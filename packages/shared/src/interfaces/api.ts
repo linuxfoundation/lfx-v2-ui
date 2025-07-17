@@ -7,7 +7,7 @@ export interface ApiClientConfig {
   retryDelay?: number;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   status: number;
   statusText: string;
@@ -37,10 +37,10 @@ export interface ApiErrorOptions {
   response?: any;
 }
 
-export interface QueryServiceItem<T = any> {
+export interface QueryServiceItem<T = unknown> {
   type: string;
   id: string;
   data: T;
 }
 
-export type QueryServiceResponse<T = any> = QueryServiceItem<T>[];
+export type QueryServiceResponse<T = unknown> = QueryServiceItem<T>[];

@@ -20,17 +20,7 @@ export interface BadgeProps {
 
 // Button interfaces
 export interface ButtonSeverityOptions {
-  severity:
-    | "success"
-    | "info"
-    | "warn"
-    | "danger"
-    | "help"
-    | "primary"
-    | "secondary"
-    | "contrast"
-    | null
-    | undefined;
+  severity: "success" | "info" | "warn" | "danger" | "help" | "primary" | "secondary" | "contrast" | null | undefined;
 }
 
 export interface ButtonIconPositionOptions {
@@ -65,7 +55,7 @@ export interface ButtonProps {
   outlined?: boolean;
   link?: boolean;
   fluid?: boolean;
-  style?: { [key: string]: any } | null;
+  style?: Record<string, string | number> | null;
   styleClass?: string;
   badge?: string;
   badgeClass?: string;
@@ -88,7 +78,7 @@ export interface AvatarProps {
   image?: string;
   size?: AvatarSizeOptions["size"];
   shape?: AvatarShapeOptions["shape"];
-  style?: { [key: string]: any } | null;
+  style?: Record<string, string | number> | null;
   styleClass?: string;
   ariaLabel?: string;
 }

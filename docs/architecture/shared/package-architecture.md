@@ -114,7 +114,7 @@ export interface AvatarProps {
   image?: string;
   size?: AvatarSizeOptions["size"];
   shape?: AvatarShapeOptions["shape"];
-  style?: { [key: string]: any } | null;
+  style?: Record<string, string | number> | null;
   styleClass?: string;
   ariaLabel?: string;
 }
