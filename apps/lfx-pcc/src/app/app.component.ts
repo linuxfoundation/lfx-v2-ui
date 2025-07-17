@@ -43,4 +43,3 @@ export class AppComponent {
     }
   }
 }
-// Test comment
