@@ -28,7 +28,7 @@ export function extractBearerToken(req: Request, _res: Response, next: NextFunct
     // Check if this is an internal SSR request (from Angular during rendering)
     const userAgent = req.get('User-Agent');
     const isInternalRequest = !userAgent || userAgent.includes('LFX-PCC-Server');
-    
+
     if (isInternalRequest) {
       // For SSR requests, we'll need to handle authentication differently
       // For now, let's see if we can use a fallback token or skip auth

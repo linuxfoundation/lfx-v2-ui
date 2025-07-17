@@ -20,7 +20,17 @@ export interface BadgeProps {
 
 // Button interfaces
 export interface ButtonSeverityOptions {
-  severity: "success" | "info" | "warn" | "danger" | "help" | "primary" | "secondary" | "contrast" | null | undefined;
+  severity:
+    | "success"
+    | "info"
+    | "warn"
+    | "danger"
+    | "help"
+    | "primary"
+    | "secondary"
+    | "contrast"
+    | null
+    | undefined;
 }
 
 export interface ButtonIconPositionOptions {

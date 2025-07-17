@@ -14,10 +14,17 @@
     "reload:prod": "pm2 reload lfx-pcc",
     "logs:prod": "pm2 logs lfx-pcc",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "lint:check": "turbo run lint:check",
+    "check-types": "turbo run check-types",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@linuxfoundation/lfx-ui-core": "^0.0.19",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
     "prettier": "^3.6.2",
+    "pretty-quick": "^4.2.2",
     "turbo": "^2.5.4",
     "typescript": "5.8.3"
   },
@@ -28,5 +35,14 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "lint-staged": {
+    "**/*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "turbo run lint --"
+    ],
+    "**/*.{html,css,scss,md,json}": [
+      "prettier --write"
+    ]
+  }
 }

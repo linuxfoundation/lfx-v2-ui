@@ -8,35 +8,22 @@ The application uses Express.js as the server framework with Angular Universal f
 
 ```typescript
 // src/server/server.ts
-import express from "express";
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from "@angular/ssr/node";
+import express from 'express';
+import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 
 const angularApp = new AngularNodeAppEngine();
 
 export function app(): express.Express {
   const server = express();
-  const distFolder = join(process.cwd(), "dist/lfx-pcc");
-  const indexHtml = existsSync(join(distFolder, "index.original.html"))
-    ? join(distFolder, "index.original.html")
-    : join(distFolder, "index.html");
+  const distFolder = join(process.cwd(), 'dist/lfx-pcc');
+  const indexHtml = existsSync(join(distFolder, 'index.original.html')) ? join(distFolder, 'index.original.html') : join(distFolder, 'index.html');
 
   // Serve static files with proper caching
-  server.get(
-    "/favicon.ico",
-    express.static(join(distFolder, "favicon.ico"), { maxAge: "1y" }),
-  );
-  server.get(
-    "**",
-    express.static(distFolder, { maxAge: "1y", index: "index.html" }),
-  );
+  server.get('/favicon.ico', express.static(join(distFolder, 'favicon.ico'), { maxAge: '1y' }));
+  server.get('**', express.static(distFolder, { maxAge: '1y', index: 'index.html' }));
 
   // Handle all routes with Angular Universal
-  server.get("**", (req, res, next) => {
+  server.get('**', (req, res, next) => {
     angularApp
       .handle(req)
       .then((response) => {
@@ -70,7 +57,7 @@ export const config = mergeApplicationConfig(appConfig, {
 // src/app/app.routes.server.ts
 export const serverRoutes: ServerRoute[] = [
   {
-    path: "**",
+    path: '**',
     renderMode: RenderMode.Server,
   },
 ];
@@ -83,7 +70,7 @@ export const serverRoutes: ServerRoute[] = [
 ```typescript
 // Development mode with HMR
 const server = app();
-const port = process.env["PORT"] || 4000;
+const port = process.env['PORT'] || 4000;
 
 server.listen(port, () => {
   console.log(`Express server listening on http://localhost:${port}`);
@@ -96,7 +83,7 @@ server.listen(port, () => {
 // Production with PM2 process management
 if (isMainModule(import.meta.url)) {
   const server = app();
-  const port = process.env["PORT"] || 4000;
+  const port = process.env['PORT'] || 4000;
 
   server.listen(port, () => {
     console.log(`Express server listening on http://localhost:${port}`);
@@ -111,25 +98,25 @@ if (isMainModule(import.meta.url)) {
 ```typescript
 // Serve static files with proper caching headers
 server.get(
-  "/favicon.ico",
-  express.static(join(distFolder, "favicon.ico"), {
-    maxAge: "1y",
+  '/favicon.ico',
+  express.static(join(distFolder, 'favicon.ico'), {
+    maxAge: '1y',
     immutable: true,
-  }),
+  })
 );
 
 server.get(
-  "**",
+  '**',
   express.static(distFolder, {
-    maxAge: "1y",
-    index: "index.html",
+    maxAge: '1y',
+    index: 'index.html',
     setHeaders: (res, path) => {
       // Cache busting for JS/CSS files
-      if (path.endsWith(".js") || path.endsWith(".css")) {
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      if (path.endsWith('.js') || path.endsWith('.css')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     },
-  }),
+  })
 );
 ```
 
@@ -149,16 +136,16 @@ server.get(
 // Security middleware
 server.use((req, res, next) => {
   // Security headers
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // CSP header for production
-  if (process.env["NODE_ENV"] === "production") {
+  if (process.env['NODE_ENV'] === 'production') {
     res.setHeader(
-      "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' kit.fontawesome.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com",
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' kit.fontawesome.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com"
     );
   }
 
@@ -172,28 +159,18 @@ server.use((req, res, next) => {
 
 ```typescript
 // Global error handler
-server.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    console.error("Server error:", err);
+server.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server error:', err);
 
-    if (res.headersSent) {
-      return next(err);
-    }
+  if (res.headersSent) {
+    return next(err);
+  }
 
-    res.status(500).json({
-      error: "Internal Server Error",
-      message:
-        process.env["NODE_ENV"] === "development"
-          ? err.message
-          : "Something went wrong",
-    });
-  },
-);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env['NODE_ENV'] === 'development' ? err.message : 'Something went wrong',
+  });
+});
 ```
 
 ### Request Logging
@@ -203,7 +180,7 @@ server.use(
 server.use((req, res, next) => {
   const start = Date.now();
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const duration = Date.now() - start;
     console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
   });
@@ -217,20 +194,20 @@ server.use((req, res, next) => {
 ### Response Compression
 
 ```typescript
-import compression from "compression";
+import compression from 'compression';
 
 // Enable gzip compression
 server.use(
   compression({
     filter: (req, res) => {
-      if (req.headers["x-no-compression"]) {
+      if (req.headers['x-no-compression']) {
         return false;
       }
       return compression.filter(req, res);
     },
     level: 6,
     threshold: 1024,
-  }),
+  })
 );
 ```
 
@@ -249,13 +226,13 @@ httpServer.headersTimeout = 35000;
 
 ```typescript
 // Services can provide initial data for SSR
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class ServerDataService {
   private readonly http = inject(HttpClient);
 
   // This will run on the server during SSR
   public loadInitialData(): Promise<InitialData> {
-    return firstValueFrom(this.http.get<InitialData>("/api/initial-data"));
+    return firstValueFrom(this.http.get<InitialData>('/api/initial-data'));
   }
 }
 ```
@@ -285,9 +262,9 @@ Development server supports Angular's HMR for faster development:
 
 ```typescript
 // Development-specific features
-if (process.env["NODE_ENV"] === "development") {
+if (process.env['NODE_ENV'] === 'development') {
   // Enable source maps
-  server.use("/dev", express.static("src"));
+  server.use('/dev', express.static('src'));
 
   // Development error handling
   server.use((err, req, res, next) => {
@@ -309,13 +286,13 @@ The development server integrates with Angular CLI's live reload system for seam
 
 ```typescript
 // Health check for load balancers
-server.get("/health", (req, res) => {
+server.get('/health', (req, res) => {
   res.status(200).json({
-    status: "healthy",
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    version: process.env["npm_package_version"] || "1.0.0",
+    version: process.env['npm_package_version'] || '1.0.0',
   });
 });
 ```
@@ -330,7 +307,7 @@ let errorCount = 0;
 server.use((req, res, next) => {
   requestCount++;
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     if (res.statusCode >= 400) {
       errorCount++;
     }
@@ -339,7 +316,7 @@ server.use((req, res, next) => {
   next();
 });
 
-server.get("/metrics", (req, res) => {
+server.get('/metrics', (req, res) => {
   res.json({
     requests: requestCount,
     errors: errorCount,
