@@ -2641,6 +2641,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@lfx-pcc/shared@workspace:packages/shared"
   dependencies:
+    "@types/node": "npm:^24.0.14"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
