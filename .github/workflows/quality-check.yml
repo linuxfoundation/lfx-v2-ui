@@ -42,13 +42,13 @@ jobs:
       - name: Check formatting
         run: yarn format:check
 
-      - name: Run linting with Turborepo
+      - name: Run linting
         run: yarn lint:check
 
-      - name: Type checking with Turborepo
+      - name: Type checking
         run: yarn check-types
 
-      - name: Build project with Turborepo
+      - name: Build project
         run: yarn build
 
       - name: Upload build artifacts
