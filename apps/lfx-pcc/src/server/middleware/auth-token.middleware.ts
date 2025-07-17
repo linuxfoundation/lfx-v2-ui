@@ -3,13 +3,6 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-// Extend Express Request type to include bearerToken
-declare module 'express-serve-static-core' {
-  interface Request {
-    bearerToken?: string;
-  }
-}
-
 export function extractBearerToken(req: Request, _res: Response, next: NextFunction): void {
   try {
     // For API routes, check Authorization header first
@@ -31,7 +24,7 @@ export function extractBearerToken(req: Request, _res: Response, next: NextFunct
     // Check if this is an internal SSR request (from Angular during rendering)
     const userAgent = req.get('User-Agent');
     const isInternalRequest = !userAgent || userAgent.includes('LFX-PCC-Server');
-    
+
     if (isInternalRequest) {
       // For SSR requests, we'll need to handle authentication differently
       // For now, let's see if we can use a fallback token or skip auth

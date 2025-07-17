@@ -1,16 +1,15 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<p-breadcrumb 
-  [model]="model()" 
+<p-breadcrumb
+  [model]="model()"
   [home]="home()"
   [style]="style()"
   [styleClass]="styleClass()"
   [homeAriaLabel]="homeAriaLabel()"
   (onItemClick)="handleItemClick($event)">
   <ng-template #item let-item>
-    <ng-container *ngTemplateOutlet="itemTemplate || null; context: { $implicit: item }">
-    </ng-container>
+    <ng-container *ngTemplateOutlet="itemTemplate || null; context: { $implicit: item }"> </ng-container>
   </ng-template>
   <ng-template #separator *ngIf="separatorTemplate">
     <ng-container *ngTemplateOutlet="separatorTemplate || null"></ng-container>

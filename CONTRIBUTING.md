@@ -1,4 +1,5 @@
 # Copyright The Linux Foundation and each contributor to LFX.
+
 # SPDX-License-Identifier: MIT
 
 # Contributing to LFX PCC
@@ -40,6 +41,7 @@ Please refer to the [README.md](README.md) for detailed setup instructions.
 ### Required Format
 
 The license header must appear in the first 4 lines of every source file and must contain the exact text:
+
 ```
 Copyright The Linux Foundation and each contributor to LFX.
 SPDX-License-Identifier: MIT
@@ -48,6 +50,7 @@ SPDX-License-Identifier: MIT
 ### File Type Examples
 
 #### TypeScript/JavaScript Files (.ts, .js)
+
 ```typescript
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
@@ -56,6 +59,7 @@ SPDX-License-Identifier: MIT
 ```
 
 #### HTML Files (.html)
+
 ```html
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
@@ -64,6 +68,7 @@ SPDX-License-Identifier: MIT
 ```
 
 #### CSS/SCSS Files (.css, .scss)
+
 ```css
 /* Copyright The Linux Foundation and each contributor to LFX. */
 /* SPDX-License-Identifier: MIT */
@@ -72,6 +77,7 @@ SPDX-License-Identifier: MIT
 ```
 
 #### YAML Files (.yml, .yaml)
+
 ```yaml
 # Copyright The Linux Foundation and each contributor to LFX.
 # SPDX-License-Identifier: MIT
@@ -80,6 +86,7 @@ SPDX-License-Identifier: MIT
 ```
 
 #### Shell Scripts (.sh)
+
 ```bash
 #!/usr/bin/env bash
 
@@ -92,11 +99,13 @@ SPDX-License-Identifier: MIT
 ### Checking License Headers
 
 Before committing, run the license header check:
+
 ```bash
 ./check-headers.sh
 ```
 
 This script will identify any files missing the required license header. The script automatically excludes:
+
 - `node_modules/`
 - `.angular/`
 - `dist/`
@@ -137,6 +146,7 @@ yarn format
 ### Format
 
 Follow the conventional commit format:
+
 ```
 type(scope): subject
 
@@ -146,6 +156,7 @@ footer
 ```
 
 ### Types
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -155,6 +166,7 @@ footer
 - `chore`: Maintenance tasks
 
 ### Examples
+
 ```
 feat(auth): add Auth0 integration
 
@@ -167,6 +179,7 @@ Closes #123
 ### Sign-off
 
 All commits must be signed off:
+
 ```bash
 git commit --signoff
 ```
@@ -185,6 +198,7 @@ This adds a `Signed-off-by` line to your commit message.
 ### PR Title Format
 
 Use the same conventional commit format for PR titles:
+
 ```
 feat(component): add new table component
 ```
@@ -213,6 +227,7 @@ yarn e2e
 ## Questions?
 
 If you have questions about contributing, please:
+
 1. Check existing issues and discussions
 2. Open a new issue for clarification
 3. Join our community channels
