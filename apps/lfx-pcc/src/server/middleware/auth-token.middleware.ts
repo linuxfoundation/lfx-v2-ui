@@ -1,12 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
 
-// Extend Express Request type to include bearerToken
-declare module 'express-serve-static-core' {
-  interface Request {
-    bearerToken?: string;
-  }
-}
-
 export function extractBearerToken(req: Request, _res: Response, next: NextFunction): void {
   try {
     // For API routes, check Authorization header first
