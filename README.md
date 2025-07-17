@@ -1,10 +1,8 @@
 # LFX PCC
 
-This is a Turborepo monorepo for the LFX PCC (Linux Foundation Experience Platform Community Contribution) application, built with Angular 19 and experimental zoneless change detection.
+This is a monorepo for the LFX PCC (Project Control Center) application, built with Angular 19 and experimental zoneless change detection.
 
 ## What's inside?
-
-This Turborepo includes the following app:
 
 ### Apps and Packages
 
@@ -23,7 +21,7 @@ The app is 100% [TypeScript](https://www.typescriptlang.org/).
 
 ### Development Tools
 
-This Turborepo has comprehensive development tooling:
+This has comprehensive development tooling:
 
 - **[TypeScript](https://www.typescriptlang.org/)** for static type checking with strict configuration
 - **[ESLint](https://eslint.org/)** for code linting with Angular 19 specific rules
@@ -244,20 +242,6 @@ export class ExampleComponent {}
 <p-card header="Example Card">
   <p-button label="Click me" severity="primary"></p-button>
 </p-card>
-```
-
-## Remote Caching
-
-Turborepo can use [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, speeding up builds for your team.
-
-To enable Remote Caching:
-
-```bash
-# Authenticate with Vercel
-yarn dlx turbo login
-
-# Link your Turborepo to your Remote Cache
-yarn dlx turbo link
 ```
 
 ## Technology Stack

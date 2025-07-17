@@ -96,3 +96,5 @@ lfx-pcc-v3/
 - Use TypeScript interfaces instead of union types for better maintainability
 - Shared package uses direct source imports during development for hot reloading
 - **Interfaces go into the shared packages**
+- **License headers are required on all source files** - run `./check-headers.sh` to verify
+- **Pre-commit hooks enforce license headers** - commits will fail without proper headers
