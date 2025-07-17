@@ -8014,6 +8014,7 @@ __metadata:
     lint-staged: "npm:^16.1.2"
     prettier: "npm:^3.6.2"
     pretty-quick: "npm:^4.2.2"
+    tslib: "npm:^2.8.1"
     turbo: "npm:^2.5.4"
     typescript: "npm:5.8.3"
   languageName: unknown
