@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@linuxfoundation/lfx-ui-core": "^0.0.19",
+    "@types/node": "^24.0.14",
     "@typescript-eslint/eslint-plugin": "^8.37.0",
     "@typescript-eslint/parser": "^8.37.0",
     "@typescript-eslint/type-utils": "^8.37.0",
