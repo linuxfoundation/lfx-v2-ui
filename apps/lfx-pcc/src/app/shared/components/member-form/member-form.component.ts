@@ -11,6 +11,7 @@ import { InputTextComponent } from '@app/shared/components/input-text/input-text
 import { CommitteeService } from '@app/shared/services/committee.service';
 import { MEMBER_ROLES, VOTING_STATUSES } from '@lfx-pcc/shared/constants';
 import { CommitteeMember } from '@lfx-pcc/shared/interfaces';
+import { formatDateToISOString, parseISODateString } from '@lfx-pcc/shared/utils';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
@@ -73,10 +74,10 @@ export class MemberFormComponent {
       const memberData: Partial<CommitteeMember> = {
         ...formValue,
         // Override date fields to format them properly (convert Date objects to ISO date strings)
-        role_start: formValue.role_start ? new Date(formValue.role_start).toISOString().split('T')[0] : undefined,
-        role_end: formValue.role_end ? new Date(formValue.role_end).toISOString().split('T')[0] : undefined,
-        voting_status_start: formValue.voting_status_start ? new Date(formValue.voting_status_start).toISOString().split('T')[0] : undefined,
-        voting_status_end: formValue.voting_status_end ? new Date(formValue.voting_status_end).toISOString().split('T')[0] : undefined,
+        role_start: formatDateToISOString(formValue.role_start),
+        role_end: formatDateToISOString(formValue.role_end),
+        voting_status_start: formatDateToISOString(formValue.voting_status_start),
+        voting_status_end: formatDateToISOString(formValue.voting_status_end),
       };
 
       const operation = this.isEditing()
@@ -124,10 +125,10 @@ export class MemberFormComponent {
         role: member.role,
         voting_status: member.voting_status,
         appointed_by: member.appointed_by,
-        role_start: member.role_start ? new Date(member.role_start) : null,
-        role_end: member.role_end ? new Date(member.role_end) : null,
-        voting_status_start: member.voting_status_start ? new Date(member.voting_status_start) : null,
-        voting_status_end: member.voting_status_end ? new Date(member.voting_status_end) : null,
+        role_start: parseISODateString(member.role_start),
+        role_end: parseISODateString(member.role_end),
+        voting_status_start: parseISODateString(member.voting_status_start),
+        voting_status_end: parseISODateString(member.voting_status_end),
       });
     }
   }
