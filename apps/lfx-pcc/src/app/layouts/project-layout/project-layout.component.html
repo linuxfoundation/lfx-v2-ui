@@ -22,7 +22,7 @@
         <!-- Category Badge -->
         @if (categoryLabel(); as category) {
           <div class="flex justify-start">
-            <img src="https://lf-master-project-logos-prod.s3.us-east-2.amazonaws.com/cncf.svg" class="h-10 w-full" />
+            <img [src]="projectLogo()" class="h-10 w-full" />
           </div>
         }
 
@@ -57,12 +57,16 @@
     <!-- Menu Items Section -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
-        @for (filter of menuItems(); track filter.label) {
-          <a [routerLink]="filter.routerLink" class="pill" routerLinkActive="bg-blue-50 text-blue-600 border-0" [routerLinkActiveOptions]="{ exact: true }">
-            @if (filter.icon) {
-              <i [class]="filter.icon"></i>
+        @for (menu of menuItems(); track menu.label) {
+          <a
+            [routerLink]="menu.routerLink"
+            class="pill"
+            routerLinkActive="bg-blue-50 text-blue-600 border-0"
+            [routerLinkActiveOptions]="menu.routerLinkActiveOptions">
+            @if (menu.icon) {
+              <i [class]="menu.icon"></i>
             }
-            {{ filter.label }}
+            {{ menu.label }}
           </a>
         }
       </div>
@@ -79,4 +83,6 @@
     </div>
   </div>
 </div>
-<ng-content></ng-content>
+@if (project()) {
+  <router-outlet></router-outlet>
+}

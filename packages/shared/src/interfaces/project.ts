@@ -24,6 +24,7 @@ export interface FilterButton {
 }
 
 export interface Project {
+  id: string;
   name: string;
   slug: string;
   description: string;
@@ -35,12 +36,4 @@ export interface Project {
   mailing_list_count: number;
 }
 
-export interface ProjectQueryItem {
-  type: 'project';
-  id: string;
-  data: Project;
-}
-
-export type ProjectQueryResponse = {
-  resources: ProjectQueryItem[];
-};
+export type ProjectQueryResponse = Project[];
