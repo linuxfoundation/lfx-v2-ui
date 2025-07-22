@@ -18,3 +18,6 @@ export * from './auth';
 
 // API interfaces
 export * from './api';
+
+// Permissions interfaces
+export * from './permissions.interface';

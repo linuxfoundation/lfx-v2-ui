@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest } from '@lfx-pcc/shared/interfaces';
+import { Committee, CommitteeMember, CreateCommitteeMemberRequest, ObjectPermission, UserPermissions } from '@lfx-pcc/shared/interfaces';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -404,6 +404,123 @@ export class SupabaseService {
     }
 
     return 0;
+  }
+
+  public async getProjectPermissions(projectId: string): Promise<UserPermissions[]> {
+    // Single query to get all effective permissions from the view
+    const params = new URLSearchParams({
+      select: `
+        user_id,
+        first_name,
+        last_name,
+        email,
+        username,
+        role_name,
+        object_type,
+        object_id
+      `,
+      order: 'user_id,object_type,object_id',
+    });
+
+    const response = await fetch(`${this.baseUrl}/effective_user_permissions?project_id=eq.${projectId}&${params}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch user permissions: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Group data by user
+    const userPermissionsMap = new Map<string, UserPermissions>();
+
+    data.forEach((user: any) => {
+      // Initialize user if not already in map
+      if (!userPermissionsMap.has(user.user_id)) {
+        userPermissionsMap.set(user.user_id, {
+          user: {
+            sid: user.user_id,
+            ['https://sso.linuxfoundation.org/claims/username']: user.username || user.email,
+            given_name: user.first_name || '',
+            family_name: user.last_name || '',
+            nickname: user.username || user.email,
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            picture: 'https://via.placeholder.com/40',
+            updated_at: user.updated_at || new Date().toISOString(),
+            email: user.email,
+            email_verified: false,
+            sub: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username,
+            id: user.id,
+            created_at: user.created_at,
+          },
+          projectRoles: [],
+          permissions: {
+            meetings: { manageAll: false, specific: [] },
+            committees: { manageAll: false, specific: [] },
+            mailingLists: { manageAll: false, specific: [] },
+          },
+        });
+      }
+
+      const userPerms = userPermissionsMap.get(user.user_id)!;
+      const row = user;
+      // Process permissions based on whether it's project-wide or object-specific
+      if (row.object_type === null && row.object_id === null) {
+        // Project-wide permission
+        if (row.role_name === 'manage_committees') {
+          userPerms.permissions.committees.manageAll = true;
+        }
+        if (row.role_name === 'manage_meetings') {
+          userPerms.permissions.meetings.manageAll = true;
+        }
+        if (row.role_name === 'manage_mailing_lists') {
+          userPerms.permissions.mailingLists.manageAll = true;
+        }
+
+        // Add to project roles (for display purposes)
+        if (!userPerms.projectRoles.some((pr) => pr.role_id === row.role_name)) {
+          userPerms.projectRoles.push({
+            id: 0,
+            user_id: user.user_id,
+            project_id: projectId,
+            role_id: 0,
+            roles: {
+              id: 0,
+              name: row.role_name,
+              description: `Manage ${row.role_name.replace('manage_', '')}`,
+            },
+          });
+        }
+      } else {
+        // Object-specific permission
+        const permissionObj: ObjectPermission = {
+          id: 0,
+          user_id: user.user_id,
+          object_type: row.object_type,
+          object_id: row.object_id,
+          permission: row.role_name,
+          committee_name: row.committee_name,
+        };
+
+        // Add specific object permissions only if user doesn't have manage all
+        if (row.object_type === 'meeting' && !userPerms.permissions.meetings.manageAll) {
+          userPerms.permissions.meetings.specific.push(permissionObj);
+        } else if (row.object_type === 'committee' && !userPerms.permissions.committees.manageAll) {
+          userPerms.permissions.committees.specific.push(permissionObj);
+        } else if (row.object_type === 'mailing_list' && !userPerms.permissions.mailingLists.manageAll) {
+          userPerms.permissions.mailingLists.specific.push(permissionObj);
+        }
+      }
+    });
+
+    return Array.from(userPermissionsMap.values());
   }
 
   private getHeaders(): Record<string, string> {

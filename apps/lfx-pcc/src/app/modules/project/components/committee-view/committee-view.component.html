@@ -42,7 +42,7 @@
               {{ committee()?.category }}
             </span>
             <span>Created {{ formattedCreatedDate() }}</span>
-            @if (committee()?.last_updated_at) {
+            @if (committee()?.updated_at) {
               <span>Last updated {{ formattedUpdatedDate() }}</span>
             }
           </div>
@@ -71,11 +71,11 @@
               <lfx-table [value]="committee()?.subcommittees!" [paginator]="false">
                 <ng-template #header>
                   <tr>
-                    <th class="text-left">Name</th>
-                    <th class="text-left">Category</th>
-                    <th class="text-left">Members</th>
-                    <th class="text-left">Voting Reps</th>
-                    <th class="text-center">Actions</th>
+                    <th class="text-sm font-sans text-gray-500">Name</th>
+                    <th class="text-sm font-sans text-gray-500">Category</th>
+                    <th class="text-sm font-sans text-gray-500">Members</th>
+                    <th class="text-sm font-sans text-gray-500">Voting Reps</th>
+                    <th class="text-center text-sm font-sans text-gray-500">Actions</th>
                   </tr>
                 </ng-template>
 

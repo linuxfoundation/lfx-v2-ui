@@ -7,9 +7,11 @@ import { MenuComponent } from '@app/shared/components/menu/menu.component';
 import { ProjectService } from '@app/shared/services/project.service';
 import { MenuItem } from 'primeng/api';
 
+import { UserPermissionsTableComponent } from './components/user-permissions-table/user-permissions-table.component';
+
 @Component({
   selector: 'lfx-settings-dashboard',
-  imports: [CardComponent, MenuComponent],
+  imports: [CardComponent, UserPermissionsTableComponent, MenuComponent],
   templateUrl: './settings-dashboard.component.html',
   styleUrl: './settings-dashboard.component.scss',
 })

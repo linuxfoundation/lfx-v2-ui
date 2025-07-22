@@ -2,28 +2,31 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, Injector, OnInit, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { CardComponent } from '@app/shared/components/card/card.component';
+import { CommitteeFormComponent } from '@app/shared/components/committee-form/committee-form.component';
 import { TableComponent } from '@app/shared/components/table/table.component';
 import { CommitteeService } from '@app/shared/services/committee.service';
 import { ProjectService } from '@app/shared/services/project.service';
 import { Committee, Project } from '@lfx-pcc/shared/interfaces';
+import { DialogService } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'lfx-project',
-  imports: [CardComponent, TableComponent, DatePipe, RouterModule, SkeletonModule],
+  imports: [CardComponent, TableComponent, DatePipe, RouterModule, SkeletonModule, ButtonComponent],
   templateUrl: './project.component.html',
   styleUrl: './project.component.scss',
 })
-export class ProjectComponent implements OnInit {
+export class ProjectComponent {
   public readonly activatedRoute = inject(ActivatedRoute);
   private readonly projectService = inject(ProjectService);
   private readonly committeeService = inject(CommitteeService);
-  private readonly injector = inject(Injector);
+  private readonly dialogService = inject(DialogService);
 
   // Signal to hold recent committees
   public recentCommittees: Signal<Committee[]> = signal([]);
@@ -60,9 +63,9 @@ export class ProjectComponent implements OnInit {
     return this.recentCommittees().map((committee) => ({
       id: committee.id,
       title: committee.name,
-      url: `committees/${committee.id}`,
+      url: `/project/${this.project()?.slug}/committees/${committee.id}`,
       status: 'Active',
-      date: committee.last_updated_at || committee.created_date,
+      date: committee.updated_at || committee.created_at,
     }));
   });
 
@@ -90,16 +93,31 @@ export class ProjectComponent implements OnInit {
     },
   ]);
 
-  public ngOnInit() {
-    runInInjectionContext(this.injector, () => {
-      this.recentCommittees = toSignal(
-        this.committeeService.getRecentCommitteesByProject(this.project()?.id || '').pipe(
-          finalize(() => {
-            this.committeesLoading.set(false);
-          })
-        ),
-        { initialValue: [] }
-      );
+  public constructor() {
+    this.recentCommittees = toSignal(
+      this.committeeService.getRecentCommitteesByProject(this.project()?.id || '').pipe(
+        finalize(() => {
+          this.committeesLoading.set(false);
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  public openCreateDialog(): void {
+    const projectId = this.project()?.id;
+    if (!projectId) return;
+
+    this.dialogService.open(CommitteeFormComponent, {
+      header: 'Create Committee',
+      width: '600px',
+      contentStyle: { overflow: 'auto' },
+      modal: true,
+      closable: true,
+      data: {
+        isEditing: false,
+        projectId: projectId,
+      },
     });
   }
 }

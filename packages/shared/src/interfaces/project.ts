@@ -36,4 +36,8 @@ export interface Project {
   mailing_list_count: number;
 }
 
+export interface ProjectCard extends Partial<Project> {
+  metrics: ProjectCardMetric[];
+}
+
 export type ProjectQueryResponse = Project[];

@@ -16,9 +16,9 @@ export interface Committee {
   sso_group_name?: string;
   committee_website?: string;
   created_by?: string;
-  created_date: string;
-  last_updated_at?: string;
-  last_updated_by?: string;
+  created_at: string;
+  updated_at?: string;
+  updated_by?: string;
   system_mod_stamp: string;
   total_members: number;
   total_voting_reps: number;
@@ -41,8 +41,8 @@ export interface Subcommittee {
   sso_group_enabled: boolean;
   sso_group_name?: string;
   created_by?: string;
-  created_date: string;
-  last_updated_at?: string;
+  created_at: string;
+  updated_at?: string;
   last_updated_by?: string;
   system_mod_stamp: string;
   total_members: number;

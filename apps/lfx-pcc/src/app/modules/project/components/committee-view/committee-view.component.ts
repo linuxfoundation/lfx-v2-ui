@@ -180,8 +180,8 @@ export class CommitteeViewComponent {
   private initializeFormattedCreatedDate(): Signal<string> {
     return computed(() => {
       const committee = this.committee();
-      if (!committee?.created_date) return '-';
-      const date = new Date(committee.created_date);
+      if (!committee?.created_at) return '-';
+      const date = new Date(committee.created_at);
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -195,8 +195,8 @@ export class CommitteeViewComponent {
   private initializeFormattedUpdatedDate(): Signal<string> {
     return computed(() => {
       const committee = this.committee();
-      if (!committee?.last_updated_at) return '-';
-      const date = new Date(committee.last_updated_at);
+      if (!committee?.updated_at) return '-';
+      const date = new Date(committee.updated_at);
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',

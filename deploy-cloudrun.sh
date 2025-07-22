@@ -32,7 +32,7 @@ echo "⬆️ Pushing image to Google Container Registry..."
 docker push ${IMAGE_NAME}:latest
 
 # Use custom domain
-SERVICE_URL="https://lfxpcc.asithadesilva.com"
+SERVICE_URL="https://poc.lfx.dev"
 
 # Deploy to Cloud Run
 echo "🚢 Deploying to Cloud Run..."

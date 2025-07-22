@@ -16,11 +16,12 @@ import { TableComponent } from '@app/shared/components/table/table.component';
 import { CommitteeService } from '@app/shared/services/committee.service';
 import { ProjectService } from '@app/shared/services/project.service';
 import { Committee } from '@lfx-pcc/shared/interfaces';
+import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, startWith } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'lfx-committee-dashboard',
@@ -36,6 +37,7 @@ import { debounceTime, distinctUntilChanged, startWith } from 'rxjs/operators';
     ButtonComponent,
     ConfirmDialogModule,
     DynamicDialogModule,
+    AnimateOnScrollModule,
   ],
   providers: [DialogService],
   templateUrl: './committee-dashboard.component.html',
@@ -60,7 +62,7 @@ export class CommitteeDashboardComponent {
   public categoryFilter: WritableSignal<string | null>;
   private searchTerm: Signal<string>;
   public committees: Signal<Committee[]>;
-  public loading: Signal<boolean>;
+  public committeesLoading: WritableSignal<boolean>;
   public categories: Signal<{ label: string; value: string | null }[]>;
   public filteredCommittees: Signal<Committee[]>;
   public totalRecords: Signal<number>;
@@ -74,11 +76,11 @@ export class CommitteeDashboardComponent {
     this.isDeleting = signal<boolean>(false);
     this.first = signal<number>(0);
     this.rows = 10;
+    this.committees = this.initializeCommittees();
+    this.committeesLoading = signal<boolean>(true);
     this.searchForm = this.initializeSearchForm();
     this.categoryFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
-    this.committees = this.initializeCommittees();
-    this.loading = this.initializeLoading();
     this.categories = this.initializeCategories();
     this.filteredCommittees = this.initializeFilteredCommittees();
     this.totalRecords = this.initializeTotalRecords();
@@ -143,7 +145,7 @@ export class CommitteeDashboardComponent {
     const committee = this.selectedCommittee();
     const projectId = this.project()?.id;
     if (committee && projectId) {
-      this.router.navigate(['/project', projectId, 'committees', committee.id]);
+      this.router.navigate(['/project', this.project()?.slug, 'committees', committee.id]);
     }
   }
 
@@ -221,14 +223,10 @@ export class CommitteeDashboardComponent {
   }
 
   private initializeCommittees(): Signal<Committee[]> {
-    return toSignal(this.project() ? this.committeeService.getCommitteesByProject(this.project()!.id) : of([]), { initialValue: [] });
-  }
-
-  private initializeLoading(): Signal<boolean> {
-    return computed(() => {
-      // We're loading if committees haven't been fetched yet and we have a project
-      return this.project() !== null && this.committees().length === 0;
-    });
+    return toSignal(
+      this.project() ? this.committeeService.getCommitteesByProject(this.project()!.id).pipe(tap(() => this.committeesLoading.set(false))) : of([]),
+      { initialValue: [] }
+    );
   }
 
   private initializeCategories(): Signal<{ label: string; value: string | null }[]> {

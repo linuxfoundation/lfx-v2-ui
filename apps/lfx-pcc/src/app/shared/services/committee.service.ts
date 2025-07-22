@@ -38,7 +38,7 @@ export class CommitteeService {
   }
 
   public getRecentCommitteesByProject(projectId: string, limit: number = 3): Observable<Committee[]> {
-    return this.getCommitteesByProject(projectId, limit, 'last_updated_at.desc');
+    return this.getCommitteesByProject(projectId, limit, 'updated_at.desc');
   }
 
   public getCommittee(id: string): Observable<Committee> {
