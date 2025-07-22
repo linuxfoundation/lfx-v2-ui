@@ -10,8 +10,9 @@ import { CardComponent } from '@app/shared/components/card/card.component';
 import { CommitteeFormComponent } from '@app/shared/components/committee-form/committee-form.component';
 import { TableComponent } from '@app/shared/components/table/table.component';
 import { CommitteeService } from '@app/shared/services/committee.service';
+import { MeetingService } from '@app/shared/services/meeting.service';
 import { ProjectService } from '@app/shared/services/project.service';
-import { Committee, Project } from '@lfx-pcc/shared/interfaces';
+import { Committee, Meeting, Project } from '@lfx-pcc/shared/interfaces';
 import { DialogService } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { finalize } from 'rxjs';
@@ -26,38 +27,27 @@ export class ProjectComponent {
   public readonly activatedRoute = inject(ActivatedRoute);
   private readonly projectService = inject(ProjectService);
   private readonly committeeService = inject(CommitteeService);
+  private readonly meetingService = inject(MeetingService);
   private readonly dialogService = inject(DialogService);
 
-  // Signal to hold recent committees
+  // Signals to hold data
   public recentCommittees: Signal<Committee[]> = signal([]);
+  public upcomingMeetings: Signal<Meeting[]> = signal([]);
   public committeesLoading: WritableSignal<boolean> = signal(true);
+  public meetingsLoading: WritableSignal<boolean> = signal(true);
 
   // Load project data based on slug from URL
   public project: Signal<Project | null> = this.projectService.project;
 
-  public readonly meetingTableData: Signal<any[]> = signal([
-    {
-      id: 1,
-      title: 'Meeting with a really long title that should be truncated',
-      url: 'meetings',
+  public readonly meetingTableData: Signal<any[]> = computed(() => {
+    return this.upcomingMeetings().map((meeting) => ({
+      id: meeting.id,
+      title: meeting.topic || meeting.meeting_type || 'Untitled Meeting',
+      url: `/project/${this.project()?.slug}/meetings`,
       status: 'Upcoming',
-      date: '2025-07-10T10:00:00Z',
-    },
-    {
-      id: 2,
-      title: 'Standup',
-      url: 'meetings',
-      status: 'Upcoming',
-      date: '2025-07-10T13:00:00Z',
-    },
-    {
-      id: 3,
-      title: 'Q4 Board Meeting',
-      url: 'meetings',
-      status: 'Upcoming',
-      date: '2025-07-10T16:00:00Z',
-    },
-  ]);
+      date: meeting.start_time,
+    }));
+  });
 
   public readonly committeeTableData: Signal<any[]> = computed(() => {
     return this.recentCommittees().map((committee) => ({
@@ -98,6 +88,15 @@ export class ProjectComponent {
       this.committeeService.getRecentCommitteesByProject(this.project()?.id || '').pipe(
         finalize(() => {
           this.committeesLoading.set(false);
+        })
+      ),
+      { initialValue: [] }
+    );
+
+    this.upcomingMeetings = toSignal(
+      this.meetingService.getUpcomingMeetingsByProject(this.project()?.id || '', 3).pipe(
+        finalize(() => {
+          this.meetingsLoading.set(false);
         })
       ),
       { initialValue: [] }

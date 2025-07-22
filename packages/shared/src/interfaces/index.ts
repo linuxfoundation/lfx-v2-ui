@@ -21,3 +21,6 @@ export * from './api';
 
 // Permissions interfaces
 export * from './permissions.interface';
+
+// Meeting interfaces
+export * from './meeting.interface';

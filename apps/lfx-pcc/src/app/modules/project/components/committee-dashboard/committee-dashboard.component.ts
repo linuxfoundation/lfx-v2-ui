@@ -61,8 +61,8 @@ export class CommitteeDashboardComponent {
   public searchForm: FormGroup;
   public categoryFilter: WritableSignal<string | null>;
   private searchTerm: Signal<string>;
-  public committees: Signal<Committee[]>;
   public committeesLoading: WritableSignal<boolean>;
+  public committees: Signal<Committee[]>;
   public categories: Signal<{ label: string; value: string | null }[]>;
   public filteredCommittees: Signal<Committee[]>;
   public totalRecords: Signal<number>;
@@ -76,8 +76,8 @@ export class CommitteeDashboardComponent {
     this.isDeleting = signal<boolean>(false);
     this.first = signal<number>(0);
     this.rows = 10;
-    this.committees = this.initializeCommittees();
     this.committeesLoading = signal<boolean>(true);
+    this.committees = this.initializeCommittees();
     this.searchForm = this.initializeSearchForm();
     this.categoryFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
