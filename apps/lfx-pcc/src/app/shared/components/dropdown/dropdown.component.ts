@@ -65,7 +65,7 @@ export class DropdownComponent {
   public readonly autocomplete = input<string>('off');
   public readonly autofocus = input<boolean>(false);
   public readonly resetFilterOnHide = input<boolean>(false);
-  public readonly dropdownIcon = input<string>('pi pi-chevron-down');
+  public readonly dropdownIcon = input<string>();
   public readonly autoDisplayFirst = input<boolean>(true);
   public readonly emptySelectionMessage = input<string>('');
   public readonly searchLocale = input<string | undefined>(undefined);

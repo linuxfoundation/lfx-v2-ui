@@ -8,7 +8,7 @@ import { Pipe, PipeTransform } from '@angular/core';
   standalone: true,
 })
 export class MeetingTimePipe implements PipeTransform {
-  public transform(startTime: string | null, duration: number | null, format: 'full' | 'date' | 'time' = 'full'): string {
+  public transform(startTime: string | null, duration: number | null, format: 'full' | 'full-start' | 'date' | 'time' = 'full'): string {
     if (!startTime) {
       return 'Time not set';
     }
@@ -56,12 +56,15 @@ export class MeetingTimePipe implements PipeTransform {
           }
           return startTimeStr;
 
+        case 'full-start':
+          return `${dateStr} @ ${startTimeStr}`;
+
         case 'full':
         default:
           // Return full format: Monday, August 4, 2025 3:00 PM - 4:00 PM
           if (endDate) {
             const endTimeStr = endDate.toLocaleTimeString('en-US', timeOptions);
-            return `${dateStr} ${startTimeStr} - ${endTimeStr}`;
+            return `${dateStr} @ ${startTimeStr} - ${endTimeStr}`;
           }
           return `${dateStr} ${startTimeStr}`;
       }

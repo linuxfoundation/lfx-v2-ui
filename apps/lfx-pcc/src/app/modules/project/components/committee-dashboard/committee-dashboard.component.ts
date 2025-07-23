@@ -13,6 +13,7 @@ import { DropdownComponent } from '@app/shared/components/dropdown/dropdown.comp
 import { InputTextComponent } from '@app/shared/components/input-text/input-text.component';
 import { MenuComponent } from '@app/shared/components/menu/menu.component';
 import { TableComponent } from '@app/shared/components/table/table.component';
+import { UpcomingCommitteeMeetingComponent } from '@app/shared/components/upcoming-committee-meeting/upcoming-committee-meeting.component';
 import { CommitteeService } from '@app/shared/services/committee.service';
 import { ProjectService } from '@app/shared/services/project.service';
 import { Committee } from '@lfx-pcc/shared/interfaces';
@@ -38,6 +39,7 @@ import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operato
     ConfirmDialogModule,
     DynamicDialogModule,
     AnimateOnScrollModule,
+    UpcomingCommitteeMeetingComponent,
   ],
   providers: [DialogService],
   templateUrl: './committee-dashboard.component.html',

@@ -7,6 +7,12 @@ export enum MeetingVisibility {
   RESTRICTED = 'restricted',
 }
 
+export interface MeetingCommittee {
+  id: string;
+  name: string;
+  committee_total_members: number;
+}
+
 export interface Meeting {
   id: string;
   created_at: string;
@@ -26,4 +32,5 @@ export interface Meeting {
   end_time: string | null;
   duration: number | null;
   status: string | null;
+  meeting_committees: MeetingCommittee[] | null;
 }

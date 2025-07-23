@@ -49,14 +49,15 @@ export class MeetingDashboardComponent {
   public isDeleting: WritableSignal<boolean>;
   public searchForm: FormGroup;
   public visibilityFilter: WritableSignal<string | null>;
+  public committeeFilter: WritableSignal<string | null>;
   private searchTerm: Signal<string>;
   public meetingsLoading: WritableSignal<boolean>;
   public meetings: Signal<Meeting[]>;
   public visibilityOptions: Signal<{ label: string; value: string | null }[]>;
+  public committeeOptions: Signal<{ label: string; value: string | null }[]>;
   public filteredMeetings: Signal<Meeting[]>;
   public publicMeetingsCount: Signal<number>;
   public privateMeetingsCount: Signal<number>;
-  public restrictedMeetingsCount: Signal<number>;
   public menuItems: MenuItem[];
   public actionMenuItems: MenuItem[];
 
@@ -69,12 +70,13 @@ export class MeetingDashboardComponent {
     this.meetings = this.initializeMeetings();
     this.searchForm = this.initializeSearchForm();
     this.visibilityFilter = signal<string | null>(null);
+    this.committeeFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
     this.visibilityOptions = this.initializeVisibilityOptions();
+    this.committeeOptions = this.initializeCommitteeOptions();
     this.filteredMeetings = this.initializeFilteredMeetings();
     this.publicMeetingsCount = this.initializePublicMeetingsCount();
     this.privateMeetingsCount = this.initializePrivateMeetingsCount();
-    this.restrictedMeetingsCount = this.initializeRestrictedMeetingsCount();
     this.menuItems = this.initializeMenuItems();
     this.actionMenuItems = this.initializeActionMenuItems();
   }
@@ -85,6 +87,10 @@ export class MeetingDashboardComponent {
 
   public onVisibilityChange(value: string | null): void {
     this.visibilityFilter.set(value);
+  }
+
+  public onCommitteeChange(value: string | null): void {
+    this.committeeFilter.set(value);
   }
 
   public onMenuToggle(event: { event: Event; meeting: Meeting; menuComponent: MenuComponent }): void {
@@ -129,6 +135,7 @@ export class MeetingDashboardComponent {
     return new FormGroup({
       search: new FormControl<string>(''),
       visibility: new FormControl<string | null>(null),
+      committee: new FormControl<string | null>(null),
     });
   }
 
@@ -149,11 +156,34 @@ export class MeetingDashboardComponent {
 
   private initializeVisibilityOptions(): Signal<{ label: string; value: string | null }[]> {
     return signal([
-      { label: 'All Meetings', value: null },
+      { label: 'All Visibilities', value: null },
       { label: 'Public', value: 'public' },
       { label: 'Private', value: 'private' },
-      { label: 'Restricted', value: 'restricted' },
     ]);
+  }
+
+  private initializeCommitteeOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const meetings = this.meetings();
+      const committeeMap = new Map<string, string>();
+
+      // Extract unique committees from all meetings
+      meetings.forEach((meeting) => {
+        meeting.meeting_committees?.forEach((committee) => {
+          committeeMap.set(committee.id, committee.name);
+        });
+      });
+
+      // Convert to options array
+      const options: { label: string; value: string | null }[] = [{ label: 'All Committees', value: null }];
+      Array.from(committeeMap.entries())
+        .sort(([, a], [, b]) => a.localeCompare(b))
+        .forEach(([id, name]) => {
+          options.push({ label: name, value: id });
+        });
+
+      return options;
+    });
   }
 
   private initializeFilteredMeetings(): Signal<Meeting[]> {
@@ -167,7 +197,8 @@ export class MeetingDashboardComponent {
           (meeting) =>
             meeting.topic?.toLowerCase().includes(searchTerm) ||
             meeting.agenda?.toLowerCase().includes(searchTerm) ||
-            meeting.meeting_type?.toLowerCase().includes(searchTerm)
+            meeting.meeting_type?.toLowerCase().includes(searchTerm) ||
+            meeting.meeting_committees?.some((committee) => committee.name.toLowerCase().includes(searchTerm))
         );
       }
 
@@ -175,6 +206,12 @@ export class MeetingDashboardComponent {
       const visibility = this.visibilityFilter();
       if (visibility) {
         filtered = filtered.filter((meeting) => meeting.visibility === visibility);
+      }
+
+      // Apply committee filter
+      const committee = this.committeeFilter();
+      if (committee) {
+        filtered = filtered.filter((meeting) => meeting.meeting_committees?.some((c) => c.id === committee));
       }
 
       return filtered;
@@ -230,9 +267,5 @@ export class MeetingDashboardComponent {
 
   private initializePrivateMeetingsCount(): Signal<number> {
     return computed(() => this.meetings().filter((m) => m.visibility === 'private').length);
-  }
-
-  private initializeRestrictedMeetingsCount(): Signal<number> {
-    return computed(() => this.meetings().filter((m) => m.visibility === 'restricted').length);
   }
 }

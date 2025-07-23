@@ -527,7 +527,7 @@ export class SupabaseService {
 
   public async getMeetings(params?: Record<string, any>): Promise<Meeting[]> {
     const queryString = params ? new URLSearchParams(params).toString() : '';
-    const url = queryString ? `${this.baseUrl}/meetings?${queryString}` : `${this.baseUrl}/meetings`;
+    const url = queryString ? `${this.baseUrl}/meetings_with_committees?${queryString}` : `${this.baseUrl}/meetings_with_committees`;
 
     const response = await fetch(url, {
       method: 'GET',

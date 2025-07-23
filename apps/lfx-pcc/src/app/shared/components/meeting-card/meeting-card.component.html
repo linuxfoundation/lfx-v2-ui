@@ -102,6 +102,28 @@
       }
     </div>
 
+    <!-- Associated Committees -->
+    @if (meeting().meeting_committees && meeting().meeting_committees!.length > 0) {
+      <div class="flex items-start gap-2 mb-4">
+        <i class="fa-light fa-people-group text-gray-400 mt-0.5"></i>
+        <div class="flex flex-wrap gap-1">
+          <div class="text-sm text-gray-600">
+            @for (committee of meeting().meeting_committees!; track committee.id; let isLast = $last) {
+              <a
+                [routerLink]="['/project', project()?.slug, 'committees', committee.id]"
+                class="text-primary hover:text-primary-600 hover:underline"
+                [title]="committee.committee_total_members + ' members'">
+                {{ committee.name }}
+              </a>
+              @if (!isLast) {
+                <span>, </span>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Created Date -->
     <div class="mt-4 text-xs text-gray-500">Last Updated {{ meeting().created_at | date: 'MMM d, y' }}</div>
   </div>
