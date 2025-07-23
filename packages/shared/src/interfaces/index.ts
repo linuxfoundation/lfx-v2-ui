@@ -24,3 +24,6 @@ export * from './permissions.interface';
 
 // Meeting interfaces
 export * from './meeting.interface';
+
+// Calendar interfaces
+export * from './calendar.interface';
