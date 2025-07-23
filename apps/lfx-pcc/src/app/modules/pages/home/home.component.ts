@@ -19,6 +19,7 @@ import { debounceTime, distinctUntilChanged, startWith, switchMap, tap } from 'r
   styleUrl: './home.component.scss',
 })
 export class HomeComponent {
+  // 1. Injected services (readonly)
   private readonly projectService = inject(ProjectService);
 
   public form: FormGroup;
