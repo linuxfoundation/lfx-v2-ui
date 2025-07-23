@@ -1,133 +1,126 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow h-full">
-  <div class="p-6">
-    <!-- Header with visibility badge and action menu -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex gap-3">
-        <div class="flex items-center gap-3">
-          @switch (meeting().visibility) {
-            @case ('public') {
-              <lfx-badge value="Public" severity="success" icon="fa-light fa-globe"></lfx-badge>
-            }
-            @case ('private') {
-              <lfx-badge value="Private" severity="danger" icon="fa-light fa-lock"></lfx-badge>
-            }
-            @case ('restricted') {
-              <lfx-badge value="Restricted" severity="warn" icon="fa-light fa-shield"></lfx-badge>
-            }
-          }
-        </div>
-        <!-- Recurrence Info -->
-        @if (meeting().recurrence) {
-          <div class="flex items-center gap-2">
-            <i class="fa-light fa-repeat text-gray-400"></i>
-            <span class="text-sm text-gray-600">Recurring Meeting</span>
-          </div>
+<!-- Header with visibility badge and action menu -->
+<div class="flex items-center justify-between mb-4">
+  <div class="flex gap-3">
+    <div class="flex items-center gap-3">
+      @switch (meeting().visibility) {
+        @case ('public') {
+          <lfx-badge value="Public" severity="success" icon="fa-light fa-globe"></lfx-badge>
         }
-      </div>
-      <lfx-button
-        icon="fa-light fa-ellipsis-vertical"
-        [text]="true"
-        [rounded]="true"
-        size="small"
-        severity="secondary"
-        (click)="onMenuToggle($event, actionMenu)"></lfx-button>
-    </div>
-
-    <!-- Meeting Type -->
-    <div class="flex justify-between gap-4">
-      @if (meeting().topic) {
-        <h3 class="text-xl font-display font-semibold text-gray-900 mb-3">
-          {{ meeting().topic }}
-        </h3>
-      }
-      <!-- Meeting Time -->
-      @if (meeting().start_time) {
-        <div class="flex items-start gap-3 mb-4">
-          <div class="flex gap-2 items-center">
-            <div class="text-sm font-medium text-gray-900 flex items-center gap-2">
-              <i class="fa-light fa-calendar-days text-blue-400 text-lg"></i>
-              {{ meeting().start_time | meetingTime: meeting().duration : 'date' }}
-            </div>
-            <div class="text-sm text-gray-600 flex items-center gap-2">
-              &#64;
-              {{ meeting().start_time | meetingTime: meeting().duration : 'time' }}
-            </div>
-          </div>
-        </div>
+        @case ('private') {
+          <lfx-badge value="Private" severity="danger" icon="fa-light fa-lock"></lfx-badge>
+        }
+        @case ('restricted') {
+          <lfx-badge value="Restricted" severity="warn" icon="fa-light fa-shield"></lfx-badge>
+        }
       }
     </div>
-
-    @if (meeting().meeting_type) {
-      <div class="flex items-center gap-2 mb-4">
-        <lfx-badge [value]="meeting().meeting_type!" severity="secondary" icon="fa-light fa-calendar-days"></lfx-badge>
-      </div>
-    }
-
-    @if (meeting().agenda) {
-      <p class="text-base text-gray-600 pb-3">
-        {{ meeting().agenda }}
-      </p>
-    }
-
-    <!-- Meeting Settings -->
-    <div class="flex flex-wrap gap-3 mb-4">
+    <!-- Recurrence Info -->
+    @if (meeting().recurrence) {
       <div class="flex items-center gap-2">
-        <i [class]="meeting().recording_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
-        <span class="text-sm text-gray-600">Recording</span>
-      </div>
-      @if (meeting().recording_enabled) {
-        <div class="flex items-center gap-2">
-          <i [class]="meeting().youtube_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
-          <span class="text-sm text-gray-600">YouTube</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <i [class]="meeting().zoom_ai_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
-          <span class="text-sm text-gray-600">Zoom AI</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <i
-            [class]="meeting().transcripts_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'"
-            class="text-base"></i>
-          <span class="text-sm text-gray-600">Transcripts</span>
-        </div>
-        @if (meeting().recording_access) {
-          <div class="flex items-center gap-2">
-            <i class="fa-light fa-video text-gray-400"></i>
-            <span class="text-gray-600">{{ meeting().recording_access | titlecase }}</span>
-          </div>
-        }
-      }
-    </div>
-
-    <!-- Associated Committees -->
-    @if (meeting().meeting_committees && meeting().meeting_committees!.length > 0) {
-      <div class="flex items-start gap-2 mb-4">
-        <i class="fa-light fa-people-group text-gray-400 mt-0.5"></i>
-        <div class="flex flex-wrap gap-1">
-          <div class="text-sm text-gray-600">
-            @for (committee of meeting().meeting_committees!; track committee.id; let isLast = $last) {
-              <a
-                [routerLink]="['/project', project()?.slug, 'committees', committee.id]"
-                class="text-primary hover:text-primary-600 hover:underline"
-                [title]="committee.committee_total_members + ' members'">
-                {{ committee.name }}
-              </a>
-              @if (!isLast) {
-                <span>, </span>
-              }
-            }
-          </div>
-        </div>
+        <i class="fa-light fa-repeat text-gray-400"></i>
+        <span class="text-sm text-gray-600">Recurring Meeting</span>
       </div>
     }
-
-    <!-- Created Date -->
-    <div class="mt-4 text-xs text-gray-500">Last Updated {{ meeting().created_at | date: 'MMM d, y' }}</div>
   </div>
-
-  <!-- Action Menu -->
-  <lfx-menu #actionMenu [model]="actionMenuItems()" [popup]="true" appendTo="body"></lfx-menu>
+  <lfx-button
+    icon="fa-light fa-ellipsis-vertical"
+    [text]="true"
+    [rounded]="true"
+    size="small"
+    severity="secondary"
+    (click)="onMenuToggle($event, actionMenu)"></lfx-button>
 </div>
+
+<!-- Meeting Type -->
+<div class="flex justify-between gap-x-4 flex-wrap">
+  @if (meeting().topic) {
+    <h3 class="text-xl font-display font-semibold text-gray-900 mb-3">
+      {{ meeting().topic }}
+    </h3>
+  }
+  <!-- Meeting Time -->
+  @if (meeting().start_time) {
+    <div class="flex items-start gap-3 mb-4">
+      <div class="flex gap-2 items-center">
+        <div class="text-sm font-medium text-gray-900 flex items-center gap-2">
+          <i class="fa-light fa-calendar-days text-blue-400 text-lg"></i>
+          {{ meeting().start_time | meetingTime: meeting().duration : 'date' }}
+        </div>
+        <div class="text-sm text-gray-600 flex items-center gap-2">
+          &#64;
+          {{ meeting().start_time | meetingTime: meeting().duration : 'time' }}
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+@if (meeting().meeting_type) {
+  <div class="flex items-center gap-2 mb-4">
+    <lfx-badge [value]="meeting().meeting_type!" severity="secondary" icon="fa-light fa-calendar-days"></lfx-badge>
+  </div>
+}
+
+@if (meeting().agenda) {
+  <p class="text-base text-gray-600 pb-3">
+    {{ meeting().agenda }}
+  </p>
+}
+
+<!-- Meeting Settings -->
+<div class="flex flex-wrap gap-3 mb-4">
+  <div class="flex items-center gap-2">
+    <i [class]="meeting().recording_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
+    <span class="text-sm text-gray-600">Recording</span>
+  </div>
+  @if (meeting().recording_enabled) {
+    <div class="flex items-center gap-2">
+      <i [class]="meeting().youtube_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
+      <span class="text-sm text-gray-600">YouTube</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <i [class]="meeting().zoom_ai_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
+      <span class="text-sm text-gray-600">Zoom AI</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <i [class]="meeting().transcripts_enabled ? 'fa-light fa-check-circle text-green-500' : 'fa-light fa-times-circle text-gray-400'" class="text-base"></i>
+      <span class="text-sm text-gray-600">Transcripts</span>
+    </div>
+    @if (meeting().recording_access) {
+      <div class="flex items-center gap-2">
+        <i class="fa-light fa-video text-gray-400"></i>
+        <span class="text-gray-600">{{ meeting().recording_access | titlecase }}</span>
+      </div>
+    }
+  }
+</div>
+
+<!-- Associated Committees -->
+@if (meeting().meeting_committees && meeting().meeting_committees!.length > 0) {
+  <div class="flex items-start gap-2 mb-4">
+    <i class="fa-light fa-people-group text-gray-400 mt-0.5"></i>
+    <div class="flex flex-wrap gap-1">
+      <div class="text-sm text-gray-600">
+        @for (committee of meeting().meeting_committees!; track committee.id; let isLast = $last) {
+          <a
+            [routerLink]="['/project', project()?.slug, 'committees', committee.id]"
+            class="text-primary hover:text-primary-600 hover:underline"
+            [title]="committee.committee_total_members + ' members'">
+            {{ committee.name }}
+          </a>
+          @if (!isLast) {
+            <span>, </span>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Created Date -->
+<div class="mt-4 text-xs text-gray-500">Last Updated {{ meeting().created_at | date: 'MMM d, y' }}</div>
+<!-- Action Menu -->
+<lfx-menu #actionMenu [model]="actionMenuItems()" [popup]="true" appendTo="body"></lfx-menu>

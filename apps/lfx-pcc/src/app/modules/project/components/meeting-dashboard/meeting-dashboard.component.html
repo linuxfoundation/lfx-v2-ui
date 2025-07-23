@@ -17,7 +17,7 @@
         <div class="flex flex-col gap-6">
           <lfx-card header="Upcoming Meetings">
             <!-- Search and Filter Controls -->
-            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+            <div class="flex flex-col items-center sm:flex-row gap-4 mb-6">
               <!-- Search Input -->
               <div class="flex-1">
                 <lfx-input-text
@@ -31,7 +31,7 @@
 
               <!-- Visibility Filter Dropdown -->
               <div class="w-full sm:w-48">
-                <lfx-dropdown
+                <lfx-select
                   [form]="searchForm"
                   control="visibility"
                   size="small"
@@ -39,12 +39,12 @@
                   placeholder="Select Visibility"
                   [showClear]="true"
                   styleClass="w-full"
-                  (onChange)="onVisibilityChange($event.value)"></lfx-dropdown>
+                  (onChange)="onVisibilityChange($event.value)"></lfx-select>
               </div>
 
               <!-- Committee Filter Dropdown -->
               <div class="w-full sm:w-48">
-                <lfx-dropdown
+                <lfx-select
                   [form]="searchForm"
                   control="committee"
                   size="small"
@@ -52,24 +52,54 @@
                   placeholder="Select Committee"
                   [showClear]="true"
                   styleClass="w-full"
-                  (onChange)="onCommitteeChange($event.value)"></lfx-dropdown>
+                  (onChange)="onCommitteeChange($event.value)"></lfx-select>
               </div>
+
+              <!-- View Switcher -->
+              <lfx-select-button
+                size="small"
+                [form]="viewForm"
+                control="view"
+                [options]="viewOptions"
+                [unselectable]="false"
+                (onChange)="onViewChange($event.value)"></lfx-select-button>
             </div>
           </lfx-card>
           @if (meetings().length > 0) {
-            <!-- Meetings Card Grid -->
-            <div class="grid grid-cols-1 gap-4">
-              @for (meeting of filteredMeetings(); track meeting.id) {
-                <lfx-meeting-card
-                  [meeting]="meeting"
-                  [actionMenuItems]="actionMenuItems"
-                  (menuToggle)="onMenuToggle($event)"
+            <!-- List View -->
+            @if (currentView() === 'list') {
+              <!-- Meetings Card Grid -->
+              <div class="grid grid-cols-1 gap-4">
+                @for (meeting of filteredMeetings(); track meeting.id) {
+                  <div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow h-full">
+                    <div class="p-6">
+                      <lfx-meeting-card
+                        [meeting]="meeting"
+                        [actionMenuItems]="actionMenuItems"
+                        (menuToggle)="onMenuToggle($event)"
+                        pAnimateOnScroll
+                        class="animate-delay-2000"
+                        enterClass="animate-enter fade-in-10 slide-in-from-b-8 animate-duration-1000"
+                        leaveClass="animate-leave fade-out-0"></lfx-meeting-card>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Calendar View -->
+            @if (currentView() === 'calendar') {
+              <div class="bg-white rounded-lg p-6">
+                <lfx-fullcalendar
+                  [events]="calendarEvents()"
+                  [height]="600"
+                  (eventClick)="onCalendarEventClick($event)"
                   pAnimateOnScroll
                   class="animate-delay-2000"
                   enterClass="animate-enter fade-in-10 slide-in-from-b-8 animate-duration-1000"
-                  leaveClass="animate-leave fade-out-0"></lfx-meeting-card>
-              }
-            </div>
+                  leaveClass="animate-leave fade-out-0"></lfx-fullcalendar>
+              </div>
+            }
 
             <!-- Empty filtered results message -->
             @if (filteredMeetings().length === 0 && meetings().length > 0) {

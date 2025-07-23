@@ -9,7 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { CardComponent } from '@app/shared/components/card/card.component';
 import { CommitteeFormComponent } from '@app/shared/components/committee-form/committee-form.component';
-import { DropdownComponent } from '@app/shared/components/dropdown/dropdown.component';
+import { SelectComponent } from '@app/shared/components/select/select.component';
 import { InputTextComponent } from '@app/shared/components/input-text/input-text.component';
 import { MenuComponent } from '@app/shared/components/menu/menu.component';
 import { TableComponent } from '@app/shared/components/table/table.component';
@@ -34,7 +34,7 @@ import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operato
     MenuComponent,
     TableComponent,
     InputTextComponent,
-    DropdownComponent,
+    SelectComponent,
     ButtonComponent,
     ConfirmDialogModule,
     DynamicDialogModule,

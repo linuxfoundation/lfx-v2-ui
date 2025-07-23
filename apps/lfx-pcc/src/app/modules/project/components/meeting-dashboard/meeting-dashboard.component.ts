@@ -7,16 +7,20 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { CardComponent } from '@app/shared/components/card/card.component';
-import { DropdownComponent } from '@app/shared/components/dropdown/dropdown.component';
+import { FullcalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
 import { InputTextComponent } from '@app/shared/components/input-text/input-text.component';
 import { MeetingCardComponent } from '@app/shared/components/meeting-card/meeting-card.component';
+import { MeetingModalComponent } from '@app/shared/components/meeting-modal/meeting-modal.component';
 import { MenuComponent } from '@app/shared/components/menu/menu.component';
+import { SelectButtonComponent } from '@app/shared/components/select-button/select-button.component';
+import { SelectComponent } from '@app/shared/components/select/select.component';
 import { MeetingService } from '@app/shared/services/meeting.service';
 import { ProjectService } from '@app/shared/services/project.service';
-import { Meeting } from '@lfx-pcc/shared/interfaces';
+import { CalendarEvent, Meeting } from '@lfx-pcc/shared/interfaces';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogService } from 'primeng/dynamicdialog';
 import { of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operators';
 
@@ -29,7 +33,9 @@ import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operato
     MenuComponent,
     MeetingCardComponent,
     InputTextComponent,
-    DropdownComponent,
+    SelectComponent,
+    SelectButtonComponent,
+    FullcalendarComponent,
     ButtonComponent,
     ConfirmDialogModule,
     AnimateOnScrollModule,
@@ -42,6 +48,7 @@ export class MeetingDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly meetingService = inject(MeetingService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
 
   // Class variables with types
   public project: typeof this.projectService.project;
@@ -60,6 +67,10 @@ export class MeetingDashboardComponent {
   public privateMeetingsCount: Signal<number>;
   public menuItems: MenuItem[];
   public actionMenuItems: MenuItem[];
+  public currentView: WritableSignal<'list' | 'calendar'>;
+  public viewOptions: { label: string; value: 'list' | 'calendar' }[];
+  public viewForm: FormGroup;
+  public calendarEvents: Signal<CalendarEvent[]>;
 
   public constructor() {
     // Initialize all class variables
@@ -79,6 +90,10 @@ export class MeetingDashboardComponent {
     this.privateMeetingsCount = this.initializePrivateMeetingsCount();
     this.menuItems = this.initializeMenuItems();
     this.actionMenuItems = this.initializeActionMenuItems();
+    this.currentView = signal<'list' | 'calendar'>('list');
+    this.viewOptions = this.initializeViewOptions();
+    this.viewForm = this.initializeViewForm();
+    this.calendarEvents = this.initializeCalendarEvents();
   }
 
   public scheduleNewMeeting(): void {
@@ -96,6 +111,35 @@ export class MeetingDashboardComponent {
   public onMenuToggle(event: { event: Event; meeting: Meeting; menuComponent: MenuComponent }): void {
     this.selectedMeeting.set(event.meeting);
     event.menuComponent.toggle(event.event);
+  }
+
+  public onViewChange(value: 'list' | 'calendar'): void {
+    this.currentView.set(value);
+  }
+
+  public onCalendarEventClick(eventInfo: any): void {
+    const meetingId = eventInfo.event.extendedProps?.meetingId;
+    if (meetingId) {
+      const meeting = this.meetings().find((m) => m.id === meetingId);
+      if (meeting) {
+        this.selectedMeeting.set(meeting);
+        this.openMeetingModal(meeting);
+      }
+    }
+  }
+
+  private openMeetingModal(meeting: Meeting): void {
+    this.dialogService.open(MeetingModalComponent, {
+      header: meeting.topic || 'Meeting Details',
+      width: '600px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        meeting: meeting,
+        actionMenuItems: this.actionMenuItems,
+      },
+    });
   }
 
   // Action handlers
@@ -267,5 +311,62 @@ export class MeetingDashboardComponent {
 
   private initializePrivateMeetingsCount(): Signal<number> {
     return computed(() => this.meetings().filter((m) => m.visibility === 'private').length);
+  }
+
+  private initializeViewOptions(): { label: string; value: 'list' | 'calendar' }[] {
+    return [
+      { label: 'List', value: 'list' },
+      { label: 'Calendar', value: 'calendar' },
+    ];
+  }
+
+  private initializeViewForm(): FormGroup {
+    return new FormGroup({
+      view: new FormControl<'list' | 'calendar'>('list'),
+    });
+  }
+
+  private initializeCalendarEvents(): Signal<CalendarEvent[]> {
+    return computed(() => {
+      return this.filteredMeetings().map((meeting): CalendarEvent => {
+        const startTime = meeting.start_time ? new Date(meeting.start_time) : new Date();
+        const endTime = meeting.end_time ? new Date(meeting.end_time) : new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour duration
+
+        // Color coding based on visibility and committee
+        let backgroundColor = '#6b7280'; // Default gray for private
+        let borderColor = '#374151';
+
+        if (meeting.visibility === 'public') {
+          backgroundColor = '#3b82f6'; // Blue for public
+          borderColor = '#1d4ed8';
+        } else if (meeting.visibility === 'restricted') {
+          backgroundColor = '#f59e0b'; // Amber for restricted
+          borderColor = '#d97706';
+        }
+
+        // Create a more informative title
+        const committeeName = meeting.meeting_committees?.[0]?.name;
+        const displayTitle = committeeName ? `${meeting.topic || 'Meeting'} (${committeeName})` : meeting.topic || 'Meeting';
+
+        return {
+          id: meeting.id,
+          title: displayTitle,
+          start: startTime.toISOString(),
+          end: endTime.toISOString(),
+          backgroundColor,
+          borderColor,
+          textColor: '#ffffff',
+          classNames: ['meeting-event'],
+          extendedProps: {
+            meetingId: meeting.id,
+            visibility: meeting.visibility || 'private',
+            committee: meeting.meeting_committees?.[0]?.name,
+            meetingType: meeting.meeting_type,
+            agenda: meeting.agenda,
+            topic: meeting.topic,
+          },
+        };
+      });
+    });
   }
 }

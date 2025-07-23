@@ -6,12 +6,12 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 
 @Component({
-  selector: 'lfx-dropdown',
+  selector: 'lfx-select',
   standalone: true,
   imports: [SelectModule, ReactiveFormsModule],
-  templateUrl: './dropdown.component.html',
+  templateUrl: './select.component.html',
 })
-export class DropdownComponent {
+export class SelectComponent {
   public form = input.required<FormGroup>();
   public control = input.required<string>();
 

@@ -30,7 +30,7 @@
 
             <!-- Category Filter Dropdown -->
             <div class="w-full sm:w-64">
-              <lfx-dropdown
+              <lfx-select
                 [form]="searchForm"
                 control="category"
                 size="small"
@@ -38,7 +38,7 @@
                 placeholder="Select Category"
                 [showClear]="true"
                 styleClass="w-full"
-                (onChange)="onCategoryChange($event.value)"></lfx-dropdown>
+                (onChange)="onCategoryChange($event.value)"></lfx-select>
             </div>
           </div>
 
