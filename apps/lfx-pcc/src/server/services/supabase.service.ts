@@ -1,7 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, Meeting, ObjectPermission, UserPermissions } from '@lfx-pcc/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CreateCommitteeMemberRequest,
+  Meeting,
+  MeetingParticipant,
+  ObjectPermission,
+  UserPermissions,
+} from '@lfx-pcc/shared/interfaces';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -580,6 +588,27 @@ export class SupabaseService {
     }
 
     return 0;
+  }
+
+  public async getMeetingParticipants(meetingId: string): Promise<MeetingParticipant[]> {
+    const params = {
+      meeting_id: `eq.${meetingId}`,
+    };
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/meeting_participants?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch meeting participants: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
   }
 
   private getHeaders(): Record<string, string> {

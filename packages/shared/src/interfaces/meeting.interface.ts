@@ -13,6 +13,20 @@ export interface MeetingCommittee {
   committee_total_members: number;
 }
 
+export interface MeetingParticipant {
+  id: string;
+  meeting_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  organization: string | null;
+  is_host: boolean;
+  job_title: string | null;
+  created_at: string;
+  updated_at: string;
+  type: 'individual' | 'committee';
+}
+
 export interface Meeting {
   id: string;
   created_at: string;
@@ -33,4 +47,7 @@ export interface Meeting {
   duration: number | null;
   status: string | null;
   meeting_committees: MeetingCommittee[] | null;
+  individual_participants_count: number;
+  committee_members_count: number;
+  committees: string[];
 }

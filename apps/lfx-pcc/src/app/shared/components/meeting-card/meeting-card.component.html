@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <!-- Header with visibility badge and action menu -->
-<div class="flex items-center justify-between mb-4">
+<div class="flex items-center justify-between mb-4 transition-all duration-300">
   <div class="flex gap-3">
     <div class="flex items-center gap-3">
       @switch (meeting().visibility) {
@@ -33,6 +33,8 @@
     severity="secondary"
     (click)="onMenuToggle($event, actionMenu)"></lfx-button>
 </div>
+<!-- Action Menu -->
+<lfx-menu #actionMenu [model]="actionMenuItems()" [popup]="true" appendTo="body"></lfx-menu>
 
 <!-- Meeting Type -->
 <div class="flex justify-between gap-x-4 flex-wrap">
@@ -120,7 +122,49 @@
   </div>
 }
 
-<!-- Created Date -->
-<div class="mt-4 text-xs text-gray-500">Last Updated {{ meeting().created_at | date: 'MMM d, y' }}</div>
-<!-- Action Menu -->
-<lfx-menu #actionMenu [model]="actionMenuItems()" [popup]="true" appendTo="body"></lfx-menu>
+<div class="flex justify-between items-end gap-x-4">
+  <!-- Meeting Participants Expander -->
+  <div class="flex-1">
+    <lfx-button
+      icon="fa-light fa-users"
+      size="small"
+      severity="secondary"
+      class="w-full"
+      [label]="meetingParticipantCount() + ' Participants'"
+      class="cursor-pointer"
+      (click)="onParticipantsToggle($event)">
+    </lfx-button>
+  </div>
+
+  <!-- Created Date -->
+  <div class="mt-4 text-xs text-gray-500">Last Updated {{ meeting().created_at | date: 'MMM d, y' }}</div>
+</div>
+
+<!-- Meeting Participants -->
+@if (showParticipants()) {
+  <div class="border-b border-gray-200 pt-4 w-full"></div>
+  @if (participantsLoading()) {
+    <div class="flex items-center justify-center mt-4">
+      <i class="fa-light fa-circle-notch fa-spin text-3xl text-blue-600 mb-4"></i>
+    </div>
+  }
+
+  <div class="grid grid-cols-3 gap-2 mt-4">
+    @for (participant of participants(); track participant.id) {
+      <div class="flex items-center gap-2">
+        <lfx-avatar [label]="participant.first_name" styleClass="bg-blue-50 border border-gray-200" shape="circle"></lfx-avatar>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1 text-xs">
+            @if (participant.type === 'committee') {
+              <i class="flex items-center fa-light fa-people-group text-green-500" pTooltip="Committee"></i>
+            } @else {
+              <i class="flex items-center fa-light fa-user text-blue-500" pTooltip="Individual"></i>
+            }
+            <span class="text-sm text-gray-600">{{ participant.first_name }} {{ participant.last_name }}</span>
+          </div>
+          <span class="text-xs text-gray-500">{{ participant.email }}</span>
+        </div>
+      </div>
+    }
+  </div>
+}

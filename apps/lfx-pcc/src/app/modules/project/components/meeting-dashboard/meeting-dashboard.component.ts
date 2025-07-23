@@ -131,7 +131,7 @@ export class MeetingDashboardComponent {
   private openMeetingModal(meeting: Meeting): void {
     this.dialogService.open(MeetingModalComponent, {
       header: meeting.topic || 'Meeting Details',
-      width: '600px',
+      width: '700px',
       modal: true,
       closable: true,
       dismissableMask: true,

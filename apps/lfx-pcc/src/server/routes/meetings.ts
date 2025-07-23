@@ -20,4 +20,24 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+router.get('/:id/participants', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const meetingId = req.params['id'];
+
+    if (!meetingId) {
+      return res.status(400).json({
+        error: 'Meeting ID is required',
+        code: 'MISSING_MEETING_ID',
+      });
+    }
+
+    const participants = await supabaseService.getMeetingParticipants(meetingId);
+
+    return res.json(participants);
+  } catch (error) {
+    console.error(`Failed to fetch participants for meeting ${req.params['id']}:`, error);
+    return next(error);
+  }
+});
+
 export default router;

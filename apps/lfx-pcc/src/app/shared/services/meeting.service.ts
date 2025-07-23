@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Meeting } from '@lfx-pcc/shared/interfaces';
+import { Meeting, MeetingParticipant } from '@lfx-pcc/shared/interfaces';
 import { catchError, Observable, of, tap } from 'rxjs';
 
 @Injectable({
@@ -59,6 +59,15 @@ export class MeetingService {
         return of(error);
       }),
       tap((meeting) => this.meeting.set(meeting))
+    );
+  }
+
+  public getMeetingParticipants(meetingId: string): Observable<MeetingParticipant[]> {
+    return this.http.get<MeetingParticipant[]>(`/api/meetings/${meetingId}/participants`).pipe(
+      catchError((error) => {
+        console.error(`Failed to load participants for meeting ${meetingId}:`, error);
+        return of([]);
+      })
     );
   }
 }

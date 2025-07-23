@@ -62,6 +62,7 @@
                 control="view"
                 [options]="viewOptions"
                 [unselectable]="false"
+                [required]="true"
                 (onChange)="onViewChange($event.value)"></lfx-select-button>
             </div>
           </lfx-card>
@@ -126,28 +127,30 @@
           }
         </div>
       </div>
-      <div class="lg:col-span-1 items-stretch flex flex-col gap-6">
-        <lfx-card header="Quick Actions">
-          <lfx-menu [model]="menuItems" styleClass="border-none"></lfx-menu>
-        </lfx-card>
-
-        <div class="flex flex-col gap-4">
-          <lfx-card header="Meeting Statistics" styleClass="h-full" class="h-full">
-            <div class="flex flex-col gap-3">
-              <div class="flex justify-between items-center">
-                <span class="text-sm font-sans text-gray-600">Total Meetings</span>
-                <span class="text-base font-display font-semibold text-gray-900">{{ meetings().length }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm font-sans text-gray-600">Public</span>
-                <span class="text-base font-display font-semibold text-gray-900">{{ publicMeetingsCount() }}</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm font-sans text-gray-600">Private</span>
-                <span class="text-base font-display font-semibold text-gray-900">{{ privateMeetingsCount() }}</span>
-              </div>
-            </div>
+      <div class="lg:col-span-1 flex flex-col">
+        <div class="sticky top-24">
+          <lfx-card header="Quick Actions">
+            <lfx-menu [model]="menuItems" styleClass="border-none"></lfx-menu>
           </lfx-card>
+
+          <div class="flex flex-col gap-4 mt-6">
+            <lfx-card header="Meeting Statistics" styleClass="h-full" class="h-full">
+              <div class="flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-sans text-gray-600">Total Meetings</span>
+                  <span class="text-base font-display font-semibold text-gray-900">{{ meetings().length }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-sans text-gray-600">Public</span>
+                  <span class="text-base font-display font-semibold text-gray-900">{{ publicMeetingsCount() }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-sans text-gray-600">Private</span>
+                  <span class="text-base font-display font-semibold text-gray-900">{{ privateMeetingsCount() }}</span>
+                </div>
+              </div>
+            </lfx-card>
+          </div>
         </div>
       </div>
     </div>
