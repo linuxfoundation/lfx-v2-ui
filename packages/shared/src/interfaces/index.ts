@@ -27,3 +27,6 @@ export * from './meeting.interface';
 
 // Calendar interfaces
 export * from './calendar.interface';
+
+// Search interfaces
+export * from './search.interface';

@@ -28,8 +28,8 @@
           leaveClass="animate-leave fade-out-0">
           <lfx-project-card
             [name]="project.name"
-            [description]="project.description"
-            [logo]="project.logo"
+            [description]="project.description ?? ''"
+            [logo]="project.logo ?? ''"
             [url]="project.slug"
             [metrics]="project.metrics"></lfx-project-card>
         </div>

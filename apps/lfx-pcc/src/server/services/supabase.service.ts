@@ -8,6 +8,7 @@ import {
   Meeting,
   MeetingParticipant,
   ObjectPermission,
+  ProjectSearchResult,
   UserPermissions,
 } from '@lfx-pcc/shared/interfaces';
 import dotenv from 'dotenv';
@@ -609,6 +610,76 @@ export class SupabaseService {
 
     const data = await response.json();
     return data;
+  }
+
+  public async searchProjects(query: string): Promise<ProjectSearchResult[]> {
+    let url: string;
+
+    // If query is provided, search across all content: projects, committees, and meetings
+    if (query && query.trim()) {
+      const trimmedQuery = query.trim();
+      const searchParam = encodeURIComponent(trimmedQuery);
+
+      // Search across project fields AND committee names AND meeting topics
+      // For arrays in PostgREST, use the 'contains' operator (@>) or overlap operator (&&)
+      url =
+        `${this.baseUrl}/project_search?or=(project_name.ilike.*${searchParam}*,project_slug.ilike.*${searchParam}*,` +
+        `project_description.ilike.*${searchParam}*,committee_names.ov.{"${trimmedQuery}"},meeting_topics.ov.{"${trimmedQuery}"})` +
+        `&order=project_name&limit=20`;
+    } else {
+      // No search query, just return all from the view
+      url = `${this.baseUrl}/project_search?limit=20&order=project_name`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      // If the view doesn't exist, fallback to regular projects search
+      if (response.status === 404) {
+        return this.fallbackProjectSearch(query);
+      }
+
+      throw new Error(`Failed to search projects: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  private async fallbackProjectSearch(query: string): Promise<ProjectSearchResult[]> {
+    let url = `${this.baseUrl}/projects?limit=10&order=name`;
+
+    if (query && query.trim()) {
+      const trimmedQuery = query.trim();
+      url = `${this.baseUrl}/projects?name=ilike.*${encodeURIComponent(trimmedQuery)}*&limit=10&order=name`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to search projects (fallback): ${response.status} ${response.statusText}`);
+    }
+
+    const projects = await response.json();
+
+    // Transform regular projects to search result format
+    return projects.map((project: any) => ({
+      project_id: project.id,
+      project_name: project.name,
+      project_slug: project.slug,
+      project_description: project.description,
+      status: project.status,
+      logo: project.logo,
+      meetings_count: project.meetings_count || 0,
+      mailing_list_count: project.mailing_list_count || 0,
+    }));
   }
 
   private getHeaders(): Record<string, string> {

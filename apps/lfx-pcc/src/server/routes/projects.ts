@@ -20,6 +20,25 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({
+        error: 'Search query is required',
+        code: 'MISSING_SEARCH_QUERY',
+      });
+    }
+
+    const results = await supabaseService.searchProjects(q);
+    return res.json(results);
+  } catch (error) {
+    console.error('Failed to search projects:', error);
+    return next(error);
+  }
+});
+
 router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const projectSlug = req.params['slug'];
