@@ -55,7 +55,7 @@ export class ProjectService {
       logo: result.logo,
       meetings_count: result.meetings_count || 0,
       mailing_list_count: result.mailing_list_count || 0,
-      committees_count: 0, // This would need to be calculated from committee_names array or added to view
+      committees_count: result.committee_names?.length || 0,
     }));
   }
 }

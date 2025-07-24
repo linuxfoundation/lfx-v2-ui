@@ -47,7 +47,10 @@ export class SupabaseService {
     // Get committee and meeting counts for each project and add them to the project
     const projectsWithCounts = await Promise.all(
       projects.map(async (project: any) => {
-        const [committeeCount, meetingCount] = await Promise.all([this.getCommitteeCountByProjectId(project.id), this.getMeetingCountByProjectId(project.id)]);
+        const [committeeCount, meetingCount] = await Promise.all([
+          this.getCommitteeCountByProjectId(project.id).catch(() => 0),
+          this.getMeetingCountByProjectId(project.id).catch(() => 0),
+        ]);
         return {
           ...project,
           committees_count: committeeCount,

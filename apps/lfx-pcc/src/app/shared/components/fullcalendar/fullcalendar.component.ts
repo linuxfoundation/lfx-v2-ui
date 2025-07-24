@@ -5,6 +5,7 @@ import { Component, input, output } from '@angular/core';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarOptions, EventClickArg, EventInput } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
 
 @Component({
   selector: 'lfx-fullcalendar',
@@ -26,13 +27,13 @@ export class FullcalendarComponent {
   protected get calendarOptions(): CalendarOptions {
     return {
       initialView: this.initialView(),
-      plugins: [dayGridPlugin],
+      plugins: [dayGridPlugin, timeGridPlugin],
       events: this.events(),
       height: this.height(),
       headerToolbar: {
         left: 'prev,next today',
-        center: '',
-        right: 'title',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek',
       },
       buttonText: {
         today: 'Today',
@@ -53,6 +54,8 @@ export class FullcalendarComponent {
       },
       displayEventTime: true,
       eventOrder: 'start',
+      nowIndicator: true,
+      scrollTime: new Date().getHours() + ':00:00',
     };
   }
 

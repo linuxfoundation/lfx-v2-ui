@@ -10,10 +10,8 @@ export interface ProjectSearchResult {
   logo: string;
   meetings_count: number;
   mailing_list_count: number;
-  project_search_vector?: any;
   committee_names?: string[];
   meeting_topics?: string[];
-  combined_search_vector?: any;
 }
 
 export interface ProjectSearchParams {

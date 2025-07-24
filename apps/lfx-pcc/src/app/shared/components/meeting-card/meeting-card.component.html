@@ -130,7 +130,7 @@
       size="small"
       severity="secondary"
       class="w-full"
-      [label]="meetingParticipantCount() + ' Participants'"
+      [label]="participantsLabel()"
       class="cursor-pointer"
       (click)="onParticipantsToggle($event)">
     </lfx-button>
@@ -149,22 +149,30 @@
     </div>
   }
 
-  <div class="grid grid-cols-3 gap-2 mt-4">
-    @for (participant of participants(); track participant.id) {
-      <div class="flex items-center gap-2">
-        <lfx-avatar [label]="participant.first_name" styleClass="bg-blue-50 border border-gray-200" shape="circle"></lfx-avatar>
-        <div class="flex flex-col">
-          <div class="flex items-center gap-1 text-xs">
-            @if (participant.type === 'committee') {
-              <i class="flex items-center fa-light fa-people-group text-green-500" pTooltip="Committee"></i>
-            } @else {
-              <i class="flex items-center fa-light fa-user text-blue-500" pTooltip="Individual"></i>
-            }
-            <span class="text-sm text-gray-600">{{ participant.first_name }} {{ participant.last_name }}</span>
+  @if (!participantsLoading()) {
+    <div class="grid grid-cols-3 gap-2 mt-4">
+      @for (participant of participants(); track participant.id) {
+        <div
+          pAnimateOnScroll
+          class="animate-delay-2000"
+          enterClass="animate-enter fade-in-10 slide-in-from-b-8 animate-duration-1000"
+          leaveClass="animate-leave fade-out-0">
+          <div class="flex items-center gap-2">
+            <lfx-avatar [label]="participant.first_name" styleClass="bg-blue-50 border border-gray-200" shape="circle"></lfx-avatar>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1 text-xs">
+                @if (participant.type === 'committee') {
+                  <i class="flex items-center fa-light fa-people-group text-green-500" pTooltip="Committee"></i>
+                } @else {
+                  <i class="flex items-center fa-light fa-user text-blue-500" pTooltip="Individual"></i>
+                }
+                <span class="text-sm text-gray-600">{{ participant.first_name }} {{ participant.last_name }}</span>
+              </div>
+              <span class="text-xs text-gray-500">{{ participant.email }}</span>
+            </div>
           </div>
-          <span class="text-xs text-gray-500">{{ participant.email }}</span>
         </div>
-      </div>
-    }
-  </div>
+      }
+    </div>
+  }
 }

@@ -16,6 +16,10 @@
         @apply text-black font-sans font-semibold text-sm uppercase tracking-wider;
       }
 
+      .fc-dayGridMonth-button {
+        @apply mr-2;
+      }
+
       // Header toolbar styling
       .fc-toolbar {
         @apply mb-6;

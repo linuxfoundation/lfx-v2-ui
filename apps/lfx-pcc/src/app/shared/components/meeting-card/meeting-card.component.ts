@@ -13,6 +13,7 @@ import { CommitteeService } from '@app/shared/services/committee.service';
 import { MeetingService } from '@app/shared/services/meeting.service';
 import { ProjectService } from '@app/shared/services/project.service';
 import { Meeting, MeetingParticipant } from '@lfx-pcc/shared/interfaces';
+import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { MenuItem } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { catchError, combineLatest, finalize, map, of } from 'rxjs';
@@ -22,7 +23,18 @@ import { AvatarComponent } from '../avatar/avatar.component';
 @Component({
   selector: 'lfx-meeting-card',
   standalone: true,
-  imports: [CommonModule, RouterLink, ButtonComponent, MenuComponent, BadgeComponent, TitleCasePipe, MeetingTimePipe, AvatarComponent, TooltipModule],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ButtonComponent,
+    MenuComponent,
+    BadgeComponent,
+    TitleCasePipe,
+    MeetingTimePipe,
+    AvatarComponent,
+    TooltipModule,
+    AnimateOnScrollModule,
+  ],
   templateUrl: './meeting-card.component.html',
   styleUrl: './meeting-card.component.scss',
 })
@@ -38,6 +50,7 @@ export class MeetingCardComponent {
   public showParticipants: WritableSignal<boolean> = signal(false);
   public participantsLoading: WritableSignal<boolean> = signal(true);
   public participants!: Signal<MeetingParticipant[]>;
+  public participantsLabel: Signal<string> = this.initParticipantsLabel();
 
   public readonly menuToggle = output<{ event: Event; meeting: Meeting; menuComponent: MenuComponent }>();
   public readonly project = this.projectService.project;
@@ -49,6 +62,11 @@ export class MeetingCardComponent {
 
   public onParticipantsToggle(event: Event): void {
     event.stopPropagation();
+    if (this.meetingParticipantCount() === 0) {
+      // TODO: Add a modal to add participants
+      return;
+    }
+
     this.participantsLoading.set(true);
     if (!this.showParticipants()) {
       const queries = combineLatest([
@@ -90,5 +108,19 @@ export class MeetingCardComponent {
 
   private initMeetingParticipantCount(): Signal<number> {
     return computed(() => this.meeting().individual_participants_count + this.meeting().committee_members_count);
+  }
+
+  private initParticipantsLabel(): Signal<string> {
+    return computed(() => {
+      if (this.meetingParticipantCount() === 0) {
+        return 'Add Guests';
+      }
+
+      if (this.meetingParticipantCount() === 1) {
+        return '1 Guest';
+      }
+
+      return this.meetingParticipantCount() + ' Guests';
+    });
   }
 }
