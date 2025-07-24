@@ -46,6 +46,7 @@ export class MeetingCardComponent {
 
   public readonly meeting = input.required<Meeting>();
   public readonly actionMenuItems = input.required<MenuItem[]>();
+  public readonly pastMeeting = input<boolean>(false);
   public readonly meetingParticipantCount: Signal<number> = this.initMeetingParticipantCount();
   public showParticipants: WritableSignal<boolean> = signal(false);
   public participantsLoading: WritableSignal<boolean> = signal(true);
@@ -88,11 +89,14 @@ export class MeetingCardComponent {
                   organization: m.organization,
                   is_host: false,
                   type: 'committee',
+                  invite_accepted: true,
+                  attended: true,
                 }));
               }),
           ];
         }),
-        map((participants) => participants as MeetingParticipant[]),
+        // Sort participants by first name
+        map((participants) => participants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingParticipant[]),
         finalize(() => this.participantsLoading.set(false))
       );
 

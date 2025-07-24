@@ -52,6 +52,17 @@ export class MeetingService {
     return this.getMeetings(params);
   }
 
+  public getPastMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
+    const now = new Date().toISOString();
+    let params = new HttpParams().set('project_id', `eq.${projectId}`).set('start_time', `lt.${now}`).set('order', 'start_time.desc');
+
+    if (limit) {
+      params = params.set('limit', limit.toString());
+    }
+
+    return this.getMeetings(params);
+  }
+
   public getMeeting(id: string): Observable<Meeting> {
     return this.http.get<Meeting>(`/api/meetings/${id}`).pipe(
       catchError((error) => {

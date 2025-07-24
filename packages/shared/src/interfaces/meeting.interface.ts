@@ -25,6 +25,8 @@ export interface MeetingParticipant {
   created_at: string;
   updated_at: string;
   type: 'individual' | 'committee';
+  invite_accepted: boolean | null;
+  attended: boolean | null;
 }
 
 export interface Meeting {

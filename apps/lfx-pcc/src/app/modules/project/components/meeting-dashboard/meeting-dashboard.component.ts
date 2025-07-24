@@ -7,7 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { CardComponent } from '@app/shared/components/card/card.component';
-import { FullcalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
+import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
 import { InputTextComponent } from '@app/shared/components/input-text/input-text.component';
 import { MeetingCardComponent } from '@app/shared/components/meeting-card/meeting-card.component';
 import { MeetingModalComponent } from '@app/shared/components/meeting-modal/meeting-modal.component';
@@ -35,7 +35,7 @@ import { debounceTime, distinctUntilChanged, startWith, tap } from 'rxjs/operato
     InputTextComponent,
     SelectComponent,
     SelectButtonComponent,
-    FullcalendarComponent,
+    FullCalendarComponent,
     ButtonComponent,
     ConfirmDialogModule,
     AnimateOnScrollModule,
@@ -57,9 +57,11 @@ export class MeetingDashboardComponent {
   public searchForm: FormGroup;
   public visibilityFilter: WritableSignal<string | null>;
   public committeeFilter: WritableSignal<string | null>;
-  private searchTerm: Signal<string>;
   public meetingsLoading: WritableSignal<boolean>;
   public meetings: Signal<Meeting[]>;
+  public pastMeetingsLoading: WritableSignal<boolean>;
+  public pastMeetings: Signal<Meeting[]>;
+  public meetingListView: WritableSignal<'upcoming' | 'past'>;
   public visibilityOptions: Signal<{ label: string; value: string | null }[]>;
   public committeeOptions: Signal<{ label: string; value: string | null }[]>;
   public filteredMeetings: Signal<Meeting[]>;
@@ -71,6 +73,7 @@ export class MeetingDashboardComponent {
   public viewOptions: { label: string; value: 'list' | 'calendar' }[];
   public viewForm: FormGroup;
   public calendarEvents: Signal<CalendarEvent[]>;
+  private searchTerm: Signal<string>;
 
   public constructor() {
     // Initialize all class variables
@@ -78,8 +81,11 @@ export class MeetingDashboardComponent {
     this.selectedMeeting = signal<Meeting | null>(null);
     this.isDeleting = signal<boolean>(false);
     this.meetingsLoading = signal<boolean>(true);
+    this.pastMeetingsLoading = signal<boolean>(true);
     this.meetings = this.initializeMeetings();
+    this.pastMeetings = this.initializePastMeetings();
     this.searchForm = this.initializeSearchForm();
+    this.meetingListView = signal<'upcoming' | 'past'>('upcoming');
     this.visibilityFilter = signal<string | null>(null);
     this.committeeFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
@@ -111,6 +117,12 @@ export class MeetingDashboardComponent {
   public onMenuToggle(event: { event: Event; meeting: Meeting; menuComponent: MenuComponent }): void {
     this.selectedMeeting.set(event.meeting);
     event.menuComponent.toggle(event.event);
+  }
+
+  public onMeetingListViewChange(value: 'upcoming' | 'past'): void {
+    this.meetingListView.set(value);
+    this.filteredMeetings = this.initializeFilteredMeetings();
+    this.menuItems = this.initializeMenuItems();
   }
 
   public onViewChange(value: 'list' | 'calendar'): void {
@@ -189,9 +201,16 @@ export class MeetingDashboardComponent {
 
   private initializeMeetings(): Signal<Meeting[]> {
     return toSignal(
-      this.project()
-        ? this.meetingService.getMeetingsByProject(this.project()!.id, undefined, 'start_time.asc.nullslast').pipe(tap(() => this.meetingsLoading.set(false)))
-        : of([]),
+      this.project() ? this.meetingService.getUpcomingMeetingsByProject(this.project()!.id, 100).pipe(tap(() => this.meetingsLoading.set(false))) : of([]),
+      {
+        initialValue: [],
+      }
+    );
+  }
+
+  private initializePastMeetings(): Signal<Meeting[]> {
+    return toSignal(
+      this.project() ? this.meetingService.getPastMeetingsByProject(this.project()!.id, 100).pipe(tap(() => this.pastMeetingsLoading.set(false))) : of([]),
       {
         initialValue: [],
       }
@@ -232,7 +251,7 @@ export class MeetingDashboardComponent {
 
   private initializeFilteredMeetings(): Signal<Meeting[]> {
     return computed(() => {
-      let filtered = this.meetings();
+      let filtered = this.meetingListView() === 'upcoming' ? this.meetings() : this.pastMeetings();
 
       // Apply search filter
       const searchTerm = this.searchTerm()?.toLowerCase() || '';
@@ -270,8 +289,9 @@ export class MeetingDashboardComponent {
         command: () => this.scheduleNewMeeting(),
       },
       {
-        label: 'Meeting History',
+        label: this.meetingListView() === 'past' ? 'Upcoming Meetings' : 'Meeting History',
         icon: 'fa-light fa-calendar-days text-sm',
+        command: () => this.onMeetingListViewChange(this.meetingListView() === 'upcoming' ? 'past' : 'upcoming'),
       },
       {
         label: 'Public Calendar',
@@ -328,7 +348,7 @@ export class MeetingDashboardComponent {
 
   private initializeCalendarEvents(): Signal<CalendarEvent[]> {
     return computed(() => {
-      return this.filteredMeetings().map((meeting): CalendarEvent => {
+      return [...this.meetings(), ...this.pastMeetings()].map((meeting): CalendarEvent => {
         const startTime = meeting.start_time ? new Date(meeting.start_time) : new Date();
         const endTime = meeting.end_time ? new Date(meeting.end_time) : new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour duration
 

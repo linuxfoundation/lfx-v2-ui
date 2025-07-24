@@ -36,7 +36,7 @@
 <!-- Action Menu -->
 <lfx-menu #actionMenu [model]="actionMenuItems()" [popup]="true" appendTo="body"></lfx-menu>
 
-<!-- Meeting Type -->
+<!-- Meeting Topic -->
 <div class="flex justify-between gap-x-4 flex-wrap">
   @if (meeting().topic) {
     <h3 class="text-xl font-display font-semibold text-gray-900 mb-3">
@@ -67,9 +67,7 @@
 }
 
 @if (meeting().agenda) {
-  <p class="text-base text-gray-600 pb-3">
-    {{ meeting().agenda }}
-  </p>
+  <div class="text-base text-gray-600 pb-3" [innerHTML]="meeting().agenda"></div>
 }
 
 <!-- Meeting Settings -->
@@ -157,8 +155,31 @@
           class="animate-delay-2000"
           enterClass="animate-enter fade-in-10 slide-in-from-b-8 animate-duration-1000"
           leaveClass="animate-leave fade-out-0">
-          <div class="flex items-center gap-2">
-            <lfx-avatar [label]="participant.first_name" styleClass="bg-blue-50 border border-gray-200" shape="circle"></lfx-avatar>
+          <div class="flex items-center gap-2" [ngClass]="{ 'gap-3': !pastMeeting() }">
+            @if (pastMeeting()) {
+              @if (participant.attended) {
+                <i class="fa-light fa-check-circle text-green-500" pTooltip="Attended"></i>
+              } @else if (participant.invite_accepted && !participant.attended) {
+                <i class="fa-light fa-times-circle text-amber-400" pTooltip="Accepted & Not Attended"></i>
+              } @else if (participant.invite_accepted === false) {
+                <i class="fa-light fa-times-circle text-red-500" pTooltip="Declined Attendance"></i>
+              } @else {
+                <i class="fa-light fa-circle-question text-gray-400" pTooltip="No Response"></i>
+              }
+            } @else {
+              <div class="relative">
+                <lfx-avatar [label]="participant.first_name" styleClass="bg-blue-50 border border-gray-200" shape="circle"></lfx-avatar>
+                <div class="absolute -top-2 -right-1.5">
+                  @if (participant.invite_accepted === false) {
+                    <i class="fa-solid text-xs fa-times-circle text-red-500" pTooltip="Declined Invite"></i>
+                  } @else if (participant.invite_accepted === null) {
+                    <i class="fa-solid text-xs fa-circle-question text-gray-400" pTooltip="Pending Response"></i>
+                  } @else {
+                    <i class="fa-solid text-xs fa-check-circle text-green-500" pTooltip="Invite Accepted"></i>
+                  }
+                </div>
+              </div>
+            }
             <div class="flex flex-col">
               <div class="flex items-center gap-1 text-xs">
                 @if (participant.type === 'committee') {

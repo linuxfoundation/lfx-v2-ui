@@ -11,11 +11,11 @@
     </div>
   }
 
-  @if (meetings() && !meetingsLoading()) {
+  @if (meetings() && pastMeetings() && !meetingsLoading() && !pastMeetingsLoading()) {
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
       <div class="lg:col-span-3 items-stretch h-full">
         <div class="flex flex-col gap-6">
-          <lfx-card header="Upcoming Meetings">
+          <lfx-card [header]="meetingListView() === 'upcoming' ? 'Upcoming Meetings' : 'Past Meetings'">
             <!-- Search and Filter Controls -->
             <div class="flex flex-col items-center sm:flex-row gap-4 mb-6">
               <!-- Search Input -->
@@ -78,6 +78,7 @@
                         [meeting]="meeting"
                         [actionMenuItems]="actionMenuItems"
                         (menuToggle)="onMenuToggle($event)"
+                        [pastMeeting]="meetingListView() === 'past'"
                         pAnimateOnScroll
                         class="animate-delay-2000"
                         enterClass="animate-enter fade-in-10 slide-in-from-b-8 animate-duration-1000"

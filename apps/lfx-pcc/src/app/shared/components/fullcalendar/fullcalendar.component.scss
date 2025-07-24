@@ -20,6 +20,20 @@
         @apply mr-2;
       }
 
+      .fc-timegrid {
+        .fc-timegrid-col-events {
+          .fc-timegrid-event {
+            &:not(.fc-event-future) {
+              background-color: #f0f0f0 !important;
+            }
+
+            &.fc-event-future {
+              background-color: rgb(239 246 255 / var(--tw-bg-opacity, 1)) !important;
+            }
+          }
+        }
+      }
+
       // Header toolbar styling
       .fc-toolbar {
         @apply mb-6;
@@ -60,45 +74,8 @@
         }
       }
 
-      // Calendar grid styling
-      .fc-theme-standard {
-        .fc-scrollgrid {
-          @apply border border-gray-200 rounded-lg overflow-hidden;
-        }
-
-        .fc-col-header {
-          @apply bg-gray-50;
-
-          .fc-col-header-cell {
-            @apply py-3 px-2 border-r border-gray-200 last:border-r-0;
-          }
-        }
-
-        .fc-daygrid-body {
-          .fc-daygrid-day {
-            @apply border-r  bg-white min-h-[100px] last:border-r-0;
-
-            &.fc-day-today {
-              @apply bg-blue-50;
-            }
-
-            &.fc-day-other {
-              @apply bg-gray-50;
-
-              .fc-daygrid-day-number {
-                @apply text-black;
-              }
-            }
-
-            .fc-daygrid-day-frame {
-              @apply p-2 min-h-[100px];
-            }
-
-            .fc-daygrid-day-number {
-              @apply text-black font-medium text-sm p-1 mb-1;
-            }
-          }
-        }
+      .fc-timegrid-col-events {
+        @apply bg-gray-400;
       }
 
       // Event styling
@@ -111,48 +88,22 @@
 
         &.meeting-event {
           .fc-event-title {
-            @apply font-medium leading-tight overflow-hidden line-clamp-2;
+            @apply font-medium leading-tight overflow-hidden line-clamp-2 text-gray-400;
           }
 
           .fc-event-time {
-            @apply font-semibold mr-1 block mb-0.5 text-[11px];
+            @apply font-semibold mr-1 block mb-0.5 text-[11px] text-gray-400;
           }
-        }
-      }
 
-      // Event tooltips and popover styling
-      .fc-popover {
-        @apply border border-gray-200 rounded-lg shadow-lg;
+          &.fc-event-future {
+            .fc-event-title {
+              @apply font-medium leading-tight overflow-hidden line-clamp-2 text-blue-700;
+            }
 
-        .fc-popover-header {
-          @apply bg-gray-50  p-3 font-semibold;
-        }
-
-        .fc-popover-body {
-          @apply p-2;
-        }
-      }
-
-      // Responsive adjustments
-      @media (max-width: 768px) {
-        .fc-toolbar {
-          @apply flex-col gap-4;
-
-          .fc-toolbar-chunk {
-            @apply flex justify-center;
+            .fc-event-time {
+              @apply font-semibold mr-1 block mb-0.5 text-[11px] text-blue-900;
+            }
           }
-        }
-
-        .fc-daygrid-day {
-          @apply min-h-[80px];
-
-          .fc-daygrid-day-frame {
-            @apply min-h-[80px] p-1;
-          }
-        }
-
-        .fc-event {
-          @apply text-[11px] px-1 py-0.5;
         }
       }
     }

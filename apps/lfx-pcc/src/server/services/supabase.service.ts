@@ -597,6 +597,7 @@ export class SupabaseService {
   public async getMeetingParticipants(meetingId: string): Promise<MeetingParticipant[]> {
     const params = {
       meeting_id: `eq.${meetingId}`,
+      order: 'first_name.asc,last_name.asc',
     };
     const queryString = new URLSearchParams(params).toString();
     const url = `${this.baseUrl}/meeting_participants?${queryString}`;

@@ -14,7 +14,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
   templateUrl: './fullcalendar.component.html',
   styleUrl: './fullcalendar.component.scss',
 })
-export class FullcalendarComponent {
+export class FullCalendarComponent {
   // Core properties
   public readonly events = input<EventInput[]>([]);
   public readonly initialView = input<string>('dayGridMonth');
