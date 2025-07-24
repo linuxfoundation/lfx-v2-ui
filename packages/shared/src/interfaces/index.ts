@@ -30,3 +30,6 @@ export * from './calendar.interface';
 
 // Search interfaces
 export * from './search.interface';
+
+// Activity interfaces
+export * from './activity.interface';

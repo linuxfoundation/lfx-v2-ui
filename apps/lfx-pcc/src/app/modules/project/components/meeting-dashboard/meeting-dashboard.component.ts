@@ -123,6 +123,8 @@ export class MeetingDashboardComponent {
     this.meetingListView.set(value);
     this.filteredMeetings = this.initializeFilteredMeetings();
     this.menuItems = this.initializeMenuItems();
+    this.visibilityOptions = this.initializeVisibilityOptions();
+    this.committeeOptions = this.initializeCommitteeOptions();
   }
 
   public onViewChange(value: 'list' | 'calendar'): void {
@@ -227,7 +229,7 @@ export class MeetingDashboardComponent {
 
   private initializeCommitteeOptions(): Signal<{ label: string; value: string | null }[]> {
     return computed(() => {
-      const meetings = this.meetings();
+      const meetings = this.meetingListView() === 'upcoming' ? this.meetings() : this.pastMeetings();
       const committeeMap = new Map<string, string>();
 
       // Extract unique committees from all meetings

@@ -38,6 +38,7 @@ export class FullCalendarComponent {
       buttonText: {
         today: 'Today',
         dayGridMonth: 'Month',
+        timeGridWeek: 'Week',
       },
       eventClick: (info) => this.handleEventClick(info),
       weekends: true,

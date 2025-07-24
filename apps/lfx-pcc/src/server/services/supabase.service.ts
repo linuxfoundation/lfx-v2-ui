@@ -9,6 +9,7 @@ import {
   MeetingParticipant,
   ObjectPermission,
   ProjectSearchResult,
+  RecentActivity,
   UserPermissions,
 } from '@lfx-pcc/shared/interfaces';
 import dotenv from 'dotenv';
@@ -648,6 +649,31 @@ export class SupabaseService {
       }
 
       throw new Error(`Failed to search projects: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+
+  public async getRecentActivityByProject(projectId: number, params?: Record<string, any>): Promise<RecentActivity[]> {
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.set('project_id', `eq.${projectId}`);
+    queryParams.set('order', 'date.desc');
+
+    // Add limit parameter if provided, default to 10
+    const limit = params?.['limit'] ? parseInt(params['limit'], 10) : 10;
+    queryParams.set('limit', limit.toString());
+
+    const url = `${this.baseUrl}/recent_activity?${queryParams.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch recent activity: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();

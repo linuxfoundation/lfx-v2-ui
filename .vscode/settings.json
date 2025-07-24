@@ -1,14 +1,17 @@
 {
   "cSpell.words": [
     "autorestart",
+    "daygrid",
     "iconfield",
     "inputicon",
     "PostgreSQL",
     "PostgREST",
     "primeng",
     "supabase",
+    "timegrid",
     "Turborepo"
   ],
+  "scss.lint.unknownAtRules": "ignore",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {

@@ -11,7 +11,7 @@
     </div>
   }
 
-  @if (meetings() && pastMeetings() && !meetingsLoading() && !pastMeetingsLoading()) {
+  @if ((meetings() || pastMeetings()) && !meetingsLoading() && !pastMeetingsLoading()) {
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
       <div class="lg:col-span-3 items-stretch h-full">
         <div class="flex flex-col gap-6">
@@ -66,7 +66,7 @@
                 (onChange)="onViewChange($event.value)"></lfx-select-button>
             </div>
           </lfx-card>
-          @if (meetings().length > 0) {
+          @if (filteredMeetings().length > 0) {
             <!-- List View -->
             @if (currentView() === 'list') {
               <!-- Meetings Card Grid -->

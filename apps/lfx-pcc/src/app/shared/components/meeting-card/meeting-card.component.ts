@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injector, input, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -23,18 +23,7 @@ import { AvatarComponent } from '../avatar/avatar.component';
 @Component({
   selector: 'lfx-meeting-card',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    ButtonComponent,
-    MenuComponent,
-    BadgeComponent,
-    TitleCasePipe,
-    MeetingTimePipe,
-    AvatarComponent,
-    TooltipModule,
-    AnimateOnScrollModule,
-  ],
+  imports: [CommonModule, RouterLink, ButtonComponent, MenuComponent, BadgeComponent, MeetingTimePipe, AvatarComponent, TooltipModule, AnimateOnScrollModule],
   templateUrl: './meeting-card.component.html',
   styleUrl: './meeting-card.component.scss',
 })

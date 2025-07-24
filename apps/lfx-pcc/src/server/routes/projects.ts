@@ -66,4 +66,33 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
+router.get('/:slug/recent-activity', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const projectSlug = req.params['slug'];
+
+    if (!projectSlug) {
+      return res.status(400).json({
+        error: 'Project Slug is required',
+        code: 'MISSING_PROJECT_SLUG',
+      });
+    }
+
+    // Get project to verify it exists and get the project ID
+    const project = await supabaseService.getProjectBySlug(projectSlug);
+
+    if (!project) {
+      return res.status(404).json({
+        error: 'Project not found',
+        code: 'PROJECT_NOT_FOUND',
+      });
+    }
+
+    const recentActivity = await supabaseService.getRecentActivityByProject(project.id, req.query as Record<string, any>);
+    return res.json(recentActivity);
+  } catch (error) {
+    console.error(`Failed to fetch recent activity for project ${req.params['slug']}:`, error);
+    return next(error);
+  }
+});
+
 export default router;

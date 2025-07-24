@@ -23,6 +23,7 @@ export class HomeComponent {
   private readonly projectService = inject(ProjectService);
 
   public form: FormGroup;
+  public projectsLoading: WritableSignal<boolean>;
   public projects: Signal<Project[]>;
   public projectCards: Signal<ProjectCard[]>;
   public filteredProjects: Signal<ProjectCard[]>;
@@ -31,6 +32,7 @@ export class HomeComponent {
   public constructor() {
     this.form = this.initializeSearchForm();
     this.isSearching = signal(false);
+    this.projectsLoading = signal(true);
     this.projects = this.initializeProjects();
     this.projectCards = this.initializeProjectCards();
     this.filteredProjects = this.initializeFilteredProjects();
@@ -90,7 +92,8 @@ export class HomeComponent {
         // Otherwise, search for projects
         this.isSearching.set(true);
         return this.projectService.searchProjects(trimmedTerm).pipe(tap(() => this.isSearching.set(false)));
-      })
+      }),
+      tap(() => this.projectsLoading.set(false))
     );
 
     return toSignal(searchResults$, {
