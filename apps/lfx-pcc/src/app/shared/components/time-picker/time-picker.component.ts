@@ -142,8 +142,8 @@ export class TimePickerComponent implements OnInit, OnDestroy {
     this.timePopover()?.hide();
   }
 
-  public onInput(event: any): void {
-    const inputValue = event.target.value;
+  public onInput(event: Event): void {
+    const inputValue = (event.target as HTMLInputElement).value;
 
     // Update search query
     this.updateState({
@@ -154,9 +154,9 @@ export class TimePickerComponent implements OnInit, OnDestroy {
     this.timePopover()?.show(event);
   }
 
-  public onInputBlur(event: any): void {
+  public onInputBlur(event: Event): void {
     // Convert time format when user finishes typing (on blur)
-    const inputValue = event.target.value;
+    const inputValue = (event.target as HTMLInputElement).value;
     if (inputValue) {
       const convertedTime = this.convertTimeFormat(inputValue);
       if (convertedTime !== inputValue) {
