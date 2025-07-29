@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Injector, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { CardComponent } from '@app/shared/components/card/card.component';
 import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
