@@ -6,4 +6,12 @@ export const environment = {
   urls: {
     profile: 'https://openprofile.dev',
   },
+  datadog: {
+    enabled: true,
+    applicationId: process.env['DD_APPLICATION_ID'] || '',
+    clientToken: process.env['DD_CLIENT_TOKEN'] || '',
+    site: 'datadoghq.com',
+    service: 'lfx-projects-self-service',
+    env: process.env['DD_ENV'] || 'prod',
+  },
 };

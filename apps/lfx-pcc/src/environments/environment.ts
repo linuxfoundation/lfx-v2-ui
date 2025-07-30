@@ -6,4 +6,12 @@ export const environment = {
   urls: {
     profile: 'https://myprofile.dev.platform.linuxfoundation.org/',
   },
+  datadog: {
+    enabled: false,
+    applicationId: '',
+    clientToken: '',
+    site: 'datadoghq.com',
+    service: 'lfx-projects-self-service',
+    env: 'local',
+  },
 };

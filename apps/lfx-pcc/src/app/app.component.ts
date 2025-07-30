@@ -8,6 +8,7 @@ import { AuthContext } from '@lfx-pcc/shared/interfaces';
 import { ToastModule } from 'primeng/toast';
 
 import { HeaderComponent } from './shared/components/header/header.component';
+import { DatadogRumService } from './shared/services/datadog-rum.service';
 import { UserService } from './shared/services/user.service';
 
 @Component({
@@ -19,12 +20,14 @@ import { UserService } from './shared/services/user.service';
 })
 export class AppComponent {
   private readonly userService = inject(UserService);
+  private readonly datadogRumService = inject(DatadogRumService);
 
   public auth: AuthContext | undefined;
   public transferState = inject(TransferState);
   public serverKey = makeStateKey<AuthContext>('auth');
 
   public constructor() {
+    this.datadogRumService.initialize();
     const reqContext = inject(REQUEST_CONTEXT, { optional: true }) as {
       auth: AuthContext;
     };
@@ -46,6 +49,13 @@ export class AppComponent {
     if (this.auth?.authenticated) {
       this.userService.authenticated.set(true);
       this.userService.user.set(this.auth.user);
+
+      // Set user context in Datadog RUM
+      this.datadogRumService.setUser({
+        id: this.auth.user?.id,
+        name: this.auth.user?.name,
+        email: this.auth.user?.email,
+      });
     }
   }
 }
