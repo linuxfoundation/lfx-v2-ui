@@ -314,9 +314,35 @@ jobs:
             
             </details>`;
             
-            github.rest.issues.createComment({
+            // Look for existing E2E test comment by this bot
+            const existingComments = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
+              repo: context.repo.repo
             });
+            
+            const botComment = existingComments.data.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('## ') && 
+              comment.body.includes('E2E Tests')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+              console.log('Updated existing E2E test comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+              console.log('Created new E2E test comment');
+            }
