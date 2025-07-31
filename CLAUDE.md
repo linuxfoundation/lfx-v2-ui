@@ -47,6 +47,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Authentication](docs/architecture/backend/authentication.md) - Auth0 setup
 - [SSR Server](docs/architecture/backend/ssr-server.md) - Server-side rendering
 - [Logging & Monitoring](docs/architecture/backend/logging-monitoring.md) - Structured logging
+- [E2E Testing](docs/architecture/testing/e2e-testing.md) - Comprehensive end-to-end testing with dual architecture
+- [Testing Best Practices](docs/architecture/testing/testing-best-practices.md) - Testing patterns and implementation guide
 
 ### 💡 Quick Reference
 
@@ -83,84 +85,6 @@ lfx-pcc-v3/
 
 [... rest of the existing content remains unchanged ...]
 
-## Component Organization Pattern
-
-All Angular components should follow this standardized organization pattern for consistency and maintainability:
-
-### Structure Overview
-
-```typescript
-export class ComponentName {
-  // 1. Injected services (readonly)
-  private readonly serviceOne = inject(ServiceOne);
-  private readonly serviceTwo = inject(ServiceTwo);
-
-  // 2. Class variables with explicit types
-  private dialogRef: DialogRef | undefined;
-  public someSignal: WritableSignal<Type>;
-  public someComputed: Signal<Type>;
-  public someForm: FormGroup;
-  public someArray: Type[];
-
-  constructor() {
-    // 3. Initialize all class variables by calling private methods
-    this.someSignal = signal<Type>(initialValue);
-    this.someComputed = this.initializeSomeComputed();
-    this.someForm = this.initializeSomeForm();
-    this.someArray = this.initializeSomeArray();
-  }
-
-  // 4. Public methods (lifecycle, event handlers, etc.)
-  public onSomeEvent(): void {}
-  public somePublicMethod(): void {}
-
-  // 5. Private methods (business logic)
-  private somePrivateMethod(): void {}
-  private handleSomeAction(): void {}
-
-  // 6. Private initialization methods (at the end of class)
-  private initializeSomeComputed(): Signal<Type> {
-    return computed(() => {
-      /* logic */
-    });
-  }
-
-  private initializeSomeForm(): FormGroup {
-    return new FormGroup({
-      /* controls */
-    });
-  }
-
-  private initializeSomeArray(): Type[] {
-    return [
-      /* initial values */
-    ];
-  }
-}
-```
-
-### Key Benefits
-
-- **Clear variable declarations** with types at the top
-- **Organized constructor** that only handles initialization calls
-- **Separation of concerns** between declaration and initialization
-- **Improved readability** and maintainability
-- **Better testability** with isolated initialization methods
-- **Consistent code structure** across the entire application
-
-### Implementation Rules
-
-1. **Always declare variables with explicit types** before constructor
-2. **Use constructor only for initialization** - no complex logic
-3. **Create private initialization methods** for complex setup
-4. **Group related variables together** (signals, forms, arrays, etc.)
-5. **Place initialization methods at the end** of the class
-6. **Use descriptive method names** like `initializeSearchForm()`
-
-### Example: Committee Dashboard
-
-See `apps/lfx-pcc/src/app/modules/project/committees/committee-dashboard/committee-dashboard.component.ts` for a complete implementation following this pattern.
-
 ## Development Memories
 
 - Always reference PrimeNG's component interface when trying to define types
@@ -182,3 +106,9 @@ See `apps/lfx-pcc/src/app/modules/project/committees/committee-dashboard/committ
 - Do not nest ternary expressions
 - Always run yarn lint before yarn build to validate your linting
 - The JIRA project key for this is LFXV2. All tickets associated to this repo should generally be in there.
+- **E2E tests use dual architecture** - both content-based (_.spec.ts) and structural (_-robust.spec.ts) tests
+- **Always add data-testid attributes** when creating new components for reliable test targeting
+- **Run yarn e2e before major changes** to ensure all 85+ tests pass consistently
+- **Use data-testid naming convention** - `[section]-[component]-[element]` for hierarchical structure
+- **Test responsive behavior** - validate mobile, tablet, and desktop viewports appropriately
+- When running tests to validate UI tests, use reporter=list

@@ -71,3 +71,16 @@ jobs:
           name: turbo-cache-summary
           path: .turbo/
           retention-days: 1
+
+  e2e-tests:
+    name: E2E Tests
+    needs: quality-checks
+    uses: ./.github/workflows/e2e-tests.yml
+    with:
+      node-version: '22'
+      test-command: 'e2e'
+      browser: 'chromium'  # Use only Chromium for PR testing for faster feedback
+      skip-build: false
+    secrets:
+      TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+      TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
