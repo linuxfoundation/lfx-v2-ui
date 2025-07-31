@@ -110,11 +110,11 @@ jobs:
         run: |
           missing_secrets=""
 
-          # Check AWS Secrets Manager secrets (from environment variables)
-          if [ -z "$AUTH0" ]; then
+          # Check AWS Secrets Manager secrets (from secrets)
+          if [ -z "${{ secrets.AUTH0 }}" ]; then
             missing_secrets="$missing_secrets AUTH0 (from AWS Secrets Manager)"
           fi
-          if [ -z "$SUPABASE" ]; then
+          if [ -z "${{ secrets.SUPABASE }}" ]; then
             missing_secrets="$missing_secrets SUPABASE (from AWS Secrets Manager)"
           fi
           
@@ -135,53 +135,14 @@ jobs:
             echo "can_run_tests=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up application environment variables
+      - name: Set up non-sensitive environment variables
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
-        working-directory: apps/lfx-pcc
         run: |
           echo "ENV=development" >> $GITHUB_ENV
           echo "PCC_BASE_URL=http://localhost:4200" >> $GITHUB_ENV
-          
-          # Parse AUTH0 secret from AWS Secrets Manager
-          if [ -n "$AUTH0" ]; then
-            # Extract individual AUTH0 values from JSON format
-            echo "PCC_AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')" >> $GITHUB_ENV
-            echo "PCC_AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret // empty')" >> $GITHUB_ENV
-
-            # Set default Auth0 configuration values
-            echo "PCC_AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
-            echo "PCC_AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
-            
-            echo "✅ AUTH0 secrets loaded from AWS Secrets Manager"
-          else
-            echo "⚠️ AUTH0 secret not found in AWS Secrets Manager"
-          fi
-          
-          # Parse SUPABASE secret from AWS Secrets Manager
-          if [ -n "$SUPABASE" ]; then
-            echo "SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')" >> $GITHUB_ENV
-            echo "POSTGRES_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')" >> $GITHUB_ENV
-            
-            echo "✅ SUPABASE secrets loaded from AWS Secrets Manager"
-          else
-            echo "⚠️ SUPABASE secret not found in AWS Secrets Manager"
-          fi
-          
-          # Fallback to GitHub secrets if AWS secrets are not available
-          echo "TEST_USERNAME=${{ secrets.TEST_USERNAME }}" >> $GITHUB_ENV
-          echo "TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}" >> $GITHUB_ENV
+          echo "PCC_AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
+          echo "PCC_AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
           echo "CI=true" >> $GITHUB_ENV
-          
-          # Debug: Show which secrets were loaded (without exposing values)
-          echo "🔍 Environment variables loaded:"
-          echo "  - PCC_AUTH0_CLIENT_ID: ${PCC_AUTH0_CLIENT_ID:+✅ Set}"
-          echo "  - PCC_AUTH0_CLIENT_SECRET: ${PCC_AUTH0_CLIENT_SECRET:+✅ Set}"
-          echo "  - PCC_AUTH0_ISSUER_BASE_URL: ${PCC_AUTH0_ISSUER_BASE_URL:+✅ Set}"
-          echo "  - PCC_AUTH0_AUDIENCE: ${PCC_AUTH0_AUDIENCE:+✅ Set}"
-          echo "  - SUPABASE_URL: ${SUPABASE_URL:+✅ Set}"
-          echo "  - POSTGRES_API_KEY: ${POSTGRES_API_KEY:+✅ Set}"
-          echo "  - TEST_USERNAME: ${TEST_USERNAME:+✅ Set}"
-          echo "  - TEST_PASSWORD: ${TEST_PASSWORD:+✅ Set}"
 
       - name: Install Playwright browsers
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
@@ -199,6 +160,10 @@ jobs:
 
       - name: Run E2E tests (All browsers)
         if: ${{ inputs.browser == 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
+        working-directory: apps/lfx-pcc
+        env:
+          PCC_AUTH0_CLIENT_ID: ${{ fromJSON(secrets.AUTH0).client_id }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on all browsers"
@@ -214,12 +179,15 @@ jobs:
       - name: Run E2E tests (Specific browser)
         if: ${{ inputs.browser != 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
         working-directory: apps/lfx-pcc
+        env:
+          PCC_AUTH0_CLIENT_ID: ${{ fromJSON(secrets.AUTH0).client_id }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
             echo "🚀 Playwright will automatically start the dev server on localhost:4200"
             echo "📋 Using secrets from AWS Secrets Manager"
-            yarn ${{ inputs.test-command }} --project=${{ inputs.browser }}
+            yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list
           else
             echo "⚠️ No test credentials provided. Skipping E2E tests."
             echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."
