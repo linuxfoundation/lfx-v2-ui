@@ -110,11 +110,11 @@ jobs:
         run: |
           missing_secrets=""
 
-          # Check AWS Secrets Manager secrets
-          if [ -z "${{ steps.get_secrets.outputs.AUTH0 }}" ]; then
+          # Check AWS Secrets Manager secrets (from environment variables)
+          if [ -z "$AUTH0" ]; then
             missing_secrets="$missing_secrets AUTH0 (from AWS Secrets Manager)"
           fi
-          if [ -z "${{ steps.get_secrets.outputs.SUPABASE }}" ]; then
+          if [ -z "$SUPABASE" ]; then
             missing_secrets="$missing_secrets SUPABASE (from AWS Secrets Manager)"
           fi
           
@@ -143,11 +143,10 @@ jobs:
           echo "PCC_BASE_URL=http://localhost:4200" >> $GITHUB_ENV
           
           # Parse AUTH0 secret from AWS Secrets Manager
-          AUTH0_SECRET='${{ steps.get_secrets.outputs.AUTH0 }}'
-          if [ -n "$AUTH0_SECRET" ]; then
+          if [ -n "$AUTH0" ]; then
             # Extract individual AUTH0 values from JSON format
-            echo "PCC_AUTH0_CLIENT_ID=$(echo $AUTH0_SECRET | jq -r '.client_id // empty')" >> $GITHUB_ENV
-            echo "PCC_AUTH0_CLIENT_SECRET=$(echo $AUTH0_SECRET | jq -r '.client_secret // empty')" >> $GITHUB_ENV
+            echo "PCC_AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')" >> $GITHUB_ENV
+            echo "PCC_AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret // empty')" >> $GITHUB_ENV
 
             # Set default Auth0 configuration values
             echo "PCC_AUTH0_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
@@ -159,10 +158,9 @@ jobs:
           fi
           
           # Parse SUPABASE secret from AWS Secrets Manager
-          SUPABASE_SECRET='${{ steps.get_secrets.outputs.SUPABASE }}'
-          if [ -n "$SUPABASE_SECRET" ]; then
-            echo "SUPABASE_URL=$(echo $SUPABASE_SECRET | jq -r '.url // empty')" >> $GITHUB_ENV
-            echo "POSTGRES_API_KEY=$(echo $SUPABASE_SECRET | jq -r '.api_key // empty')" >> $GITHUB_ENV
+          if [ -n "$SUPABASE" ]; then
+            echo "SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')" >> $GITHUB_ENV
+            echo "POSTGRES_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')" >> $GITHUB_ENV
             
             echo "✅ SUPABASE secrets loaded from AWS Secrets Manager"
           else
