@@ -270,15 +270,6 @@ jobs:
           name: playwright-report-${{ inputs.browser }}-${{ github.run_id }}
           path: |
             apps/lfx-pcc/playwright-report/
-            apps/lfx-pcc/test-results/
-          retention-days: 7
-
-      - name: Upload test traces
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-traces-${{ inputs.browser }}-${{ github.run_id }}
-          path: apps/lfx-pcc/test-results/
           retention-days: 7
 
       - name: Comment test results on PR
@@ -289,7 +280,7 @@ jobs:
             const results = '${{ steps.test-results.outputs.results }}';
             const browser = '${{ inputs.browser }}';
             const runId = '${{ github.run_id }}';
-            
+
             let emoji, status, details;
             
             if (results === 'success') {
