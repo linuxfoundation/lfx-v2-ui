@@ -40,6 +40,105 @@ router.get('/:id/participants', async (req: Request, res: Response, next: NextFu
   }
 });
 
+router.post('/:id/participants', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const meetingId = req.params['id'];
+    const participantData = req.body;
+
+    if (!meetingId) {
+      return res.status(400).json({
+        error: 'Meeting ID is required',
+        code: 'MISSING_MEETING_ID',
+      });
+    }
+
+    // Basic validation
+    if (!participantData.first_name || !participantData.last_name || !participantData.email) {
+      return res.status(400).json({
+        error: 'First name, last name, and email are required fields',
+        code: 'MISSING_REQUIRED_FIELDS',
+      });
+    }
+
+    const participant = await supabaseService.addMeetingParticipant(meetingId, participantData);
+
+    return res.status(201).json(participant);
+  } catch (error) {
+    console.error(`Failed to add participant to meeting ${req.params['id']}:`, error);
+    return next(error);
+  }
+});
+
+router.put('/:id/participants/:participantId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const meetingId = req.params['id'];
+    const participantId = req.params['participantId'];
+    const participantData = req.body;
+
+    if (!meetingId) {
+      return res.status(400).json({
+        error: 'Meeting ID is required',
+        code: 'MISSING_MEETING_ID',
+      });
+    }
+
+    if (!participantId) {
+      return res.status(400).json({
+        error: 'Participant ID is required',
+        code: 'MISSING_PARTICIPANT_ID',
+      });
+    }
+
+    // Basic validation
+    if (!participantData.first_name || !participantData.last_name || !participantData.email) {
+      return res.status(400).json({
+        error: 'First name, last name, and email are required fields',
+        code: 'MISSING_REQUIRED_FIELDS',
+      });
+    }
+
+    // Remove fields that shouldn't be updated directly
+    delete participantData.id;
+    delete participantData.meeting_id;
+    delete participantData.created_at;
+
+    const participant = await supabaseService.updateMeetingParticipant(meetingId, participantId, participantData);
+
+    return res.json(participant);
+  } catch (error) {
+    console.error(`Failed to update participant ${req.params['participantId']} in meeting ${req.params['id']}:`, error);
+    return next(error);
+  }
+});
+
+router.delete('/:id/participants/:participantId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const meetingId = req.params['id'];
+    const participantId = req.params['participantId'];
+
+    if (!meetingId) {
+      return res.status(400).json({
+        error: 'Meeting ID is required',
+        code: 'MISSING_MEETING_ID',
+      });
+    }
+
+    if (!participantId) {
+      return res.status(400).json({
+        error: 'Participant ID is required',
+        code: 'MISSING_PARTICIPANT_ID',
+      });
+    }
+
+    await supabaseService.deleteMeetingParticipant(meetingId, participantId);
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(`Failed to delete participant ${req.params['participantId']} from meeting ${req.params['id']}:`, error);
+    return next(error);
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const meetingId = req.params['id'];

@@ -619,6 +619,73 @@ export class SupabaseService {
     return data;
   }
 
+  public async addMeetingParticipant(meetingId: string, participantData: Partial<MeetingParticipant>): Promise<MeetingParticipant> {
+    const url = `${this.baseUrl}/meeting_participants`;
+    const payload = {
+      ...participantData,
+      meeting_id: meetingId,
+      invite_accepted: false,
+      attended: false,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to add meeting participant: ${response.status} ${response.statusText}: ${await response.text()}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  public async updateMeetingParticipant(meetingId: string, participantId: string, participantData: Partial<MeetingParticipant>): Promise<MeetingParticipant> {
+    const params = {
+      meeting_id: `eq.${meetingId}`,
+      id: `eq.${participantId}`,
+    };
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/meeting_participants?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(participantData),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to update participant: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  public async deleteMeetingParticipant(meetingId: string, participantId: string): Promise<void> {
+    const params = {
+      meeting_id: `eq.${meetingId}`,
+      id: `eq.${participantId}`,
+    };
+    const queryString = new URLSearchParams(params).toString();
+    const url = `${this.baseUrl}/meeting_participants?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete meeting participant: ${response.status} ${response.statusText}`);
+    }
+  }
+
   public async searchProjects(query: string): Promise<ProjectSearchResult[]> {
     let url: string;
 
