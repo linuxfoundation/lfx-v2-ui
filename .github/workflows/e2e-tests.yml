@@ -195,13 +195,12 @@ jobs:
 
       - name: Run E2E tests (All browsers)
         if: ${{ inputs.browser == 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
-        working-directory: apps/lfx-pcc
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on all browsers"
             echo "🚀 Playwright will automatically start the dev server on localhost:4200"
             echo "📋 Using secrets from AWS Secrets Manager"
-            yarn ${{ inputs.test-command }}
+            yarn ${{ inputs.test-command }} --reporter=list
           else
             echo "⚠️ No test credentials provided. Skipping E2E tests."
             echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."
