@@ -147,38 +147,36 @@ jobs:
       - name: Set up sensitive environment variables
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
         run: |
-          # Parse and set AUTH0 secrets
+          # Parse and set AUTH0 secrets with explicit masking
           if [ -n "$AUTH0" ]; then
-            # Explicitly mask the values
-            echo "::add-mask::$(echo "$AUTH0" | jq -r '.client_id // empty')"
-            echo "::add-mask::$(echo "$AUTH0" | jq -r '.client_secret // empty')"
-
-            # Extract the values
             AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')
             AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret // empty')
+
+            # Explicitly mask the values
+            echo "::add-mask::$AUTH0_CLIENT_ID"
+            echo "::add-mask::$AUTH0_CLIENT_SECRET"
 
             # Set as environment variables
             echo "PCC_AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> $GITHUB_ENV
             echo "PCC_AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> $GITHUB_ENV
             echo "✅ AUTH0 secrets set as masked environment variables"
           fi
-
+          
           # Parse and set SUPABASE secrets
           if [ -n "$SUPABASE" ]; then
-            # Explicitly mask the values
-            echo "::add-mask::$(echo "$SUPABASE" | jq -r '.url // empty')"
-            echo "::add-mask::$(echo "$SUPABASE" | jq -r '.api_key // empty')"
-
-            # Extract the values
             SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')
             SUPABASE_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')
-
+            
+            # Explicitly mask the values
+            echo "::add-mask::$SUPABASE_URL"
+            echo "::add-mask::$SUPABASE_API_KEY"
+            
             # Set as environment variables
             echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
             echo "POSTGRES_API_KEY=$SUPABASE_API_KEY" >> $GITHUB_ENV
             echo "✅ SUPABASE secrets set as masked environment variables"
           fi
-
+          
           # Set test credentials
           echo "::add-mask::${{ secrets.TEST_USERNAME }}"
           echo "::add-mask::${{ secrets.TEST_PASSWORD }}"
