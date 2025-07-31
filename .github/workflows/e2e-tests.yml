@@ -110,11 +110,11 @@ jobs:
         run: |
           missing_secrets=""
 
-          # Check AWS Secrets Manager secrets (from secrets)
-          if [ -z "${{ secrets.AUTH0 }}" ]; then
+          # Check AWS Secrets Manager secrets (masked environment variables)
+          if [ -z "$AUTH0" ]; then
             missing_secrets="$missing_secrets AUTH0 (from AWS Secrets Manager)"
           fi
-          if [ -z "${{ secrets.SUPABASE }}" ]; then
+          if [ -z "$SUPABASE" ]; then
             missing_secrets="$missing_secrets SUPABASE (from AWS Secrets Manager)"
           fi
           
@@ -144,6 +144,26 @@ jobs:
           echo "PCC_AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
           echo "CI=true" >> $GITHUB_ENV
 
+      - name: Set up sensitive environment variables
+        if: steps.validate-secrets.outputs.can_run_tests == 'true'
+        run: |
+          # Parse and set AUTH0 secrets with explicit masking
+          if [ -n "$AUTH0" ]; then
+            AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')
+
+            # Explicitly mask the values
+            echo "::add-mask::$AUTH0_CLIENT_ID"
+
+            # Set as environment variables
+            echo "PCC_AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> $GITHUB_ENV
+            echo "✅ AUTH0 secrets set as masked environment variables"
+          fi
+
+          # Set test credentials with explicit masking
+          echo "::add-mask::${{ secrets.TEST_USERNAME }}"
+
+          echo "TEST_USERNAME=${{ secrets.TEST_USERNAME }}" >> $GITHUB_ENV
+
       - name: Install Playwright browsers
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
         working-directory: apps/lfx-pcc
@@ -161,9 +181,6 @@ jobs:
       - name: Run E2E tests (All browsers)
         if: ${{ inputs.browser == 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
         working-directory: apps/lfx-pcc
-        env:
-          PCC_AUTH0_CLIENT_ID: ${{ fromJSON(secrets.AUTH0).client_id }}
-          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on all browsers"
@@ -179,9 +196,6 @@ jobs:
       - name: Run E2E tests (Specific browser)
         if: ${{ inputs.browser != 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
         working-directory: apps/lfx-pcc
-        env:
-          PCC_AUTH0_CLIENT_ID: ${{ fromJSON(secrets.AUTH0).client_id }}
-          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
