@@ -3,7 +3,7 @@
 
 import { inject, Pipe, PipeTransform, SecurityContext } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { URL_REGEX } from '@lfx-pcc/shared';
+import { extractUrls } from '@lfx-pcc/shared';
 
 @Pipe({
   name: 'linkify',
@@ -17,9 +17,20 @@ export class LinkifyPipe implements PipeTransform {
       return '';
     }
 
-    // Convert URLs to clickable links
-    const linkedText = value.replace(URL_REGEX, (url) => {
-      return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600 hover:underline">${url}</a>`;
+    // Extract and validate URLs first
+    const validUrls = extractUrls(value);
+
+    // Convert validated URLs to clickable links
+    let linkedText = value;
+    validUrls.forEach((url) => {
+      // Escape the URL for use in regex to handle special characters
+      const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const urlRegex = new RegExp(escapedUrl, 'g');
+
+      linkedText = linkedText.replace(
+        urlRegex,
+        `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600 hover:underline">${url}</a>`
+      );
     });
 
     // Sanitize and return the HTML content

@@ -146,7 +146,7 @@ export class MeetingCardComponent {
   }
   private initMeetingParticipantCount(): Signal<number> {
     return computed(
-      () => (this.meeting().individual_participants_count || 0) + (this.meeting().committee_members_count || 0) + (this.additionalParticipantsCount() || 0)
+      () => (this.meeting()?.individual_participants_count || 0) + (this.meeting()?.committee_members_count || 0) + (this.additionalParticipantsCount() || 0)
     );
   }
 
