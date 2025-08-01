@@ -11,7 +11,7 @@ import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { MenuComponent } from '@components/menu/menu.component';
-import { Meeting, MeetingParticipant } from '@lfx-pcc/shared/interfaces';
+import { extractUrlsWithDomains, Meeting, MeetingParticipant } from '@lfx-pcc/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
@@ -337,25 +337,8 @@ export class MeetingCardComponent {
         return [];
       }
 
-      // URL regex pattern to match various URL formats
-      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
-      const matches = [...agenda.matchAll(urlRegex)];
-
-      // Return unique URLs with their domain names
-      const uniqueUrls = new Map<string, { url: string; domain: string }>();
-      matches.forEach((match) => {
-        const url = match[0];
-        if (!uniqueUrls.has(url)) {
-          try {
-            const domain = new URL(url).hostname.replace('www.', '');
-            uniqueUrls.set(url, { url, domain });
-          } catch {
-            // Invalid URL, skip it
-          }
-        }
-      });
-
-      return Array.from(uniqueUrls.values());
+      // Use shared utility to extract URLs with domains
+      return extractUrlsWithDomains(agenda);
     });
   }
 }
