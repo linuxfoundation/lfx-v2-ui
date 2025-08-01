@@ -5,9 +5,11 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { Meeting, MeetingParticipant } from '@lfx-pcc/shared/interfaces';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
@@ -40,6 +42,8 @@ import { RecurringEditOption, RecurringMeetingEditOptionsComponent } from '../re
     TooltipModule,
     AnimateOnScrollModule,
     ConfirmDialogModule,
+    ExpandableTextComponent,
+    LinkifyPipe,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './meeting-card.component.html',
@@ -66,6 +70,9 @@ export class MeetingCardComponent {
 
   public readonly meetingDeleted = output<void>();
   public readonly project = this.projectService.project;
+
+  // Extract important links from agenda
+  public readonly importantLinks = this.initImportantLinks();
 
   public constructor() {
     effect(() => {
@@ -292,20 +299,18 @@ export class MeetingCardComponent {
           icon: 'fa-light fa-edit',
           command: () => this.editMeeting(),
         });
+        baseItems.push({
+          separator: true,
+        });
       }
 
       // Add separator and delete option
-      baseItems.push(
-        {
-          separator: true,
-        },
-        {
-          label: 'Delete',
-          icon: 'fa-light fa-trash',
-          styleClass: 'text-red-600',
-          command: () => this.deleteMeeting(),
-        }
-      );
+      baseItems.push({
+        label: 'Delete',
+        icon: 'fa-light fa-trash',
+        styleClass: 'text-red-600',
+        command: () => this.deleteMeeting(),
+      });
 
       return baseItems;
     });
@@ -323,5 +328,34 @@ export class MeetingCardComponent {
         finalize(() => this.initParticipantsList())
       )
       .subscribe();
+  }
+
+  private initImportantLinks(): Signal<{ url: string; domain: string }[]> {
+    return computed(() => {
+      const agenda = this.meeting().agenda;
+      if (!agenda) {
+        return [];
+      }
+
+      // URL regex pattern to match various URL formats
+      const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
+      const matches = [...agenda.matchAll(urlRegex)];
+
+      // Return unique URLs with their domain names
+      const uniqueUrls = new Map<string, { url: string; domain: string }>();
+      matches.forEach((match) => {
+        const url = match[0];
+        if (!uniqueUrls.has(url)) {
+          try {
+            const domain = new URL(url).hostname.replace('www.', '');
+            uniqueUrls.set(url, { url, domain });
+          } catch {
+            // Invalid URL, skip it
+          }
+        }
+      });
+
+      return Array.from(uniqueUrls.values());
+    });
   }
 }
