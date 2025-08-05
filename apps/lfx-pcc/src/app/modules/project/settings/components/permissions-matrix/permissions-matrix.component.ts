@@ -38,10 +38,10 @@ export class PermissionsMatrixComponent {
       level: 'View',
       description: 'View specific committee only, including meetings and mailing lists that are associated with the committees.',
       capabilities: [
-        'Read project (limited to committees)',
-        'Read assigned committees',
-        'Read meetings associated with the committees',
-        'Read mailing lists associated with the committees',
+        'View project (limited to committees)',
+        'View assigned committees',
+        'View meetings associated with the committees',
+        'View mailing lists associated with the committees',
       ],
       badge: {
         color: 'text-green-800',
@@ -53,7 +53,7 @@ export class PermissionsMatrixComponent {
       level: 'Manage',
       description: 'Manage specific committee only, including meetings and mailing lists that are associated with the committees.',
       capabilities: [
-        'Read project (limited to committees)',
+        'View project (limited to committees)',
         'Manage assigned committees',
         'Manage meetings associated with the committees',
         'Manage mailing lists associated with the committees',
