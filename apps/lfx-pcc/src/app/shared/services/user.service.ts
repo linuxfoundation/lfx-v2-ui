@@ -3,7 +3,7 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { User, CreateUserPermissionRequest } from '@lfx-pcc/shared/interfaces';
+import { CreateUserPermissionRequest, User } from '@lfx-pcc/shared/interfaces';
 import { Observable } from 'rxjs';
 
 @Injectable({

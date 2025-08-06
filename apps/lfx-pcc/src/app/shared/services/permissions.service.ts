@@ -17,11 +17,6 @@ export class PermissionsService {
     return this.http.get<UserPermissionSummary[]>(`/api/projects/${project}/permissions`);
   }
 
-  // Add new user with permissions
-  public addUserPermissions(project: string, userPermissions: UserPermissionSummary): Observable<UserPermissionSummary> {
-    return this.http.post<UserPermissionSummary>(`/api/projects/${project}/permissions`, userPermissions);
-  }
-
   // Update user permissions
   public updateUserPermissions(project: string, userId: string, permissions: Omit<UpdateUserPermissionRequest, 'user_id' | 'project_id'>): Observable<void> {
     return this.http.put<void>(`/api/projects/${project}/permissions/${userId}`, permissions);

@@ -29,7 +29,7 @@ export class SettingsDashboardComponent {
   private readonly permissionsService = inject(PermissionsService);
 
   public users: Signal<UserPermissionSummary[]>;
-  public loading: WritableSignal<boolean> = signal(false);
+  public loading: WritableSignal<boolean> = signal(true);
   public refresh: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
   public project = this.projectService.project;
   protected readonly menuItems: MenuItem[] = [
@@ -45,6 +45,7 @@ export class SettingsDashboardComponent {
     this.users = toSignal(
       this.project()?.id
         ? this.refresh.pipe(
+            tap(() => this.loading.set(true)),
             switchMap(() => this.permissionsService.getProjectPermissions(this.project()?.id as string).pipe(tap(() => this.loading.set(false))))
           )
         : of([]),

@@ -429,7 +429,6 @@ export class SupabaseService {
   }
 
   public async getProjectPermissions(projectId: string): Promise<UserPermissionSummary[]> {
-    console.info('getProjectPermissions', projectId);
     // Get project permissions
     const projectPermissionsParams = new URLSearchParams({
       select: `user_id,permission_level,users(id,first_name,last_name,email,username,created_at)`,
@@ -471,20 +470,11 @@ export class SupabaseService {
     const userPermissionsMap = new Map<string, UserPermissionSummary>();
 
     projectPermissions.forEach((perm: { user_id: string; users: User; project_id: string; permission_level: PermissionLevel }) => {
-      const user = userPermissionsMap.get(perm.user_id);
-      if (user) {
-        userPermissionsMap.set(perm.user_id, {
-          user: perm.users,
-          projectPermission: { level: perm.permission_level, scope: 'project' },
-          committeePermissions: [],
-        });
-      } else {
-        userPermissionsMap.set(perm.user_id, {
-          user: perm.users,
-          projectPermission: { level: perm.permission_level, scope: 'project' },
-          committeePermissions: [],
-        });
-      }
+      userPermissionsMap.set(perm.user_id, {
+        user: perm.users,
+        projectPermission: { level: perm.permission_level, scope: 'project' },
+        committeePermissions: [],
+      });
     });
 
     committeePermissions.forEach((perm: { user_id: string; users: User; committee_id: string; permission_level: PermissionLevel; committees: Committee }) => {

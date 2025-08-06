@@ -8,19 +8,20 @@ import { MultiSelectComponent } from '@app/shared/components/multi-select/multi-
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
-import { CreateUserPermissionRequest, PermissionScope, PermissionLevel } from '@lfx-pcc/shared';
+import { CreateUserPermissionRequest, PermissionLevel, PermissionScope, UserPermissionSummary } from '@lfx-pcc/shared';
 import { CommitteeService } from '@services/committee.service';
-import { ProjectService } from '@services/project.service';
 import { PermissionsService } from '@services/permissions.service';
+import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { map, take } from 'rxjs/operators';
 
 @Component({
   selector: 'lfx-user-form',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextComponent, ButtonComponent, RadioButtonComponent, MultiSelectComponent],
+  imports: [ReactiveFormsModule, InputTextComponent, ButtonComponent, RadioButtonComponent, MultiSelectComponent, TooltipModule],
   templateUrl: './user-form.component.html',
 })
 export class UserFormComponent {
@@ -41,7 +42,7 @@ export class UserFormComponent {
 
   public isEditing = computed(() => this.config.data?.isEditing || false);
   public userId = computed(() => this.config.data?.user?.user?.sid || this.config.data?.user?.user?.id);
-  public user = computed(() => this.config.data?.user || null);
+  public user = computed(() => (this.config.data?.user as UserPermissionSummary) || null);
   public project = this.projectService.project;
 
   // Form Options
@@ -49,13 +50,13 @@ export class UserFormComponent {
 
   // Permission options
   public permissionScopeOptions = [
-    { label: 'Project Level', value: 'project' as PermissionScope },
-    { label: 'Committee Specific', value: 'committee' as PermissionScope },
+    { label: 'Project', value: 'project' as PermissionScope },
+    { label: 'Committee', value: 'committee' as PermissionScope },
   ];
 
   public permissionLevelOptions = [
-    { label: 'Read Only', value: 'read' as PermissionLevel },
-    { label: 'Read/Write', value: 'write' as PermissionLevel },
+    { label: 'View', value: 'read' as PermissionLevel },
+    { label: 'Manage', value: 'write' as PermissionLevel },
   ];
 
   public constructor() {
@@ -112,7 +113,7 @@ export class UserFormComponent {
       : this.userService.createUserWithPermissions(userData as CreateUserPermissionRequest);
 
     operation.pipe(take(1)).subscribe({
-      next: (result) => {
+      next: (result: UserPermissionSummary) => {
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
@@ -120,7 +121,7 @@ export class UserFormComponent {
         });
         this.dialogRef.close(result);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error saving user:', error);
         this.messageService.add({
           severity: 'error',
@@ -181,7 +182,7 @@ export class UserFormComponent {
       } else if (user.committeePermissions?.length > 0) {
         permissionScope = 'committee';
         permissionLevel = user.committeePermissions[0].level;
-        committeeIds = user.committeePermissions.map((cp: any) => cp.committee.id);
+        committeeIds = user.committeePermissions.map((cp) => cp.committee.id);
       }
 
       this.form().patchValue({
