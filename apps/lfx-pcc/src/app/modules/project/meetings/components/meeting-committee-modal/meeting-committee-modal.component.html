@@ -23,7 +23,8 @@
         filterPlaceHolder="Search committees"
         [showToggleAll]="true"
         appendTo="body"
-        styleClass="w-full"></lfx-multi-select>
+        styleClass="w-full"
+        data-testid="meeting-committee-multi-select"></lfx-multi-select>
       <p class="text-xs text-gray-500">
         @if (selectedCommitteeIds().length === 0) {
           Select committees to associate with this meeting. Committee members will automatically be added as participants.
@@ -155,12 +156,19 @@
 
 <!-- Footer Actions -->
 <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-  <lfx-button label="Cancel" severity="secondary" size="small" (onClick)="onCancel()" [disabled]="saving()"></lfx-button>
+  <lfx-button
+    label="Cancel"
+    severity="secondary"
+    size="small"
+    (onClick)="onCancel()"
+    [disabled]="saving()"
+    data-testid="meeting-committee-modal-cancel-button"></lfx-button>
   <lfx-button
     label="Save"
     severity="primary"
     size="small"
     [icon]="saving() ? 'fa-light fa-circle-notch fa-spin' : 'fa-light fa-save'"
     (onClick)="onSave()"
-    [disabled]="saving()"></lfx-button>
+    [disabled]="saving()"
+    data-testid="meeting-committee-modal-save-button"></lfx-button>
 </div>

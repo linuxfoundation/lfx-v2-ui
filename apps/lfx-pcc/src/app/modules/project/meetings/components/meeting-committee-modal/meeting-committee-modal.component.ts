@@ -3,6 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -108,10 +109,13 @@ export class MeetingCommitteeModalComponent {
     }
 
     // Subscribe to form value changes
-    this.form.get('committees')?.valueChanges.subscribe((committeeIds: string[]) => {
-      this.selectedCommitteeIds.set(committeeIds || []);
-      this.loadCommitteeMembers(committeeIds || []);
-    });
+    this.form
+      .get('committees')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((committeeIds: string[]) => {
+        this.selectedCommitteeIds.set(committeeIds || []);
+        this.loadCommitteeMembers(committeeIds || []);
+      });
   }
 
   public onCancel(): void {
