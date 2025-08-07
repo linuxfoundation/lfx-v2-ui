@@ -78,6 +78,21 @@ export class MeetingCommitteeModalComponent {
     return committees.some((c) => selectedIds.includes(c.id) && c.enable_voting);
   });
 
+  public tableColspan = computed(() => {
+    const hasVoting = this.hasVotingEnabledCommittee();
+    const hasMultipleCommittees = this.selectedCommitteeIds().length > 1;
+
+    if (hasVoting) {
+      return 5; // Name, Organization, Committee, Role, Voting Status
+    }
+
+    if (hasMultipleCommittees) {
+      return 3; // Name, Organization, Committee
+    }
+
+    return 2; // Name, Organization
+  });
+
   public constructor() {
     this.form = new FormGroup({
       committees: new FormControl([]),
@@ -215,30 +230,26 @@ export class MeetingCommitteeModalComponent {
   }
 
   private updateMembersDisplay(committeeIds: string[]): void {
-    // Collect all members from selected committees using cache
-    const allMembers: CommitteeMemberDisplay[] = [];
+    // Collect all members from selected committees and deduplicate in a single pass
+    const uniqueMembers = committeeIds
+      .flatMap((id) => this.committeesMembersCache.get(id) || [])
+      .reduce((acc: CommitteeMemberDisplay[], member) => {
+        const existingMember = acc.find((m) => m.email === member.email);
+        const committee = this.committees().find((c) => c.id === member.committee_id);
+        const committeeName = committee?.name || '';
 
-    committeeIds.forEach((id) => {
-      const cachedMembers = this.committeesMembersCache.get(id);
-      if (cachedMembers) {
-        allMembers.push(...cachedMembers);
-      }
-    });
-
-    // Deduplicate members by email
-    const uniqueMembers = allMembers.reduce((acc: CommitteeMemberDisplay[], member) => {
-      const existingMember = acc.find((m) => m.email === member.email);
-      const committee = this.committees().find((c) => c.id === member.committee_id);
-      if (!existingMember) {
-        acc.push({
-          ...member,
-          committees: [committee?.name || ''],
-        });
-      } else {
-        existingMember.committees?.push(committee?.name || '');
-      }
-      return acc;
-    }, []);
+        if (!existingMember) {
+          acc.push({
+            ...member,
+            committees: [committeeName],
+          });
+        } else {
+          if (!existingMember.committees?.includes(committeeName)) {
+            existingMember.committees?.push(committeeName);
+          }
+        }
+        return acc;
+      }, []);
 
     this.committeeMembers.set(uniqueMembers);
   }

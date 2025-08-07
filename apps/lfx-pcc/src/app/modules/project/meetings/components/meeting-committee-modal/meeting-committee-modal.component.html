@@ -129,7 +129,7 @@
             </ng-template>
             <ng-template #emptymessage>
               <tr>
-                <td [attr.colspan]="hasVotingEnabledCommittee() ? 6 : 4" class="text-center py-4">
+                <td [attr.colspan]="tableColspan()" class="text-center py-4">
                   <span class="text-sm text-gray-500">No members found in selected committees</span>
                 </td>
               </tr>
