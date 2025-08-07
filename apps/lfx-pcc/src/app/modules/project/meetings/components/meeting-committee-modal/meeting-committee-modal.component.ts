@@ -3,8 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { MultiSelectComponent } from '@components/multi-select/multi-select.component';
@@ -234,27 +233,33 @@ export class MeetingCommitteeModalComponent {
   }
 
   private updateMembersDisplay(committeeIds: string[]): void {
-    // Collect all members from selected committees and deduplicate in a single pass
-    const uniqueMembers = committeeIds
-      .flatMap((id) => this.committeesMembersCache.get(id) || [])
-      .reduce((acc: CommitteeMemberDisplay[], member) => {
-        const existingMember = acc.find((m) => m.email === member.email);
-        const committee = this.committees().find((c) => c.id === member.committee_id);
-        const committeeName = committee?.name || '';
+    const memberMap = new Map<string, CommitteeMemberDisplay>();
+
+    for (const committeeId of committeeIds) {
+      const cachedMembers = this.committeesMembersCache.get(committeeId) || [];
+      const committee = this.committees().find((c) => c.id === committeeId);
+      const committeeName = committee?.name || '';
+
+      for (const member of cachedMembers) {
+        // Skip members without email addresses
+        if (!member.email) continue;
+
+        const existingMember = memberMap.get(member.email);
 
         if (!existingMember) {
-          acc.push({
+          memberMap.set(member.email, {
             ...member,
             committees: [committeeName],
           });
         } else {
+          // Only add if not already present
           if (!existingMember.committees?.includes(committeeName)) {
             existingMember.committees?.push(committeeName);
           }
         }
-        return acc;
-      }, []);
+      }
+    }
 
-    this.committeeMembers.set(uniqueMembers);
+    this.committeeMembers.set(Array.from(memberMap.values()));
   }
 }
