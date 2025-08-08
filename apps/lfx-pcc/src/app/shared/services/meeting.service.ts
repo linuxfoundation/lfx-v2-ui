@@ -4,7 +4,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { CreateMeetingRequest, Meeting, MeetingAttachment, MeetingParticipant, UpdateMeetingRequest, UploadFileResponse } from '@lfx-pcc/shared/interfaces';
-import { catchError, Observable, of, take, tap } from 'rxjs';
+import { catchError, defer, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -160,11 +160,8 @@ export class MeetingService {
   }
 
   public uploadFileToStorage(file: File): Observable<UploadFileResponse> {
-    return new Observable((observer) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64Data = (reader.result as string).split(',')[1];
-
+    return defer(() => this.readFileAsBase64(file)).pipe(
+      switchMap((base64Data: string) => {
         // Generate a temporary path for the file
         const timestamp = Date.now();
         const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -178,24 +175,13 @@ export class MeetingService {
           filePath: tempPath,
         };
 
-        this.http
-          .post<UploadFileResponse>('/api/meetings/storage/upload', uploadData)
-          .pipe(
-            take(1),
-            catchError((error) => {
-              console.error(`Failed to upload file ${file.name}:`, error);
-              throw error;
-            })
-          )
-          .subscribe(observer);
-      };
-
-      reader.onerror = () => {
-        observer.error(new Error('Failed to read file'));
-      };
-
-      reader.readAsDataURL(file);
-    });
+        return this.http.post<UploadFileResponse>('/api/meetings/storage/upload', uploadData);
+      }),
+      catchError((error) => {
+        console.error(`Failed to upload file ${file.name}:`, error);
+        return throwError(() => error);
+      })
+    );
   }
 
   public uploadAttachment(meetingId: string, file: File): Observable<{ message: string; attachment: MeetingAttachment }> {
@@ -257,5 +243,20 @@ export class MeetingService {
         throw error;
       })
     );
+  }
+
+  private readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64Data = result.split(',')[1];
+        resolve(base64Data);
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsDataURL(file);
+    });
   }
 }

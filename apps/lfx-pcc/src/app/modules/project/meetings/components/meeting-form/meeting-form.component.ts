@@ -13,7 +13,8 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { TimePickerComponent } from '@components/time-picker/time-picker.component';
 import { ToggleComponent } from '@components/toggle/toggle.component';
-import { getUserTimezone, TIMEZONES } from '@lfx-pcc/shared/constants';
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, TIMEZONES } from '@lfx-pcc/shared/constants';
+import { getUserTimezone } from '@lfx-pcc/shared/utils';
 import { MeetingType, MeetingVisibility, RecurrenceType } from '@lfx-pcc/shared/enums';
 import { CreateMeetingRequest, MeetingAttachment, MeetingRecurrence, PendingAttachment, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
@@ -248,8 +249,20 @@ export class MeetingFormComponent {
       return;
     }
 
-    // Process each file immediately
+    // Validate each file before processing
     files.forEach((file) => {
+      const validationError = this.validateFile(file);
+      if (validationError) {
+        // Show validation error to user
+        this.messageService.add({
+          severity: 'error',
+          summary: 'File Upload Error',
+          detail: validationError,
+          life: 5000,
+        });
+        return;
+      }
+
       const pendingAttachment: PendingAttachment = {
         id: crypto.randomUUID(),
         fileName: file.name,
@@ -283,6 +296,34 @@ export class MeetingFormComponent {
 
   public removePendingAttachment(attachmentId: string): void {
     this.pendingAttachments.update((current) => current.filter((pa) => pa.id !== attachmentId));
+  }
+
+  private validateFile(file: File): string | null {
+    // Check file size (10MB limit)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return `File "${file.name}" is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`;
+    }
+
+    // Check file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
+      const allowedTypes = ALLOWED_FILE_TYPES.map((type) => type.split('/')[1]).join(', ');
+      return `File type "${file.type}" is not supported. Allowed types: ${allowedTypes}.`;
+    }
+
+    // Check for duplicate filenames in current session
+    const currentFiles = this.pendingAttachments();
+    const isDuplicate = currentFiles.some((attachment) => attachment.fileName === file.name && !attachment.uploadError);
+
+    if (isDuplicate) {
+      return `A file named "${file.name}" has already been selected for upload.`;
+    }
+
+    // Check filename safety
+    if (file.name.includes('..') || file.name.startsWith('.')) {
+      return `Invalid filename "${file.name}". Filename cannot contain path traversal characters or start with a dot.`;
+    }
+
+    return null; // File is valid
   }
 
   private savePendingAttachments(meetingId: string): Observable<MeetingAttachment[]> {

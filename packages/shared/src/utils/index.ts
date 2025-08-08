@@ -3,4 +3,5 @@
 
 export * from './date.utils';
 export * from './file.utils';
+export * from './timezone.utils';
 export * from './url.utils';
