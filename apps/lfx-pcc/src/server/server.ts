@@ -92,10 +92,10 @@ const httpLogger = pinoHttp({
     },
   },
   redact: {
-    paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+    paths: ['access_token', 'refresh_token', 'authorization', 'cookie'],
     remove: true,
   },
-  level: 'info',
+  level: process.env['LOG_LEVEL'] || 'info',
   formatters: {
     level: (label) => {
       return { level: label.toUpperCase() };
