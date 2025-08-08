@@ -6,9 +6,11 @@ import {
   CommitteeMember,
   CommitteePermission,
   CreateCommitteeMemberRequest,
+  CreateMeetingAttachmentRequest,
   CreateMeetingRequest,
   CreateUserPermissionRequest,
   Meeting,
+  MeetingAttachment,
   MeetingParticipant,
   PermissionLevel,
   ProjectPermission,
@@ -16,6 +18,7 @@ import {
   RecentActivity,
   UpdateMeetingRequest,
   UpdateUserPermissionRequest,
+  UploadFileResponse,
   User,
   UserPermissionSummary,
 } from '@lfx-pcc/shared/interfaces';
@@ -25,15 +28,20 @@ dotenv.config();
 
 export class SupabaseService {
   private readonly baseUrl: string;
+  private readonly storageUrl: string;
   private readonly apiKey: string;
   private readonly timeout: number = 30000;
+  private readonly defaultBucket: string;
 
   public constructor() {
     const supabaseUrl = process.env['SUPABASE_URL'];
     const apiKey = process.env['POSTGRES_API_KEY'];
+    const storageBucket = process.env['SUPABASE_STORAGE_BUCKET'] || 'meeting-attachments';
 
     this.baseUrl = `${supabaseUrl}/rest/v1`;
+    this.storageUrl = `${supabaseUrl}/storage/v1`;
     this.apiKey = apiKey || '';
+    this.defaultBucket = storageBucket;
   }
 
   public async getProjects(params?: Record<string, any>) {
@@ -927,6 +935,138 @@ export class SupabaseService {
     }
   }
 
+  // Storage methods
+  public async uploadFile(
+    filePath: string,
+    fileBuffer: Buffer,
+    options?: {
+      bucket?: string;
+      contentType?: string;
+      upsert?: boolean;
+      cacheControl?: string;
+    }
+  ): Promise<UploadFileResponse> {
+    const bucket = options?.bucket || this.defaultBucket;
+    const url = `${this.storageUrl}/object/${bucket}/${filePath}`;
+
+    const headers: Record<string, string> = {
+      ...this.getStorageHeaders(),
+      ['Content-Type']: options?.contentType || 'application/octet-stream',
+    };
+
+    if (options?.upsert) {
+      headers['x-upsert'] = 'true';
+    }
+
+    if (options?.cacheControl) {
+      headers['Cache-Control'] = options.cacheControl;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: fileBuffer,
+      signal: AbortSignal.timeout(this.timeout * 2), // Double timeout for uploads
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to upload file: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+
+    // Get the public URL for the uploaded file
+    const publicUrl = this.getPublicUrl(bucket, filePath);
+
+    return {
+      url: publicUrl,
+      path: filePath,
+      size: fileBuffer.length,
+      mimeType: options?.contentType || 'application/octet-stream',
+    };
+  }
+
+  public getPublicUrl(bucket: string, filePath: string): string {
+    return `${this.storageUrl}/object/public/${bucket}/${filePath}`;
+  }
+
+  public async deleteFile(filePaths: string[], bucket?: string): Promise<void> {
+    const bucketName = bucket || this.defaultBucket;
+    const url = `${this.storageUrl}/object/${bucketName}`;
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        ...this.getStorageHeaders(),
+        ['Content-Type']: 'application/json',
+      },
+      body: JSON.stringify({ prefixes: filePaths }),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete file: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+  }
+
+  public async createMeetingAttachment(attachment: CreateMeetingAttachmentRequest): Promise<MeetingAttachment> {
+    const url = `${this.baseUrl}/meeting_attachments`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(attachment),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create meeting attachment: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data?.[0] || data;
+  }
+
+  public async getMeetingAttachments(meetingId: string): Promise<MeetingAttachment[]> {
+    const params = new URLSearchParams({
+      meeting_id: `eq.${meetingId}`,
+      order: 'created_at.asc',
+    });
+    const url = `${this.baseUrl}/meeting_attachments?${params.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch meeting attachments: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+
+    return await response.json();
+  }
+
+  public async deleteMeetingAttachment(attachmentId: string): Promise<void> {
+    const params = new URLSearchParams({
+      id: `eq.${attachmentId}`,
+    });
+    const url = `${this.baseUrl}/meeting_attachments?${params.toString()}`;
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+      signal: AbortSignal.timeout(this.timeout),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete meeting attachment: ${response.status} ${response.statusText}: ${errorText}`);
+    }
+  }
+
   private async fallbackProjectSearch(query: string): Promise<ProjectSearchResult[]> {
     let url = `${this.baseUrl}/projects?limit=10&order=name`;
 
@@ -966,6 +1106,13 @@ export class SupabaseService {
       Authorization: `Bearer ${this.apiKey}`,
       ['Content-Type']: 'application/json',
       Prefer: 'return=representation',
+    };
+  }
+
+  private getStorageHeaders(): Record<string, string> {
+    return {
+      apikey: this.apiKey,
+      Authorization: `Bearer ${this.apiKey}`,
     };
   }
 
