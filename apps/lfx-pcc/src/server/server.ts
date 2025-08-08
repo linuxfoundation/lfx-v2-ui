@@ -10,23 +10,48 @@ import express, { NextFunction, Request, Response } from 'express';
 import { auth, ConfigParams } from 'express-openid-connect';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pino from 'pino';
 import pinoHttp from 'pino-http';
 
 import { extractBearerToken } from './middleware/auth-token.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
-import { tokenRefreshMiddleware } from './middleware/token-refresh.middleware';
 import committeesRouter from './routes/committees';
 import meetingsRouter from './routes/meetings';
 import permissionsRouter from './routes/permissions';
 import projectsRouter from './routes/projects';
 
-dotenv.config();
+if (process.env['NODE_ENV'] !== 'production') {
+  dotenv.config();
+}
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const angularApp = new AngularNodeAppEngine();
 const app = express();
+
+/**
+ * Base Pino logger instance for server-level operations.
+ *
+ * Used for:
+ * - Server startup/shutdown messages
+ * - Direct logging from server code outside request context
+ * - Operations that don't have access to req.log
+ * - Can be imported by other modules for consistent logging
+ */
+const serverLogger = pino({
+  level: process.env['LOG_LEVEL'] || 'info',
+  redact: {
+    paths: ['access_token', 'refresh_token', 'authorization', 'cookie'],
+    remove: true,
+  },
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
+    },
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+});
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -47,7 +72,19 @@ app.get('/health', (_req: Request, res: Response) => {
   res.send('OK');
 });
 
-const logger = pinoHttp({
+/**
+ * HTTP request/response logging middleware using Pino.
+ *
+ * Provides:
+ * - Automatic HTTP request/response logging
+ * - Request-scoped logger accessible via req.log in route handlers
+ * - Request correlation and timing
+ * - Consistent configuration with serverLogger
+ *
+ * Usage in routes: req.log.info({...}, 'message')
+ */
+const httpLogger = pinoHttp({
+  logger: serverLogger, // Use the same base logger for consistency
   autoLogging: {
     ignore: (req: Request) => {
       return req.url === '/health' || req.url === '/api/health';
@@ -58,10 +95,16 @@ const logger = pinoHttp({
     remove: true,
   },
   level: 'info',
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
+    },
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
 });
 
-// Add logger middleware after health endpoint to avoid logging health check
-app.use(logger);
+// Add HTTP logger middleware after health endpoint to avoid logging health check
+app.use(httpLogger);
 
 const authConfig: ConfigParams = {
   authRequired: true,
@@ -80,7 +123,7 @@ const authConfig: ConfigParams = {
 
 app.use(auth(authConfig));
 
-app.use(tokenRefreshMiddleware);
+// app.use(tokenRefreshMiddleware);
 
 // Apply bearer token middleware to all API routes
 app.use('/api', extractBearerToken);
@@ -126,7 +169,18 @@ app.use('/**', (req: Request, res: Response, next: NextFunction) => {
       return next();
     })
     .catch((error) => {
-      req.log.error({ error }, 'Error rendering Angular application');
+      req.log.error(
+        {
+          error: error.message,
+          code: error.code,
+          stack: process.env['NODE_ENV'] !== 'production' ? error.stack : undefined,
+          url: req.url,
+          method: req.method,
+          user_agent: req.get('User-Agent'),
+        },
+        'Error rendering Angular application'
+      );
+
       if (error.code === 'NOT_FOUND') {
         res.status(404).send('Not Found');
       } else if (error.code === 'UNAUTHORIZED') {
@@ -144,9 +198,23 @@ app.use('/**', (req: Request, res: Response, next: NextFunction) => {
 export function startServer() {
   const port = process.env['PORT'] || 4000;
   app.listen(port, () => {
-    logger.logger.info(`Node Express server listening on http://localhost:${port}`);
+    serverLogger.info(
+      {
+        port,
+        url: `http://localhost:${port}`,
+        node_env: process.env['NODE_ENV'] || 'development',
+        pm2: process.env['PM2'] === 'true',
+      },
+      'Node Express server started'
+    );
   });
 }
+
+/**
+ * Export server logger for use in other modules that need logging
+ * outside of the HTTP request context (e.g., startup scripts, utilities).
+ */
+export { serverLogger };
 
 const metaUrl = import.meta.url;
 const isMain = isMainModule(metaUrl);
