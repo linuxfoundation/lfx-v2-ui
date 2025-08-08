@@ -5,6 +5,7 @@ import { DEFAULT_QUERY_PARAMS } from '@lfx-pcc/shared/constants';
 import { MicroserviceUrls } from '@lfx-pcc/shared/interfaces';
 import { Request } from 'express';
 
+import { serverLogger } from '../server';
 import { ApiClientService } from './api-client.service';
 
 export class MicroserviceProxyService {
@@ -44,11 +45,18 @@ export class MicroserviceProxyService {
       const response = await this.executeRequest<T>(method, endpoint, token, data, mergedParams);
       return response.data;
     } catch (error) {
-      console.error(`Microservice request failed: ${service}${path}`, {
-        method,
-        error: error instanceof Error ? error.message : error,
-        stack: error instanceof Error ? error.stack : undefined,
-      });
+      serverLogger.error(
+        {
+          service,
+          path,
+          method,
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error && process.env['NODE_ENV'] !== 'production' ? error.stack : undefined,
+          endpoint: `${service}${path}`,
+          has_bearer_token: !!req.bearerToken,
+        },
+        'Microservice request failed'
+      );
 
       throw this.transformError(error, service, path);
     }
