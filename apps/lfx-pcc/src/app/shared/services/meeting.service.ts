@@ -24,7 +24,7 @@ export class MeetingService {
   }
 
   public getMeetingsByProject(projectId: string, limit?: number, orderBy?: string): Observable<Meeting[]> {
-    let params = new HttpParams().set('project_id', `eq.${projectId}`);
+    let params = new HttpParams().set('project_uid', `eq.${projectId}`);
 
     if (limit) {
       params = params.set('limit', limit.toString());
@@ -43,7 +43,7 @@ export class MeetingService {
 
   public getUpcomingMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
     const now = new Date().toISOString();
-    let params = new HttpParams().set('project_id', `eq.${projectId}`).set('start_time', `gte.${now}`).set('order', 'start_time.asc');
+    let params = new HttpParams().set('project_uid', `eq.${projectId}`).set('start_time', `gte.${now}`).set('order', 'start_time.asc');
 
     if (limit) {
       params = params.set('limit', limit.toString());
@@ -54,7 +54,7 @@ export class MeetingService {
 
   public getPastMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
     const now = new Date().toISOString();
-    let params = new HttpParams().set('project_id', `eq.${projectId}`).set('start_time', `lt.${now}`).set('order', 'start_time.desc');
+    let params = new HttpParams().set('project_uid', `eq.${projectId}`).set('start_time', `lt.${now}`).set('order', 'start_time.desc');
 
     if (limit) {
       params = params.set('limit', limit.toString());

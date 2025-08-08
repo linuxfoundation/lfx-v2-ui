@@ -28,17 +28,17 @@ export class MicroserviceProxyService {
       }
 
       const MICROSERVICE_URLS: MicroserviceUrls = {
-        QUERY_SERVICE: process.env['QUERY_SERVICE_URL'] || 'http://localhost:8080/query/resources',
+        LFX_V2_SERVICE: process.env['LFX_V2_SERVICE_URL'] || 'http://lfx-api.k8s.orb.local',
       };
 
       const baseUrl = MICROSERVICE_URLS[service];
       const endpoint = `${baseUrl}${path}`;
-      // const token = req.bearerToken;
-      const token = process.env['QUERY_SERVICE_TOKEN'] as string;
+      const token = req.bearerToken;
+      // const token = process.env['QUERY_SERVICE_TOKEN'] as string;
 
       // Merge query parameters with defaults taking precedence
       // This ensures that default params cannot be overridden by the caller
-      const defaultParams = DEFAULT_QUERY_PARAMS[service] || {};
+      const defaultParams = DEFAULT_QUERY_PARAMS;
       const mergedParams = { ...params, ...defaultParams };
 
       const response = await this.executeRequest<T>(method, endpoint, token, data, mergedParams);

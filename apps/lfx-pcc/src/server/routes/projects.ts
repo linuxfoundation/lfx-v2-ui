@@ -1,17 +1,23 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { Project } from '@lfx-pcc/shared';
 import { NextFunction, Request, Response, Router } from 'express';
 
+import { ApiClientService } from '../services/api-client.service';
+import { MicroserviceProxyService } from '../services/microservice-proxy.service';
 import { SupabaseService } from '../services/supabase.service';
 
 const router = Router();
 
 const supabaseService = new SupabaseService();
+const microserviceProxyService = new MicroserviceProxyService(new ApiClientService());
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const projects = await supabaseService.getProjects(req.query as Record<string, any>);
+    let { projects } = await microserviceProxyService.proxyRequest<{ projects: Project[] }>(req, 'LFX_V2_SERVICE', '/projects', 'GET', req.query);
+
+    projects = projects.filter((project) => project.name !== 'ROOT');
 
     return res.json(projects);
   } catch (error) {
@@ -87,7 +93,7 @@ router.get('/:slug/recent-activity', async (req: Request, res: Response, next: N
       });
     }
 
-    const recentActivity = await supabaseService.getRecentActivityByProject(project.id, req.query as Record<string, any>);
+    const recentActivity = await supabaseService.getRecentActivityByProject(project.uid, req.query as Record<string, any>);
     return res.json(recentActivity);
   } catch (error) {
     console.error(`Failed to fetch recent activity for project ${req.params['slug']}:`, error);

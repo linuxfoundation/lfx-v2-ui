@@ -23,7 +23,7 @@ export interface Committee {
   total_members: number;
   total_voting_reps: number;
   subcommittees: Subcommittee[] | null;
-  project_id: string;
+  project_uid: string;
 }
 
 export interface Subcommittee {
@@ -48,7 +48,7 @@ export interface Subcommittee {
   total_members: number;
   total_voting_reps: number;
   subcommittees: Subcommittee[] | null;
-  project_id: string;
+  project_uid: string;
 }
 
 export interface CommitteeSummary {

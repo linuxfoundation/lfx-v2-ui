@@ -56,8 +56,8 @@ export class SupabaseService {
     const projectsWithCounts = await Promise.all(
       projects.map(async (project: any) => {
         const [committeeCount, meetingCount] = await Promise.all([
-          this.getCommitteeCountByProjectId(project.id).catch(() => 0),
-          this.getMeetingCountByProjectId(project.id).catch(() => 0),
+          this.getCommitteeCountByProjectId(project.uid).catch(() => 0),
+          this.getMeetingCountByProjectId(project.uid).catch(() => 0),
         ]);
         return {
           ...project,
@@ -93,7 +93,7 @@ export class SupabaseService {
 
     if (project) {
       // Get committee and meeting counts for this specific project and add them to the project
-      const [committeeCount, meetingCount] = await Promise.all([this.getCommitteeCountByProjectId(project.id), this.getMeetingCountByProjectId(project.id)]);
+      const [committeeCount, meetingCount] = await Promise.all([this.getCommitteeCountByProjectId(project.uid), this.getMeetingCountByProjectId(project.uid)]);
       project.committees_count = committeeCount;
       project.meetings_count = meetingCount;
     }
@@ -170,7 +170,7 @@ export class SupabaseService {
 
   public async getCommitteeCountByProjectId(projectId: string): Promise<number> {
     const params = new URLSearchParams({
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
       select: 'count',
     });
     const url = `${this.baseUrl}/committees?${params.toString()}`;
@@ -432,7 +432,7 @@ export class SupabaseService {
     // Get project permissions
     const projectPermissionsParams = new URLSearchParams({
       select: `user_id,permission_level,users(id,first_name,last_name,email,username,created_at)`,
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
     });
 
     const projectPermissionsResponse = await fetch(`${this.baseUrl}/user_project_permissions?${projectPermissionsParams.toString()}`, {
@@ -443,8 +443,8 @@ export class SupabaseService {
 
     // Get committee permissions
     const committeePermissionsParams = new URLSearchParams({
-      select: `user_id,committee_id,permission_level,users(id,first_name,last_name,email,username,created_at),committees(id,name,description,project_id)`,
-      project_id: `eq.${projectId}`,
+      select: `user_id,committee_id,permission_level,users(id,first_name,last_name,email,username,created_at),committees(id,name,description,project_uid)`,
+      project_uid: `eq.${projectId}`,
     });
 
     const committeePermissionsResponse = await fetch(`${this.baseUrl}/user_committee_permissions?${committeePermissionsParams.toString()}`, {
@@ -469,7 +469,7 @@ export class SupabaseService {
     // Combine and group by user
     const userPermissionsMap = new Map<string, UserPermissionSummary>();
 
-    projectPermissions.forEach((perm: { user_id: string; users: User; project_id: string; permission_level: PermissionLevel }) => {
+    projectPermissions.forEach((perm: { user_id: string; users: User; project_uid: string; permission_level: PermissionLevel }) => {
       userPermissionsMap.set(perm.user_id, {
         user: perm.users,
         projectPermission: { level: perm.permission_level, scope: 'project' },
@@ -516,7 +516,7 @@ export class SupabaseService {
 
   public async getMeetingsByProjectId(projectId: string, params?: Record<string, any>): Promise<Meeting[]> {
     const queryParams = {
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
       ...params,
     };
 
@@ -525,7 +525,7 @@ export class SupabaseService {
 
   public async getMeetingCountByProjectId(projectId: string): Promise<number> {
     const params = new URLSearchParams({
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
       select: 'count',
     });
     const url = `${this.baseUrl}/meetings?${params.toString()}`;
@@ -682,7 +682,7 @@ export class SupabaseService {
   public async getRecentActivityByProject(projectId: number, params?: Record<string, any>): Promise<RecentActivity[]> {
     // Build query parameters
     const queryParams = new URLSearchParams();
-    queryParams.set('project_id', `eq.${projectId}`);
+    queryParams.set('project_uid', `eq.${projectId}`);
     queryParams.set('order', 'date.desc');
 
     // Add limit parameter if provided, default to 10
@@ -800,7 +800,7 @@ export class SupabaseService {
     // Remove project-level permissions
     const projectPermissionsParams = new URLSearchParams({
       user_id: `eq.${userId}`,
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
     });
     const projectPermissionsUrl = `${this.baseUrl}/user_project_permissions?${projectPermissionsParams.toString()}`;
 
@@ -818,7 +818,7 @@ export class SupabaseService {
     // Remove committee-level permissions for this project
     const committeePermissionsParams = new URLSearchParams({
       user_id: `eq.${userId}`,
-      project_id: `eq.${projectId}`,
+      project_uid: `eq.${projectId}`,
     });
     const committeePermissionsUrl = `${this.baseUrl}/user_committee_permissions?${committeePermissionsParams.toString()}`;
 
@@ -883,7 +883,7 @@ export class SupabaseService {
     if (userData.permission_scope === 'project') {
       await this.createProjectPermission({
         user_id: userId,
-        project_id: userData.project_id,
+        project_uid: userData.project_uid,
         permission_level: userData.permission_level,
       });
     } else if (userData.permission_scope === 'committee' && userData.committee_ids) {
@@ -891,7 +891,7 @@ export class SupabaseService {
         userData.committee_ids.map((committeeId) =>
           this.createCommitteePermission({
             user_id: userId,
-            project_id: userData.project_id,
+            project_uid: userData.project_uid,
             committee_id: committeeId,
             permission_level: userData.permission_level,
           })
@@ -904,13 +904,13 @@ export class SupabaseService {
 
   public async updateUserPermissions(updateData: UpdateUserPermissionRequest): Promise<void> {
     // Remove existing permissions
-    await this.removeUserFromProject(updateData.user_id, updateData.project_id);
+    await this.removeUserFromProject(updateData.user_id, updateData.project_uid);
 
     // Add new permissions based on scope
     if (updateData.permission_scope === 'project') {
       await this.createProjectPermission({
         user_id: updateData.user_id,
-        project_id: updateData.project_id,
+        project_uid: updateData.project_uid,
         permission_level: updateData.permission_level,
       });
     } else if (updateData.permission_scope === 'committee' && updateData.committee_ids) {
@@ -918,7 +918,7 @@ export class SupabaseService {
         updateData.committee_ids.map((committeeId) =>
           this.createCommitteePermission({
             user_id: updateData.user_id,
-            project_id: updateData.project_id,
+            project_uid: updateData.project_uid,
             committee_id: committeeId,
             permission_level: updateData.permission_level,
           })
@@ -949,7 +949,7 @@ export class SupabaseService {
 
     // Transform regular projects to search result format
     return projects.map((project: any) => ({
-      project_id: project.id,
+      project_uid: project.uid,
       project_name: project.name,
       project_slug: project.slug,
       project_description: project.description,

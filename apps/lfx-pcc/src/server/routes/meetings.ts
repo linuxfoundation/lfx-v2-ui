@@ -164,9 +164,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const meetingData = req.body;
 
     // Basic validation
-    if (!meetingData.topic || !meetingData.start_time || !meetingData.project_id || !meetingData.duration) {
+    if (!meetingData.topic || !meetingData.start_time || !meetingData.project_uid || !meetingData.duration) {
       return res.status(400).json({
-        error: 'Topic, start_time, duration, and project_id are required fields',
+        error: 'Topic, start_time, duration, and project_uid are required fields',
         code: 'MISSING_REQUIRED_FIELDS',
       });
     }

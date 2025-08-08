@@ -154,7 +154,7 @@ export class MeetingFormComponent {
 
     // Create meeting data
     const baseMeetingData = {
-      project_id: project.id,
+      project_uid: project.uid,
       topic: formValue.topic,
       agenda: formValue.agenda || '',
       start_time: startDateTime,
