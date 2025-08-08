@@ -793,7 +793,13 @@ router.post('/:id/attachments', async (req: Request, res: Response, next: NextFu
 
     return res.status(201).json(attachment);
   } catch (error) {
-    console.error(`Failed to create attachment for meeting ${req.params['id']}:`, error);
+    req.log.error(
+      {
+        error: error instanceof Error ? error.message : error,
+        meeting_id: req.params['id'],
+      },
+      'Failed to create meeting attachment'
+    );
     return next(error);
   }
 });
@@ -813,7 +819,13 @@ router.get('/:id/attachments', async (req: Request, res: Response, next: NextFun
 
     return res.json(attachments);
   } catch (error) {
-    console.error(`Failed to fetch attachments for meeting ${req.params['id']}:`, error);
+    req.log.error(
+      {
+        error: error instanceof Error ? error.message : error,
+        meeting_id: req.params['id'],
+      },
+      'Failed to fetch meeting attachments'
+    );
     return next(error);
   }
 });
@@ -883,7 +895,13 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
       attachment,
     });
   } catch (error) {
-    console.error(`Failed to upload attachment for meeting ${req.params['id']}:`, error);
+    req.log.error(
+      {
+        error: error instanceof Error ? error.message : error,
+        meeting_id: req.params['id'],
+      },
+      'Failed to upload meeting attachment'
+    );
     return next(error);
   }
 });
@@ -928,7 +946,7 @@ router.delete('/:id/attachments/:attachmentId', async (req: Request, res: Respon
         // Delete from storage (continue even if this fails)
         await supabaseService.deleteFile([filePath]);
       } catch (storageError) {
-        console.warn(`Failed to delete file from storage: ${storageError}`);
+        req.log.warn({ error: storageError }, 'Failed to delete file from storage');
       }
     }
 
@@ -937,7 +955,14 @@ router.delete('/:id/attachments/:attachmentId', async (req: Request, res: Respon
 
     return res.status(204).send();
   } catch (error) {
-    console.error(`Failed to delete attachment ${req.params['attachmentId']} from meeting ${req.params['id']}:`, error);
+    req.log.error(
+      {
+        error: error instanceof Error ? error.message : error,
+        meeting_id: req.params['id'],
+        attachment_id: req.params['attachmentId'],
+      },
+      'Failed to delete meeting attachment'
+    );
     return next(error);
   }
 });
@@ -982,7 +1007,13 @@ router.post('/storage/upload', async (req: Request, res: Response, next: NextFun
 
     return res.status(201).json(uploadResult);
   } catch (error) {
-    console.error('Failed to upload file to storage:', error);
+    req.log.error(
+      {
+        error: error instanceof Error ? error.message : error,
+        file_path: req.body?.filePath,
+      },
+      'Failed to upload file to storage'
+    );
     return next(error);
   }
 });

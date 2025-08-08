@@ -15,6 +15,7 @@ import pinoHttp from 'pino-http';
 
 import { extractBearerToken } from './middleware/auth-token.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
+import { tokenRefreshMiddleware } from './middleware/token-refresh.middleware';
 import committeesRouter from './routes/committees';
 import meetingsRouter from './routes/meetings';
 import permissionsRouter from './routes/permissions';
@@ -53,8 +54,8 @@ const serverLogger = pino({
   timestamp: pino.stdTimeFunctions.isoTime,
 });
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 /**
  * Serve static files from /browser
@@ -123,7 +124,7 @@ const authConfig: ConfigParams = {
 
 app.use(auth(authConfig));
 
-// app.use(tokenRefreshMiddleware);
+app.use(tokenRefreshMiddleware);
 
 // Apply bearer token middleware to all API routes
 app.use('/api', extractBearerToken);

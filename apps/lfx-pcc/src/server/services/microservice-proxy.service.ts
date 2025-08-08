@@ -35,7 +35,6 @@ export class MicroserviceProxyService {
       const baseUrl = MICROSERVICE_URLS[service];
       const endpoint = `${baseUrl}${path}`;
       const token = req.bearerToken;
-      // const token = process.env['QUERY_SERVICE_TOKEN'] as string;
 
       // Merge query parameters with defaults taking precedence
       // This ensures that default params cannot be overridden by the caller
