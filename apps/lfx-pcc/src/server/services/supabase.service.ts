@@ -168,9 +168,9 @@ export class SupabaseService {
     return committee;
   }
 
-  public async getCommitteeCountByProjectId(projectId: string): Promise<number> {
+  public async getCommitteeCountByProjectId(projectUid: string): Promise<number> {
     const params = new URLSearchParams({
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
       select: 'count',
     });
     const url = `${this.baseUrl}/committees?${params.toString()}`;
@@ -186,7 +186,7 @@ export class SupabaseService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch committee count for project ${projectId}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch committee count for project ${projectUid}: ${response.status} ${response.statusText}`);
     }
 
     const contentRange = response.headers.get('content-range');
@@ -428,11 +428,11 @@ export class SupabaseService {
     return 0;
   }
 
-  public async getProjectPermissions(projectId: string): Promise<UserPermissionSummary[]> {
+  public async getProjectPermissions(projectUid: string): Promise<UserPermissionSummary[]> {
     // Get project permissions
     const projectPermissionsParams = new URLSearchParams({
       select: `user_id,permission_level,users(id,first_name,last_name,email,username,created_at)`,
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
     });
 
     const projectPermissionsResponse = await fetch(`${this.baseUrl}/user_project_permissions?${projectPermissionsParams.toString()}`, {
@@ -444,7 +444,7 @@ export class SupabaseService {
     // Get committee permissions
     const committeePermissionsParams = new URLSearchParams({
       select: `user_id,committee_id,permission_level,users(id,first_name,last_name,email,username,created_at),committees(id,name,description,project_uid)`,
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
     });
 
     const committeePermissionsResponse = await fetch(`${this.baseUrl}/user_committee_permissions?${committeePermissionsParams.toString()}`, {
@@ -514,18 +514,18 @@ export class SupabaseService {
     return meetings;
   }
 
-  public async getMeetingsByProjectId(projectId: string, params?: Record<string, any>): Promise<Meeting[]> {
+  public async getMeetingsByProjectId(projectUid: string, params?: Record<string, any>): Promise<Meeting[]> {
     const queryParams = {
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
       ...params,
     };
 
     return this.getMeetings(queryParams);
   }
 
-  public async getMeetingCountByProjectId(projectId: string): Promise<number> {
+  public async getMeetingCountByProjectId(projectUid: string): Promise<number> {
     const params = new URLSearchParams({
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
       select: 'count',
     });
     const url = `${this.baseUrl}/meetings?${params.toString()}`;
@@ -541,7 +541,7 @@ export class SupabaseService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch meeting count for project ${projectId}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch meeting count for project ${projectUid}: ${response.status} ${response.statusText}`);
     }
 
     const contentRange = response.headers.get('content-range');
@@ -679,10 +679,10 @@ export class SupabaseService {
     return await response.json();
   }
 
-  public async getRecentActivityByProject(projectId: number, params?: Record<string, any>): Promise<RecentActivity[]> {
+  public async getRecentActivityByProject(projectUid: string, params?: Record<string, any>): Promise<RecentActivity[]> {
     // Build query parameters
     const queryParams = new URLSearchParams();
-    queryParams.set('project_uid', `eq.${projectId}`);
+    queryParams.set('project_uid', `eq.${projectUid}`);
     queryParams.set('order', 'date.desc');
 
     // Add limit parameter if provided, default to 10
@@ -796,11 +796,11 @@ export class SupabaseService {
     }
   }
 
-  public async removeUserFromProject(userId: string, projectId: string): Promise<void> {
+  public async removeUserFromProject(userId: string, projectUid: string): Promise<void> {
     // Remove project-level permissions
     const projectPermissionsParams = new URLSearchParams({
       user_id: `eq.${userId}`,
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
     });
     const projectPermissionsUrl = `${this.baseUrl}/user_project_permissions?${projectPermissionsParams.toString()}`;
 
@@ -818,7 +818,7 @@ export class SupabaseService {
     // Remove committee-level permissions for this project
     const committeePermissionsParams = new URLSearchParams({
       user_id: `eq.${userId}`,
-      project_uid: `eq.${projectId}`,
+      project_uid: `eq.${projectUid}`,
     });
     const committeePermissionsUrl = `${this.baseUrl}/user_committee_permissions?${committeePermissionsParams.toString()}`;
 
@@ -954,7 +954,7 @@ export class SupabaseService {
       project_slug: project.slug,
       project_description: project.description,
       status: project.status,
-      logo: project.logo,
+      logo_url: project.logo_url,
       meetings_count: project.meetings_count || 0,
       mailing_list_count: project.mailing_list_count || 0,
     }));
