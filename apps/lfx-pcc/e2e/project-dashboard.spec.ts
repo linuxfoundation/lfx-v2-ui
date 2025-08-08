@@ -34,13 +34,13 @@ test.describe('Project Dashboard', () => {
       if (isMobile) {
         // On mobile: search and brand text should be hidden
         await expect(page.getByPlaceholder('Search projects...')).toBeHidden();
-        await expect(page.getByText('Projects')).toBeHidden();
+        await expect(page.getByText('Projects', { exact: true })).toBeHidden();
         // Mobile search toggle should be visible
         await expect(page.getByTestId('mobile-search-toggle')).toBeVisible();
       } else {
         // On desktop: search and brand text should be visible
         await expect(page.getByPlaceholder('Search projects...')).toBeVisible();
-        await expect(page.getByText('Projects')).toBeVisible();
+        await expect(page.getByText('Projects', { exact: true })).toBeVisible();
         // Mobile search toggle should be hidden
         await expect(page.getByTestId('mobile-search-toggle')).toBeHidden();
       }
@@ -279,7 +279,7 @@ test.describe('Project Dashboard', () => {
       await expect(page.getByPlaceholder('Search projects...')).toBeHidden();
 
       // Projects text should also be hidden on mobile
-      await expect(page.getByText('Projects')).toBeHidden();
+      await expect(page.getByText('Projects', { exact: true })).toBeHidden();
 
       // Mobile search toggle should be visible
       await expect(page.getByTestId('mobile-search-toggle')).toBeVisible();

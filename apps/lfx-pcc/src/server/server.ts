@@ -43,7 +43,7 @@ const app = express();
 const serverLogger = pino({
   level: process.env['LOG_LEVEL'] || 'info',
   redact: {
-    paths: ['access_token', 'refresh_token', 'authorization', 'cookie'],
+    paths: ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
     remove: true,
   },
   formatters: {
@@ -92,7 +92,7 @@ const httpLogger = pinoHttp({
     },
   },
   redact: {
-    paths: ['access_token', 'refresh_token', 'authorization', 'cookie'],
+    paths: ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
     remove: true,
   },
   level: process.env['LOG_LEVEL'] || 'info',

@@ -250,7 +250,7 @@ test.describe('Project Dashboard - Robust Tests', () => {
       await expect(page.getByPlaceholder('Search projects...')).toBeHidden();
 
       // Projects text should be hidden on mobile
-      await expect(page.getByText('Projects')).toBeHidden();
+      await expect(page.getByText('Projects', { exact: true })).toBeHidden();
 
       // Logo should still be visible
       await expect(page.getByAltText('LFX Logo')).toBeVisible();
@@ -267,7 +267,7 @@ test.describe('Project Dashboard - Robust Tests', () => {
 
       // Header elements should be visible on tablet (medium and up)
       await expect(page.getByPlaceholder('Search projects...')).toBeVisible();
-      await expect(page.getByText('Projects')).toBeVisible();
+      await expect(page.getByText('Projects', { exact: true })).toBeVisible();
       await expect(page.getByAltText('LFX Logo')).toBeVisible();
     });
   });
