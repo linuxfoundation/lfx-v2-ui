@@ -15,12 +15,11 @@ import { CommitteeService } from '@services/committee.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { MessageModule } from 'primeng/message';
 
 @Component({
   selector: 'lfx-committee-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, SelectComponent, InputTextComponent, TextareaComponent, ToggleComponent, MessageModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, SelectComponent, InputTextComponent, TextareaComponent, ToggleComponent],
   templateUrl: './committee-form.component.html',
   styleUrl: './committee-form.component.scss',
 })
