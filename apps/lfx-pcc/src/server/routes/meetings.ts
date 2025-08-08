@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NextFunction, Request, Response, Router } from 'express';
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, sanitizeFilename } from '@lfx-pcc/shared';
 
 import { SupabaseService } from '../services/supabase.service';
 
@@ -319,18 +320,7 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
     }
 
     // Validate file type
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-
-    if (!allowedTypes.includes(mimeType)) {
+    if (!ALLOWED_FILE_TYPES.includes(mimeType as any)) {
       return res.status(400).json({
         error: 'File type not supported',
         code: 'UNSUPPORTED_FILE_TYPE',
@@ -341,7 +331,7 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
     const buffer = Buffer.from(fileData, 'base64');
 
     // Validate file size (10MB limit)
-    if (buffer.length > 10 * 1024 * 1024) {
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
       return res.status(400).json({
         error: 'File size too large (max 10MB)',
         code: 'FILE_TOO_LARGE',
@@ -350,7 +340,7 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
 
     // Generate unique file path: meetings/{meetingId}/{timestamp}_{filename}
     const timestamp = Date.now();
-    const sanitizedFilename = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const sanitizedFilename = sanitizeFilename(fileName);
     const filePath = `meetings/${meetingId}/${timestamp}_${sanitizedFilename}`;
 
     // Upload to Supabase Storage
@@ -447,18 +437,7 @@ router.post('/storage/upload', async (req: Request, res: Response, next: NextFun
     }
 
     // Validate file type
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-
-    if (!allowedTypes.includes(mimeType)) {
+    if (!ALLOWED_FILE_TYPES.includes(mimeType as any)) {
       return res.status(400).json({
         error: 'File type not supported',
         code: 'UNSUPPORTED_FILE_TYPE',
@@ -469,7 +448,7 @@ router.post('/storage/upload', async (req: Request, res: Response, next: NextFun
     const buffer = Buffer.from(fileData, 'base64');
 
     // Validate file size (10MB limit)
-    if (buffer.length > 10 * 1024 * 1024) {
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
       return res.status(400).json({
         error: 'File size too large (max 10MB)',
         code: 'FILE_TOO_LARGE',
