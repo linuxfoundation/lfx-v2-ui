@@ -24,6 +24,7 @@ export interface Committee {
   total_voting_reps: number;
   subcommittees: Subcommittee[] | null;
   project_uid: string;
+  joinable?: boolean;
 }
 
 export interface Subcommittee {
@@ -49,6 +50,7 @@ export interface Subcommittee {
   total_voting_reps: number;
   subcommittees: Subcommittee[] | null;
   project_uid: string;
+  joinable?: boolean;
 }
 
 export interface CommitteeSummary {

@@ -2,4 +2,5 @@
 // SPDX-License-Identifier: MIT
 
 export * from './date.utils';
+export * from './file.utils';
 export * from './url.utils';

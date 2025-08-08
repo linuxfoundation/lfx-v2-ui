@@ -184,6 +184,7 @@ export class CommitteeFormComponent {
       sso_group_name: new FormControl(committee?.sso_group_name || ''),
       committee_website: new FormControl(committee?.committee_website || '', [Validators.pattern(/^https?:\/\/.+\..+/)]),
       project_uid: new FormControl(committee?.project_uid || ''),
+      joinable: new FormControl(committee?.joinable || false),
     });
   }
 }

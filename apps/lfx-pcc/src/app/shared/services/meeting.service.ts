@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { CreateMeetingRequest, Meeting, MeetingParticipant, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
+import { CreateMeetingRequest, Meeting, MeetingAttachment, MeetingParticipant, UpdateMeetingRequest, UploadFileResponse } from '@lfx-pcc/shared/interfaces';
 import { catchError, Observable, of, take, tap } from 'rxjs';
 
 @Injectable({
@@ -145,6 +145,115 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete participant ${participantId} from meeting ${meetingId}:`, error);
+        throw error;
+      })
+    );
+  }
+
+  public getMeetingAttachments(meetingId: string): Observable<MeetingAttachment[]> {
+    return this.http.get<MeetingAttachment[]>(`/api/meetings/${meetingId}/attachments`).pipe(
+      catchError((error) => {
+        console.error(`Failed to load attachments for meeting ${meetingId}:`, error);
+        return of([]);
+      })
+    );
+  }
+
+  public uploadFileToStorage(file: File): Observable<UploadFileResponse> {
+    return new Observable((observer) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Data = (reader.result as string).split(',')[1];
+
+        // Generate a temporary path for the file
+        const timestamp = Date.now();
+        const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const tempPath = `temp/${timestamp}_${sanitizedFilename}`;
+
+        const uploadData = {
+          fileName: file.name,
+          fileData: base64Data,
+          mimeType: file.type,
+          fileSize: file.size,
+          filePath: tempPath,
+        };
+
+        this.http
+          .post<UploadFileResponse>('/api/meetings/storage/upload', uploadData)
+          .pipe(
+            take(1),
+            catchError((error) => {
+              console.error(`Failed to upload file ${file.name}:`, error);
+              throw error;
+            })
+          )
+          .subscribe(observer);
+      };
+
+      reader.onerror = () => {
+        observer.error(new Error('Failed to read file'));
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  public uploadAttachment(meetingId: string, file: File): Observable<{ message: string; attachment: MeetingAttachment }> {
+    return new Observable((observer) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Data = (reader.result as string).split(',')[1];
+
+        const uploadData = {
+          fileName: file.name,
+          fileData: base64Data,
+          mimeType: file.type,
+          fileSize: file.size,
+        };
+
+        this.http
+          .post<{ message: string; attachment: MeetingAttachment }>(`/api/meetings/${meetingId}/attachments/upload`, uploadData)
+          .pipe(
+            take(1),
+            catchError((error) => {
+              console.error(`Failed to upload attachment to meeting ${meetingId}:`, error);
+              throw error;
+            })
+          )
+          .subscribe(observer);
+      };
+
+      reader.onerror = () => {
+        observer.error(new Error('Failed to read file'));
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  public createAttachmentFromUrl(meetingId: string, fileName: string, fileUrl: string, fileSize: number, mimeType: string): Observable<MeetingAttachment> {
+    const attachmentData = {
+      meeting_id: meetingId,
+      file_name: fileName,
+      file_url: fileUrl,
+      file_size: fileSize,
+      mime_type: mimeType,
+    };
+
+    return this.http.post<MeetingAttachment>(`/api/meetings/${meetingId}/attachments`, attachmentData).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to create attachment for meeting ${meetingId}:`, error);
+        throw error;
+      })
+    );
+  }
+
+  public deleteAttachment(meetingId: string, attachmentId: string): Observable<void> {
+    return this.http.delete<void>(`/api/meetings/${meetingId}/attachments/${attachmentId}`).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to delete attachment ${attachmentId} from meeting ${meetingId}:`, error);
         throw error;
       })
     );
