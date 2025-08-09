@@ -7,13 +7,23 @@ test.describe('Project Dashboard - Robust Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to homepage and search for a project
     await page.goto('/');
-    await page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' }).fill('test');
+
+    // Wait for the search input to be available
+    await expect(page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' })).toBeVisible({ timeout: 10000 });
+
+    // Perform search for "aswf" to get the Academy Software Foundation project
+    await page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' }).fill('aswf');
     await page.keyboard.press('Enter');
 
-    // Click on the Academy Software Foundation project
+    // Wait for search results to load
+    await expect(page.locator('lfx-project-card').first()).toBeVisible({ timeout: 10000 });
+
+    // Click on the first project card from search results
     await page.locator('lfx-project-card').first().click();
 
-    // Ensure we're on the dashboard tab
+    // Wait for navigation to project page and ensure we're on the dashboard tab
+    await expect(page).toHaveURL(/\/project\/[\w-]+$/, { timeout: 10000 });
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await page.getByRole('link', { name: 'Dashboard' }).click();
   });
 
@@ -249,8 +259,15 @@ test.describe('Project Dashboard - Robust Tests', () => {
       // Search bar should be hidden on mobile (responsive design)
       await expect(page.getByPlaceholder('Search projects...')).toBeHidden();
 
-      // Projects text should be hidden on mobile
-      await expect(page.getByText('Projects', { exact: true })).toBeHidden();
+      // On mobile: "Projects" text is completely hidden from header button
+      // We need to target the specific span that contains "Projects" text
+      await expect(page.getByTestId('header-projects-text')).toBeHidden();
+
+      // Search bar should be hidden on mobile (responsive design)
+      await expect(page.getByPlaceholder('Search projects...')).toBeHidden();
+
+      // Mobile search toggle should be visible
+      await expect(page.getByTestId('mobile-search-toggle')).toBeVisible();
 
       // Logo should still be visible
       await expect(page.getByAltText('LFX Logo')).toBeVisible();
@@ -267,7 +284,7 @@ test.describe('Project Dashboard - Robust Tests', () => {
 
       // Header elements should be visible on tablet (medium and up)
       await expect(page.getByPlaceholder('Search projects...')).toBeVisible();
-      await expect(page.getByText('Projects', { exact: true })).toBeVisible();
+      await expect(page.getByTestId('header-projects-text')).toBeVisible();
       await expect(page.getByAltText('LFX Logo')).toBeVisible();
     });
   });
