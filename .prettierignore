@@ -1,6 +1,13 @@
 # Ignore everything
 *.*
 
+# Ignore test and build artifacts
+playwright-report/
+test-results/
+dist/
+node_modules/
+.angular/
+
 # Don't ignore these file types
 !*.html
 !*.tsx
