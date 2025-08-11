@@ -24,7 +24,7 @@ on:
           - 'all'
           - 'chromium'
           - 'firefox'
-          - 'Mobile Chrome'
+          - 'mobile-chrome'
       branch:
         description: 'Branch to test'
         required: false
