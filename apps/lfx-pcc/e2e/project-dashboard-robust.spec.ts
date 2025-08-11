@@ -18,8 +18,8 @@ test.describe('Project Dashboard - Robust Tests', () => {
     // Wait for search results to load
     await expect(page.locator('lfx-project-card').first()).toBeVisible({ timeout: 10000 });
 
-    // Click on the first project card from search results
-    await page.locator('lfx-project-card').first().click();
+    // Click on the Academy Software Foundation project card specifically
+    await page.locator('lfx-project-card').filter({ hasText: 'Academy Software Foundation' }).click();
 
     // Wait for navigation to project page and ensure we're on the dashboard tab
     await expect(page).toHaveURL(/\/project\/[\w-]+$/, { timeout: 10000 });
@@ -30,7 +30,7 @@ test.describe('Project Dashboard - Robust Tests', () => {
   test.describe('Page Structure and Components', () => {
     test('should have correct page structure with main content', async ({ page }) => {
       await expect(page).toHaveTitle('LFX Projects');
-      await expect(page).toHaveURL(/\/project\/\w+$/);
+      await expect(page).toHaveURL(/\/project\/[\w-]+$/);
 
       // Check main project component is present
       await expect(page.locator('lfx-project')).toBeVisible();

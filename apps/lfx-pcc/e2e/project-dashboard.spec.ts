@@ -18,8 +18,8 @@ test.describe('Project Dashboard', () => {
     // Wait for search results to load
     await expect(page.locator('lfx-project-card').first()).toBeVisible({ timeout: 10000 });
 
-    // Click on the first project card from search results (ASWF)
-    await page.locator('lfx-project-card').first().click();
+    // Click on the Academy Software Foundation project card specifically
+    await page.locator('lfx-project-card').filter({ hasText: 'Academy Software Foundation' }).click();
 
     // Wait for navigation to project page and ensure we're on the dashboard tab
     await expect(page).toHaveURL(/\/project\/[\w-]+$/, { timeout: 10000 });
@@ -30,7 +30,7 @@ test.describe('Project Dashboard', () => {
   test.describe('Navigation and Layout', () => {
     test('should display correct page title and URL', async ({ page }) => {
       await expect(page).toHaveTitle('LFX Projects');
-      await expect(page).toHaveURL(/\/project\/\w+$/);
+      await expect(page).toHaveURL(/\/project\/[\w-]+$/);
     });
 
     test('should display header elements correctly for current viewport', async ({ page }) => {
@@ -286,7 +286,7 @@ test.describe('Project Dashboard', () => {
       await page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' }).fill('aswf');
       await page.keyboard.press('Enter');
       await expect(page.locator('lfx-project-card').first()).toBeVisible({ timeout: 10000 });
-      await page.locator('lfx-project-card').first().click();
+      await page.locator('lfx-project-card').filter({ hasText: 'Academy Software Foundation' }).click();
       await expect(page).toHaveURL(/\/project\/[\w-]+$/, { timeout: 10000 });
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await page.getByRole('link', { name: 'Dashboard' }).click();
@@ -314,7 +314,7 @@ test.describe('Project Dashboard', () => {
       await page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' }).fill('aswf');
       await page.keyboard.press('Enter');
       await expect(page.locator('lfx-project-card').first()).toBeVisible({ timeout: 10000 });
-      await page.locator('lfx-project-card').first().click();
+      await page.locator('lfx-project-card').filter({ hasText: 'Academy Software Foundation' }).click();
       await expect(page).toHaveURL(/\/project\/[\w-]+$/, { timeout: 10000 });
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
       await page.getByRole('link', { name: 'Dashboard' }).click();
