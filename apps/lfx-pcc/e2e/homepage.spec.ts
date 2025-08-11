@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // Verify we're authenticated and on the homepage
     await expect(page).not.toHaveURL(/auth0\.com/);

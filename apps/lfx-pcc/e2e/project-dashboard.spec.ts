@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 test.describe('Project Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to homepage and search for a project
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // Wait for the search input to be available
     await expect(page.getByRole('textbox', { name: 'Search projects, committees, meetings, or mailing lists...' })).toBeVisible({ timeout: 10000 });
