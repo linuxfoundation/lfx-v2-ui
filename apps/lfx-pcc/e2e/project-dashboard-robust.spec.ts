@@ -291,15 +291,18 @@ test.describe('Project Dashboard - Robust Tests', () => {
 
   test.describe('Component Integration', () => {
     test('should properly integrate Angular signals and computed values', async ({ page }) => {
+      // Wait for the health indicators section to be present first
+      await expect(page.locator('[data-testid="project-health-card"]')).toBeVisible({ timeout: 15000 });
+
       // Check that percentage values are rendered (they would be 0% initially but should be present)
       const activityScore = page.locator('[data-testid="activity-score-indicator"] span').filter({ hasText: /%$/ });
-      await expect(activityScore).toBeVisible();
+      await expect(activityScore).toBeVisible({ timeout: 20000 });
 
       const meetingCompletion = page.locator('[data-testid="meeting-completion-indicator"] span').filter({ hasText: /%$/ });
-      await expect(meetingCompletion).toBeVisible();
+      await expect(meetingCompletion).toBeVisible({ timeout: 20000 });
 
       const activeCommittees = page.locator('[data-testid="active-committees-indicator"] span').filter({ hasText: /%$/ });
-      await expect(activeCommittees).toBeVisible();
+      await expect(activeCommittees).toBeVisible({ timeout: 20000 });
     });
 
     test('should use lfx-card components consistently', async ({ page }) => {

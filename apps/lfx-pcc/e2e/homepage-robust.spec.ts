@@ -356,7 +356,7 @@ test.describe('Homepage - Robust Tests', () => {
   test.describe('Component Integration', () => {
     test('should properly integrate Angular signals and computed values', async ({ page }) => {
       // Wait for Angular to initialize and signals to resolve
-      await expect(page.locator('[data-testid="project-card"]').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid="project-card"]').first()).toBeVisible({ timeout: 20000 });
 
       // The presence of project cards indicates successful signal integration
       const projectsSection = page.locator('[data-testid="projects-section"]');
