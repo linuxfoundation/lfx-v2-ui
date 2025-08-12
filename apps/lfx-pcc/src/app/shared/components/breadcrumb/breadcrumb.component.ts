@@ -12,6 +12,8 @@ import { BreadcrumbItemClickEvent, BreadcrumbModule } from 'primeng/breadcrumb';
   standalone: true,
   imports: [CommonModule, RouterModule, BreadcrumbModule],
   templateUrl: './breadcrumb.component.html',
+  // TODO: Remove ngSkipHydration when upgrading to Angular 20 - zoneless hydration compatibility
+  // https://github.com/angular/angular/issues/50543
   host: { ngSkipHydration: 'true' },
 })
 export class BreadcrumbComponent {
