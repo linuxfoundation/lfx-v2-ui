@@ -112,5 +112,5 @@ lfx-pcc-v3/
 - **Use data-testid naming convention** - `[section]-[component]-[element]` for hierarchical structure
 - **Test responsive behavior** - validate mobile, tablet, and desktop viewports appropriately
 - When running tests to validate UI tests, use reporter=list
-
-- All commits and pull requests need to be associated to a JIRA ticket. If there isn't one, we need to create it and reference it moving forward.
+- All commits and pull requests need to be associated to a JIRA ticket. If there isn't one, we need to create it and reference it moving forward, and assign it to the current user
+- git commits and pr titles should follow the conventional commit style and the scope would be the JIRA ticket. i.e; feat(LFXV2-111)
