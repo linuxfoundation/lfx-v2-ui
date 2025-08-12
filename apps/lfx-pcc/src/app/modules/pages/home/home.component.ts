@@ -38,6 +38,10 @@ export class HomeComponent {
     this.filteredProjects = this.initializeFilteredProjects();
   }
 
+  public onClearSearch(): void {
+    this.form.get('search')?.setValue('');
+  }
+
   private transformProjectToCard(project: Project): ProjectCard {
     const metrics: ProjectCardMetric[] = [
       {
@@ -83,7 +87,7 @@ export class HomeComponent {
       switchMap((searchTerm: string) => {
         const trimmedTerm = searchTerm?.trim() || '';
 
-        if (!trimmedTerm || trimmedTerm.length < 3) {
+        if (!trimmedTerm) {
           // If search is empty or too short, return all projects
           this.isSearching.set(false);
           return this.projectService.getProjects();
