@@ -12,6 +12,7 @@ import { BreadcrumbItemClickEvent, BreadcrumbModule } from 'primeng/breadcrumb';
   standalone: true,
   imports: [CommonModule, RouterModule, BreadcrumbModule],
   templateUrl: './breadcrumb.component.html',
+  host: { ngSkipHydration: 'true' },
 })
 export class BreadcrumbComponent {
   @ContentChild('item', { static: false, descendants: false }) public itemTemplate?: TemplateRef<any>;

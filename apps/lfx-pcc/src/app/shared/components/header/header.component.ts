@@ -22,6 +22,7 @@ import { MenuComponent } from '../menu/menu.component';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  host: { ngSkipHydration: 'true' },
 })
 export class HeaderComponent {
   private readonly router = inject(Router);
