@@ -20,7 +20,7 @@ import { MenuItem } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { finalize, switchMap } from 'rxjs';
+import { finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeFormComponent } from '../../committees/components/committee-form/committee-form.component';
 
@@ -130,7 +130,8 @@ export class ProjectComponent {
       this.projectService.project$.pipe(
         switchMap((project) => {
           if (!project?.uid) {
-            return [];
+            this.committeesLoading.set(false);
+            return of([]);
           }
           return this.committeeService.getCommitteesByProject(project.uid).pipe(
             finalize(() => {
@@ -148,7 +149,8 @@ export class ProjectComponent {
       this.projectService.project$.pipe(
         switchMap((project) => {
           if (!project?.uid) {
-            return [];
+            this.meetingsLoading.set(false);
+            return of([]);
           }
           return this.meetingService.getMeetingsByProject(project.uid).pipe(
             finalize(() => {
@@ -162,9 +164,19 @@ export class ProjectComponent {
   }
 
   private initializeRecentActivity(): Signal<RecentActivity[]> {
-    return toSignal(this.projectService.project$.pipe(switchMap((project) => this.activityService.getRecentActivitiesByProject(project?.slug || '', 5))), {
-      initialValue: [],
-    });
+    return toSignal(
+      this.projectService.project$.pipe(
+        switchMap((project) => {
+          if (!project?.slug) {
+            return of([]);
+          }
+          return this.activityService.getRecentActivitiesByProject(project.slug, 5);
+        })
+      ),
+      {
+        initialValue: [],
+      }
+    );
   }
 
   private initializeRecentCommittees(): Signal<Committee[]> {
