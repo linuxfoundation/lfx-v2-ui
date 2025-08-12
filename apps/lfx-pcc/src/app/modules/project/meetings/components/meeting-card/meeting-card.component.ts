@@ -77,6 +77,7 @@ export class MeetingCardComponent implements OnInit {
 
   // Computed values for template
   public readonly attendancePercentage: Signal<number> = this.initAttendancePercentage();
+  public readonly attendanceBarColor: Signal<string> = this.initAttendanceBarColor();
   public readonly totalResourcesCount: Signal<number> = this.initTotalResourcesCount();
   public readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
   public readonly meetingTypeBadge: Signal<{ badgeClass: string; icon?: string; text: string } | null> = this.initMeetingTypeBadge();
@@ -432,6 +433,20 @@ export class MeetingCardComponent implements OnInit {
       const totalParticipants = this.meetingParticipantCount();
       const acceptedCount = this.meeting().participants_accepted_count || 0;
       return totalParticipants > 0 ? Math.round((acceptedCount / totalParticipants) * 100) : 0;
+    });
+  }
+
+  private initAttendanceBarColor(): Signal<string> {
+    return computed(() => {
+      const percentage = this.attendancePercentage();
+
+      if (percentage < 25) {
+        return 'bg-amber-500';
+      }
+      if (percentage < 70) {
+        return 'bg-blue-500';
+      }
+      return 'bg-green-500';
     });
   }
 
