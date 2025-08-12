@@ -10,7 +10,7 @@ import { Project, ProjectCard, ProjectCardMetric } from '@lfx-pcc/shared/interfa
 import { ProjectService } from '@shared/services/project.service';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { SkeletonModule } from 'primeng/skeleton';
-import { debounceTime, distinctUntilChanged, startWith, switchMap, tap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, of, startWith, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-home',
@@ -96,6 +96,10 @@ export class HomeComponent {
         // Otherwise, search for projects
         this.isSearching.set(true);
         return this.projectService.searchProjects(trimmedTerm).pipe(tap(() => this.isSearching.set(false)));
+      }),
+      catchError((error) => {
+        console.error('Error searching projects:', error);
+        return of([]);
       }),
       tap(() => this.projectsLoading.set(false))
     );

@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Project, ProjectQueryResponse } from '@lfx-pcc/shared/interfaces';
+import { Project } from '@lfx-pcc/shared/interfaces';
 import { BehaviorSubject, catchError, Observable, of, tap } from 'rxjs';
 
 @Injectable({
@@ -16,7 +16,7 @@ export class ProjectService {
   private readonly http = inject(HttpClient);
 
   public getProjects(params?: HttpParams): Observable<Project[]> {
-    return this.http.get<ProjectQueryResponse>('/api/projects', { params }).pipe(
+    return this.http.get<Project[]>('/api/projects', { params }).pipe(
       catchError((error) => {
         console.error('Failed to load projects:', error);
         return of([]);

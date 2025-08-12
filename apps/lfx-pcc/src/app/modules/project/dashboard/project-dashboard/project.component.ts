@@ -20,7 +20,7 @@ import { MenuItem } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { finalize, of, switchMap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeFormComponent } from '../../committees/components/committee-form/committee-form.component';
 
@@ -134,6 +134,10 @@ export class ProjectComponent {
             return of([]);
           }
           return this.committeeService.getCommitteesByProject(project.uid).pipe(
+            catchError((error) => {
+              console.error('Error loading committees:', error);
+              return of([]);
+            }),
             finalize(() => {
               this.committeesLoading.set(false);
             })
@@ -153,6 +157,10 @@ export class ProjectComponent {
             return of([]);
           }
           return this.meetingService.getMeetingsByProject(project.uid).pipe(
+            catchError((error) => {
+              console.error('Error loading meetings:', error);
+              return of([]);
+            }),
             finalize(() => {
               this.meetingsLoading.set(false);
             })
@@ -170,7 +178,12 @@ export class ProjectComponent {
           if (!project?.slug) {
             return of([]);
           }
-          return this.activityService.getRecentActivitiesByProject(project.slug, 5);
+          return this.activityService.getRecentActivitiesByProject(project.slug, 5).pipe(
+            catchError((error) => {
+              console.error('Error loading recent activities:', error);
+              return of([]);
+            })
+          );
         })
       ),
       {
@@ -181,7 +194,7 @@ export class ProjectComponent {
 
   private initializeRecentCommittees(): Signal<Committee[]> {
     return computed(() => {
-      return this.allCommittees()
+      return [...this.allCommittees()]
         .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
         .slice(0, 3);
     });
@@ -190,7 +203,7 @@ export class ProjectComponent {
   private initializeUpcomingMeetings(): Signal<Meeting[]> {
     return computed(() => {
       const now = new Date();
-      return this.allMeetings()
+      return [...this.allMeetings()]
         .filter((meeting) => meeting.start_time && new Date(meeting.start_time) >= now)
         .sort((a, b) => new Date(a.start_time!).getTime() - new Date(b.start_time!).getTime())
         .slice(0, 3);

@@ -16,7 +16,7 @@ import { MenuItem } from 'primeng/api';
 import { AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { RippleModule } from 'primeng/ripple';
 import { of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, startWith, switchMap } from 'rxjs/operators';
+import { catchError, debounceTime, distinctUntilChanged, startWith, switchMap } from 'rxjs/operators';
 
 import { AutocompleteComponent } from '../autocomplete/autocomplete.component';
 import { MenuComponent } from '../menu/menu.component';
@@ -89,6 +89,10 @@ export class HeaderComponent {
         }
 
         return this.projectService.searchProjects(trimmedTerm);
+      }),
+      catchError((error) => {
+        console.error('Error searching projects:', error);
+        return of([]);
       })
     );
 
