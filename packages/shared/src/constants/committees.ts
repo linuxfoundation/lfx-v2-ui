@@ -50,13 +50,38 @@ export const VOTING_STATUSES = [
  * Colors match corresponding meeting types for consistency
  */
 export const COMMITTEE_TYPE_COLORS = {
+  // Board and governance
   Board: 'text-red-500', // Matches meeting type
+  'Government Advisory Council': 'text-red-600', // Similar to board governance
+
+  // Technical committees
   'Technical Steering Committee': 'text-purple-500', // Matches "Technical" meeting type
-  Maintainers: 'text-blue-500', // Matches meeting type
-  'Working Group': 'text-orange-700',
-  'Special Interest Group': 'text-yellow-600',
   'Technical Oversight Committee/Technical Advisory Committee': 'text-purple-500', // Matches "Technical" meeting type
+  'Technical Mailing List': 'text-purple-400', // Technical related
+  Maintainers: 'text-blue-500', // Matches meeting type
+  Committers: 'text-blue-600', // Similar to maintainers
+
+  // Legal and compliance
   'Legal Committee': 'text-amber-500', // Matches meeting type
+  'Code of Conduct': 'text-amber-600', // Legal/compliance related
+  'Product Security': 'text-amber-700', // Security/compliance
+
+  // Marketing and outreach
+  'Marketing Oversight Committee/Marketing Advisory Committee': 'text-green-500', // Matches marketing meeting type
+  'Marketing Committee/Sub Committee': 'text-green-600', // Marketing related
+  'Marketing Mailing List': 'text-green-400', // Marketing related
+  Ambassador: 'text-green-700', // Outreach/marketing
+
+  // Finance
+  'Finance Committee': 'text-emerald-500', // Financial management
+
+  // Working groups and special interest
+  'Working Group': 'text-orange-700', // Distinct color for working groups
+  'Special Interest Group': 'text-yellow-600', // Special interest groups
+  'Expert Group': 'text-yellow-700', // Similar to special interest
+
+  // Other/miscellaneous
+  Other: 'text-gray-600', // General other category
 } as const;
 
 /**

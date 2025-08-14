@@ -20,12 +20,19 @@
             Manage committees, their settings, and organizational structure. Sub-committees are indicated with indentation.
           </p>
         </div>
-        <lfx-button label="New Committee" icon="fa-light fa-plus" severity="primary" (onClick)="openCreateDialog()" size="small"> </lfx-button>
+        <lfx-button
+          label="New Committee"
+          icon="fa-light fa-plus"
+          severity="primary"
+          (onClick)="openCreateDialog()"
+          size="small"
+          data-testid="committee-new-cta">
+        </lfx-button>
       </div>
 
       <!-- Statistics Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
-        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full">
+        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full" data-testid="stats-total-committees">
           <div class="p-3">
             <div class="text-[10px] text-gray-500 font-normal mb-1">Total Committees</div>
             <div class="flex items-center gap-2">
@@ -38,7 +45,7 @@
           </div>
         </lfx-card>
 
-        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full">
+        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full" data-testid="stats-public-committees">
           <div class="p-3">
             <div class="text-[10px] text-gray-500 font-normal mb-1">Public Committees</div>
             <div class="flex items-center gap-2">
@@ -52,7 +59,7 @@
           </div>
         </lfx-card>
 
-        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full">
+        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full" data-testid="stats-active-voting">
           <div class="p-3">
             <div class="text-[10px] text-gray-500 font-normal mb-1">Active Voting</div>
             <div class="flex items-center gap-2">
@@ -64,7 +71,7 @@
           </div>
         </lfx-card>
 
-        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full items-center">
+        <lfx-card styleClass="bg-white border border-gray-100 shadow-sm h-full items-center" data-testid="stats-upcoming-meeting">
           <div class="p-3">
             <div class="text-[10px] text-gray-500 font-normal mb-1">Upcoming Meeting</div>
             <lfx-upcoming-committee-meeting></lfx-upcoming-committee-meeting>
@@ -84,7 +91,8 @@
               placeholder="Search committees..."
               icon="fa-light fa-search"
               styleClass="w-full"
-              size="small"></lfx-input-text>
+              size="small"
+              data-testid="committee-search-input"></lfx-input-text>
           </div>
 
           <!-- Committee Type Filter Dropdown -->
@@ -97,7 +105,8 @@
               placeholder="Select Committee Type"
               [showClear]="true"
               styleClass="w-full"
-              (onChange)="onCategoryChange($event.value)"></lfx-select>
+              (onChange)="onCategoryChange($event.value)"
+              data-testid="committee-type-filter"></lfx-select>
           </div>
 
           <!-- Voting Status Filter Dropdown -->
@@ -110,7 +119,8 @@
               placeholder="Select Voting Status"
               [showClear]="true"
               styleClass="w-full"
-              (onChange)="onVotingStatusChange($event.value)"></lfx-select>
+              (onChange)="onVotingStatusChange($event.value)"
+              data-testid="committee-voting-status-filter"></lfx-select>
           </div>
         </div>
 
@@ -134,7 +144,12 @@
               <i class="fa-light fa-people-group text-4xl text-gray-400 mb-4"></i>
               <h3 class="text-lg font-medium text-gray-900 mb-2">No Committees Yet</h3>
               <p class="text-gray-600 mb-4">This project doesn't have any committees yet.</p>
-              <lfx-button label="Add First Committee" icon="fa-light fa-people-group" severity="secondary" (onClick)="openCreateDialog()"></lfx-button>
+              <lfx-button
+                label="Add First Committee"
+                icon="fa-light fa-people-group"
+                severity="secondary"
+                (onClick)="openCreateDialog()"
+                data-testid="committee-add-first"></lfx-button>
             </div>
           </div>
         }
