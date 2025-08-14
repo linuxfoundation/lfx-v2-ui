@@ -5,7 +5,7 @@ export interface Committee {
   id: string;
   name: string;
   category: string;
-  committee_id: string;
+  parent_uid: string;
   description?: string;
   business_email_required: boolean;
   enable_voting: boolean;

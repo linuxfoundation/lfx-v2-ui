@@ -44,3 +44,29 @@ export const VOTING_STATUSES = [
   { label: 'Voting Rep', value: 'Voting Rep' },
   { label: 'Emeritus', value: 'Emeritus' },
 ];
+
+/**
+ * Committee type color mappings for consistent styling across the application
+ * Colors match corresponding meeting types for consistency
+ */
+export const COMMITTEE_TYPE_COLORS = {
+  Board: 'text-red-500', // Matches meeting type
+  'Technical Steering Committee': 'text-purple-500', // Matches "Technical" meeting type
+  Maintainers: 'text-blue-500', // Matches meeting type
+  'Working Group': 'text-orange-700',
+  'Special Interest Group': 'text-yellow-600',
+  'Technical Oversight Committee/Technical Advisory Committee': 'text-purple-500', // Matches "Technical" meeting type
+  'Legal Committee': 'text-amber-500', // Matches meeting type
+} as const;
+
+/**
+ * Default color scheme for unknown committee types
+ */
+export const DEFAULT_COMMITTEE_TYPE_COLOR = 'text-gray-500';
+
+/**
+ * Get color class for a committee type
+ */
+export function getCommitteeTypeColor(type: string): string {
+  return COMMITTEE_TYPE_COLORS[type as keyof typeof COMMITTEE_TYPE_COLORS] || DEFAULT_COMMITTEE_TYPE_COLOR;
+}
