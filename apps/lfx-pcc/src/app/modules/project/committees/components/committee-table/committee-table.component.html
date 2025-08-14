@@ -107,7 +107,7 @@
 
         <!-- Last Updated column -->
         <td class="px-4 py-3">
-          <span class="text-xs text-gray-600">{{ committee.updated_at | date: 'MMM d, y' }}</span>
+          <span class="text-xs text-gray-600">{{ committee.updated_at ? (committee.updated_at | date: 'MMM d, y') : '-' }}</span>
         </td>
 
         <!-- Actions column -->
