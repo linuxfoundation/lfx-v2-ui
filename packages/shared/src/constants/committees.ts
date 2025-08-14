@@ -77,8 +77,8 @@ export const COMMITTEE_TYPE_COLORS = {
 
   // Working groups and special interest
   'Working Group': 'text-orange-700', // Distinct color for working groups
-  'Special Interest Group': 'text-yellow-600', // Special interest groups
-  'Expert Group': 'text-yellow-700', // Similar to special interest
+  'Special Interest Group': 'text-amber-600', // Special interest groups
+  'Expert Group': 'text-amber-700', // Similar to special interest
 
   // Other/miscellaneous
   Other: 'text-gray-600', // General other category
