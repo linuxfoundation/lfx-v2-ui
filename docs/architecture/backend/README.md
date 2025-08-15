@@ -153,10 +153,10 @@ export class ETagService {
 
 **Features:**
 
-- Optimistic concurrency control
-- ETag extraction and validation
-- Conflict detection and resolution
-- Integration with microservice ETag headers
+- Optimistic concurrency control using HTTP If-Match headers
+- ETag extraction and validation from response headers
+- Conflict detection and resolution (412 Precondition Failed)
+- Integration with microservice ETag headers following HTTP standards
 
 ### Controller-Service Pattern Implementation
 

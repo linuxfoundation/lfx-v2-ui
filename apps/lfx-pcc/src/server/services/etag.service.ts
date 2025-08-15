@@ -91,7 +91,7 @@ export class ETagService {
   }
 
   /**
-   * Performs a safe update operation using ETag header
+   * Performs a safe update operation using If-Match header
    */
   public async updateWithETag<T>(req: Request, service: 'LFX_V2_SERVICE', path: string, etag: string, data: any, operation: string): Promise<T> {
     req.log.info(
@@ -101,14 +101,14 @@ export class ETagService {
         path,
         etag_value: etag,
       },
-      'Attempting to update resource with ETag'
+      'Attempting to update resource with If-Match header'
     );
 
-    return await this.microserviceProxy.proxyRequest<T>(req, service, path, 'PUT', {}, data, { [HTTP_HEADERS.ETAG]: etag });
+    return await this.microserviceProxy.proxyRequest<T>(req, service, path, 'PUT', {}, data, { [HTTP_HEADERS.IF_MATCH]: etag });
   }
 
   /**
-   * Performs a safe delete operation using ETag header
+   * Performs a safe delete operation using If-Match header
    */
   public async deleteWithETag(req: Request, service: 'LFX_V2_SERVICE', path: string, etag: string, operation: string): Promise<void> {
     req.log.info(
@@ -118,10 +118,10 @@ export class ETagService {
         path,
         etag_value: etag,
       },
-      'Attempting to delete resource with ETag'
+      'Attempting to delete resource with If-Match header'
     );
 
-    await this.microserviceProxy.proxyRequest(req, service, path, 'DELETE', {}, undefined, { [HTTP_HEADERS.ETAG]: etag });
+    await this.microserviceProxy.proxyRequest(req, service, path, 'DELETE', {}, undefined, { [HTTP_HEADERS.IF_MATCH]: etag });
   }
 
   /**

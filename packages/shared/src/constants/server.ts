@@ -27,6 +27,7 @@ export const SENSITIVE_FIELDS = [
  */
 export const HTTP_HEADERS = {
   ETAG: 'ETag',
+  IF_MATCH: 'If-Match',
   CONTENT_TYPE: 'Content-Type',
   AUTHORIZATION: 'Authorization',
   USER_AGENT: 'User-Agent',
