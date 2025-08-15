@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DEFAULT_QUERY_PARAMS } from '@lfx-pcc/shared/constants';
-import { MicroserviceUrls } from '@lfx-pcc/shared/interfaces';
+import { ApiResponse, MicroserviceUrls } from '@lfx-pcc/shared/interfaces';
 import { Request } from 'express';
 
 import { serverLogger } from '../server';
@@ -21,7 +21,8 @@ export class MicroserviceProxyService {
     path: string,
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
     params?: Record<string, any>,
-    data?: any
+    data?: any,
+    customHeaders?: Record<string, string>
   ): Promise<T> {
     try {
       if (!req.bearerToken) {
@@ -41,8 +42,55 @@ export class MicroserviceProxyService {
       const defaultParams = DEFAULT_QUERY_PARAMS;
       const mergedParams = { ...params, ...defaultParams };
 
-      const response = await this.executeRequest<T>(method, endpoint, token, data, mergedParams);
+      const response = await this.executeRequest<T>(method, endpoint, token, data, mergedParams, customHeaders);
       return response.data;
+    } catch (error) {
+      serverLogger.error(
+        {
+          service,
+          path,
+          method,
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error && process.env['NODE_ENV'] !== 'production' ? error.stack : undefined,
+          endpoint: `${service}${path}`,
+          has_bearer_token: !!req.bearerToken,
+        },
+        'Microservice request failed'
+      );
+
+      throw this.transformError(error, service, path);
+    }
+  }
+
+  public async proxyRequestWithResponse<T>(
+    req: Request,
+    service: keyof MicroserviceUrls,
+    path: string,
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
+    params?: Record<string, any>,
+    data?: any,
+    customHeaders?: Record<string, string>
+  ): Promise<ApiResponse<T>> {
+    try {
+      if (!req.bearerToken) {
+        throw new Error('Bearer token not available on request');
+      }
+
+      const MICROSERVICE_URLS: MicroserviceUrls = {
+        LFX_V2_SERVICE: process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local',
+      };
+
+      const baseUrl = MICROSERVICE_URLS[service];
+      const endpoint = `${baseUrl}${path}`;
+      const token = req.bearerToken;
+
+      // Merge query parameters with defaults taking precedence
+      // This ensures that default params cannot be overridden by the caller
+      const defaultParams = DEFAULT_QUERY_PARAMS;
+      const mergedParams = { ...params, ...defaultParams };
+
+      const response = await this.executeRequest<T>(method, endpoint, token, data, mergedParams, customHeaders);
+      return response;
     } catch (error) {
       serverLogger.error(
         {
@@ -66,19 +114,20 @@ export class MicroserviceProxyService {
     endpoint: string,
     bearerToken: string,
     data?: any,
-    params?: Record<string, any>
+    params?: Record<string, any>,
+    customHeaders?: Record<string, string>
   ) {
     switch (method) {
       case 'GET':
-        return await this.apiClient.get<T>(endpoint, bearerToken, params);
+        return await this.apiClient.get<T>(endpoint, bearerToken, params, customHeaders);
       case 'POST':
-        return await this.apiClient.post<T>(endpoint, bearerToken, data);
+        return await this.apiClient.post<T>(endpoint, bearerToken, data, customHeaders);
       case 'PUT':
-        return await this.apiClient.put<T>(endpoint, bearerToken, data);
+        return await this.apiClient.put<T>(endpoint, bearerToken, data, customHeaders);
       case 'PATCH':
-        return await this.apiClient.patch<T>(endpoint, bearerToken, data);
+        return await this.apiClient.patch<T>(endpoint, bearerToken, data, customHeaders);
       case 'DELETE':
-        return await this.apiClient.delete<T>(endpoint, bearerToken);
+        return await this.apiClient.delete<T>(endpoint, bearerToken, customHeaders);
       default:
         throw new Error(`Unsupported HTTP method: ${method}`);
     }

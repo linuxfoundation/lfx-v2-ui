@@ -17,30 +17,30 @@ export class ApiClientService {
     };
   }
 
-  public async get<T = any>(url: string, bearerToken: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
+  public async get<T = any>(url: string, bearerToken: string, params?: Record<string, any>, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
     const queryString = params ? new URLSearchParams(params).toString() : '';
     const fullUrl = queryString ? `${url}?${queryString}` : url;
 
-    return this.makeRequest<T>('GET', fullUrl, bearerToken);
+    return this.makeRequest<T>('GET', fullUrl, bearerToken, undefined, customHeaders);
   }
 
-  public async post<T = any>(url: string, bearerToken: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>('POST', url, bearerToken, data);
+  public async post<T = any>(url: string, bearerToken: string, data?: any, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>('POST', url, bearerToken, data, customHeaders);
   }
 
-  public async put<T = any>(url: string, bearerToken: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>('PUT', url, bearerToken, data);
+  public async put<T = any>(url: string, bearerToken: string, data?: any, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>('PUT', url, bearerToken, data, customHeaders);
   }
 
-  public async patch<T = any>(url: string, bearerToken: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>('PATCH', url, bearerToken, data);
+  public async patch<T = any>(url: string, bearerToken: string, data?: any, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>('PATCH', url, bearerToken, data, customHeaders);
   }
 
-  public async delete<T = any>(url: string, bearerToken: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>('DELETE', url, bearerToken);
+  public async delete<T = any>(url: string, bearerToken: string, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>('DELETE', url, bearerToken, undefined, customHeaders);
   }
 
-  private async makeRequest<T>(method: string, url: string, bearerToken: string, data?: any): Promise<ApiResponse<T>> {
+  private async makeRequest<T>(method: string, url: string, bearerToken: string, data?: any, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
     const requestInit: RequestInit = {
       method,
       headers: {
@@ -48,6 +48,7 @@ export class ApiClientService {
         Accept: 'application/json',
         ['Content-Type']: 'application/json',
         ['User-Agent']: 'LFX-PCC-Server/1.0',
+        ...customHeaders,
       },
       signal: AbortSignal.timeout(this.config.timeout),
     };
