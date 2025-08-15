@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Response } from 'express';
-import { ApiErrorResponse, ValidationError, PaginationInfo } from '@lfx-pcc/shared/interfaces';
+import { ApiErrorResponse, ValidationError, PaginationInfo, extractErrorDetails, isValidationApiError } from '@lfx-pcc/shared/interfaces';
 
 /**
  * Response helper for consistent API responses
@@ -112,36 +112,38 @@ export class Responder {
   /**
    * Handles different types of errors and sends appropriate response
    */
-  public static handle(res: Response, error: any, operation = 'operation'): void {
+  public static handle(res: Response, error: unknown, operation = 'operation'): void {
     // Handle validation errors
-    if (error.validationErrors) {
+    if (isValidationApiError(error)) {
       this.validationError(res, error.validationErrors);
       return;
     }
 
+    const errorDetails = extractErrorDetails(error);
+
     // Handle ETag errors
-    if (error.code === 'NOT_FOUND') {
-      this.notFound(res, error.message);
+    if (errorDetails.code === 'NOT_FOUND') {
+      this.notFound(res, errorDetails.message);
       return;
     }
 
-    if (error.code === 'PRECONDITION_FAILED') {
-      this.preconditionFailed(res, error.message);
+    if (errorDetails.code === 'PRECONDITION_FAILED') {
+      this.preconditionFailed(res, errorDetails.message);
       return;
     }
 
-    if (error.code === 'ETAG_MISSING') {
+    if (errorDetails.code === 'ETAG_MISSING') {
       this.internalError(res, 'ETag header missing from upstream service');
       return;
     }
 
     // Handle HTTP status code errors
-    const statusCode = error.statusCode || 500;
-    const message = error.message || `Failed to ${operation.replace('_', ' ')}`;
+    const statusCode = errorDetails.statusCode;
+    const message = errorDetails.message || `Failed to ${operation.replace('_', ' ')}`;
 
     this.error(res, message, {
       statusCode,
-      code: statusCode >= 500 ? 'INTERNAL_ERROR' : undefined,
+      code: errorDetails.code || (statusCode >= 500 ? 'INTERNAL_ERROR' : undefined),
     });
   }
 }

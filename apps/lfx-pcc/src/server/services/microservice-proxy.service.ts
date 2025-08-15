@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { DEFAULT_QUERY_PARAMS } from '@lfx-pcc/shared/constants';
-import { ApiResponse, MicroserviceUrls } from '@lfx-pcc/shared/interfaces';
+import { ApiResponse, MicroserviceUrls, ApiError, extractErrorDetails } from '@lfx-pcc/shared/interfaces';
 import { Request } from 'express';
 
 import { serverLogger } from '../server';
 import { ApiClientService } from './api-client.service';
+import { createApiError } from '../utils/api-error';
 
 export class MicroserviceProxyService {
   private apiClient: ApiClientService;
@@ -133,15 +134,13 @@ export class MicroserviceProxyService {
     }
   }
 
-  private transformError(error: any, service: string, path: string): Error {
-    const originalMessage = error instanceof Error ? error.message : String(error);
-
-    const statusCode = error.statusCode || error.status || 500;
+  private transformError(error: unknown, service: string, path: string): ApiError {
+    const errorDetails = extractErrorDetails(error);
 
     let userMessage: string;
     let errorCode: string;
 
-    switch (statusCode) {
+    switch (errorDetails.statusCode) {
       case 400:
         userMessage = 'Invalid request. Please check your input and try again.';
         errorCode = 'BAD_REQUEST';
@@ -181,10 +180,10 @@ export class MicroserviceProxyService {
         errorCode = 'SERVICE_UNAVAILABLE';
         break;
       default:
-        if (originalMessage.includes('timeout')) {
+        if (errorDetails.message.includes('timeout')) {
           userMessage = 'Request timeout. Please try again.';
           errorCode = 'TIMEOUT';
-        } else if (originalMessage.includes('Network')) {
+        } else if (errorDetails.message.includes('Network')) {
           userMessage = 'Network error. Please check your connection and try again.';
           errorCode = 'NETWORK_ERROR';
         } else {
@@ -193,13 +192,14 @@ export class MicroserviceProxyService {
         }
     }
 
-    const transformedError = new Error(userMessage);
-    (transformedError as any).code = errorCode;
-    (transformedError as any).status = statusCode;
-    (transformedError as any).service = service;
-    (transformedError as any).path = path;
-    (transformedError as any).originalMessage = originalMessage;
-
-    return transformedError;
+    return createApiError({
+      message: userMessage,
+      statusCode: errorDetails.statusCode,
+      code: errorCode,
+      service,
+      path,
+      originalMessage: errorDetails.message,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
 }

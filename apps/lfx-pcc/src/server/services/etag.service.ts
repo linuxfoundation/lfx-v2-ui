@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ETagError, ETagResult } from '@lfx-pcc/shared/interfaces';
+import { ETagError, ETagResult, extractErrorDetails } from '@lfx-pcc/shared/interfaces';
 import { HTTP_HEADERS } from '@lfx-pcc/shared/constants';
 import { Request } from 'express';
 
@@ -80,10 +80,11 @@ export class ETagService {
         throw error;
       }
 
+      const errorDetails = extractErrorDetails(error);
       const etagError: ETagError = {
         code: 'NETWORK_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-        statusCode: (error as any).statusCode || (error as any).status || 500,
+        message: errorDetails.message,
+        statusCode: errorDetails.statusCode,
       };
       throw etagError;
     }
@@ -126,7 +127,14 @@ export class ETagService {
   /**
    * Type guard for ETag errors
    */
-  private isETagError(error: any): error is ETagError {
-    return error && typeof error.code === 'string' && typeof error.statusCode === 'number';
+  private isETagError(error: unknown): error is ETagError {
+    if (error === null || typeof error !== 'object') return false;
+
+    const errorObj = error as Record<string, unknown>;
+    return (
+      typeof errorObj['code'] === 'string' &&
+      typeof errorObj['statusCode'] === 'number' &&
+      ['NOT_FOUND', 'ETAG_MISSING', 'NETWORK_ERROR', 'PRECONDITION_FAILED'].includes(errorObj['code'] as string)
+    );
   }
 }

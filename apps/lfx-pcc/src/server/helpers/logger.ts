@@ -3,6 +3,7 @@
 
 import { Request } from 'express';
 import { SENSITIVE_FIELDS } from '@lfx-pcc/shared/constants';
+import { extractErrorDetails, isValidationApiError } from '@lfx-pcc/shared/interfaces';
 
 /**
  * Standardized request logging helper for consistent log formatting
@@ -49,17 +50,19 @@ export class Logger {
   /**
    * Logs operation failure with error details
    */
-  public static error(req: Request, operation: string, startTime: number, error: any, metadata: Record<string, any> = {}): void {
+  public static error(req: Request, operation: string, startTime: number, error: unknown, metadata: Record<string, any> = {}): void {
     const duration = Date.now() - startTime;
+    const errorDetails = extractErrorDetails(error);
 
     req.log.error(
       {
         operation,
         duration,
-        error: error instanceof Error ? error.message : error,
+        error: errorDetails.message,
         stack: error instanceof Error ? error.stack : undefined,
-        status_code: error.statusCode || 500,
-        validation_errors: error.validationErrors,
+        status_code: errorDetails.statusCode,
+        error_code: errorDetails.code,
+        validation_errors: isValidationApiError(error) ? error.validationErrors : undefined,
         ...metadata,
         request_id: req.id,
       },

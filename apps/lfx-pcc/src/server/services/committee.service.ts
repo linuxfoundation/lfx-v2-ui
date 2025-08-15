@@ -10,12 +10,14 @@ import {
   CommitteeValidationResult,
   ETagError,
   QueryServiceResponse,
+  ValidationApiError,
 } from '@lfx-pcc/shared/interfaces';
 import { getValidCommitteeCategories } from '@lfx-pcc/shared/constants';
 import { Request } from 'express';
 
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+import { createApiError } from '../utils/api-error';
 
 /**
  * Service for handling committee business logic
@@ -71,10 +73,13 @@ export class CommitteeService {
     // Validate input data
     const validation = this.validateCommitteeData(data);
     if (!validation.isValid) {
-      const error = new Error(`Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`);
-      (error as any).statusCode = 400;
-      (error as any).validationErrors = validation.errors;
-      throw error;
+      const validationError: ValidationApiError = createApiError({
+        message: `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`,
+        statusCode: 400,
+        code: 'VALIDATION_ERROR',
+      }) as ValidationApiError;
+      validationError.validationErrors = validation.errors;
+      throw validationError;
     }
 
     // Extract settings fields
@@ -122,10 +127,13 @@ export class CommitteeService {
     // Validate input data
     const validation = this.validateCommitteeData(data, true);
     if (!validation.isValid) {
-      const error = new Error(`Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`);
-      (error as any).statusCode = 400;
-      (error as any).validationErrors = validation.errors;
-      throw error;
+      const validationError: ValidationApiError = createApiError({
+        message: `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`,
+        statusCode: 400,
+        code: 'VALIDATION_ERROR',
+      }) as ValidationApiError;
+      validationError.validationErrors = validation.errors;
+      throw validationError;
     }
 
     // Extract settings fields
