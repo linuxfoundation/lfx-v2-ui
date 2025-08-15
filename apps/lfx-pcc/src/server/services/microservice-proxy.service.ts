@@ -136,7 +136,7 @@ export class MicroserviceProxyService {
   private transformError(error: any, service: string, path: string): Error {
     const originalMessage = error instanceof Error ? error.message : String(error);
 
-    const statusCode = error.status || 500;
+    const statusCode = error.statusCode || error.status || 500;
 
     let userMessage: string;
     let errorCode: string;

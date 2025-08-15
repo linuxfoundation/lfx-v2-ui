@@ -11,6 +11,7 @@ import {
   ETagError,
   QueryServiceResponse,
 } from '@lfx-pcc/shared/interfaces';
+import { getValidCommitteeCategories } from '@lfx-pcc/shared/constants';
 import { Request } from 'express';
 
 import { ETagService } from './etag.service';
@@ -268,14 +269,14 @@ export class CommitteeService {
 
     // Category validation
     if (data.category !== undefined) {
-      const validCategories = ['technical', 'business', 'governance', 'advisory', 'marketing', 'security', 'outreach'];
+      const validCategories = getValidCommitteeCategories();
       if (typeof data.category !== 'string') {
         errors.push({
           field: 'category',
           message: 'Committee category must be a string',
           code: 'INVALID_TYPE',
         });
-      } else if (!validCategories.includes(data.category.toLowerCase())) {
+      } else if (!validCategories.includes(data.category)) {
         errors.push({
           field: 'category',
           message: `Committee category must be one of: ${validCategories.join(', ')}`,

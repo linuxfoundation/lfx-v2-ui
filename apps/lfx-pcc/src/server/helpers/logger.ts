@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Request } from 'express';
+import { SENSITIVE_FIELDS } from '@lfx-pcc/shared/constants';
 
 /**
  * Standardized request logging helper for consistent log formatting
@@ -118,11 +119,10 @@ export class Logger {
    * Sanitizes sensitive data from metadata before logging
    */
   public static sanitize(metadata: Record<string, any>): Record<string, any> {
-    const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization', 'cookie'];
     const sanitized = { ...metadata };
 
     Object.keys(sanitized).forEach((key) => {
-      if (sensitiveFields.some((field) => key.toLowerCase().includes(field))) {
+      if (SENSITIVE_FIELDS.some((field) => key.toLowerCase().includes(field))) {
         sanitized[key] = '[REDACTED]';
       }
     });

@@ -44,11 +44,11 @@ export class ApiClientService {
     const requestInit: RequestInit = {
       method,
       headers: {
+        ...customHeaders,
         Authorization: `Bearer ${bearerToken}`,
         Accept: 'application/json',
         ['Content-Type']: 'application/json',
         ['User-Agent']: 'LFX-PCC-Server/1.0',
-        ...customHeaders,
       },
       signal: AbortSignal.timeout(this.config.timeout),
     };

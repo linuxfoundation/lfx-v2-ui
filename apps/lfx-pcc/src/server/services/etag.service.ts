@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ETagError, ETagResult } from '@lfx-pcc/shared/interfaces';
+import { HTTP_HEADERS } from '@lfx-pcc/shared/constants';
 import { Request } from 'express';
 
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -37,7 +38,7 @@ export class ETagService {
         throw error;
       }
 
-      const etag = response.headers['etag'] || response.headers['ETag'];
+      const etag = response.headers[HTTP_HEADERS.ETAG.toLowerCase()] || response.headers[HTTP_HEADERS.ETAG];
 
       if (!etag) {
         req.log.warn(
@@ -82,7 +83,7 @@ export class ETagService {
       const etagError: ETagError = {
         code: 'NETWORK_ERROR',
         message: error instanceof Error ? error.message : 'Unknown error occurred',
-        statusCode: (error as any).status || 500,
+        statusCode: (error as any).statusCode || (error as any).status || 500,
       };
       throw etagError;
     }
@@ -102,7 +103,7 @@ export class ETagService {
       'Attempting to update resource with ETag'
     );
 
-    return await this.microserviceProxy.proxyRequest<T>(req, service, path, 'PUT', {}, data, { ['Etag']: etag });
+    return await this.microserviceProxy.proxyRequest<T>(req, service, path, 'PUT', {}, data, { [HTTP_HEADERS.ETAG]: etag });
   }
 
   /**
@@ -119,7 +120,7 @@ export class ETagService {
       'Attempting to delete resource with ETag'
     );
 
-    await this.microserviceProxy.proxyRequest(req, service, path, 'DELETE', {}, undefined, { ['Etag']: etag });
+    await this.microserviceProxy.proxyRequest(req, service, path, 'DELETE', {}, undefined, { [HTTP_HEADERS.ETAG]: etag });
   }
 
   /**

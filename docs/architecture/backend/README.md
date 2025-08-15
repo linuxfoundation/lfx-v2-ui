@@ -143,10 +143,11 @@ export class Responder {
 #### ETag Service (`/server/services/etag.service.ts`)
 
 ```typescript
-export class EtagService {
-  static extractETag<T>(result: ETagResult<T>): { data: T; etag: string };
-  static validateETag(headers: Record<string, string>): string;
-  static handleETagError(error: any): ETagError;
+export class ETagService {
+  constructor(private microserviceProxy: MicroserviceProxyService);
+  async fetchWithETag<T>(req: Request, service: string, path: string, operation: string): Promise<ETagResult<T>>;
+  async updateWithETag<T>(req: Request, service: string, path: string, etag: string, data: any, operation: string): Promise<T>;
+  async deleteWithETag(req: Request, service: string, path: string, etag: string, operation: string): Promise<void>;
 }
 ```
 
@@ -192,9 +193,12 @@ export class CommitteeController {
 export class CommitteeService {
   public async getCommittees(req: Request, queryParams: any): Promise<Committee[]> {
     // Business logic and microservice integration
-    const result = await this.microserviceProxy.get<QueryServiceResponse<Committee>>('/committees', queryParams, req);
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      ...queryParams,
+      type: 'committee',
+    });
 
-    return result.resources.map((item) => item.data);
+    return resources.map((resource) => resource.data);
   }
 }
 ```
