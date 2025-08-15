@@ -44,3 +44,38 @@ export interface CommitteeSummary {
   name: string;
   category: string;
 }
+
+export interface CommitteeCreateData {
+  name: string;
+  category: string;
+  description?: string;
+  parent_uid?: string;
+  business_email_required?: boolean;
+  enable_voting?: boolean;
+  is_audit_enabled?: boolean;
+  public?: boolean;
+  display_name?: string;
+  sso_group_enabled?: boolean;
+  sso_group_name?: string;
+  website?: string;
+  project_uid?: string;
+  joinable?: boolean;
+}
+
+export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {}
+
+export interface CommitteeSettingsData {
+  business_email_required?: boolean;
+  is_audit_enabled?: boolean;
+}
+
+export interface CommitteeValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface CommitteeValidationResult {
+  isValid: boolean;
+  errors: CommitteeValidationError[];
+}
