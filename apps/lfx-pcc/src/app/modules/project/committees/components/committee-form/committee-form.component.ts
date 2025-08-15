@@ -190,12 +190,12 @@ export class CommitteeFormComponent {
 
           // If editing, exclude the current committee
           const currentCommitteeId = this.committee()?.id;
-          const availableCommittees = currentCommitteeId ? topLevelCommittees.filter((committee) => committee.id !== currentCommitteeId) : topLevelCommittees;
+          const availableCommittees = currentCommitteeId ? topLevelCommittees.filter((committee) => committee.uid !== currentCommitteeId) : topLevelCommittees;
 
           // Transform to dropdown options
           const options = availableCommittees.map((committee) => ({
             label: committee.name,
-            value: committee.id,
+            value: committee.uid,
           }));
 
           // Add "No Parent Committee" option at the beginning
@@ -215,11 +215,11 @@ export class CommitteeFormComponent {
       business_email_required: new FormControl(committee?.business_email_required || false),
       enable_voting: new FormControl(committee?.enable_voting || false),
       is_audit_enabled: new FormControl(committee?.is_audit_enabled || false),
-      public_enabled: new FormControl(committee?.public_enabled || false),
-      public_name: new FormControl(committee?.public_name || ''),
+      public: new FormControl(committee?.public || false),
+      display_name: new FormControl(committee?.display_name || ''),
       sso_group_enabled: new FormControl(committee?.sso_group_enabled || false),
       sso_group_name: new FormControl(committee?.sso_group_name || ''),
-      committee_website: new FormControl(committee?.committee_website || '', [Validators.pattern(/^https?:\/\/.+\..+/)]),
+      website: new FormControl(committee?.website || '', [Validators.pattern(/^https?:\/\/.+\..+/)]),
       project_uid: new FormControl(committee?.project_uid || ''),
       joinable: new FormControl(committee?.joinable || false),
     });

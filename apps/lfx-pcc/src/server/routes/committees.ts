@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { NextFunction, Request, Response, Router } from 'express';
+import { Committee, QueryServiceResponse } from '@lfx-pcc/shared';
 
+import { ApiClientService } from '../services/api-client.service';
+import { MicroserviceProxyService } from '../services/microservice-proxy.service';
 import { SupabaseService } from '../services/supabase.service';
 
 const router = Router();
 
 const supabaseService = new SupabaseService();
+const microserviceProxyService = new MicroserviceProxyService(new ApiClientService());
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
@@ -21,7 +25,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   );
 
   try {
-    const committees = await supabaseService.getCommittees(req.query as Record<string, any>);
+    const query = {
+      ...req.query,
+      type: 'committee',
+    };
+    const { resources } = await microserviceProxyService.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', query);
+
+    const committees = resources.map((resource) => resource.data);
     const duration = Date.now() - startTime;
 
     req.log.info(
@@ -181,7 +191,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     req.log.info(
       {
         operation: 'create_committee',
-        committee_id: newCommittee.id,
+        committee_id: newCommittee.uid,
         committee_category: newCommittee.category,
         duration,
         status_code: 201,
