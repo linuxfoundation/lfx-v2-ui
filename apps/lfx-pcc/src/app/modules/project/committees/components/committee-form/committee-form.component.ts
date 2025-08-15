@@ -62,7 +62,16 @@ export class CommitteeFormComponent {
 
     if (this.form().valid) {
       const isEditingMode = this.isEditing();
-      const formValue = this.form().value;
+      const rawFormValue = {
+        ...this.form().value,
+        calendar: {
+          public: this.form().value.public || false,
+        },
+        display_name: this.form().value.display_name || this.form().value.name,
+        website: this.form().value.website || null,
+        public: true,
+      };
+      const formValue = this.cleanFormData(rawFormValue);
       const committeeId = this.committeeId();
 
       this.submitting.set(true);
@@ -130,6 +139,23 @@ export class CommitteeFormComponent {
       const control = form.get(key);
       control?.markAsTouched();
     });
+  }
+
+  // Helper method to clean form data - convert empty strings to null
+  private cleanFormData(formData: any): any {
+    const cleaned: any = {};
+
+    Object.keys(formData).forEach((key) => {
+      const value = formData[key];
+      // Convert empty strings to null for optional string fields
+      if (typeof value === 'string' && value.trim() === '') {
+        cleaned[key] = null;
+      } else {
+        cleaned[key] = value;
+      }
+    });
+
+    return cleaned;
   }
 
   // Success handler
