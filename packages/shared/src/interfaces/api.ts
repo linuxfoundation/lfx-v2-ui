@@ -46,3 +46,41 @@ export interface QueryServiceItem<T = unknown> {
 export interface QueryServiceResponse<T = unknown> {
   resources: QueryServiceItem<T>[];
 }
+
+export interface ETagResult<T> {
+  data: T;
+  etag: string;
+  headers: Record<string, string>;
+}
+
+export interface ETagError {
+  code: 'NOT_FOUND' | 'ETAG_MISSING' | 'NETWORK_ERROR' | 'PRECONDITION_FAILED';
+  message: string;
+  statusCode: number;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Standard API error response interface
+ */
+export interface ApiErrorResponse {
+  error: string;
+  code?: string;
+  errors?: ValidationError[];
+  details?: Record<string, any>;
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
