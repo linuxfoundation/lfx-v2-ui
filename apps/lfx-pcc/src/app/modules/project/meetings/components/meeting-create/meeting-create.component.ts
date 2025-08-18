@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -28,6 +29,7 @@ export class MeetingCreateComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly projectService = inject(ProjectService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Stepper state
   public currentStep = signal<number>(0);
@@ -50,9 +52,11 @@ export class MeetingCreateComponent {
 
   public constructor() {
     // Subscribe to form value changes and update validation signals
-    this.form().valueChanges.subscribe(() => {
-      this.updateCanProceed();
-    });
+    this.form()
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.updateCanProceed();
+      });
 
     // Use effect to watch for step changes and re-validate
     effect(() => {

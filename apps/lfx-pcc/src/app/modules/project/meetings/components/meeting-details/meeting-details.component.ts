@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -35,6 +36,9 @@ import { TooltipModule } from 'primeng/tooltip';
 export class MeetingDetailsComponent implements OnInit {
   // Form group input from parent
   public readonly form = input.required<FormGroup>();
+
+  // Dependency injection
+  private readonly destroyRef = inject(DestroyRef);
 
   // AI Agenda Helper signals
   public readonly showAiHelper = signal<boolean>(false);
@@ -86,7 +90,8 @@ export class MeetingDetailsComponent implements OnInit {
     // Add custom duration validator when duration is 'custom'
     this.form()
       .get('duration')
-      ?.valueChanges.subscribe((value) => {
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
         const customDurationControl = this.form().get('customDuration');
         if (value === 'custom') {
           customDurationControl?.setValidators([Validators.required, Validators.min(5), Validators.max(480)]);
@@ -99,7 +104,8 @@ export class MeetingDetailsComponent implements OnInit {
     // Reset recurrence selection when start date changes
     this.form()
       .get('startDate')
-      ?.valueChanges.subscribe(() => {
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
         // Reset recurrence to 'none' when date changes to avoid confusion
         this.form().get('recurrence')?.setValue('none');
       });
@@ -107,14 +113,16 @@ export class MeetingDetailsComponent implements OnInit {
     // Auto-generate title when meeting type and date are available
     this.form()
       .get('startDate')
-      ?.valueChanges.subscribe(() => {
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
         this.generateMeetingTitleIfNeeded();
       });
 
     // Watch for isRecurring changes to reset recurrence
     this.form()
       .get('isRecurring')
-      ?.valueChanges.subscribe((isRecurring) => {
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((isRecurring) => {
         if (!isRecurring) {
           this.form().get('recurrence')?.setValue('none');
         } else {
