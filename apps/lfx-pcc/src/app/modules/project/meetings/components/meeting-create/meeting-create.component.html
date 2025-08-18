@@ -14,15 +14,55 @@
 
     <!-- Stepper Content -->
     <div class="p-8">
-      <lfx-stepper [value]="currentStep()" (valueChange)="goToStep($event)">
-        <!-- Step panels will be rendered here by child step components -->
-        <ng-content></ng-content>
-      </lfx-stepper>
+      <p-stepper [value]="currentStep()" (valueChange)="goToStep($event)">
+        <p-step-list>
+          <p-step [value]="0"></p-step>
+          <p-step [value]="1"></p-step>
+          <p-step [value]="2"></p-step>
+          <p-step [value]="3"></p-step>
+          <p-step [value]="4"></p-step>
+        </p-step-list>
 
-      <!-- Placeholder for step content - will be replaced by individual step components -->
-      <div class="min-h-96 flex items-center justify-center text-slate-500">
-        <p>Step {{ currentStep() + 1 }} content will be implemented in individual step components</p>
-      </div>
+        <p-step-panels>
+          <p-step-panel [value]="0">
+            <ng-template #content let-activateCallback="activateCallback">
+              <lfx-meeting-type-selection [form]="form()"></lfx-meeting-type-selection>
+            </ng-template>
+          </p-step-panel>
+
+          <p-step-panel [value]="1">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="min-h-96 flex items-center justify-center text-slate-500">
+                <p>Step 2: Meeting Details - To be implemented</p>
+              </div>
+            </ng-template>
+          </p-step-panel>
+
+          <p-step-panel [value]="2">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="min-h-96 flex items-center justify-center text-slate-500">
+                <p>Step 3: Platform & Features - To be implemented</p>
+              </div>
+            </ng-template>
+          </p-step-panel>
+
+          <p-step-panel [value]="3">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="min-h-96 flex items-center justify-center text-slate-500">
+                <p>Step 4: Participants - To be implemented</p>
+              </div>
+            </ng-template>
+          </p-step-panel>
+
+          <p-step-panel [value]="4">
+            <ng-template #content let-activateCallback="activateCallback">
+              <div class="min-h-96 flex items-center justify-center text-slate-500">
+                <p>Step 5: Resources & Summary - To be implemented</p>
+              </div>
+            </ng-template>
+          </p-step-panel>
+        </p-step-panels>
+      </p-stepper>
     </div>
 
     <!-- Footer Navigation -->

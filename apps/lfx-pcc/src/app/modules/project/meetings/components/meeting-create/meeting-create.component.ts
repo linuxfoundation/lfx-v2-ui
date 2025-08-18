@@ -2,12 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { StepPanelComponent } from '@app/shared/components/step-panel/step-panel.component';
-import { StepComponent } from '@app/shared/components/step/step.component';
-import { StepperComponent } from '@app/shared/components/stepper/stepper.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { MeetingVisibility, RecurrenceType } from '@lfx-pcc/shared/enums';
 import { CreateMeetingRequest, MeetingRecurrence } from '@lfx-pcc/shared/interfaces';
@@ -15,11 +12,14 @@ import { getUserTimezone } from '@lfx-pcc/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
+import { StepperModule } from 'primeng/stepper';
+
+import { MeetingTypeSelectionComponent } from '../meeting-type-selection/meeting-type-selection.component';
 
 @Component({
   selector: 'lfx-meeting-create',
   standalone: true,
-  imports: [CommonModule, StepperComponent, StepComponent, StepPanelComponent, ButtonComponent, ReactiveFormsModule],
+  imports: [CommonModule, StepperModule, ButtonComponent, ReactiveFormsModule, MeetingTypeSelectionComponent],
   templateUrl: './meeting-create.component.html',
 })
 export class MeetingCreateComponent {
@@ -36,8 +36,8 @@ export class MeetingCreateComponent {
   public form = signal<FormGroup>(this.createMeetingFormGroup());
   public submitting = signal<boolean>(false);
 
-  // Computed signals for template
-  public readonly canProceed = computed(() => this.isCurrentStepValid());
+  // Validation signals for template
+  public readonly canProceed = signal<boolean>(false);
   public readonly canGoNext = computed(() => {
     const next = this.currentStep() + 1;
     return next < this.totalSteps && this.canNavigateToStep(next);
@@ -47,9 +47,24 @@ export class MeetingCreateComponent {
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps - 1);
   public readonly currentStepTitle = computed(() => this.getStepTitle(this.currentStep()));
 
+  public constructor() {
+    // Subscribe to form value changes and update validation signals
+    this.form().valueChanges.subscribe(() => {
+      this.updateCanProceed();
+    });
+
+    // Use effect to watch for step changes and re-validate
+    effect(() => {
+      // Access the signal to create dependency
+      this.currentStep();
+      // Update validation when step changes
+      this.updateCanProceed();
+    });
+  }
+
   // Navigation methods
-  public goToStep(step: number): void {
-    if (this.canNavigateToStep(step)) {
+  public goToStep(step: number | undefined): void {
+    if (step !== undefined && this.canNavigateToStep(step)) {
       this.currentStep.set(step);
     }
   }
@@ -167,8 +182,9 @@ export class MeetingCreateComponent {
     return true;
   }
 
-  private isCurrentStepValid(): boolean {
-    return this.isStepValid(this.currentStep());
+  private updateCanProceed(): void {
+    const isValid = this.isStepValid(this.currentStep());
+    this.canProceed.set(isValid);
   }
 
   private isStepValid(step: number): boolean {

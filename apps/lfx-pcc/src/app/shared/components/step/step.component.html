@@ -1,10 +1,6 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<p-step [value]="value()" [disabled]="disabled()" (valueChange)="handleValueChange($event)">
-  <ng-template #content *ngIf="contentTemplate">
-    <ng-container *ngTemplateOutlet="contentTemplate"></ng-container>
-  </ng-template>
-
+<p-step [value]="value()" [disabled]="disabled()">
   <ng-content></ng-content>
 </p-step>
