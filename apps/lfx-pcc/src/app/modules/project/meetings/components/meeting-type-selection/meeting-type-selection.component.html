@@ -30,10 +30,10 @@
           @let typeInfo = getMeetingTypeInfo(option.value);
           <div
             class="p-4 border rounded-lg cursor-pointer transition-all hover:border-blue-600 hover:bg-blue-50"
-            [class.border-blue-600]="selectedMeetingType() === option.value"
-            [class.bg-blue-50]="selectedMeetingType() === option.value"
-            [class.border-slate-200]="selectedMeetingType() !== option.value"
-            [class.bg-white]="selectedMeetingType() !== option.value"
+            [ngClass]="{
+              'border-blue-600 bg-blue-50': form().get('meeting_type')?.value === option.value,
+              'border-slate-200 bg-white': form().get('meeting_type')?.value !== option.value,
+            }"
             (click)="onMeetingTypeSelect(option.value)"
             [attr.data-testid]="'meeting-type-option-' + option.value.toLowerCase()">
             <div class="flex items-start gap-3">

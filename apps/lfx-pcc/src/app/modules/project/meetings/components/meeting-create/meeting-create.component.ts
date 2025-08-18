@@ -14,12 +14,13 @@ import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { StepperModule } from 'primeng/stepper';
 
+import { MeetingDetailsComponent } from '../meeting-details/meeting-details.component';
 import { MeetingTypeSelectionComponent } from '../meeting-type-selection/meeting-type-selection.component';
 
 @Component({
   selector: 'lfx-meeting-create',
   standalone: true,
-  imports: [CommonModule, StepperModule, ButtonComponent, ReactiveFormsModule, MeetingTypeSelectionComponent],
+  imports: [CommonModule, StepperModule, ButtonComponent, ReactiveFormsModule, MeetingTypeSelectionComponent, MeetingDetailsComponent],
   templateUrl: './meeting-create.component.html',
 })
 export class MeetingCreateComponent {
@@ -66,6 +67,7 @@ export class MeetingCreateComponent {
   public goToStep(step: number | undefined): void {
     if (step !== undefined && this.canNavigateToStep(step)) {
       this.currentStep.set(step);
+      this.scrollToStepper();
     }
   }
 
@@ -73,6 +75,7 @@ export class MeetingCreateComponent {
     const next = this.currentStep() + 1;
     if (next < this.totalSteps && this.canNavigateToStep(next)) {
       this.currentStep.set(next);
+      this.scrollToStepper();
     }
   }
 
@@ -80,6 +83,7 @@ export class MeetingCreateComponent {
     const previous = this.currentStep() - 1;
     if (previous >= 0) {
       this.currentStep.set(previous);
+      this.scrollToStepper();
     }
   }
 
@@ -233,12 +237,14 @@ export class MeetingCreateComponent {
         // Step 2: Meeting Details
         topic: new FormControl('', [Validators.required]),
         agenda: new FormControl('', [Validators.required]),
+        aiPrompt: new FormControl(''),
         startDate: new FormControl(defaultDateTime.date, [Validators.required]),
         startTime: new FormControl(defaultDateTime.time, [Validators.required]),
         duration: new FormControl(60, [Validators.required]),
         customDuration: new FormControl(''),
         timezone: new FormControl(getUserTimezone(), [Validators.required]),
         early_join_time: new FormControl(10, [Validators.min(10), Validators.max(60)]),
+        isRecurring: new FormControl(false),
         recurrence: new FormControl('none'),
 
         // Step 3: Platform & Features
@@ -435,5 +441,17 @@ export class MeetingCreateComponent {
   private getStepTitle(step: number): string {
     const titles = ['Meeting Type', 'Meeting Details', 'Platform & Features', 'Participants', 'Resources & Summary'];
     return titles[step] || '';
+  }
+
+  private scrollToStepper(): void {
+    // Find the meeting-create element and scroll to it minus 100px
+    const meetingCreate = document.getElementById('meeting-create');
+    if (meetingCreate) {
+      const elementTop = meetingCreate.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: elementTop - 50,
+        behavior: 'smooth',
+      });
+    }
   }
 }

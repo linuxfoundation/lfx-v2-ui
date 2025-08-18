@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ToggleComponent } from '@components/toggle/toggle.component';
 import { MeetingType } from '@lfx-pcc/shared/enums';
@@ -80,11 +80,6 @@ export class MeetingTypeSelectionComponent {
       color: '#6b7280', // gray-500
     },
   };
-
-  // Computed signal for currently selected meeting type
-  public readonly selectedMeetingType = computed(() => {
-    return this.form().get('meeting_type')?.value as MeetingType | null;
-  });
 
   // Get meeting type information
   public getMeetingTypeInfo(type: MeetingType): MeetingTypeInfo {
