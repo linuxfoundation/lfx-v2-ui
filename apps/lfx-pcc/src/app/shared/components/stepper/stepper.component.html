@@ -1,0 +1,12 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (value() !== undefined) {
+  <p-stepper [value]="value()!" [linear]="linear()" [transitionOptions]="transitionOptions()" [style]="style()" (valueChange)="handleValueChange($event)">
+    <ng-content></ng-content>
+  </p-stepper>
+} @else {
+  <p-stepper [value]="0" [linear]="linear()" [transitionOptions]="transitionOptions()" [style]="style()" (valueChange)="handleValueChange($event)">
+    <ng-content></ng-content>
+  </p-stepper>
+}
