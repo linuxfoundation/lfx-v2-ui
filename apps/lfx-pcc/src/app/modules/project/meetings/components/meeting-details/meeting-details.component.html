@@ -160,7 +160,7 @@
     }
 
     <!-- Custom Duration (shown when 'custom' is selected) -->
-    @if (isCustomDuration()) {
+    @if (form().get('duration')?.value === 'custom') {
       <div>
         <label for="custom-duration" class="block text-sm font-medium text-gray-700 mb-1">
           Custom Duration (minutes) <span class="text-red-500">*</span>

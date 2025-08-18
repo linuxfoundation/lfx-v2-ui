@@ -13,29 +13,29 @@
 
     <!-- Stepper Content -->
     <div class="p-8">
-      <p-stepper [value]="currentStep()" (valueChange)="goToStep($event)">
+      <p-stepper [value]="currentStep()" [linear]="true" data-testid="meeting-create-stepper">
         <p-step-list>
-          <p-step [value]="0"></p-step>
-          <p-step [value]="1"></p-step>
-          <p-step [value]="2"></p-step>
-          <p-step [value]="3"></p-step>
-          <p-step [value]="4"></p-step>
+          <p-step [value]="0" data-testid="meeting-create-step-0"></p-step>
+          <p-step [value]="1" data-testid="meeting-create-step-1"></p-step>
+          <p-step [value]="2" data-testid="meeting-create-step-2"></p-step>
+          <p-step [value]="3" data-testid="meeting-create-step-3"></p-step>
+          <p-step [value]="4" data-testid="meeting-create-step-4"></p-step>
         </p-step-list>
 
         <p-step-panels>
-          <p-step-panel [value]="0">
+          <p-step-panel [value]="0" data-testid="meeting-create-panel-0">
             <ng-template #content let-activateCallback="activateCallback">
               <lfx-meeting-type-selection [form]="form()"></lfx-meeting-type-selection>
             </ng-template>
           </p-step-panel>
 
-          <p-step-panel [value]="1">
+          <p-step-panel [value]="1" data-testid="meeting-create-panel-1">
             <ng-template #content let-activateCallback="activateCallback">
               <lfx-meeting-details [form]="form()"></lfx-meeting-details>
             </ng-template>
           </p-step-panel>
 
-          <p-step-panel [value]="2">
+          <p-step-panel [value]="2" data-testid="meeting-create-panel-2">
             <ng-template #content let-activateCallback="activateCallback">
               <div class="min-h-96 flex items-center justify-center text-slate-500">
                 <p>Step 3: Platform & Features - To be implemented</p>
@@ -43,7 +43,7 @@
             </ng-template>
           </p-step-panel>
 
-          <p-step-panel [value]="3">
+          <p-step-panel [value]="3" data-testid="meeting-create-panel-3">
             <ng-template #content let-activateCallback="activateCallback">
               <div class="min-h-96 flex items-center justify-center text-slate-500">
                 <p>Step 4: Participants - To be implemented</p>
@@ -51,7 +51,7 @@
             </ng-template>
           </p-step-panel>
 
-          <p-step-panel [value]="4">
+          <p-step-panel [value]="4" data-testid="meeting-create-panel-4">
             <ng-template #content let-activateCallback="activateCallback">
               <div class="min-h-96 flex items-center justify-center text-slate-500">
                 <p>Step 5: Resources & Summary - To be implemented</p>

@@ -93,7 +93,7 @@ export class MeetingCreateComponent {
 
   public onCancel(): void {
     const project = this.projectService.project();
-    if (project) {
+    if (project?.slug) {
       this.router.navigate(['/project', project.slug, 'meetings']);
     }
   }
@@ -123,8 +123,8 @@ export class MeetingCreateComponent {
     this.submitting.set(true);
     const formValue = this.form().value;
 
-    // Process duration value
-    const duration = formValue.duration === 'custom' ? formValue.customDuration : formValue.duration;
+    // Process duration value - ensure it's always a number
+    const duration = formValue.duration === 'custom' ? Number(formValue.customDuration) : Number(formValue.duration);
 
     // Combine date and time for start_time
     const startDateTime = this.combineDateTime(formValue.startDate, formValue.startTime);
@@ -211,7 +211,8 @@ export class MeetingCreateComponent {
           form.get('timezone')?.value &&
           form.get('topic')?.valid &&
           form.get('startDate')?.valid &&
-          form.get('startTime')?.valid
+          form.get('startTime')?.valid &&
+          !form.errors?.['futureDateTime']
         );
 
       case 2: // Platform & Features

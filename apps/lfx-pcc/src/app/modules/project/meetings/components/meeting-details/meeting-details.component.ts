@@ -57,21 +57,14 @@ export class MeetingDetailsComponent implements OnInit {
     { label: 'Custom...', value: 'custom' },
   ];
 
+  // Recurrence options (dynamically updated based on selected date)
+  public recurrenceOptions = signal<Array<{ label: string; value: string }>>([]);
+
   // Timezone options from shared constants
   public readonly timezoneOptions = TIMEZONES.map((tz) => ({
     label: `${tz.label} (${tz.offset})`,
     value: tz.value,
   }));
-
-  // Recurrence options (dynamically updated based on selected date)
-  public recurrenceOptions = computed(() => {
-    const startDate = this.form().get('startDate')?.value;
-    if (!startDate) {
-      return [{ label: 'Does not repeat', value: 'none' }];
-    }
-
-    return this.generateRecurrenceOptions(startDate);
-  });
 
   // Minimum date (yesterday)
   public readonly minDate = computed(() => {
@@ -81,12 +74,15 @@ export class MeetingDetailsComponent implements OnInit {
     return yesterday;
   });
 
-  // Check if custom duration is selected
-  public readonly isCustomDuration = computed(() => {
-    return this.form().get('duration')?.value === 'custom';
-  });
-
   public ngOnInit(): void {
+    // Initialize recurrence options with current start date
+    const initialStartDate = this.form().get('startDate')?.value;
+    if (initialStartDate) {
+      this.generateRecurrenceOptions(initialStartDate);
+    } else {
+      this.recurrenceOptions.set([{ label: 'Does not repeat', value: 'none' }]);
+    }
+
     // Add custom duration validator when duration is 'custom'
     this.form()
       .get('duration')
@@ -105,9 +101,10 @@ export class MeetingDetailsComponent implements OnInit {
     this.form()
       .get('startDate')
       ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
+      .subscribe((value) => {
         // Reset recurrence to 'none' when date changes to avoid confusion
         this.form().get('recurrence')?.setValue('none');
+        this.generateRecurrenceOptions(value as Date);
       });
 
     // Auto-generate title when meeting type and date are available
@@ -161,7 +158,7 @@ export class MeetingDetailsComponent implements OnInit {
     this.hideAiAgendaHelper();
   }
 
-  private generateRecurrenceOptions(date: Date): Array<{ label: string; value: string }> {
+  private generateRecurrenceOptions(date: Date): void {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[date.getDay()];
 
@@ -183,7 +180,7 @@ export class MeetingDetailsComponent implements OnInit {
       options.splice(3, 0, { label: `Monthly on the ${ordinal} ${dayName}`, value: 'monthly_nth' });
     }
 
-    return options;
+    this.recurrenceOptions.set(options);
   }
 
   private getWeekOfMonth(date: Date): { weekOfMonth: number; isLastWeek: boolean } {
@@ -272,7 +269,7 @@ export class MeetingDetailsComponent implements OnInit {
 
       [MeetingType.MAINTAINERS]: `**Community Focus**: ${prompt}
 
-**Maintainer Sync Agenda**:
+**Maintainers Sync Agenda**:
 1. **Community Updates** (10 min)
    - Recent contributor activity
    - Community feedback highlights
