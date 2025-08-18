@@ -1,0 +1,68 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="max-w-4xl mx-auto p-6">
+  <div class="bg-white rounded-lg border border-slate-200 shadow-sm">
+    <!-- Header -->
+    <div class="border-b border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl font-semibold text-slate-900" data-testid="meeting-create-title">Create Meeting</h1>
+        <div class="text-sm text-slate-500" data-testid="meeting-create-step-indicator">Step {{ currentStep() + 1 }} of {{ totalSteps }}</div>
+      </div>
+      <h2 class="text-lg font-medium text-slate-700" data-testid="meeting-create-step-title">{{ currentStepTitle() }}</h2>
+    </div>
+
+    <!-- Stepper Content -->
+    <div class="p-8">
+      <lfx-stepper [value]="currentStep()" (valueChange)="goToStep($event)">
+        <!-- Step panels will be rendered here by child step components -->
+        <ng-content></ng-content>
+      </lfx-stepper>
+
+      <!-- Placeholder for step content - will be replaced by individual step components -->
+      <div class="min-h-96 flex items-center justify-center text-slate-500">
+        <p>Step {{ currentStep() + 1 }} content will be implemented in individual step components</p>
+      </div>
+    </div>
+
+    <!-- Footer Navigation -->
+    <div class="border-t border-slate-200 p-6">
+      <div class="flex justify-between">
+        <lfx-button
+          [label]="'Previous'"
+          [icon]="'fa-light fa-arrow-left'"
+          [disabled]="!canGoPrevious()"
+          [outlined]="true"
+          (onClick)="previousStep()"
+          data-testid="meeting-create-previous-btn">
+        </lfx-button>
+
+        <div class="flex gap-3">
+          <lfx-button [label]="'Cancel'" [outlined]="true" (onClick)="onCancel()" data-testid="meeting-create-cancel-btn"> </lfx-button>
+
+          @if (!isLastStep()) {
+            <lfx-button
+              [label]="'Next'"
+              [icon]="'fa-light fa-arrow-right'"
+              [iconPos]="'right'"
+              [disabled]="!canProceed()"
+              [severity]="'primary'"
+              (onClick)="nextStep()"
+              data-testid="meeting-create-next-btn">
+            </lfx-button>
+          } @else {
+            <lfx-button
+              [label]="'Create Meeting'"
+              [icon]="'fa-light fa-check'"
+              [loading]="submitting()"
+              [disabled]="!canProceed() || submitting()"
+              [severity]="'primary'"
+              (onClick)="onSubmit()"
+              data-testid="meeting-create-submit-btn">
+            </lfx-button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
