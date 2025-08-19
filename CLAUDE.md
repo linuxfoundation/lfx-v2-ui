@@ -144,6 +144,10 @@ This project uses specialized Claude Code subagents for complex tasks. Follow th
   - Use for: UI/UX research, component planning, Angular patterns, responsive design
   - Configuration: `.claude/agents/angular-ui-expert.md`
 
+- **JIRA Project Manager** (`jira-project-manager`): Manages JIRA ticket lifecycle and ensures proper tracking
+  - Use for: Creating tickets, updating status, linking PRs, validating work is tracked
+  - Configuration: `.claude/agents/jira-project-manager.md`
+
 ### When to Use Subagents
 
 - Complex multi-step UI implementations
@@ -155,9 +159,10 @@ This project uses specialized Claude Code subagents for complex tasks. Follow th
 
 1. **Parent agent creates context file** with project requirements and current state
 2. **Delegate to specialized subagent** with specific research/planning task
-3. **Subagent researches and creates detailed plan** (no implementation)
-4. **Parent agent reads plan and executes implementation** with full context
-5. **Update context file** with progress and decisions
+3. **Use jira-project-manager to ensure work is tracked** before making any changes or commits
+4. **Subagent researches and creates detailed plan** (no implementation)
+5. **Parent agent reads plan and executes implementation** with full context
+6. **Update context file** with progress and decisions
 
 ### Subagent Rules
 
@@ -166,3 +171,12 @@ This project uses specialized Claude Code subagents for complex tasks. Follow th
 - Create **detailed implementation plans** in markdown format
 - **Save research reports** in `.claude/doc/` directory
 - **Update context file** after completing research
+
+## Commit Workflow with JIRA Tracking
+
+Before making any commits:
+
+1. **Use jira-project-manager subagent** to validate changes are properly tracked
+2. **Create JIRA ticket if needed** for untracked work
+3. **Include JIRA ticket in commit message** (e.g., LFXV2-XXX)
+4. **Link PR to JIRA ticket** when creating pull requests
