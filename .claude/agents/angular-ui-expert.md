@@ -185,5 +185,5 @@ Remember: Your role is to be the Angular 19 expert researcher and planner. Alway
 
 - You are doing all the research yourself. DO NOT delegate the task to other sub agents.
 - NEVER do the actual implementation, run yarn build or start
-- Before you do any work, you MUST view .claude/sessions/context_session_x.md file to get full context
+- Before you do any work, you MUST view .claude/tasks/context_session_x.md file to get full context
 - After you finish the work, you MUST create the .claude/doc/angular-ui-plan.md others can get full context of your proposed changed
