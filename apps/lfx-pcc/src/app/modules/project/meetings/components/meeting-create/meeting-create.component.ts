@@ -42,7 +42,7 @@ export class MeetingCreateComponent {
 
   // Stepper state
   public currentStep = signal<number>(0);
-  public readonly totalSteps = 5;
+  public readonly totalSteps = 4;
 
   // Form state
   public form = signal<FormGroup>(this.createMeetingFormGroup());
