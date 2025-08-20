@@ -15,7 +15,7 @@ export interface MeetingRecurrence {
 }
 
 export interface ImportantLink {
-  id: string;
+  id?: string;
   title: string;
   url: string;
 }

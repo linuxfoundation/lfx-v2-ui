@@ -75,7 +75,7 @@ export class FileUploadComponent {
     const accept = this.accept();
     if (!accept) return '';
 
-    const extensions = accept.split(',').map((ext) => ext.trim().replace('.', '').toUpperCase());
+    const extensions = accept.split(',').map((ext) => ext.trim().replace(/\./g, '').toUpperCase());
     return extensions.join(', ');
   }
 

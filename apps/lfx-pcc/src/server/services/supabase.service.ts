@@ -1244,7 +1244,7 @@ export class SupabaseService {
           // Extract field name from details
           const fieldMatch = details.match(/column "([^"]+)"/);
           if (fieldMatch) {
-            const field = fieldMatch[1].replace('_', ' ');
+            const field = fieldMatch[1].replace(/_/g, ' ');
             return `Missing required field: ${field}`;
           }
         }
