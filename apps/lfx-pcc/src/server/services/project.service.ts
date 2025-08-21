@@ -5,6 +5,7 @@ import { Project, QueryServiceResponse } from '@lfx-pcc/shared/interfaces';
 import { Request } from 'express';
 
 import { createApiError } from '../utils/api-error';
+import { ApiClientService } from './api-client.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 
@@ -12,10 +13,13 @@ import { NatsService } from './nats.service';
  * Service for handling project business logic
  */
 export class ProjectService {
-  public constructor(
-    private microserviceProxy: MicroserviceProxyService,
-    private natsService: NatsService
-  ) {}
+  private microserviceProxy: MicroserviceProxyService;
+  private natsService: NatsService;
+
+  public constructor() {
+    this.microserviceProxy = new MicroserviceProxyService(new ApiClientService());
+    this.natsService = new NatsService();
+  }
 
   /**
    * Fetches all projects based on query parameters
