@@ -177,46 +177,43 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-router.get('/:slug/recent-activity', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:uid/recent-activity', async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  const projectSlug = req.params['slug'];
+  const projectUid = req.params['uid'];
 
   req.log.info(
     {
       operation: 'fetch_project_recent_activity',
-      has_project_slug: !!projectSlug,
+      has_project_uid: !!projectUid,
       query_params: req.query,
     },
     'Starting project recent activity fetch request'
   );
 
   try {
-    if (!projectSlug) {
+    if (!projectUid) {
       req.log.warn(
         {
           operation: 'fetch_project_recent_activity',
-          error: 'Missing project slug parameter',
+          error: 'Missing project uid parameter',
           status_code: 400,
         },
-        'Bad request: Project slug validation failed'
+        'Bad request: Project uid validation failed'
       );
 
       return res.status(400).json({
-        error: 'Project Slug is required',
-        code: 'MISSING_PROJECT_SLUG',
+        error: 'Project uid is required',
+        code: 'MISSING_PROJECT_UID',
       });
     }
 
-    // Get project to verify it exists and get the project ID
-    const project = await projectService.getProjectBySlug(req, projectSlug);
-
-    const recentActivity = await supabaseService.getRecentActivityByProject(project.uid, req.query as Record<string, any>);
+    const recentActivity = await supabaseService.getRecentActivityByProject(projectUid, req.query as Record<string, any>);
     const duration = Date.now() - startTime;
 
     req.log.info(
       {
         operation: 'fetch_project_recent_activity',
-        project_uid: project.uid,
+        project_uid: projectUid,
         activity_count: recentActivity.length,
         duration,
         status_code: 200,
