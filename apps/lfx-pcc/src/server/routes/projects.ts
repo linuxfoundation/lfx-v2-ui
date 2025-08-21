@@ -1,17 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Project, QueryServiceResponse } from '@lfx-pcc/shared';
 import { NextFunction, Request, Response, Router } from 'express';
 
 import { ApiClientService } from '../services/api-client.service';
 import { MicroserviceProxyService } from '../services/microservice-proxy.service';
+import { ProjectService } from '../services/project.service';
 import { SupabaseService } from '../services/supabase.service';
 
 const router = Router();
 
 const supabaseService = new SupabaseService();
 const microserviceProxyService = new MicroserviceProxyService(new ApiClientService());
+const projectService = new ProjectService(microserviceProxyService);
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
@@ -25,13 +26,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   );
 
   try {
-    const query = {
-      ...req.query,
-      type: 'project',
-    };
-    const { resources } = await microserviceProxyService.proxyRequest<QueryServiceResponse<Project>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', query);
-
-    const projects = resources.map((resource) => resource.data);
+    const projects = await projectService.getProjects(req, req.query as Record<string, any>);
 
     const duration = Date.now() - startTime;
 
@@ -91,12 +86,7 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
-    const { resources } = await microserviceProxyService.proxyRequest<QueryServiceResponse<Project>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-      type: 'project',
-      name: q,
-    });
-
-    const results = resources.map((resource) => resource.data);
+    const results = await projectService.searchProjects(req, q);
 
     const duration = Date.now() - startTime;
 
@@ -132,7 +122,7 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
   req.log.info(
     {
       operation: 'fetch_project_by_slug',
-      has_project_slug: !!projectSlug,
+      slug: projectSlug,
     },
     'Starting project fetch by slug request'
   );
@@ -154,30 +144,14 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    const project = await supabaseService.getProjectBySlug(projectSlug);
-
-    if (!project) {
-      const duration = Date.now() - startTime;
-      req.log.warn(
-        {
-          operation: 'fetch_project_by_slug',
-          error: 'Project not found',
-          duration,
-          status_code: 404,
-        },
-        'Project not found'
-      );
-
-      return res.status(404).json({
-        error: 'Project not found',
-        code: 'PROJECT_NOT_FOUND',
-      });
-    }
+    // Use the project service to handle slug resolution and project fetching
+    const project = await projectService.getProjectBySlug(req, projectSlug);
 
     const duration = Date.now() - startTime;
     req.log.info(
       {
         operation: 'fetch_project_by_slug',
+        slug: projectSlug,
         project_uid: project.uid,
         duration,
         status_code: 200,
@@ -192,6 +166,7 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
       {
         error: error instanceof Error ? error.message : error,
         operation: 'fetch_project_by_slug',
+        slug: projectSlug,
         duration,
       },
       'Failed to fetch project'
@@ -231,25 +206,7 @@ router.get('/:slug/recent-activity', async (req: Request, res: Response, next: N
     }
 
     // Get project to verify it exists and get the project ID
-    const project = await supabaseService.getProjectBySlug(projectSlug);
-
-    if (!project) {
-      const duration = Date.now() - startTime;
-      req.log.warn(
-        {
-          operation: 'fetch_project_recent_activity',
-          error: 'Project not found for recent activity fetch',
-          duration,
-          status_code: 404,
-        },
-        'Project not found for recent activity'
-      );
-
-      return res.status(404).json({
-        error: 'Project not found',
-        code: 'PROJECT_NOT_FOUND',
-      });
-    }
+    const project = await projectService.getProjectBySlug(req, projectSlug);
 
     const recentActivity = await supabaseService.getRecentActivityByProject(project.uid, req.query as Record<string, any>);
     const duration = Date.now() - startTime;
