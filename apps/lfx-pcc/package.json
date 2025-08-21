@@ -36,6 +36,8 @@
     "@lfx-pcc/shared": "workspace:*",
     "@linuxfoundation/lfx-ui-core": "^0.0.20",
     "@primeng/themes": "^19.1.4",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
     "express-openid-connect": "^2.19.2",

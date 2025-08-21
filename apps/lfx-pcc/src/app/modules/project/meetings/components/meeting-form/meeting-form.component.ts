@@ -4,7 +4,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FileUploadComponent } from '@app/shared/components/file-upload/file-upload.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -14,7 +14,8 @@ import { TextareaComponent } from '@components/textarea/textarea.component';
 import { TimePickerComponent } from '@components/time-picker/time-picker.component';
 import { ToggleComponent } from '@components/toggle/toggle.component';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, TIMEZONES } from '@lfx-pcc/shared/constants';
-import { getUserTimezone } from '@lfx-pcc/shared/utils';
+import { getUserTimezone, combineDateTime } from '@lfx-pcc/shared/utils';
+import { futureDateTimeValidator } from '@lfx-pcc/shared/validators';
 import { MeetingType, MeetingVisibility, RecurrenceType } from '@lfx-pcc/shared/enums';
 import { CreateMeetingRequest, MeetingAttachment, MeetingRecurrence, PendingAttachment, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
@@ -153,8 +154,8 @@ export class MeetingFormComponent {
     // Process duration value
     const duration = formValue.duration === 'custom' ? formValue.customDuration : formValue.duration;
 
-    // Combine date and time for start_time
-    const startDateTime = this.combineDateTime(formValue.startDate, formValue.startTime);
+    // Combine date and time for start_time with timezone awareness
+    const startDateTime = combineDateTime(formValue.startDate, formValue.startTime, formValue.timezone);
 
     // Generate recurrence object if needed
     const recurrenceObject = this.generateRecurrenceObject(formValue.recurrence, formValue.startDate);
@@ -355,34 +356,6 @@ export class MeetingFormComponent {
   }
 
   // Private methods
-  private combineDateTime(date: Date, time: string): string {
-    if (!date || !time) return '';
-
-    // Parse the 12-hour format time (e.g., "12:45 AM" or "1:30 PM")
-    const match = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!match) {
-      console.error('Invalid time format:', time);
-      return '';
-    }
-
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const period = match[3].toUpperCase();
-
-    // Convert to 24-hour format
-    if (period === 'PM' && hours !== 12) {
-      hours += 12;
-    } else if (period === 'AM' && hours === 12) {
-      hours = 0;
-    }
-
-    // Create a new date object with the selected date and time
-    const combinedDate = new Date(date);
-    combinedDate.setHours(hours, minutes, 0, 0);
-
-    // Return ISO string
-    return combinedDate.toISOString();
-  }
 
   private createMeetingFormGroup(): FormGroup {
     const defaultDateTime = this.getDefaultStartDateTime();
@@ -421,7 +394,7 @@ export class MeetingFormComponent {
         // Attachments
         attachments: new FormControl<PendingAttachment[]>([]),
       },
-      { validators: this.futureDateTimeValidator() }
+      { validators: futureDateTimeValidator() }
     );
   }
 
@@ -463,46 +436,6 @@ export class MeetingFormComponent {
     return {
       date: new Date(now),
       time: timeString,
-    };
-  }
-
-  private futureDateTimeValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const formGroup = control as FormGroup;
-      const startDate = formGroup.get('startDate')?.value;
-      const startTime = formGroup.get('startTime')?.value;
-      const timezone = formGroup.get('timezone')?.value;
-
-      if (!startDate || !startTime || !timezone) {
-        return null; // Don't validate if values are not set
-      }
-
-      // Combine the date and time
-      const combinedDateTime = this.combineDateTime(startDate, startTime);
-      if (!combinedDateTime) {
-        return null; // Invalid time format
-      }
-
-      // Parse the combined datetime
-      const selectedDate = new Date(combinedDateTime);
-
-      // Get current time in the selected timezone
-      const now = new Date();
-
-      // Create timezone-aware date strings for comparison
-      const selectedTimeString = selectedDate.toLocaleString('en-US', { timeZone: timezone });
-      const currentTimeString = now.toLocaleString('en-US', { timeZone: timezone });
-
-      // Convert back to Date objects for comparison
-      const selectedTimeInZone = new Date(selectedTimeString);
-      const currentTimeInZone = new Date(currentTimeString);
-
-      // Check if the selected time is in the future
-      if (selectedTimeInZone <= currentTimeInZone) {
-        return { futureDateTime: true };
-      }
-
-      return null;
     };
   }
 

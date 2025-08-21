@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { RecurrenceType } from '../enums';
 import { MeetingRecurrence } from '../interfaces';
 import {
@@ -41,9 +42,13 @@ export const parseISODateString = (dateString: string | null | undefined): Date 
 };
 
 /**
- * Combines a date and time string into an ISO string
+ * Combines a date and time string into an ISO string in the specified timezone
+ * @param date The date object
+ * @param time The time string in 12-hour format (e.g., "12:45 AM")
+ * @param timezone The IANA timezone identifier (e.g., "America/New_York")
+ * @returns ISO string representing the datetime in UTC
  */
-export function combineDateTime(date: Date, time: string): string {
+export function combineDateTime(date: Date, time: string, timezone?: string): string {
   if (!date || !time) return '';
 
   // Parse the 12-hour format time (e.g., "12:45 AM" or "1:30 PM")
@@ -64,12 +69,30 @@ export function combineDateTime(date: Date, time: string): string {
     hours = 0;
   }
 
-  // Create a new date object with the selected date and time
-  const combinedDate = new Date(date);
-  combinedDate.setHours(hours, minutes, 0, 0);
+  // Create a date object with the selected date and time
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const day = date.getDate();
 
-  // Return ISO string
-  return combinedDate.toISOString();
+  // Create the datetime in local time first
+  const localDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+
+  // If timezone is provided, convert to UTC for that timezone
+  // Otherwise, treat as local timezone (backward compatibility)
+  if (timezone) {
+    try {
+      // Convert the local datetime to UTC as if it were in the specified timezone
+      const utcDateTime = fromZonedTime(localDateTime, timezone);
+      return utcDateTime.toISOString();
+    } catch (error) {
+      console.error('Invalid timezone:', timezone, error);
+      // Fallback to local timezone
+      return localDateTime.toISOString();
+    }
+  }
+
+  // Backward compatibility: return local timezone ISO string
+  return localDateTime.toISOString();
 }
 
 // ============================================================================
@@ -180,6 +203,70 @@ export function formatTimezoneWithCurrentTime(timezone: string): string {
     return `(${timeString})`;
   } catch {
     return '';
+  }
+}
+
+/**
+ * Compares two datetimes in the context of a specific timezone
+ * @param dateTime1 First datetime (ISO string or Date)
+ * @param dateTime2 Second datetime (ISO string or Date)
+ * @param timezone IANA timezone identifier
+ * @returns Comparison result: negative if dateTime1 < dateTime2, positive if dateTime1 > dateTime2, 0 if equal
+ */
+export function compareDateTimesInTimezone(dateTime1: string | Date, dateTime2: string | Date, timezone: string): number {
+  try {
+    const date1 = typeof dateTime1 === 'string' ? new Date(dateTime1) : dateTime1;
+    const date2 = typeof dateTime2 === 'string' ? new Date(dateTime2) : dateTime2;
+
+    // Convert both dates to the specified timezone for comparison
+    const zonedDate1 = toZonedTime(date1, timezone);
+    const zonedDate2 = toZonedTime(date2, timezone);
+
+    return zonedDate1.getTime() - zonedDate2.getTime();
+  } catch (error) {
+    console.error('Error comparing dates in timezone:', timezone, error);
+    // Fallback to direct comparison
+    const date1 = typeof dateTime1 === 'string' ? new Date(dateTime1) : dateTime1;
+    const date2 = typeof dateTime2 === 'string' ? new Date(dateTime2) : dateTime2;
+    return date1.getTime() - date2.getTime();
+  }
+}
+
+/**
+ * Gets the current date and time in a specific timezone
+ * @param timezone IANA timezone identifier
+ * @returns Date object representing current time in the specified timezone
+ */
+export function getCurrentTimeInTimezone(timezone: string): Date {
+  try {
+    return toZonedTime(new Date(), timezone);
+  } catch (error) {
+    console.error('Error getting current time in timezone:', timezone, error);
+    return new Date();
+  }
+}
+
+/**
+ * Checks if a datetime is in the future relative to the current time in a specific timezone
+ * @param dateTime The datetime to check (ISO string or Date)
+ * @param timezone IANA timezone identifier
+ * @returns true if the datetime is in the future in the specified timezone
+ */
+export function isDateTimeInFutureForTimezone(dateTime: string | Date, timezone: string): boolean {
+  try {
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
+    const now = new Date();
+
+    // Convert both to the specified timezone for comparison
+    const zonedDateTime = toZonedTime(date, timezone);
+    const zonedNow = toZonedTime(now, timezone);
+
+    return zonedDateTime.getTime() > zonedNow.getTime();
+  } catch (error) {
+    console.error('Error checking future date in timezone:', timezone, error);
+    // Fallback to direct comparison
+    const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
+    return date.getTime() > Date.now();
   }
 }
 

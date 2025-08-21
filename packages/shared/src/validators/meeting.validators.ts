@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
-import { combineDateTime } from '../utils/date-time.utils';
+import { combineDateTime, isDateTimeInFutureForTimezone } from '../utils/date-time.utils';
 
 /**
- * Validator to ensure meeting date/time is in the future
+ * Validator to ensure meeting date/time is in the future in the specified timezone
  */
 export function futureDateTimeValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -18,28 +18,16 @@ export function futureDateTimeValidator(): ValidatorFn {
       return null; // Don't validate if values are not set
     }
 
-    // Combine the date and time
-    const combinedDateTime = combineDateTime(startDate, startTime);
+    // Combine the date and time with timezone awareness
+    const combinedDateTime = combineDateTime(startDate, startTime, timezone);
     if (!combinedDateTime) {
       return null; // Invalid time format
     }
 
-    // Parse the combined datetime
-    const selectedDate = new Date(combinedDateTime);
+    // Check if the datetime is in the future for the specified timezone
+    const isInFuture = isDateTimeInFutureForTimezone(combinedDateTime, timezone);
 
-    // Get current time in the selected timezone
-    const now = new Date();
-
-    // Create timezone-aware date strings for comparison
-    const selectedTimeString = selectedDate.toLocaleString('en-US', { timeZone: timezone });
-    const currentTimeString = now.toLocaleString('en-US', { timeZone: timezone });
-
-    // Convert back to Date objects for comparison
-    const selectedTimeInZone = new Date(selectedTimeString);
-    const currentTimeInZone = new Date(currentTimeString);
-
-    // Check if the selected time is in the future
-    if (selectedTimeInZone <= currentTimeInZone) {
+    if (!isInFuture) {
       return { futureDateTime: true };
     }
 

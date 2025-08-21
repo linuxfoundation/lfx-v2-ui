@@ -240,8 +240,8 @@ export class MeetingManageComponent {
     // Process duration value - ensure it's always a number
     const duration = formValue.duration === 'custom' ? Number(formValue.customDuration) : Number(formValue.duration);
 
-    // Combine date and time for start_time
-    const startDateTime = combineDateTime(formValue.startDate, formValue.startTime);
+    // Combine date and time for start_time with timezone awareness
+    const startDateTime = combineDateTime(formValue.startDate, formValue.startTime, formValue.timezone);
 
     // Generate recurrence object if needed
     const recurrenceObject = generateRecurrenceObject(formValue.recurrence, formValue.startDate);
