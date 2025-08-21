@@ -428,7 +428,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@angular/forms@npm:^19.2.14":
+"@angular/forms@npm:^19.0.0, @angular/forms@npm:^19.2.14":
   version: 19.2.14
   resolution: "@angular/forms@npm:19.2.14"
   dependencies:
@@ -2871,9 +2871,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@lfx-pcc/shared@workspace:packages/shared"
   dependencies:
+    "@angular/forms": "npm:^19.0.0"
     "@fullcalendar/core": "npm:^6.1.19"
     typescript: "npm:5.8.3"
   peerDependencies:
+    "@angular/forms": ^19.0.0
     "@fullcalendar/core": ^6.1.19
   languageName: unknown
   linkType: soft
