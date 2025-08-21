@@ -83,5 +83,61 @@ export const AI_SUMMARY_ACCESS_OPTIONS = [
   { label: 'Public', value: 'Public' },
 ];
 
+// Meeting Form Constants
+export const MEETING_STEP_TITLES = ['Meeting Type', 'Meeting Details', 'Platform & Features', 'Resources & Summary'];
+
+export const TOTAL_STEPS = 4;
+
+export const DEFAULT_DURATION = 60;
+
+export const MIN_EARLY_JOIN_TIME = 10;
+
+export const MAX_EARLY_JOIN_TIME = 60;
+
+export const DEFAULT_EARLY_JOIN_TIME = 10;
+
+export const WEEKDAY_CODES = '2,3,4,5,6'; // Monday through Friday
+
+export const TIME_ROUNDING_MINUTES = 15;
+
+export const DEFAULT_MEETING_TYPE = 'None';
+
+export const DEFAULT_MEETING_TOOL = 'zoom';
+
+export const DEFAULT_AI_SUMMARY_ACCESS = 'PCC';
+
+export const DEFAULT_RECORDING_ACCESS = 'Members';
+
+export const DEFAULT_REPEAT_INTERVAL = 1;
+
+// Scroll offset for stepper navigation
+export const STEPPER_SCROLL_OFFSET = 50;
+
+// Time constants
+export const HOURS_IN_DAY = 24;
+export const MINUTES_IN_HOUR = 60;
+export const SECONDS_IN_MINUTE = 60;
+export const MS_IN_SECOND = 1000;
+export const DAYS_IN_WEEK = 7;
+export const MS_IN_DAY = DAYS_IN_WEEK * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
+
+// Meeting form validation constants
+export const MEETING_FORM_STEPS = {
+  MEETING_TYPE: 0,
+  MEETING_DETAILS: 1,
+  PLATFORM_FEATURES: 2,
+  RESOURCES_SUMMARY: 3,
+} as const;
+
+// Recurrence type mappings
+export const RECURRENCE_MAPPINGS = {
+  NONE: 'none',
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+  WEEKDAYS: 'weekdays',
+  MONTHLY_NTH: 'monthly_nth',
+  MONTHLY_LAST: 'monthly_last',
+} as const;
+
 // Re-export meeting templates from the organized template files
 export { MEETING_TEMPLATES } from './meeting-templates';
