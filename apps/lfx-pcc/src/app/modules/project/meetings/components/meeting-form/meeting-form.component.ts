@@ -14,10 +14,16 @@ import { TextareaComponent } from '@components/textarea/textarea.component';
 import { TimePickerComponent } from '@components/time-picker/time-picker.component';
 import { ToggleComponent } from '@components/toggle/toggle.component';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, TIMEZONES } from '@lfx-pcc/shared/constants';
-import { getUserTimezone, combineDateTime } from '@lfx-pcc/shared/utils';
-import { futureDateTimeValidator } from '@lfx-pcc/shared/validators';
 import { MeetingType, MeetingVisibility, RecurrenceType } from '@lfx-pcc/shared/enums';
 import { CreateMeetingRequest, MeetingAttachment, MeetingRecurrence, PendingAttachment, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
+import { combineDateTime, getUserTimezone } from '@lfx-pcc/shared/utils';
+import {
+  customDurationValidator,
+  futureDateTimeValidator,
+  meetingAgendaValidator,
+  meetingTopicValidator,
+  timeFormatValidator,
+} from '@lfx-pcc/shared/validators';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
@@ -151,8 +157,19 @@ export class MeetingFormComponent {
     this.submitting.set(true);
     const formValue = this.form().value;
 
-    // Process duration value
-    const duration = formValue.duration === 'custom' ? formValue.customDuration : formValue.duration;
+    // Process duration value with safety check for NaN
+    const duration = formValue.duration === 'custom' ? Number(formValue.customDuration) : formValue.duration;
+
+    // Safety check to prevent NaN duration
+    if (isNaN(duration) || duration <= 0) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Please enter a valid duration.',
+      });
+      this.submitting.set(false);
+      return;
+    }
 
     // Combine date and time for start_time with timezone awareness
     const startDateTime = combineDateTime(formValue.startDate, formValue.startTime, formValue.timezone);
@@ -363,15 +380,15 @@ export class MeetingFormComponent {
     return new FormGroup(
       {
         // Basic info (using exact database field names)
-        topic: new FormControl('', [Validators.required]),
-        agenda: new FormControl(''),
+        topic: new FormControl('', [Validators.required, meetingTopicValidator()]),
+        agenda: new FormControl('', [meetingAgendaValidator()]),
         meeting_type: new FormControl(''),
 
         // Date/Time fields (helper fields for form, will be combined into start_time)
         startDate: new FormControl(defaultDateTime.date, [Validators.required]),
-        startTime: new FormControl(defaultDateTime.time, [Validators.required]),
+        startTime: new FormControl(defaultDateTime.time, [Validators.required, timeFormatValidator()]),
         duration: new FormControl(60, [Validators.required]),
-        customDuration: new FormControl(''),
+        customDuration: new FormControl('', [customDurationValidator()]),
         timezone: new FormControl(getUserTimezone(), [Validators.required]),
         early_join_time: new FormControl(10, [Validators.min(10), Validators.max(60)]),
 
@@ -605,7 +622,7 @@ export class MeetingFormComponent {
       .subscribe((value) => {
         const customDurationControl = this.form().get('customDuration');
         if (value === 'custom') {
-          customDurationControl?.setValidators([Validators.required, Validators.min(5), Validators.max(480)]);
+          customDurationControl?.setValidators([Validators.required, customDurationValidator()]);
         } else {
           customDurationControl?.clearValidators();
         }

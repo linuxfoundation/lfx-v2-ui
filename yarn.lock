@@ -8515,8 +8515,6 @@ __metadata:
     "@typescript-eslint/types": "npm:^8.39.1"
     "@typescript-eslint/utils": "npm:^8.39.1"
     autoprefixer: "npm:^10.4.21"
-    date-fns: "npm:^4.1.0"
-    date-fns-tz: "npm:^3.2.0"
     dotenv: "npm:^17.2.1"
     eslint: "npm:^9.33.0"
     eslint-plugin-import: "npm:^2.32.0"
