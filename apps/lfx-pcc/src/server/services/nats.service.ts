@@ -1,10 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NATS_CONFIG } from '@lfx-pcc/shared/constants';
 import { NatsSubjects, ProjectSlugToIdResponse } from '@lfx-pcc/shared/interfaces';
 import { connect, NatsConnection, StringCodec } from 'nats';
 
-import { NATS_CONFIG } from '../config/nats.config';
 import { serverLogger } from '../server';
 
 export class NatsService {
