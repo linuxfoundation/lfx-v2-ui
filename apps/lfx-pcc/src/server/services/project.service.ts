@@ -12,7 +12,10 @@ import { NatsService } from './nats.service';
  * Service for handling project business logic
  */
 export class ProjectService {
-  public constructor(private microserviceProxy: MicroserviceProxyService) {}
+  public constructor(
+    private microserviceProxy: MicroserviceProxyService,
+    private natsService: NatsService
+  ) {}
 
   /**
    * Fetches all projects based on query parameters
@@ -80,8 +83,6 @@ export class ProjectService {
    * First resolves slug to ID via NATS, then fetches project data
    */
   public async getProjectBySlug(req: Request, projectSlug: string): Promise<Project> {
-    const natsService = new NatsService();
-
     req.log.info(
       {
         slug: projectSlug,
@@ -91,7 +92,7 @@ export class ProjectService {
       'Resolving project slug to ID via NATS'
     );
 
-    const natsResult = await natsService.getProjectIdBySlug(projectSlug);
+    const natsResult = await this.natsService.getProjectIdBySlug(projectSlug);
 
     if (!natsResult.exists || !natsResult.projectId) {
       throw createApiError({

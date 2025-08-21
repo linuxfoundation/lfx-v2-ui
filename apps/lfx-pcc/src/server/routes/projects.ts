@@ -5,6 +5,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 
 import { ApiClientService } from '../services/api-client.service';
 import { MicroserviceProxyService } from '../services/microservice-proxy.service';
+import { NatsService } from '../services/nats.service';
 import { ProjectService } from '../services/project.service';
 import { SupabaseService } from '../services/supabase.service';
 
@@ -12,7 +13,8 @@ const router = Router();
 
 const supabaseService = new SupabaseService();
 const microserviceProxyService = new MicroserviceProxyService(new ApiClientService());
-const projectService = new ProjectService(microserviceProxyService);
+const natsService = new NatsService();
+const projectService = new ProjectService(microserviceProxyService, natsService);
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();

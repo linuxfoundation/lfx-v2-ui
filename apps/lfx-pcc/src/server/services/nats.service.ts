@@ -4,20 +4,22 @@
 import { NatsSubjects, ProjectSlugToIdResponse } from '@lfx-pcc/shared/interfaces';
 import { connect, NatsConnection, StringCodec } from 'nats';
 
+import { NATS_CONFIG } from '../config/nats.config';
 import { serverLogger } from '../server';
 
 export class NatsService {
   private connection: NatsConnection | null = null;
+  private connectionPromise: Promise<NatsConnection> | null = null;
   private codec = StringCodec();
 
   /**
    * Get project ID by slug using NATS request-reply pattern
    */
   public async getProjectIdBySlug(slug: string): Promise<ProjectSlugToIdResponse> {
-    await this.ensureConnection();
+    const connection = await this.ensureConnection();
 
     try {
-      const response = await this.connection!.request(NatsSubjects.PROJECT_SLUG_TO_UID, this.codec.encode(slug), { timeout: 5000 });
+      const response = await connection.request(NatsSubjects.PROJECT_SLUG_TO_UID, this.codec.encode(slug), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
 
       const projectId = this.codec.decode(response.data);
 
@@ -79,24 +81,51 @@ export class NatsService {
   }
 
   /**
-   * Ensure NATS connection (lazy initialization)
+   * Ensure NATS connection with thread safety (lazy initialization)
    */
-  private async ensureConnection(): Promise<void> {
+  private async ensureConnection(): Promise<NatsConnection> {
+    // Return existing connection if valid
     if (this.connection && !this.connection.isClosed()) {
-      return; // Already connected
+      return this.connection;
     }
 
-    const natsUrl = process.env['NATS_URL'] || 'nats://lfx-platform-nats.lfx.svc.cluster.local:4222';
+    // If already connecting, wait for that connection
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    // Create new connection
+    this.connectionPromise = this.createConnection();
+
+    try {
+      this.connection = await this.connectionPromise;
+      return this.connection;
+    } catch (error) {
+      // Reset connection promise on failure
+      this.connectionPromise = null;
+      throw error;
+    } finally {
+      // Reset connection promise after completion
+      this.connectionPromise = null;
+    }
+  }
+
+  /**
+   * Create a new NATS connection
+   */
+  private async createConnection(): Promise<NatsConnection> {
+    const natsUrl = process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL;
 
     try {
       serverLogger.info({ url: natsUrl }, 'Connecting to NATS server on demand');
 
-      this.connection = await connect({
+      const connection = await connect({
         servers: [natsUrl],
-        timeout: 5000,
+        timeout: NATS_CONFIG.CONNECTION_TIMEOUT,
       });
 
       serverLogger.info('Successfully connected to NATS server');
+      return connection;
     } catch (error) {
       serverLogger.error(
         {
