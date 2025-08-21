@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
-import { combineDateTime } from '../utils/date.utils';
+import { combineDateTime } from '../utils/date-time.utils';
 
 /**
  * Validator to ensure meeting date/time is in the future

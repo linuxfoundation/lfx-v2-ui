@@ -3,7 +3,20 @@
 
 import { RecurrenceType } from '../enums';
 import { MeetingRecurrence } from '../interfaces';
-import { TIME_ROUNDING_MINUTES, WEEKDAY_CODES, DEFAULT_REPEAT_INTERVAL, MINUTES_IN_HOUR, DAYS_IN_WEEK, MS_IN_DAY } from '../constants';
+import {
+  TIME_ROUNDING_MINUTES,
+  WEEKDAY_CODES,
+  DEFAULT_REPEAT_INTERVAL,
+  MINUTES_IN_HOUR,
+  DAYS_IN_WEEK,
+  MS_IN_DAY,
+  TIMEZONES,
+  type TimezoneOption,
+} from '../constants';
+
+// ============================================================================
+// Date Formatting and Parsing Utilities
+// ============================================================================
 
 /**
  * Converts a Date object to ISO date string (YYYY-MM-DD format)
@@ -58,6 +71,10 @@ export function combineDateTime(date: Date, time: string): string {
   // Return ISO string
   return combinedDate.toISOString();
 }
+
+// ============================================================================
+// Time Formatting and Default Values
+// ============================================================================
 
 /**
  * Gets default start date and time (1 hour from now, rounded to next 15 minutes)
@@ -126,6 +143,50 @@ export function parseTime12Hour(time: string): { hours: number; minutes: number 
   return { hours, minutes };
 }
 
+// ============================================================================
+// Timezone Utilities
+// ============================================================================
+
+/**
+ * Helper function to get timezone by value
+ */
+export function getTimezoneByValue(value: string): TimezoneOption | undefined {
+  return TIMEZONES.find((tz) => tz.value === value);
+}
+
+/**
+ * Helper function to get user's current timezone
+ */
+export function getUserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+/**
+ * Helper function to format timezone display with current time
+ */
+export function formatTimezoneWithCurrentTime(timezone: string): string {
+  try {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `(${timeString})`;
+  } catch {
+    return '';
+  }
+}
+
+// ============================================================================
+// Date Calculation Utilities
+// ============================================================================
+
 /**
  * Gets the week of month for a given date
  */
@@ -146,6 +207,10 @@ export function getWeekOfMonth(date: Date): { weekOfMonth: number; isLastWeek: b
 
   return { weekOfMonth, isLastWeek };
 }
+
+// ============================================================================
+// Meeting Recurrence Utilities
+// ============================================================================
 
 /**
  * Generates a recurrence object based on type and start date

@@ -276,6 +276,6 @@ export const RECURRENCE_MAPPINGS = {
 
 /**
  * Pre-defined meeting templates
- * @description Re-exported from meeting-templates.ts for convenient access
+ * @description Re-exported from meeting-templates/index.ts for convenient access
  */
 export { MEETING_TEMPLATES } from './meeting-templates';
