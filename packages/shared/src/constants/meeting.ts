@@ -1,6 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+/**
+ * Available meeting platforms and their configurations
+ * @description Defines the supported platforms for hosting meetings
+ */
 export const MEETING_PLATFORMS = [
   {
     value: 'zoom',
@@ -28,6 +32,10 @@ export const MEETING_PLATFORMS = [
   },
 ];
 
+/**
+ * Available meeting features that can be enabled/disabled
+ * @description Feature toggles for recording, transcripts, AI features, etc.
+ */
 export const MEETING_FEATURES = [
   {
     key: 'recording_enabled',
@@ -71,73 +79,203 @@ export const MEETING_FEATURES = [
   },
 ];
 
+/**
+ * Recording access control options
+ * @description Defines who can access meeting recordings
+ */
 export const RECORDING_ACCESS_OPTIONS = [
   { label: 'Members Only', value: 'Members' },
   { label: 'Public', value: 'Public' },
   { label: 'Private', value: 'Private' },
 ];
 
+/**
+ * AI summary access control options
+ * @description Defines who can access AI-generated meeting summaries
+ */
 export const AI_SUMMARY_ACCESS_OPTIONS = [
   { label: 'PCC Members', value: 'PCC' },
   { label: 'Project Members', value: 'Members' },
   { label: 'Public', value: 'Public' },
 ];
 
-// Meeting Form Constants
+// ============================================================================
+// Meeting Form Configuration Constants
+// ============================================================================
+
+/**
+ * Step titles for the meeting creation/edit stepper
+ * @description Array of human-readable titles for each step in the meeting form
+ */
 export const MEETING_STEP_TITLES = ['Meeting Type', 'Meeting Details', 'Platform & Features', 'Resources & Summary'];
 
+/**
+ * Total number of steps in the meeting form
+ * @description Must match the length of MEETING_STEP_TITLES array
+ * @example 4 steps: Meeting Type → Details → Platform → Resources
+ */
 export const TOTAL_STEPS = 4;
 
+/**
+ * Default meeting duration in minutes
+ * @description Standard meeting length when no custom duration is specified
+ */
 export const DEFAULT_DURATION = 60;
 
+/**
+ * Minimum early join time in minutes
+ * @description Earliest time participants can join before the scheduled start
+ */
 export const MIN_EARLY_JOIN_TIME = 10;
 
+/**
+ * Maximum early join time in minutes
+ * @description Latest time participants can join before the scheduled start
+ */
 export const MAX_EARLY_JOIN_TIME = 60;
 
+/**
+ * Default early join time in minutes
+ * @description Standard early join window for new meetings
+ */
 export const DEFAULT_EARLY_JOIN_TIME = 10;
 
-export const WEEKDAY_CODES = '2,3,4,5,6'; // Monday through Friday
+/**
+ * Zoom API codes for weekdays (Monday through Friday)
+ * @description String format used by Zoom API: '2,3,4,5,6' where 1=Sunday, 2=Monday, etc.
+ */
+export const WEEKDAY_CODES = '2,3,4,5,6';
 
+/**
+ * Time rounding interval in minutes
+ * @description Meeting start times are rounded to the nearest 15-minute interval
+ * @example 2:37 PM becomes 2:45 PM, 3:50 PM becomes 4:00 PM
+ */
 export const TIME_ROUNDING_MINUTES = 15;
 
+/**
+ * Default meeting type when none is selected
+ * @description Fallback value for meeting type field
+ */
 export const DEFAULT_MEETING_TYPE = 'None';
 
+/**
+ * Default meeting platform
+ * @description Primary platform used for hosting meetings
+ */
 export const DEFAULT_MEETING_TOOL = 'zoom';
 
+/**
+ * Default AI summary access level
+ * @description Who can view AI-generated meeting summaries by default
+ */
 export const DEFAULT_AI_SUMMARY_ACCESS = 'PCC';
 
+/**
+ * Default recording access level
+ * @description Who can view meeting recordings by default
+ */
 export const DEFAULT_RECORDING_ACCESS = 'Members';
 
+/**
+ * Default repeat interval for recurring meetings
+ * @description How often recurring meetings repeat (1 = every occurrence)
+ */
 export const DEFAULT_REPEAT_INTERVAL = 1;
 
-// Scroll offset for stepper navigation
+/**
+ * Scroll offset in pixels for stepper navigation
+ * @description Distance to offset when auto-scrolling to stepper component
+ */
 export const STEPPER_SCROLL_OFFSET = 50;
 
-// Time constants
+// ============================================================================
+// Time Calculation Constants
+// ============================================================================
+
+/**
+ * Number of hours in a day
+ * @description Standard 24-hour day
+ */
 export const HOURS_IN_DAY = 24;
+
+/**
+ * Number of minutes in an hour
+ * @description Standard 60-minute hour
+ */
 export const MINUTES_IN_HOUR = 60;
+
+/**
+ * Number of seconds in a minute
+ * @description Standard 60-second minute
+ */
 export const SECONDS_IN_MINUTE = 60;
+
+/**
+ * Number of milliseconds in a second
+ * @description Standard 1000ms = 1 second
+ */
 export const MS_IN_SECOND = 1000;
+
+/**
+ * Number of days in a week
+ * @description Standard 7-day week
+ */
 export const DAYS_IN_WEEK = 7;
-export const MS_IN_DAY = DAYS_IN_WEEK * HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
 
-// Meeting form validation constants
+/**
+ * Number of milliseconds in one day
+ * @description Calculated as: 24 hours × 60 minutes × 60 seconds × 1000 milliseconds = 86,400,000 ms
+ * @example Used for date arithmetic: `new Date(date.getTime() + MS_IN_DAY)` adds one day
+ */
+export const MS_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
+
+// ============================================================================
+// Form Validation and Navigation Constants
+// ============================================================================
+
+/**
+ * Meeting form step indices
+ * @description Zero-based step numbers for form navigation and validation
+ * @readonly
+ */
 export const MEETING_FORM_STEPS = {
+  /** Step 0: Select meeting type and basic settings */
   MEETING_TYPE: 0,
+  /** Step 1: Configure meeting details (title, time, duration, etc.) */
   MEETING_DETAILS: 1,
+  /** Step 2: Choose platform and enable features */
   PLATFORM_FEATURES: 2,
+  /** Step 3: Add resources and review summary */
   RESOURCES_SUMMARY: 3,
-} as const;
+};
 
-// Recurrence type mappings
+/**
+ * Recurrence type string mappings
+ * @description Maps recurrence types to their string identifiers used in forms and API
+ * @readonly
+ */
 export const RECURRENCE_MAPPINGS = {
+  /** No recurrence - single meeting */
   NONE: 'none',
+  /** Repeats every day */
   DAILY: 'daily',
+  /** Repeats every week on the same day */
   WEEKLY: 'weekly',
+  /** Repeats Monday through Friday only */
   WEEKDAYS: 'weekdays',
+  /** Repeats monthly on the nth occurrence of the weekday */
   MONTHLY_NTH: 'monthly_nth',
+  /** Repeats monthly on the last occurrence of the weekday */
   MONTHLY_LAST: 'monthly_last',
-} as const;
+};
 
-// Re-export meeting templates from the organized template files
+// ============================================================================
+// Template Re-exports
+// ============================================================================
+
+/**
+ * Pre-defined meeting templates
+ * @description Re-exported from meeting-templates.ts for convenient access
+ */
 export { MEETING_TEMPLATES } from './meeting-templates';
