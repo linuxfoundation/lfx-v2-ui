@@ -37,7 +37,7 @@ export class ProjectService {
   public async getProjectById(req: Request, projectId: string): Promise<Project> {
     const params = {
       type: 'project',
-      uid: projectId,
+      tags: projectId,
     };
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Project>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
