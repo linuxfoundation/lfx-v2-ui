@@ -197,27 +197,19 @@ jobs:
             echo "✅ SUPABASE secrets set as masked environment variables"
           fi
 
-
-          # Parse and set AI secrets
-          if [ -n "$AI" ]; then
-            AI_API_KEY=$(echo "$AI" | jq -r '.api_key // empty')
-            AI_PROXY_URL=$(echo "$AI" | jq -r '.proxy_url // empty')
-
-            # Explicitly mask the values
-            echo "::add-mask::$AI_API_KEY"
-            echo "::add-mask::$AI_PROXY_URL"
-
-            # Set as environment variables
-            echo "AI_API_KEY=${{ secrets.AI_API_KEY }}" >> $GITHUB_ENV
-            echo "AI_PROXY_URL=${{ secrets.AI_PROXY_URL }}" >> $GITHUB_ENV
-            echo "✅ AI secrets set as masked environment variables"
-          fi
+          # Set AI secrets
+          echo "::add-mask::${{ secrets.AI_API_KEY }}"
+          echo "::add-mask::${{ secrets.AI_PROXY_URL }}"
+          echo "AI_API_KEY=${{ secrets.AI_API_KEY }}" >> $GITHUB_ENV
+          echo "AI_PROXY_URL=${{ secrets.AI_PROXY_URL }}" >> $GITHUB_ENV
+          echo "✅ AI secrets set as masked environment variables"
 
           # Set test credentials
           echo "::add-mask::${{ secrets.TEST_USERNAME }}"
           echo "::add-mask::${{ secrets.TEST_PASSWORD }}"
           echo "TEST_USERNAME=${{ secrets.TEST_USERNAME }}" >> $GITHUB_ENV
           echo "TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}" >> $GITHUB_ENV
+          echo "✅ TEST_USERNAME and TEST_PASSWORD secrets set as masked environment variables"
 
       - name: Install Playwright browsers
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
