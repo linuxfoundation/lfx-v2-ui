@@ -200,7 +200,7 @@ test.describe('Project Dashboard', () => {
     test('should have working links in quick actions', async ({ page }) => {
       // Create Meeting should link to meetings page
       const createMeetingLink = page.getByRole('link', { name: 'Create Meeting' });
-      await expect(createMeetingLink).toHaveAttribute('href', /\/meetings$/);
+      await expect(createMeetingLink).toHaveAttribute('href', /\/meetings\/create$/);
 
       // View All Committees should link to committees page
       const viewCommitteesLink = page.getByRole('link', { name: 'View All Committees' });

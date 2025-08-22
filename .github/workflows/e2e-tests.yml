@@ -115,12 +115,30 @@ jobs:
           # Check AWS Secrets Manager secrets (masked environment variables)
           if [ -z "$AUTH0" ]; then
             missing_secrets="$missing_secrets AUTH0 (from AWS Secrets Manager)"
+          else
+            AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')
+            AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret // empty')
+            if [ -z "$AUTH0_CLIENT_ID" ] || [ -z "$AUTH0_CLIENT_SECRET" ]; then
+              missing_secrets="$missing_secrets AUTH0.client_id or AUTH0.client_secret (from AWS Secrets Manager)"
+            fi
           fi
           if [ -z "$SUPABASE" ]; then
             missing_secrets="$missing_secrets SUPABASE (from AWS Secrets Manager)"
+          else
+            SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')
+            SUPABASE_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')
+            if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_API_KEY" ]; then
+              missing_secrets="$missing_secrets SUPABASE.url or SUPABASE.api_key (from AWS Secrets Manager)"
+            fi
           fi
           if [ -z "$AI" ]; then
             missing_secrets="$missing_secrets AI (from AWS Secrets Manager)"
+          else
+            AI_API_KEY=$(echo "$AI" | jq -r '.api_key // empty')
+            AI_PROXY_URL=$(echo "$AI" | jq -r '.proxy_url // empty')
+            if [ -z "$AI_API_KEY" ] || [ -z "$AI_PROXY_URL" ]; then
+              missing_secrets="$missing_secrets AI.api_key or AI.proxy_url (from AWS Secrets Manager)"
+            fi
           fi
 
           # Check GitHub secrets (fallback)

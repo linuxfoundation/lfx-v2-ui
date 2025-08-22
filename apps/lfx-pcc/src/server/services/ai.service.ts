@@ -10,10 +10,10 @@ import { serverLogger } from '../server';
 export class AiService {
   private readonly aiProxyUrl: string;
   private readonly model = AI_MODEL;
-  private readonly aiKey = process.env['AI_API_KEY'] || '';
+  private readonly aiKey = process.env['AI_API_KEY'] || 'sk-proj-1234567890';
 
   public constructor() {
-    this.aiProxyUrl = process.env['AI_PROXY_URL'] || '';
+    this.aiProxyUrl = process.env['AI_PROXY_URL'] || 'https://api.openai.com/v1/chat/completions';
     if (!this.aiProxyUrl) {
       throw new Error('AI_PROXY_URL environment variable is required');
     }
