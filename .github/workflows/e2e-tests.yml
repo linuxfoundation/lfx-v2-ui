@@ -44,6 +44,12 @@ on:
       TEST_PASSWORD:
         description: 'Password for test authentication'
         required: false
+      AI_API_KEY:
+        description: 'API key for AI'
+        required: false
+      AI_PROXY_URL:
+        description: 'Proxy URL for AI'
+        required: false
     outputs:
       test-results:
         description: 'Test results summary'
