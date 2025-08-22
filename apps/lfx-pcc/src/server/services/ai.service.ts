@@ -19,7 +19,7 @@ export class AiService {
     }
 
     if (!this.aiKey) {
-      throw new Error('AI_KEY environment variable is required');
+      throw new Error('AI_API_KEY environment variable is required');
     }
   }
 
@@ -66,9 +66,9 @@ export class AiService {
               },
               required: ['agenda', 'duration'],
               additionalProperties: false,
+              strict: true,
             },
           },
-          strict: true,
         },
       };
 
@@ -161,9 +161,12 @@ export class AiService {
         throw new Error('Invalid duration format in response');
       }
 
+      // Cap duration between minimum and maximum limits
+      const cappedDuration = Math.max(DURATION_ESTIMATION.MINIMUM_DURATION, Math.min(parsed.duration, DURATION_ESTIMATION.MAXIMUM_DURATION));
+
       return {
         agenda: parsed.agenda.trim(),
-        estimatedDuration: parsed.duration,
+        estimatedDuration: cappedDuration,
       };
     } catch (parseError) {
       serverLogger.warn('Failed to parse JSON response, falling back to text extraction', {
@@ -176,9 +179,12 @@ export class AiService {
       const estimatedItems = lines.filter((line) => line.match(/^[#\-*\d]/)).length;
       const fallbackDuration = DURATION_ESTIMATION.BASE_DURATION + estimatedItems * DURATION_ESTIMATION.TIME_PER_ITEM;
 
+      // Cap fallback duration between minimum and maximum limits
+      const cappedFallbackDuration = Math.max(DURATION_ESTIMATION.MINIMUM_DURATION, Math.min(fallbackDuration, DURATION_ESTIMATION.MAXIMUM_DURATION));
+
       return {
         agenda: content.trim(),
-        estimatedDuration: Math.max(DURATION_ESTIMATION.MINIMUM_DURATION, fallbackDuration),
+        estimatedDuration: cappedFallbackDuration,
       };
     }
   }

@@ -19,7 +19,7 @@ import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { take, tap } from 'rxjs';
+import { finalize, take, tap } from 'rxjs';
 
 import { AgendaTemplateSelectorComponent } from '../agenda-template-selector/agenda-template-selector.component';
 
@@ -204,8 +204,10 @@ export class MeetingDetailsComponent implements OnInit {
           },
           complete: () => {
             this.hideAiAgendaHelper();
-            this.isGeneratingAgenda.set(false);
           },
+        }),
+        finalize(() => {
+          this.isGeneratingAgenda.set(false);
         })
       )
       .subscribe();

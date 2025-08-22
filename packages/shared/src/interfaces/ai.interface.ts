@@ -61,9 +61,9 @@ export interface OpenAIChatRequest {
       description?: string;
       /** JSON schema definition */
       schema: Record<string, any>;
+      /** Whether to enforce strict schema validation */
+      strict?: boolean;
     };
-    /** Whether to enforce strict schema validation */
-    strict?: boolean;
   };
 }
 

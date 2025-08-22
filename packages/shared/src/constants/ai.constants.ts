@@ -30,7 +30,7 @@ export const AI_MODEL = 'us.anthropic.claude-sonnet-4-20250514-v1:0';
  * AI request configuration
  */
 export const AI_REQUEST_CONFIG = {
-  MAX_TOKENS: 2000,
+  MAX_TOKENS: 4000,
   TEMPERATURE: 0.7,
 };
 
@@ -41,4 +41,5 @@ export const DURATION_ESTIMATION = {
   BASE_DURATION: 15, // Opening/closing time in minutes
   TIME_PER_ITEM: 10, // Average time per agenda item in minutes
   MINIMUM_DURATION: 30, // Minimum meeting duration in minutes
+  MAXIMUM_DURATION: 240, // Maximum meeting duration in minutes (4 hours)
 };
