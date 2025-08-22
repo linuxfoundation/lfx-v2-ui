@@ -12,10 +12,15 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { TimePickerComponent } from '@components/time-picker/time-picker.component';
 import { ToggleComponent } from '@components/toggle/toggle.component';
+import { GenerateAgendaRequest, MeetingTemplate } from '@lfx-pcc/shared';
 import { TIMEZONES } from '@lfx-pcc/shared/constants';
 import { MeetingType } from '@lfx-pcc/shared/enums';
-import { MeetingTemplate } from '@lfx-pcc/shared';
+import { MeetingService } from '@services/meeting.service';
+import { ProjectService } from '@services/project.service';
+import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { take, tap } from 'rxjs';
+
 import { AgendaTemplateSelectorComponent } from '../agenda-template-selector/agenda-template-selector.component';
 
 @Component({
@@ -37,6 +42,10 @@ import { AgendaTemplateSelectorComponent } from '../agenda-template-selector/age
   templateUrl: './meeting-details.component.html',
 })
 export class MeetingDetailsComponent implements OnInit {
+  private readonly projectService = inject(ProjectService);
+  private readonly meetingService = inject(MeetingService);
+  private readonly messageService = inject(MessageService);
+
   // Form group input from parent
   public readonly form = input.required<FormGroup>();
 
@@ -141,20 +150,65 @@ export class MeetingDetailsComponent implements OnInit {
   }
 
   public async generateAiAgenda(): Promise<void> {
-    const promptValue = this.form().get('aiPrompt')?.value;
-    if (!promptValue?.trim()) return;
+    const context = this.form().get('aiPrompt')?.value;
+    const currentProject = this.projectService.project();
+    const form = this.form();
+    const topic = form.get('topic')?.value;
+    const meetingType = form.get('meeting_type')?.value;
+
+    if (!currentProject || !topic || !meetingType || !context) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Missing Information',
+        detail: 'Please fill in the meeting title, type, and prompt before generating an agenda.',
+      });
+      return;
+    }
+
+    const request: GenerateAgendaRequest = {
+      meetingType,
+      title: topic,
+      projectName: currentProject.name,
+      context,
+    };
 
     this.isGeneratingAgenda.set(true);
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    this.meetingService
+      .generateAgenda(request)
+      .pipe(
+        take(1),
+        tap({
+          next: (response) => {
+            // Set the generated agenda in the form
+            this.form().get('agenda')?.setValue(response.agenda);
 
-    const meetingType = this.form().get('meeting_type')?.value || MeetingType.OTHER;
-    const generatedAgenda = this.getMockAgenda(meetingType, promptValue);
+            // Set the AI-estimated duration
+            if (response.estimatedDuration) {
+              this.setAiEstimatedDuration(response.estimatedDuration);
+            }
 
-    this.form().get('agenda')?.setValue(generatedAgenda);
-    this.isGeneratingAgenda.set(false);
-    this.hideAiAgendaHelper();
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Agenda Generated',
+              detail: 'AI has successfully generated a meeting agenda.',
+            });
+          },
+          error: (error) => {
+            console.error('Failed to generate agenda:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Generation Failed',
+              detail: 'Failed to generate agenda. Please try again.',
+            });
+          },
+          complete: () => {
+            this.hideAiAgendaHelper();
+            this.isGeneratingAgenda.set(false);
+          },
+        })
+      )
+      .subscribe();
   }
 
   // Template selector public methods
@@ -355,5 +409,20 @@ export class MeetingDetailsComponent implements OnInit {
     };
 
     return mockAgendas[meetingType] || mockAgendas[MeetingType.OTHER];
+  }
+
+  private setAiEstimatedDuration(estimatedDuration: number): void {
+    // Check if the estimated duration matches one of our standard options
+    const standardDuration = this.durationOptions.find((option) => typeof option.value === 'number' && option.value === estimatedDuration);
+
+    if (standardDuration) {
+      // Use standard duration option
+      this.form().get('duration')?.setValue(estimatedDuration);
+      this.form().get('customDuration')?.setValue(null);
+    } else {
+      // Use custom duration
+      this.form().get('duration')?.setValue('custom');
+      this.form().get('customDuration')?.setValue(estimatedDuration);
+    }
   }
 }

@@ -500,9 +500,9 @@ export class MeetingManageComponent {
         // Step 3: Platform & Features
         meetingTool: new FormControl(DEFAULT_MEETING_TOOL, [Validators.required]),
         recording_enabled: new FormControl(false),
-        transcripts_enabled: new FormControl(false),
-        youtube_enabled: new FormControl(false),
-        zoom_ai_enabled: new FormControl(false),
+        transcripts_enabled: new FormControl({ value: false, disabled: true }),
+        youtube_enabled: new FormControl({ value: false, disabled: true }),
+        zoom_ai_enabled: new FormControl({ value: false, disabled: true }),
         require_ai_summary_approval: new FormControl(false),
         ai_summary_access: new FormControl(DEFAULT_AI_SUMMARY_ACCESS),
         recording_access: new FormControl(DEFAULT_RECORDING_ACCESS),

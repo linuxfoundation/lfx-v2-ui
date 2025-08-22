@@ -543,7 +543,7 @@ export class ProjectComponent {
       {
         label: 'Schedule Meeting',
         icon: 'fa-light fa-calendar-plus text-sm',
-        routerLink: ['meetings'],
+        routerLink: ['meetings/create'],
       },
       {
         label: 'Create Committee',
