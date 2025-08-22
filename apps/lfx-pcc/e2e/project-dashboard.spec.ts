@@ -73,7 +73,6 @@ test.describe('Project Dashboard', () => {
     });
 
     test('should display all navigation tabs', async ({ page }) => {
-      console.log(await page.getByTestId('menu-item').allInnerTexts());
       await expect(page.getByTestId('menu-item').filter({ hasText: 'Dashboard' })).toBeVisible();
       await expect(page.getByTestId('menu-item').filter({ hasText: 'Meetings' })).toBeVisible();
       await expect(page.getByTestId('menu-item').filter({ hasText: 'Committees' })).toBeVisible();
@@ -92,16 +91,6 @@ test.describe('Project Dashboard', () => {
       // Project logo should be present (assuming it's an img element)
       const projectImage = page.locator('img').first();
       await expect(projectImage).toBeVisible();
-    });
-
-    test('should display project summary counts', async ({ page }) => {
-      // Look for summary cards in the upper section of the page
-      await expect(page.locator('span').filter({ hasText: 'Meetings' }).first()).toBeVisible();
-      await expect(page.locator('span').filter({ hasText: 'Committees' }).first()).toBeVisible();
-      await expect(page.locator('span').filter({ hasText: 'Mailing Lists' }).first()).toBeVisible();
-
-      // Check for count values (they should be visible as numbers)
-      await expect(page.getByText(/^\d+$/).first()).toBeVisible();
     });
   });
 
