@@ -14,7 +14,6 @@ import { TimePickerComponent } from '@components/time-picker/time-picker.compone
 import { ToggleComponent } from '@components/toggle/toggle.component';
 import { GenerateAgendaRequest, MeetingTemplate } from '@lfx-pcc/shared';
 import { TIMEZONES } from '@lfx-pcc/shared/constants';
-import { MeetingType } from '@lfx-pcc/shared/enums';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
@@ -184,9 +183,7 @@ export class MeetingDetailsComponent implements OnInit {
             this.form().get('agenda')?.setValue(response.agenda);
 
             // Set the AI-estimated duration
-            if (response.estimatedDuration) {
-              this.setAiEstimatedDuration(response.estimatedDuration);
-            }
+            this.setAiEstimatedDuration(response.estimatedDuration);
 
             this.messageService.add({
               severity: 'success',
@@ -289,128 +286,6 @@ export class MeetingDetailsComponent implements OnInit {
     const isLastWeek = nextWeekDate.getMonth() !== date.getMonth();
 
     return { weekOfMonth, isLastWeek };
-  }
-
-  private getMockAgenda(meetingType: string, prompt: string): string {
-    const mockAgendas: Record<string, string> = {
-      [MeetingType.BOARD]: `**Meeting Objective**: ${prompt}
-
-**Agenda Items**:
-1. **Opening & Welcome** (5 min)
-   - Roll call and attendance
-   - Review of previous meeting minutes
-
-2. **Strategic Discussion** (25 min)
-   - ${prompt}
-   - Financial overview and budget considerations
-   - Key performance indicators review
-
-3. **Decision Items** (15 min)
-   - Action items requiring board approval
-   - Risk assessment and mitigation strategies
-
-4. **Next Steps & Closing** (5 min)
-   - Assignment of action items
-   - Next meeting date confirmation`,
-
-      [MeetingType.TECHNICAL]: `**Development Focus**: ${prompt}
-
-**Technical Agenda**:
-1. **System Status Review** (10 min)
-   - Current sprint progress
-   - Infrastructure health check
-
-2. **Core Discussion** (30 min)
-   - ${prompt}
-   - Technical implementation approach
-   - Architecture considerations and trade-offs
-
-3. **Code Review & Quality** (15 min)
-   - Recent pull requests and code changes
-   - Testing coverage and quality metrics
-
-4. **Planning & Blockers** (5 min)
-   - Upcoming milestones
-   - Technical blockers and dependencies`,
-
-      [MeetingType.MAINTAINERS]: `**Community Focus**: ${prompt}
-
-**Maintainers Sync Agenda**:
-1. **Community Updates** (10 min)
-   - Recent contributor activity
-   - Community feedback highlights
-
-2. **Project Discussion** (25 min)
-   - ${prompt}
-   - Release planning and roadmap updates
-   - Contributor onboarding improvements
-
-3. **Issue Triage** (20 min)
-   - High-priority issues review
-   - Feature requests evaluation
-
-4. **Action Planning** (5 min)
-   - Task assignments and next steps`,
-
-      [MeetingType.MARKETING]: `**Marketing Initiative**: ${prompt}
-
-**Marketing Meeting Agenda**:
-1. **Performance Review** (10 min)
-   - Current campaign metrics
-   - Community growth statistics
-
-2. **Strategic Focus** (25 min)
-   - ${prompt}
-   - Brand positioning and messaging
-   - Content strategy alignment
-
-3. **Campaign Planning** (20 min)
-   - Upcoming marketing initiatives
-   - Budget allocation and resources
-
-4. **Collaboration & Next Steps** (5 min)
-   - Cross-team coordination
-   - Action item assignments`,
-
-      [MeetingType.LEGAL]: `**Legal Review**: ${prompt}
-
-**Legal Meeting Agenda**:
-1. **Compliance Overview** (10 min)
-   - Current legal standing
-   - Recent regulatory changes
-
-2. **Focus Discussion** (30 min)
-   - ${prompt}
-   - Legal risk assessment
-   - Policy and procedure updates
-
-3. **Documentation Review** (15 min)
-   - Contract updates and amendments
-   - Terms of service modifications
-
-4. **Action Items** (5 min)
-   - Legal task assignments
-   - Timeline for deliverables`,
-
-      [MeetingType.OTHER]: `**Meeting Purpose**: ${prompt}
-
-**General Meeting Agenda**:
-1. **Welcome & Introductions** (10 min)
-   - Participant introductions
-   - Meeting objectives overview
-
-2. **Main Discussion** (35 min)
-   - ${prompt}
-   - Open discussion and brainstorming
-   - Key points and considerations
-
-3. **Summary & Next Steps** (15 min)
-   - Key takeaways summary
-   - Action item assignments
-   - Follow-up meeting planning`,
-    };
-
-    return mockAgendas[meetingType] || mockAgendas[MeetingType.OTHER];
   }
 
   private setAiEstimatedDuration(estimatedDuration: number): void {

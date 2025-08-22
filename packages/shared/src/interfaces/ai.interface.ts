@@ -23,8 +23,8 @@ export interface GenerateAgendaRequest {
 export interface GenerateAgendaResponse {
   /** Generated agenda content in markdown format */
   agenda: string;
-  /** AI-estimated duration in minutes */
-  estimatedDuration?: number;
+  /** AI-estimated duration in minutes (30-240 range) */
+  estimatedDuration: number;
 }
 
 /**

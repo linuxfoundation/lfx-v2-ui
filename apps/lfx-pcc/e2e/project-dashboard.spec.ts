@@ -191,16 +191,16 @@ test.describe('Project Dashboard', () => {
     });
 
     test('should display all quick action items', async ({ page }) => {
-      await expect(page.getByRole('menuitem', { name: 'Schedule Meeting' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Create Meeting' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Create Committee' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'View All Committees' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'View Calendar' })).toBeVisible();
     });
 
     test('should have working links in quick actions', async ({ page }) => {
-      // Schedule Meeting should link to meetings page
-      const scheduleMeetingLink = page.getByRole('link', { name: 'Schedule Meeting' });
-      await expect(scheduleMeetingLink).toHaveAttribute('href', /\/meetings$/);
+      // Create Meeting should link to meetings page
+      const createMeetingLink = page.getByRole('link', { name: 'Create Meeting' });
+      await expect(createMeetingLink).toHaveAttribute('href', /\/meetings$/);
 
       // View All Committees should link to committees page
       const viewCommitteesLink = page.getByRole('link', { name: 'View All Committees' });
@@ -216,7 +216,7 @@ test.describe('Project Dashboard', () => {
       const quickActionsSection = page.getByText('Quick Actions').locator('..');
 
       // Check that menu items are present and interactive
-      await expect(quickActionsSection.getByRole('menuitem', { name: 'Schedule Meeting' })).toBeVisible();
+      await expect(quickActionsSection.getByRole('menuitem', { name: 'Create Meeting' })).toBeVisible();
       await expect(quickActionsSection.getByRole('menuitem', { name: 'Create Committee' })).toBeVisible();
       await expect(quickActionsSection.getByRole('menuitem', { name: 'View All Committees' })).toBeVisible();
       await expect(quickActionsSection.getByRole('menuitem', { name: 'View Calendar' })).toBeVisible();

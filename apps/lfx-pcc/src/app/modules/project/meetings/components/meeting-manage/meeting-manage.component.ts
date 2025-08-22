@@ -535,23 +535,19 @@ export class MeetingManageComponent {
     const form = this.form();
     const meetingType = form.get('meeting_type')?.value;
     const startDate = form.get('startDate')?.value;
+    const project = this.projectService.project();
 
-    // Only auto-generate if we have meeting type and the title is empty
+    // Only auto-generate if we have meeting type, start date, and the title is empty
     const currentTitle = form.get('topic')?.value;
-    if (meetingType && (!currentTitle || currentTitle.trim() === '')) {
-      const formattedDate = startDate
-        ? new Date(startDate).toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-          })
-        : new Date().toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-          });
+    if (meetingType && startDate && (!currentTitle || currentTitle.trim() === '')) {
+      const formattedDate = new Date(startDate).toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+      });
 
-      const generatedTitle = `${meetingType} Meeting - ${formattedDate}`;
+      const projectSlug = project?.slug?.toUpperCase() || '';
+      const generatedTitle = `${projectSlug} ${meetingType} Meeting - ${formattedDate}`;
       form.get('topic')?.setValue(generatedTitle);
     }
   }

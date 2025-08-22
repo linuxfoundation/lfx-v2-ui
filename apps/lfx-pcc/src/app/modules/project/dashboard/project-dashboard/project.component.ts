@@ -541,7 +541,7 @@ export class ProjectComponent {
   private initializeQuickActionMenuItems(): MenuItem[] {
     return [
       {
-        label: 'Schedule Meeting',
+        label: 'Create Meeting',
         icon: 'fa-light fa-calendar-plus text-sm',
         routerLink: ['meetings/create'],
       },

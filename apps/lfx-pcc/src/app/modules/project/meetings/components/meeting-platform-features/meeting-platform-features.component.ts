@@ -27,12 +27,14 @@ export class MeetingPlatformFeaturesComponent implements OnInit {
   public readonly recordingAccessOptions = RECORDING_ACCESS_OPTIONS;
   public readonly aiSummaryAccessOptions = AI_SUMMARY_ACCESS_OPTIONS;
 
-  public selectPlatform(platform: string): void {
-    const platformOption = this.platformOptions.find((p) => p.value === platform);
-    if (platformOption?.available) {
-      this.form().get('meetingTool')?.setValue(platform);
-    }
-  }
+  // Transform platforms into dropdown options (only available platforms)
+  public readonly platformDropdownOptions = MEETING_PLATFORMS.map((platform) => ({
+    label: platform.available ? platform.label : `${platform.label} (Coming Soon)`,
+    value: platform.value,
+    icon: platform.icon,
+    description: platform.description,
+    disabled: !platform.available,
+  }));
 
   public ngOnInit(): void {
     // Watch for recording_enabled changes to disable dependent features

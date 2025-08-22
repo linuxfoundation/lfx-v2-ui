@@ -95,7 +95,7 @@ jobs:
           secret-ids: |
             SUPABASE, /cloudops/managed-secrets/cloud/supabase/api_key
             AUTH0,  /cloudops/managed-secrets/auth0/LFX_V2_PCC
-
+            AI, /cloudops/managed-secrets/ai/ai_config
       - name: Setup Turborepo cache
         uses: actions/cache@v4
         with:
@@ -119,7 +119,10 @@ jobs:
           if [ -z "$SUPABASE" ]; then
             missing_secrets="$missing_secrets SUPABASE (from AWS Secrets Manager)"
           fi
-          
+          if [ -z "$AI" ]; then
+            missing_secrets="$missing_secrets AI (from AWS Secrets Manager)"
+          fi
+
           # Check GitHub secrets (fallback)
           if [ -z "${{ secrets.TEST_USERNAME }}" ]; then
             missing_secrets="$missing_secrets TEST_USERNAME"
@@ -164,22 +167,38 @@ jobs:
             echo "PCC_AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> $GITHUB_ENV
             echo "✅ AUTH0 secrets set as masked environment variables"
           fi
-          
+
           # Parse and set SUPABASE secrets
           if [ -n "$SUPABASE" ]; then
             SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')
             SUPABASE_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')
-            
+
             # Explicitly mask the values
             echo "::add-mask::$SUPABASE_URL"
             echo "::add-mask::$SUPABASE_API_KEY"
-            
+
             # Set as environment variables
             echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
             echo "POSTGRES_API_KEY=$SUPABASE_API_KEY" >> $GITHUB_ENV
             echo "✅ SUPABASE secrets set as masked environment variables"
           fi
-          
+
+
+          # Parse and set AI secrets
+          if [ -n "$AI" ]; then
+            AI_API_KEY=$(echo "$AI" | jq -r '.api_key // empty')
+            AI_PROXY_URL=$(echo "$AI" | jq -r '.proxy_url // empty')
+
+            # Explicitly mask the values
+            echo "::add-mask::$AI_API_KEY"
+            echo "::add-mask::$AI_PROXY_URL"
+
+            # Set as environment variables
+            echo "AI_API_KEY=$AI_API_KEY" >> $GITHUB_ENV
+            echo "AI_PROXY_URL=$AI_PROXY_URL" >> $GITHUB_ENV
+            echo "✅ AI secrets set as masked environment variables"
+          fi
+
           # Set test credentials
           echo "::add-mask::${{ secrets.TEST_USERNAME }}"
           echo "::add-mask::${{ secrets.TEST_PASSWORD }}"
@@ -239,6 +258,7 @@ jobs:
           echo "AWS Secrets Manager (required):"
           echo "  - /cloudops/managed-secrets/auth0/LFX_V2_PCC (AUTH0 configuration)"
           echo "  - /cloudops/managed-secrets/cloud/supabase/api_key (SUPABASE configuration)"
+          echo "  - /cloudops/managed-secrets/ai/ai_config (AI configuration)"
           echo ""
           echo "GitHub Secrets (required for authenticated tests):"
           echo "  - TEST_USERNAME"
@@ -262,16 +282,6 @@ jobs:
             echo "❌ E2E tests failed"
             echo "results=failure" >> $GITHUB_OUTPUT
           fi
-
-      - name: Upload Playwright report
-        id: upload-report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report-${{ inputs.browser }}-${{ github.run_id }}
-          path: |
-            apps/lfx-pcc/playwright-report/
-          retention-days: 7
 
       - name: Comment test results on PR
         if: github.event_name == 'pull_request' && always()
