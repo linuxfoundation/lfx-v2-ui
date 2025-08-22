@@ -66,9 +66,9 @@ export class AiService {
               },
               required: ['agenda', 'duration'],
               additionalProperties: false,
-              strict: true,
             },
           },
+          strict: true,
         },
       };
 
