@@ -8,6 +8,8 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { MultiSelectComponent } from '@components/multi-select/multi-select.component';
 import { TableComponent } from '@components/table/table.component';
+import { MIN_EARLY_JOIN_TIME } from '@lfx-pcc/shared';
+import { ArtifactVisibility, MeetingVisibility } from '@lfx-pcc/shared/enums';
 import { Committee, CommitteeMember, Meeting } from '@lfx-pcc/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
@@ -142,18 +144,18 @@ export class MeetingCommitteeModalComponent {
       duration: this.meeting.duration || 60,
       timezone: this.meeting.timezone || 'UTC',
       meeting_type: this.meeting.meeting_type || 'online',
-      early_join_time_minutes: this.meeting.early_join_time_minutes || undefined,
-      visibility: this.meeting.visibility || undefined,
-      recording_enabled: this.meeting.recording_enabled || undefined,
-      transcript_enabled: this.meeting.transcript_enabled || undefined,
-      youtube_upload_enabled: this.meeting.youtube_upload_enabled || undefined,
+      early_join_time_minutes: this.meeting.early_join_time_minutes || MIN_EARLY_JOIN_TIME,
+      visibility: this.meeting.visibility || MeetingVisibility.PUBLIC,
+      recording_enabled: this.meeting.recording_enabled || false,
+      transcript_enabled: this.meeting.transcript_enabled || false,
+      youtube_upload_enabled: this.meeting.youtube_upload_enabled || false,
       zoom_config: {
-        ai_companion_enabled: this.meeting.zoom_config?.ai_companion_enabled || undefined,
-        ai_summary_require_approval: this.meeting.zoom_config?.ai_summary_require_approval || undefined,
+        ai_companion_enabled: this.meeting.zoom_config?.ai_companion_enabled || false,
+        ai_summary_require_approval: this.meeting.zoom_config?.ai_summary_require_approval || false,
       },
-      artifact_visibility: this.meeting.artifact_visibility || undefined,
+      artifact_visibility: this.meeting.artifact_visibility || ArtifactVisibility.PUBLIC,
       recurrence: this.meeting.recurrence || undefined,
-      restricted: this.meeting.restricted || undefined,
+      restricted: this.meeting.restricted || false,
       committees: selectedIds.map((uid) => ({
         uid,
         allowed_voting_statuses: ['active', 'voting'],

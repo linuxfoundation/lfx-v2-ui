@@ -144,10 +144,20 @@ export class MeetingController {
     });
 
     try {
+      if (!id) {
+        Logger.error(req, 'delete_meeting', startTime, new Error('Missing meeting ID parameter'));
+
+        Responder.badRequest(res, 'Meeting ID is required', {
+          code: 'MISSING_MEETING_ID',
+        });
+        return;
+      }
+
       await this.meetingService.deleteMeeting(req, id);
 
       Logger.success(req, 'delete_meeting', startTime, {
         meeting_id: id,
+        status_code: 204,
       });
 
       res.status(204).send();

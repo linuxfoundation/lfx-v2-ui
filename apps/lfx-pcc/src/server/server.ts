@@ -12,7 +12,6 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
-import pinoPretty from 'pino-pretty';
 
 import { extractBearerToken } from './middleware/auth-token.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
@@ -41,32 +40,30 @@ const app = express();
  * - Operations that don't have access to req.log
  * - Can be imported by other modules for consistent logging
  */
-// Create pretty stream for development
-const prettyStream =
-  process.env['NODE_ENV'] !== 'production'
-    ? pinoPretty({
-        colorize: true,
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname',
-      })
-    : undefined;
-
-const serverLogger = pino(
-  {
-    level: process.env['LOG_LEVEL'] || 'info',
-    redact: {
-      paths: ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-      remove: true,
-    },
-    formatters: {
-      level: (label) => {
-        return { level: label.toUpperCase() };
-      },
-    },
-    timestamp: pino.stdTimeFunctions.isoTime,
+const serverLogger = pino({
+  level: process.env['LOG_LEVEL'] || 'info',
+  redact: {
+    paths: ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+    remove: true,
   },
-  prettyStream
-);
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
+    },
+  },
+  timestamp: pino.stdTimeFunctions.isoTime,
+  transport:
+    process.env['NODE_ENV'] !== 'production'
+      ? {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+          },
+        }
+      : undefined,
+});
 
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));

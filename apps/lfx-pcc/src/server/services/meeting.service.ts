@@ -5,6 +5,7 @@ import { CreateMeetingRequest, ETagError, Meeting, QueryServiceResponse } from '
 import { Request } from 'express';
 
 import { getUsernameFromAuth } from '../utils/auth-helper';
+import { Logger } from '../helpers/logger';
 import { ApiClientService } from './api-client.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -81,7 +82,8 @@ export class MeetingService {
       ...(username && { organizers: [username] }),
     };
 
-    req.log.info({ createPayload }, 'Creating meeting payload');
+    const sanitizedPayload = Logger.sanitize({ createPayload });
+    req.log.info(sanitizedPayload, 'Creating meeting payload');
 
     const newMeeting = await this.microserviceProxy.proxyRequest<Meeting>(req, 'LFX_V2_SERVICE', '/meetings', 'POST', undefined, createPayload);
 
