@@ -401,6 +401,11 @@ export class MeetingManageComponent {
     // Map recurrence object back to form value
     const recurrenceValue = mapRecurrenceToFormValue(meeting.recurrence);
 
+    // If recording_enabled is true, enable controls for transcript_enabled and youtube_upload_enabled
+    this.form().get('transcript_enabled')?.enable();
+    this.form().get('youtube_upload_enabled')?.enable();
+    this.form().get('zoom_ai_enabled')?.enable();
+
     this.form().patchValue({
       title: meeting.title,
       description: meeting.description,
