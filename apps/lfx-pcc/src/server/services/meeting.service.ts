@@ -111,10 +111,19 @@ export class MeetingService {
     // Get the logged-in user's username to maintain organizer if not provided
     const username = await getUsernameFromAuth(req);
 
-    // Include organizers in the update payload if not provided
+    // Create organizers array ensuring no duplicates or null values
+    const existingOrganizers = data.organizers || [];
+    const organizersSet = new Set(existingOrganizers.filter((organizer) => organizer != null));
+
+    // Add current user as organizer if username exists and not already included
+    if (username) {
+      organizersSet.add(username);
+    }
+
+    // Include organizers in the update payload
     const updatePayload = {
       ...meetingData,
-      organizers: [...(data.organizers || []), username], // Add the logged-in user as organizer if not provided
+      organizers: Array.from(organizersSet),
     };
 
     const sanitizedPayload = Logger.sanitize({ updatePayload, editType });

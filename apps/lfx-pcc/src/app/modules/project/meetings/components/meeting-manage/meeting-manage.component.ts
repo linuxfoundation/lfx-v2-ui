@@ -228,7 +228,7 @@ export class MeetingManageComponent {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
-        detail: 'Project information is required to create a meeting.',
+        detail: `Project information is required to ${this.isEditMode() ? 'update' : 'create'} a meeting.`,
       });
       return;
     }
@@ -402,9 +402,11 @@ export class MeetingManageComponent {
     const recurrenceValue = mapRecurrenceToFormValue(meeting.recurrence);
 
     // If recording_enabled is true, enable controls for transcript_enabled and youtube_upload_enabled
-    this.form().get('transcript_enabled')?.enable();
-    this.form().get('youtube_upload_enabled')?.enable();
-    this.form().get('zoom_ai_enabled')?.enable();
+    if (meeting.recording_enabled) {
+      this.form().get('transcript_enabled')?.enable();
+      this.form().get('youtube_upload_enabled')?.enable();
+      this.form().get('zoom_ai_enabled')?.enable();
+    }
 
     this.form().patchValue({
       title: meeting.title,
