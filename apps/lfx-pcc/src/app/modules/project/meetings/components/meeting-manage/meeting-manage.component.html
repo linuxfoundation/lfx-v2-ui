@@ -25,6 +25,7 @@
             <p-step [value]="1" data-testid="meeting-manage-step-1"></p-step>
             <p-step [value]="2" data-testid="meeting-manage-step-2"></p-step>
             <p-step [value]="3" data-testid="meeting-manage-step-3"></p-step>
+            <p-step [value]="4" data-testid="meeting-manage-step-4"></p-step>
           </p-step-list>
 
           <p-step-panels>
@@ -56,6 +57,19 @@
                   (goToStep)="goToStep($event)"
                   (deleteAttachment)="deleteAttachment($event)">
                 </lfx-meeting-resources-summary>
+              </ng-template>
+            </p-step-panel>
+
+            <p-step-panel [value]="4" data-testid="meeting-manage-panel-4">
+              <ng-template #content let-activateCallback="activateCallback">
+                <!-- @if (createdMeetingUid()) { -->
+                <lfx-meeting-registrants [meetingUid]="createdMeetingUid()!" (onBack)="onRegistrantsBack()" (onComplete)="onRegistrantsComplete()">
+                </lfx-meeting-registrants>
+                <!-- } @else {
+                  <div class="text-center py-8 text-gray-500">
+                    <p>Meeting must be created before managing guests.</p>
+                  </div>
+                } -->
               </ng-template>
             </p-step-panel>
           </p-step-panels>
@@ -95,6 +109,13 @@
               (deleteAttachment)="deleteAttachment($event)">
             </lfx-meeting-resources-summary>
           </div>
+
+          <!-- Manage Guests Section -->
+          <div class="border border-slate-200 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">Manage Guests</h2>
+            <lfx-meeting-registrants [meetingUid]="meetingId()!" (onBack)="onRegistrantsBack()" (onComplete)="onRegistrantsComplete()">
+            </lfx-meeting-registrants>
+          </div>
         </div>
       }
     </div>
@@ -103,7 +124,7 @@
     <div class="border-t border-slate-200 p-6">
       <div class="flex justify-between">
         <!-- CREATE MODE: Previous Button -->
-        @if (!isEditMode()) {
+        @if (!isEditMode() && !isLastStep()) {
           <lfx-button
             label="Previous"
             icon="fa-light fa-arrow-left"
@@ -119,11 +140,17 @@
         }
 
         <div class="flex gap-3">
-          <lfx-button [label]="'Cancel'" [outlined]="true" (onClick)="onCancel()" data-testid="meeting-manage-cancel-btn" size="small"> </lfx-button>
+          <lfx-button
+            [label]="isLastStep() ? 'Skip For Now' : 'Cancel'"
+            [outlined]="true"
+            (onClick)="onCancel()"
+            data-testid="meeting-manage-cancel-btn"
+            size="small">
+          </lfx-button>
 
           @if (!isEditMode()) {
             <!-- CREATE MODE: Next/Create Button -->
-            @if (!isLastStep()) {
+            @if (!isLastMeetingStep() && !isLastStep()) {
               <lfx-button
                 label="Next"
                 icon="fa-light fa-arrow-right"
@@ -134,14 +161,25 @@
                 size="small"
                 data-testid="meeting-manage-next-btn">
               </lfx-button>
-            } @else {
+            } @else if (isLastMeetingStep()) {
               <lfx-button
                 label="Create Meeting"
                 icon="fa-light fa-check"
                 size="small"
                 [loading]="submitting()"
                 [disabled]="!canProceed() || submitting()"
-                [severity]="'primary'"
+                severity="primary"
+                (onClick)="onSubmit()"
+                data-testid="meeting-manage-submit-btn">
+              </lfx-button>
+            } @else {
+              <lfx-button
+                label="Add Guests"
+                icon="fa-light fa-check"
+                size="small"
+                [loading]="submitting()"
+                [disabled]="!canProceed() || submitting()"
+                severity="primary"
                 (onClick)="onSubmit()"
                 data-testid="meeting-manage-submit-btn">
               </lfx-button>

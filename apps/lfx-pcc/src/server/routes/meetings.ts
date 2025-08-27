@@ -575,4 +575,10 @@ router.post('/generate-agenda', async (req: Request, res: Response, next: NextFu
   }
 });
 
+// Registrant routes - using new controller pattern
+router.get('/:uid/registrants', (req, res) => meetingController.getMeetingRegistrants(req, res));
+router.post('/:uid/registrants', (req, res) => meetingController.addMeetingRegistrant(req, res));
+router.put('/:uid/registrants/:registrantUid', (req, res) => meetingController.updateMeetingRegistrant(req, res));
+router.delete('/:uid/registrants/:registrantUid', (req, res) => meetingController.deleteMeetingRegistrant(req, res));
+
 export default router;

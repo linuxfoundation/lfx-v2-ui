@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CreateMeetingRequest, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
+import { CreateMeetingRequest, CreateMeetingRegistrantRequest, UpdateMeetingRequest, UpdateMeetingRegistrantRequest } from '@lfx-pcc/shared/interfaces';
 import { Request, Response } from 'express';
 
 import { Logger } from '../helpers/logger';
@@ -255,6 +255,200 @@ export class MeetingController {
         meeting_id: id,
       });
       Responder.handle(res, error, 'delete_meeting');
+    }
+  }
+
+  /**
+   * GET /meetings/:uid/registrants
+   */
+  public async getMeetingRegistrants(req: Request, res: Response): Promise<void> {
+    const { uid } = req.params;
+    const startTime = Logger.start(req, 'get_meeting_registrants', {
+      meeting_uid: uid,
+    });
+
+    try {
+      if (!uid) {
+        Logger.error(req, 'get_meeting_registrants', startTime, new Error('Missing meeting UID parameter'));
+
+        Responder.badRequest(res, 'Meeting UID is required', {
+          code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      const registrants = await this.meetingService.getMeetingRegistrants(req, uid);
+
+      Logger.success(req, 'get_meeting_registrants', startTime, {
+        meeting_uid: uid,
+        registrant_count: registrants.length,
+      });
+
+      res.json(registrants);
+    } catch (error) {
+      Logger.error(req, 'get_meeting_registrants', startTime, error, {
+        meeting_uid: uid,
+      });
+      Responder.handle(res, error, 'get_meeting_registrants');
+    }
+  }
+
+  /**
+   * POST /meetings/:uid/registrants
+   */
+  public async addMeetingRegistrant(req: Request, res: Response): Promise<void> {
+    const { uid } = req.params;
+    const registrantData: CreateMeetingRegistrantRequest = {
+      ...req.body,
+      meeting_uid: uid,
+    };
+
+    const startTime = Logger.start(req, 'add_meeting_registrant', {
+      meeting_uid: uid,
+      email: registrantData.email,
+      host: registrantData.host || false,
+      body_size: JSON.stringify(req.body).length,
+    });
+
+    try {
+      if (!uid) {
+        Logger.error(req, 'add_meeting_registrant', startTime, new Error('Missing meeting UID parameter'));
+
+        Responder.badRequest(res, 'Meeting UID is required', {
+          code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      // Basic validation
+      if (!registrantData.email || !registrantData.first_name || !registrantData.last_name) {
+        Logger.error(req, 'add_meeting_registrant', startTime, new Error('Missing required fields for registrant creation'), {
+          provided_fields: {
+            has_email: !!registrantData.email,
+            has_first_name: !!registrantData.first_name,
+            has_last_name: !!registrantData.last_name,
+          },
+        });
+
+        Responder.badRequest(res, 'Email, first name, and last name are required', {
+          code: 'MISSING_REQUIRED_FIELDS',
+        });
+        return;
+      }
+
+      const registrant = await this.meetingService.addMeetingRegistrant(req, registrantData);
+
+      Logger.success(req, 'add_meeting_registrant', startTime, {
+        meeting_uid: uid,
+        registrant_uid: registrant.uid,
+        email: registrant.email,
+        host: registrant.host,
+      });
+
+      res.status(201).json(registrant);
+    } catch (error) {
+      Logger.error(req, 'add_meeting_registrant', startTime, error, {
+        meeting_uid: uid,
+        email: registrantData.email,
+      });
+      Responder.handle(res, error, 'add_meeting_registrant');
+    }
+  }
+
+  /**
+   * PUT /meetings/:uid/registrants/:registrantUid
+   */
+  public async updateMeetingRegistrant(req: Request, res: Response): Promise<void> {
+    const { uid, registrantUid } = req.params;
+    const updateData: UpdateMeetingRegistrantRequest = req.body;
+
+    const startTime = Logger.start(req, 'update_meeting_registrant', {
+      meeting_uid: uid,
+      registrant_uid: registrantUid,
+      body_size: JSON.stringify(req.body).length,
+    });
+
+    try {
+      if (!uid) {
+        Logger.error(req, 'update_meeting_registrant', startTime, new Error('Missing meeting UID parameter'));
+
+        Responder.badRequest(res, 'Meeting UID is required', {
+          code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      if (!registrantUid) {
+        Logger.error(req, 'update_meeting_registrant', startTime, new Error('Missing registrant UID parameter'));
+
+        Responder.badRequest(res, 'Registrant UID is required', {
+          code: 'MISSING_REGISTRANT_UID',
+        });
+        return;
+      }
+
+      const updatedRegistrant = await this.meetingService.updateMeetingRegistrant(req, uid, registrantUid, updateData);
+
+      Logger.success(req, 'update_meeting_registrant', startTime, {
+        meeting_uid: uid,
+        registrant_uid: registrantUid,
+        email: updatedRegistrant.email,
+      });
+
+      res.json(updatedRegistrant);
+    } catch (error) {
+      Logger.error(req, 'update_meeting_registrant', startTime, error, {
+        meeting_uid: uid,
+        registrant_uid: registrantUid,
+      });
+      Responder.handle(res, error, 'update_meeting_registrant');
+    }
+  }
+
+  /**
+   * DELETE /meetings/:uid/registrants/:registrantUid
+   */
+  public async deleteMeetingRegistrant(req: Request, res: Response): Promise<void> {
+    const { uid, registrantUid } = req.params;
+    const startTime = Logger.start(req, 'delete_meeting_registrant', {
+      meeting_uid: uid,
+      registrant_uid: registrantUid,
+    });
+
+    try {
+      if (!uid) {
+        Logger.error(req, 'delete_meeting_registrant', startTime, new Error('Missing meeting UID parameter'));
+
+        Responder.badRequest(res, 'Meeting UID is required', {
+          code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      if (!registrantUid) {
+        Logger.error(req, 'delete_meeting_registrant', startTime, new Error('Missing registrant UID parameter'));
+
+        Responder.badRequest(res, 'Registrant UID is required', {
+          code: 'MISSING_REGISTRANT_UID',
+        });
+        return;
+      }
+
+      await this.meetingService.deleteMeetingRegistrant(req, uid, registrantUid);
+
+      Logger.success(req, 'delete_meeting_registrant', startTime, {
+        meeting_uid: uid,
+        registrant_uid: registrantUid,
+        status_code: 204,
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      Logger.error(req, 'delete_meeting_registrant', startTime, error, {
+        meeting_uid: uid,
+        registrant_uid: registrantUid,
+      });
+      Responder.handle(res, error, 'delete_meeting_registrant');
     }
   }
 }

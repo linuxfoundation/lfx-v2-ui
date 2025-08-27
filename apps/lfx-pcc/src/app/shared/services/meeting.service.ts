@@ -5,12 +5,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
   CreateMeetingRequest,
+  CreateMeetingRegistrantRequest,
   GenerateAgendaRequest,
   GenerateAgendaResponse,
   Meeting,
   MeetingAttachment,
   MeetingParticipant,
+  MeetingRegistrant,
   UpdateMeetingRequest,
+  UpdateMeetingRegistrantRequest,
   UploadFileResponse,
 } from '@lfx-pcc/shared/interfaces';
 import { catchError, defer, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
@@ -264,6 +267,45 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error('Failed to generate meeting agenda:', error);
+        throw error;
+      })
+    );
+  }
+
+  public getMeetingRegistrants(meetingUid: string): Observable<MeetingRegistrant[]> {
+    return this.http.get<MeetingRegistrant[]>(`/api/meetings/${meetingUid}/registrants`).pipe(
+      catchError((error) => {
+        console.error(`Failed to load registrants for meeting ${meetingUid}:`, error);
+        return of([]);
+      })
+    );
+  }
+
+  public addMeetingRegistrant(registrantData: CreateMeetingRegistrantRequest): Observable<MeetingRegistrant> {
+    return this.http.post<MeetingRegistrant>(`/api/meetings/${registrantData.meeting_uid}/registrants`, registrantData).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to add registrant to meeting ${registrantData.meeting_uid}:`, error);
+        throw error;
+      })
+    );
+  }
+
+  public updateMeetingRegistrant(meetingUid: string, registrantUid: string, updateData: UpdateMeetingRegistrantRequest): Observable<MeetingRegistrant> {
+    return this.http.put<MeetingRegistrant>(`/api/meetings/${meetingUid}/registrants/${registrantUid}`, updateData).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to update registrant ${registrantUid} in meeting ${meetingUid}:`, error);
+        throw error;
+      })
+    );
+  }
+
+  public deleteMeetingRegistrant(meetingUid: string, registrantUid: string): Observable<void> {
+    return this.http.delete<void>(`/api/meetings/${meetingUid}/registrants/${registrantUid}`).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to delete registrant ${registrantUid} from meeting ${meetingUid}:`, error);
         throw error;
       })
     );

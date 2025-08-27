@@ -39,6 +39,7 @@ import { BehaviorSubject, catchError, from, mergeMap, Observable, of, switchMap,
 
 import { MeetingDetailsComponent } from '../meeting-details/meeting-details.component';
 import { MeetingPlatformFeaturesComponent } from '../meeting-platform-features/meeting-platform-features.component';
+import { MeetingRegistrantsComponent } from '../meeting-registrants/meeting-registrants.component';
 import { MeetingResourcesSummaryComponent } from '../meeting-resources-summary/meeting-resources-summary.component';
 import { MeetingTypeSelectionComponent } from '../meeting-type-selection/meeting-type-selection.component';
 
@@ -55,6 +56,7 @@ import { MeetingTypeSelectionComponent } from '../meeting-type-selection/meeting
     MeetingDetailsComponent,
     MeetingPlatformFeaturesComponent,
     MeetingResourcesSummaryComponent,
+    MeetingRegistrantsComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-manage.component.html',
@@ -71,6 +73,7 @@ export class MeetingManageComponent {
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
   public meetingId = signal<string | null>(null);
+  public createdMeetingUid = signal<string | null>(null);
   public isEditMode = computed(() => this.mode() === 'edit');
 
   // Initialize meeting data using toSignal
@@ -81,7 +84,7 @@ export class MeetingManageComponent {
   public attachments = this.initializeAttachments();
 
   // Stepper state
-  public currentStep = signal<number>(0);
+  public currentStep = signal<number>(4);
   public readonly totalSteps = TOTAL_STEPS;
 
   // Form state
@@ -102,6 +105,7 @@ export class MeetingManageComponent {
   });
   public readonly canGoPrevious = computed(() => this.currentStep() > 0);
   public readonly isFirstStep = computed(() => this.currentStep() === 0);
+  public readonly isLastMeetingStep = computed(() => this.currentStep() === this.totalSteps - 2);
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps - 1);
   public readonly currentStepTitle = computed(() => this.getStepTitle(this.currentStep()));
 
@@ -119,10 +123,7 @@ export class MeetingManageComponent {
       this.currentStep();
       // Update validation when step changes
       this.updateCanProceed();
-    });
 
-    // Use effect to populate form when meeting data is loaded
-    effect(() => {
       const meeting = this.meeting();
       if (meeting && this.isEditMode()) {
         this.populateFormWithMeetingData(meeting);
@@ -275,6 +276,16 @@ export class MeetingManageComponent {
 
     operation.subscribe({
       next: (meeting) => {
+        // Store the created meeting UID for Step 5 (registrants)
+        this.createdMeetingUid.set(meeting.uid);
+
+        // If we're in create mode and not on the last step, continue to next step
+        if (!this.isEditMode() && this.currentStep() < this.totalSteps - 1) {
+          this.nextStep();
+          this.submitting.set(false);
+          return;
+        }
+
         // If we have pending attachments, save them to the database
         if (this.pendingAttachments.length > 0) {
           this.savePendingAttachments(meeting.uid)
@@ -363,6 +374,24 @@ export class MeetingManageComponent {
         this.submitting.set(false);
       },
     });
+  }
+
+  public onRegistrantsComplete(): void {
+    // Called when Step 5 (Manage Guests) is completed
+    const project = this.projectService.project();
+    if (project?.slug) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Meeting setup completed successfully',
+      });
+      this.router.navigate(['/project', project.slug, 'meetings']);
+    }
+  }
+
+  public onRegistrantsBack(): void {
+    // Go back to the previous step from registrants
+    this.previousStep();
   }
 
   // Private methods
@@ -473,6 +502,9 @@ export class MeetingManageComponent {
         return !!form.get('meetingTool')?.value;
 
       case 3: // Resources & Summary (optional)
+        return true;
+
+      case 4: // Manage Guests (optional)
         return true;
 
       default:
