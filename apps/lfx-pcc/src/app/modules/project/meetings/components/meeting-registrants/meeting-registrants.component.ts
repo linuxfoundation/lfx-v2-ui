@@ -3,7 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, input, output, signal, WritableSignal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -21,6 +21,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { take } from 'rxjs';
 
 import { RegistrantCardComponent } from './registrant-card/registrant-card.component';
+import { RegistrantFormComponent } from './registrant-form/registrant-form.component';
 
 @Component({
   selector: 'lfx-meeting-registrants',
@@ -33,6 +34,7 @@ import { RegistrantCardComponent } from './registrant-card/registrant-card.compo
     SelectComponent,
     ConfirmDialogModule,
     RegistrantCardComponent,
+    RegistrantFormComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-registrants.component.html',
@@ -55,6 +57,7 @@ export class MeetingRegistrantsComponent {
   public registrantsWithState: WritableSignal<MeetingRegistrantWithState[]> = signal([]);
   public loading: WritableSignal<boolean> = signal(true);
   public searchForm: FormGroup;
+  public addRegistrantForm: FormGroup;
 
   // Original data from API
   private originalRegistrants: WritableSignal<MeetingRegistrant[]> = signal([]);
@@ -152,6 +155,8 @@ export class MeetingRegistrantsComponent {
       status: new FormControl(null),
     });
 
+    this.addRegistrantForm = this.buildAddRegistrantForm();
+
     // Subscribe to form changes and update signals
     this.searchForm.get('search')?.valueChanges.subscribe((value) => {
       this.searchTerm.set(value || '');
@@ -196,12 +201,51 @@ export class MeetingRegistrantsComponent {
     this.editingRegistrantId.set(null);
   }
 
-  // Action handlers (placeholders for now)
-  public handleAddRegistrant(registrantData: any): void {
-    // TODO: Implement add registrant functionality
-    console.info('Add registrant:', registrantData);
+  // Action handlers
+  public handleAddRegistrantFromForm(): void {
+    if (this.addRegistrantForm.valid) {
+      const formValue = this.addRegistrantForm.value;
+
+      // Build complete MeetingRegistrant object
+      const registrantData: MeetingRegistrant = {
+        uid: '', // Will be assigned by API
+        meeting_uid: this.meetingUid(),
+        occurrence_id: null,
+        email: formValue.email,
+        first_name: formValue.first_name,
+        last_name: formValue.last_name,
+        job_title: formValue.job_title || null,
+        org_name: formValue.org_name || null,
+        host: formValue.host || false,
+        org_is_member: false,
+        org_is_project_member: false,
+        avatar_url: null,
+        username: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      this.handleAddRegistrant(registrantData);
+    }
+  }
+
+  public handleAddRegistrant(registrantData: MeetingRegistrant): void {
+    // Create new registrant with temporary ID for immediate UI updates
+    const newRegistrant: MeetingRegistrantWithState = {
+      ...registrantData,
+      meeting_uid: this.meetingUid(),
+      uid: '', // Will be assigned by API
+      state: 'new' as RegistrantState,
+      tempId: this.generateTempId(),
+      originalData: undefined,
+    };
+
+    // Add to local state for immediate UI feedback
+    this.registrantsWithState.update((registrants) => [...registrants, newRegistrant]);
+
+    // Reset and close form
+    this.addRegistrantForm.reset();
     this.onCloseAddForm();
-    this.refreshRegistrants();
   }
 
   public handleBulkAdd(emailData: any): void {
@@ -500,5 +544,16 @@ export class MeetingRegistrantsComponent {
         updated_at: new Date().toISOString(),
       },
     ];
+  }
+
+  private buildAddRegistrantForm(): FormGroup {
+    return new FormGroup({
+      first_name: new FormControl('', [Validators.required, Validators.minLength(2)]),
+      last_name: new FormControl('', [Validators.required, Validators.minLength(2)]),
+      email: new FormControl('', [Validators.required, Validators.email]),
+      job_title: new FormControl(''),
+      org_name: new FormControl(''),
+      host: new FormControl(false),
+    });
   }
 }

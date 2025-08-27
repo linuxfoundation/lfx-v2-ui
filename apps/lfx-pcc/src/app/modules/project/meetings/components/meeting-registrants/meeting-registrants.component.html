@@ -24,17 +24,28 @@
         <ng-template #header>
           <div class="px-8 pt-4 flex items-center justify-between">
             <h4 class="font-semibold text-slate-900">Add New Participant</h4>
-            <lfx-button size="small" icon="fa-light fa-times" severity="secondary" size="small" (click)="onCloseAddForm()"> </lfx-button>
+            <lfx-button
+              size="small"
+              icon="fa-light fa-times"
+              [text]="true"
+              styleClass="text-gray-400 hover:text-gray-600"
+              severity="secondary"
+              (click)="onCloseAddForm()">
+            </lfx-button>
           </div>
         </ng-template>
 
-        <p class="text-sm text-slate-600 mb-4">
-          Add New Participant form component will be implemented here. This will include fields for email, first name, last name, job title, and organization.
-        </p>
+        <!-- Use the shared registrant-form component -->
+        <lfx-registrant-form [form]="addRegistrantForm" [registrant]="null"> </lfx-registrant-form>
 
         <ng-template #footer>
-          <div class="flex gap-2">
-            <lfx-button size="small" label="Test Add" size="small" severity="primary" (click)="handleAddRegistrant({ email: 'test@example.com' })">
+          <div class="flex items-center justify-end gap-3">
+            <lfx-button
+              size="small"
+              label="Add Participant"
+              severity="primary"
+              [disabled]="!addRegistrantForm.valid || !addRegistrantForm.dirty"
+              (click)="handleAddRegistrantFromForm()">
             </lfx-button>
             <lfx-button
               size="small"
@@ -108,7 +119,8 @@
             </lfx-button>
             <lfx-button size="small" label="Test CSV Import" size="small" severity="success" (click)="handleImportCSV({ csvData: 'sample csv data' })">
             </lfx-button>
-            <lfx-button size="small" label="Cancel" size="small" severity="secondary" (click)="onCloseImport()"> </lfx-button>
+            <lfx-button size="small" label="Cancel" [text]="true" styleClass="text-gray-400 hover:text-gray-600" severity="secondary" (click)="onCloseImport()">
+            </lfx-button>
           </div>
         </ng-template>
       </lfx-card>
