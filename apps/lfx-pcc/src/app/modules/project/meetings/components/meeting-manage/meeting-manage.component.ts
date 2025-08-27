@@ -81,7 +81,7 @@ export class MeetingManageComponent {
 
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
-  public meetingId = signal<string | null>('ceb94986-054f-4ce8-ad8a-a71730dde4c7');
+  public meetingId = signal<string | null>(null);
   public isEditMode = computed(() => this.mode() === 'edit');
   public registrantUpdates = signal<{
     toAdd: CreateMeetingRegistrantRequest[]; // registrants to add
@@ -98,7 +98,7 @@ export class MeetingManageComponent {
   private attachmentsRefresh$ = new BehaviorSubject<void>(undefined);
   public attachments = this.initializeAttachments();
   // Stepper state
-  public currentStep = signal<number>(4);
+  public currentStep = signal<number>(0);
   public readonly totalSteps = TOTAL_STEPS;
   // Form state
   public form = signal<FormGroup>(this.createMeetingFormGroup());
