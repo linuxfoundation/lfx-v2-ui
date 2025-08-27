@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CreateMeetingRequest, CreateMeetingRegistrantRequest, UpdateMeetingRequest, UpdateMeetingRegistrantRequest } from '@lfx-pcc/shared/interfaces';
+import { CreateMeetingRegistrantRequest, CreateMeetingRequest, UpdateMeetingRegistrantRequest, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
 import { Request, Response } from 'express';
 
 import { Logger } from '../helpers/logger';

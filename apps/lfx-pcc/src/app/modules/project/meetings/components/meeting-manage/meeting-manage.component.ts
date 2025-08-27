@@ -20,7 +20,16 @@ import {
   TOTAL_STEPS,
 } from '@lfx-pcc/shared/constants';
 import { MeetingVisibility } from '@lfx-pcc/shared/enums';
-import { CreateMeetingRequest, Meeting, MeetingAttachment, PendingAttachment, UpdateMeetingRequest } from '@lfx-pcc/shared/interfaces';
+import {
+  CreateMeetingRegistrantRequest,
+  CreateMeetingRequest,
+  Meeting,
+  MeetingAttachment,
+  MeetingRegistrantWithState,
+  PendingAttachment,
+  UpdateMeetingRegistrantRequest,
+  UpdateMeetingRequest,
+} from '@lfx-pcc/shared/interfaces';
 import {
   combineDateTime,
   formatTo12Hour,
@@ -72,21 +81,25 @@ export class MeetingManageComponent {
 
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
-  public meetingId = signal<string | null>(null);
-  public createdMeetingUid = signal<string | null>(null);
+  public meetingId = signal<string | null>('ceb94986-054f-4ce8-ad8a-a71730dde4c7');
   public isEditMode = computed(() => this.mode() === 'edit');
-
+  public registrantUpdates = signal<{
+    toAdd: CreateMeetingRegistrantRequest[]; // registrants to add
+    toUpdate: { uid: string; changes: UpdateMeetingRegistrantRequest }[]; // uid of the registrant to update and the changes to make
+    toDelete: string[]; // uid of the registrant to delete
+  }>({
+    toAdd: [],
+    toUpdate: [],
+    toDelete: [],
+  });
   // Initialize meeting data using toSignal
   public meeting = this.initializeMeeting();
-
   // Initialize meeting attachments with refresh capability
   private attachmentsRefresh$ = new BehaviorSubject<void>(undefined);
   public attachments = this.initializeAttachments();
-
   // Stepper state
   public currentStep = signal<number>(4);
   public readonly totalSteps = TOTAL_STEPS;
-
   // Form state
   public form = signal<FormGroup>(this.createMeetingFormGroup());
   public submitting = signal<boolean>(false);
@@ -99,10 +112,7 @@ export class MeetingManageComponent {
 
   // Validation signals for template
   public readonly canProceed = signal<boolean>(false);
-  public readonly canGoNext = computed(() => {
-    const next = this.currentStep() + 1;
-    return next < this.totalSteps && this.canNavigateToStep(next);
-  });
+  public readonly canGoNext = computed(() => this.currentStep() + 1 < this.totalSteps && this.canNavigateToStep(this.currentStep() + 1));
   public readonly canGoPrevious = computed(() => this.currentStep() > 0);
   public readonly isFirstStep = computed(() => this.currentStep() === 0);
   public readonly isLastMeetingStep = computed(() => this.currentStep() === this.totalSteps - 2);
@@ -128,52 +138,6 @@ export class MeetingManageComponent {
       if (meeting && this.isEditMode()) {
         this.populateFormWithMeetingData(meeting);
       }
-    });
-  }
-
-  // Public methods
-  public deleteAttachment(attachmentId: string): void {
-    const meetingId = this.meetingId();
-    if (!meetingId) return;
-
-    // Find the attachment name for the confirmation dialog
-    const attachment = this.attachments().find((att) => att.id === attachmentId);
-    const fileName = attachment?.file_name || 'this attachment';
-
-    this.confirmationService.confirm({
-      message: `Are you sure you want to delete "${fileName}"? This action cannot be undone.`,
-      header: 'Delete Attachment',
-      icon: 'fa-light fa-exclamation-triangle',
-      acceptIcon: 'fa-light fa-trash',
-      rejectIcon: 'fa-light fa-times',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger p-button-text',
-      rejectButtonStyleClass: 'p-button-text',
-      accept: () => {
-        this.deletingAttachmentId.set(attachmentId);
-        this.meetingService.deleteAttachment(meetingId, attachmentId).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: 'Attachment deleted successfully',
-            });
-            // Force refresh the attachments by triggering the BehaviorSubject
-            this.attachmentsRefresh$.next();
-            this.deletingAttachmentId.set(null);
-          },
-          error: (error) => {
-            console.error('Error deleting attachment:', error);
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'Failed to delete attachment. Please try again.',
-            });
-            this.deletingAttachmentId.set(null);
-          },
-        });
-      },
     });
   }
 
@@ -235,19 +199,52 @@ export class MeetingManageComponent {
     }
 
     this.submitting.set(true);
+    const meetingData = this.prepareMeetingData(project);
+    const operation = this.isEditMode()
+      ? this.meetingService.updateMeeting(this.meetingId()!, meetingData as UpdateMeetingRequest, 'single')
+      : this.meetingService.createMeeting(meetingData as CreateMeetingRequest);
+
+    operation.subscribe({
+      next: (meeting) => this.handleMeetingSuccess(meeting, project),
+      error: (error) => this.handleMeetingError(error),
+    });
+  }
+
+  public deleteAttachment(attachmentId: string): void {
+    const meetingId = this.meetingId();
+    if (!meetingId) return;
+
+    const attachment = this.attachments().find((att) => att.id === attachmentId);
+    const fileName = attachment?.file_name || 'this attachment';
+
+    this.showDeleteAttachmentConfirmation(meetingId, attachmentId, fileName);
+  }
+
+  public onRegistrantsUpdate(registrants: MeetingRegistrantWithState[]): void {
+    this.registrantUpdates.set({
+      toAdd: registrants.filter((r) => r.state === 'new').map((r) => this.stripMetadata(r)),
+      toUpdate: registrants
+        .filter((r) => r.state === 'modified')
+        .map((r) => ({
+          uid: r.uid,
+          changes: this.getChangedFields(r),
+        })),
+      toDelete: registrants.filter((r) => r.state === 'deleted').map((r) => r.uid),
+    });
+  }
+
+  public onInviteGuests(): void {
+    console.info('Invite guests', this.registrantUpdates());
+  }
+
+  // Private methods
+  private prepareMeetingData(project: any): CreateMeetingRequest | UpdateMeetingRequest {
     const formValue = this.form().value;
-
-    // Process duration value - ensure it's always a number
     const duration = formValue.duration === 'custom' ? Number(formValue.customDuration) : Number(formValue.duration);
-
-    // Combine date and time for start_time with timezone awareness
     const startDateTime = combineDateTime(formValue.startDate, formValue.startTime, formValue.timezone);
-
-    // Generate recurrence object if needed
     const recurrenceObject = generateRecurrenceObject(formValue.recurrence, formValue.startDate);
 
-    // Create meeting data
-    const baseMeetingData = {
+    return {
       project_uid: project.uid,
       title: formValue.title,
       description: formValue.description || '',
@@ -267,134 +264,150 @@ export class MeetingManageComponent {
       },
       artifact_visibility: formValue.artifact_visibility || DEFAULT_ARTIFACT_VISIBILITY,
       recurrence: recurrenceObject,
-      important_links: (this.form().get('important_links') as FormArray).value || [],
     };
-
-    const operation = this.isEditMode()
-      ? this.meetingService.updateMeeting(this.meetingId()!, baseMeetingData as UpdateMeetingRequest, 'single')
-      : this.meetingService.createMeeting(baseMeetingData as CreateMeetingRequest);
-
-    operation.subscribe({
-      next: (meeting) => {
-        // Store the created meeting UID for Step 5 (registrants)
-        this.createdMeetingUid.set(meeting.uid);
-
-        // If we're in create mode and not on the last step, continue to next step
-        if (!this.isEditMode() && this.currentStep() < this.totalSteps - 1) {
-          this.nextStep();
-          this.submitting.set(false);
-          return;
-        }
-
-        // If we have pending attachments, save them to the database
-        if (this.pendingAttachments.length > 0) {
-          this.savePendingAttachments(meeting.uid)
-            .pipe(take(1))
-            .subscribe({
-              next: (result) => {
-                const { successes, failures } = result;
-
-                if (failures.length === 0) {
-                  // All attachments saved successfully
-                  const successMessage = this.isEditMode()
-                    ? `Meeting updated successfully with ${successes.length} new attachment(s)`
-                    : `Meeting created successfully with ${successes.length} attachment(s)`;
-
-                  this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: successMessage,
-                  });
-                } else if (successes.length > 0) {
-                  // Partial success
-                  const partialMessage = this.isEditMode()
-                    ? `Meeting updated with ${successes.length} attachments. ${failures.length} failed to save.`
-                    : `Meeting created with ${successes.length} attachments. ${failures.length} failed to save.`;
-
-                  this.messageService.add({
-                    severity: 'warn',
-                    summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
-                    detail: partialMessage,
-                  });
-                } else {
-                  // All failed
-                  const errorMessage = this.isEditMode()
-                    ? 'Meeting updated but all attachments failed to save. You can add them later.'
-                    : 'Meeting created but all attachments failed to save. You can add them later.';
-
-                  this.messageService.add({
-                    severity: 'warn',
-                    summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
-                    detail: errorMessage,
-                  });
-                }
-
-                // Log individual failures for debugging
-                failures.forEach((failure) => {
-                  console.error(`Failed to save attachment ${failure.fileName}:`, failure.error);
-                });
-
-                // Refresh attachments list if we're in edit mode
-                if (this.isEditMode()) {
-                  this.attachmentsRefresh$.next();
-                }
-
-                this.router.navigate(['/project', project.slug, 'meetings']);
-              },
-              error: (attachmentError: any) => {
-                console.error('Error saving attachments:', attachmentError);
-                const warningMessage = this.isEditMode()
-                  ? 'Meeting updated but attachments failed to save. You can add them later.'
-                  : 'Meeting created but attachments failed to save. You can add them later.';
-
-                this.messageService.add({
-                  severity: 'warn',
-                  summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
-                  detail: warningMessage,
-                });
-                this.router.navigate(['/project', project.slug, 'meetings']);
-              },
-            });
-        } else {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: `Meeting ${this.isEditMode() ? 'updated' : 'created'} successfully`,
-          });
-          this.router.navigate(['/project', project.slug, 'meetings']);
-        }
-      },
-      error: (error) => {
-        console.error('Error saving meeting:', error);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: `Failed to ${this.isEditMode() ? 'update' : 'create'} meeting. Please try again.`,
-        });
-        this.submitting.set(false);
-      },
-    });
   }
 
-  public onRegistrantsComplete(): void {
-    // Called when Step 5 (Manage Guests) is completed
-    const project = this.projectService.project();
-    if (project?.slug) {
+  private handleMeetingSuccess(meeting: Meeting, project: any): void {
+    this.meetingId.set(meeting.uid);
+
+    // If we're in create mode and not on the last step, continue to next step
+    if (!this.isEditMode() && this.currentStep() < this.totalSteps - 1) {
+      this.nextStep();
+      this.submitting.set(false);
+      return;
+    }
+
+    // If we have pending attachments, save them to the database
+    if (this.pendingAttachments.length > 0) {
+      this.savePendingAttachments(meeting.uid)
+        .pipe(take(1))
+        .subscribe({
+          next: (result) => {
+            // Process attachments after meeting save
+            this.handleAttachmentResults(result, project);
+          },
+          error: (attachmentError: any) => {
+            console.error('Error saving attachments:', attachmentError);
+            const warningMessage = this.isEditMode()
+              ? 'Meeting updated but attachments failed to save. You can add them later.'
+              : 'Meeting created but attachments failed to save. You can add them later.';
+
+            this.messageService.add({
+              severity: 'warn',
+              summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
+              detail: warningMessage,
+            });
+            this.router.navigate(['/project', project.slug, 'meetings']);
+          },
+        });
+    } else {
       this.messageService.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Meeting setup completed successfully',
+        detail: `Meeting ${this.isEditMode() ? 'updated' : 'created'} successfully`,
       });
       this.router.navigate(['/project', project.slug, 'meetings']);
     }
   }
 
-  public onRegistrantsBack(): void {
-    // Go back to the previous step from registrants
-    this.previousStep();
+  private handleMeetingError(error: any): void {
+    console.error('Error saving meeting:', error);
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: `Failed to ${this.isEditMode() ? 'update' : 'create'} meeting. Please try again.`,
+    });
+    this.submitting.set(false);
   }
 
-  // Private methods
+  private handleAttachmentResults(result: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }, project: any): void {
+    const { successes, failures } = result;
+
+    if (failures.length === 0) {
+      // All attachments saved successfully
+      const successMessage = this.isEditMode()
+        ? `Meeting updated successfully with ${successes.length} new attachment(s)`
+        : `Meeting created successfully with ${successes.length} attachment(s)`;
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: successMessage,
+      });
+    } else if (successes.length > 0) {
+      // Partial success
+      const partialMessage = this.isEditMode()
+        ? `Meeting updated with ${successes.length} attachments. ${failures.length} failed to save.`
+        : `Meeting created with ${successes.length} attachments. ${failures.length} failed to save.`;
+
+      this.messageService.add({
+        severity: 'warn',
+        summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
+        detail: partialMessage,
+      });
+    } else {
+      // All failed
+      const errorMessage = this.isEditMode()
+        ? 'Meeting updated but all attachments failed to save. You can add them later.'
+        : 'Meeting created but all attachments failed to save. You can add them later.';
+
+      this.messageService.add({
+        severity: 'warn',
+        summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
+        detail: errorMessage,
+      });
+    }
+
+    // Log individual failures for debugging
+    failures.forEach((failure) => {
+      console.error(`Failed to save attachment ${failure.fileName}:`, failure.error);
+    });
+
+    // Refresh attachments list if we're in edit mode
+    if (this.isEditMode()) {
+      this.attachmentsRefresh$.next();
+    }
+
+    this.router.navigate(['/project', project.slug, 'meetings']);
+  }
+
+  private showDeleteAttachmentConfirmation(meetingId: string, attachmentId: string, fileName: string): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete "${fileName}"? This action cannot be undone.`,
+      header: 'Delete Attachment',
+      icon: 'fa-light fa-exclamation-triangle',
+      acceptIcon: 'fa-light fa-trash',
+      rejectIcon: 'fa-light fa-times',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger p-button-text',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: () => {
+        this.deletingAttachmentId.set(attachmentId);
+        this.meetingService.deleteAttachment(meetingId, attachmentId).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: 'Attachment deleted successfully',
+            });
+            this.attachmentsRefresh$.next();
+            this.deletingAttachmentId.set(null);
+          },
+          error: (error) => {
+            console.error('Error deleting attachment:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to delete attachment. Please try again.',
+            });
+            this.deletingAttachmentId.set(null);
+          },
+        });
+      },
+    });
+  }
+
   private initializeMeeting() {
     return toSignal(
       this.route.paramMap.pipe(
@@ -628,5 +641,31 @@ export class MeetingManageComponent {
       ),
       { initialValue: [] }
     );
+  }
+
+  private stripMetadata(registrant: MeetingRegistrantWithState): CreateMeetingRegistrantRequest {
+    return {
+      meeting_uid: this.meetingId() as string,
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+    };
+  }
+
+  private getChangedFields(registrant: MeetingRegistrantWithState): UpdateMeetingRegistrantRequest {
+    // For PUT requests, return the complete object with all required and optional fields
+    return {
+      meeting_uid: registrant.meeting_uid,
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+      job_title: registrant.job_title || null,
+      org_name: registrant.org_name || null,
+      occurrence_id: registrant.occurrence_id || null,
+      avatar_url: registrant.avatar_url || null,
+      username: registrant.username || null,
+    };
   }
 }

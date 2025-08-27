@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import {
-  CreateMeetingRequest,
   CreateMeetingRegistrantRequest,
+  CreateMeetingRequest,
   ETagError,
   Meeting,
   MeetingRegistrant,
   QueryServiceResponse,
-  UpdateMeetingRequest,
   UpdateMeetingRegistrantRequest,
+  UpdateMeetingRequest,
 } from '@lfx-pcc/shared/interfaces';
 import { Request } from 'express';
 
 import { Logger } from '../helpers/logger';
 import { getUsernameFromAuth } from '../utils/auth-helper';
-import { ApiClientService } from './api-client.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
@@ -27,7 +26,7 @@ export class MeetingService {
   private microserviceProxy: MicroserviceProxyService;
 
   public constructor() {
-    this.microserviceProxy = new MicroserviceProxyService(new ApiClientService());
+    this.microserviceProxy = new MicroserviceProxyService();
     this.etagService = new ETagService(this.microserviceProxy);
   }
 
@@ -185,18 +184,27 @@ export class MeetingService {
    */
   public async getMeetingRegistrants(req: Request, meetingUid: string): Promise<MeetingRegistrant[]> {
     try {
-      const registrants = await this.microserviceProxy.proxyRequest<MeetingRegistrant[]>(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}/registrants`, 'GET');
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+        req,
+        'LFX_V2_SERVICE',
+        `/query/resources`,
+        'GET',
+        {
+          type: 'meeting_registrant',
+          tags: meetingUid,
+        }
+      );
 
       req.log.info(
         {
           operation: 'get_meeting_registrants',
           meeting_uid: meetingUid,
-          registrant_count: registrants.length,
+          registrant_count: resources.length,
         },
         'Meeting registrants fetched successfully'
       );
 
-      return registrants;
+      return resources.map((resource) => resource.data);
     } catch (error) {
       req.log.error(
         {

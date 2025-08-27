@@ -62,14 +62,13 @@
 
             <p-step-panel [value]="4" data-testid="meeting-manage-panel-4">
               <ng-template #content let-activateCallback="activateCallback">
-                <!-- @if (createdMeetingUid()) { -->
-                <lfx-meeting-registrants [meetingUid]="createdMeetingUid()!" (onBack)="onRegistrantsBack()" (onComplete)="onRegistrantsComplete()">
-                </lfx-meeting-registrants>
-                <!-- } @else {
+                @if (meetingId()) {
+                  <lfx-meeting-registrants [meetingUid]="meetingId()!" (onUpdate)="onRegistrantsUpdate($event)"> </lfx-meeting-registrants>
+                } @else {
                   <div class="text-center py-8 text-gray-500">
                     <p>Meeting must be created before managing guests.</p>
                   </div>
-                } -->
+                }
               </ng-template>
             </p-step-panel>
           </p-step-panels>
@@ -113,8 +112,7 @@
           <!-- Manage Guests Section -->
           <div class="border border-slate-200 rounded-lg p-6">
             <h2 class="text-lg font-semibold text-slate-900 mb-4">Manage Guests</h2>
-            <lfx-meeting-registrants [meetingUid]="meetingId()!" (onBack)="onRegistrantsBack()" (onComplete)="onRegistrantsComplete()">
-            </lfx-meeting-registrants>
+            <lfx-meeting-registrants [meetingUid]="meetingId()!" (onUpdate)="onRegistrantsUpdate($event)"> </lfx-meeting-registrants>
           </div>
         </div>
       }
@@ -174,13 +172,13 @@
               </lfx-button>
             } @else {
               <lfx-button
-                label="Add Guests"
-                icon="fa-light fa-check"
+                label="Invite Guests"
+                icon="fa-light fa-envelope"
                 size="small"
                 [loading]="submitting()"
                 [disabled]="!canProceed() || submitting()"
                 severity="primary"
-                (onClick)="onSubmit()"
+                (onClick)="onInviteGuests()"
                 data-testid="meeting-manage-submit-btn">
               </lfx-button>
             }

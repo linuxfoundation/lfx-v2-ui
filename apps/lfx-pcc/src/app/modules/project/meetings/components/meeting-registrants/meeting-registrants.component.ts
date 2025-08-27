@@ -2,23 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, input, output, signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, Signal, signal, WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import {
-  MeetingRegistrant,
-  MeetingRegistrantWithState,
-  RegistrantPendingChanges,
-  RegistrantState,
-  UpdateMeetingRegistrantRequest,
-} from '@lfx-pcc/shared/interfaces';
+import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantState } from '@lfx-pcc/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { take } from 'rxjs';
+import { catchError, finalize, of, take, tap } from 'rxjs';
 
 import { RegistrantCardComponent } from './registrant-card/registrant-card.component';
 import { RegistrantFormComponent } from './registrant-form/registrant-form.component';
@@ -40,13 +34,12 @@ import { RegistrantFormComponent } from './registrant-form/registrant-form.compo
   templateUrl: './meeting-registrants.component.html',
   styleUrl: './meeting-registrants.component.scss',
 })
-export class MeetingRegistrantsComponent {
+export class MeetingRegistrantsComponent implements OnInit {
   // Input signals
   public meetingUid = input.required<string>();
 
   // Output events
-  public readonly onBack = output<void>();
-  public readonly onComplete = output<void>();
+  public readonly onUpdate = output<MeetingRegistrantWithState[]>();
 
   // Injected services
   private readonly meetingService = inject(MeetingService);
@@ -58,9 +51,9 @@ export class MeetingRegistrantsComponent {
   public loading: WritableSignal<boolean> = signal(true);
   public searchForm: FormGroup;
   public addRegistrantForm: FormGroup;
+  public registrants: Signal<MeetingRegistrant[]> = signal([]);
 
   // Original data from API
-  private originalRegistrants: WritableSignal<MeetingRegistrant[]> = signal([]);
 
   // Component visibility states (following React pattern)
   public showAddForm = signal<boolean>(false);
@@ -116,31 +109,6 @@ export class MeetingRegistrantsComponent {
   public hostCount = computed(() => this.visibleRegistrants().filter((r) => r.host).length);
   public memberCount = computed(() => this.visibleRegistrants().filter((r) => r.org_is_member).length);
 
-  // Change tracking computed signals
-  public pendingChanges = computed((): RegistrantPendingChanges => {
-    const all = this.registrantsWithState();
-    return {
-      toAdd: all.filter((r) => r.state === 'new').map((r) => this.stripMetadata(r)),
-      toUpdate: all
-        .filter((r) => r.state === 'modified')
-        .map((r) => ({
-          uid: r.uid,
-          changes: this.getChangedFields(r),
-        })),
-      toDelete: all.filter((r) => r.state === 'deleted').map((r) => r.uid),
-    };
-  });
-
-  public hasUnsavedChanges = computed(() => {
-    const changes = this.pendingChanges();
-    return changes.toAdd.length > 0 || changes.toUpdate.length > 0 || changes.toDelete.length > 0;
-  });
-
-  public unsavedChangesCount = computed(() => {
-    const changes = this.pendingChanges();
-    return changes.toAdd.length + changes.toUpdate.length + changes.toDelete.length;
-  });
-
   // Form options
   public statusOptions = [
     { label: 'All Registrants', value: null },
@@ -165,23 +133,20 @@ export class MeetingRegistrantsComponent {
     this.searchForm.get('status')?.valueChanges.subscribe((value) => {
       this.statusFilter.set(value);
     });
-
-    this.initializeRegistrants();
-
-    effect(() => {
-      // Load registrants when meeting UID changes
-      if (this.meetingUid()) {
-        this.initializeRegistrants();
-      }
-    });
   }
 
-  public onAddRegistrant(): void {
+  public ngOnInit(): void {
+    this.initializeRegistrants();
+  }
+
+  public onToggleAddRegistrant(): void {
+    this.showAddForm.set(false);
     this.showAddForm.set(true);
   }
 
   public onBulkAdd(): void {
-    this.showImport.set(true); // Opens the combined import component
+    this.showAddForm.set(false);
+    this.showImport.set(true);
   }
 
   public refreshRegistrants(): void {
@@ -202,7 +167,7 @@ export class MeetingRegistrantsComponent {
   }
 
   // Action handlers
-  public handleAddRegistrantFromForm(): void {
+  public onAddRegistrant(): void {
     if (this.addRegistrantForm.valid) {
       const formValue = this.addRegistrantForm.value;
 
@@ -242,6 +207,9 @@ export class MeetingRegistrantsComponent {
 
     // Add to local state for immediate UI feedback
     this.registrantsWithState.update((registrants) => [...registrants, newRegistrant]);
+
+    // Emit the updated registrants
+    this.onUpdate.emit(this.registrantsWithState());
 
     // Reset and close form
     this.addRegistrantForm.reset();
@@ -289,6 +257,9 @@ export class MeetingRegistrantsComponent {
         return r;
       })
     );
+
+    // Emit the updated registrants
+    this.onUpdate.emit(this.registrantsWithState());
   }
 
   public handleRegistrantDelete(id: string): void {
@@ -316,84 +287,10 @@ export class MeetingRegistrantsComponent {
               .filter(Boolean) as MeetingRegistrantWithState[]
         );
 
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Participant will be removed when changes are saved',
-        });
+        // Emit the updated registrants
+        this.onUpdate.emit(this.registrantsWithState());
       },
     });
-  }
-
-  // Public method to sync all changes with API
-  public async syncRegistrantsWithAPI(): Promise<void> {
-    const changes = this.pendingChanges();
-
-    if (!this.hasUnsavedChanges()) {
-      return; // No changes to sync
-    }
-
-    try {
-      this.loading.set(true);
-
-      // Execute all API operations in parallel
-      const operations = [
-        // Create new registrants
-        ...changes.toAdd.map((registrant) =>
-          this.meetingService.addMeetingRegistrant({
-            ...registrant,
-            meeting_uid: this.meetingUid(),
-          })
-        ),
-        // Update existing registrants
-        ...changes.toUpdate.map((update) => this.meetingService.updateMeetingRegistrant(this.meetingUid(), update.uid, update.changes)),
-        // Delete registrants
-        ...changes.toDelete.map((uid) => this.meetingService.deleteMeetingRegistrant(this.meetingUid(), uid)),
-      ];
-
-      await Promise.all(operations);
-
-      // Refresh data from API
-      await this.loadRegistrantsFromAPI();
-
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `Successfully saved ${this.unsavedChangesCount()} changes`,
-      });
-    } catch (error) {
-      console.error('Failed to sync registrants:', error);
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to save changes. Please try again.',
-      });
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  // Helper methods for state management
-  private stripMetadata(registrant: MeetingRegistrantWithState): MeetingRegistrant {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { state, originalData, tempId, ...cleanRegistrant } = registrant;
-    return cleanRegistrant;
-  }
-
-  private getChangedFields(registrant: MeetingRegistrantWithState): UpdateMeetingRegistrantRequest {
-    // For PUT requests, return the complete object with all required and optional fields
-    return {
-      meeting_uid: registrant.meeting_uid,
-      email: registrant.email,
-      first_name: registrant.first_name,
-      last_name: registrant.last_name,
-      host: registrant.host || false,
-      job_title: registrant.job_title || null,
-      org_name: registrant.org_name || null,
-      occurrence_id: registrant.occurrence_id || null,
-      avatar_url: registrant.avatar_url || null,
-      username: registrant.username || null,
-    };
   }
 
   private generateTempId(): string {
@@ -409,141 +306,31 @@ export class MeetingRegistrantsComponent {
     };
   }
 
-  // Method to load fresh data from API and reset state
-  private async loadRegistrantsFromAPI(): Promise<void> {
+  private initializeRegistrants(): void {
     const uid = this.meetingUid();
     if (!uid) return;
 
-    try {
-      const registrants = (await this.meetingService.getMeetingRegistrants(uid).pipe(take(1)).toPromise()) as MeetingRegistrant[];
-      this.originalRegistrants.set(registrants || []);
+    this.meetingService
+      .getMeetingRegistrants(uid)
+      .pipe(
+        take(1),
+        catchError((error) => {
+          console.error('Error', error);
+          return of([]);
+        }),
+        finalize(() => {
+          this.loading.set(false);
+        }),
+        tap((registrants) => {
+          if (!registrants || registrants.length === 0) {
+            this.registrantsWithState.set([]);
+            return;
+          }
 
-      // Convert to state-tracked registrants
-      const registrantsWithState = (registrants || []).map((r) => this.createRegistrantWithState(r, 'existing'));
-      this.registrantsWithState.set(registrantsWithState);
-    } catch (error) {
-      console.error('Failed to load registrants:', error);
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to load participants',
-      });
-    }
-  }
-
-  private initializeRegistrants(): void {
-    // const uid = this.meetingUid();
-    // if (!uid) return;
-
-    // TODO: Remove mock data and use actual API call
-    const mockData = this.createMockRegistrants('123');
-    this.originalRegistrants.set(mockData);
-
-    // Convert to state-tracked registrants
-    const registrantsWithState = mockData.map((r) => this.createRegistrantWithState(r, 'existing'));
-    this.registrantsWithState.set(registrantsWithState);
-
-    this.loading.set(false);
-
-    // Actual API call (commented out for now)
-    // this.loading.set(true);
-    // this.meetingService.getMeetingRegistrants(uid).pipe(
-    //   take(1),
-    //   finalize(() => this.loading.set(false))
-    // ).subscribe(registrants => {
-    //   this.registrants.set(registrants);
-    //   // Populate FormArray with API data
-    // });
-  }
-
-  private createMockRegistrants(meetingUid: string): MeetingRegistrant[] {
-    return [
-      {
-        uid: '1',
-        meeting_uid: meetingUid,
-        occurrence_id: 'occurrence-1',
-        email: 'john.doe@example.com',
-        first_name: 'John',
-        last_name: 'Doe',
-        username: 'johndoe',
-        avatar_url: null,
-        job_title: 'Senior Software Engineer',
-        org_name: 'Tech Corp',
-        host: true,
-        org_is_member: true,
-        org_is_project_member: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        uid: '2',
-        meeting_uid: meetingUid,
-        occurrence_id: 'occurrence-2',
-        email: 'jane.smith@company.com',
-        first_name: 'Jane',
-        last_name: 'Smith',
-        username: 'janesmith',
-        avatar_url: null,
-        job_title: 'Product Manager',
-        org_name: 'Innovation Labs',
-        host: false,
-        org_is_member: false,
-        org_is_project_member: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        uid: '3',
-        meeting_uid: meetingUid,
-        occurrence_id: 'occurrence-3',
-        email: 'mike.wilson@startup.io',
-        first_name: 'Mike',
-        last_name: 'Wilson',
-        username: 'mikewilson',
-        avatar_url: null,
-        job_title: 'CTO',
-        org_name: 'StartupIO',
-        host: false,
-        org_is_member: true,
-        org_is_project_member: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        uid: '4',
-        meeting_uid: meetingUid,
-        occurrence_id: 'occurrence-4',
-        email: 'sarah.johnson@freelance.com',
-        first_name: 'Sarah',
-        last_name: 'Johnson',
-        username: 'sarahj',
-        avatar_url: null,
-        job_title: 'UX Designer',
-        org_name: null,
-        host: false,
-        org_is_member: false,
-        org_is_project_member: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        uid: '5',
-        meeting_uid: meetingUid,
-        occurrence_id: 'occurrence-5',
-        email: 'alex@consultant.com',
-        first_name: 'Alex',
-        last_name: 'Consultant',
-        username: 'alex_consultant',
-        avatar_url: null,
-        job_title: null,
-        org_name: null,
-        host: false,
-        org_is_member: false,
-        org_is_project_member: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
+          this.registrantsWithState.set(registrants.map((r) => this.createRegistrantWithState(r, 'existing')));
+        })
+      )
+      .subscribe();
   }
 
   private buildAddRegistrantForm(): FormGroup {

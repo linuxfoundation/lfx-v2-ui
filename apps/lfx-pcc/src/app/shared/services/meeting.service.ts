@@ -4,16 +4,16 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
-  CreateMeetingRequest,
   CreateMeetingRegistrantRequest,
+  CreateMeetingRequest,
   GenerateAgendaRequest,
   GenerateAgendaResponse,
   Meeting,
   MeetingAttachment,
   MeetingParticipant,
   MeetingRegistrant,
-  UpdateMeetingRequest,
   UpdateMeetingRegistrantRequest,
+  UpdateMeetingRequest,
   UploadFileResponse,
 } from '@lfx-pcc/shared/interfaces';
 import { catchError, defer, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
