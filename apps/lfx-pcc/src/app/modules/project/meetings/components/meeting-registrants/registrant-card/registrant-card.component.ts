@@ -7,14 +7,14 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { CheckboxComponent } from '@components/checkbox/checkbox.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MeetingRegistrant, MeetingRegistrantWithState } from '@lfx-pcc/shared/interfaces';
+
+import { RegistrantFormComponent } from '../registrant-form/registrant-form.component';
 
 @Component({
   selector: 'lfx-registrant-card',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, BadgeComponent, ButtonComponent, CheckboxComponent, InputTextComponent, CardComponent],
+  imports: [CommonModule, ReactiveFormsModule, BadgeComponent, ButtonComponent, CardComponent, RegistrantFormComponent],
   templateUrl: './registrant-card.component.html',
   styleUrl: './registrant-card.component.scss',
 })

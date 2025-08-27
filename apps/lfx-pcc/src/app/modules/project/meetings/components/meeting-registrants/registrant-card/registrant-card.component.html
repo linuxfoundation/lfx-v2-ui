@@ -3,61 +3,41 @@
 
 <div [attr.data-testid]="'registrant-' + registrant().uid">
   @if (isEditing()) {
-    <!-- Edit Form (inline editing following React pattern) -->
+    <!-- Edit Form using shared registrant-form component -->
     <lfx-card>
       <ng-template #header>
-        <div class="px-8 py-4 flex items-center justify-between">
+        <div class="px-8 pt-4 flex items-center justify-between">
           <h4 class="font-medium text-slate-900">Edit Participant</h4>
-          <lfx-button size="small" icon="fa-light fa-times" severity="secondary" (click)="handleCancelEdit()"> </lfx-button>
+          <lfx-button
+            size="small"
+            icon="fa-light fa-times"
+            [text]="true"
+            styleClass="text-gray-400 hover:text-gray-600"
+            severity="secondary"
+            (click)="handleCancelEdit()">
+          </lfx-button>
         </div>
       </ng-template>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" [formGroup]="form">
-        <!-- First Name -->
-        <div>
-          <lfx-input-text size="small" [form]="form" control="first_name" label="First Name" placeholder="Enter first name"> </lfx-input-text>
-        </div>
+      <!-- Use the shared registrant-form component -->
+      <lfx-registrant-form [form]="form" [registrant]="registrant()"> </lfx-registrant-form>
 
-        <!-- Last Name -->
-        <div>
-          <lfx-input-text size="small" [form]="form" control="last_name" label="Last Name" placeholder="Enter last name"> </lfx-input-text>
+      <ng-template #footer>
+        <div class="flex items-center justify-between">
+          <div class="text-sm">
+            @if (!form.valid) {
+              <span class="text-red-600">Please fill in all required fields correctly</span>
+            }
+            @if (form.dirty && form.valid) {
+              <span class="text-blue-600">Ready to save changes</span>
+            }
+          </div>
+          <div class="flex items-center gap-3">
+            <lfx-button size="small" label="Save Changes" severity="primary" [disabled]="!form.valid || !form.dirty" (click)="handleSaveEdit()"> </lfx-button>
+            <lfx-button size="small" label="Cancel" severity="secondary" (click)="handleCancelEdit()"> </lfx-button>
+          </div>
         </div>
-
-        <!-- Email -->
-        <div class="md:col-span-2">
-          <lfx-input-text size="small" [form]="form" control="email" label="Email" placeholder="Enter email address" type="email"> </lfx-input-text>
-        </div>
-
-        <!-- Job Title -->
-        <div>
-          <lfx-input-text size="small" [form]="form" control="job_title" label="Job Title" placeholder="Enter job title"> </lfx-input-text>
-        </div>
-
-        <!-- Organization -->
-        <div>
-          <lfx-input-text size="small" [form]="form" control="org_name" label="Organization" placeholder="Enter organization"> </lfx-input-text>
-        </div>
-
-        <!-- Host Toggle -->
-        <div class="md:col-span-2">
-          <lfx-checkbox [form]="form" control="host" label="Meeting Host" [binary]="true"> </lfx-checkbox>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <div class="text-sm">
-          @if (!form.valid) {
-            <span class="text-red-600">Please fill in all required fields correctly</span>
-          }
-          @if (form.dirty && form.valid) {
-            <span class="text-blue-600">Ready to save changes</span>
-          }
-        </div>
-        <div class="flex items-center gap-3">
-          <lfx-button size="small" label="Save Changes" severity="primary" [disabled]="!form.valid || !form.dirty" (click)="handleSaveEdit()"> </lfx-button>
-          <lfx-button size="small" label="Cancel" severity="secondary" (click)="handleCancelEdit()"> </lfx-button>
-        </div>
-      </div>
+      </ng-template>
     </lfx-card>
   } @else {
     <!-- Normal Display (Registrant Card Component) -->

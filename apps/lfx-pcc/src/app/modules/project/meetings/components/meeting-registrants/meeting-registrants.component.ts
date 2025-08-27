@@ -245,12 +245,6 @@ export class MeetingRegistrantsComponent {
         return r;
       })
     );
-
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Participant updated successfully',
-    });
   }
 
   public handleRegistrantDelete(id: string): void {
