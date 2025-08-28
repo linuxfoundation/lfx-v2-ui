@@ -41,9 +41,10 @@ export async function tokenRefreshMiddleware(req: Request, res: Response, next: 
           return;
         } catch (error) {
           req.log.error({ error }, 'Error during silent login');
-          await res.oidc.login({
-            returnTo: req.originalUrl,
-          });
+          if (req.method === 'GET' && req.accepts(['html'])) {
+            await res.oidc.login({ returnTo: req.originalUrl });
+            return;
+          }
 
           return;
         }
