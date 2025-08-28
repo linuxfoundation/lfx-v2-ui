@@ -84,7 +84,7 @@ export class MeetingService {
     return this.http.get<Meeting>(`/api/meetings/${id}`).pipe(
       catchError((error) => {
         console.error(`Failed to load meeting ${id}:`, error);
-        return of(error);
+        return throwError(() => error);
       }),
       tap((meeting) => this.meeting.set(meeting))
     );
@@ -104,7 +104,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error('Failed to create meeting:', error);
-        return of(error);
+        return throwError(() => error);
       }),
       tap(console.log)
     );
@@ -119,7 +119,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to update meeting ${id}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -133,7 +133,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete meeting ${id}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -143,7 +143,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to add participant to meeting ${meetingId}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -153,7 +153,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to update participant ${participantId} in meeting ${meetingId}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -163,7 +163,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete participant ${participantId} from meeting ${meetingId}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -221,7 +221,7 @@ export class MeetingService {
             take(1),
             catchError((error) => {
               console.error(`Failed to upload attachment to meeting ${meetingId}:`, error);
-              return of(error);
+              return throwError(() => error);
             })
           )
           .subscribe(observer);
@@ -248,7 +248,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to create attachment for meeting ${meetingId}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -258,7 +258,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete attachment ${attachmentId} from meeting ${meetingId}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -268,7 +268,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error('Failed to generate meeting agenda:', error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -287,7 +287,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to add registrants to meeting ${meetingUid}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -297,7 +297,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to update registrants in meeting ${meetingUid}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }
@@ -307,7 +307,7 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete registrants from meeting ${meetingUid}:`, error);
-        return of(error);
+        return throwError(() => error);
       })
     );
   }

@@ -237,10 +237,11 @@ export class MeetingController {
    */
   public async addMeetingRegistrants(req: Request, res: Response): Promise<void> {
     const { uid } = req.params;
-    const registrantData: CreateMeetingRegistrantRequest[] = req.body.map((registrant: CreateMeetingRegistrantRequest) => ({
-      ...registrant,
-      meeting_uid: uid,
-    }));
+    const registrantData: CreateMeetingRegistrantRequest[] =
+      req.body?.map((registrant: CreateMeetingRegistrantRequest) => ({
+        ...registrant,
+        meeting_uid: uid,
+      })) || [];
 
     const startTime = Logger.start(req, 'add_meeting_registrants', {
       meeting_uid: uid,
@@ -254,6 +255,14 @@ export class MeetingController {
 
         Responder.badRequest(res, 'Meeting UID is required', {
           code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      if (!Array.isArray(registrantData) || !registrantData.length) {
+        Logger.error(req, 'add_meeting_registrants', startTime, new Error('No registrants provided'));
+        Responder.badRequest(res, 'No registrants provided', {
+          code: 'MISSING_REGISTRANT_DATA',
         });
         return;
       }
@@ -300,15 +309,14 @@ export class MeetingController {
    */
   public async updateMeetingRegistrants(req: Request, res: Response): Promise<void> {
     const { uid } = req.params;
-    const updateData: { uid: string; changes: UpdateMeetingRegistrantRequest }[] = req.body.map(
-      (update: { uid: string; changes: UpdateMeetingRegistrantRequest }) => ({
+    const updateData: { uid: string; changes: UpdateMeetingRegistrantRequest }[] =
+      req.body?.map((update: { uid: string; changes: UpdateMeetingRegistrantRequest }) => ({
         ...update,
         changes: {
           ...update.changes,
           meeting_uid: uid,
         },
-      })
-    );
+      })) || [];
 
     const startTime = Logger.start(req, 'update_meeting_registrants', {
       meeting_uid: uid,
@@ -322,6 +330,14 @@ export class MeetingController {
 
         Responder.badRequest(res, 'Meeting UID is required', {
           code: 'MISSING_MEETING_UID',
+        });
+        return;
+      }
+
+      if (!Array.isArray(updateData) || !updateData.length) {
+        Logger.error(req, 'update_meeting_registrants', startTime, new Error('No registrants provided'));
+        Responder.badRequest(res, 'No registrants provided', {
+          code: 'MISSING_REGISTRANT_DATA',
         });
         return;
       }
@@ -380,7 +396,7 @@ export class MeetingController {
    */
   public async deleteMeetingRegistrants(req: Request, res: Response): Promise<void> {
     const { uid } = req.params;
-    const registrantUids: string[] = req.body;
+    const registrantUids: string[] = req.body || [];
 
     const startTime = Logger.start(req, 'delete_meeting_registrants', {
       meeting_uid: uid,
@@ -398,8 +414,16 @@ export class MeetingController {
         return;
       }
 
-      // Basic validation - only check for non-empty array
       if (!registrantUids.length) {
+        Logger.error(req, 'delete_meeting_registrants', startTime, new Error('Empty registrant UIDs array'));
+        Responder.badRequest(res, 'Empty registrant UIDs array', {
+          code: 'MISSING_REGISTRANT_UIDS',
+        });
+        return;
+      }
+
+      // Basic validation - only check for non-empty array
+      if (!Array.isArray(registrantUids) || !registrantUids.length || !req.body.every((item: string) => typeof item === 'string')) {
         Logger.error(req, 'delete_meeting_registrants', startTime, new Error('Empty registrant UIDs array'), {
           provided_count: registrantUids.length,
         });
