@@ -32,10 +32,15 @@ export class MeetingController {
       const meetings = await this.meetingService.getMeetings(req, req.query as Record<string, any>);
 
       // TODO: Remove this once we have a way to get the participants count
-      for (const meeting of meetings) {
-        const participants = await this.meetingService.getMeetingRegistrants(req, meeting.uid);
-        meeting.individual_participants_count = participants.length;
-      }
+      const counts = await Promise.all(
+        meetings.map(async (m) => {
+          const registrants = await this.meetingService.getMeetingRegistrants(req, m.uid);
+          return registrants.length;
+        })
+      );
+      meetings.forEach((m, i) => {
+        m.individual_participants_count = counts[i];
+      });
 
       Logger.success(req, 'get_meetings', startTime, {
         meeting_count: meetings.length,
@@ -343,7 +348,7 @@ export class MeetingController {
       }
 
       // Basic validation - only check for registrant UIDs
-      if (!updateData.some((update) => update.uid)) {
+      if (updateData.some((update) => !update.uid)) {
         Logger.error(req, 'update_meeting_registrants', startTime, new Error('Missing registrant UIDs for update'), {
           provided_uids: updateData.map((update) => update.uid).filter(Boolean),
         });

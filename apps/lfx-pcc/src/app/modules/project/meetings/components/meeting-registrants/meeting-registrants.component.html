@@ -92,8 +92,8 @@
         <!-- Tab Navigation (simplified, will be replaced with actual tabs component) -->
         <div class="border-b border-slate-200 mb-4">
           <div class="flex space-x-2">
-            <lfx-button size="small" label="Bulk Email Add" size="small" severity="primary" class="border-b-2 border-blue-500"> </lfx-button>
-            <lfx-button size="small" label="CSV Upload" size="small" severity="secondary"> </lfx-button>
+            <lfx-button size="small" label="Bulk Email Add" severity="primary" class="border-b-2 border-blue-500"> </lfx-button>
+            <lfx-button size="small" label="CSV Upload" severity="secondary"> </lfx-button>
           </div>
         </div>
 
@@ -116,15 +116,9 @@
 
         <ng-template #footer>
           <div class="flex gap-2">
-            <lfx-button
-              size="small"
-              label="Test Bulk Add"
-              size="small"
-              severity="primary"
-              (click)="handleBulkAdd({ emails: ['test1@example.com', 'test2@example.com'] })">
+            <lfx-button size="small" label="Test Bulk Add" severity="primary" (click)="handleBulkAdd({ emails: ['test1@example.com', 'test2@example.com'] })">
             </lfx-button>
-            <lfx-button size="small" label="Test CSV Import" size="small" severity="success" (click)="handleImportCSV({ csvData: 'sample csv data' })">
-            </lfx-button>
+            <lfx-button size="small" label="Test CSV Import" severity="success" (click)="handleImportCSV({ csvData: 'sample csv data' })"> </lfx-button>
             <lfx-button size="small" label="Cancel" [text]="true" styleClass="text-gray-400 hover:text-gray-600" severity="secondary" (click)="onCloseImport()">
             </lfx-button>
           </div>
@@ -192,7 +186,7 @@
       <!-- Registrants list -->
       @if (!loading() && filteredRegistrants().length > 0) {
         <div class="flex flex-col gap-2" data-testid="registrants-list">
-          @for (registrant of filteredRegistrants(); track registrant.uid) {
+          @for (registrant of filteredRegistrants(); track registrant.uid ?? registrant.tempId) {
             <lfx-registrant-card [registrant]="registrant" (onValidSave)="handleRegistrantUpdate($event)" (onDelete)="handleRegistrantDelete($event)">
             </lfx-registrant-card>
           }

@@ -240,7 +240,6 @@ export class MeetingService {
           operation: 'add_meeting_registrant',
           meeting_uid: registrantData.meeting_uid,
           registrant_uid: newRegistrant.uid,
-          email: registrantData.email,
           host: registrantData.host || false,
         },
         'Meeting registrant created successfully'
@@ -252,7 +251,6 @@ export class MeetingService {
         {
           operation: 'add_meeting_registrant',
           meeting_uid: registrantData.meeting_uid,
-          email: registrantData.email,
           error: error instanceof Error ? error.message : error,
         },
         'Failed to create meeting registrant'
@@ -297,7 +295,6 @@ export class MeetingService {
           operation: 'update_meeting_registrant',
           meeting_uid: meetingUid,
           registrant_uid: registrantUid,
-          email: updatedRegistrant.email,
         },
         'Meeting registrant updated successfully'
       );

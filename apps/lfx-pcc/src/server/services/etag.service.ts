@@ -77,7 +77,7 @@ export class ETagService {
       };
     } catch (error) {
       if (this.isETagError(error)) {
-        throw error;
+        req.log.error({ error }, 'ETag error');
       }
 
       // Let original error bubble up - don't transform here

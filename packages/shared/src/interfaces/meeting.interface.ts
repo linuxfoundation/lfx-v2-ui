@@ -396,7 +396,7 @@ export interface BatchDeleteMeetingRegistrantsRequest {
  */
 export interface RegistrantPendingChanges {
   /** Registrants to be created via API */
-  toAdd: MeetingRegistrant[];
+  toAdd: CreateMeetingRegistrantRequest[];
   /** Registrants to be updated via API */
   toUpdate: { uid: string; changes: UpdateMeetingRegistrantRequest }[];
   /** Registrant UIDs to be deleted via API */

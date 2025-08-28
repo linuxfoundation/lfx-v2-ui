@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ApiError, ApiResponse, ValidationApiError, ValidationError } from '../interfaces/api.interface';
+import { ApiError, ValidationApiError } from '../interfaces/api.interface';
 
 /**
  * Type guard to check if error is an ApiError

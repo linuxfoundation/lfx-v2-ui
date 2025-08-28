@@ -108,7 +108,7 @@ export const MEETING_STEP_TITLES = ['Meeting Type', 'Meeting Details', 'Platform
  * @description Must match the length of MEETING_STEP_TITLES array
  * @example 5 steps: Meeting Type → Details → Platform → Resources → Guests
  */
-export const TOTAL_STEPS = 5;
+export const TOTAL_STEPS = MEETING_STEP_TITLES.length;
 
 /**
  * Default meeting duration in minutes

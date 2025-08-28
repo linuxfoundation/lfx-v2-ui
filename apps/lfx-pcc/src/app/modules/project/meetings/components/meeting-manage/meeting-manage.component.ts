@@ -44,8 +44,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
 import { TabsModule } from 'primeng/tabs';
-import { catchError, concat, finalize, from, mergeMap, Observable, of, switchMap, take, toArray } from 'rxjs';
-import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
+import { BehaviorSubject, concat, from, Observable, of } from 'rxjs';
+import { catchError, finalize, mergeMap, switchMap, take, toArray } from 'rxjs/operators';
 
 import { MeetingDetailsComponent } from '../meeting-details/meeting-details.component';
 import { MeetingPlatformFeaturesComponent } from '../meeting-platform-features/meeting-platform-features.component';
