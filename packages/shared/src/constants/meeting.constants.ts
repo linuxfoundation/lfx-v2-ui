@@ -157,7 +157,7 @@ export const DEFAULT_MEETING_TYPE = 'None';
  * Default meeting platform
  * @description Primary platform used for hosting meetings
  */
-export const DEFAULT_MEETING_TOOL = 'zoom';
+export const DEFAULT_MEETING_TOOL = 'Zoom';
 
 /**
  * Default artifact visibility level

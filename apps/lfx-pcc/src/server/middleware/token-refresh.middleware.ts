@@ -8,11 +8,19 @@ import { validateAndSanitizeUrl, validateCookieDomain } from '../helpers/url-val
 export async function tokenRefreshMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
     if (req.oidc?.isAuthenticated() && req.oidc.accessToken?.isExpired()) {
+      req.log.debug('Token expired, refreshing token', {
+        is_authenticated: req.oidc?.isAuthenticated(),
+        is_expired: req.oidc.accessToken?.isExpired(),
+      });
       await req.oidc.accessToken.refresh();
     }
 
     // Check if sso cookie is present for the current environment
     if (!req.oidc?.isAuthenticated() && req.headers.cookie) {
+      req.log.debug('No authentication but cookie present, refreshing token', {
+        is_authenticated: req.oidc?.isAuthenticated(),
+        has_cookie: !!req.headers.cookie,
+      });
       const cookies = req.headers.cookie.split('; ');
       const environment = process.env['ENV'] as 'development' | 'staging' | 'production';
 
@@ -22,6 +30,10 @@ export async function tokenRefreshMiddleware(req: Request, res: Response, next: 
 
       if (ssoCookie && !skipSilentLogin) {
         try {
+          req.log.debug('Silent login', {
+            is_authenticated: req.oidc?.isAuthenticated(),
+            has_cookie: !!req.headers.cookie,
+          });
           // Silent login
           await res.oidc.login({
             silent: true,

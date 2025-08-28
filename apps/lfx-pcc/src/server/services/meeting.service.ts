@@ -45,12 +45,12 @@ export class MeetingService {
   }
 
   /**
-   * Fetches a single meeting by ID
+   * Fetches a single meeting by UID
    */
-  public async getMeetingById(req: Request, meetingId: string): Promise<Meeting> {
+  public async getMeetingById(req: Request, meetingUid: string): Promise<Meeting> {
     const params = {
       type: 'meeting',
-      tags: meetingId,
+      tags: meetingUid,
     };
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Meeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
@@ -67,10 +67,10 @@ export class MeetingService {
     if (resources.length > 1) {
       req.log.warn(
         {
-          meeting_id: meetingId,
+          meeting_uid: meetingUid,
           result_count: resources.length,
         },
-        'Multiple meetings found for single ID lookup'
+        'Multiple meetings found for single UID lookup'
       );
     }
 
@@ -112,9 +112,9 @@ export class MeetingService {
   /**
    * Updates a meeting using ETag for concurrency control
    */
-  public async updateMeeting(req: Request, meetingId: string, meetingData: UpdateMeetingRequest, editType?: 'single' | 'future'): Promise<Meeting> {
+  public async updateMeeting(req: Request, meetingUid: string, meetingData: UpdateMeetingRequest, editType?: 'single' | 'future'): Promise<Meeting> {
     // Step 1: Fetch meeting with ETag
-    const { etag, data } = await this.etagService.fetchWithETag<Meeting>(req, 'LFX_V2_SERVICE', `/meetings/${meetingId}`, 'update_meeting');
+    const { etag, data } = await this.etagService.fetchWithETag<Meeting>(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}`, 'update_meeting');
 
     // Get the logged-in user's username to maintain organizer if not provided
     const username = await getUsernameFromAuth(req);
@@ -138,7 +138,7 @@ export class MeetingService {
     req.log.info(sanitizedPayload, 'Updating meeting payload');
 
     // Step 2: Update meeting with ETag, including editType query parameter if provided
-    let path = `/meetings/${meetingId}`;
+    let path = `/meetings/${meetingUid}`;
     if (editType) {
       path += `?editType=${editType}`;
     }
@@ -148,7 +148,7 @@ export class MeetingService {
     req.log.info(
       {
         operation: 'update_meeting',
-        meeting_id: meetingId,
+        meeting_uid: meetingUid,
         project_uid: updatedMeeting.project_uid,
         title: updatedMeeting.title,
         edit_type: editType || 'single',
@@ -163,17 +163,17 @@ export class MeetingService {
   /**
    * Deletes a meeting using ETag for concurrency control
    */
-  public async deleteMeeting(req: Request, meetingId: string): Promise<void> {
+  public async deleteMeeting(req: Request, meetingUid: string): Promise<void> {
     // Step 1: Fetch meeting with ETag
-    const { etag } = await this.etagService.fetchWithETag<Meeting>(req, 'LFX_V2_SERVICE', `/meetings/${meetingId}`, 'delete_meeting');
+    const { etag } = await this.etagService.fetchWithETag<Meeting>(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}`, 'delete_meeting');
 
     // Step 2: Delete meeting with ETag
-    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', `/meetings/${meetingId}`, etag, 'delete_meeting');
+    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}`, etag, 'delete_meeting');
 
     req.log.info(
       {
         operation: 'delete_meeting',
-        meeting_id: meetingId,
+        meeting_uid: meetingUid,
       },
       'Meeting deleted successfully'
     );

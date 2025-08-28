@@ -25,7 +25,6 @@ import {
   CreateMeetingRequest,
   Meeting,
   MeetingAttachment,
-  MeetingRegistrantWithState,
   PendingAttachment,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
@@ -44,7 +43,9 @@ import { ProjectService } from '@services/project.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
-import { BehaviorSubject, catchError, from, mergeMap, Observable, of, switchMap, take, toArray } from 'rxjs';
+import { TabsModule } from 'primeng/tabs';
+import { catchError, concat, finalize, from, mergeMap, Observable, of, switchMap, take, toArray } from 'rxjs';
+import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 
 import { MeetingDetailsComponent } from '../meeting-details/meeting-details.component';
 import { MeetingPlatformFeaturesComponent } from '../meeting-platform-features/meeting-platform-features.component';
@@ -66,6 +67,7 @@ import { MeetingTypeSelectionComponent } from '../meeting-type-selection/meeting
     MeetingPlatformFeaturesComponent,
     MeetingResourcesSummaryComponent,
     MeetingRegistrantsComponent,
+    TabsModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-manage.component.html',
@@ -118,6 +120,9 @@ export class MeetingManageComponent {
   public readonly isLastMeetingStep = computed(() => this.currentStep() === this.totalSteps - 2);
   public readonly isLastStep = computed(() => this.currentStep() === this.totalSteps - 1);
   public readonly currentStepTitle = computed(() => this.getStepTitle(this.currentStep()));
+  public readonly hasRegistrantUpdates = computed(
+    () => this.registrantUpdates().toAdd.length > 0 || this.registrantUpdates().toUpdate.length > 0 || this.registrantUpdates().toDelete.length > 0
+  );
 
   public constructor() {
     // Subscribe to form value changes and update validation signals
@@ -220,21 +225,61 @@ export class MeetingManageComponent {
     this.showDeleteAttachmentConfirmation(meetingId, attachmentId, fileName);
   }
 
-  public onRegistrantsUpdate(registrants: MeetingRegistrantWithState[]): void {
-    this.registrantUpdates.set({
-      toAdd: registrants.filter((r) => r.state === 'new').map((r) => this.stripMetadata(r)),
-      toUpdate: registrants
-        .filter((r) => r.state === 'modified')
-        .map((r) => ({
-          uid: r.uid,
-          changes: this.getChangedFields(r),
-        })),
-      toDelete: registrants.filter((r) => r.state === 'deleted').map((r) => r.uid),
-    });
-  }
+  public onManageRegistrants(): void {
+    this.submitting.set(true);
 
-  public onInviteGuests(): void {
-    console.info('Invite guests', this.registrantUpdates());
+    const registrantUpdates = this.registrantUpdates();
+    // Build an array of operations based on what data we have
+    const operations: Observable<any>[] = this.buildRegistrantOperations();
+
+    // If no operations, just complete
+    if (operations.length === 0) {
+      this.submitting.set(false);
+      this.messageService.add({
+        severity: 'info',
+        summary: 'No Changes',
+        detail: 'No registrant changes to save',
+      });
+      return;
+    }
+
+    // Execute operations sequentially using concat
+    concat(...operations)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        complete: () => {
+          // Build success message based on what was done
+          const actions: string[] = [];
+          if (registrantUpdates.toDelete.length > 0) {
+            actions.push(`deleted ${registrantUpdates.toDelete.length}`);
+          }
+          if (registrantUpdates.toUpdate.length > 0) {
+            actions.push(`updated ${registrantUpdates.toUpdate.length}`);
+          }
+          if (registrantUpdates.toAdd.length > 0) {
+            actions.push(`added ${registrantUpdates.toAdd.length}`);
+          }
+
+          const message = `Successfully ${actions.join(', ')} registrant(s)`;
+
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: message,
+          });
+
+          if (!this.isEditMode()) {
+            this.router.navigate(['/project', this.projectService.project()?.slug, 'meetings']);
+          } else {
+            // Reset registrant updates
+            this.registrantUpdates.set({
+              toAdd: [],
+              toUpdate: [],
+              toDelete: [],
+            });
+          }
+        },
+      });
   }
 
   // Private methods
@@ -264,6 +309,7 @@ export class MeetingManageComponent {
       },
       artifact_visibility: formValue.artifact_visibility || DEFAULT_ARTIFACT_VISIBILITY,
       recurrence: recurrenceObject,
+      platform: formValue.meetingTool || DEFAULT_MEETING_TOOL,
     };
   }
 
@@ -643,29 +689,62 @@ export class MeetingManageComponent {
     );
   }
 
-  private stripMetadata(registrant: MeetingRegistrantWithState): CreateMeetingRegistrantRequest {
-    return {
-      meeting_uid: this.meetingId() as string,
-      email: registrant.email,
-      first_name: registrant.first_name,
-      last_name: registrant.last_name,
-      host: registrant.host || false,
-    };
-  }
+  private buildRegistrantOperations(): Observable<any>[] {
+    const operations: Observable<any>[] = [];
+    const meetingId = this.meetingId()!;
+    const registrantUpdates = this.registrantUpdates();
 
-  private getChangedFields(registrant: MeetingRegistrantWithState): UpdateMeetingRegistrantRequest {
-    // For PUT requests, return the complete object with all required and optional fields
-    return {
-      meeting_uid: registrant.meeting_uid,
-      email: registrant.email,
-      first_name: registrant.first_name,
-      last_name: registrant.last_name,
-      host: registrant.host || false,
-      job_title: registrant.job_title || null,
-      org_name: registrant.org_name || null,
-      occurrence_id: registrant.occurrence_id || null,
-      avatar_url: registrant.avatar_url || null,
-      username: registrant.username || null,
-    };
+    // Add delete operation if there are registrants to delete
+    if (registrantUpdates.toDelete.length > 0) {
+      operations.push(
+        this.meetingService.deleteMeetingRegistrants(meetingId, registrantUpdates.toDelete).pipe(
+          catchError((error) => {
+            console.error('Error deleting registrants:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Delete Failed',
+              detail: `Failed to delete ${registrantUpdates.toDelete.length} registrant(s)`,
+            });
+            return of(null);
+          })
+        )
+      );
+    }
+
+    // Add update operation if there are registrants to update
+    if (registrantUpdates.toUpdate.length > 0) {
+      operations.push(
+        this.meetingService.updateMeetingRegistrants(meetingId, registrantUpdates.toUpdate).pipe(
+          catchError((error) => {
+            console.error('Error updating registrants:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Update Failed',
+              detail: `Failed to update ${registrantUpdates.toUpdate.length} registrant(s)`,
+            });
+            return of(null);
+          })
+        )
+      );
+    }
+
+    // Add create operation if there are registrants to add
+    if (registrantUpdates.toAdd.length > 0) {
+      operations.push(
+        this.meetingService.addMeetingRegistrants(meetingId, registrantUpdates.toAdd).pipe(
+          catchError((error) => {
+            console.error('Error adding registrants:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Add Failed',
+              detail: `Failed to add ${registrantUpdates.toAdd.length} registrant(s)`,
+            });
+            return of(null);
+          })
+        )
+      );
+    }
+
+    return operations;
   }
 }

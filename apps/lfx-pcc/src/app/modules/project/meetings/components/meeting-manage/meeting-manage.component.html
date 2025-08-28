@@ -63,7 +63,7 @@
             <p-step-panel [value]="4" data-testid="meeting-manage-panel-4">
               <ng-template #content let-activateCallback="activateCallback">
                 @if (meetingId()) {
-                  <lfx-meeting-registrants [meetingUid]="meetingId()!" (onUpdate)="onRegistrantsUpdate($event)"> </lfx-meeting-registrants>
+                  <lfx-meeting-registrants [meetingUid]="meetingId()!" [(registrantUpdates)]="registrantUpdates"> </lfx-meeting-registrants>
                 } @else {
                   <div class="text-center py-8 text-gray-500">
                     <p>Meeting must be created before managing guests.</p>
@@ -77,44 +77,55 @@
 
       <!-- EDIT MODE: Single Page Layout -->
       @if (isEditMode()) {
-        <div class="space-y-8" data-testid="meeting-manage-single-page">
-          <!-- Meeting Type Section -->
-          <div class="border border-slate-200 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Meeting Type</h2>
-            <lfx-meeting-type-selection [form]="form()"></lfx-meeting-type-selection>
-          </div>
+        <p-tabs [(value)]="currentStep">
+          <p-tablist>
+            <p-tab [value]="0">Meeting Details</p-tab>
+            <p-tab [value]="1">Manage Guests</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel [value]="0">
+              <div class="space-y-8" data-testid="meeting-manage-single-page">
+                <!-- Meeting Type Section -->
+                <div class="border border-slate-200 rounded-lg p-6">
+                  <h2 class="text-lg font-semibold text-slate-900 mb-4">Meeting Type</h2>
+                  <lfx-meeting-type-selection [form]="form()"></lfx-meeting-type-selection>
+                </div>
 
-          <!-- Meeting Details Section -->
-          <div class="border border-slate-200 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Meeting Details</h2>
-            <lfx-meeting-details [form]="form()"></lfx-meeting-details>
-          </div>
+                <!-- Meeting Details Section -->
+                <div class="border border-slate-200 rounded-lg p-6">
+                  <h2 class="text-lg font-semibold text-slate-900 mb-4">Meeting Details</h2>
+                  <lfx-meeting-details [form]="form()"></lfx-meeting-details>
+                </div>
 
-          <!-- Platform & Features Section -->
-          <div class="border border-slate-200 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Platform & Features</h2>
-            <lfx-meeting-platform-features [form]="form()"></lfx-meeting-platform-features>
-          </div>
+                <!-- Platform & Features Section -->
+                <div class="border border-slate-200 rounded-lg p-6">
+                  <h2 class="text-lg font-semibold text-slate-900 mb-4">Platform & Features</h2>
+                  <lfx-meeting-platform-features [form]="form()"></lfx-meeting-platform-features>
+                </div>
 
-          <!-- Resources & Summary Section -->
-          <div class="border border-slate-200 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Resources & Summary</h2>
-            <lfx-meeting-resources-summary
-              [form]="form()"
-              [existingAttachments]="attachments()"
-              [isEditMode]="isEditMode()"
-              [deletingAttachmentId]="deletingAttachmentId()"
-              (goToStep)="goToStep($event)"
-              (deleteAttachment)="deleteAttachment($event)">
-            </lfx-meeting-resources-summary>
-          </div>
-
-          <!-- Manage Guests Section -->
-          <div class="border border-slate-200 rounded-lg p-6">
-            <h2 class="text-lg font-semibold text-slate-900 mb-4">Manage Guests</h2>
-            <lfx-meeting-registrants [meetingUid]="meetingId()!" (onUpdate)="onRegistrantsUpdate($event)"> </lfx-meeting-registrants>
-          </div>
-        </div>
+                <!-- Resources & Summary Section -->
+                <div class="border border-slate-200 rounded-lg p-6">
+                  <h2 class="text-lg font-semibold text-slate-900 mb-4">Resources & Summary</h2>
+                  <lfx-meeting-resources-summary
+                    [form]="form()"
+                    [existingAttachments]="attachments()"
+                    [isEditMode]="isEditMode()"
+                    [deletingAttachmentId]="deletingAttachmentId()"
+                    (goToStep)="goToStep($event)"
+                    (deleteAttachment)="deleteAttachment($event)">
+                  </lfx-meeting-resources-summary>
+                </div>
+              </div>
+            </p-tabpanel>
+            <p-tabpanel [value]="1">
+              <!-- Manage Guests Section -->
+              <div class="border border-slate-200 rounded-lg p-6">
+                <h2 class="text-lg font-semibold text-slate-900 mb-4">Manage Guests</h2>
+                <lfx-meeting-registrants [meetingUid]="meetingId()!" [(registrantUpdates)]="registrantUpdates"> </lfx-meeting-registrants>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
       }
     </div>
 
@@ -176,24 +187,37 @@
                 icon="fa-light fa-envelope"
                 size="small"
                 [loading]="submitting()"
-                [disabled]="!canProceed() || submitting()"
+                [disabled]="!hasRegistrantUpdates() || submitting()"
                 severity="primary"
-                (onClick)="onInviteGuests()"
+                (onClick)="onManageRegistrants()"
                 data-testid="meeting-manage-submit-btn">
               </lfx-button>
             }
           } @else {
             <!-- EDIT MODE: Update Button -->
-            <lfx-button
-              label="Update Meeting"
-              icon="fa-light fa-check"
-              size="small"
-              [loading]="submitting()"
-              [disabled]="submitting()"
-              [severity]="'primary'"
-              (onClick)="onSubmit()"
-              data-testid="meeting-manage-update-btn">
-            </lfx-button>
+            @if (currentStep() === 0) {
+              <lfx-button
+                label="Update Meeting"
+                icon="fa-light fa-check"
+                size="small"
+                [loading]="submitting()"
+                [disabled]="submitting()"
+                [severity]="'primary'"
+                (onClick)="onSubmit()"
+                data-testid="meeting-manage-update-btn">
+              </lfx-button>
+            } @else {
+              <lfx-button
+                label="Update Guests"
+                icon="fa-light fa-envelope"
+                size="small"
+                [loading]="submitting()"
+                [disabled]="!hasRegistrantUpdates() || submitting()"
+                severity="primary"
+                (onClick)="onManageRegistrants()"
+                data-testid="meeting-manage-submit-btn">
+              </lfx-button>
+            }
           }
         </div>
       </div>

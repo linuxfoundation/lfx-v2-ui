@@ -8,9 +8,15 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantState } from '@lfx-pcc/shared/interfaces';
+import {
+  CreateMeetingRegistrantRequest,
+  MeetingRegistrant,
+  MeetingRegistrantWithState,
+  RegistrantState,
+  UpdateMeetingRegistrantRequest,
+} from '@lfx-pcc/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { catchError, finalize, of, take, tap } from 'rxjs';
 
@@ -37,13 +43,21 @@ import { RegistrantFormComponent } from './registrant-form/registrant-form.compo
 export class MeetingRegistrantsComponent implements OnInit {
   // Input signals
   public meetingUid = input.required<string>();
+  public registrantUpdates = input.required<{
+    toAdd: CreateMeetingRegistrantRequest[];
+    toUpdate: { uid: string; changes: UpdateMeetingRegistrantRequest }[];
+    toDelete: string[];
+  }>();
 
-  // Output events
-  public readonly onUpdate = output<MeetingRegistrantWithState[]>();
+  // Output events for two-way binding
+  public readonly registrantUpdatesChange = output<{
+    toAdd: CreateMeetingRegistrantRequest[];
+    toUpdate: { uid: string; changes: UpdateMeetingRegistrantRequest }[];
+    toDelete: string[];
+  }>();
 
   // Injected services
   private readonly meetingService = inject(MeetingService);
-  private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
   // State signals
@@ -208,8 +222,8 @@ export class MeetingRegistrantsComponent implements OnInit {
     // Add to local state for immediate UI feedback
     this.registrantsWithState.update((registrants) => [...registrants, newRegistrant]);
 
-    // Emit the updated registrants
-    this.onUpdate.emit(this.registrantsWithState());
+    // Emit updated registrant updates using the conversion logic
+    this.emitRegistrantUpdates();
 
     // Reset and close form
     this.addRegistrantForm.reset();
@@ -258,8 +272,8 @@ export class MeetingRegistrantsComponent implements OnInit {
       })
     );
 
-    // Emit the updated registrants
-    this.onUpdate.emit(this.registrantsWithState());
+    // Emit updated registrant updates using the conversion logic
+    this.emitRegistrantUpdates();
   }
 
   public handleRegistrantDelete(id: string): void {
@@ -287,14 +301,14 @@ export class MeetingRegistrantsComponent implements OnInit {
               .filter(Boolean) as MeetingRegistrantWithState[]
         );
 
-        // Emit the updated registrants
-        this.onUpdate.emit(this.registrantsWithState());
+        // Emit updated registrant updates using the conversion logic
+        this.emitRegistrantUpdates();
       },
     });
   }
 
   private generateTempId(): string {
-    return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private createRegistrantWithState(registrant: MeetingRegistrant, state: RegistrantState = 'existing'): MeetingRegistrantWithState {
@@ -342,5 +356,45 @@ export class MeetingRegistrantsComponent implements OnInit {
       org_name: new FormControl(''),
       host: new FormControl(false),
     });
+  }
+
+  // Reuse the conversion logic from onRegistrantsUpdate
+  private emitRegistrantUpdates(): void {
+    const registrants = this.registrantsWithState();
+    this.registrantUpdatesChange.emit({
+      toAdd: registrants.filter((r) => r.state === 'new').map((r) => this.stripMetadata(r)),
+      toUpdate: registrants
+        .filter((r) => r.state === 'modified')
+        .map((r) => ({
+          uid: r.uid,
+          changes: this.getChangedFields(r),
+        })),
+      toDelete: registrants.filter((r) => r.state === 'deleted').map((r) => r.uid),
+    });
+  }
+
+  private stripMetadata(registrant: MeetingRegistrantWithState): CreateMeetingRegistrantRequest {
+    return {
+      meeting_uid: this.meetingUid(),
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+    };
+  }
+
+  private getChangedFields(registrant: MeetingRegistrantWithState): UpdateMeetingRegistrantRequest {
+    return {
+      meeting_uid: registrant.meeting_uid,
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+      job_title: registrant.job_title || null,
+      org_name: registrant.org_name || null,
+      occurrence_id: registrant.occurrence_id || null,
+      avatar_url: registrant.avatar_url || null,
+      username: registrant.username || null,
+    };
   }
 }

@@ -4,9 +4,9 @@
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, sanitizeFilename } from '@lfx-pcc/shared';
 import { NextFunction, Request, Response, Router } from 'express';
 
+import { MeetingController } from '../controllers/meeting.controller';
 import { AiService } from '../services/ai.service';
 import { SupabaseService } from '../services/supabase.service';
-import { MeetingController } from '../controllers/meeting.controller';
 
 const router = Router();
 
@@ -14,23 +14,36 @@ const supabaseService = new SupabaseService();
 const aiService = new AiService();
 const meetingController = new MeetingController();
 
-// GET /meetings - using new controller pattern
+// GET /meetings - get all meetings
 router.get('/', (req, res) => meetingController.getMeetings(req, res));
 
-// GET /meetings/:id - using new controller pattern
-router.get('/:id', (req, res) => meetingController.getMeetingById(req, res));
+// GET /meetings/:uid - get a single meeting
+router.get('/:uid', (req, res) => meetingController.getMeetingById(req, res));
 
-// POST /meetings - using new controller pattern
+// POST /meetings - create a new meeting
 router.post('/', (req, res) => meetingController.createMeeting(req, res));
 
-// PUT /meetings/:id - using new controller pattern
-router.put('/:id', (req, res) => meetingController.updateMeeting(req, res));
+// PUT /meetings/:uid - update a meeting
+router.put('/:uid', (req, res) => meetingController.updateMeeting(req, res));
 
-router.delete('/:id', (req, res) => meetingController.deleteMeeting(req, res));
+// DELETE /meetings/:uid - delete a meeting
+router.delete('/:uid', (req, res) => meetingController.deleteMeeting(req, res));
 
-router.post('/:id/attachments/upload', async (req: Request, res: Response, next: NextFunction) => {
+// Registrant routes
+router.get('/:uid/registrants', (req, res) => meetingController.getMeetingRegistrants(req, res));
+
+// POST /meetings/:uid/registrants - add registrants (handles single or multiple)
+router.post('/:uid/registrants', (req, res) => meetingController.addMeetingRegistrants(req, res));
+
+// PUT /meetings/:uid/registrants - update registrants (handles single or multiple)
+router.put('/:uid/registrants', (req, res) => meetingController.updateMeetingRegistrants(req, res));
+
+// DELETE /meetings/:uid/registrants - delete registrants (handles single or multiple)
+router.delete('/:uid/registrants', (req, res) => meetingController.deleteMeetingRegistrants(req, res));
+
+router.post('/:uid/attachments/upload', async (req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  const meetingId = req.params['id'];
+  const meetingId = req.params['uid'];
   const { fileName, fileData, mimeType, fileSize } = req.body;
 
   req.log.info(
@@ -156,7 +169,6 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
       file_url: uploadResult.url,
       file_size: fileSize || buffer.length,
       mime_type: mimeType,
-      // uploaded_by: req.user?.id, // TODO: Add user ID from auth context
     });
 
     const duration = Date.now() - startTime;
@@ -192,9 +204,9 @@ router.post('/:id/attachments/upload', async (req: Request, res: Response, next:
   }
 });
 
-router.delete('/:id/attachments/:attachmentId', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:uid/attachments/:attachmentId', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const meetingId = req.params['id'];
+    const meetingId = req.params['uid'];
     const attachmentId = req.params['attachmentId'];
 
     if (!meetingId) {
@@ -305,9 +317,9 @@ router.post('/storage/upload', async (req: Request, res: Response, next: NextFun
 });
 
 // Meeting attachment routes
-router.post('/:id/attachments', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:uid/attachments', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const meetingId = req.params['id'];
+    const meetingId = req.params['uid'];
     const attachmentData = req.body;
 
     if (!meetingId) {
@@ -346,9 +358,9 @@ router.post('/:id/attachments', async (req: Request, res: Response, next: NextFu
   }
 });
 
-router.get('/:id/attachments', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:uid/attachments', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const meetingId = req.params['id'];
+    const meetingId = req.params['uid'];
 
     if (!meetingId) {
       return res.status(400).json({
@@ -429,11 +441,5 @@ router.post('/generate-agenda', async (req: Request, res: Response, next: NextFu
     return next(error);
   }
 });
-
-// Registrant routes - using new controller pattern
-router.get('/:uid/registrants', (req, res) => meetingController.getMeetingRegistrants(req, res));
-router.post('/:uid/registrants', (req, res) => meetingController.addMeetingRegistrant(req, res));
-router.put('/:uid/registrants/:registrantUid', (req, res) => meetingController.updateMeetingRegistrant(req, res));
-router.delete('/:uid/registrants/:registrantUid', (req, res) => meetingController.deleteMeetingRegistrant(req, res));
 
 export default router;

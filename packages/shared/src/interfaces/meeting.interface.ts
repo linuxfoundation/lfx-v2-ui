@@ -374,6 +374,24 @@ export interface MeetingRegistrantWithState extends MeetingRegistrant {
 }
 
 /**
+ * Batch update request for meeting registrants
+ * @description Request payload for updating multiple registrants at once
+ */
+export interface BatchUpdateMeetingRegistrantsRequest {
+  /** Array of registrants to update with their UIDs and change data */
+  registrants: { uid: string; changes: UpdateMeetingRegistrantRequest }[];
+}
+
+/**
+ * Batch delete request for meeting registrants
+ * @description Request payload for deleting multiple registrants at once
+ */
+export interface BatchDeleteMeetingRegistrantsRequest {
+  /** Array of registrant UIDs to delete */
+  registrantUids: string[];
+}
+
+/**
  * Pending changes summary for registrants
  */
 export interface RegistrantPendingChanges {
