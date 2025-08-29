@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
+  BatchRegistrantOperationResponse,
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   GenerateAgendaRequest,
@@ -242,8 +244,11 @@ export class MeetingService {
     );
   }
 
-  public addMeetingRegistrants(meetingUid: string, registrantData: CreateMeetingRegistrantRequest[]): Observable<MeetingRegistrant[]> {
-    return this.http.post<MeetingRegistrant[]>(`/api/meetings/${meetingUid}/registrants`, registrantData).pipe(
+  public addMeetingRegistrants(
+    meetingUid: string,
+    registrantData: CreateMeetingRegistrantRequest[]
+  ): Observable<BatchRegistrantOperationResponse<MeetingRegistrant>> {
+    return this.http.post<BatchRegistrantOperationResponse<MeetingRegistrant>>(`/api/meetings/${meetingUid}/registrants`, registrantData).pipe(
       take(1),
       catchError((error) => {
         console.error(`Failed to add registrants to meeting ${meetingUid}:`, error);
@@ -252,8 +257,11 @@ export class MeetingService {
     );
   }
 
-  public updateMeetingRegistrants(meetingUid: string, updateData: { uid: string; changes: UpdateMeetingRegistrantRequest }[]): Observable<MeetingRegistrant[]> {
-    return this.http.put<MeetingRegistrant[]>(`/api/meetings/${meetingUid}/registrants`, updateData).pipe(
+  public updateMeetingRegistrants(
+    meetingUid: string,
+    updateData: { uid: string; changes: UpdateMeetingRegistrantRequest }[]
+  ): Observable<BatchRegistrantOperationResponse<MeetingRegistrant>> {
+    return this.http.put<BatchRegistrantOperationResponse<MeetingRegistrant>>(`/api/meetings/${meetingUid}/registrants`, updateData).pipe(
       take(1),
       catchError((error) => {
         console.error(`Failed to update registrants in meeting ${meetingUid}:`, error);
@@ -262,14 +270,68 @@ export class MeetingService {
     );
   }
 
-  public deleteMeetingRegistrants(meetingUid: string, registrantUids: string[]): Observable<void> {
-    return this.http.delete<void>(`/api/meetings/${meetingUid}/registrants`, { body: registrantUids }).pipe(
+  public deleteMeetingRegistrants(meetingUid: string, registrantUids: string[]): Observable<BatchRegistrantOperationResponse<string>> {
+    return this.http.delete<BatchRegistrantOperationResponse<string>>(`/api/meetings/${meetingUid}/registrants`, { body: registrantUids }).pipe(
       take(1),
       catchError((error) => {
         console.error(`Failed to delete registrants from meeting ${meetingUid}:`, error);
         return throwError(() => error);
       })
     );
+  }
+
+  /**
+   * Strips metadata from MeetingRegistrantWithState to create CreateMeetingRegistrantRequest
+   */
+  public stripMetadata(meetingUid: string, registrant: any): CreateMeetingRegistrantRequest {
+    return {
+      meeting_uid: meetingUid,
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+      job_title: registrant.job_title || null,
+      org_name: registrant.org_name || null,
+    };
+  }
+
+  /**
+   * Gets changed fields from MeetingRegistrantWithState to create UpdateMeetingRegistrantRequest
+   */
+  public getChangedFields(registrant: any): UpdateMeetingRegistrantRequest {
+    return {
+      meeting_uid: registrant.meeting_uid,
+      email: registrant.email,
+      first_name: registrant.first_name,
+      last_name: registrant.last_name,
+      host: registrant.host || false,
+      job_title: registrant.job_title || null,
+      org_name: registrant.org_name || null,
+      occurrence_id: registrant.occurrence_id || null,
+      avatar_url: registrant.avatar_url || null,
+      username: registrant.username || null,
+    };
+  }
+
+  /**
+   * Creates a form group for registrant data entry
+   */
+  public createRegistrantFormGroup(includeAddMore: boolean = false): FormGroup {
+    const controls: any = {
+      first_name: new FormControl('', [Validators.required, Validators.minLength(2)]),
+      last_name: new FormControl('', [Validators.required, Validators.minLength(2)]),
+      email: new FormControl('', [Validators.required, Validators.email]),
+      job_title: new FormControl(''),
+      org_name: new FormControl(''),
+      host: new FormControl(false),
+    };
+
+    // Add the add_more_registrants control only if requested (for modal)
+    if (includeAddMore) {
+      controls.add_more_registrants = new FormControl(false);
+    }
+
+    return new FormGroup(controls);
   }
 
   private readFileAsBase64(file: File): Promise<string> {
@@ -286,4 +348,6 @@ export class MeetingService {
       reader.readAsDataURL(file);
     });
   }
+
+  // Meeting-specific utility functions for registrant data handling
 }
