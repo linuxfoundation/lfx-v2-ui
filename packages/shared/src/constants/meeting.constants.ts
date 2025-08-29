@@ -163,7 +163,7 @@ export const DEFAULT_MEETING_TOOL = 'Zoom';
  * Default artifact visibility level
  * @description Who can access meeting artifacts (recordings, transcripts, AI summaries) by default
  */
-export const DEFAULT_ARTIFACT_VISIBILITY = 'meeting_participants';
+export const DEFAULT_ARTIFACT_VISIBILITY = 'meeting_registrants';
 
 /**
  * Default repeat interval for recurring meetings
