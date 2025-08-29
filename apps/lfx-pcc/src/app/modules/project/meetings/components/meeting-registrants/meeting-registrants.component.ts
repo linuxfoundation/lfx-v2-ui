@@ -20,8 +20,8 @@ import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { catchError, finalize, of, take, tap } from 'rxjs';
 
-import { RegistrantCardComponent } from './registrant-card/registrant-card.component';
-import { RegistrantFormComponent } from './registrant-form/registrant-form.component';
+import { RegistrantCardComponent } from '../registrant-card/registrant-card.component';
+import { RegistrantFormComponent } from '../registrant-form/registrant-form.component';
 
 @Component({
   selector: 'lfx-meeting-registrants',

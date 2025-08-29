@@ -90,15 +90,6 @@ export class MeetingService {
     );
   }
 
-  public getMeetingParticipants(meetingId: string): Observable<MeetingParticipant[]> {
-    return this.http.get<MeetingParticipant[]>(`/api/meetings/${meetingId}/participants`).pipe(
-      catchError((error) => {
-        console.error(`Failed to load participants for meeting ${meetingId}:`, error);
-        return of([]);
-      })
-    );
-  }
-
   public createMeeting(meeting: CreateMeetingRequest): Observable<Meeting> {
     return this.http.post<Meeting>('/api/meetings', meeting).pipe(
       take(1),

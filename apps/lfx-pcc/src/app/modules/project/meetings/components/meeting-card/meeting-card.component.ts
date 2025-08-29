@@ -3,7 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
@@ -22,11 +22,11 @@ import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, finalize, map, of, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
 
 import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
-import { ParticipantFormComponent } from '../participant-form/participant-form.component';
+import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
 
 @Component({
   selector: 'lfx-meeting-card',
@@ -67,7 +67,8 @@ export class MeetingCardComponent implements OnInit {
   public showParticipants: WritableSignal<boolean> = signal(false);
   public meeting: WritableSignal<Meeting> = signal({} as Meeting);
   public participantsLoading: WritableSignal<boolean> = signal(true);
-  public participants!: Signal<MeetingParticipant[]>;
+  private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  public participants = this.initParticipantsList();
   public participantsLabel: Signal<string> = this.initParticipantsLabel();
   public additionalParticipantsCount: WritableSignal<number> = signal(0);
   public actionMenuItems: Signal<MenuItem[]> = this.initializeActionMenuItems();
@@ -112,28 +113,28 @@ export class MeetingCardComponent implements OnInit {
     this.participantsLoading.set(true);
 
     if (!this.showParticipants()) {
-      this.initParticipantsList();
+      this.refresh$.next(true);
     }
 
     this.showParticipants.set(!this.showParticipants());
   }
 
   public openAddParticipantModal(): void {
-    const dialogRef = this.dialogService.open(ParticipantFormComponent, {
-      header: 'Add Participant',
+    const dialogRef = this.dialogService.open(RegistrantModalComponent, {
+      header: 'Add Guests',
       width: '650px',
       modal: true,
       closable: true,
       dismissableMask: true,
       data: {
         meetingId: this.meeting().uid,
-        participant: null, // Add mode
+        registrant: null, // Add mode
       },
     });
 
     dialogRef.onChildComponentLoaded.pipe(take(1)).subscribe((component) => {
-      component.participantSaved.subscribe(() => {
-        this.initParticipantsList();
+      component.registrantSaved.subscribe(() => {
+        this.refresh$.next(true);
       });
     });
   }
@@ -172,22 +173,22 @@ export class MeetingCardComponent implements OnInit {
     }
 
     this.dialogService
-      .open(ParticipantFormComponent, {
-        header: 'Edit Participant',
+      .open(RegistrantModalComponent, {
+        header: 'Edit Guest',
         width: '650px',
         modal: true,
         closable: true,
         dismissableMask: true,
         data: {
           meetingId: this.meeting().uid,
-          participant: participant, // Edit mode
+          registrant: participant, // Edit mode
         },
       })
       .onClose.pipe(take(1))
       .subscribe((result) => {
         if (result) {
           // Refresh the current participant display
-          this.initParticipantsList();
+          this.refresh$.next(true);
         }
       });
   }
@@ -236,46 +237,51 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  private initParticipantsList(): void {
-    this.participantsLoading.set(true);
-    const queries = combineLatest([
-      this.meetingService.getMeetingParticipants(this.meeting().uid),
-      ...(this.meeting().committees?.map((c) => this.committeeService.getCommitteeMembers(c.uid).pipe(catchError(() => of([])))) ?? []),
-    ]).pipe(
-      map(([participants, ...committeeMembers]) => {
-        return [
-          ...participants,
-          ...committeeMembers
-            .filter((c) => c.length > 0)
-            .flatMap((c) => {
-              return c.map((m) => ({
-                id: m.id,
-                meeting_id: this.meeting().uid,
-                first_name: m.first_name,
-                last_name: m.last_name,
-                email: m.email,
-                organization: m.organization,
-                is_host: false,
-                type: 'committee',
-                invite_accepted: null,
-                attended: true,
-              }));
+  private initParticipantsList() {
+    return toSignal(
+      this.refresh$.pipe(
+        takeUntilDestroyed(),
+        filter((refresh) => refresh),
+        switchMap(() => {
+          this.participantsLoading.set(true);
+          return combineLatest([
+            this.meetingService.getMeetingRegistrants(this.meeting().uid),
+            ...(this.meeting().committees?.map((c) => this.committeeService.getCommitteeMembers(c.uid).pipe(catchError(() => of([])))) ?? []),
+          ]).pipe(
+            map(([participants, ...committeeMembers]) => {
+              return [
+                ...participants,
+                ...committeeMembers
+                  .filter((c) => c.length > 0)
+                  .flatMap((c) => {
+                    return c.map((m) => ({
+                      id: m.id,
+                      meeting_id: this.meeting().uid,
+                      first_name: m.first_name,
+                      last_name: m.last_name,
+                      email: m.email,
+                      organization: m.organization,
+                      is_host: false,
+                      type: 'committee',
+                      invite_accepted: null,
+                      attended: true,
+                    }));
+                  }),
+              ];
             }),
-        ];
-      }),
-      // Sort participants by first name
-      map((participants) => participants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingParticipant[]),
-      tap((participants) => {
-        this.additionalParticipantsCount.set(participants.length - (this.meeting().individual_participants_count + this.meeting().committee_members_count));
-      }),
-      finalize(() => this.participantsLoading.set(false))
+            // Sort participants by first name
+            map((participants) => participants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingParticipant[]),
+            tap((participants) => {
+              this.additionalParticipantsCount.set(
+                participants.length - (this.meeting().individual_participants_count + this.meeting().committee_members_count)
+              );
+            }),
+            finalize(() => this.participantsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
     );
-
-    runInInjectionContext(this.injector, () => {
-      this.participants = toSignal(queries, {
-        initialValue: [],
-      });
-    });
   }
 
   private deleteMeeting(): void {
@@ -353,7 +359,7 @@ export class MeetingCardComponent implements OnInit {
           this.additionalParticipantsCount.set(0);
           this.meeting.set(meeting);
         }),
-        finalize(() => this.initParticipantsList())
+        finalize(() => this.refresh$.next(true))
       )
       .subscribe();
   }
