@@ -10,7 +10,6 @@ import {
   GenerateAgendaResponse,
   Meeting,
   MeetingAttachment,
-  MeetingParticipant,
   MeetingRegistrant,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
@@ -124,36 +123,6 @@ export class MeetingService {
       take(1),
       catchError((error) => {
         console.error(`Failed to delete meeting ${id}:`, error);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  public addMeetingParticipant(meetingId: string, participant: Partial<MeetingParticipant>): Observable<MeetingParticipant> {
-    return this.http.post<MeetingParticipant>(`/api/meetings/${meetingId}/participants`, participant).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to add participant to meeting ${meetingId}:`, error);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  public updateMeetingParticipant(meetingId: string, participantId: string, participant: Partial<MeetingParticipant>): Observable<MeetingParticipant> {
-    return this.http.put<MeetingParticipant>(`/api/meetings/${meetingId}/participants/${participantId}`, participant).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to update participant ${participantId} in meeting ${meetingId}:`, error);
-        return throwError(() => error);
-      })
-    );
-  }
-
-  public deleteMeetingParticipant(meetingId: string, participantId: string): Observable<void> {
-    return this.http.delete<void>(`/api/meetings/${meetingId}/participants/${participantId}`).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to delete participant ${participantId} from meeting ${meetingId}:`, error);
         return throwError(() => error);
       })
     );

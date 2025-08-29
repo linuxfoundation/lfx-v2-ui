@@ -60,6 +60,10 @@ export class RegistrantModalComponent {
 
   // Public methods
   public onSubmit(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     if (this.form.valid) {
       this.submitting.set(true);
       const formValue = this.form.value;

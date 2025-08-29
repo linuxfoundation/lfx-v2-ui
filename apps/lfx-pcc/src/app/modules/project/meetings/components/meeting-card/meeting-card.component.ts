@@ -12,7 +12,7 @@ import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { MenuComponent } from '@components/menu/menu.component';
-import { extractUrlsWithDomains, Meeting, MeetingAttachment, MeetingParticipant } from '@lfx-pcc/shared';
+import { extractUrlsWithDomains, Meeting, MeetingAttachment, MeetingRegistrant } from '@lfx-pcc/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
@@ -62,15 +62,15 @@ export class MeetingCardComponent implements OnInit {
   public readonly pastMeeting = input<boolean>(false);
   public readonly loading = input<boolean>(false);
   public readonly showBorder = input<boolean>(false);
-  public readonly meetingParticipantCount: Signal<number> = this.initMeetingParticipantCount();
-  public readonly participantResponseBreakdown: Signal<string> = this.initParticipantResponseBreakdown();
-  public showParticipants: WritableSignal<boolean> = signal(false);
+  public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
+  public readonly registrantResponseBreakdown: Signal<string> = this.initRegistrantResponseBreakdown();
+  public showRegistrants: WritableSignal<boolean> = signal(false);
   public meeting: WritableSignal<Meeting> = signal({} as Meeting);
-  public participantsLoading: WritableSignal<boolean> = signal(true);
+  public registrantsLoading: WritableSignal<boolean> = signal(true);
   private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  public participants = this.initParticipantsList();
-  public participantsLabel: Signal<string> = this.initParticipantsLabel();
-  public additionalParticipantsCount: WritableSignal<number> = signal(0);
+  public registrants = this.initRegistrantsList();
+  public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
+  public additionalRegistrantsCount: WritableSignal<number> = signal(0);
   public actionMenuItems: Signal<MenuItem[]> = this.initializeActionMenuItems();
   public attachments: Signal<MeetingAttachment[]> = signal([]);
 
@@ -100,26 +100,26 @@ export class MeetingCardComponent implements OnInit {
     this.attachments = this.initAttachments();
   }
 
-  public onParticipantsToggle(event: Event): void {
+  public onRegistrantsToggle(event: Event): void {
     event.stopPropagation();
 
-    if (this.meetingParticipantCount() === 0) {
-      // Open add participant modal
-      this.openAddParticipantModal();
+    if (this.meetingRegistrantCount() === 0) {
+      // Open add registrant modal
+      this.openAddRegistrantModal();
       return;
     }
 
-    // Show/hide inline participants display
-    this.participantsLoading.set(true);
+    // Show/hide inline registrants display
+    this.registrantsLoading.set(true);
 
-    if (!this.showParticipants()) {
+    if (!this.showRegistrants()) {
       this.refresh$.next(true);
     }
 
-    this.showParticipants.set(!this.showParticipants());
+    this.showRegistrants.set(!this.showRegistrants());
   }
 
-  public openAddParticipantModal(): void {
+  public openAddRegistrantModal(): void {
     const dialogRef = this.dialogService.open(RegistrantModalComponent, {
       header: 'Add Guests',
       width: '650px',
@@ -159,11 +159,11 @@ export class MeetingCardComponent implements OnInit {
       });
   }
 
-  public onParticipantEdit(participant: MeetingParticipant, event: Event): void {
+  public onRegistrantEdit(registrant: MeetingRegistrant, event: Event): void {
     event.stopPropagation();
 
     // Don't allow editing committee members - show informational message
-    if (participant.type === 'committee') {
+    if (registrant.type === 'committee') {
       this.messageService.add({
         severity: 'info',
         summary: 'Committee Member',
@@ -181,30 +181,30 @@ export class MeetingCardComponent implements OnInit {
         dismissableMask: true,
         data: {
           meetingId: this.meeting().uid,
-          registrant: participant, // Edit mode
+          registrant: registrant, // Edit mode
         },
       })
       .onClose.pipe(take(1))
       .subscribe((result) => {
         if (result) {
-          // Refresh the current participant display
+          // Refresh the current registrant display
           this.refresh$.next(true);
         }
       });
   }
-  private initMeetingParticipantCount(): Signal<number> {
+  private initMeetingRegistrantCount(): Signal<number> {
     return computed(
-      () => (this.meeting()?.individual_participants_count || 0) + (this.meeting()?.committee_members_count || 0) + (this.additionalParticipantsCount() || 0)
+      () => (this.meeting()?.individual_registrants_count || 0) + (this.meeting()?.committee_members_count || 0) + (this.additionalRegistrantsCount() || 0)
     );
   }
 
-  private initParticipantsLabel(): Signal<string> {
+  private initRegistrantsLabel(): Signal<string> {
     return computed(() => {
-      if (this.meetingParticipantCount() === 0) {
+      if (this.meetingRegistrantCount() === 0) {
         return 'Add Guests';
       }
 
-      const totalGuests = this.meetingParticipantCount();
+      const totalGuests = this.meetingRegistrantCount();
 
       if (totalGuests === 1) {
         return '1 Guest';
@@ -214,16 +214,16 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  private initParticipantResponseBreakdown(): Signal<string> {
+  private initRegistrantResponseBreakdown(): Signal<string> {
     return computed(() => {
       const meeting = this.meeting();
       if (!meeting) return '';
 
-      const accepted = meeting.participants_accepted_count || 0;
-      const declined = meeting.participants_declined_count || 0;
-      const pending = meeting.participants_pending_count || 0;
+      const accepted = meeting.registrants_accepted_count || 0;
+      const declined = meeting.registrants_declined_count || 0;
+      const pending = meeting.registrants_pending_count || 0;
 
-      // Only show breakdown if there are individual participants with responses
+      // Only show breakdown if there are individual registrants with responses
       if (accepted === 0 && declined === 0 && pending === 0) {
         return '';
       }
@@ -237,20 +237,20 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  private initParticipantsList() {
+  private initRegistrantsList() {
     return toSignal(
       this.refresh$.pipe(
         takeUntilDestroyed(),
         filter((refresh) => refresh),
         switchMap(() => {
-          this.participantsLoading.set(true);
+          this.registrantsLoading.set(true);
           return combineLatest([
-            this.meetingService.getMeetingRegistrants(this.meeting().uid),
+            this.meetingService.getMeetingRegistrants(this.meeting().uid).pipe(catchError(() => of([]))),
             ...(this.meeting().committees?.map((c) => this.committeeService.getCommitteeMembers(c.uid).pipe(catchError(() => of([])))) ?? []),
           ]).pipe(
-            map(([participants, ...committeeMembers]) => {
+            map(([registrants, ...committeeMembers]) => {
               return [
-                ...participants,
+                ...registrants,
                 ...committeeMembers
                   .filter((c) => c.length > 0)
                   .flatMap((c) => {
@@ -269,14 +269,13 @@ export class MeetingCardComponent implements OnInit {
                   }),
               ];
             }),
-            // Sort participants by first name
-            map((participants) => participants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingParticipant[]),
-            tap((participants) => {
-              this.additionalParticipantsCount.set(
-                participants.length - (this.meeting().individual_participants_count + this.meeting().committee_members_count)
-              );
+            // Sort registrants by first name
+            map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
+            tap((registrants) => {
+              const baseCount = (this.meeting().individual_registrants_count || 0) + (this.meeting().committee_members_count || 0);
+              this.additionalRegistrantsCount.set(Math.max(0, (registrants?.length || 0) - baseCount));
             }),
-            finalize(() => this.participantsLoading.set(false))
+            finalize(() => this.registrantsLoading.set(false))
           );
         })
       ),
@@ -316,7 +315,7 @@ export class MeetingCardComponent implements OnInit {
         baseItems.push({
           label: 'Add Guests',
           icon: 'fa-light fa-plus',
-          command: () => this.openAddParticipantModal(),
+          command: () => this.openAddRegistrantModal(),
         });
 
         baseItems.push({
@@ -356,7 +355,7 @@ export class MeetingCardComponent implements OnInit {
       .pipe(
         take(1),
         tap((meeting) => {
-          this.additionalParticipantsCount.set(0);
+          this.additionalRegistrantsCount.set(0);
           this.meeting.set(meeting);
         }),
         finalize(() => this.refresh$.next(true))
@@ -384,9 +383,9 @@ export class MeetingCardComponent implements OnInit {
 
   private initAttendancePercentage(): Signal<number> {
     return computed(() => {
-      const totalParticipants = this.meetingParticipantCount();
-      const acceptedCount = this.meeting().participants_accepted_count || 0;
-      return totalParticipants > 0 ? Math.round((acceptedCount / totalParticipants) * 100) : 0;
+      const totalRegistrants = this.meetingRegistrantCount();
+      const acceptedCount = this.meeting().registrants_accepted_count || 0;
+      return totalRegistrants > 0 ? Math.round((acceptedCount / totalRegistrants) * 100) : 0;
     });
   }
 

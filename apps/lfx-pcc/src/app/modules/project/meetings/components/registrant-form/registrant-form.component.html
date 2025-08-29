@@ -15,9 +15,6 @@
           placeholder="Enter first name"
           data-testid="registrant-form-firstname-input">
         </lfx-input-text>
-        @if (form().get('first_name')?.errors?.['required'] && form().get('first_name')?.touched && form().get('first_name')?.dirty) {
-          <p class="text-sm text-red-500">First name is required</p>
-        }
       </div>
 
       <!-- Last Name -->
@@ -31,13 +28,10 @@
           placeholder="Enter last name"
           data-testid="registrant-form-lastname-input">
         </lfx-input-text>
-        @if (form().get('last_name')?.errors?.['required'] && form().get('last_name')?.touched && form().get('last_name')?.dirty) {
-          <p class="text-sm text-red-500">Last name is required</p>
-        }
       </div>
 
       <!-- Email -->
-      <div class="md:col-span-2" data-testid="registrant-form-email-field" class="flex flex-col gap-1">
+      <div class="md:col-span-2 flex flex-col gap-1" data-testid="registrant-form-email-field">
         <label for="email" class="text-sm font-medium text-gray-700">Email</label>
         <lfx-input-text
           size="small"
@@ -67,9 +61,6 @@
           placeholder="Enter job title"
           data-testid="registrant-form-jobtitle-input">
         </lfx-input-text>
-        @if (form().get('job_title')?.errors?.['required'] && form().get('job_title')?.touched && form().get('job_title')?.dirty) {
-          <p class="text-sm text-red-500">Job title is required</p>
-        }
       </div>
 
       <!-- Organization -->
@@ -83,13 +74,10 @@
           placeholder="Enter organization"
           data-testid="registrant-form-organization-input">
         </lfx-input-text>
-        @if (form().get('org_name')?.errors?.['required'] && form().get('org_name')?.touched && form().get('org_name')?.dirty) {
-          <p class="text-sm text-red-500">Organization is required</p>
-        }
       </div>
 
       <!-- Host Toggle -->
-      <div class="md:col-span-2" data-testid="registrant-form-host-field" class="flex flex-col gap-1">
+      <div class="md:col-span-2 flex flex-col gap-1" data-testid="registrant-form-host-field">
         <lfx-checkbox [form]="form()" control="host" label="Meeting Host" [binary]="true" data-testid="registrant-form-host-checkbox"> </lfx-checkbox>
       </div>
     </div>
