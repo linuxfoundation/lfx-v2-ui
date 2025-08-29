@@ -41,7 +41,6 @@ import { UpcomingCommitteeMeetingComponent } from '../components/upcoming-commit
   ],
   providers: [DialogService],
   templateUrl: './committee-dashboard.component.html',
-  styleUrl: './committee-dashboard.component.scss',
 })
 export class CommitteeDashboardComponent {
   // Injected services

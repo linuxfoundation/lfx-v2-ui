@@ -21,7 +21,6 @@ import { UserPermissionsTableComponent } from '../components/user-permissions-ta
   selector: 'lfx-settings-dashboard',
   imports: [CardComponent, PermissionsMatrixComponent, UserPermissionsTableComponent, MenuComponent],
   templateUrl: './settings-dashboard.component.html',
-  styleUrl: './settings-dashboard.component.scss',
 })
 export class SettingsDashboardComponent {
   private readonly projectService = inject(ProjectService);

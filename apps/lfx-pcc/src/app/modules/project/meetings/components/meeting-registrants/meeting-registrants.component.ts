@@ -34,7 +34,6 @@ import { RegistrantFormComponent } from '../registrant-form/registrant-form.comp
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-registrants.component.html',
-  styleUrl: './meeting-registrants.component.scss',
 })
 export class MeetingRegistrantsComponent implements OnInit {
   // Injected services

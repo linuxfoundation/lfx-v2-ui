@@ -42,7 +42,6 @@ import { MeetingModalComponent } from '../components/meeting-modal/meeting-modal
     AnimateOnScrollModule,
   ],
   templateUrl: './meeting-dashboard.component.html',
-  styleUrl: './meeting-dashboard.component.scss',
 })
 export class MeetingDashboardComponent {
   // Injected services

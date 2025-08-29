@@ -19,7 +19,6 @@ import { RegistrantFormComponent } from '../registrant-form/registrant-form.comp
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ButtonComponent, CheckboxComponent, RegistrantFormComponent],
   templateUrl: './registrant-modal.component.html',
-  styleUrl: './registrant-modal.component.scss',
 })
 export class RegistrantModalComponent {
   // Injected services
