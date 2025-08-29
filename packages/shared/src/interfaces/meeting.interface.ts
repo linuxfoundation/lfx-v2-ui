@@ -420,16 +420,3 @@ export interface BatchRegistrantOperationResponse<T = unknown> {
     failed: number;
   };
 }
-
-/**
- * Structure for tracking pending registrant changes
- * @description Used to manage registrant operations before they are committed to the server
- */
-export interface RegistrantUpdates {
-  /** Registrants to add via API */
-  toAdd: CreateMeetingRegistrantRequest[];
-  /** Registrants to update via API */
-  toUpdate: { uid: string; changes: UpdateMeetingRegistrantRequest }[];
-  /** Registrant UIDs to delete via API */
-  toDelete: string[];
-}

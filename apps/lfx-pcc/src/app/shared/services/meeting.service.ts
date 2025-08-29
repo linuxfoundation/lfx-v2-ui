@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import {
   BatchRegistrantOperationResponse,
   CreateMeetingRegistrantRequest,
@@ -13,6 +13,7 @@ import {
   Meeting,
   MeetingAttachment,
   MeetingRegistrant,
+  MeetingRegistrantWithState,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UploadFileResponse,
@@ -283,7 +284,7 @@ export class MeetingService {
   /**
    * Strips metadata from MeetingRegistrantWithState to create CreateMeetingRegistrantRequest
    */
-  public stripMetadata(meetingUid: string, registrant: any): CreateMeetingRegistrantRequest {
+  public stripMetadata(meetingUid: string, registrant: MeetingRegistrantWithState): CreateMeetingRegistrantRequest {
     return {
       meeting_uid: meetingUid,
       email: registrant.email,
@@ -298,7 +299,7 @@ export class MeetingService {
   /**
    * Gets changed fields from MeetingRegistrantWithState to create UpdateMeetingRegistrantRequest
    */
-  public getChangedFields(registrant: any): UpdateMeetingRegistrantRequest {
+  public getChangedFields(registrant: MeetingRegistrantWithState): UpdateMeetingRegistrantRequest {
     return {
       meeting_uid: registrant.meeting_uid,
       email: registrant.email,

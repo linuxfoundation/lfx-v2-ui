@@ -11,7 +11,7 @@ import { ProjectService } from '@services/project.service';
 import { MenuItem } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { BehaviorSubject, of } from 'rxjs';
-import { switchMap, take, tap } from 'rxjs/operators';
+import { switchMap, take, tap } from 'rxjs';
 
 import { PermissionsMatrixComponent } from '../components/permissions-matrix/permissions-matrix.component';
 import { UserFormComponent } from '../components/user-form/user-form.component';

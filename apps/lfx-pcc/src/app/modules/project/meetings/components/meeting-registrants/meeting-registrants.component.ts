@@ -9,7 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantState, RegistrantUpdates } from '@lfx-pcc/shared/interfaces';
+import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantPendingChanges, RegistrantState } from '@lfx-pcc/shared/interfaces';
 import { generateTempId } from '@lfx-pcc/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService } from 'primeng/api';
@@ -43,11 +43,11 @@ export class MeetingRegistrantsComponent implements OnInit {
 
   // Input signals
   public meetingUid = input.required<string>();
-  public registrantUpdates = input.required<RegistrantUpdates>();
+  public registrantUpdates = input.required<RegistrantPendingChanges>();
   public refresh = input.required<BehaviorSubject<void>>();
 
   // Output events for two-way binding
-  public readonly registrantUpdatesChange = output<RegistrantUpdates>();
+  public readonly registrantUpdatesChange = output<RegistrantPendingChanges>();
 
   // Writable signals for state management
   public registrantsWithState: WritableSignal<MeetingRegistrantWithState[]> = signal([]);

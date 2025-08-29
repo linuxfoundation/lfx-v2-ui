@@ -27,7 +27,7 @@ import {
   MeetingAttachment,
   MeetingRegistrant,
   PendingAttachment,
-  RegistrantUpdates,
+  RegistrantPendingChanges,
   UpdateMeetingRequest,
 } from '@lfx-pcc/shared/interfaces';
 import {
@@ -45,8 +45,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
 import { TabsModule } from 'primeng/tabs';
-import { BehaviorSubject, concat, from, Observable, of } from 'rxjs';
-import { catchError, finalize, mergeMap, switchMap, take, toArray } from 'rxjs/operators';
+import { BehaviorSubject, catchError, concat, finalize, from, mergeMap, Observable, of, switchMap, take, toArray } from 'rxjs';
 
 import { MeetingDetailsComponent } from '../meeting-details/meeting-details.component';
 import { MeetingPlatformFeaturesComponent } from '../meeting-platform-features/meeting-platform-features.component';
@@ -86,7 +85,7 @@ export class MeetingManageComponent {
   public mode = signal<'create' | 'edit'>('create');
   public meetingId = signal<string | null>(null);
   public isEditMode = computed(() => this.mode() === 'edit');
-  public registrantUpdates = signal<RegistrantUpdates>({
+  public registrantUpdates = signal<RegistrantPendingChanges>({
     toAdd: [],
     toUpdate: [],
     toDelete: [],

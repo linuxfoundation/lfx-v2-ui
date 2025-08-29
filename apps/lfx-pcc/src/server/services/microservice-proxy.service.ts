@@ -27,7 +27,8 @@ export class MicroserviceProxyService {
     customHeaders?: Record<string, string>
   ): Promise<T> {
     try {
-      if (!req.oidc?.accessToken?.access_token) {
+      const token = req.oidc?.accessToken?.access_token;
+      if (!req.oidc?.isAuthenticated() || !token || req.oidc?.accessToken?.isExpired()) {
         throw new Error('Bearer token not available on request');
       }
 
@@ -37,7 +38,6 @@ export class MicroserviceProxyService {
 
       const baseUrl = MICROSERVICE_URLS[service];
       const endpoint = `${baseUrl}${path}`;
-      const token = req.oidc.accessToken?.access_token;
 
       // Merge query parameters with defaults taking precedence
       // This ensures that default params cannot be overridden by the caller

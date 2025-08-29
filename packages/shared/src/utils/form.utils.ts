@@ -14,8 +14,6 @@ export function generateTempId(): string {
  * Marks all form controls as touched to trigger validation display
  */
 export function markFormControlsAsTouched(form: FormGroup): void {
-  Object.keys(form.controls).forEach((key) => {
-    form.get(key)?.markAsTouched();
-    form.get(key)?.markAsDirty();
-  });
+  form.markAllAsTouched();
+  form.updateValueAndValidity({ onlySelf: false, emitEvent: false });
 }
