@@ -3,12 +3,13 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { isBaseApiError } from '../errors';
+import { BaseApiError, isBaseApiError } from '../errors';
 
-export function apiErrorHandler(error: any, req: Request, res: Response, next: NextFunction): void {
+export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: Response, next: NextFunction): void {
   // If response already sent, delegate to default Express error handler
   if (res.headersSent) {
-    return next(error);
+    next(error);
+    return;
   }
 
   // Handle our structured API errors

@@ -36,7 +36,6 @@ export abstract class BaseApiError extends Error {
     this.metadata = options.metadata;
     this.originalError = options.originalError;
 
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }

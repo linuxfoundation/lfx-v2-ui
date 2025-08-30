@@ -15,7 +15,7 @@ export interface CommitteeMember {
   /** Committee name for display purposes */
   committee_name: string;
   /** Member's username/handle */
-  username: string;
+  username?: string;
   /** Member's email address */
   email: string;
   /** Member's first name */
@@ -27,14 +27,14 @@ export interface CommitteeMember {
   /** Who appointed this member to their role */
   appointed_by?: CommitteeMemberAppointedBy;
   /** Member status */
-  status: CommitteeMemberStatus;
+  status?: CommitteeMemberStatus;
   /** Member's role within the committee */
   role?: {
     /** Role name */
     name: CommitteeMemberRole;
     /** Start date of role assignment (ISO string) */
     start_date?: string;
-    /** End date of role assignment (ISO string, null if indefinite) */
+    /** End date of role assignment (ISO string) */
     end_date?: string;
   } | null;
   /** Member's voting eligibility and status */
@@ -43,7 +43,7 @@ export interface CommitteeMember {
     status: CommitteeMemberVotingStatus;
     /** Start date of voting eligibility (ISO string) */
     start_date?: string;
-    /** End date of voting eligibility (ISO string, null if indefinite) */
+    /** End date of voting eligibility (ISO string) */
     end_date?: string;
   } | null;
   /** Member's agency affiliation */

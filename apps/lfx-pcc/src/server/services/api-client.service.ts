@@ -76,7 +76,7 @@ export class ApiClientService {
           operation: 'api_client_request',
           service: 'api_client_service',
           path: url,
-          originalError: errorBody,
+          errorBody: errorBody,
         });
       }
 

@@ -70,9 +70,9 @@ export class SupabaseService {
     return committee;
   }
 
-  public async getCommitteeMemberCountByCommitteeId(committeeId: string): Promise<number> {
+  public async getCommitteeMemberCountByCommitteeId(committeeUid: string): Promise<number> {
     const params = new URLSearchParams({
-      committee_uid: `eq.${committeeId}`,
+      committee_uid: `eq.${committeeUid}`,
       select: 'count',
     });
     const url = `${this.baseUrl}/committee_members?${params.toString()}`;
@@ -88,7 +88,7 @@ export class SupabaseService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch member count for committee ${committeeId}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch member count for committee ${committeeUid}: ${response.status} ${response.statusText}`);
     }
 
     const contentRange = response.headers.get('content-range');
@@ -100,9 +100,9 @@ export class SupabaseService {
     return 0;
   }
 
-  public async getCommitteeVotingRepsCount(committeeId: string): Promise<number> {
+  public async getCommitteeVotingRepsCount(committeeUid: string): Promise<number> {
     const params = new URLSearchParams({
-      committee_uid: `eq.${committeeId}`,
+      committee_uid: `eq.${committeeUid}`,
       voting_status: `in.(Voting Rep,Alternate Voting Rep)`,
       select: 'count',
     });
@@ -119,7 +119,7 @@ export class SupabaseService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch voting reps count for committee ${committeeId}: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch voting reps count for committee ${committeeUid}: ${response.status} ${response.statusText}`);
     }
 
     const contentRange = response.headers.get('content-range');

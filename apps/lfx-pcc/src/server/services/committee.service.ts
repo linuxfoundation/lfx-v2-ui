@@ -184,6 +184,7 @@ export class CommitteeService {
     const params = {
       ...query,
       type: 'committee_member',
+      tags: `committee_uid:${committeeId}`,
     };
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(
