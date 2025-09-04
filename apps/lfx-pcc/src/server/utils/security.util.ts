@@ -22,7 +22,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
  *
  * @example
  * ```typescript
- * const isValid = constantTimeEquals(userPasscode, storedPasscode);
+ * const isValid = constantTimeEquals(userPassword, storedPassword);
  * ```
  *
  * @security This function prevents timing attacks by:
@@ -51,10 +51,22 @@ export function constantTimeEquals(a: string | null | undefined, b: string | nul
 }
 
 /**
- * Validates that a passcode matches the expected value using cryptographically secure constant-time comparison.
+ * Validates that a password matches the expected value using cryptographically secure constant-time comparison.
  *
- * This is a convenience wrapper around constantTimeEquals specifically for passcode validation.
+ * This is a convenience wrapper around constantTimeEquals specifically for password validation.
  * Uses Node.js's native timing-safe primitives to provide true security guarantees.
+ *
+ * @param providedPassword - The password provided by the user
+ * @param expectedPassword - The expected password value
+ * @returns true if passwords match, false otherwise
+ */
+export function validatePassword(providedPassword: string | null | undefined, expectedPassword: string | null | undefined): boolean {
+  return constantTimeEquals(providedPassword, expectedPassword);
+}
+
+/**
+ * @deprecated Use validatePassword instead. This function is maintained for backward compatibility.
+ * Validates that a passcode matches the expected value using cryptographically secure constant-time comparison.
  *
  * @param providedPasscode - The passcode provided by the user
  * @param expectedPasscode - The expected passcode value

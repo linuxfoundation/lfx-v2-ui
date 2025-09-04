@@ -125,6 +125,8 @@ export interface Meeting {
   early_join_time_minutes?: number;
   /** Array of organizer usernames */
   organizers: string[];
+  /** Meeting access password for private/restricted meetings */
+  password?: string;
   /** Zoom-specific settings */
   zoom_config?: ZoomConfig | null;
 

@@ -322,7 +322,7 @@ export class MeetingCardComponent implements OnInit {
           icon: 'fa-light fa-calendar',
           routerLink: ['/meetings', this.meeting().uid],
           queryParams: {
-            passcode: this.meeting().zoom_config?.passcode,
+            password: this.meeting().password,
           },
         });
 
