@@ -18,7 +18,7 @@ export class PublicMeetingController {
   private meetingService: MeetingService = new MeetingService();
   private projectService: ProjectService = new ProjectService();
   /**
-   * GET /public/api/meeting/:id
+   * GET /public/api/meetings/:id
    * Retrieves a single meeting by ID without requiring authentication
    */
   public async getMeetingById(req: Request, res: Response, next: NextFunction): Promise<void> {

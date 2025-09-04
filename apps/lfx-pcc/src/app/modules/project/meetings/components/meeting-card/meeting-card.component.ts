@@ -320,7 +320,7 @@ export class MeetingCardComponent implements OnInit {
         baseItems.push({
           label: 'Join Meeting',
           icon: 'fa-light fa-calendar',
-          routerLink: ['/meeting', this.meeting().uid],
+          routerLink: ['/meetings', this.meeting().uid],
           queryParams: {
             passcode: this.meeting().zoom_config?.passcode,
           },

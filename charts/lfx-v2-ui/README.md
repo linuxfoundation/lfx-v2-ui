@@ -125,12 +125,12 @@ environment:
 
 #### LFX Auth Configuration (Service-to-Service)
 
-| Parameter                            | Description                                   | Required | Default                                            |
-| ------------------------------------ | --------------------------------------------- | -------- | -------------------------------------------------- |
-| `environment.M2M_AUTH_ISSUER_BASE`   | LFX Auth issuer base URL                      | No       | `https://linuxfoundation-dev.auth0.com/`           |
-| `environment.M2M_AUTH_AUDIENCE`      | LFX Auth API audience identifier              | No       | `https://api-gw.dev.platform.linuxfoundation.org/` |
-| `environment.M2M_AUTH_CLIENT_ID`     | LFX Auth client ID for M2M authentication     | **Yes**  | -                                                  |
-| `environment.M2M_AUTH_CLIENT_SECRET` | LFX Auth client secret for M2M authentication | **Yes**  | -                                                  |
+| Parameter                              | Description                                   | Required | Default                                            |
+| -------------------------------------- | --------------------------------------------- | -------- | -------------------------------------------------- |
+| `environment.M2M_AUTH_ISSUER_BASE_URL` | LFX Auth issuer base URL                      | No       | `https://linuxfoundation-dev.auth0.com/`           |
+| `environment.M2M_AUTH_AUDIENCE`        | LFX Auth API audience identifier              | No       | `https://api-gw.dev.platform.linuxfoundation.org/` |
+| `environment.M2M_AUTH_CLIENT_ID`       | LFX Auth client ID for M2M authentication     | **Yes**  | -                                                  |
+| `environment.M2M_AUTH_CLIENT_SECRET`   | LFX Auth client secret for M2M authentication | **Yes**  | -                                                  |
 
 #### Database Configuration
 

@@ -11,7 +11,7 @@ The public meetings feature allows unauthenticated users to access specific meet
 The system exposes public endpoints that bypass user authentication:
 
 - **Public API Endpoint**: `/public/api/meetings/:id` - Returns meeting and project data
-- **Frontend Route**: `/meeting/:id` - Displays the meeting page without authentication
+- **Frontend Route**: `/meetings/:id` - Displays the meeting page without authentication
 - **Access Control**: Meeting visibility levels and optional passcode protection
 
 ### Controller Architecture
@@ -59,7 +59,7 @@ For private meetings:
 
 ### Public Meeting Component
 
-**Location**: `apps/lfx-pcc/src/app/modules/meeting/meeting.component.ts`
+**Location**: `apps/lfx-pcc/src/app/modules/meetings/meeting.component.ts`
 
 The Angular component handles:
 
@@ -77,7 +77,7 @@ The meeting routes are configured to allow public access:
 // apps/lfx-pcc/src/app/app.routes.ts
 {
   path: 'meeting/:id',
-  loadComponent: () => import('./modules/meeting/meeting.component').then(m => m.MeetingComponent),
+  loadComponent: () => import('./modules/meetings/meeting.component').then(m => m.MeetingComponent),
 }
 ```
 
@@ -127,7 +127,7 @@ The protected routes middleware allows public meeting routes to bypass authentic
 
 ### Public Meeting Request
 
-1. **User Access**: User navigates to `/meeting/:id`
+1. **User Access**: User navigates to `/meetings/:id`
 2. **Route Analysis**: Protected routes middleware allows access
 3. **Component Load**: Angular loads meeting component
 4. **API Call**: Component requests meeting data from `/public/api/meetings/:id`

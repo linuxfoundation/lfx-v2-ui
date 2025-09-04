@@ -8,7 +8,7 @@ import { PublicMeetingController } from '../controllers/public-meeting.controlle
 const router = Router();
 const publicMeetingController = new PublicMeetingController();
 
-// GET /public/api/meeting/:id - get a single meeting (public access, no authentication required)
+// GET /public/api/meetings/:id - get a single meeting (public access, no authentication required)
 router.get('/:id', (req, res, next) => publicMeetingController.getMeetingById(req, res, next));
 
 export default router;
