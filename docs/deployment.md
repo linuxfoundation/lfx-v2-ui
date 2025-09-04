@@ -191,7 +191,7 @@ The application uses a dual authentication system:
 1. **User Authentication**: For protected routes requiring user login (Auth0/Authelia)
 2. **M2M Authentication**: For server-side API calls from public endpoints
 
-This allows public routes (like `/meeting/:id`) to serve content without user authentication while still making authenticated backend API calls.
+This allows public routes (like `/meetings/:id`) to serve content without user authentication while still making authenticated backend API calls.
 
 ### Required Production Variables
 

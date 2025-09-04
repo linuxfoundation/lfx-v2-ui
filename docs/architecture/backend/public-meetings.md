@@ -119,9 +119,10 @@ The protected routes middleware allows public meeting routes to bypass authentic
 
 **Location**: `apps/lfx-pcc/src/server/middleware/protected-routes.middleware.ts`
 
-- Checks request path for `/meeting` or `/public/api`
-- Bypasses authentication for matching routes
-- Applies standard authentication for all other routes
+- Uses an explicit allowlist for prefixes: `/public/api/meetings` (API) and SPA route `/meeting/:id`
+- Bypasses only user–session auth for those allowlisted routes; server-to-server (M2M) calls still require auth
+- Applies standard authentication to all other routes (avoid loose regexes like `/meeting.*`)
+- Add unit tests verifying that only those exact prefixes bypass auth and that all similar prefixes remain protected
 
 ## 📊 Data Flow
 

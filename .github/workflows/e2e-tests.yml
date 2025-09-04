@@ -54,9 +54,6 @@ on:
       test-results:
         description: 'Test results summary'
         value: ${{ jobs.e2e-tests.outputs.test-results }}
-      report-url:
-        description: 'URL to the test report artifact'
-        value: ${{ jobs.e2e-tests.outputs.report-url }}
 
 jobs:
   e2e-tests:
@@ -66,7 +63,6 @@ jobs:
 
     outputs:
       test-results: ${{ steps.test-results.outputs.results }}
-      report-url: ${{ steps.upload-report.outputs.artifact-url }}
 
     steps:
       - name: Checkout code
