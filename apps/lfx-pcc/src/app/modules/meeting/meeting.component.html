@@ -140,7 +140,7 @@
                 <span>Duration</span>
               </div>
               <div class="text-sm font-sans">{{ meeting().duration }}m</div>
-              <div class="text-xs text-gray-500">{{ meeting().start_time | meetingTime: meeting().duration || null : 'time' }}</div>
+              <div class="text-xs text-gray-500">{{ meeting().start_time | meetingTime: meeting().duration : 'time' }}</div>
             </div>
           </div>
 

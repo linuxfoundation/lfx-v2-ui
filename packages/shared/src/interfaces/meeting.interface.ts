@@ -101,8 +101,6 @@ export interface Meeting {
   /** Meeting description */
   description: string;
   // Optional API fields
-  /** Meeting join URL */
-  join_url?: string;
   /** Currently only "Zoom" is supported */
   platform?: string;
   /** For recurring meetings */
@@ -131,6 +129,8 @@ export interface Meeting {
   zoom_config?: ZoomConfig | null;
 
   // Fields NOT in API - likely response-only
+  /** Meeting join URL */
+  join_url?: string;
   /** Full committee objects (response only) */
   meeting_committees?: MeetingCommittee[] | null;
   /** Count fields (response only) */

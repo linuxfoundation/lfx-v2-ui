@@ -68,7 +68,7 @@ export class PublicMeetingController {
 
       // Check if the user has passed in a passcode, if so, check if it's correct
       const { passcode } = req.query;
-      if (passcode && !validatePasscode(passcode as string, meeting.zoom_config?.passcode)) {
+      if (!passcode || !validatePasscode(passcode as string, meeting.zoom_config?.passcode)) {
         throw new AuthenticationError('Invalid passcode', {
           operation: 'get_public_meeting_by_id',
           service: 'public_meeting_controller',

@@ -244,7 +244,6 @@ export class MeetingController {
       // Send the response to the client
       res.status(204).send();
     } catch (error) {
-      console.error('Error deleting meeting', error);
       // Log the error
       Logger.error(req, 'delete_meeting', startTime, error, {
         meeting_uid: uid,

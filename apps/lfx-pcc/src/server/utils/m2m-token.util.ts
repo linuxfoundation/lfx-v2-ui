@@ -83,6 +83,8 @@ export async function generateM2MToken(req: Request): Promise<string> {
       scope: tokenResponse.scope,
     });
 
+    // TODO: Cache the token
+
     return tokenResponse.access_token;
   } catch (error) {
     // If it's already a structured error, re-throw it

@@ -101,7 +101,7 @@ jobs:
           secret-ids: |
             SUPABASE, /cloudops/managed-secrets/cloud/supabase/api_key
             AUTH0,  /cloudops/managed-secrets/auth0/LFX_V2_PCC
-            AUTH, /cloudops/managed-secrets/auth0/LFX_V2_UI_M2M
+            AUTH,  /cloudops/managed-secrets/auth0/LFX_V2_UI_M2M
       - name: Setup Turborepo cache
         uses: actions/cache@v4
         with:
@@ -179,8 +179,8 @@ jobs:
           echo "PCC_AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
           echo "LFX_V2_SERVICE=http://lfx-api.dev.v2.cluster.linuxfound.info" >> $GITHUB_ENV
           echo "NATS_URL=nats://lfx-platform-nats.lfx.svc.cluster.local:4222" >> $GITHUB_ENV
-          echo "M2MISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
-          echo "LFX_AUTH0_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
+          echo "M2M_AUTH_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
+          echo "M2M_AUTH_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
           echo "CI=true" >> $GITHUB_ENV
 
       - name: Set up sensitive environment variables

@@ -10,8 +10,8 @@ import { AuthenticationError } from '../errors';
  * All other routes require authentication
  */
 export async function protectedRoutesMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // Allow /meeting routes to be accessed without authentication
-  if (req.path.startsWith('/meeting') || req.path.startsWith('/public/api')) {
+  // Allow /meetings routes to be accessed without authentication
+  if (req.path.startsWith('/meetings') || req.path.startsWith('/public/api')) {
     next();
     return;
   }
@@ -56,15 +56,18 @@ export async function protectedRoutesMiddleware(req: Request, res: Response, nex
     } catch {
       // If refresh token fails, redirect to login page
       if (!req.path.startsWith('/api')) {
-        res.oidc.login({ returnTo: req.originalUrl });
-      } else {
-        const error = new AuthenticationError('Authentication required to access this resource', {
-          operation: 'protected_routes_middleware',
-          service: 'protected_routes_middleware',
-          path: req.path,
-        });
-        next(error);
+        req.log.info('Redirecting unauthenticated user to login page');
+        await res.oidc.login({ returnTo: req.originalUrl });
+        return;
       }
+
+      // For API routes, return authentication error
+      const error = new AuthenticationError('Authentication required to access this resource', {
+        operation: 'protected_routes_middleware',
+        service: 'protected_routes_middleware',
+        path: req.path,
+      });
+      next(error);
       return;
     }
   }
