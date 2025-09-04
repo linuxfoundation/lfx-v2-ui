@@ -9,7 +9,7 @@ import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { MeetingService } from '../services/meeting.service';
 import { ProjectService } from '../services/project.service';
-import { generateM2MToken } from '../utils/m2m-token.util';
+import { validatePasscode } from '../utils/security.util';
 
 /**
  * Controller for handling public meeting HTTP requests (no authentication required)
@@ -39,12 +39,7 @@ export class PublicMeetingController {
         return;
       }
 
-      // Generate an M2M token
-      const m2mToken = await generateM2MToken(req);
-
-      req.bearerToken = m2mToken;
-
-      req.log.info({ m2mToken }, 'M2M token set in request');
+      // TODO: Generate an M2M token
 
       // Get the meeting by ID using the existing meeting service
       const meeting = await this.meetingService.getMeetingById(req, id);
@@ -73,7 +68,7 @@ export class PublicMeetingController {
 
       // Check if the user has passed in a passcode, if so, check if it's correct
       const { passcode } = req.query;
-      if (passcode && passcode !== meeting.zoom_config?.passcode) {
+      if (passcode && !validatePasscode(passcode as string, meeting.zoom_config?.passcode)) {
         throw new AuthenticationError('Invalid passcode', {
           operation: 'get_public_meeting_by_id',
           service: 'public_meeting_controller',
