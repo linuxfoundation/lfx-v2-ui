@@ -100,8 +100,9 @@ export interface Meeting {
   title: string;
   /** Meeting description */
   description: string;
-
   // Optional API fields
+  /** Meeting join URL */
+  join_url?: string;
   /** Currently only "Zoom" is supported */
   platform?: string;
   /** For recurring meetings */

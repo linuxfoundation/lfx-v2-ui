@@ -22,9 +22,10 @@ import pinoHttp from 'pino-http';
 // Middleware and route imports
 import { extractBearerToken } from './middleware/auth-token.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
-import { tokenRefreshMiddleware } from './middleware/token-refresh.middleware';
+import { protectedRoutesMiddleware } from './middleware/protected-routes.middleware';
 import projectsRouter from './routes/projects';
 import meetingsRouter from './routes/meetings';
+import publicMeetingsRouter from './routes/public-meetings';
 
 dotenv.config();
 
@@ -74,28 +75,57 @@ const logger = pinoHttp({
 app.use(logger);
 ```
 
-### Authentication with Auth0
+### Authentication Architecture
+
+The server implements selective authentication using Auth0/Authelia:
+
+**Configuration Location**: `apps/lfx-pcc/src/server/server.ts`
+
+Key features:
+
+- **Selective Authentication**: `authRequired: false` allows custom middleware control
+- **Custom Login Handler**: Disabled default login route for custom implementation
+- **Protected Routes Middleware**: Replaces global auth requirement with selective protection
 
 ```typescript
+// Authentication configuration
 const authConfig: ConfigParams = {
-  authRequired: true,
+  authRequired: false, // Selective authentication
   auth0Logout: true,
-  baseURL: process.env['PCC_BASE_URL'] || 'http://localhost:4000',
-  clientID: process.env['PCC_AUTH0_CLIENT_ID'] || '1234',
-  issuerBaseURL: process.env['PCC_AUTH0_ISSUER_BASE_URL'] || 'https://example.com',
-  secret: process.env['PCC_AUTH0_SECRET'] || 'sufficiently-long-string',
-  idTokenSigningAlg: 'HS256',
-  authorizationParams: {
-    response_type: 'code',
-    audience: process.env['PCC_AUTH0_AUDIENCE'] || 'https://example.com',
-    scope: 'openid email profile api offline_access',
+  routes: {
+    login: false, // Custom login handler
   },
-  clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'bar',
+  // ... other configuration
 };
 
 app.use(auth(authConfig));
-app.use(tokenRefreshMiddleware);
+app.use(protectedRoutesMiddleware); // Selective route protection
 ```
+
+## 🛡️ Middleware Stack
+
+### Middleware Order and Purpose
+
+1. **Health Check**: `/health` endpoint (before logging)
+2. **Logging**: Pino HTTP logger with sensitive data redaction
+3. **Authentication**: Express OpenID Connect middleware
+4. **Custom Login Handler**: URL validation and secure redirects
+5. **Protected Routes**: Selective authentication enforcement
+6. **Bearer Token Extraction**: API route authentication
+7. **API Routes**: Protected and public endpoints
+8. **Error Handler**: Structured error responses
+9. **Angular SSR**: Server-side rendering for all other routes
+
+### Protected Routes Middleware
+
+**Location**: `apps/lfx-pcc/src/server/middleware/protected-routes.middleware.ts`
+
+Handles selective authentication:
+
+- Bypasses auth for `/meeting` and `/public/api` routes
+- Redirects unauthenticated users to login for protected routes
+- Returns 401 for unauthenticated API requests
+- Manages token refresh for expired sessions
 
 ## 🚀 API Routes and Middleware
 
