@@ -9,17 +9,17 @@
       "outputs": ["dist/**"]
     },
     "build:development": {
-      "dependsOn": ["^build", "^build:development"],
+      "dependsOn": ["^build:development"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
     "build:production": {
-      "dependsOn": ["^build", "^build:production"],
+      "dependsOn": ["^build:production"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
     "build:staging": {
-      "dependsOn": ["^build", "^build:staging"],
+      "dependsOn": ["^build:staging"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**"]
     },
