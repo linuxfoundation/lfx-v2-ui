@@ -9,7 +9,7 @@ import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { MeetingService } from '../services/meeting.service';
 import { ProjectService } from '../services/project.service';
-import { validatePasscode } from '../utils/security.util';
+import { validatePassword } from '../utils/security.util';
 
 /**
  * Controller for handling public meeting HTTP requests (no authentication required)
@@ -65,7 +65,7 @@ export class PublicMeetingController {
         try {
           // Get the meeting join URL for public meetings
           req.log.debug(
-            {
+            Logger.sanitize({
               meeting_uid: id,
               isAuthenticated: req.oidc?.isAuthenticated(),
               hasOidc: !!req.oidc,
@@ -75,17 +75,17 @@ export class PublicMeetingController {
               headers: {
                 cookie: req.headers.cookie ? 'present' : 'missing',
               },
-            },
+            }),
             'OIDC Authentication Debug - Getting join URL for public meeting'
           );
           const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id);
           meeting.join_url = joinUrlData.join_url;
 
           req.log.debug(
-            {
+            Logger.sanitize({
               meeting_uid: id,
               has_join_url: !!joinUrlData.join_url,
-            },
+            }),
             'Fetched join URL for public meeting'
           );
         } catch (error) {
@@ -95,19 +95,18 @@ export class PublicMeetingController {
               error: error instanceof Error ? error.message : error,
               meeting_uid: id,
               has_token: !!req.bearerToken,
-              bearer_token: req.bearerToken,
             },
             'Failed to fetch join URL for public meeting, continuing without it'
           );
         }
 
-        res.json({ meeting, project });
+        res.json({ meeting, project: { name: project.name, slug: project.slug, logo_url: project.logo_url } });
         return;
       }
 
       // Check if the user has passed in a password, if so, check if it's correct
       const { password } = req.query;
-      if (!password || !validatePasscode(password as string, meeting.password)) {
+      if (!password || !validatePassword(password as string, meeting.password)) {
         throw new AuthenticationError('Invalid password', {
           operation: 'get_public_meeting_by_id',
           service: 'public_meeting_controller',
