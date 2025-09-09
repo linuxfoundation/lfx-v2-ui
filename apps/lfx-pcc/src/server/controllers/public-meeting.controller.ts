@@ -42,7 +42,7 @@ export class PublicMeetingController {
       // TODO: Generate an M2M token
 
       // Get the meeting by ID using the existing meeting service
-      const meeting = await this.meetingService.getMeetingById(req, id, false);
+      const meeting = await this.meetingService.getMeetingById(req, id, 'meeting', false);
       const project = await this.projectService.getProjectById(req, meeting.project_uid, false);
 
       if (!project) {
