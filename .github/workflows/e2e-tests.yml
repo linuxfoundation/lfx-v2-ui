@@ -240,6 +240,10 @@ jobs:
         working-directory: apps/lfx-pcc
         run: mkdir -p playwright/.auth
 
+      - name: Build the application
+        if: steps.validate-secrets.outputs.can_run_tests == 'true'
+        run: yarn build
+
       - name: Run E2E tests (All browsers)
         id: run-tests-all
         if: ${{ inputs.browser == 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
