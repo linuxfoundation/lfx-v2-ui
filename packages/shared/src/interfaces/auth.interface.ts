@@ -134,8 +134,6 @@ export interface AuthMiddlewareResult {
   authenticated: boolean;
   /** Whether bearer token is available */
   hasToken: boolean;
-  /** User information if authenticated */
-  user?: User;
 }
 
 /**

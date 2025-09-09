@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AuthConfig, AuthDecision, AuthMiddlewareResult, RouteAuthConfig, User } from '@lfx-pcc/shared/interfaces';
+import { AuthConfig, AuthDecision, AuthMiddlewareResult, RouteAuthConfig } from '@lfx-pcc/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
@@ -63,36 +63,21 @@ function classifyRoute(path: string, config: AuthConfig): RouteAuthConfig {
 /**
  * Checks authentication status from OIDC session
  */
-async function checkAuthentication(req: Request): Promise<{ authenticated: boolean; user?: User }> {
-  try {
-    req.log.debug(
-      {
-        path: req.path,
-        hasOidc: !!req.oidc,
-        isAuthenticated: req.oidc?.isAuthenticated(),
-        hasUser: !!req.oidc?.user,
-        cookies: Object.keys(req.cookies || {}),
-      },
-      'Authentication check debug'
-    );
+function checkAuthentication(req: Request): boolean {
+  req.log.debug(
+    {
+      path: req.path,
+      hasOidc: !!req.oidc,
+      isAuthenticated: req.oidc?.isAuthenticated(),
+      cookies: Object.keys(req.cookies || {}),
+    },
+    'Authentication check debug'
+  );
 
-    if (req.oidc?.isAuthenticated()) {
-      const user = (await req.oidc.fetchUserInfo()) ?? (req.oidc?.user as User);
-      req.log.debug({ path: req.path, userId: user?.sub }, 'Authentication check successful');
-      return { authenticated: true, user };
-    }
-  } catch (error) {
-    req.log.warn(
-      {
-        error: error instanceof Error ? error.message : error,
-        path: req.path,
-      },
-      'Failed to fetch user info during authentication check'
-    );
-  }
+  const authenticated = req.oidc?.isAuthenticated() ?? false;
+  req.log.debug({ path: req.path, authenticated }, authenticated ? 'Authentication check successful' : 'Authentication check failed - not authenticated');
 
-  req.log.debug({ path: req.path }, 'Authentication check failed - not authenticated');
-  return { authenticated: false };
+  return authenticated;
 }
 
 /**
@@ -335,7 +320,7 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
       );
 
       // 2. Authentication status check
-      const authStatus = await checkAuthentication(req);
+      const authenticated = checkAuthentication(req);
 
       // 3. Token extraction (if needed)
       let hasToken = false;
@@ -348,9 +333,8 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
       // 5. Build result for decision making
       const result: AuthMiddlewareResult = {
         route: routeConfig,
-        authenticated: authStatus.authenticated,
+        authenticated,
         hasToken,
-        user: authStatus.user,
       };
 
       // 6. Make authentication decision
@@ -364,7 +348,7 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
         {
           path: req.path,
           decision: decision.action,
-          authenticated: authStatus.authenticated,
+          authenticated,
           hasToken,
           duration,
         },

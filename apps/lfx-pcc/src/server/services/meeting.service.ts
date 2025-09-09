@@ -49,7 +49,6 @@ export class MeetingService {
 
     let meetings = resources.map((resource) => resource.data);
 
-    req.log.debug({ meetings }, 'Meetings');
     // Get committee data for each committee associated with the meeting
     if (meetings.some((m) => m.committees && m.committees.length > 0)) {
       meetings = await this.getMeetingCommittees(req, meetings);

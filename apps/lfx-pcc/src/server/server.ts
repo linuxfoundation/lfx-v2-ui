@@ -219,7 +219,11 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     auth.authenticated = true;
     try {
       // Fetch user info from OIDC
-      auth.user = (await req.oidc.fetchUserInfo()) ?? (req.oidc?.user as User);
+      auth.user = req.oidc?.user as User;
+
+      if (!auth.user?.email) {
+        auth.user = await req.oidc.fetchUserInfo();
+      }
     } catch (error) {
       // If userinfo fetch fails, fall back to basic user info from token
       req.log.warn(
