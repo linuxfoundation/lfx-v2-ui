@@ -25,8 +25,8 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Protected API routes - require authentication and token
   { pattern: '/api', type: 'api', auth: 'required', tokenRequired: true },
 
-  // All other routes - Angular SSR routes requiring authentication
-  { pattern: '/', type: 'ssr', auth: 'required' },
+  // All other routes - Angular SSR routes with optional authentication
+  { pattern: '/', type: 'ssr', auth: 'optional' },
 ];
 
 /**
@@ -112,12 +112,36 @@ async function extractBearerToken(req: Request): Promise<boolean> {
       'Bearer token extraction debug'
     );
 
-    if (req.oidc?.isAuthenticated() && !req.oidc.accessToken?.isExpired()) {
-      const accessToken = req.oidc.accessToken?.access_token;
-      if (accessToken && typeof accessToken === 'string') {
-        req.bearerToken = accessToken;
-        req.log.debug({ path: req.path }, 'Bearer token successfully extracted');
-        return true;
+    if (req.oidc?.isAuthenticated()) {
+      // Check if token exists and is expired
+      if (req.oidc.accessToken?.isExpired()) {
+        try {
+          // Attempt to refresh the token
+          const refreshedToken = await req.oidc.accessToken.refresh();
+          if (refreshedToken?.access_token) {
+            req.bearerToken = refreshedToken.access_token;
+            req.log.debug({ path: req.path }, 'Token refreshed successfully');
+            return true;
+          }
+        } catch (refreshError) {
+          req.log.warn(
+            {
+              error: refreshError instanceof Error ? refreshError.message : refreshError,
+              path: req.path,
+            },
+            'Token refresh failed'
+          );
+          // Token refresh failed, user needs to re-authenticate
+          return false;
+        }
+      } else if (req.oidc.accessToken?.access_token) {
+        // Token exists and is not expired
+        const accessToken = req.oidc.accessToken.access_token;
+        if (typeof accessToken === 'string') {
+          req.bearerToken = accessToken;
+          req.log.debug({ path: req.path }, 'Bearer token successfully extracted');
+          return true;
+        }
       }
     }
   } catch (error) {
