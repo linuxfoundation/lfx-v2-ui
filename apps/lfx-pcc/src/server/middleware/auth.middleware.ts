@@ -187,6 +187,23 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
         };
       }
 
+      // Non-GET SSR routes - return 401 error
+      if (route.type === 'ssr' && req.method !== 'GET') {
+        req.log.warn(
+          {
+            path: req.path,
+            routeType: route.type,
+            method: req.method,
+          },
+          'SSR route requires authentication for non-GET request - returning 401'
+        );
+        return {
+          action: 'error',
+          errorType: 'authentication',
+          statusCode: 401,
+        };
+      }
+
       // API routes - return 401 error
       if (route.type === 'api') {
         req.log.warn(
