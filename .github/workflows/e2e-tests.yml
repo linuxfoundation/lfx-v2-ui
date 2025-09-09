@@ -229,10 +229,11 @@ jobs:
           echo "TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}" >> $GITHUB_ENV
           echo "✅ TEST_USERNAME and TEST_PASSWORD secrets set as masked environment variables"
 
-      - name: Install Playwright browsers
+      - name: Setup Playwright with caching
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
-        working-directory: apps/lfx-pcc
-        run: npx playwright install --with-deps
+        uses: ./.github/actions/setup-playwright
+        with:
+          browser: ${{ inputs.browser }}
 
       - name: Create Playwright auth directory
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
@@ -263,21 +264,17 @@ jobs:
           fi
 
       - name: Run E2E tests (Specific browser)
-        id: run-tests-specific
         if: ${{ inputs.browser != 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
         working-directory: apps/lfx-pcc
-        continue-on-error: true
         run: |
           if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
             echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
             echo "🚀 Playwright will automatically start the dev server on localhost:4200"
             echo "📋 Using secrets from AWS Secrets Manager"
             yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list
-            echo "test_exit_code=$?" >> $GITHUB_OUTPUT
           else
             echo "⚠️ No test credentials provided. Skipping E2E tests."
             echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."
-            echo "test_exit_code=0" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -307,25 +304,12 @@ jobs:
           elif [ -z "$TEST_USERNAME" ] || [ -z "$TEST_PASSWORD" ]; then
             echo "⏭️ E2E tests skipped (no test credentials)"
             echo "results=skipped" >> $GITHUB_OUTPUT
+          elif [ -f "test-results/.last-run.json" ]; then
+            echo "✅ E2E tests completed successfully"
+            echo "results=success" >> $GITHUB_OUTPUT
           else
-            # Check exit codes from test execution steps
-            ALL_EXIT_CODE="${{ steps.run-tests-all.outputs.test_exit_code }}"
-            SPECIFIC_EXIT_CODE="${{ steps.run-tests-specific.outputs.test_exit_code }}"
-            
-            # Determine which test was run and check its exit code
-            if [ "${{ inputs.browser }}" == "all" ]; then
-              EXIT_CODE="$ALL_EXIT_CODE"
-            else
-              EXIT_CODE="$SPECIFIC_EXIT_CODE"
-            fi
-            
-            if [ "$EXIT_CODE" == "0" ]; then
-              echo "✅ E2E tests completed successfully"
-              echo "results=success" >> $GITHUB_OUTPUT
-            else
-              echo "❌ E2E tests failed (exit code: $EXIT_CODE)"
-              echo "results=failure" >> $GITHUB_OUTPUT
-            fi
+            echo "❌ E2E tests failed"
+            echo "results=failure" >> $GITHUB_OUTPUT
           fi
 
       - name: Comment test results on PR
