@@ -9,11 +9,7 @@ import { MicroserviceError } from '../errors';
 import { ApiClientService } from './api-client.service';
 
 export class MicroserviceProxyService {
-  private apiClient: ApiClientService;
-
-  public constructor() {
-    this.apiClient = new ApiClientService();
-  }
+  private apiClient: ApiClientService = new ApiClientService();
 
   public async proxyRequest<T>(
     req: Request,
@@ -39,7 +35,7 @@ export class MicroserviceProxyService {
       // This ensures that default params cannot be overridden by the caller
       const mergedQuery = { ...query, ...DEFAULT_QUERY_PARAMS };
 
-      const response = await this.executeRequest<T>(method, endpoint, token, mergedQuery, data, customHeaders);
+      const response = await this.apiClient.request<T>(method, endpoint, token, mergedQuery, data, customHeaders);
       return response.data;
     } catch (error: any) {
       // Transform HTTP errors from API client into MicroserviceError
@@ -76,7 +72,7 @@ export class MicroserviceProxyService {
       // This ensures that default params cannot be overridden by the caller
       const mergedQuery = { ...query, ...DEFAULT_QUERY_PARAMS };
 
-      const response = await this.executeRequest<T>(method, endpoint, token, mergedQuery, data, customHeaders);
+      const response = await this.apiClient.request<T>(method, endpoint, token, mergedQuery, data, customHeaders);
       return response;
     } catch (error: any) {
       // Transform HTTP errors from API client into MicroserviceError
@@ -87,16 +83,5 @@ export class MicroserviceProxyService {
       // Re-throw unexpected errors
       throw error;
     }
-  }
-
-  private async executeRequest<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    endpoint: string,
-    bearerToken?: string,
-    query?: Record<string, any>,
-    data?: any,
-    customHeaders?: Record<string, string>
-  ) {
-    return await this.apiClient.request<T>(method, endpoint, bearerToken, query, data, customHeaders);
   }
 }
