@@ -26,22 +26,14 @@ export class PastMeetingController {
       const meetings = await this.meetingService.getMeetings(req, req.query as Record<string, any>, 'past_meeting');
 
       // TODO: Remove this once we have a way to get the registrants count
-      const counts = await Promise.all(
-        meetings.map(async (m) => {
-          const registrants = await this.meetingService.getMeetingRegistrants(req, m.uid);
-          const committeeMembers = registrants.filter((r) => r.type === 'committee').length ?? 0;
-
-          return {
-            individual_registrants_count: registrants.length - committeeMembers,
-            committee_members_count: committeeMembers,
-          };
+      // Process each meeting individually to add registrant counts
+      await Promise.all(
+        meetings.map(async (meeting) => {
+          const counts = await this.addRegistrantCounts(req, meeting.uid);
+          meeting.individual_registrants_count = counts.individual_registrants_count;
+          meeting.committee_members_count = counts.committee_members_count;
         })
       );
-
-      meetings.forEach((m, i) => {
-        m.individual_registrants_count = counts[i].individual_registrants_count;
-        m.committee_members_count = counts[i].committee_members_count;
-      });
 
       // Log the success
       Logger.success(req, 'get_past_meetings', startTime, {
@@ -89,18 +81,9 @@ export class PastMeetingController {
       });
 
       // TODO: Remove this once we have a way to get the registrants count
-      try {
-        const registrants = await this.meetingService.getMeetingRegistrants(req, meeting.uid);
-        const committeeMembers = registrants.filter((r) => r.type === 'committee').length ?? 0;
-
-        meeting.individual_registrants_count = registrants.length - committeeMembers;
-        meeting.committee_members_count = committeeMembers;
-      } catch (error) {
-        // Log the error
-        Logger.error(req, 'get_past_meeting_by_id', startTime, error, {
-          meeting_uid: uid,
-        });
-      }
+      const counts = await this.addRegistrantCounts(req, meeting.uid);
+      meeting.individual_registrants_count = counts.individual_registrants_count;
+      meeting.committee_members_count = counts.committee_members_count;
 
       // Send the meeting data to the client
       res.json(meeting);
@@ -112,6 +95,34 @@ export class PastMeetingController {
 
       // Send the error to the next middleware
       next(error);
+    }
+  }
+
+  /**
+   * Helper method to add registrant counts to a meeting
+   * @param req - Express request object
+   * @param meetingUid - UID of the meeting
+   * @returns Promise with registrant counts or defaults to 0 on error
+   */
+  private async addRegistrantCounts(req: Request, meetingUid: string): Promise<{ individual_registrants_count: number; committee_members_count: number }> {
+    try {
+      const registrants = await this.meetingService.getMeetingRegistrants(req, meetingUid);
+      const committeeMembers = registrants.filter((r) => r.type === 'committee').length ?? 0;
+
+      return {
+        individual_registrants_count: registrants.length - committeeMembers,
+        committee_members_count: committeeMembers,
+      };
+    } catch (error) {
+      // Log error but don't fail - default to 0 counts
+      Logger.error(req, 'add_registrant_counts', Date.now(), error, {
+        meeting_uid: meetingUid,
+      });
+
+      return {
+        individual_registrants_count: 0,
+        committee_members_count: 0,
+      };
     }
   }
 }
