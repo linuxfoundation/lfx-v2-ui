@@ -155,8 +155,37 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
       {
         path: req.path,
         routeType: route.type,
+        method: req.method,
       },
-      'Token refresh failed - logging user out'
+      'Token refresh failed - determining response based on request type'
+    );
+
+    // For API routes or non-GET requests, return 401 instead of logout redirect
+    // This prevents breaking XHR/Fetch clients that can't handle HTML redirects
+    if (route.type === 'api' || req.method !== 'GET') {
+      req.log.info(
+        {
+          path: req.path,
+          routeType: route.type,
+          method: req.method,
+        },
+        'API route or non-GET request - returning 401 instead of logout redirect'
+      );
+      return {
+        action: 'error',
+        errorType: 'authentication',
+        statusCode: 401,
+      };
+    }
+
+    // For SSR GET requests, proceed with logout redirect
+    req.log.info(
+      {
+        path: req.path,
+        routeType: route.type,
+        method: req.method,
+      },
+      'SSR GET request - proceeding with logout redirect'
     );
     return { action: 'logout' };
   }
