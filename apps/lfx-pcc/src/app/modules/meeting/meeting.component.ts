@@ -19,7 +19,7 @@ import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { combineLatest, map, of, switchMap, tap } from 'rxjs';
+import { combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting',
@@ -56,6 +56,7 @@ export class MeetingComponent {
   public meetingTypeBadge: Signal<{ badgeClass: string; icon?: string; text: string } | null>;
   public importantLinks: Signal<{ url: string; domain: string }[]>;
   public returnTo: Signal<string | undefined>;
+  public password: WritableSignal<string | null> = signal<string | null>(null);
 
   public constructor() {
     // Initialize all class variables
@@ -75,14 +76,13 @@ export class MeetingComponent {
       .getPublicMeetingJoinUrl(this.meeting().uid, this.meeting().password, {
         email: this.authenticated() ? this.user()?.email : this.joinForm.get('email')?.value,
       })
+      .pipe(finalize(() => this.isJoining.set(false)))
       .subscribe({
         next: (res) => {
           this.meeting().join_url = res.join_url;
-          this.isJoining.set(false);
           window.open(this.meeting().join_url as string, '_blank');
         },
         error: ({ error }) => {
-          this.isJoining.set(false);
           this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error });
         },
       });
@@ -93,9 +93,9 @@ export class MeetingComponent {
       combineLatest([this.activatedRoute.paramMap, this.activatedRoute.queryParamMap]).pipe(
         switchMap(([params, queryParams]) => {
           const meetingId = params.get('id');
-          const password = queryParams.get('password');
+          this.password.set(queryParams.get('password'));
           if (meetingId) {
-            return this.meetingService.getPublicMeeting(meetingId, password);
+            return this.meetingService.getPublicMeeting(meetingId, this.password());
           }
 
           // TODO: If no meeting ID, redirect to 404
@@ -178,7 +178,7 @@ export class MeetingComponent {
 
   private initializeReturnTo(): Signal<string | undefined> {
     return computed(() => {
-      return `${environment.urls.home}/meetings/${this.meeting().uid}?password=${this.meeting().password}`;
+      return `${environment.urls.home}/meetings/${this.meeting().uid}?password=${this.password()}`;
     });
   }
 }
