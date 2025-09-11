@@ -170,8 +170,10 @@ jobs:
         with:
           name: build-artifacts
           path: |
+            packages/shared/dist/
             apps/lfx-pcc/dist/
             node_modules/.cache/
+            .turbo/
           retention-days: 1
 
   # E2E tests - runs in parallel shards after setup
