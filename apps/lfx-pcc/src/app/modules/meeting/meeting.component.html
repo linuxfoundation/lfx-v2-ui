@@ -174,8 +174,8 @@
                       <i class="fa-light fa-clock text-amber-600"></i>
                       <div class="flex flex-col">
                         <span class="font-sans text-amber-700"
-                          >You may only join the meeting up to <span class="font-bold">{{ meeting().early_join_time_minutes }} minutes</span> before the start
-                          time.</span
+                          >You may only join the meeting up to <span class="font-bold">{{ meeting().early_join_time_minutes || 10 }} minutes</span> before the
+                          start time.</span
                         >
                       </div>
                     }
@@ -280,8 +280,8 @@
                           <i class="fa-light fa-clock text-amber-600"></i>
                           <div class="flex flex-col">
                             <span class="font-sans text-amber-700"
-                              >You may only join the meeting up to <span class="font-bold">{{ meeting().early_join_time_minutes }} minutes</span> before the
-                              start time.</span
+                              >You may only join the meeting up to <span class="font-bold">{{ meeting().early_join_time_minutes || 10 }} minutes</span> before
+                              the start time.</span
                             >
                           </div>
                         </div>
