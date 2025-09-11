@@ -584,6 +584,7 @@ export class SupabaseService {
 
     const updateData = {
       ...data,
+      username: username,
       updated_at: new Date().toISOString(),
     };
 

@@ -1,14 +1,14 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="container mx-auto px-8 py-8">
+<div class="container mx-auto pb-8">
   @if (isLoading()) {
-    <div class="flex flex-col gap-2 items-center justify-center py-12" data-testid="profile-edit-loading">
-      <i class="fa-light fa-circle-notch fa-spin text-4xl text-blue-400" data-testid="loading-spinner"></i>
+    <div class="flex flex-col gap-2 items-center justify-center py-12" data-testid="profile-edit-loading-container">
+      <i class="fa-light fa-circle-notch fa-spin text-4xl text-blue-400" data-testid="profile-edit-loading-spinner"></i>
       <span class="ml-3 text-gray-600">Loading profile...</span>
     </div>
   } @else {
-    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="max-w-4xl mx-auto">
+    <form [formGroup]="profileForm" (ngSubmit)="onSubmit()">
       <!-- Profile Benefits Info Banner -->
       <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
         <div class="flex items-start gap-3">
@@ -28,7 +28,7 @@
           <!-- Personal Information Section -->
           <div class="flex flex-col gap-4">
             <div>
-              <h3 class="text-base font-medium text-gray-900" data-testid="personal-info-heading">Personal Information</h3>
+              <h3 class="text-base font-medium text-gray-900" data-testid="profile-edit-personal-heading">Personal Information</h3>
               <p class="text-sm text-gray-500 mt-1">Helps community members identify and connect with you in discussions and contributions</p>
             </div>
 
@@ -43,7 +43,7 @@
                   id="first-name"
                   placeholder="Enter your first name"
                   styleClass="w-full"
-                  data-testid="profile-edit-first-name">
+                  data-testid="profile-edit-personal-first-name">
                 </lfx-input-text>
               </div>
 
@@ -57,7 +57,7 @@
                   id="last-name"
                   placeholder="Enter your last name"
                   styleClass="w-full"
-                  data-testid="profile-edit-last-name">
+                  data-testid="profile-edit-personal-last-name">
                 </lfx-input-text>
               </div>
 
@@ -69,7 +69,7 @@
                     class="fa-light fa-info-circle text-gray-400 cursor-help"
                     pTooltip="Your username is used for @mentions in discussions and appears in contributor rankings and recognition"
                     tooltipPosition="right"
-                    data-testid="username-tooltip">
+                    data-testid="profile-edit-personal-username-tooltip">
                   </i>
                 </div>
                 <lfx-input-text
@@ -79,7 +79,7 @@
                   id="username"
                   placeholder="Enter your username"
                   styleClass="w-full"
-                  data-testid="profile-edit-username">
+                  data-testid="profile-edit-personal-username">
                 </lfx-input-text>
               </div>
             </div>
@@ -88,7 +88,7 @@
           <!-- Professional Information Section -->
           <div class="flex flex-col gap-4">
             <div>
-              <h3 class="text-base font-medium text-gray-900" data-testid="professional-info-heading">Professional Information</h3>
+              <h3 class="text-base font-medium text-gray-900" data-testid="profile-edit-professional-heading">Professional Information</h3>
               <p class="text-sm text-gray-500 mt-1">Showcase your expertise and affiliations to build credibility and unlock networking opportunities</p>
             </div>
 
@@ -103,7 +103,7 @@
                   id="job-title"
                   placeholder="Enter your job title"
                   styleClass="w-full"
-                  data-testid="profile-edit-title">
+                  data-testid="profile-edit-professional-title">
                 </lfx-input-text>
               </div>
 
@@ -115,7 +115,7 @@
                     class="fa-light fa-info-circle text-gray-400 cursor-help"
                     pTooltip="Your organization appears in contributor rankings and helps maintainers understand your company's involvement in the project"
                     tooltipPosition="right"
-                    data-testid="organization-tooltip">
+                    data-testid="profile-edit-professional-organization-tooltip">
                   </i>
                 </div>
                 <lfx-input-text
@@ -125,7 +125,7 @@
                   id="organization"
                   placeholder="Enter your organization"
                   styleClass="w-full"
-                  data-testid="profile-edit-organization">
+                  data-testid="profile-edit-professional-organization">
                 </lfx-input-text>
               </div>
             </div>
@@ -134,7 +134,7 @@
           <!-- Location Information Section -->
           <div class="flex flex-col gap-4">
             <div>
-              <h3 class="text-base font-medium text-gray-900" data-testid="location-info-heading">Location Information</h3>
+              <h3 class="text-base font-medium text-gray-900" data-testid="profile-edit-location-heading">Location Information</h3>
               <div class="bg-gray-50 border border-gray-200 p-3 rounded-lg mt-2">
                 <div class="flex items-start gap-2">
                   <i class="fa-light fa-info-circle text-gray-600 mt-0.5 text-sm"></i>
@@ -159,7 +159,7 @@
                   placeholder="Select your country"
                   styleClass="w-full"
                   [filter]="true"
-                  data-testid="profile-edit-country">
+                  data-testid="profile-edit-location-country">
                 </lfx-select>
               </div>
 
@@ -176,7 +176,7 @@
                     placeholder="Select your state"
                     styleClass="w-full"
                     [filter]="true"
-                    data-testid="profile-edit-state-select">
+                    data-testid="profile-edit-location-state-select">
                   </lfx-select>
                 } @else {
                   <lfx-input-text
@@ -186,7 +186,7 @@
                     id="state"
                     placeholder="Enter your state or province"
                     styleClass="w-full"
-                    data-testid="profile-edit-state-input">
+                    data-testid="profile-edit-location-state-input">
                   </lfx-input-text>
                 }
               </div>
@@ -201,7 +201,7 @@
                   id="city"
                   placeholder="Enter your city"
                   styleClass="w-full"
-                  data-testid="profile-edit-city">
+                  data-testid="profile-edit-location-city">
                 </lfx-input-text>
               </div>
 
@@ -215,7 +215,7 @@
                   id="address"
                   placeholder="Enter your address"
                   styleClass="w-full"
-                  data-testid="profile-edit-address">
+                  data-testid="profile-edit-location-address">
                 </lfx-input-text>
               </div>
 
@@ -229,7 +229,7 @@
                   id="zipcode"
                   placeholder="Enter your postal or zip code"
                   styleClass="w-full"
-                  data-testid="profile-edit-zipcode">
+                  data-testid="profile-edit-location-zipcode">
                 </lfx-input-text>
               </div>
 
@@ -243,7 +243,7 @@
                   id="phone"
                   placeholder="Enter your phone number"
                   styleClass="w-full"
-                  data-testid="profile-edit-phone">
+                  data-testid="profile-edit-location-phone">
                 </lfx-input-text>
                 <p class="text-xs text-gray-500 mt-1">Optional - Only used for urgent event notifications and is kept private</p>
               </div>
@@ -253,7 +253,7 @@
           <!-- Additional Information Section -->
           <div class="flex flex-col gap-4">
             <div>
-              <h3 class="text-base font-medium text-gray-900" data-testid="additional-info-heading">Additional Information</h3>
+              <h3 class="text-base font-medium text-gray-900" data-testid="profile-edit-additional-heading">Additional Information</h3>
               <p class="text-sm text-gray-500 mt-1">Helps us send you the right swag and plan for community events</p>
             </div>
 
@@ -266,7 +266,7 @@
                     class="fa-light fa-info-circle text-gray-400 cursor-help"
                     pTooltip="For community events, contributor appreciation swag, and conference giveaways"
                     tooltipPosition="right"
-                    data-testid="tshirt-tooltip">
+                    data-testid="profile-edit-additional-tshirt-tooltip">
                   </i>
                 </div>
                 <lfx-select
@@ -277,7 +277,7 @@
                   id="tshirt-size"
                   placeholder="Select your t-shirt size"
                   styleClass="w-full"
-                  data-testid="profile-edit-tshirt-size">
+                  data-testid="profile-edit-additional-tshirt-size">
                 </lfx-select>
               </div>
             </div>
@@ -285,7 +285,8 @@
 
           <!-- Form Actions -->
           <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-            <lfx-button type="button" variant="outlined" label="Reset" (onClick)="onReset()" size="small" data-testid="profile-edit-reset-button"> </lfx-button>
+            <lfx-button type="button" variant="outlined" label="Reset" (onClick)="onReset()" size="small" data-testid="profile-edit-actions-reset-button">
+            </lfx-button>
 
             <lfx-button
               type="submit"
@@ -294,7 +295,7 @@
               [loading]="isSaving()"
               [disabled]="profileForm.invalid || isSaving()"
               size="small"
-              data-testid="profile-edit-save-button">
+              data-testid="profile-edit-actions-save-button">
             </lfx-button>
           </div>
         </div>

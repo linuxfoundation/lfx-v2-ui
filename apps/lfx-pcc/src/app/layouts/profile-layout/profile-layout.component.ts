@@ -13,10 +13,12 @@ import { MenuItem } from 'primeng/api';
 import { ChipModule } from 'primeng/chip';
 import { finalize } from 'rxjs';
 
+import { ProfileStatsComponent } from './components/profile-stats/profile-stats.component';
+
 @Component({
   selector: 'lfx-profile-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, AvatarComponent, BreadcrumbComponent, ChipModule],
+  imports: [CommonModule, RouterModule, AvatarComponent, BreadcrumbComponent, ChipModule, ProfileStatsComponent],
   templateUrl: './profile-layout.component.html',
   styleUrl: './profile-layout.component.scss',
 })
@@ -32,6 +34,8 @@ export class ProfileLayoutComponent {
   public readonly profileSubtitle = this.initializeProfileSubtitle();
   public readonly profileLocation = this.initializeProfileLocation();
   public readonly userInitials = this.initializeUserInitials();
+  public readonly memberSince = this.initializeMemberSince();
+  public readonly lastActive = this.initializeLastActive();
   // Loading state
 
   public readonly breadcrumbItems = input<MenuItem[]>([
@@ -151,5 +155,75 @@ export class ProfileLayoutComponent {
 
       return parts.join(', ');
     });
+  }
+
+  private initializeMemberSince(): Signal<string> {
+    return computed(() => {
+      const profile = this.profile();
+      if (!profile?.user) return '';
+
+      return this.calculateMemberSince(profile.user.created_at);
+    });
+  }
+
+  private initializeLastActive(): Signal<string> {
+    return computed(() => {
+      const profile = this.profile();
+      if (!profile?.user) return '';
+
+      return this.calculateLastActive(profile.user.updated_at);
+    });
+  }
+
+  /**
+   * Calculate how long the user has been a member
+   */
+  private calculateMemberSince(createdAt: string): string {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 30) {
+      return `${diffDays} day${diffDays === 1 ? '' : 's'}`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months} month${months === 1 ? '' : 's'}`;
+    }
+
+    const years = Math.floor(diffDays / 365);
+    const remainingMonths = Math.floor((diffDays % 365) / 30);
+    if (remainingMonths > 0) {
+      return `${years} year${years === 1 ? '' : 's'}, ${remainingMonths} month${remainingMonths === 1 ? '' : 's'}`;
+    }
+    return `${years} year${years === 1 ? '' : 's'}`;
+  }
+
+  /**
+   * Calculate last active time
+   */
+  private calculateLastActive(updatedAt: string): string {
+    const updated = new Date(updatedAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - updated.getTime());
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffMinutes < 1) {
+      return 'Just now';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    } else if (diffDays < 30) {
+      return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return `${months} month${months === 1 ? '' : 's'} ago`;
+    }
+
+    const years = Math.floor(diffDays / 365);
+    return `${years} year${years === 1 ? '' : 's'} ago`;
   }
 }
