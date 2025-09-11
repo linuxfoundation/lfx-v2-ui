@@ -37,6 +37,16 @@ on:
         required: false
         default: false
         type: boolean
+      enable-sharding:
+        description: 'Enable test sharding for faster parallel execution'
+        required: false
+        default: true
+        type: boolean
+      shard-count:
+        description: 'Number of shards for parallel execution (2-8)'
+        required: false
+        default: 4
+        type: number
     secrets:
       TEST_USERNAME:
         description: 'Username for test authentication'
@@ -57,9 +67,13 @@ on:
 
 jobs:
   e2e-tests:
-    name: Playwright E2E Tests
+    name: Playwright E2E Tests${{ inputs.enable-sharding && format(' (Shard {0}/{1})', matrix.shard, inputs.shard-count) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ inputs.enable-sharding && fromJSON('[1, 2, 3, 4]') || fromJSON('[0]') }}
     outputs:
       test-results: ${{ steps.test-results.outputs.results }}
     steps:
@@ -254,7 +268,12 @@ jobs:
             echo "🔐 Running authenticated E2E tests on all browsers"
             echo "🚀 Playwright will automatically start the dev server on localhost:4200"
             echo "📋 Using secrets from AWS Secrets Manager"
-            yarn ${{ inputs.test-command }} --reporter=list
+            if [ "${{ inputs.enable-sharding }}" == "true" ]; then
+              echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
+              yarn ${{ inputs.test-command }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+            else
+              yarn ${{ inputs.test-command }} --reporter=list
+            fi
             echo "test_exit_code=$?" >> $GITHUB_OUTPUT
           else
             echo "⚠️ No test credentials provided. Skipping E2E tests."
@@ -271,7 +290,12 @@ jobs:
             echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
             echo "🚀 Playwright will automatically start the dev server on localhost:4200"
             echo "📋 Using secrets from AWS Secrets Manager"
-            yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list
+            if [ "${{ inputs.enable-sharding }}" == "true" ]; then
+              echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
+              yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+            else
+              yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list
+            fi
           else
             echo "⚠️ No test credentials provided. Skipping E2E tests."
             echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."

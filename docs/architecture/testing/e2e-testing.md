@@ -56,6 +56,72 @@ Total E2E Tests: 85+ (All Passing)
 }
 ```
 
+## ⚡ Parallelization Strategy
+
+### Local Development Optimization
+
+- **Workers**: `50%` of CPU cores for faster feedback
+- **Full Parallel**: Tests run in parallel across all files
+- **Resource Management**: Mobile tests use single worker to prevent contention
+
+```typescript
+// playwright.config.ts - Optimized Configuration
+workers: process.env.CI ? 1 : '50%',
+fullyParallel: true,
+```
+
+### CI Environment Configuration
+
+#### Default Single Worker (Recommended)
+
+- **Stability First**: Single worker ensures reproducible results
+- **Resource Efficiency**: Optimal for standard GitHub runners
+- **Debugging Friendly**: Sequential execution simplifies failure analysis
+
+#### Optional Test Sharding
+
+Enable for faster PR validation:
+
+```yaml
+# Workflow Usage
+- uses: ./.github/workflows/e2e-tests.yml
+  with:
+    enable-sharding: true
+    shard-count: 4
+    browser: chromium
+```
+
+**Performance Comparison**:
+
+- Single Worker: ~15 minutes (stable)
+- 4-Way Sharding: ~4 minutes (4x faster)
+
+### Sharding Implementation
+
+The E2E workflow automatically detects sharding configuration:
+
+```bash
+# Without sharding
+yarn e2e --reporter=list
+
+# With sharding (distributes tests across 4 parallel jobs)
+yarn e2e --reporter=list --shard=1/4
+```
+
+### Best Practices
+
+✅ **Use sharding for**:
+
+- PR validation workflows
+- Fast feedback requirements
+- Large test suites (>50 tests)
+
+❌ **Avoid sharding for**:
+
+- Release workflows (stability priority)
+- Debugging test failures
+- Resource-constrained environments
+
 ## 🔧 Data-TestID Architecture
 
 ### Implementation Strategy
