@@ -37,11 +37,6 @@ on:
         required: false
         default: false
         type: boolean
-      enable-sharding:
-        description: 'Enable test sharding for faster parallel execution'
-        required: false
-        default: true
-        type: boolean
       shard-count:
         description: 'Number of shards for parallel execution (2-8)'
         required: false
@@ -66,16 +61,13 @@ on:
         value: ${{ jobs.e2e-tests.outputs.test-results }}
 
 jobs:
-  e2e-tests:
-    name: Playwright E2E Tests${{ inputs.enable-sharding && format(' (Shard {0}/{1})', matrix.shard, inputs.shard-count) || '' }}
+  # Setup job - runs once to prepare shared artifacts
+  setup:
+    name: Setup Dependencies and Build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ${{ inputs.enable-sharding && fromJSON('[1, 2, 3, 4]') || fromJSON('[0]') }}
+    timeout-minutes: 15
     outputs:
-      test-results: ${{ steps.test-results.outputs.results }}
+      can-run-tests: ${{ steps.validate-secrets.outputs.can_run_tests }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -168,8 +160,71 @@ jobs:
             echo "can_run_tests=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up non-sensitive environment variables
+      - name: Build the application
+        if: steps.validate-secrets.outputs.can_run_tests == 'true' && !inputs.skip-build
+        run: yarn build
+
+      - name: Upload build artifacts
         if: steps.validate-secrets.outputs.can_run_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            apps/lfx-pcc/dist/
+            node_modules/.cache/
+          retention-days: 1
+
+  # E2E tests - runs in parallel shards after setup
+  e2e-tests:
+    name: Playwright E2E Tests (Shard ${{ matrix.shard }}/${{ inputs.shard-count }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [setup]
+    if: ${{ needs.setup.outputs.can-run-tests == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    outputs:
+      test-results: ${{ steps.test-results.outputs.results }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: OIDC Auth
+        uses: aws-actions/configure-aws-credentials@v4
+        id: oidc-auth
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: arn:aws:iam::788942260905:role/github-actions-deploy
+          aws-region: us-west-2
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        id: get_secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            SUPABASE, /cloudops/managed-secrets/cloud/supabase/api_key
+            AUTH0,  /cloudops/managed-secrets/auth0/LFX_V2_PCC
+            AUTH,  /cloudops/managed-secrets/auth0/LFX_V2_Meeting_Join_M2M
+
+      - name: Set up environment variables
         run: |
           echo "ENV=development" >> $GITHUB_ENV
           echo "PCC_BASE_URL=http://localhost:4200" >> $GITHUB_ENV
@@ -180,152 +235,83 @@ jobs:
           echo "M2M_AUTH_ISSUER_BASE_URL=https://linuxfoundation-dev.auth0.com/" >> $GITHUB_ENV
           echo "M2M_AUTH_AUDIENCE=https://api-gw.dev.platform.linuxfoundation.org/" >> $GITHUB_ENV
           echo "CI=true" >> $GITHUB_ENV
-
-      - name: Set up sensitive environment variables
-        if: steps.validate-secrets.outputs.can_run_tests == 'true'
-        run: |
-          # Parse and set AUTH0 secrets with explicit masking
+          
+          # Parse and set AUTH0 secrets
           if [ -n "$AUTH0" ]; then
             AUTH0_CLIENT_ID=$(echo "$AUTH0" | jq -r '.client_id // empty')
             AUTH0_CLIENT_SECRET=$(echo "$AUTH0" | jq -r '.client_secret // empty')
-
-            # Explicitly mask the values
             echo "::add-mask::$AUTH0_CLIENT_ID"
             echo "::add-mask::$AUTH0_CLIENT_SECRET"
-
-            # Set as environment variables
             echo "PCC_AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID" >> $GITHUB_ENV
             echo "PCC_AUTH0_CLIENT_SECRET=$AUTH0_CLIENT_SECRET" >> $GITHUB_ENV
-            echo "✅ AUTH0 secrets set as masked environment variables"
           fi
 
+          # Parse and set M2M AUTH secrets
           if [ -n "$AUTH" ]; then
             M2M_AUTH_CLIENT_ID=$(echo "$AUTH" | jq -r '.m2m_client_id // empty')
             M2M_AUTH_CLIENT_SECRET=$(echo "$AUTH" | jq -r '.m2m_client_secret // empty')
-
-            # Explicitly mask the values
             echo "::add-mask::$M2M_AUTH_CLIENT_ID"
             echo "::add-mask::$M2M_AUTH_CLIENT_SECRET"
-
-            # Set as environment variables
             echo "M2M_AUTH_CLIENT_ID=$M2M_AUTH_CLIENT_ID" >> $GITHUB_ENV
             echo "M2M_AUTH_CLIENT_SECRET=$M2M_AUTH_CLIENT_SECRET" >> $GITHUB_ENV
-            echo "✅ M2M_AUTH secrets set as masked environment variables"
           fi
-
 
           # Parse and set SUPABASE secrets
           if [ -n "$SUPABASE" ]; then
             SUPABASE_URL=$(echo "$SUPABASE" | jq -r '.url // empty')
             SUPABASE_API_KEY=$(echo "$SUPABASE" | jq -r '.api_key // empty')
-
-            # Explicitly mask the values
             echo "::add-mask::$SUPABASE_URL"
             echo "::add-mask::$SUPABASE_API_KEY"
-
-            # Set as environment variables
             echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
             echo "POSTGRES_API_KEY=$SUPABASE_API_KEY" >> $GITHUB_ENV
-            echo "✅ SUPABASE secrets set as masked environment variables"
           fi
 
-          # Set AI secrets
+          # Set GitHub secrets
           echo "::add-mask::${{ secrets.AI_API_KEY }}"
           echo "::add-mask::${{ secrets.AI_PROXY_URL }}"
-          echo "AI_API_KEY=${{ secrets.AI_API_KEY }}" >> $GITHUB_ENV
-          echo "AI_PROXY_URL=${{ secrets.AI_PROXY_URL }}" >> $GITHUB_ENV
-          echo "✅ AI secrets set as masked environment variables"
-
-          # Set test credentials
           echo "::add-mask::${{ secrets.TEST_USERNAME }}"
           echo "::add-mask::${{ secrets.TEST_PASSWORD }}"
+          echo "AI_API_KEY=${{ secrets.AI_API_KEY }}" >> $GITHUB_ENV
+          echo "AI_PROXY_URL=${{ secrets.AI_PROXY_URL }}" >> $GITHUB_ENV
           echo "TEST_USERNAME=${{ secrets.TEST_USERNAME }}" >> $GITHUB_ENV
           echo "TEST_PASSWORD=${{ secrets.TEST_PASSWORD }}" >> $GITHUB_ENV
-          echo "✅ TEST_USERNAME and TEST_PASSWORD secrets set as masked environment variables"
 
       - name: Setup Playwright with caching
-        if: steps.validate-secrets.outputs.can_run_tests == 'true'
         uses: ./.github/actions/setup-playwright
         with:
           browser: ${{ inputs.browser }}
 
       - name: Create Playwright auth directory
-        if: steps.validate-secrets.outputs.can_run_tests == 'true'
         working-directory: apps/lfx-pcc
         run: mkdir -p playwright/.auth
 
-      - name: Build the application
-        if: steps.validate-secrets.outputs.can_run_tests == 'true'
-        run: yarn build
-
       - name: Run E2E tests (All browsers)
         id: run-tests-all
-        if: ${{ inputs.browser == 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
+        if: ${{ inputs.browser == 'all' }}
         working-directory: apps/lfx-pcc
         continue-on-error: true
         run: |
-          if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
-            echo "🔐 Running authenticated E2E tests on all browsers"
-            echo "🚀 Playwright will automatically start the dev server on localhost:4200"
-            echo "📋 Using secrets from AWS Secrets Manager"
-            if [ "${{ inputs.enable-sharding }}" == "true" ]; then
-              echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
-              yarn ${{ inputs.test-command }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
-            else
-              yarn ${{ inputs.test-command }} --reporter=list
-            fi
-            echo "test_exit_code=$?" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ No test credentials provided. Skipping E2E tests."
-            echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."
-            echo "test_exit_code=0" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          echo "🔐 Running authenticated E2E tests on all browsers"
+          echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
+          echo "🚀 Playwright will automatically start the dev server on localhost:4200"
+          yarn ${{ inputs.test-command }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+          echo "test_exit_code=$?" >> $GITHUB_OUTPUT
 
       - name: Run E2E tests (Specific browser)
-        if: ${{ inputs.browser != 'all' && steps.validate-secrets.outputs.can_run_tests == 'true' }}
+        if: ${{ inputs.browser != 'all' }}
         working-directory: apps/lfx-pcc
         run: |
-          if [ -n "$TEST_USERNAME" ] && [ -n "$TEST_PASSWORD" ]; then
-            echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
-            echo "🚀 Playwright will automatically start the dev server on localhost:4200"
-            echo "📋 Using secrets from AWS Secrets Manager"
-            if [ "${{ inputs.enable-sharding }}" == "true" ]; then
-              echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
-              yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
-            else
-              yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list
-            fi
-          else
-            echo "⚠️ No test credentials provided. Skipping E2E tests."
-            echo "Set TEST_USERNAME and TEST_PASSWORD secrets to enable E2E tests."
-            exit 0
-          fi
-
-      - name: E2E tests skipped
-        if: ${{ steps.validate-secrets.outputs.can_run_tests == 'false' }}
-        run: |
-          echo "⏭️ E2E tests skipped due to missing required secrets"
-          echo "Configure the following secrets to enable E2E testing:"
-          echo ""
-          echo "AWS Secrets Manager (required):"
-          echo "  - /cloudops/managed-secrets/auth0/LFX_V2_PCC (AUTH0 configuration)"
-          echo "  - /cloudops/managed-secrets/cloud/supabase/api_key (SUPABASE configuration)"
-          echo "  - /cloudops/managed-secrets/ai/ai_config (AI configuration)"
-          echo ""
-          echo "GitHub Secrets (required for authenticated tests):"
-          echo "  - TEST_USERNAME"
-          echo "  - TEST_PASSWORD"
+          echo "🔐 Running authenticated E2E tests on ${{ inputs.browser }}"
+          echo "🔀 Running with sharding: ${{ matrix.shard }}/${{ inputs.shard-count }}"
+          echo "🚀 Playwright will automatically start the dev server on localhost:4200"
+          yarn ${{ inputs.test-command }} --project=${{ inputs.browser }} --reporter=list --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
 
       - name: Generate test results summary
         id: test-results
         if: always()
         working-directory: apps/lfx-pcc
         run: |
-          if [ "${{ steps.validate-secrets.outputs.can_run_tests }}" == "false" ]; then
-            echo "⏭️ E2E tests skipped (missing required secrets)"
-            echo "results=skipped" >> $GITHUB_OUTPUT
-          elif [ -z "$TEST_USERNAME" ] || [ -z "$TEST_PASSWORD" ]; then
+          if [ -z "$TEST_USERNAME" ] || [ -z "$TEST_PASSWORD" ]; then
             echo "⏭️ E2E tests skipped (no test credentials)"
             echo "results=skipped" >> $GITHUB_OUTPUT
           elif [ -f "test-results/.last-run.json" ]; then
@@ -337,7 +323,7 @@ jobs:
           fi
 
       - name: Comment test results on PR
-        if: github.event_name == 'pull_request' && always()
+        if: github.event_name == 'pull_request' && matrix.shard == 1 && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -350,7 +336,7 @@ jobs:
             if (results === 'success') {
               emoji = '✅';
               status = 'passed';
-              details = 'All E2E tests passed successfully.';
+              details = 'All E2E tests passed successfully across 4 parallel shards.';
             } else if (results === 'failure') {
               emoji = '❌';
               status = 'failed';
@@ -364,6 +350,7 @@ jobs:
             const comment = `## ${emoji} E2E Tests ${status.charAt(0).toUpperCase() + status.slice(1)}
             
             **Browser:** ${browser}
+            **Shards:** 4 parallel executions
             **Status:** ${status}
             
             ${details}
@@ -375,6 +362,7 @@ jobs:
             - **Command:** \`${{ inputs.test-command }}\`
             - **Browser:** ${browser}
             - **Base URL:** ${{ inputs.base-url }}
+            - **Shards:** ${{ inputs.shard-count }}
             
             </details>`;
             
