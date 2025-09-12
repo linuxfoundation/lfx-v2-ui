@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-@if (statistics()) {
+@if (statistics(); as stats) {
   <div class="flex flex-col gap-4">
     <!-- Quick Actions -->
     <lfx-card>
@@ -37,7 +37,7 @@
             <i class="fa-light fa-users text-purple-600"></i>
           </div>
           <div>
-            <p class="text-lg font-bold text-gray-900">{{ statistics()!.committees }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ stats!.committees }}</p>
             <p class="text-xs text-gray-500">Committees</p>
           </div>
         </div>
@@ -50,7 +50,7 @@
             <i class="fa-light fa-video text-amber-600"></i>
           </div>
           <div>
-            <p class="text-lg font-bold text-gray-900">{{ statistics()!.meetings }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ stats!.meetings }}</p>
             <p class="text-xs text-gray-500">Meetings</p>
           </div>
         </div>
@@ -63,7 +63,7 @@
             <i class="fa-light fa-code-commit text-indigo-600"></i>
           </div>
           <div>
-            <p class="text-lg font-bold text-gray-900">{{ statistics()!.contributions }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ stats!.contributions }}</p>
             <p class="text-xs text-gray-500">Contributions</p>
           </div>
         </div>
@@ -76,7 +76,7 @@
             <i class="fa-light fa-folder-open text-red-600"></i>
           </div>
           <div>
-            <p class="text-lg font-bold text-gray-900">{{ statistics()!.activeProjects }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ stats!.activeProjects }}</p>
             <p class="text-xs text-gray-500">Active Projects</p>
           </div>
         </div>
