@@ -62,7 +62,9 @@ export class MeetingRecurrencePatternComponent implements OnInit {
   // Pattern type change handlers
 
   // Weekly days handlers
-  public onWeeklyDayChange(dayIndex: number, checked: boolean): void {
+  public onWeeklyDayChange(dayIndex: number, event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    const checked = checkbox.checked;
     const currentDays = this.weeklyDaysArray();
     let newDays: number[];
 
@@ -262,7 +264,13 @@ export class MeetingRecurrencePatternComponent implements OnInit {
 
     // Update weeklyDaysArray signal
     if (recurrenceValue.weekly_days) {
-      const daysArray = recurrenceValue.weekly_days.split(',').map((d: string) => parseInt(d.trim()) - 1);
+      const daysArray = recurrenceValue.weekly_days
+        .split(',')
+        .map((d: string) => {
+          const num = Number(d.trim());
+          return isNaN(num) ? null : num - 1;
+        })
+        .filter((d: number | null): d is number => d !== null);
       this.weeklyDaysArray.set(daysArray);
     } else {
       this.weeklyDaysArray.set([]);
@@ -295,7 +303,13 @@ export class MeetingRecurrencePatternComponent implements OnInit {
     const recurrenceForm = this.recurrenceForm();
     if (!recurrenceForm || !currentValue.weekly_days) return;
 
-    const currentDays = currentValue.weekly_days.split(',').map((d: string) => parseInt(d.trim()));
+    const currentDays = currentValue.weekly_days
+      .split(',')
+      .map((d: string) => {
+        const num = Number(d.trim());
+        return isNaN(num) ? null : num;
+      })
+      .filter((d: number | null): d is number => d !== null);
 
     // If only one day is selected, update it to the new day
     if (currentDays.length === 1) {

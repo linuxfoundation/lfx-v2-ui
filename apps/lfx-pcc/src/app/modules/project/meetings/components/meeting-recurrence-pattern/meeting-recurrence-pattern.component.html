@@ -53,7 +53,7 @@
                 [class.bg-blue-50]="isWeeklyDaySelected(i)"
                 [class.border-blue-300]="isWeeklyDaySelected(i)"
                 [attr.data-testid]="'recurrence-day-' + day.label.toLowerCase()">
-                <input type="checkbox" [checked]="isWeeklyDaySelected(i)" (change)="onWeeklyDayChange(i, $any($event.target).checked)" class="sr-only" />
+                <input type="checkbox" [checked]="isWeeklyDaySelected(i)" (change)="onWeeklyDayChange(i, $event)" class="sr-only" />
                 <span class="text-xs font-medium text-gray-700">{{ day.label }}</span>
               </label>
             }
