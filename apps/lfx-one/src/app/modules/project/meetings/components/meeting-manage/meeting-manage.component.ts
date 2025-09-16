@@ -316,7 +316,7 @@ export class MeetingManageComponent {
       duration: duration,
       timezone: formValue.timezone,
       meeting_type: formValue.meeting_type || DEFAULT_MEETING_TYPE,
-      early_join_time_minutes: formValue.early_join_time_minutes || DEFAULT_EARLY_JOIN_TIME,
+      early_join_time_minutes: parseInt(formValue.early_join_time_minutes) || DEFAULT_EARLY_JOIN_TIME,
       visibility: formValue.visibility || MeetingVisibility.PRIVATE,
       restricted: formValue.restricted || false,
       recording_enabled: formValue.recording_enabled || false,
