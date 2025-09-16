@@ -126,7 +126,7 @@ export function startServer() {
 
 ### 2. Docker Deployment
 
-The application uses a multi-stage Docker build process defined in `/Dockerfile-changelog`:
+The application uses a multi-stage Docker build process defined in `/Dockerfile`:
 
 **Build Process**:
 
@@ -145,13 +145,13 @@ The application uses a multi-stage Docker build process defined in `/Dockerfile-
 
 ```bash
 # Build the image
-docker build -f /path/to/Dockerfile-changelog -t lfx-one .
+docker build -f /path/to/Dockerfile -t lfx-one .
 
 # Run the container
 docker run -p 4000:4000 lfx-one
 
 # Build for specific environment
-docker build --build-arg BUILD_ENV=prod -f Dockerfile-changelog -t lfx-one .
+docker build --build-arg BUILD_ENV=prod -f Dockerfile -t lfx-one .
 ```
 
 ### 3. CI/CD Pipeline (AWS ECS)
@@ -166,7 +166,7 @@ The application uses GitHub Actions for automated deployment to AWS ECS:
 - **ECS Deployment**: AWS Fargate for serverless container execution
 - **Environment Management**: Separate dev/prod deployments with AWS Secrets Manager
 
-**Deployment Workflow** (`.github/workflows/deploy-changelog-dev.yml`):
+**Deployment Workflow** (`.github/workflows/deploy-dev.yml`):
 
 1. **Build**: Multi-stage Docker build with environment-specific configurations
 2. **Security Scan**: TruffleHog analysis for embedded secrets

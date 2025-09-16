@@ -264,8 +264,8 @@ test.describe('Project Dashboard - Robust Tests', () => {
       // Search bar should be hidden on mobile (responsive design)
       await expect(page.locator('[data-testid="header-search-autocomplete"]')).toBeHidden();
 
-      // On mobile: "Projects" text is completely hidden from header button
-      // We need to target the specific span that contains "Projects" text
+      // On mobile: "One" text is completely hidden from header button
+      // We need to target the specific span that contains "One" text
       await expect(page.getByTestId('header-projects-text')).toBeHidden();
 
       // Search bar should be hidden on mobile (responsive design)

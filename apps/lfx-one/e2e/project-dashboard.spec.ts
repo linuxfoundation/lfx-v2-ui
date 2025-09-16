@@ -322,8 +322,8 @@ test.describe('Project Dashboard', () => {
         await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
         await page.getByRole('link', { name: 'Dashboard' }).click();
 
-        // All dashboard elements should be visible on tablet (768px = desktop, "Projects" text visible)
-        await expect(page.getByRole('button', { name: 'Go to home page' }).getByText('Projects', { exact: true })).toBeVisible();
+        // All dashboard elements should be visible on tablet (768px = desktop, "One" text visible)
+        await expect(page.getByRole('button', { name: 'Go to home page' }).getByText('One', { exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Academy Software Foundation (ASWF)' })).toBeVisible();
         await expect(page.getByText('Total Members')).toBeVisible();
         await expect(page.getByText('Project Health')).toBeVisible();
