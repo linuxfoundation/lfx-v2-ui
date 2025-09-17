@@ -158,7 +158,7 @@ export class MeetingJoinComponent {
       const joinableOccurrence = meeting.occurrences.find((occurrence) => {
         const startTime = new Date(occurrence.start_time);
         const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
-        const latestJoinTime = new Date(startTime.getTime() + occurrence.duration * 60000); // 40 minutes after end
+        const latestJoinTime = new Date(startTime.getTime() + occurrence.duration * 60000 + 40 * 60000); // 40 minutes after end
 
         return now >= earliestJoinTime && now <= latestJoinTime;
       });
@@ -259,7 +259,7 @@ export class MeetingJoinComponent {
         const startTime = new Date(currentOccurrence.start_time);
         const earlyJoinMinutes = meeting.early_join_time_minutes || 10;
         const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
-        const latestJoinTime = new Date(startTime.getTime() + currentOccurrence.duration * 60000); // 40 minutes after end
+        const latestJoinTime = new Date(startTime.getTime() + currentOccurrence.duration * 60000 + 40 * 60000); // 40 minutes after end
 
         return now >= earliestJoinTime && now <= latestJoinTime;
       }
@@ -273,7 +273,7 @@ export class MeetingJoinComponent {
       const startTime = new Date(meeting.start_time);
       const earlyJoinMinutes = meeting.early_join_time_minutes || 10; // Default to 10 minutes
       const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
-      const latestJoinTime = new Date(startTime.getTime() + meeting.duration * 60000); // 40 minutes after end
+      const latestJoinTime = new Date(startTime.getTime() + meeting.duration * 60000 + 40 * 60000); // 40 minutes after end
 
       return now >= earliestJoinTime && now <= latestJoinTime;
     });
