@@ -52,8 +52,7 @@
                         'text-gray-300 cursor-not-allowed': !email.canSetPrimary && !email.isPrimary,
                       }"
                       [attr.data-testid]="'primary-icon-' + email.id"
-                      [attr.aria-label]="email.isPrimary ? 'Primary email' : email.is_verified ? 'Set as primary email' : 'Verify email to set as primary'"
-                      [title]="email.isPrimary ? 'Primary email' : email.is_verified ? 'Set as primary email' : 'Verify email to set as primary'">
+                      [attr.aria-label]="email.isPrimary ? 'Primary email' : email.is_verified ? 'Set as primary email' : 'Verify email to set as primary'">
                     </lfx-button>
 
                     <div class="flex-1">
@@ -68,18 +67,35 @@
                     </div>
                   </div>
 
-                  <!-- Delete Button -->
-                  @if (email.canDelete) {
-                    <lfx-button
-                      size="small"
-                      icon="fa-light fa-trash"
-                      severity="danger"
-                      variant="outlined"
-                      (onClick)="deleteEmail(email)"
-                      [attr.data-testid]="'delete-button-' + email.id"
-                      [attr.aria-label]="'Delete ' + email.email">
-                    </lfx-button>
-                  }
+                  <!-- Action Buttons -->
+                  <div class="flex items-center gap-2">
+                    <!-- Resend Verification Button -->
+                    @if (!email.is_verified) {
+                      <lfx-button
+                        size="small"
+                        icon="fa-light fa-envelope"
+                        label="Resend verification"
+                        severity="secondary"
+                        variant="outlined"
+                        (onClick)="resendVerification(email)"
+                        [attr.data-testid]="'resend-verification-button-' + email.id"
+                        [attr.aria-label]="'Resend verification email to ' + email.email">
+                      </lfx-button>
+                    }
+
+                    <!-- Delete Button -->
+                    @if (email.canDelete) {
+                      <lfx-button
+                        size="small"
+                        icon="fa-light fa-trash"
+                        severity="danger"
+                        variant="outlined"
+                        (onClick)="deleteEmail(email)"
+                        [attr.data-testid]="'delete-button-' + email.id"
+                        [attr.aria-label]="'Delete ' + email.email">
+                      </lfx-button>
+                    }
+                  </div>
                 </div>
               }
             </div>

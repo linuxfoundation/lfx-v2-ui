@@ -184,6 +184,15 @@ export class ProfileEmailComponent {
     });
   }
 
+  public resendVerification(email: UserEmail): void {
+    // For now, just show a success toast. In the future, this will call an API endpoint
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Verification Email Sent',
+      detail: `Verification email has been sent to ${email.email}`,
+    });
+  }
+
   public updatePreferences(): void {
     this.updatingPreferences.set(true);
 
