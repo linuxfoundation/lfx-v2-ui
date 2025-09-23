@@ -73,7 +73,7 @@ export class PastMeetingController {
       }
 
       // Get the past meeting by ID using meetingType 'past_meeting'
-      const meeting = await this.meetingService.getMeetingById(req, uid, 'past_meeting');
+      const meeting = await this.meetingService.getMeetingById(req, uid, 'past_meetings');
 
       // Log the success
       Logger.success(req, 'get_past_meeting_by_id', startTime, {
