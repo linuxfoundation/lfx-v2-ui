@@ -3,7 +3,7 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { OrganizationSuggestionsResponse } from '@lfx-one/shared';
+import { OrganizationSuggestion, OrganizationSuggestionsResponse } from '@lfx-one/shared';
 import { catchError, map, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -18,7 +18,7 @@ export class OrganizationService {
    * @param searchTerm - The search term to look for
    * @returns Observable of organization suggestions
    */
-  public searchOrganizations(searchTerm: string): Observable<any[]> {
+  public searchOrganizations(searchTerm: string): Observable<OrganizationSuggestion[]> {
     if (!searchTerm || searchTerm.length < 2) {
       return of([]);
     }

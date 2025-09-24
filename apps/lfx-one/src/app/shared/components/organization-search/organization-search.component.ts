@@ -7,7 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { normalizeToUrl, OrganizationSuggestion } from '@lfx-one/shared';
 import { AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
-import { catchError, debounceTime, distinctUntilChanged, of, startWith, switchMap } from 'rxjs';
+import { catchError, distinctUntilChanged, of, startWith, switchMap } from 'rxjs';
 
 import { OrganizationService } from '../../services/organization.service';
 import { AutocompleteComponent } from '../autocomplete/autocomplete.component';
@@ -48,7 +48,6 @@ export class OrganizationSearchComponent {
     // Initialize suggestions signal that reacts to search query changes
     const searchResults$ = this.organizationForm.get('organizationSearch')!.valueChanges.pipe(
       startWith(''),
-      debounceTime(300),
       distinctUntilChanged(),
       switchMap((searchTerm: string | null) => {
         const trimmedTerm = searchTerm?.trim() || '';

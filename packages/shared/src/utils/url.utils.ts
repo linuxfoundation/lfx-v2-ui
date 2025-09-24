@@ -126,19 +126,29 @@ export function isValidDomain(domain: string): boolean {
     return false;
   }
 
-  // Remove protocol if present but preserve www if it exists
-  const cleanDomain = domain.replace(/^https?:\/\//, '').trim();
-
-  if (!cleanDomain || cleanDomain.length < 3) {
+  const trimmedDomain = domain.trim();
+  if (!trimmedDomain || trimmedDomain.length < 3) {
     return false;
   }
 
-  // Try to create a URL with https:// prefix to validate the domain
-  try {
-    const url = new URL(`https://${cleanDomain}`);
+  // Case-insensitive protocol detection
+  const hasProtocol = /^https?:\/\//i.test(trimmedDomain);
 
-    // Check if hostname is valid and matches our cleaned domain
-    return url.hostname === cleanDomain && cleanDomain.includes('.');
+  let candidateUrl: string;
+  if (hasProtocol) {
+    // Already has protocol, use as-is
+    candidateUrl = trimmedDomain;
+  } else {
+    // No protocol, build HTTPS candidate from host (with optional path)
+    candidateUrl = `https://${trimmedDomain}`;
+  }
+
+  // Try to create and validate the URL
+  try {
+    const url = new URL(candidateUrl);
+
+    // Check if hostname is valid and contains at least one dot (for TLD)
+    return url.hostname.length > 0 && url.hostname.includes('.');
   } catch {
     return false;
   }
