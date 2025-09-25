@@ -173,6 +173,16 @@ export class ProfilePasswordComponent implements OnInit {
     window.open('https://docs.example.com/2fa-setup', '_blank');
   }
 
+  public scrollToAccountRecovery(): void {
+    const accountRecoveryElement = document.querySelector('[data-testid="password-recovery-heading"]');
+    if (accountRecoveryElement) {
+      accountRecoveryElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }
+
   // Private helper methods
   private initializeTwoFactorData(): Signal<TwoFactorSettings | null> {
     this.loadingTwoFactorSignal.set(true);
