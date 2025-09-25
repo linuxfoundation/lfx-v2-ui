@@ -3,26 +3,27 @@
 
 import { CommonModule } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal, effect } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { RecurrenceSummaryPipe } from '@app/shared/pipes/recurrence-summary.pipe';
+import { FileSizePipe } from '@pipes/file-size.pipe';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { environment } from '@environments/environment';
-import { extractUrlsWithDomains, getCurrentOrNextOccurrence, Meeting, MeetingOccurrence, Project, User } from '@lfx-one/shared';
+import { extractUrlsWithDomains, getCurrentOrNextOccurrence, Meeting, MeetingAttachment, MeetingOccurrence, Project, User } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, switchMap, tap, distinctUntilChanged, filter } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-join',
@@ -39,6 +40,7 @@ import { catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rx
     MeetingTimePipe,
     RecurrenceSummaryPipe,
     LinkifyPipe,
+    FileSizePipe,
     ExpandableTextComponent,
   ],
   providers: [MessageService],
@@ -66,6 +68,7 @@ export class MeetingJoinComponent {
   public password: WritableSignal<string | null> = signal<string | null>(null);
   public canJoinMeeting: Signal<boolean>;
   public joinUrlWithParams: Signal<string | undefined>;
+  public attachments: Signal<MeetingAttachment[]>;
 
   // Form value signals for reactivity
   private formValues: Signal<{ name: string; email: string; organization: string }>;
@@ -83,6 +86,7 @@ export class MeetingJoinComponent {
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
     this.joinUrlWithParams = this.initializeJoinUrlWithParams();
+    this.attachments = this.initializeAttachments();
   }
 
   public onJoinMeeting(): void {
@@ -299,5 +303,31 @@ export class MeetingJoinComponent {
       return `${joinUrl}&${queryString}`;
     }
     return `${joinUrl}?${queryString}`;
+  }
+
+  private initializeAttachments(): Signal<MeetingAttachment[]> {
+    const attachmentsSignal = signal<MeetingAttachment[]>([]);
+
+    // Use effect to watch the meeting signal and load attachments
+    effect(() => {
+      const meeting = this.meeting();
+      if (meeting?.uid) {
+        this.meetingService
+          .getMeetingAttachments(meeting.uid)
+          .pipe(
+            catchError((error) => {
+              console.error(`Failed to load attachments for meeting ${meeting.uid}:`, error);
+              return of([]);
+            })
+          )
+          .subscribe((attachments) => {
+            attachmentsSignal.set(attachments);
+          });
+      } else {
+        attachmentsSignal.set([]);
+      }
+    });
+
+    return attachmentsSignal.asReadonly();
   }
 }
