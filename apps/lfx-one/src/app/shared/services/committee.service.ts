@@ -4,7 +4,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { Committee, CommitteeMember, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { catchError, Observable, of, map, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -39,7 +39,7 @@ export class CommitteeService {
           return of({ count: 0 });
         })
       )
-      .pipe(switchMap((response) => of(response.count)));
+      .pipe(map((response) => response.count));
   }
 
   public getRecentCommitteesByProject(projectId: string): Observable<Committee[]> {

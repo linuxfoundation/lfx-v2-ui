@@ -22,7 +22,7 @@ import {
   UpdateMeetingRequest,
   UploadFileResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, defer, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { catchError, defer, Observable, of, map, switchMap, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -76,7 +76,7 @@ export class MeetingService {
       )
       .pipe(
         // Extract just the count number from the response
-        switchMap((response) => of(response.count))
+        map((response) => response.count)
       );
   }
 
