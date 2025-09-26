@@ -64,6 +64,22 @@ export class MeetingService {
     return this.getMeetings(params);
   }
 
+  public getMeetingsCountByProject(projectId: string): Observable<number> {
+    const params = new HttpParams().set('tags', `project_uid:${projectId}`);
+    return this.http
+      .get<{ count: number }>('/api/meetings/count', { params })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to load meetings count:', error);
+          return of({ count: 0 });
+        })
+      )
+      .pipe(
+        // Extract just the count number from the response
+        switchMap((response) => of(response.count))
+      );
+  }
+
   public getRecentMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
     return this.getMeetingsByProject(projectId, limit, 'updated_at.desc');
   }
