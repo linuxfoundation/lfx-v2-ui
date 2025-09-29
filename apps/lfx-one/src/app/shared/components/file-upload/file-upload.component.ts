@@ -3,6 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
+import { getAcceptedFileTypesDisplay } from '@lfx-one/shared/utils';
 import { FileUploadModule } from 'primeng/fileupload';
 
 @Component({
@@ -75,6 +76,13 @@ export class FileUploadComponent {
     const accept = this.accept();
     if (!accept) return '';
 
+    // Check if accept string contains MIME types (our standard format)
+    if (accept.includes('application/') || accept.includes('image/') || accept.includes('text/')) {
+      // Use the presentable display function
+      return getAcceptedFileTypesDisplay();
+    }
+
+    // Fallback for custom accept strings
     const extensions = accept.split(',').map((ext) => ext.trim().replace(/\./g, '').toUpperCase());
     return extensions.join(', ');
   }
