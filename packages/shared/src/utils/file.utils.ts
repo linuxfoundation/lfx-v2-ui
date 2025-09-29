@@ -32,27 +32,22 @@ const MIME_TO_EXTENSIONS: Record<string, string[]> = {
  * const acceptString = generateAcceptString();
  */
 export function generateAcceptString(): string {
-  const acceptParts: string[] = [];
-  const addedExtensions = new Set<string>();
+  // Build arrays for MIME types and unique extensions in a single pass
+  const mimeTypes: string[] = [];
+  const uniqueExtensions = new Set<string>();
 
-  // Add both extensions and MIME types for maximum compatibility
+  // Process all MIME types and collect unique extensions
   ALLOWED_FILE_TYPES.forEach((mimeType) => {
-    // Add MIME type
-    acceptParts.push(mimeType);
+    mimeTypes.push(mimeType);
 
-    // Add corresponding file extensions
     const extensions = MIME_TO_EXTENSIONS[mimeType];
     if (extensions) {
-      extensions.forEach((ext) => {
-        if (!addedExtensions.has(ext)) {
-          acceptParts.push(ext);
-          addedExtensions.add(ext);
-        }
-      });
+      extensions.forEach((ext) => uniqueExtensions.add(ext));
     }
   });
 
-  return acceptParts.join(',');
+  // Combine MIME types and extensions into final accept string
+  return [...mimeTypes, ...uniqueExtensions].join(',');
 }
 
 /**
@@ -63,45 +58,48 @@ export function generateAcceptString(): string {
  * const displayString = getAcceptedFileTypesDisplay();
  */
 export function getAcceptedFileTypesDisplay(): string {
-  const fileTypeGroups: { [key: string]: string[] } = {
-    PDF: [],
-    Word: [],
-    Excel: [],
-    PowerPoint: [],
-    Images: [],
-    Text: [],
+  const fileTypeGroups: { [key: string]: Set<string> } = {
+    PDF: new Set(),
+    Word: new Set(),
+    Excel: new Set(),
+    PowerPoint: new Set(),
+    Images: new Set(),
+    Text: new Set(),
   };
 
+  // Single pass through MIME types to categorize extensions
   ALLOWED_FILE_TYPES.forEach((mimeType) => {
     const extensions = MIME_TO_EXTENSIONS[mimeType];
     if (!extensions) return;
 
+    // Convert extensions to uppercase display format
     const displayExtensions = extensions.map((ext) => ext.substring(1).toUpperCase());
 
+    // Categorize based on MIME type
     if (mimeType.includes('pdf')) {
-      fileTypeGroups['PDF'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['PDF'].add(ext));
     } else if (mimeType.includes('word')) {
-      fileTypeGroups['Word'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['Word'].add(ext));
     } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
-      fileTypeGroups['Excel'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['Excel'].add(ext));
     } else if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) {
-      fileTypeGroups['PowerPoint'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['PowerPoint'].add(ext));
     } else if (mimeType.startsWith('image/')) {
-      fileTypeGroups['Images'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['Images'].add(ext));
     } else if (mimeType.startsWith('text/')) {
-      fileTypeGroups['Text'].push(...displayExtensions);
+      displayExtensions.forEach((ext) => fileTypeGroups['Text'].add(ext));
     }
   });
 
+  // Build display string from categorized groups
   const displayParts: string[] = [];
-  Object.entries(fileTypeGroups).forEach(([groupName, extensions]) => {
-    if (extensions.length > 0) {
-      // Remove duplicates
-      const uniqueExtensions = [...new Set(extensions)];
+  Object.entries(fileTypeGroups).forEach(([groupName, extensionSet]) => {
+    if (extensionSet.size > 0) {
       if (groupName === 'PDF') {
         displayParts.push('PDF');
       } else {
-        displayParts.push(`${groupName} (${uniqueExtensions.join(', ')})`);
+        const extensions = Array.from(extensionSet);
+        displayParts.push(`${groupName} (${extensions.join(', ')})`);
       }
     }
   });

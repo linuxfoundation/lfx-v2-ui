@@ -76,13 +76,15 @@ export class FileUploadComponent {
     const accept = this.accept();
     if (!accept) return '';
 
-    // Check if accept string contains MIME types (our standard format)
-    if (accept.includes('application/') || accept.includes('image/') || accept.includes('text/')) {
-      // Use the presentable display function
+    // Check if accept string contains MIME types using regex pattern (type/subtype)
+    // This matches any valid MIME type format like image/*, application/pdf, audio/mp3, video/mp4, etc.
+    const mimeTypePattern = /\w+\/[\w+\-.*]+/;
+    if (mimeTypePattern.test(accept)) {
+      // Use the presentable display function for our standard format
       return getAcceptedFileTypesDisplay();
     }
 
-    // Fallback for custom accept strings
+    // Fallback for custom accept strings (extension-only format)
     const extensions = accept.split(',').map((ext) => ext.trim().replace(/\./g, '').toUpperCase());
     return extensions.join(', ');
   }
