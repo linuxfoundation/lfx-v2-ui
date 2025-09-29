@@ -3,13 +3,12 @@
 
 import { CommonModule } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
-import { Component, computed, inject, signal, Signal, WritableSignal, effect } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { RecurrenceSummaryPipe } from '@app/shared/pipes/recurrence-summary.pipe';
-import { FileSizePipe } from '@pipes/file-size.pipe';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
@@ -17,13 +16,14 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { MessageComponent } from '@components/message/message.component';
 import { environment } from '@environments/environment';
 import { extractUrlsWithDomains, getCurrentOrNextOccurrence, Meeting, MeetingAttachment, MeetingOccurrence, Project, User } from '@lfx-one/shared';
+import { FileSizePipe } from '@pipes/file-size.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, finalize, map, of, switchMap, tap, distinctUntilChanged, filter } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-join',
@@ -43,7 +43,7 @@ import { catchError, combineLatest, finalize, map, of, switchMap, tap, distinctU
     FileSizePipe,
     ExpandableTextComponent,
   ],
-  providers: [MessageService],
+  providers: [],
   templateUrl: './meeting-join.component.html',
 })
 export class MeetingJoinComponent {
@@ -306,28 +306,22 @@ export class MeetingJoinComponent {
   }
 
   private initializeAttachments(): Signal<MeetingAttachment[]> {
-    const attachmentsSignal = signal<MeetingAttachment[]>([]);
-
-    // Use effect to watch the meeting signal and load attachments
-    effect(() => {
-      const meeting = this.meeting();
-      if (meeting?.uid) {
-        this.meetingService
-          .getMeetingAttachments(meeting.uid)
-          .pipe(
-            catchError((error) => {
-              console.error(`Failed to load attachments for meeting ${meeting.uid}:`, error);
-              return of([]);
-            })
-          )
-          .subscribe((attachments) => {
-            attachmentsSignal.set(attachments);
-          });
-      } else {
-        attachmentsSignal.set([]);
-      }
-    });
-
-    return attachmentsSignal.asReadonly();
+    // Convert meeting signal to observable to react to changes
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        switchMap((meeting) => {
+          if (meeting?.uid) {
+            return this.meetingService.getMeetingAttachments(meeting.uid).pipe(
+              catchError((error) => {
+                console.error(`Failed to load attachments for meeting ${meeting.uid}:`, error);
+                return of([]);
+              })
+            );
+          }
+          return of([]);
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }
