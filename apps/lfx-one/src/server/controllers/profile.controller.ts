@@ -647,6 +647,13 @@ export class ProfileController {
         token_length: bearerToken.length,
       });
 
+      // Set cache headers to prevent caching of sensitive bearer tokens
+      res.set({
+        ['Cache-Control']: 'no-store, no-cache, must-revalidate, private',
+        Pragma: 'no-cache',
+        Expires: '0',
+      });
+
       res.json(tokenInfo);
     } catch (error) {
       Logger.error(req, 'get_developer_token_info', startTime, error);
