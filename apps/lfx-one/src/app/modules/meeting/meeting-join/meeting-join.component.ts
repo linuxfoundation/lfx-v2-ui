@@ -4,7 +4,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
@@ -15,7 +15,8 @@ import { ExpandableTextComponent } from '@components/expandable-text/expandable-
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { environment } from '@environments/environment';
-import { extractUrlsWithDomains, Meeting, MeetingOccurrence, Project, User } from '@lfx-one/shared';
+import { extractUrlsWithDomains, getCurrentOrNextOccurrence, Meeting, MeetingAttachment, MeetingOccurrence, Project, User } from '@lfx-one/shared';
+import { FileSizePipe } from '@pipes/file-size.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
@@ -39,9 +40,10 @@ import { catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rx
     MeetingTimePipe,
     RecurrenceSummaryPipe,
     LinkifyPipe,
+    FileSizePipe,
     ExpandableTextComponent,
   ],
-  providers: [MessageService],
+  providers: [],
   templateUrl: './meeting-join.component.html',
 })
 export class MeetingJoinComponent {
@@ -66,6 +68,7 @@ export class MeetingJoinComponent {
   public password: WritableSignal<string | null> = signal<string | null>(null);
   public canJoinMeeting: Signal<boolean>;
   public joinUrlWithParams: Signal<string | undefined>;
+  public attachments: Signal<MeetingAttachment[]>;
 
   // Form value signals for reactivity
   private formValues: Signal<{ name: string; email: string; organization: string }>;
@@ -83,6 +86,7 @@ export class MeetingJoinComponent {
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
     this.joinUrlWithParams = this.initializeJoinUrlWithParams();
+    this.attachments = this.initializeAttachments();
   }
 
   public onJoinMeeting(): void {
@@ -149,32 +153,7 @@ export class MeetingJoinComponent {
   private initializeCurrentOccurrence(): Signal<MeetingOccurrence | null> {
     return computed(() => {
       const meeting = this.meeting();
-      if (!meeting?.occurrences || meeting.occurrences.length === 0) {
-        return null;
-      }
-
-      const now = new Date();
-      const earlyJoinMinutes = meeting.early_join_time_minutes || 10;
-
-      // Find the first occurrence that is currently joinable (within the join window)
-      const joinableOccurrence = meeting.occurrences.find((occurrence) => {
-        const startTime = new Date(occurrence.start_time);
-        const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
-        const latestJoinTime = new Date(startTime.getTime() + occurrence.duration * 60000 + 40 * 60000); // 40 minutes after end
-
-        return now >= earliestJoinTime && now <= latestJoinTime;
-      });
-
-      if (joinableOccurrence) {
-        return joinableOccurrence;
-      }
-
-      // If no joinable occurrence, find the next future occurrence
-      const futureOccurrences = meeting.occurrences
-        .filter((occurrence) => new Date(occurrence.start_time) > now)
-        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
-
-      return futureOccurrences.length > 0 ? futureOccurrences[0] : null;
+      return getCurrentOrNextOccurrence(meeting);
     });
   }
 
@@ -324,5 +303,25 @@ export class MeetingJoinComponent {
       return `${joinUrl}&${queryString}`;
     }
     return `${joinUrl}?${queryString}`;
+  }
+
+  private initializeAttachments(): Signal<MeetingAttachment[]> {
+    // Convert meeting signal to observable to react to changes
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        switchMap((meeting) => {
+          if (meeting?.uid) {
+            return this.meetingService.getMeetingAttachments(meeting.uid).pipe(
+              catchError((error) => {
+                console.error(`Failed to load attachments for meeting ${meeting.uid}:`, error);
+                return of([]);
+              })
+            );
+          }
+          return of([]);
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }

@@ -15,13 +15,15 @@ import {
   MeetingJoinURL,
   MeetingRegistrant,
   MeetingRegistrantWithState,
+  PastMeeting,
   PastMeetingParticipant,
   Project,
+  QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UploadFileResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, defer, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { catchError, defer, Observable, of, map, switchMap, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -40,8 +42,8 @@ export class MeetingService {
     );
   }
 
-  public getPastMeetings(params?: HttpParams): Observable<Meeting[]> {
-    return this.http.get<Meeting[]>('/api/past-meetings', { params }).pipe(
+  public getPastMeetings(params?: HttpParams): Observable<PastMeeting[]> {
+    return this.http.get<PastMeeting[]>('/api/past-meetings', { params }).pipe(
       catchError((error) => {
         console.error('Failed to load past meetings:', error);
         return of([]);
@@ -63,6 +65,22 @@ export class MeetingService {
     return this.getMeetings(params);
   }
 
+  public getMeetingsCountByProject(projectId: string): Observable<number> {
+    const params = new HttpParams().set('tags', `project_uid:${projectId}`);
+    return this.http
+      .get<QueryServiceCountResponse>('/api/meetings/count', { params })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to load meetings count:', error);
+          return of({ count: 0 });
+        })
+      )
+      .pipe(
+        // Extract just the count number from the response
+        map((response) => response.count)
+      );
+  }
+
   public getRecentMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
     return this.getMeetingsByProject(projectId, limit, 'updated_at.desc');
   }
@@ -78,7 +96,7 @@ export class MeetingService {
     return this.getMeetings(params);
   }
 
-  public getPastMeetingsByProject(projectId: string, limit: number = 3): Observable<Meeting[]> {
+  public getPastMeetingsByProject(projectId: string, limit: number = 3): Observable<PastMeeting[]> {
     let params = new HttpParams().set('tags', `project_uid:${projectId}`);
 
     if (limit) {
@@ -98,8 +116,8 @@ export class MeetingService {
     );
   }
 
-  public getPastMeeting(id: string): Observable<Meeting> {
-    return this.http.get<Meeting>(`/api/past-meetings/${id}`).pipe(
+  public getPastMeeting(id: string): Observable<PastMeeting> {
+    return this.http.get<PastMeeting>(`/api/past-meetings/${id}`).pipe(
       catchError((error) => {
         console.error(`Failed to load past meeting ${id}:`, error);
         return throwError(() => error);

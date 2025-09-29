@@ -9,6 +9,7 @@ import {
   MeetingRegistrant,
   PastMeetingParticipant,
   QueryServiceResponse,
+  QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -64,17 +65,26 @@ export class MeetingService {
   }
 
   /**
-   * Fetches a single meeting by UID
+   * Fetches the count of meetings based on query parameters
    */
-  public async getMeetingById(req: Request, meetingUid: string, meetingType: string = 'meeting', access: boolean = true): Promise<Meeting> {
+  public async getMeetingsCount(req: Request, query: Record<string, any> = {}, meetingType: string = 'meeting'): Promise<number> {
     const params = {
+      ...query,
       type: meetingType,
-      tags: `meeting_uid:${meetingUid}`,
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Meeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+    const { count } = await this.microserviceProxy.proxyRequest<QueryServiceCountResponse>(req, 'LFX_V2_SERVICE', '/query/resources/count', 'GET', params);
 
-    if (!resources || resources.length === 0) {
+    return count;
+  }
+
+  /**
+   * Fetches a single meeting by UID
+   */
+  public async getMeetingById(req: Request, meetingUid: string, meetingType: string = 'meetings', access: boolean = true): Promise<Meeting> {
+    let meeting = await this.microserviceProxy.proxyRequest<Meeting>(req, 'LFX_V2_SERVICE', `/${meetingType}/${meetingUid}`, 'GET');
+
+    if (!meeting || !meeting.uid) {
       throw new ResourceNotFoundError('Meeting', meetingUid, {
         operation: 'get_meeting_by_id',
         service: 'meeting_service',
@@ -82,28 +92,17 @@ export class MeetingService {
       });
     }
 
-    if (resources.length > 1) {
-      req.log.warn(
-        {
-          meeting_uid: meetingUid,
-          result_count: resources.length,
-        },
-        'Multiple meetings found for single UID lookup'
-      );
-    }
-
-    let meeting = resources.map((resource) => resource.data);
-
-    if (meeting[0].committees && meeting[0].committees.length > 0) {
-      meeting = await this.getMeetingCommittees(req, meeting);
+    if (meeting.committees && meeting.committees.length > 0) {
+      const meetingWithCommittees = await this.getMeetingCommittees(req, [meeting]);
+      meeting = meetingWithCommittees[0];
     }
 
     if (access) {
       // Add writer access field to the meeting
-      return await this.accessCheckService.addAccessToResource(req, meeting[0], 'meeting', 'organizer');
+      return await this.accessCheckService.addAccessToResource(req, meeting, 'meeting', 'organizer');
     }
 
-    return meeting[0];
+    return meeting;
   }
 
   /**
