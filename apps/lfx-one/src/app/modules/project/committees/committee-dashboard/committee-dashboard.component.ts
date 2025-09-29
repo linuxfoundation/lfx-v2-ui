@@ -61,7 +61,6 @@ export class CommitteeDashboardComponent {
   public votingStatusFilter: WritableSignal<string | null>;
   public committeesLoading: WritableSignal<boolean>;
   public committees: Signal<Committee[]>;
-  public committeesCount: Signal<number>;
   public categories: Signal<{ label: string; value: string | null }[]>;
   public votingStatusOptions: Signal<{ label: string; value: string | null }[]>;
   public filteredCommittees: Signal<Committee[]>;
@@ -72,7 +71,7 @@ export class CommitteeDashboardComponent {
   private dialogRef: DynamicDialogRef | undefined;
 
   // Statistics calculations
-  public totalCommittees: Signal<number> = computed(() => this.committeesCount());
+  public totalCommittees: Signal<number>;
   public publicCommittees: Signal<number> = computed(() => this.committees().filter((c) => c.public).length);
   public activeVoting: Signal<number> = computed(() => this.committees().filter((c) => c.enable_voting).length);
 
@@ -86,7 +85,7 @@ export class CommitteeDashboardComponent {
     this.committeesLoading = signal<boolean>(true);
     this.refresh = new BehaviorSubject<void>(undefined);
     this.committees = this.initializeCommittees();
-    this.committeesCount = this.initializeCommitteesCount();
+    this.totalCommittees = this.initializeCommitteesCount();
     this.searchForm = this.initializeSearchForm();
     this.categoryFilter = signal<string | null>(null);
     this.votingStatusFilter = signal<string | null>(null);

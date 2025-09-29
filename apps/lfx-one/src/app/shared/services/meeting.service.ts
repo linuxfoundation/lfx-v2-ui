@@ -18,6 +18,7 @@ import {
   PastMeeting,
   PastMeetingParticipant,
   Project,
+  QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UploadFileResponse,
@@ -67,7 +68,7 @@ export class MeetingService {
   public getMeetingsCountByProject(projectId: string): Observable<number> {
     const params = new HttpParams().set('tags', `project_uid:${projectId}`);
     return this.http
-      .get<{ count: number }>('/api/meetings/count', { params })
+      .get<QueryServiceCountResponse>('/api/meetings/count', { params })
       .pipe(
         catchError((error) => {
           console.error('Failed to load meetings count:', error);
