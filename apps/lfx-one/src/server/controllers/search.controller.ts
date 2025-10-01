@@ -19,20 +19,22 @@ export class SearchController {
    * Searches for users across meeting registrants and committee members
    */
   public async searchUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const { name, type } = req.query;
+    const { name, type, tags } = req.query;
     const startTime = Logger.start(req, 'search_users', {
       has_name: !!name,
       has_type: !!type,
+      has_tags: !!tags,
     });
 
     try {
       // Validate required parameters
-      if (!name || typeof name !== 'string') {
+      if ((!name || typeof name !== 'string') && (!tags || typeof tags !== 'string')) {
         Logger.error(req, 'search_users', startTime, new Error('Missing or invalid name parameter'), {
           name_type: typeof name,
+          tags_type: typeof tags,
         });
 
-        const validationError = ServiceValidationError.forField('name', 'Name parameter is required and must be a string', {
+        const validationError = ServiceValidationError.forField('name', 'Name or tags parameter is required and must be a string', {
           operation: 'search_users',
           service: 'search_controller',
           path: req.path,
@@ -75,7 +77,8 @@ export class SearchController {
 
       // Build search parameters
       const searchParams: UserSearchParams = {
-        name,
+        ...(name ? { name: name as string } : {}),
+        ...(tags ? { tags: tags as string } : {}),
         type: type as 'committee_member' | 'meeting_registrant',
         limit: req.query['limit'] ? parseInt(req.query['limit'] as string, 10) : undefined,
         offset: req.query['offset'] ? parseInt(req.query['offset'] as string, 10) : undefined,
@@ -93,6 +96,7 @@ export class SearchController {
     } catch (error) {
       Logger.error(req, 'search_users', startTime, error, {
         name,
+        tags,
         type,
       });
       next(error);

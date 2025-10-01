@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { UserSearchParams, UserSearchResponse, UserSearchResult } from '@lfx-one/shared/interfaces';
+import { UserSearchResponse, UserSearchResult } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of } from 'rxjs';
 
 @Injectable({
@@ -20,31 +20,20 @@ export class SearchService {
       return of([]);
     }
 
-    const params = new HttpParams().set('name', name).set('type', type).set('limit', '20');
+    let params = new HttpParams().set('type', type).set('limit', '20');
+
+    // if name is an email, search for users by email
+    if (name.includes('@')) {
+      params = params.set('tags', `email:${name}`);
+    } else {
+      params = params.set('name', name);
+    }
 
     return this.http.get<UserSearchResponse>('/api/search/users', { params }).pipe(
       map((response) => response.results || []),
       catchError((error) => {
         console.error('Error searching users:', error);
         return of([]);
-      })
-    );
-  }
-
-  /**
-   * Search for users with custom parameters
-   */
-  public searchUsersAdvanced(params: UserSearchParams): Observable<UserSearchResponse> {
-    const httpParams = new HttpParams()
-      .set('name', params.name)
-      .set('type', params.type)
-      .set('limit', (params.limit || 20).toString())
-      .set('offset', (params.offset || 0).toString());
-
-    return this.http.get<UserSearchResponse>('/api/search/users', { params: httpParams }).pipe(
-      catchError((error) => {
-        console.error('Error searching users:', error);
-        return of({ results: [], total: 0, has_more: false });
       })
     );
   }

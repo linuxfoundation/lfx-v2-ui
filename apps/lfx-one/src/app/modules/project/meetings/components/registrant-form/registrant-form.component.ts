@@ -9,7 +9,7 @@ import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { UserSearchComponent } from '@components/user-search/user-search.component';
-import { MeetingRegistrant, UserSearchResult } from '@lfx-one/shared/interfaces';
+import { MeetingRegistrant } from '@lfx-one/shared/interfaces';
 import { filter, take } from 'rxjs';
 
 @Component({
@@ -43,8 +43,7 @@ export class RegistrantFormComponent {
    * Handle user selection from search component
    * The form controls are already populated by the search component
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public handleUserSelection(_user: UserSearchResult): void {
+  public handleUserSelection(): void {
     // The search component has already populated the form controls
     // Now show the individual input fields
     this.showIndividualFields.set(true);

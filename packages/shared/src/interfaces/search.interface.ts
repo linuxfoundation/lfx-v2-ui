@@ -82,7 +82,9 @@ export interface UserSearchResult {
  */
 export interface UserSearchParams {
   /** Search query string (user name) */
-  name: string;
+  name?: string;
+  /** Search query string (user email) */
+  tags?: string;
   /** Type of resource to search */
   type: 'committee_member' | 'meeting_registrant';
   /** Maximum number of results to return (optional) */

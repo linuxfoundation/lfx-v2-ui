@@ -152,7 +152,7 @@ export class UserSearchComponent {
     // Update username control
     const usernameControlName = this.usernameControl();
     if (usernameControlName && parentForm.get(usernameControlName)) {
-      parentForm.get(usernameControlName)?.setValue(selectedUser.username);
+      parentForm.get(usernameControlName)?.setValue(selectedUser.username || null);
     }
 
     // Clear the search field to show that selection is complete
