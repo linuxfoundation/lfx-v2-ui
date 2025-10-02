@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AddEmailRequest, CombinedProfile, UpdateEmailPreferencesRequest, UserMetadataUpdateRequest } from '@lfx-one/shared/interfaces';
+import { AddEmailRequest, CombinedProfile, ProfileUpdateRequest, UpdateEmailPreferencesRequest, UserMetadataUpdateRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, AuthorizationError, MicroserviceError, ResourceNotFoundError, ServiceValidationError } from '../errors';
@@ -123,7 +123,7 @@ export class ProfileController {
       }
 
       // Extract and validate request body
-      const { user_metadata } = req.body;
+      const { user_metadata }: ProfileUpdateRequest = req.body;
 
       // Validate at least one field to update is provided
       if (!user_metadata) {

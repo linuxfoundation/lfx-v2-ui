@@ -3,7 +3,7 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { UserMetadataUpdateRequest, UserMetadataUpdateResponse } from '@lfx-one/shared/interfaces';
+import { UserMetadata, UserMetadataUpdateRequest, UserMetadataUpdateResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { serverLogger } from '../server';
@@ -22,16 +22,14 @@ export class UserService {
   /**
    * Update user metadata through NATS
    * @param req - Express request object
-   * @param userId - The user ID to update
    * @param updates - The user metadata updates
-   * @param token - Authentication token
    * @returns Promise with the update response
    */
   public async updateUserMetadata(req: Request, updates: UserMetadataUpdateRequest): Promise<UserMetadataUpdateResponse> {
     try {
       // Validate required fields
       if (!updates.username) {
-        throw new Error('User ID is required');
+        throw new Error('Username is required');
       }
 
       if (!updates.token) {
@@ -96,7 +94,7 @@ export class UserService {
    * @param metadata - The user metadata to validate
    * @returns true if valid, throws error if invalid
    */
-  public validateUserMetadata(metadata: any): boolean {
+  public validateUserMetadata(metadata: UserMetadata): boolean {
     // Validate t-shirt size if provided
     if (metadata?.t_shirt_size) {
       const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];

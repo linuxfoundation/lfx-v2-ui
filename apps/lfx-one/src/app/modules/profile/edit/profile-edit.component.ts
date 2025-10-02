@@ -221,12 +221,9 @@ export class ProfileEditComponent implements OnInit {
     const countryValue = profile.profile?.country || '';
 
     this.profileForm.patchValue({
-      // User fields - map from old backend response to new form field names
       given_name: profile.user.first_name || '',
       family_name: profile.user.last_name || '',
       username: profile.user.username || '',
-
-      // Profile fields - map from old backend response to new form field names
       job_title: profile.profile?.job_title || '',
       organization: profile.profile?.organization || '',
       country: countryValue,
