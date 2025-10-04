@@ -3,7 +3,7 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { Project, ProjectSettings, ProjectSlugToIdResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { EmailToUsernameErrorResponse, Project, ProjectSettings, ProjectSlugToIdResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -205,6 +205,83 @@ export class ProjectService {
     );
 
     return result;
+  }
+
+  /**
+   * Resolve email address to username using NATS request-reply pattern
+   * @param req - Express request object for logging
+   * @param email - Email address to lookup
+   * @returns Username associated with the email
+   * @throws ResourceNotFoundError if user not found
+   */
+  public async resolveEmailToUsername(req: Request, email: string): Promise<string> {
+    const codec = this.natsService.getCodec();
+
+    // Normalize email input
+    const normalizedEmail = email.trim().toLowerCase();
+
+    try {
+      req.log.info({ email: normalizedEmail }, 'Resolving email to username via NATS');
+
+      const response = await this.natsService.request(NatsSubjects.EMAIL_TO_USERNAME, codec.encode(normalizedEmail), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
+
+      const responseText = codec.decode(response.data);
+
+      // Try to parse as JSON error response
+      try {
+        const errorResponse: EmailToUsernameErrorResponse = JSON.parse(responseText);
+
+        if (errorResponse.success === false) {
+          req.log.info({ email: normalizedEmail, error: errorResponse.error }, 'User email not found via NATS');
+
+          throw new ResourceNotFoundError('User', normalizedEmail, {
+            operation: 'resolve_email_to_username',
+            service: 'project_service',
+            path: '/nats/email-to-username',
+          });
+        }
+      } catch (parseError) {
+        // Not JSON or JSON parse failed - treat responseText as username
+        if (parseError instanceof ResourceNotFoundError) {
+          throw parseError;
+        }
+      }
+
+      // Response is plain text username
+      const username = responseText.trim();
+
+      if (!username || username === '') {
+        req.log.info({ email: normalizedEmail }, 'Empty username returned from NATS');
+
+        throw new ResourceNotFoundError('User', normalizedEmail, {
+          operation: 'resolve_email_to_username',
+          service: 'project_service',
+          path: '/nats/email-to-username',
+        });
+      }
+
+      req.log.info({ email: normalizedEmail, username }, 'Successfully resolved email to username');
+
+      return username;
+    } catch (error) {
+      // Re-throw ResourceNotFoundError as-is
+      if (error instanceof ResourceNotFoundError) {
+        throw error;
+      }
+
+      req.log.error({ error: error instanceof Error ? error.message : error, email: normalizedEmail }, 'Failed to resolve email to username via NATS');
+
+      // If it's a timeout or no responder error, treat as not found
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        throw new ResourceNotFoundError('User', normalizedEmail, {
+          operation: 'resolve_email_to_username',
+          service: 'project_service',
+          path: '/nats/email-to-username',
+        });
+      }
+
+      throw error;
+    }
   }
 
   /**
