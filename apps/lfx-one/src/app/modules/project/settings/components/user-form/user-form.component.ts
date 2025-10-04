@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -92,7 +93,7 @@ export class UserFormComponent {
         });
         this.dialogRef.close(true);
       },
-      error: (error: any) => {
+      error: (error: HttpErrorResponse) => {
         console.error('Error saving user:', error);
 
         // Check if it's a 404 error for email not found
