@@ -3,7 +3,7 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { EmailToUsernameErrorResponse, Project, ProjectSettings, ProjectSlugToIdResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { Project, ProjectSettings, ProjectSlugToIdResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -227,12 +227,14 @@ export class ProjectService {
 
       const responseText = codec.decode(response.data);
 
-      // Try to parse as JSON error response
+      // Parse once and branch on the result shape
+      let username: string;
       try {
-        const errorResponse: EmailToUsernameErrorResponse = JSON.parse(responseText);
+        const parsed = JSON.parse(responseText);
 
-        if (errorResponse.success === false) {
-          req.log.info({ email: normalizedEmail, error: errorResponse.error }, 'User email not found via NATS');
+        // Check if it's an error response
+        if (typeof parsed === 'object' && parsed !== null && parsed.success === false) {
+          req.log.info({ email: normalizedEmail, error: parsed.error }, 'User email not found via NATS');
 
           throw new ResourceNotFoundError('User', normalizedEmail, {
             operation: 'resolve_email_to_username',
@@ -240,15 +242,21 @@ export class ProjectService {
             path: '/nats/email-to-username',
           });
         }
+
+        // Extract username from JSON success response or JSON string
+        username = typeof parsed === 'string' ? parsed : parsed.username;
       } catch (parseError) {
-        // Not JSON or JSON parse failed - treat responseText as username
+        // Re-throw ResourceNotFoundError as-is
         if (parseError instanceof ResourceNotFoundError) {
           throw parseError;
         }
+
+        // JSON parsing failed - use raw text as username
+        username = responseText;
       }
 
-      // Response is plain text username
-      const username = responseText.trim();
+      // Trim and validate username
+      username = username.trim();
 
       if (!username || username === '') {
         req.log.info({ email: normalizedEmail }, 'Empty username returned from NATS');
