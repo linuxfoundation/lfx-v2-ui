@@ -261,7 +261,7 @@ export class ProjectController {
 
       // Detect if input is email or username
       const isEmail = userData.username.includes('@');
-      
+
       // Check if manual user data is provided (for users not found in directory)
       let manualUserInfo: { name: string; email: string; username: string; avatar?: string } | undefined;
       if (userData.name || userData.email || userData.avatar) {

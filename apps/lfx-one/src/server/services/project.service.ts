@@ -458,7 +458,7 @@ export class ProjectService {
     // For usernames, use them directly
     let usernameForLookup = usernameOrEmail.trim();
     let originalEmail = '';
-    
+
     if (usernameOrEmail.includes('@')) {
       originalEmail = usernameOrEmail;
       // First confirm the user exists with email_to_sub
@@ -471,7 +471,9 @@ export class ProjectService {
     try {
       req.log.info({ username: usernameForLookup }, 'Fetching user metadata via NATS');
 
-      const response = await this.natsService.request(NatsSubjects.USER_METADATA_READ, codec.encode(usernameForLookup), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
+      const response = await this.natsService.request(NatsSubjects.USER_METADATA_READ, codec.encode(usernameForLookup), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
 
       const responseText = codec.decode(response.data);
       const userMetadata = JSON.parse(responseText);
@@ -499,7 +501,7 @@ export class ProjectService {
       req.log.info({ username: usernameForLookup }, 'Successfully fetched user metadata');
 
       const userData = userMetadata.data || {};
-      
+
       const result: { name: string; email: string; username: string; avatar?: string } = {
         // Use the name from metadata, fallback to constructed name from given_name/family_name
         name: userData.name || `${userData.given_name || ''} ${userData.family_name || ''}`.trim() || usernameForLookup,
