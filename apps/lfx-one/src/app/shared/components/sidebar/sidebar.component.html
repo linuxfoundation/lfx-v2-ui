@@ -1,0 +1,61 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<aside
+  class="fixed left-4 top-24 bottom-4 bg-white rounded-2xl shadow-lg border border-gray-200 transition-all duration-300 z-50 w-64"
+  data-testid="sidebar">
+  <nav class="flex flex-col py-3">
+    @for (item of items(); track item.label) {
+      @if (item.routerLink) {
+        <a
+          [routerLink]="item.routerLink"
+          routerLinkActive="!bg-blue-600 !text-white"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="flex items-center px-4 py-3 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer group"
+          [class.opacity-50]="item.disabled"
+          [class.pointer-events-none]="item.disabled"
+          [attr.data-testid]="getTestId(item.label)">
+          <i [ngClass]="[item.icon, 'w-6', 'text-center', item.disabled ? '' : 'group-hover:scale-110 transition-transform']"></i>
+          <span class="ml-3 font-medium">{{ item.label }}</span>
+
+          @if (item.badge) {
+            <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small" styleClass="ml-auto"></lfx-badge>
+          }
+        </a>
+      }
+
+      @if (item.url) {
+        <a
+          [href]="item.url"
+          class="flex items-center px-4 py-3 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer group"
+          [class.opacity-50]="item.disabled"
+          [class.pointer-events-none]="item.disabled"
+          [attr.data-testid]="getTestId(item.label)">
+          <i [ngClass]="[item.icon, 'w-6', 'text-center', item.disabled ? '' : 'group-hover:scale-110 transition-transform']"></i>
+          <span class="ml-3 font-medium">{{ item.label }}</span>
+
+          @if (item.badge) {
+            <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small" styleClass="ml-auto"></lfx-badge>
+          }
+        </a>
+      }
+
+      @if (item.command && !item.routerLink && !item.url) {
+        <button
+          type="button"
+          (click)="item.command()"
+          class="flex items-center px-4 py-3 mx-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer group w-full text-left"
+          [class.opacity-50]="item.disabled"
+          [disabled]="item.disabled"
+          [attr.data-testid]="getTestId(item.label)">
+          <i [ngClass]="[item.icon, 'w-6', 'text-center', item.disabled ? '' : 'group-hover:scale-110 transition-transform']"></i>
+          <span class="ml-3 font-medium">{{ item.label }}</span>
+
+          @if (item.badge) {
+            <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small" styleClass="ml-auto"></lfx-badge>
+          }
+        </button>
+      }
+    }
+  </nav>
+</aside>

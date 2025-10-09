@@ -1,0 +1,281 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto px-8 py-8" data-testid="home-new-container">
+  <!-- Dashboard Sections -->
+  <div class="space-y-6" data-testid="home-new-sections-grid">
+    <!-- Recent Progress - Full Width -->
+    <lfx-card data-testid="section-recent-progress" styleClass="hover:shadow-lg transition-shadow">
+      <ng-template #header>
+        <div class="flex items-center justify-between p-6 border-b border-gray-100">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+              <i class="fa-light fa-chart-line text-2xl text-blue-500"></i>
+            </div>
+            <h2 class="text-xl font-display font-medium text-gray-900">Recent Progress</h2>
+          </div>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              (click)="scrollLeft()"
+              class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              aria-label="Scroll left">
+              <i class="fa-light fa-chevron-left"></i>
+            </button>
+            <button
+              type="button"
+              (click)="scrollRight()"
+              class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              aria-label="Scroll right">
+              <i class="fa-light fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="p-6">
+        <div #progressScroll class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar scroll-smooth">
+          @for (item of progressItems; track item.label) {
+            <div class="bg-white border border-gray-200 rounded-lg p-4 min-w-[280px] flex-shrink-0">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <div class="text-sm text-gray-600 mb-1">{{ item.label }}</div>
+                  <div class="text-2xl font-display font-semibold text-gray-900">{{ item.value }}</div>
+                </div>
+                @if (item.trend === 'up') {
+                  <i class="fa-light fa-arrow-trend-up text-green-500 text-lg"></i>
+                } @else if (item.trend === 'down') {
+                  <i class="fa-light fa-arrow-trend-down text-red-500 text-lg"></i>
+                }
+              </div>
+              <div class="h-20">
+                <lfx-chart type="line" [data]="item.chartData" [options]="item.chartOptions" height="100%"></lfx-chart>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </lfx-card>
+
+    <!-- Middle Row - Two Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Pending Actions -->
+      <lfx-card data-testid="section-pending-actions" styleClass="hover:shadow-lg transition-shadow">
+        <ng-template #header>
+          <div class="flex items-center gap-3 p-6 border-b border-gray-100">
+            <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+              <i class="fa-light fa-list-check text-2xl text-amber-500"></i>
+            </div>
+            <h2 class="text-xl font-display font-medium text-gray-900">Pending Actions</h2>
+          </div>
+        </ng-template>
+
+        <div class="p-6">
+          <div class="space-y-4">
+            @for (item of pendingActions; track item.text) {
+              <div
+                class="p-4 border rounded-lg"
+                [ngClass]="{
+                  'bg-amber-50 border-amber-200': item.color === 'amber',
+                  'bg-blue-50 border-blue-200': item.color === 'blue',
+                  'bg-green-50 border-green-200': item.color === 'green',
+                  'bg-purple-50 border-purple-200': item.color === 'purple'
+                }">
+                <!-- Header with Type and Badge -->
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <div
+                      [ngClass]="{
+                        'text-amber-700': item.color === 'amber',
+                        'text-blue-700': item.color === 'blue',
+                        'text-green-700': item.color === 'green',
+                        'text-purple-700': item.color === 'purple'
+                      }">
+                      <i [ngClass]="[item.icon, 'w-4', 'h-4']"></i>
+                    </div>
+                    <span
+                      class="text-xs font-medium"
+                      [ngClass]="{
+                        'text-amber-700': item.color === 'amber',
+                        'text-blue-700': item.color === 'blue',
+                        'text-green-700': item.color === 'green',
+                        'text-purple-700': item.color === 'purple'
+                      }">
+                      {{ item.type }}
+                    </span>
+                  </div>
+                  <span class="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-medium bg-white text-gray-700 border border-gray-200">
+                    {{ item.badge }}
+                  </span>
+                </div>
+
+                <!-- Action Text -->
+                <div class="mb-4">
+                  <p
+                    class="text-sm font-medium"
+                    [ngClass]="{
+                      'text-amber-900': item.color === 'amber',
+                      'text-blue-900': item.color === 'blue',
+                      'text-green-900': item.color === 'green',
+                      'text-purple-900': item.color === 'purple'
+                    }">
+                    {{ item.text }}
+                  </p>
+                </div>
+
+                <!-- Action Button -->
+                <button
+                  type="button"
+                  class="w-full h-8 rounded-md px-3 text-sm font-medium border bg-background transition-colors"
+                  [ngClass]="{
+                    'border-amber-300 text-amber-700 hover:bg-amber-100': item.color === 'amber',
+                    'border-blue-300 text-blue-700 hover:bg-blue-100': item.color === 'blue',
+                    'border-green-300 text-green-700 hover:bg-green-100': item.color === 'green',
+                    'border-purple-300 text-purple-700 hover:bg-purple-100': item.color === 'purple'
+                  }">
+                  {{ item.buttonText }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </lfx-card>
+
+      <!-- My Meetings -->
+      <lfx-card data-testid="section-my-meetings" styleClass="hover:shadow-lg transition-shadow">
+        <ng-template #header>
+          <div class="flex items-center gap-3 p-6 border-b border-gray-100">
+            <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+              <i class="fa-light fa-calendar-days text-2xl text-green-500"></i>
+            </div>
+            <h2 class="text-xl font-display font-medium text-gray-900">My Meetings</h2>
+          </div>
+        </ng-template>
+
+        <div class="p-6">
+          <div class="space-y-3">
+            @for (item of meetings; track item.title) {
+              <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="font-medium text-gray-900 mb-1">{{ item.title }}</div>
+                <div class="flex items-center justify-between text-sm text-gray-600">
+                  <span>{{ item.time }}</span>
+                  <span class="flex items-center gap-1">
+                    <i class="fa-light fa-user text-xs"></i>
+                    {{ item.attendees }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </lfx-card>
+    </div>
+
+    <!-- My Projects - Full Width -->
+    <lfx-card data-testid="section-my-projects" styleClass="hover:shadow-lg transition-shadow">
+      <ng-template #header>
+        <div class="flex items-center gap-3 p-6 border-b border-gray-100">
+          <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+            <i class="fa-light fa-folder text-2xl text-purple-500"></i>
+          </div>
+          <h2 class="text-xl font-display font-medium text-gray-900">My Projects</h2>
+        </div>
+      </ng-template>
+
+      <div class="p-6">
+        <div class="space-y-3">
+          @for (item of projects; track item.name) {
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div class="flex items-center gap-4">
+                <!-- Project Logo & Name -->
+                <div class="flex items-center gap-3 flex-1">
+                  @if (item.logo) {
+                    <img [src]="item.logo" [alt]="item.name + ' logo'" class="w-12 h-12 object-contain" />
+                  } @else {
+                    <div class="w-12 h-12 bg-gray-300 rounded-lg flex items-center justify-center">
+                      <i class="fa-light fa-folder text-gray-600 text-xl"></i>
+                    </div>
+                  }
+                  <div>
+                    <h3 class="font-semibold text-gray-900">{{ item.name }}</h3>
+                    <p class="text-xs text-gray-500">{{ item.role }}</p>
+                  </div>
+                </div>
+
+                <!-- Affiliations Column -->
+                <div class="flex-1 text-sm text-gray-700">
+                  <div class="text-xs text-gray-500 mb-1">Affiliation(s)</div>
+                  <div>{{ item.affiliations.join(', ') }}</div>
+                </div>
+
+                <!-- Code Activities Column -->
+                <div class="flex-1 text-sm text-gray-700">
+                  <div class="text-xs text-gray-500 mb-2">Code Activities</div>
+                  <div class="h-12 w-full">
+                    <lfx-chart
+                      type="line"
+                      [data]="{
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                          data: item.codeActivities,
+                          borderColor: '#3b82f6',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          fill: true,
+                          tension: 0.4,
+                          borderWidth: 2,
+                          pointRadius: 0
+                        }]
+                      }"
+                      [options]="{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        scales: {
+                          x: { display: false },
+                          y: { display: false }
+                        }
+                      }"
+                      height="100%">
+                    </lfx-chart>
+                  </div>
+                </div>
+
+                <!-- Non-Code Activities Column -->
+                <div class="flex-1 text-sm text-gray-700">
+                  <div class="text-xs text-gray-500 mb-2">Non-Code Activities</div>
+                  <div class="h-12 w-full">
+                    <lfx-chart
+                      type="line"
+                      [data]="{
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                          data: item.nonCodeActivities,
+                          borderColor: '#10b981',
+                          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                          fill: true,
+                          tension: 0.4,
+                          borderWidth: 2,
+                          pointRadius: 0
+                        }]
+                      }"
+                      [options]="{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        scales: {
+                          x: { display: false },
+                          y: { display: false }
+                        }
+                      }"
+                      height="100%">
+                    </lfx-chart>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </lfx-card>
+  </div>
+</div>
