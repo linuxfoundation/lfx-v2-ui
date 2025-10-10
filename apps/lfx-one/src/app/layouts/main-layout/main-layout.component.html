@@ -3,10 +3,12 @@
 
 <div class="flex min-h-screen pt-20">
   <!-- Sidebar -->
-  <lfx-sidebar [items]="sidebarItems"></lfx-sidebar>
+  <div class="w-72 flex-shrink-0">
+    <lfx-sidebar [items]="sidebarItems"></lfx-sidebar>
+  </div>
 
   <!-- Main Content Area -->
-  <main class="flex-1 ml-72 transition-all duration-300" data-testid="main-content">
+  <main class="flex-1 min-w-0 transition-all duration-300" data-testid="main-content">
     <router-outlet />
   </main>
 </div>
