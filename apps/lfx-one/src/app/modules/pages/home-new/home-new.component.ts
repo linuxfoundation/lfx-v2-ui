@@ -20,17 +20,8 @@ interface ProgressItemWithChart extends ProgressItem {
   styleUrl: './home-new.component.scss',
 })
 export class HomeNewComponent {
-  @ViewChild('progressScroll') progressScrollContainer!: ElementRef;
+  @ViewChild('progressScroll') protected progressScrollContainer!: ElementRef;
 
-  protected scrollLeft(): void {
-    const container = this.progressScrollContainer.nativeElement;
-    container.scrollBy({ left: -300, behavior: 'smooth' });
-  }
-
-  protected scrollRight(): void {
-    const container = this.progressScrollContainer.nativeElement;
-    container.scrollBy({ left: 300, behavior: 'smooth' });
-  }
   // Recent Progress data with chart configurations
   protected readonly progressItems: ProgressItemWithChart[] = [
     {
@@ -268,4 +259,14 @@ export class HomeNewComponent {
       status: 'archived',
     },
   ];
+
+  protected scrollLeft(): void {
+    const container = this.progressScrollContainer.nativeElement;
+    container.scrollBy({ left: -300, behavior: 'smooth' });
+  }
+
+  protected scrollRight(): void {
+    const container = this.progressScrollContainer.nativeElement;
+    container.scrollBy({ left: 300, behavior: 'smooth' });
+  }
 }
