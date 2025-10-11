@@ -257,3 +257,107 @@ export interface MessageProps {
   /** Accessibility label */
   ariaLabel?: string;
 }
+
+/**
+ * Sidebar menu item configuration
+ * @description Structure for sidebar navigation menu items
+ */
+export interface SidebarMenuItem {
+  /** Display label for menu item */
+  label: string;
+  /** Icon class or name */
+  icon: string;
+  /** Router link path */
+  routerLink?: string;
+  /** External URL */
+  url?: string;
+  /** Badge content for notifications */
+  badge?: string | number;
+  /** Badge severity for styling */
+  badgeSeverity?: BadgeSeverityOptions['severity'];
+  /** Whether item is disabled */
+  disabled?: boolean;
+  /** Command to execute on click */
+  command?: () => void;
+  /** Child menu items for nested navigation */
+  items?: SidebarMenuItem[];
+}
+
+/**
+ * Sidebar component properties
+ * @description Configuration for LFX sidebar navigation component
+ */
+export interface SidebarProps {
+  /** Menu items to display */
+  items: SidebarMenuItem[];
+  /** Whether sidebar is collapsed */
+  collapsed?: boolean;
+  /** Additional CSS classes */
+  styleClass?: string;
+}
+
+/**
+ * Progress item for dashboard metrics
+ * @description Structure for progress tracking items
+ */
+export interface ProgressItem {
+  /** Metric label */
+  label: string;
+  /** Metric value */
+  value: string;
+  /** Trend direction indicator */
+  trend: 'up' | 'down';
+}
+
+/**
+ * Pending action item for task list
+ * @description Structure for pending action items
+ */
+export interface PendingActionItem {
+  /** Action type (e.g., Issue, PR, Review) */
+  type: string;
+  /** Project or repository badge */
+  badge: string;
+  /** Action description text */
+  text: string;
+  /** Icon class for the action type */
+  icon: string;
+  /** Color theme for the action */
+  color: 'amber' | 'blue' | 'green' | 'purple';
+  /** Button text */
+  buttonText: string;
+}
+
+/**
+ * Meeting item for schedule display
+ * @description Structure for meeting information
+ */
+export interface MeetingItem {
+  /** Meeting title */
+  title: string;
+  /** Meeting time/date */
+  time: string;
+  /** Number of attendees */
+  attendees: number;
+}
+
+/**
+ * Project item for project list
+ * @description Structure for project information
+ */
+export interface ProjectItem {
+  /** Project name */
+  name: string;
+  /** Project logo URL */
+  logo?: string;
+  /** User's role in project */
+  role: string;
+  /** User's affiliations */
+  affiliations: string[];
+  /** Code activity data for chart */
+  codeActivities: number[];
+  /** Non-code activity data for chart */
+  nonCodeActivities: number[];
+  /** Project status */
+  status: 'active' | 'archived';
+}

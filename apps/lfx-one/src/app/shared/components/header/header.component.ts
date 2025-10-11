@@ -8,6 +8,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { MenubarComponent } from '@components/menubar/menubar.component';
+import { PersonaSelectorComponent } from '@components/persona-selector/persona-selector.component';
 import { Project } from '@lfx-one/shared/interfaces';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
@@ -22,7 +23,17 @@ import { MenuComponent } from '../menu/menu.component';
 @Component({
   selector: 'lfx-header',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MenubarComponent, RippleModule, RouterModule, AvatarComponent, MenuComponent, AutocompleteComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MenubarComponent,
+    RippleModule,
+    RouterModule,
+    AvatarComponent,
+    MenuComponent,
+    AutocompleteComponent,
+    PersonaSelectorComponent,
+  ],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
