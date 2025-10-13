@@ -46,12 +46,26 @@ export class ProfileController {
         return next(validationError);
       }
 
+      // Get the bearer token from the request (set by auth middleware) or OIDC access token
+      const token = req.bearerToken || req.oidc?.accessToken?.access_token;
+      if (!token) {
+        Logger.error(req, 'get_current_user_profile', startTime, new Error('No authentication token found'));
+
+        const validationError = ServiceValidationError.forField('token', 'Authentication token required', {
+          operation: 'get_current_user_profile',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
       let combinedProfile: CombinedProfile | null = null;
 
       // Step 1: Try to get user metadata from NATS first (authoritative source)
       let natsUserData: UserMetadata | null = null;
       try {
-        const natsResponse = await this.userService.getUserInfo(req, userId);
+        const natsResponse = await this.userService.getUserInfo(req, token);
         req.log.info({ userId, natsSuccess: natsResponse.success }, 'Fetched user data from NATS');
 
         if (natsResponse.success && natsResponse.data) {
