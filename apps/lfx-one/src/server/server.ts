@@ -159,7 +159,7 @@ const authConfig: ConfigParams = {
   secret: process.env['PCC_AUTH0_SECRET'] || 'sufficiently-long-string',
   authorizationParams: {
     response_type: 'code',
-    audience: process.env['PCC_AUTH0_AUDIENCE'] || 'https://example.com',
+    audience: 'https://linuxfoundation-dev.auth0.com/api/v2/',
     scope: 'openid email profile access:api offline_access update:current_user_metadata read:current_user',
   },
   clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'bar',
