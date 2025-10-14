@@ -154,7 +154,7 @@
 
         <div class="p-6">
           <div class="space-y-4">
-            @for (item of meetings; track item.title) {
+            @for (item of meetings(); track item.title) {
               <div class="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-3">
