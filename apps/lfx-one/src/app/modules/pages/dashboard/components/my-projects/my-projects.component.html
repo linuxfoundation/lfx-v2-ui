@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card data-testid="section-my-projects" styleClass="hover:shadow-lg transition-shadow">
+<lfx-card data-testid="dashboard-my-projects-card" styleClass="hover:shadow-lg transition-shadow">
   <ng-template #header>
     <div class="flex items-center gap-3 p-6 border-b border-gray-100">
       <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
@@ -12,15 +12,15 @@
   </ng-template>
 
   <div class="p-6">
-    <div class="flex flex-col gap-4" data-testid="my-projects-list">
+    <div class="flex flex-col gap-4" data-testid="dashboard-my-projects-list">
       @for (item of projects; track item.name) {
-        <div class="flex flex-col lg:flex-wrap lg:flex-row lg:gap-0" [attr.data-testid]="'project-' + item.name">
+        <div class="flex flex-col lg:flex-wrap lg:flex-row lg:gap-0" [attr.data-testid]="'dashboard-my-projects-item-' + item.name">
           <!-- Project Logo & Name -->
           <div
             class="p-4 bg-gray-50 rounded-t-lg lg:rounded-l-lg lg:rounded-r-none lg:rounded-t-lg border border-gray-200 border-b-0 lg:border-b lg:border-r-0 w-full lg:flex-1 lg:min-w-[200px]">
             <div class="flex items-center gap-3">
               @if (item.logo) {
-                <img [src]="item.logo" [alt]="item.name + ' logo'" class="w-12 h-12 object-contain flex-shrink-0" data-testid="project-logo" />
+                <img [src]="item.logo" [alt]="item.name + ' logo'" class="w-12 h-12 object-contain flex-shrink-0" data-testid="dashboard-my-projects-logo" />
               } @else {
                 <div class="w-12 h-12 bg-gray-300 rounded-lg flex items-center justify-center flex-shrink-0">
                   <i class="fa-light fa-folder text-gray-600 text-xl"></i>

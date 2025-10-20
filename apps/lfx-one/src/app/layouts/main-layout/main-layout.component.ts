@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, signal, WritableSignal } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { AppService } from '@app/shared/services/app.service';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
@@ -17,9 +19,10 @@ import { filter } from 'rxjs';
 })
 export class MainLayoutComponent {
   private readonly router = inject(Router);
+  private readonly appService = inject(AppService);
 
-  // Mobile sidebar state
-  public showMobileSidebar: WritableSignal<boolean> = signal(false);
+  // Expose mobile sidebar state from service
+  protected readonly showMobileSidebar = this.appService.showMobileSidebar;
 
   // Sidebar navigation items
   protected readonly sidebarItems: SidebarMenuItem[] = [
@@ -87,25 +90,17 @@ export class MainLayoutComponent {
 
   public constructor() {
     // Close mobile sidebar on navigation
-    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
-      this.closeMobileSidebar();
-    });
-
-    // Listen for custom event from header
-    effect(() => {
-      const handleToggle = () => {
-        this.showMobileSidebar.set(!this.showMobileSidebar());
-      };
-
-      window.addEventListener('toggleMobileSidebar', handleToggle);
-
-      return () => {
-        window.removeEventListener('toggleMobileSidebar', handleToggle);
-      };
-    });
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        this.appService.closeMobileSidebar();
+      });
   }
 
   public closeMobileSidebar(): void {
-    this.showMobileSidebar.set(false);
+    this.appService.closeMobileSidebar();
   }
 }

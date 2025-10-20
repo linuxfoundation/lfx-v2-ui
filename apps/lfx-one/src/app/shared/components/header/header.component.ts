@@ -9,6 +9,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { MenubarComponent } from '@components/menubar/menubar.component';
 import { PersonaSelectorComponent } from '@components/persona-selector/persona-selector.component';
+import { AppService } from '@app/shared/services/app.service';
 import { CombinedProfile, Project } from '@lfx-one/shared/interfaces';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
@@ -44,6 +45,7 @@ import { MenuComponent } from '../menu/menu.component';
 export class HeaderComponent {
   private readonly router = inject(Router);
   private readonly projectService = inject(ProjectService);
+  private readonly appService = inject(AppService);
   public readonly userService = inject(UserService);
 
   // Mobile search state
@@ -51,7 +53,7 @@ export class HeaderComponent {
   private readonly mobileSearchInput = viewChild<ElementRef>('mobileSearchInput');
 
   public userProfile: Signal<CombinedProfile | null> = this.initializeUserProfile();
-  public initials = computed(() => this.userProfile()?.user.first_name?.slice(0));
+  public initials = computed(() => this.userProfile()?.user.first_name?.slice(0, 1));
   public fullName = computed(() => this.userProfile()?.user.first_name + ' ' + this.userProfile()?.user?.last_name);
 
   // Search form
@@ -155,8 +157,7 @@ export class HeaderComponent {
   }
 
   protected toggleMobileSidebar(): void {
-    // Dispatch custom event to toggle sidebar in main-layout
-    window.dispatchEvent(new CustomEvent('toggleMobileSidebar'));
+    this.appService.toggleMobileSidebar();
   }
 
   private initializeUserProfile(): Signal<CombinedProfile | null> {

@@ -31,13 +31,15 @@ export class PersonaService {
    * Set the current persona and persist to storage
    */
   public setPersona(persona: PersonaType): void {
-    this.currentPersona.set(persona);
-    this.persistPersona(persona);
+    if (persona !== this.currentPersona()) {
+      this.currentPersona.set(persona);
+      this.persistPersona(persona);
 
-    if (persona === 'old-ui') {
-      this.router.navigate(['/old-ui']);
-    } else {
-      this.router.navigate(['/']);
+      if (persona === 'old-ui') {
+        this.router.navigate(['/old-ui']);
+      } else {
+        this.router.navigate(['/']);
+      }
     }
   }
 

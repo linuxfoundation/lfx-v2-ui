@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, output } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MeetingService } from '@app/shared/services/meeting.service';
 import { CardComponent } from '@components/card/card.component';
 
@@ -17,7 +18,7 @@ import type { Meeting, MeetingItem, MeetingOccurrence } from '@lfx-one/shared/in
 })
 export class MyMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
-  private readonly allMeetings = signal<Meeting[]>([]);
+  private readonly allMeetings = toSignal(this.meetingService.getMeetings(), { initialValue: [] });
 
   public readonly joinMeeting = output<MeetingItem>();
 
@@ -76,13 +77,6 @@ export class MyMeetingsComponent {
         attendees: item.meeting.individual_registrants_count + item.meeting.committee_members_count,
       }));
   });
-
-  public constructor() {
-    // Load meetings when component initializes
-    this.meetingService.getMeetings().subscribe((meetings) => {
-      this.allMeetings.set(meetings);
-    });
-  }
 
   public handleJoinMeeting(meeting: MeetingItem): void {
     this.joinMeeting.emit(meeting);

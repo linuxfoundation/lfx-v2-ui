@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card data-testid="section-my-meetings" styleClass="hover:shadow-lg transition-shadow h-full flex flex-col">
+<lfx-card data-testid="dashboard-my-meetings-card" styleClass="hover:shadow-lg transition-shadow h-full flex flex-col">
   <ng-template #header>
     <div class="flex items-center gap-3 p-6 border-b border-gray-100">
       <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
@@ -12,9 +12,11 @@
   </ng-template>
 
   <div class="p-6 flex-1 flex flex-col">
-    <div class="space-y-4 flex-1" data-testid="my-meetings-list">
-      @for (item of meetings(); track item.title) {
-        <div class="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors" [attr.data-testid]="'meeting-' + item.title">
+    <div class="space-y-4 flex-1" data-testid="dashboard-my-meetings-list">
+      @for (item of meetings(); track item.time) {
+        <div
+          class="p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+          [attr.data-testid]="'dashboard-my-meetings-item-' + item.title">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
@@ -26,7 +28,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2 justify-between sm:justify-start w-full sm:w-auto">
-              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-xs text-gray-600" data-testid="meeting-attendees">
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 text-xs text-gray-600" data-testid="dashboard-my-meetings-attendees">
                 <i class="fa-light fa-users text-xs"></i>
                 {{ item.attendees }}
               </span>
@@ -34,7 +36,7 @@
                 type="button"
                 (click)="handleJoinMeeting(item)"
                 class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors min-h-[44px] sm:min-h-0"
-                data-testid="meeting-join-button"
+                data-testid="dashboard-my-meetings-join-button"
                 aria-label="Join meeting">
                 Join
               </button>
