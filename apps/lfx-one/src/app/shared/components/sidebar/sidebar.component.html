@@ -12,7 +12,7 @@
   data-testid="sidebar">
   <!-- Main Navigation -->
   <nav class="flex flex-col py-3 flex-grow overflow-y-auto">
-    @for (item of items(); track item.label) {
+    @for (item of itemsWithTestIds(); track item.label) {
       @if (item.routerLink) {
         <a
           [routerLink]="item.routerLink"
@@ -21,7 +21,7 @@
           class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group text-sm"
           [class.opacity-50]="item.disabled"
           [class.pointer-events-none]="item.disabled"
-          [attr.data-testid]="getTestId(item.label)">
+          [attr.data-testid]="item.testId">
           <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
           <span class="ml-3 font-medium">{{ item.label }}</span>
 
@@ -37,7 +37,7 @@
           class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group text-sm"
           [class.opacity-50]="item.disabled"
           [class.pointer-events-none]="item.disabled"
-          [attr.data-testid]="getTestId(item.label)">
+          [attr.data-testid]="item.testId">
           <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
           <span class="ml-3 font-medium">{{ item.label }}</span>
 
@@ -54,7 +54,7 @@
           class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group w-full text-left text-sm"
           [class.opacity-50]="item.disabled"
           [disabled]="item.disabled"
-          [attr.data-testid]="getTestId(item.label)">
+          [attr.data-testid]="item.testId">
           <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
           <span class="ml-3 font-medium">{{ item.label }}</span>
 
@@ -69,7 +69,7 @@
   <!-- Footer Navigation -->
   @if (footerItems().length > 0) {
     <nav class="flex flex-col py-3 border-t border-gray-200">
-      @for (item of footerItems(); track item.label) {
+      @for (item of footerItemsWithTestIds(); track item.label) {
         @if (item.routerLink) {
           <a
             [routerLink]="item.routerLink"
@@ -78,7 +78,7 @@
             class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group text-sm"
             [class.opacity-50]="item.disabled"
             [class.pointer-events-none]="item.disabled"
-            [attr.data-testid]="getTestId(item.label)">
+            [attr.data-testid]="item.testId">
             <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
             <span class="ml-3 font-medium">{{ item.label }}</span>
 
@@ -94,7 +94,7 @@
             class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group text-sm"
             [class.opacity-50]="item.disabled"
             [class.pointer-events-none]="item.disabled"
-            [attr.data-testid]="getTestId(item.label)">
+            [attr.data-testid]="item.testId">
             <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
             <span class="ml-3 font-medium">{{ item.label }}</span>
 
@@ -111,7 +111,7 @@
             class="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors cursor-pointer group w-full text-left text-sm"
             [class.opacity-50]="item.disabled"
             [disabled]="item.disabled"
-            [attr.data-testid]="getTestId(item.label)">
+            [attr.data-testid]="item.testId">
             <i [ngClass]="[item.icon, 'w-6', 'text-center']"></i>
             <span class="ml-3 font-medium">{{ item.label }}</span>
 

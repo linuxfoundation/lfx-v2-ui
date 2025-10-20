@@ -283,6 +283,8 @@ export interface SidebarMenuItem {
   command?: () => void;
   /** Child menu items for nested navigation */
   items?: SidebarMenuItem[];
+  /** Test ID for e2e testing (computed from label if not provided) */
+  testId?: string;
 }
 
 /**

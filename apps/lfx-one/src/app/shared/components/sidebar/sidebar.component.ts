@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
@@ -21,10 +21,18 @@ export class SidebarComponent {
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
 
-  /**
-   * Generate test ID from label
-   */
-  protected getTestId(label: string): string {
-    return `sidebar-item-${label.toLowerCase().replace(/\s+/g, '-')}`;
-  }
+  // Computed items with test IDs
+  protected readonly itemsWithTestIds = computed(() =>
+    this.items().map((item) => ({
+      ...item,
+      testId: item.testId || `sidebar-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`,
+    }))
+  );
+
+  protected readonly footerItemsWithTestIds = computed(() =>
+    this.footerItems().map((item) => ({
+      ...item,
+      testId: item.testId || `sidebar-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`,
+    }))
+  );
 }
