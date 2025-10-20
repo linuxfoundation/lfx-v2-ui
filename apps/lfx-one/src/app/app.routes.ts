@@ -1,53 +1,19 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { inject } from '@angular/core';
-import { CanActivateFn, Router, Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 
 import { authGuard } from './shared/guards/auth.guard';
-import { PersonaService } from './shared/services/persona.service';
-
-/**
- * Guard to check if new UI persona is selected
- */
-const newUIGuard: CanActivateFn = () => {
-  const personaService = inject(PersonaService);
-  const router = inject(Router);
-
-  if (personaService.isNewUI()) {
-    return true;
-  }
-
-  // If old UI is selected, redirect to old UI route
-  router.navigate(['/old-ui']);
-  return false;
-};
-
-/**
- * Guard to check if old UI persona is selected
- */
-const oldUIGuard: CanActivateFn = () => {
-  const personaService = inject(PersonaService);
-  const router = inject(Router);
-
-  if (personaService.isOldUI()) {
-    return true;
-  }
-
-  // If new UI is selected, redirect to new UI route
-  router.navigate(['/']);
-  return false;
-};
 
 export const routes: Routes = [
   {
     path: '',
-    canActivate: [authGuard, newUIGuard],
+    canActivate: [authGuard],
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
       {
         path: '',
-        loadComponent: () => import('./modules/pages/home-new/home-new.component').then((m) => m.HomeNewComponent),
+        loadComponent: () => import('./modules/pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
         path: 'projects',
@@ -58,7 +24,7 @@ export const routes: Routes = [
   // Old UI route - shows when "Old UI" persona is selected
   {
     path: 'old-ui',
-    canActivate: [authGuard, oldUIGuard],
+    canActivate: [authGuard],
     loadComponent: () => import('./modules/pages/home/home.component').then((m) => m.HomeComponent),
   },
   {

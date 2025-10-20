@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ChartData, ChartOptions } from 'chart.js';
+
 /**
  * Badge severity level options
  * @description Available color schemes for badge components
@@ -307,6 +309,18 @@ export interface ProgressItem {
   value: string;
   /** Trend direction indicator */
   trend: 'up' | 'down';
+}
+
+/**
+ * Progress item with chart data for dashboard metrics
+ * @description Extended progress item with Chart.js configuration
+ * @note ChartData and ChartOptions types should be imported from chart.js
+ */
+export interface ProgressItemWithChart extends ProgressItem {
+  /** Chart.js data configuration */
+  chartData: ChartData<'line'>;
+  /** Chart.js options configuration */
+  chartOptions: ChartOptions<'line'>;
 }
 
 /**

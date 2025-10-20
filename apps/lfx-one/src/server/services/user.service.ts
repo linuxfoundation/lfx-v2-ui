@@ -156,7 +156,7 @@ export class UserService {
     }
 
     // Validate job title if provided (basic length check)
-    if (metadata?.job_title && metadata.job_title.length > 200) {
+    if (metadata?.title && metadata.title.length > 200) {
       throw new Error('Job title is too long');
     }
 

@@ -17,6 +17,7 @@ import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
 export class SidebarComponent {
   // Input properties
   public readonly items = input.required<SidebarMenuItem[]>();
+  public readonly footerItems = input<SidebarMenuItem[]>([]);
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
 

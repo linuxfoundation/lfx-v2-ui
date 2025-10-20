@@ -1,0 +1,88 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<lfx-card data-testid="section-pending-actions" styleClass="hover:shadow-lg transition-shadow h-full flex flex-col">
+  <ng-template #header>
+    <div class="flex items-center gap-3 p-6 border-b border-gray-100">
+      <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+        <i class="fa-light fa-list-check text-2xl text-amber-500"></i>
+      </div>
+      <h2 class="text-base font-display font-medium text-gray-900">Pending Actions</h2>
+    </div>
+  </ng-template>
+
+  <div class="p-6 flex-1 flex flex-col">
+    <div class="space-y-4 flex-1" data-testid="pending-actions-list">
+      @for (item of pendingActions; track item.text) {
+        <div
+          class="p-4 border rounded-lg"
+          [ngClass]="{
+            'bg-amber-50 border-amber-200': item.color === 'amber',
+            'bg-blue-50 border-blue-200': item.color === 'blue',
+            'bg-green-50 border-green-200': item.color === 'green',
+            'bg-purple-50 border-purple-200': item.color === 'purple',
+          }"
+          [attr.data-testid]="'pending-action-' + item.type">
+          <!-- Header with Type and Badge -->
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div
+                [ngClass]="{
+                  'text-amber-700': item.color === 'amber',
+                  'text-blue-700': item.color === 'blue',
+                  'text-green-700': item.color === 'green',
+                  'text-purple-700': item.color === 'purple',
+                }">
+                <i [ngClass]="[item.icon, 'w-4', 'h-4']"></i>
+              </div>
+              <span
+                class="text-xs font-medium"
+                [ngClass]="{
+                  'text-amber-700': item.color === 'amber',
+                  'text-blue-700': item.color === 'blue',
+                  'text-green-700': item.color === 'green',
+                  'text-purple-700': item.color === 'purple',
+                }">
+                {{ item.type }}
+              </span>
+            </div>
+            <span
+              class="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-medium bg-white text-gray-700 border border-gray-200"
+              data-testid="pending-action-badge">
+              {{ item.badge }}
+            </span>
+          </div>
+
+          <!-- Action Text -->
+          <div class="mb-4">
+            <p
+              class="text-sm font-medium"
+              [ngClass]="{
+                'text-amber-900': item.color === 'amber',
+                'text-blue-900': item.color === 'blue',
+                'text-green-900': item.color === 'green',
+                'text-purple-900': item.color === 'purple',
+              }">
+              {{ item.text }}
+            </p>
+          </div>
+
+          <!-- Action Button -->
+          <button
+            type="button"
+            (click)="handleActionClick(item)"
+            class="w-full h-8 rounded-md px-3 text-sm font-medium border bg-background transition-colors"
+            [ngClass]="{
+              'border-amber-300 text-amber-700 hover:bg-amber-100': item.color === 'amber',
+              'border-blue-300 text-blue-700 hover:bg-blue-100': item.color === 'blue',
+              'border-green-300 text-green-700 hover:bg-green-100': item.color === 'green',
+              'border-purple-300 text-purple-700 hover:bg-purple-100': item.color === 'purple',
+            }"
+            data-testid="pending-action-button">
+            {{ item.buttonText }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</lfx-card>

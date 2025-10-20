@@ -1,0 +1,56 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<lfx-card data-testid="section-recent-progress" styleClass="hover:shadow-lg transition-shadow">
+  <ng-template #header>
+    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+          <i class="fa-light fa-chart-line text-2xl text-blue-500"></i>
+        </div>
+        <h2 class="text-base font-display font-medium text-gray-900">Recent Progress</h2>
+      </div>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          (click)="scrollLeft()"
+          class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+          data-testid="recent-progress-scroll-left"
+          aria-label="Scroll left">
+          <i class="fa-light fa-chevron-left"></i>
+        </button>
+        <button
+          type="button"
+          (click)="scrollRight()"
+          class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+          data-testid="recent-progress-scroll-right"
+          aria-label="Scroll right">
+          <i class="fa-light fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="p-6">
+    <div #progressScroll class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar scroll-smooth" data-testid="recent-progress-items">
+      @for (item of progressItems; track item.label) {
+        <div class="bg-white border border-gray-200 rounded-lg p-4 min-w-[280px] flex-shrink-0" [attr.data-testid]="'progress-item-' + item.label">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-sm text-gray-600 mb-1">{{ item.label }}</div>
+              <div class="text-2xl font-display font-semibold text-gray-900">{{ item.value }}</div>
+            </div>
+            @if (item.trend === 'up') {
+              <i class="fa-light fa-arrow-trend-up text-green-500 text-lg" data-testid="trend-up"></i>
+            } @else if (item.trend === 'down') {
+              <i class="fa-light fa-arrow-trend-down text-red-500 text-lg" data-testid="trend-down"></i>
+            }
+          </div>
+          <div class="h-20">
+            <lfx-chart type="line" [data]="item.chartData" [options]="item.chartOptions" height="100%"></lfx-chart>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</lfx-card>

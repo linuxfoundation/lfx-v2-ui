@@ -1,0 +1,122 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<lfx-card data-testid="section-my-projects" styleClass="hover:shadow-lg transition-shadow">
+  <ng-template #header>
+    <div class="flex items-center gap-3 p-6 border-b border-gray-100">
+      <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center">
+        <i class="fa-light fa-folder text-2xl text-purple-500"></i>
+      </div>
+      <h2 class="text-base font-display font-medium text-gray-900">My Projects</h2>
+    </div>
+  </ng-template>
+
+  <div class="p-6">
+    <div class="flex flex-col gap-4" data-testid="my-projects-list">
+      @for (item of projects; track item.name) {
+        <div class="flex flex-col lg:flex-wrap lg:flex-row lg:gap-0" [attr.data-testid]="'project-' + item.name">
+          <!-- Project Logo & Name -->
+          <div
+            class="p-4 bg-gray-50 rounded-t-lg lg:rounded-l-lg lg:rounded-r-none lg:rounded-t-lg border border-gray-200 border-b-0 lg:border-b lg:border-r-0 w-full lg:flex-1 lg:min-w-[200px]">
+            <div class="flex items-center gap-3">
+              @if (item.logo) {
+                <img [src]="item.logo" [alt]="item.name + ' logo'" class="w-12 h-12 object-contain flex-shrink-0" data-testid="project-logo" />
+              } @else {
+                <div class="w-12 h-12 bg-gray-300 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i class="fa-light fa-folder text-gray-600 text-xl"></i>
+                </div>
+              }
+              <div class="min-w-0">
+                <h3 class="font-semibold text-gray-900 truncate">{{ item.name }}</h3>
+                <p class="text-xs text-gray-500">{{ item.role }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Affiliations -->
+          <div
+            class="p-4 bg-gray-50 rounded-none lg:rounded-none border border-gray-200 border-b-0 border-t-0 lg:border-t lg:border-b lg:border-r-0 lg:border-l-0 w-full lg:flex-1 lg:min-w-[140px]">
+            <div class="text-sm text-gray-700">
+              <div class="text-xs text-gray-500 mb-1">Affiliation(s)</div>
+              <div class="break-words">{{ item.affiliations.join(', ') }}</div>
+            </div>
+          </div>
+
+          <!-- Code Activities -->
+          <div
+            class="p-4 bg-gray-50 rounded-none lg:rounded-none border border-gray-200 border-b-0 border-t-0 lg:border-t lg:border-b lg:border-r-0 lg:border-l-0 w-full lg:flex-1">
+            <div class="text-sm text-gray-700">
+              <div class="text-xs text-gray-500 mb-2">Code Activities</div>
+              <div class="h-32 lg:h-12 w-full">
+                <lfx-chart
+                  type="line"
+                  [data]="{
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [
+                      {
+                        data: item.codeActivities,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                      },
+                    ],
+                  }"
+                  [options]="{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                      x: { display: false },
+                      y: { display: false },
+                    },
+                  }"
+                  height="100%">
+                </lfx-chart>
+              </div>
+            </div>
+          </div>
+
+          <!-- Non-Code Activities -->
+          <div
+            class="p-4 bg-gray-50 rounded-b-lg lg:rounded-r-lg lg:rounded-l-none lg:rounded-b-lg border border-t-0 lg:border-t border-gray-200 lg:border-l-0 w-full lg:flex-1">
+            <div class="text-sm text-gray-700">
+              <div class="text-xs text-gray-500 mb-2">Non-Code Activities</div>
+              <div class="h-32 lg:h-12 w-full">
+                <lfx-chart
+                  type="line"
+                  [data]="{
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [
+                      {
+                        data: item.nonCodeActivities,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                      },
+                    ],
+                  }"
+                  [options]="{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                      x: { display: false },
+                      y: { display: false },
+                    },
+                  }"
+                  height="100%">
+                </lfx-chart>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</lfx-card>
