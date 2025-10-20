@@ -157,5 +157,6 @@ export interface UserMetadataUpdateResponse {
   username: string;
   message?: string;
   updated_fields?: string[];
+  data?: UserMetadata;
   error?: string;
 }
