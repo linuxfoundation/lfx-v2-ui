@@ -323,6 +323,8 @@ export interface ProgressItemWithChart extends ProgressItem {
   chartData: ChartData<'line'>;
   /** Chart.js options configuration */
   chartOptions: ChartOptions<'line'>;
+  /** Optional subtitle text displayed below the value */
+  subtitle?: string;
 }
 
 /**
@@ -376,4 +378,44 @@ export interface ProjectItem {
   nonCodeActivities: number[];
   /** Project status */
   status: 'active' | 'archived';
+}
+
+/**
+ * Dashboard meeting card feature flags
+ * @description Enabled features for a meeting displayed on dashboard
+ */
+export interface DashboardMeetingFeatures {
+  /** YouTube auto-upload enabled */
+  youtubeAutoUploads?: boolean;
+  /** Recording enabled */
+  recordingEnabled: boolean;
+  /** Transcripts enabled */
+  transcriptsEnabled?: boolean;
+  /** AI summary enabled */
+  aiSummary?: boolean;
+  /** Chat enabled */
+  chatEnabled?: boolean;
+}
+
+/**
+ * Dashboard meeting card properties
+ * @description Configuration for dashboard meeting card component
+ */
+export interface DashboardMeetingCardProps {
+  /** Unique meeting identifier */
+  id: string;
+  /** Meeting title */
+  title: string;
+  /** Meeting date string */
+  date: string;
+  /** Meeting time string */
+  time: string;
+  /** Meeting type category */
+  meetingType: string;
+  /** Whether meeting is private */
+  isPrivate: boolean;
+  /** Enabled meeting features */
+  features: DashboardMeetingFeatures;
+  /** Project name (optional) */
+  project?: string;
 }

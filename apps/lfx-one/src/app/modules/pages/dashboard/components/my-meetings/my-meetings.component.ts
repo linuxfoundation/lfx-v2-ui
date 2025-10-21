@@ -2,57 +2,68 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, output } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { MeetingService } from '@app/shared/services/meeting.service';
-import { CardComponent } from '@components/card/card.component';
+import { ButtonComponent } from '@components/button/button.component';
+import { DashboardMeetingCardComponent } from '@components/dashboard-meeting-card/dashboard-meeting-card.component';
 
-import type { Meeting, MeetingItem, MeetingOccurrence } from '@lfx-one/shared/interfaces';
+import type { Meeting, MeetingOccurrence } from '@lfx-one/shared/interfaces';
+
+interface MeetingWithOccurrence {
+  meeting: Meeting;
+  occurrence: MeetingOccurrence;
+  sortTime: number;
+}
 
 @Component({
   selector: 'lfx-my-meetings',
   standalone: true,
-  imports: [CommonModule, CardComponent],
+  imports: [CommonModule, DashboardMeetingCardComponent, ButtonComponent],
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
 export class MyMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly router = inject(Router);
   private readonly allMeetings = toSignal(this.meetingService.getMeetings(), { initialValue: [] });
 
-  public readonly joinMeeting = output<MeetingItem>();
-
-  protected readonly meetings = computed<MeetingItem[]>(() => {
+  protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const currentTime = now.getTime();
     const buffer = 40 * 60 * 1000; // 40 minutes in milliseconds
 
-    const upcomingMeetings: Array<{ meeting: Meeting; occurrence: MeetingOccurrence; sortTime: number }> = [];
+    const meetings: MeetingWithOccurrence[] = [];
 
     for (const meeting of this.allMeetings()) {
       // Process occurrences if they exist
       if (meeting.occurrences && meeting.occurrences.length > 0) {
         for (const occurrence of meeting.occurrences) {
-          const startTime = new Date(occurrence.start_time).getTime();
-          const endTime = startTime + occurrence.duration * 60 * 1000 + buffer;
+          const startTime = new Date(occurrence.start_time);
+          const startTimeMs = startTime.getTime();
+          const endTime = startTimeMs + occurrence.duration * 60 * 1000 + buffer;
 
-          // Only include if meeting hasn't ended yet (including buffer)
-          if (endTime >= currentTime) {
-            upcomingMeetings.push({
+          // Include if meeting is today and hasn't ended yet (including buffer)
+          if (startTime >= today && startTime < todayEnd && endTime >= currentTime) {
+            meetings.push({
               meeting,
               occurrence,
-              sortTime: startTime,
+              sortTime: startTimeMs,
             });
           }
         }
       } else {
         // Handle meetings without occurrences (single meetings)
-        const startTime = new Date(meeting.start_time).getTime();
-        const endTime = startTime + meeting.duration * 60 * 1000 + buffer;
+        const startTime = new Date(meeting.start_time);
+        const startTimeMs = startTime.getTime();
+        const endTime = startTimeMs + meeting.duration * 60 * 1000 + buffer;
 
-        // Only include if meeting hasn't ended yet (including buffer)
-        if (endTime >= currentTime) {
-          upcomingMeetings.push({
+        // Include if meeting is today and hasn't ended yet (including buffer)
+        if (startTime >= today && startTime < todayEnd && endTime >= currentTime) {
+          meetings.push({
             meeting,
             occurrence: {
               occurrence_id: '',
@@ -61,52 +72,70 @@ export class MyMeetingsComponent {
               start_time: meeting.start_time,
               duration: meeting.duration,
             },
-            sortTime: startTime,
+            sortTime: startTimeMs,
+          });
+        }
+      }
+    }
+
+    // Sort by earliest time first
+    return meetings.sort((a, b) => a.sortTime - b.sortTime);
+  });
+
+  protected readonly upcomingMeetings = computed<MeetingWithOccurrence[]>(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+    const meetings: MeetingWithOccurrence[] = [];
+
+    for (const meeting of this.allMeetings()) {
+      // Process occurrences if they exist
+      if (meeting.occurrences && meeting.occurrences.length > 0) {
+        for (const occurrence of meeting.occurrences) {
+          const startTime = new Date(occurrence.start_time);
+          const startTimeMs = startTime.getTime();
+
+          // Include if meeting is after today
+          if (startTime >= todayEnd) {
+            meetings.push({
+              meeting,
+              occurrence,
+              sortTime: startTimeMs,
+            });
+          }
+        }
+      } else {
+        // Handle meetings without occurrences (single meetings)
+        const startTime = new Date(meeting.start_time);
+        const startTimeMs = startTime.getTime();
+
+        // Include if meeting is after today
+        if (startTime >= todayEnd) {
+          meetings.push({
+            meeting,
+            occurrence: {
+              occurrence_id: '',
+              title: meeting.title,
+              description: meeting.description,
+              start_time: meeting.start_time,
+              duration: meeting.duration,
+            },
+            sortTime: startTimeMs,
           });
         }
       }
     }
 
     // Sort by earliest time first and limit to 5
-    return upcomingMeetings
-      .sort((a, b) => a.sortTime - b.sortTime)
-      .slice(0, 5)
-      .map((item) => ({
-        title: item.occurrence.title,
-        time: this.formatMeetingTime(item.occurrence.start_time),
-        attendees: item.meeting.individual_registrants_count + item.meeting.committee_members_count,
-      }));
+    return meetings.sort((a, b) => a.sortTime - b.sortTime).slice(0, 5);
   });
 
-  public handleJoinMeeting(meeting: MeetingItem): void {
-    this.joinMeeting.emit(meeting);
+  public handleSeeMeeting(meetingId: string): void {
+    this.router.navigate(['/meetings', meetingId]);
   }
 
-  private formatMeetingTime(startTime: string): string {
-    const meetingDate = new Date(startTime);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-    const meetingDateOnly = new Date(meetingDate.getFullYear(), meetingDate.getMonth(), meetingDate.getDate());
-
-    const timeFormatter = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    const formattedTime = timeFormatter.format(meetingDate);
-
-    if (meetingDateOnly.getTime() === today.getTime()) {
-      return `Today, ${formattedTime}`;
-    } else if (meetingDateOnly.getTime() === tomorrow.getTime()) {
-      return `Tomorrow, ${formattedTime}`;
-    }
-    const dateFormatter = new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-    });
-    return `${dateFormatter.format(meetingDate)}, ${formattedTime}`;
+  public handleViewAll(): void {
+    this.router.navigate(['/meetings']);
   }
 }

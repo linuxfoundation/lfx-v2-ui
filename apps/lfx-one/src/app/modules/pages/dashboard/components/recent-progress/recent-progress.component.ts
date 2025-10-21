@@ -3,14 +3,14 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, ViewChild } from '@angular/core';
-import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
+
 import type { ProgressItemWithChart } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-recent-progress',
   standalone: true,
-  imports: [CommonModule, CardComponent, ChartComponent],
+  imports: [CommonModule, ChartComponent],
   templateUrl: './recent-progress.component.html',
   styleUrl: './recent-progress.component.scss',
 })
@@ -19,16 +19,17 @@ export class RecentProgressComponent {
 
   protected readonly progressItems: ProgressItemWithChart[] = [
     {
-      label: 'Pull requests merged',
-      value: '12',
+      label: 'Code Commits',
+      value: '47',
       trend: 'up',
+      subtitle: 'Last 30 days',
       chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
         datasets: [
           {
-            data: [3, 5, 2, 8, 6, 10, 12],
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 6)),
+            borderColor: '#0094FF',
+            backgroundColor: 'rgba(0, 148, 255, 0.1)',
             fill: true,
             tension: 0.4,
             borderWidth: 2,
@@ -47,14 +48,78 @@ export class RecentProgressComponent {
       },
     },
     {
-      label: 'Code reviews completed',
-      value: '8',
+      label: 'Pull Requests Merged',
+      value: '12',
       trend: 'up',
+      subtitle: 'Last 30 days',
       chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
         datasets: [
           {
-            data: [2, 3, 4, 3, 5, 6, 8],
+            data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 3)),
+            borderColor: '#0094FF',
+            backgroundColor: 'rgba(0, 148, 255, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
+      chartOptions: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false },
+        },
+      },
+    },
+    {
+      label: 'Issues Resolved & Comments Added',
+      value: '34',
+      trend: 'up',
+      subtitle: 'Combined activity last 30 days',
+      chartData: {
+        labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
+        datasets: [
+          {
+            data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 5)),
+            borderColor: '#0094FF',
+            backgroundColor: 'rgba(0, 148, 255, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
+      chartOptions: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false },
+        },
+      },
+    },
+    {
+      label: 'Active Weeks Streak',
+      value: '12',
+      trend: 'up',
+      subtitle: 'Current streak',
+      chartData: {
+        labels: Array.from({ length: 20 }, (_, i) => `Week ${i + 1}`),
+        datasets: [
+          {
+            data: Array.from({ length: 20 }, (_, i) => {
+              if (i >= 8) {
+                return 1;
+              }
+              return Math.random() > 0.5 ? 1 : 0;
+            }),
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             fill: true,
@@ -75,100 +140,17 @@ export class RecentProgressComponent {
       },
     },
     {
-      label: 'Issues closed',
-      value: '15',
-      trend: 'down',
-      chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [
-          {
-            data: [20, 18, 19, 17, 18, 16, 15],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
-      chartOptions: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          y: { display: false },
-        },
-      },
-    },
-    {
-      label: 'Commits pushed',
-      value: '24',
+      label: 'Learning Hours',
+      value: '8.5',
       trend: 'up',
+      subtitle: 'Last 30 days',
       chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
         datasets: [
           {
-            data: [15, 18, 20, 19, 21, 22, 24],
-            borderColor: '#8b5cf6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
-      chartOptions: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          y: { display: false },
-        },
-      },
-    },
-    {
-      label: 'Active branches',
-      value: '6',
-      trend: 'up',
-      chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [
-          {
-            data: [3, 4, 4, 5, 5, 6, 6],
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
-      chartOptions: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          y: { display: false },
-        },
-      },
-    },
-    {
-      label: 'Documentation updates',
-      value: '5',
-      trend: 'up',
-      chartData: {
-        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [
-          {
-            data: [1, 2, 2, 3, 3, 4, 5],
-            borderColor: '#06b6d4',
-            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+            data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 3)),
+            borderColor: '#93c5fd',
+            backgroundColor: 'rgba(147, 197, 253, 0.1)',
             fill: true,
             tension: 0.4,
             borderWidth: 2,
