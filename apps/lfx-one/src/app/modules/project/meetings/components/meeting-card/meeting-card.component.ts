@@ -24,6 +24,7 @@ import {
   MeetingRegistrant,
   PastMeeting,
   PastMeetingParticipant,
+  PastMeetingRecording,
 } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -37,6 +38,7 @@ import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take
 
 import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
+import { RecordingModalComponent } from '../recording-modal/recording-modal.component';
 import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
 
 @Component({
@@ -81,6 +83,8 @@ export class MeetingCardComponent implements OnInit {
   public meeting: WritableSignal<Meeting | PastMeeting> = signal({} as Meeting | PastMeeting);
   public occurrence: WritableSignal<MeetingOccurrence | null> = signal(null);
   public registrantsLoading: WritableSignal<boolean> = signal(true);
+  public recordingShareUrl: WritableSignal<string | null> = signal(null);
+  public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
   private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
@@ -124,6 +128,13 @@ export class MeetingCardComponent implements OnInit {
       } else {
         // For past meetings without occurrence input, set to null
         this.occurrence.set(null);
+      }
+    });
+
+    // Fetch recording for past meetings
+    effect(() => {
+      if (this.pastMeeting() && this.meeting().uid) {
+        this.fetchRecording();
       }
     });
   }
@@ -238,6 +249,50 @@ export class MeetingCardComponent implements OnInit {
       summary: 'Meeting Link Copied',
       detail: 'The meeting link has been copied to your clipboard',
     });
+  }
+
+  public openRecordingModal(): void {
+    if (!this.recordingShareUrl()) {
+      return;
+    }
+
+    this.dialogService.open(RecordingModalComponent, {
+      header: 'Meeting Recording',
+      width: '650px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        shareUrl: this.recordingShareUrl(),
+        meetingTitle: this.meeting().title,
+      },
+    });
+  }
+
+  private fetchRecording(): void {
+    this.meetingService
+      .getPastMeetingRecording(this.meeting().uid)
+      .pipe(take(1))
+      .subscribe((recording) => {
+        if (recording) {
+          const shareUrl = this.getLargestSessionShareUrl(recording);
+          this.recordingShareUrl.set(shareUrl);
+        } else {
+          this.recordingShareUrl.set(null);
+        }
+      });
+  }
+
+  private getLargestSessionShareUrl(recording: PastMeetingRecording): string | null {
+    if (!recording.sessions || recording.sessions.length === 0) {
+      return null;
+    }
+
+    const largestSession = recording.sessions.reduce((largest, current) => {
+      return current.total_size > largest.total_size ? current : largest;
+    });
+
+    return largestSession.share_url || null;
   }
 
   private initMeetingRegistrantCount(): Signal<number> {

@@ -8,6 +8,7 @@ import {
   MeetingJoinURL,
   MeetingRegistrant,
   PastMeetingParticipant,
+  PastMeetingRecording,
   QueryServiceResponse,
   QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
@@ -449,6 +450,62 @@ export class MeetingService {
     );
 
     return participants;
+  }
+
+  /**
+   * Fetches past meeting recording by past meeting UID
+   */
+  public async getPastMeetingRecording(req: Request, pastMeetingUid: string): Promise<PastMeetingRecording | null> {
+    try {
+      const params = {
+        type: 'past_meeting_recording',
+        tags: `past_meeting_uid:${pastMeetingUid}`,
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingRecording>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      if (!resources || resources.length === 0) {
+        req.log.info(
+          {
+            operation: 'get_past_meeting_recording',
+            past_meeting_uid: pastMeetingUid,
+          },
+          'No recording found for past meeting'
+        );
+        return null;
+      }
+
+      const recording = resources[0].data;
+
+      req.log.info(
+        {
+          operation: 'get_past_meeting_recording',
+          past_meeting_uid: pastMeetingUid,
+          recording_uid: recording.uid,
+          recording_count: recording.recording_count,
+          session_count: recording.sessions?.length || 0,
+        },
+        'Past meeting recording retrieved successfully'
+      );
+
+      return recording;
+    } catch (error) {
+      req.log.error(
+        {
+          operation: 'get_past_meeting_recording',
+          past_meeting_uid: pastMeetingUid,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to retrieve past meeting recording'
+      );
+      return null;
+    }
   }
 
   private async getMeetingCommittees(req: Request, meetings: Meeting[]): Promise<Meeting[]> {

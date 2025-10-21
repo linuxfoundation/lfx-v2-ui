@@ -544,3 +544,72 @@ export interface PastMeetingParticipant {
   /** Last update timestamp */
   updated_at: string;
 }
+
+/**
+ * Recording session information
+ * @description Individual session within a past meeting recording
+ */
+export interface RecordingSession {
+  /** Session start time */
+  start_time: string;
+  /** Shareable URL for the recording */
+  share_url: string;
+  /** Total size of the session in bytes */
+  total_size: number;
+  /** Session UUID */
+  uuid: string;
+}
+
+/**
+ * Recording file information
+ * @description Individual recording file from a meeting session
+ */
+export interface RecordingFile {
+  /** Unique identifier for the recording file */
+  id: string;
+  /** Download URL for the recording file */
+  download_url: string;
+  /** Play URL for the recording file */
+  play_url: string;
+  /** File size in bytes */
+  file_size: number;
+  /** File type (e.g., MP4, M4A, CHAT, TRANSCRIPT) */
+  file_type: string;
+  /** Recording type (e.g., shared_screen_with_speaker_view, audio_only) */
+  recording_type: string;
+  /** Recording start time */
+  recording_start: string;
+  /** Recording end time */
+  recording_end: string;
+  /** Recording status */
+  status: string;
+  /** Platform-specific meeting ID */
+  platform_meeting_id: string;
+}
+
+/**
+ * Past meeting recording information
+ * @description Recording data for a completed past meeting
+ */
+export interface PastMeetingRecording {
+  /** Unique identifier for the recording */
+  uid: string;
+  /** Past meeting UID this recording belongs to */
+  past_meeting_uid: string;
+  /** Platform (e.g., Zoom) */
+  platform: string;
+  /** Platform-specific meeting ID */
+  platform_meeting_id: string;
+  /** Number of recording files */
+  recording_count: number;
+  /** Array of recording files */
+  recording_files: RecordingFile[];
+  /** Array of recording sessions */
+  sessions: RecordingSession[];
+  /** Total size of all recordings in bytes */
+  total_size: number;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last update timestamp */
+  updated_at: string;
+}

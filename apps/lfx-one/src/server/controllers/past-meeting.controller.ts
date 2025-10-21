@@ -3,7 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { PastMeeting } from '@lfx-one/shared/interfaces';
+import { PastMeeting, PastMeetingRecording } from '@lfx-one/shared/interfaces';
 import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { MeetingService } from '../services/meeting.service';
@@ -138,6 +138,60 @@ export class PastMeetingController {
     } catch (error) {
       // Log the error
       Logger.error(req, 'get_past_meeting_participants', startTime, error, {
+        past_meeting_uid: uid,
+      });
+
+      // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  /**
+   * GET /past-meetings/:uid/recording
+   */
+  public async getPastMeetingRecording(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const startTime = Logger.start(req, 'get_past_meeting_recording', {
+      past_meeting_uid: uid,
+    });
+
+    try {
+      // Check if the past meeting UID is provided
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_past_meeting_recording',
+          service: 'past_meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      // Get the past meeting recording
+      const recording: PastMeetingRecording | null = await this.meetingService.getPastMeetingRecording(req, uid);
+
+      // If no recording found, return 404
+      if (!recording) {
+        res.status(404).json({
+          error: 'Not Found',
+          message: `No recording found for past meeting ${uid}`,
+        });
+        return;
+      }
+
+      // Log the success
+      Logger.success(req, 'get_past_meeting_recording', startTime, {
+        past_meeting_uid: uid,
+        recording_uid: recording.uid,
+        recording_count: recording.recording_count,
+        session_count: recording.sessions?.length || 0,
+      });
+
+      // Send the recording data to the client
+      res.json(recording);
+    } catch (error) {
+      // Log the error
+      Logger.error(req, 'get_past_meeting_recording', startTime, error, {
         past_meeting_uid: uid,
       });
 

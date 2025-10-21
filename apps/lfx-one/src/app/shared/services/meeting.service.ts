@@ -17,6 +17,7 @@ import {
   MeetingRegistrantWithState,
   PastMeeting,
   PastMeetingParticipant,
+  PastMeetingRecording,
   Project,
   QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
@@ -315,6 +316,18 @@ export class MeetingService {
       catchError((error) => {
         console.error(`Failed to load participants for past meeting ${pastMeetingUid}:`, error);
         return of([]);
+      })
+    );
+  }
+
+  public getPastMeetingRecording(pastMeetingUid: string): Observable<PastMeetingRecording | null> {
+    return this.http.get<PastMeetingRecording>(`/api/past-meetings/${pastMeetingUid}/recording`).pipe(
+      catchError((error) => {
+        if (error.status === 404) {
+          return of(null);
+        }
+        console.error(`Failed to load recording for past meeting ${pastMeetingUid}:`, error);
+        return of(null);
       })
     );
   }
