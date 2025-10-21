@@ -9,6 +9,7 @@ import {
   MeetingRegistrant,
   PastMeetingParticipant,
   PastMeetingRecording,
+  PastMeetingSummary,
   QueryServiceResponse,
   QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
@@ -503,6 +504,62 @@ export class MeetingService {
           error: error instanceof Error ? error.message : String(error),
         },
         'Failed to retrieve past meeting recording'
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Fetches past meeting summary by past meeting UID
+   */
+  public async getPastMeetingSummary(req: Request, pastMeetingUid: string): Promise<PastMeetingSummary | null> {
+    try {
+      const params = {
+        type: 'past_meeting_summary',
+        tags: `past_meeting_uid:${pastMeetingUid}`,
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingSummary>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      if (!resources || resources.length === 0) {
+        req.log.info(
+          {
+            operation: 'get_past_meeting_summary',
+            past_meeting_uid: pastMeetingUid,
+          },
+          'No summary found for past meeting'
+        );
+        return null;
+      }
+
+      const summary = resources[0].data;
+
+      req.log.info(
+        {
+          operation: 'get_past_meeting_summary',
+          past_meeting_uid: pastMeetingUid,
+          summary_uid: summary.uid,
+          approved: summary.approved,
+          requires_approval: summary.requires_approval,
+        },
+        'Past meeting summary retrieved successfully'
+      );
+
+      return summary;
+    } catch (error) {
+      req.log.error(
+        {
+          operation: 'get_past_meeting_summary',
+          past_meeting_uid: pastMeetingUid,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to retrieve past meeting summary'
       );
       return null;
     }

@@ -3,7 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { PastMeeting, PastMeetingRecording } from '@lfx-one/shared/interfaces';
+import { PastMeeting, PastMeetingRecording, PastMeetingSummary } from '@lfx-one/shared/interfaces';
 import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { MeetingService } from '../services/meeting.service';
@@ -192,6 +192,60 @@ export class PastMeetingController {
     } catch (error) {
       // Log the error
       Logger.error(req, 'get_past_meeting_recording', startTime, error, {
+        past_meeting_uid: uid,
+      });
+
+      // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  /**
+   * GET /past-meetings/:uid/summary
+   */
+  public async getPastMeetingSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const startTime = Logger.start(req, 'get_past_meeting_summary', {
+      past_meeting_uid: uid,
+    });
+
+    try {
+      // Check if the past meeting UID is provided
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_past_meeting_summary',
+          service: 'past_meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      // Get the past meeting summary
+      const summary: PastMeetingSummary | null = await this.meetingService.getPastMeetingSummary(req, uid);
+
+      // If no summary found, return 404
+      if (!summary) {
+        res.status(404).json({
+          error: 'Not Found',
+          message: `No summary found for past meeting ${uid}`,
+        });
+        return;
+      }
+
+      // Log the success
+      Logger.success(req, 'get_past_meeting_summary', startTime, {
+        past_meeting_uid: uid,
+        summary_uid: summary.uid,
+        approved: summary.approved,
+        requires_approval: summary.requires_approval,
+      });
+
+      // Send the summary data to the client
+      res.json(summary);
+    } catch (error) {
+      // Log the error
+      Logger.error(req, 'get_past_meeting_summary', startTime, error, {
         past_meeting_uid: uid,
       });
 

@@ -613,3 +613,64 @@ export interface PastMeetingRecording {
   /** Last update timestamp */
   updated_at: string;
 }
+
+/**
+ * Summary data for a past meeting
+ * @description Contains the AI-generated summary content and metadata
+ */
+export interface SummaryData {
+  /** Summary title */
+  title: string;
+  /** AI-generated summary content in markdown format */
+  content: string;
+  /** User-edited summary content (can be empty) */
+  edited_content: string;
+  /** Zoom document URL for the summary */
+  doc_url: string;
+  /** Summary generation start time */
+  start_time: string;
+  /** Summary generation end time */
+  end_time: string;
+}
+
+/**
+ * Zoom configuration for meeting summary
+ * @description Platform-specific configuration for Zoom summaries
+ */
+export interface ZoomSummaryConfig {
+  /** Zoom meeting ID */
+  meeting_id: string;
+  /** Zoom meeting UUID */
+  meeting_uuid: string;
+}
+
+/**
+ * Past meeting summary information
+ * @description AI-generated summary data for a completed past meeting
+ */
+export interface PastMeetingSummary {
+  /** Unique identifier for the summary */
+  uid: string;
+  /** Original meeting UID */
+  meeting_uid: string;
+  /** Past meeting UID this summary belongs to */
+  past_meeting_uid: string;
+  /** Platform (e.g., Zoom) */
+  platform: string;
+  /** Whether the summary has been approved */
+  approved: boolean;
+  /** Whether the summary requires approval before viewing */
+  requires_approval: boolean;
+  /** Whether notification email was sent */
+  email_sent: boolean;
+  /** Access password for the summary */
+  password: string;
+  /** Summary content and metadata */
+  summary_data: SummaryData;
+  /** Zoom-specific configuration (optional) */
+  zoom_config?: ZoomSummaryConfig;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last update timestamp */
+  updated_at: string;
+}

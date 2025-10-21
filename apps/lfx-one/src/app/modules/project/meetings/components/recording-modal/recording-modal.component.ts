@@ -25,6 +25,15 @@ export class RecordingModalComponent {
   public readonly shareUrl = this.config.data.shareUrl as string;
   public readonly meetingTitle = this.config.data.meetingTitle as string;
 
+  public selectUrl(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
   // Public methods
   public copyShareUrl(): void {
     const success = this.clipboard.copy(this.shareUrl);

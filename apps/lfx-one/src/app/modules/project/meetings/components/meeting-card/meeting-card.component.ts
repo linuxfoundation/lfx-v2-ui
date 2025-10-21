@@ -25,6 +25,7 @@ import {
   PastMeeting,
   PastMeetingParticipant,
   PastMeetingRecording,
+  PastMeetingSummary,
 } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -40,6 +41,7 @@ import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeti
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
 import { RecordingModalComponent } from '../recording-modal/recording-modal.component';
 import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
+import { SummaryModalComponent } from '../summary-modal/summary-modal.component';
 
 @Component({
   selector: 'lfx-meeting-card',
@@ -85,6 +87,8 @@ export class MeetingCardComponent implements OnInit {
   public registrantsLoading: WritableSignal<boolean> = signal(true);
   public recordingShareUrl: WritableSignal<string | null> = signal(null);
   public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
+  public summaryContent: WritableSignal<string | null> = signal(null);
+  public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
@@ -135,6 +139,13 @@ export class MeetingCardComponent implements OnInit {
     effect(() => {
       if (this.pastMeeting() && this.meeting().uid) {
         this.fetchRecording();
+      }
+    });
+
+    // Fetch summary for past meetings
+    effect(() => {
+      if (this.pastMeeting() && this.meeting().uid) {
+        this.fetchSummary();
       }
     });
   }
@@ -269,6 +280,24 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
+  public openSummaryModal(): void {
+    if (!this.summaryContent()) {
+      return;
+    }
+
+    this.dialogService.open(SummaryModalComponent, {
+      header: 'Meeting Summary',
+      width: '800px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        summaryContent: this.summaryContent(),
+        meetingTitle: this.meeting().title,
+      },
+    });
+  }
+
   private fetchRecording(): void {
     this.meetingService
       .getPastMeetingRecording(this.meeting().uid)
@@ -293,6 +322,20 @@ export class MeetingCardComponent implements OnInit {
     });
 
     return largestSession.share_url || null;
+  }
+
+  private fetchSummary(): void {
+    this.meetingService
+      .getPastMeetingSummary(this.meeting().uid)
+      .pipe(take(1))
+      .subscribe((summary: PastMeetingSummary | null) => {
+        if (summary && summary.summary_data) {
+          const content = summary.summary_data.edited_content || summary.summary_data.content;
+          this.summaryContent.set(content);
+        } else {
+          this.summaryContent.set(null);
+        }
+      });
   }
 
   private initMeetingRegistrantCount(): Signal<number> {
