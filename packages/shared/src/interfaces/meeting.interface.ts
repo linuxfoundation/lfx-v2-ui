@@ -674,3 +674,14 @@ export interface PastMeetingSummary {
   /** Last update timestamp */
   updated_at: string;
 }
+
+/**
+ * Update past meeting summary request
+ * @description Request payload for updating a past meeting summary's edited content and approval status
+ */
+export interface UpdatePastMeetingSummaryRequest {
+  /** Updated summary content (HTML/text) - optional when only approving */
+  edited_content?: string;
+  /** Approval status - optional when only editing content */
+  approved?: boolean;
+}

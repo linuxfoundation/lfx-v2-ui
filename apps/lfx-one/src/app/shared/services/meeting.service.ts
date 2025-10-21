@@ -23,6 +23,7 @@ import {
   QueryServiceCountResponse,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
+  UpdatePastMeetingSummaryRequest,
   UploadFileResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, defer, Observable, of, map, switchMap, take, tap, throwError } from 'rxjs';
@@ -343,6 +344,14 @@ export class MeetingService {
         return of(null);
       })
     );
+  }
+
+  public updatePastMeetingSummary(pastMeetingUid: string, summaryUid: string, updateData: UpdatePastMeetingSummaryRequest): Observable<PastMeetingSummary> {
+    return this.http.put<PastMeetingSummary>(`/api/past-meetings/${pastMeetingUid}/summary/${summaryUid}`, updateData);
+  }
+
+  public approvePastMeetingSummary(pastMeetingUid: string, summaryUid: string): Observable<PastMeetingSummary> {
+    return this.updatePastMeetingSummary(pastMeetingUid, summaryUid, { approved: true });
   }
 
   public addMeetingRegistrants(

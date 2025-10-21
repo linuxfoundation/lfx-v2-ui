@@ -88,6 +88,8 @@ export class MeetingCardComponent implements OnInit {
   public recordingShareUrl: WritableSignal<string | null> = signal(null);
   public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
   public summaryContent: WritableSignal<string | null> = signal(null);
+  public summaryUid: WritableSignal<string | null> = signal(null);
+  public summaryApproved: WritableSignal<boolean> = signal(false);
   public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   public registrants = this.initRegistrantsList();
@@ -281,11 +283,11 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public openSummaryModal(): void {
-    if (!this.summaryContent()) {
+    if (!this.summaryContent() || !this.summaryUid()) {
       return;
     }
 
-    this.dialogService.open(SummaryModalComponent, {
+    const ref = this.dialogService.open(SummaryModalComponent, {
       header: 'Meeting Summary',
       width: '800px',
       modal: true,
@@ -293,8 +295,19 @@ export class MeetingCardComponent implements OnInit {
       dismissableMask: true,
       data: {
         summaryContent: this.summaryContent(),
+        summaryUid: this.summaryUid(),
+        pastMeetingUid: this.meeting().uid,
         meetingTitle: this.meeting().title,
+        approved: this.summaryApproved(),
       },
+    });
+
+    // Update local content and approval status when changes are made
+    ref.onClose.pipe(take(1)).subscribe((result?: { updated: boolean; content: string; approved: boolean }) => {
+      if (result && result.updated) {
+        this.summaryContent.set(result.content);
+        this.summaryApproved.set(result.approved);
+      }
     });
   }
 
@@ -332,8 +345,12 @@ export class MeetingCardComponent implements OnInit {
         if (summary && summary.summary_data) {
           const content = summary.summary_data.edited_content || summary.summary_data.content;
           this.summaryContent.set(content);
+          this.summaryUid.set(summary.uid);
+          this.summaryApproved.set(summary.approved);
         } else {
           this.summaryContent.set(null);
+          this.summaryUid.set(null);
+          this.summaryApproved.set(false);
         }
       });
   }

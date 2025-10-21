@@ -3,7 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { PastMeeting, PastMeetingRecording, PastMeetingSummary } from '@lfx-one/shared/interfaces';
+import { PastMeeting, PastMeetingRecording, PastMeetingSummary, UpdatePastMeetingSummaryRequest } from '@lfx-one/shared/interfaces';
 import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { MeetingService } from '../services/meeting.service';
@@ -247,6 +247,67 @@ export class PastMeetingController {
       // Log the error
       Logger.error(req, 'get_past_meeting_summary', startTime, error, {
         past_meeting_uid: uid,
+      });
+
+      // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /past-meetings/:uid/summary/:summaryUid
+   */
+  public async updatePastMeetingSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid, summaryUid } = req.params;
+    const startTime = Logger.start(req, 'update_past_meeting_summary', {
+      past_meeting_uid: uid,
+      summary_uid: summaryUid,
+    });
+
+    try {
+      // Check if the past meeting UID and summary UID are provided
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'update_past_meeting_summary',
+          service: 'past_meeting_controller',
+          logStartTime: startTime,
+        }) ||
+        !validateUidParameter(summaryUid, req, next, {
+          operation: 'update_past_meeting_summary',
+          service: 'past_meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      const body = req.body as UpdatePastMeetingSummaryRequest;
+
+      // Validate request body - at least one field must be provided
+      if (!body.edited_content && body.approved === undefined) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Either edited_content or approved must be provided',
+        });
+        return;
+      }
+
+      // Update the summary
+      const updatedSummary = await this.meetingService.updatePastMeetingSummary(req, uid, summaryUid, body);
+
+      // Log the success
+      Logger.success(req, 'update_past_meeting_summary', startTime, {
+        past_meeting_uid: uid,
+        summary_uid: summaryUid,
+      });
+
+      // Send the updated summary data to the client
+      res.json(updatedSummary);
+    } catch (error) {
+      // Log the error
+      Logger.error(req, 'update_past_meeting_summary', startTime, error, {
+        past_meeting_uid: uid,
+        summary_uid: summaryUid,
       });
 
       // Send the error to the next middleware
