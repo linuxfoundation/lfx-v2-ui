@@ -23,7 +23,7 @@ import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, debounceTime, filter, map, of, startWith, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-join',
@@ -370,69 +370,54 @@ export class MeetingJoinComponent {
             return of(undefined);
           }
 
-          // For authenticated users, just check if they have email
+          // Determine email based on authentication status
+          let email: string | undefined;
+
           if (authenticated) {
-            const email = user?.email;
+            // For authenticated users, use their email from user profile
+            email = user?.email;
             if (!email) {
               this.isLoadingJoinUrl.set(false);
               return of(undefined);
             }
-
-            // Set loading state
-            this.isLoadingJoinUrl.set(true);
-
-            // Fetch the join URL for authenticated user
-            return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email }).pipe(
-              map((res) => {
-                this.isLoadingJoinUrl.set(false);
-                if (res.join_url) {
-                  meeting.join_url = res.join_url;
-                  return this.buildJoinUrlWithParams(res.join_url);
-                }
-                return undefined;
-              }),
-              catchError((error) => {
-                this.isLoadingJoinUrl.set(false);
-                this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
-                return of(undefined);
-              })
-            );
-          }
-
-          // For unauthenticated users, form must be valid
-          if (formStatus !== 'VALID') {
-            this.isLoadingJoinUrl.set(false);
-            return of(undefined);
-          }
-
-          const email = this.joinForm.get('email')?.value;
-          if (!email) {
-            this.isLoadingJoinUrl.set(false);
-            return of(undefined);
-          }
-
-          // Set loading state
-          this.isLoadingJoinUrl.set(true);
-
-          // Fetch the join URL for unauthenticated user
-          return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email }).pipe(
-            map((res) => {
+          } else {
+            // For unauthenticated users, form must be valid
+            if (formStatus !== 'VALID') {
               this.isLoadingJoinUrl.set(false);
-              if (res.join_url) {
-                meeting.join_url = res.join_url;
-                return this.buildJoinUrlWithParams(res.join_url);
-              }
-              return undefined;
-            }),
-            catchError((error) => {
-              this.isLoadingJoinUrl.set(false);
-              this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
               return of(undefined);
-            })
-          );
+            }
+            // Use email from form
+            email = this.joinForm.get('email')?.value;
+            if (!email) {
+              this.isLoadingJoinUrl.set(false);
+              return of(undefined);
+            }
+          }
+
+          // Fetch join URL with the determined email
+          return this.fetchJoinUrl(meeting, email);
         })
       ),
       { initialValue: undefined }
+    );
+  }
+
+  private fetchJoinUrl(meeting: Meeting, email: string): Observable<string | undefined> {
+    this.isLoadingJoinUrl.set(true);
+
+    return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email }).pipe(
+      map((res) => {
+        this.isLoadingJoinUrl.set(false);
+        if (res.join_url) {
+          return this.buildJoinUrlWithParams(res.join_url);
+        }
+        return undefined;
+      }),
+      catchError((error) => {
+        this.isLoadingJoinUrl.set(false);
+        this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
+        return of(undefined);
+      })
     );
   }
 
