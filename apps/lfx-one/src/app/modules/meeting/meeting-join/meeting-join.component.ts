@@ -23,7 +23,7 @@ import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, filter, map, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, filter, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-join',
@@ -68,6 +68,8 @@ export class MeetingJoinComponent {
   public canJoinMeeting: Signal<boolean>;
   public joinUrlWithParams: Signal<string | undefined>;
   public fetchedJoinUrl: Signal<string | undefined>;
+  public isLoadingJoinUrl: WritableSignal<boolean> = signal<boolean>(false);
+  public joinUrlError: WritableSignal<string | null> = signal<string | null>(null);
   public attachments: Signal<MeetingAttachment[]>;
   public messageSeverity: Signal<'success' | 'info' | 'warn'>;
   public messageIcon: Signal<string>;
@@ -353,37 +355,78 @@ export class MeetingJoinComponent {
 
   private initializeFetchedJoinUrl(): Signal<string | undefined> {
     return toSignal(
-      toObservable(this.canJoinMeeting).pipe(
-        switchMap((canJoin) => {
+      combineLatest([toObservable(this.canJoinMeeting), this.joinForm.statusChanges.pipe(debounceTime(300), startWith(this.joinForm.status))]).pipe(
+        switchMap(([canJoin, formStatus]) => {
           const meeting = this.meeting();
           const authenticated = this.authenticated();
           const user = this.user();
 
+          // Reset error state
+          this.joinUrlError.set(null);
+
           // Only fetch when meeting is joinable and we have necessary user info
           if (!canJoin || !meeting?.uid) {
+            this.isLoadingJoinUrl.set(false);
             return of(undefined);
           }
 
-          // Get email from authenticated user or form
-          const email = authenticated ? user?.email : this.joinForm.get('email')?.value;
+          // For authenticated users, just check if they have email
+          if (authenticated) {
+            const email = user?.email;
+            if (!email) {
+              this.isLoadingJoinUrl.set(false);
+              return of(undefined);
+            }
 
+            // Set loading state
+            this.isLoadingJoinUrl.set(true);
+
+            // Fetch the join URL for authenticated user
+            return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email }).pipe(
+              map((res) => {
+                this.isLoadingJoinUrl.set(false);
+                if (res.join_url) {
+                  meeting.join_url = res.join_url;
+                  return this.buildJoinUrlWithParams(res.join_url);
+                }
+                return undefined;
+              }),
+              catchError((error) => {
+                this.isLoadingJoinUrl.set(false);
+                this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
+                return of(undefined);
+              })
+            );
+          }
+
+          // For unauthenticated users, form must be valid
+          if (formStatus !== 'VALID') {
+            this.isLoadingJoinUrl.set(false);
+            return of(undefined);
+          }
+
+          const email = this.joinForm.get('email')?.value;
           if (!email) {
+            this.isLoadingJoinUrl.set(false);
             return of(undefined);
           }
 
-          // Fetch the join URL
+          // Set loading state
+          this.isLoadingJoinUrl.set(true);
+
+          // Fetch the join URL for unauthenticated user
           return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email }).pipe(
             map((res) => {
+              this.isLoadingJoinUrl.set(false);
               if (res.join_url) {
-                // Update the meeting's join_url
                 meeting.join_url = res.join_url;
-                // Build URL with params
                 return this.buildJoinUrlWithParams(res.join_url);
               }
               return undefined;
             }),
             catchError((error) => {
-              console.error('Failed to fetch join URL:', error);
+              this.isLoadingJoinUrl.set(false);
+              this.joinUrlError.set(error?.error?.error || 'Failed to load meeting join URL. Please try again.');
               return of(undefined);
             })
           );
