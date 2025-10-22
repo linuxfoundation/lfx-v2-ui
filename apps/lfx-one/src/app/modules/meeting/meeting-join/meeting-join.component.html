@@ -8,7 +8,9 @@
       <div class="max-w-4xl mx-auto">
         <!-- Project Logo -->
         @if (project()?.logo_url) {
-          <img src="{{ project()?.logo_url }}" alt="{{ project()?.name }}" class="w-full h-20 mb-6" />
+          <div class="flex items-center justify-center">
+            <img src="{{ project()?.logo_url }}" alt="{{ project()?.name }}" class="w-auto h-20 mb-6" />
+          </div>
         }
 
         <!-- Meeting Information Card -->
@@ -218,9 +220,7 @@
                   <ng-template #content>
                     <div class="flex items-center justify-between w-full">
                       <div class="flex items-center gap-3 text-sm">
-                        @if (hasAutoJoined()) {
-                          <span class="font-sans">Meeting opened in a new tab. If it didn't open, use the button to join manually.</span>
-                        } @else if (canJoinMeeting()) {
+                        @if (canJoinMeeting()) {
                           <span class="font-sans">Ready to join as {{ user.name }}</span>
                         } @else {
                           <div class="flex flex-col">
@@ -236,10 +236,10 @@
                           size="small"
                           severity="primary"
                           label="Join Meeting"
-                          [disabled]="!canJoinMeeting()"
+                          [href]="canJoinMeeting() && fetchedJoinUrl() ? fetchedJoinUrl() : undefined"
+                          [disabled]="!canJoinMeeting() || !fetchedJoinUrl()"
                           icon="fa-light fa-sign-in"
-                          [attr.data-testid]="'join-meeting-button-authenticated'"
-                          (click)="onJoinMeeting()"></lfx-button>
+                          [attr.data-testid]="'join-meeting-button-authenticated'"></lfx-button>
                       </div>
                     </div>
                   </ng-template>
@@ -336,10 +336,10 @@
                           size="small"
                           severity="primary"
                           label="Join Meeting"
-                          [disabled]="joinForm.invalid || !canJoinMeeting()"
+                          [href]="joinForm.valid && canJoinMeeting() && fetchedJoinUrl() ? fetchedJoinUrl() : undefined"
+                          [disabled]="joinForm.invalid || !canJoinMeeting() || !fetchedJoinUrl()"
                           icon="fa-light fa-sign-in"
-                          [attr.data-testid]="'join-meeting-button-form'"
-                          (click)="onJoinMeeting()"></lfx-button>
+                          [attr.data-testid]="'join-meeting-button-form'"></lfx-button>
                       </div>
                     </div>
                   </form>
