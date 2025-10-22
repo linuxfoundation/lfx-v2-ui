@@ -10,9 +10,9 @@
         <span [class]="meetingTypeInfo().className + ' text-xs px-2 py-1 font-medium rounded'" data-testid="dashboard-meeting-card-type-badge">
           {{ meetingTypeInfo().label }}
         </span>
-        @if (projectName()) {
+        @if (meeting().project_name) {
           <span class="border border-gray-300 bg-white text-gray-700 text-xs px-2 py-1 font-medium rounded" data-testid="dashboard-meeting-card-project-badge">
-            {{ projectName() }}
+            {{ meeting().project_name }}
           </span>
         }
       </div>

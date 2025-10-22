@@ -3,18 +3,19 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, output } from '@angular/core';
-import { CardComponent } from '@components/card/card.component';
+import { ButtonComponent } from '@components/button/button.component';
 import type { PendingActionItem } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-pending-actions',
   standalone: true,
-  imports: [CommonModule, CardComponent],
+  imports: [CommonModule, ButtonComponent],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
 export class PendingActionsComponent {
   public readonly actionClick = output<PendingActionItem>();
+  public readonly viewAll = output<void>();
 
   protected readonly pendingActions: PendingActionItem[] = [
     {
@@ -42,6 +43,10 @@ export class PendingActionsComponent {
       buttonText: 'View Agenda',
     },
   ];
+
+  public handleViewAll(): void {
+    this.viewAll.emit();
+  }
 
   protected handleActionClick(item: PendingActionItem): void {
     this.actionClick.emit(item);

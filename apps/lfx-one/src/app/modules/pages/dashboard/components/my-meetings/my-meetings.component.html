@@ -29,7 +29,6 @@
                 <lfx-dashboard-meeting-card
                   [meeting]="item.meeting"
                   [occurrence]="item.occurrence"
-                  [projectName]="'Kubernetes'"
                   (onSeeMeeting)="handleSeeMeeting($event)"
                   [attr.data-testid]="'dashboard-my-meetings-today-item-' + item.meeting.uid" />
               }
@@ -46,7 +45,6 @@
                 <lfx-dashboard-meeting-card
                   [meeting]="item.meeting"
                   [occurrence]="item.occurrence"
-                  [projectName]="'Kubernetes'"
                   (onSeeMeeting)="handleSeeMeeting($event)"
                   [attr.data-testid]="'dashboard-my-meetings-upcoming-item-' + item.meeting.uid" />
               }

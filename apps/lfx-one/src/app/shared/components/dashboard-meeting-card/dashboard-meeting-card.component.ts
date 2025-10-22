@@ -21,7 +21,6 @@ interface MeetingTypeBadge {
 export class DashboardMeetingCardComponent {
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
-  public readonly projectName = input<string>();
   public readonly onSeeMeeting = output<string>();
 
   // Computed values
