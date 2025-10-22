@@ -3,15 +3,15 @@
 
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
+import { TableComponent } from '@components/table/table.component';
 
 import type { ProjectItem } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-my-projects',
   standalone: true,
-  imports: [CommonModule, CardComponent, ChartComponent],
+  imports: [CommonModule, ChartComponent, TableComponent],
   templateUrl: './my-projects.component.html',
   styleUrl: './my-projects.component.scss',
 })
@@ -45,4 +45,13 @@ export class MyProjectsComponent {
       status: 'archived',
     },
   ];
+
+  /**
+   * Generates labels for chart based on data length
+   * @param length - Number of data points
+   * @returns Array of empty strings for chart labels
+   */
+  protected generateLabels(length: number): string[] {
+    return Array.from({ length }, () => '');
+  }
 }
