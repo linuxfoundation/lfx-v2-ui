@@ -322,28 +322,12 @@ export class MeetingService {
     );
   }
 
-  public getPastMeetingRecording(pastMeetingUid: string): Observable<PastMeetingRecording | null> {
-    return this.http.get<PastMeetingRecording>(`/api/past-meetings/${pastMeetingUid}/recording`).pipe(
-      catchError((error) => {
-        if (error.status === 404) {
-          return of(null);
-        }
-        console.error(`Failed to load recording for past meeting ${pastMeetingUid}:`, error);
-        return of(null);
-      })
-    );
+  public getPastMeetingRecording(pastMeetingUid: string): Observable<PastMeetingRecording> {
+    return this.http.get<PastMeetingRecording>(`/api/past-meetings/${pastMeetingUid}/recording`);
   }
 
-  public getPastMeetingSummary(pastMeetingUid: string): Observable<PastMeetingSummary | null> {
-    return this.http.get<PastMeetingSummary>(`/api/past-meetings/${pastMeetingUid}/summary`).pipe(
-      catchError((error) => {
-        if (error.status === 404) {
-          return of(null);
-        }
-        console.error(`Failed to load summary for past meeting ${pastMeetingUid}:`, error);
-        return of(null);
-      })
-    );
+  public getPastMeetingSummary(pastMeetingUid: string): Observable<PastMeetingSummary> {
+    return this.http.get<PastMeetingSummary>(`/api/past-meetings/${pastMeetingUid}/summary`);
   }
 
   public updatePastMeetingSummary(pastMeetingUid: string, summaryUid: string, updateData: UpdatePastMeetingSummaryRequest): Observable<PastMeetingSummary> {

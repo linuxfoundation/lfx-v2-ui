@@ -85,16 +85,24 @@ export class MeetingCardComponent implements OnInit {
   public meeting: WritableSignal<Meeting | PastMeeting> = signal({} as Meeting | PastMeeting);
   public occurrence: WritableSignal<MeetingOccurrence | null> = signal(null);
   public registrantsLoading: WritableSignal<boolean> = signal(true);
-  public recordingShareUrl: WritableSignal<string | null> = signal(null);
-  public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
-  public summaryContent: WritableSignal<string | null> = signal(null);
-  public summaryUid: WritableSignal<string | null> = signal(null);
-  public summaryApproved: WritableSignal<boolean> = signal(false);
-  public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
   public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
+  public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
+  public recordingShareUrl: Signal<string | null> = computed(() => {
+    const recording = this.recording();
+    return recording ? this.getLargestSessionShareUrl(recording) : null;
+  });
+  public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
+  public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
+  public summaryContent: Signal<string | null> = computed(() => {
+    const summary = this.summary();
+    return summary?.summary_data ? summary.summary_data.edited_content || summary.summary_data.content : null;
+  });
+  public summaryUid: Signal<string | null> = computed(() => this.summary()?.uid || null);
+  public summaryApproved: Signal<boolean> = computed(() => this.summary()?.approved || false);
+  public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
   public additionalParticipantsCount: WritableSignal<number> = signal(0);
   public actionMenuItems: Signal<MenuItem[]> = this.initializeActionMenuItems();
@@ -136,24 +144,12 @@ export class MeetingCardComponent implements OnInit {
         this.occurrence.set(null);
       }
     });
-
-    // Fetch recording for past meetings
-    effect(() => {
-      if (this.pastMeeting() && this.meeting().uid) {
-        this.fetchRecording();
-      }
-    });
-
-    // Fetch summary for past meetings
-    effect(() => {
-      if (this.pastMeeting() && this.meeting().uid) {
-        this.fetchSummary();
-      }
-    });
   }
 
   public ngOnInit(): void {
     this.attachments = this.initAttachments();
+    this.initRecording();
+    this.initSummary();
   }
 
   public onRegistrantsToggle(event: Event): void {
@@ -305,24 +301,19 @@ export class MeetingCardComponent implements OnInit {
     // Update local content and approval status when changes are made
     ref.onClose.pipe(take(1)).subscribe((result?: { updated: boolean; content: string; approved: boolean }) => {
       if (result && result.updated) {
-        this.summaryContent.set(result.content);
-        this.summaryApproved.set(result.approved);
+        const currentSummary = this.summary();
+        if (currentSummary) {
+          this.summary.set({
+            ...currentSummary,
+            approved: result.approved,
+            summary_data: {
+              ...currentSummary.summary_data,
+              edited_content: result.content,
+            },
+          });
+        }
       }
     });
-  }
-
-  private fetchRecording(): void {
-    this.meetingService
-      .getPastMeetingRecording(this.meeting().uid)
-      .pipe(take(1))
-      .subscribe((recording) => {
-        if (recording) {
-          const shareUrl = this.getLargestSessionShareUrl(recording);
-          this.recordingShareUrl.set(shareUrl);
-        } else {
-          this.recordingShareUrl.set(null);
-        }
-      });
   }
 
   private getLargestSessionShareUrl(recording: PastMeetingRecording): string | null {
@@ -335,24 +326,6 @@ export class MeetingCardComponent implements OnInit {
     });
 
     return largestSession.share_url || null;
-  }
-
-  private fetchSummary(): void {
-    this.meetingService
-      .getPastMeetingSummary(this.meeting().uid)
-      .pipe(take(1))
-      .subscribe((summary: PastMeetingSummary | null) => {
-        if (summary && summary.summary_data) {
-          const content = summary.summary_data.edited_content || summary.summary_data.content;
-          this.summaryContent.set(content);
-          this.summaryUid.set(summary.uid);
-          this.summaryApproved.set(summary.approved);
-        } else {
-          this.summaryContent.set(null);
-          this.summaryUid.set(null);
-          this.summaryApproved.set(false);
-        }
-      });
   }
 
   private initMeetingRegistrantCount(): Signal<number> {
@@ -594,6 +567,30 @@ export class MeetingCardComponent implements OnInit {
   private initAttachments(): Signal<MeetingAttachment[]> {
     return runInInjectionContext(this.injector, () => {
       return toSignal(this.meetingService.getMeetingAttachments(this.meetingInput().uid).pipe(catchError(() => of([]))), { initialValue: [] });
+    });
+  }
+
+  private initRecording(): void {
+    runInInjectionContext(this.injector, () => {
+      toSignal(
+        this.meetingService.getPastMeetingRecording(this.meetingInput().uid).pipe(
+          catchError(() => of(null)),
+          tap((recording) => this.recording.set(recording))
+        ),
+        { initialValue: null }
+      );
+    });
+  }
+
+  private initSummary(): void {
+    runInInjectionContext(this.injector, () => {
+      toSignal(
+        this.meetingService.getPastMeetingSummary(this.meetingInput().uid).pipe(
+          catchError(() => of(null)),
+          tap((summary) => this.summary.set(summary))
+        ),
+        { initialValue: null }
+      );
     });
   }
 

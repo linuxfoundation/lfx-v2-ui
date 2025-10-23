@@ -18,21 +18,12 @@ export class RecordingModalComponent {
   // Injected services
   private readonly clipboard = inject(Clipboard);
   private readonly messageService = inject(MessageService);
-  private readonly ref = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
+  private readonly dialogConfig = inject(DynamicDialogConfig);
 
   // Inputs from dialog config
-  public readonly shareUrl = this.config.data.shareUrl as string;
-  public readonly meetingTitle = this.config.data.meetingTitle as string;
-
-  public selectUrl(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    const selection = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(target);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  }
+  public readonly shareUrl = this.dialogConfig.data.shareUrl as string;
+  public readonly meetingTitle = this.dialogConfig.data.meetingTitle as string;
 
   // Public methods
   public copyShareUrl(): void {
@@ -53,11 +44,7 @@ export class RecordingModalComponent {
     }
   }
 
-  public openRecording(): void {
-    window.open(this.shareUrl, '_blank', 'noopener,noreferrer');
-  }
-
   public onClose(): void {
-    this.ref.close();
+    this.dialogRef.close();
   }
 }

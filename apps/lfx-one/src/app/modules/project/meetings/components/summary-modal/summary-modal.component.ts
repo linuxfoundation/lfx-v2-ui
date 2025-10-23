@@ -3,9 +3,10 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Signal, signal, WritableSignal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ButtonComponent } from '@components/button/button.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -14,53 +15,58 @@ import { take } from 'rxjs';
 @Component({
   selector: 'lfx-summary-modal',
   standalone: true,
-  imports: [CommonModule, ButtonComponent, FormsModule],
+  imports: [CommonModule, ButtonComponent, ReactiveFormsModule, TextareaComponent],
   templateUrl: './summary-modal.component.html',
 })
 export class SummaryModalComponent {
   // Injected services
-  private readonly ref = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
+  private readonly dialogConfig = inject(DynamicDialogConfig);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
 
   // Inputs from dialog config
-  private readonly summaryUid = this.config.data.summaryUid as string;
-  private readonly pastMeetingUid = this.config.data.pastMeetingUid as string;
-  public readonly meetingTitle = this.config.data.meetingTitle as string;
+  private readonly summaryUid = this.dialogConfig.data.summaryUid as string;
+  private readonly pastMeetingUid = this.dialogConfig.data.pastMeetingUid as string;
+  public readonly meetingTitle = this.dialogConfig.data.meetingTitle as string;
 
   // Edit mode state
   public readonly isEditMode: WritableSignal<boolean> = signal(false);
-  public readonly originalContent: WritableSignal<string> = signal(this.config.data.summaryContent as string);
-  public readonly editedContent: WritableSignal<string> = signal(this.config.data.summaryContent as string);
+  public readonly originalContent: WritableSignal<string> = signal(this.dialogConfig.data.summaryContent as string);
   public readonly isSaving: WritableSignal<boolean> = signal(false);
   public readonly isApproving: WritableSignal<boolean> = signal(false);
-  public readonly isApproved: WritableSignal<boolean> = signal(this.config.data.approved as boolean);
+  public readonly isApproved: WritableSignal<boolean> = signal(this.dialogConfig.data.approved as boolean);
   private readonly wasUpdated: WritableSignal<boolean> = signal(false);
+
+  // Reactive form for editing
+  public readonly editForm: FormGroup = new FormGroup({
+    content: new FormControl(this.dialogConfig.data.summaryContent as string),
+  });
 
   // Sanitized HTML content for display
   public readonly summaryContent: Signal<SafeHtml> = computed(() => {
-    const content = this.isEditMode() ? this.editedContent() : this.originalContent();
+    const content = this.isEditMode() ? this.editForm.get('content')?.value : this.originalContent();
     return this.sanitizer.bypassSecurityTrustHtml(content || '');
   });
 
   // Public methods
   public enterEditMode(): void {
-    this.editedContent.set(this.originalContent() || '');
+    this.editForm.get('content')?.setValue(this.originalContent() || '');
     this.isEditMode.set(true);
   }
 
   public cancelEdit(): void {
-    this.editedContent.set(this.originalContent() || '');
+    this.editForm.get('content')?.setValue(this.originalContent() || '');
     this.isEditMode.set(false);
   }
 
   public saveEdit(): void {
     this.isSaving.set(true);
+    const editedContent = this.editForm.get('content')?.value || '';
 
     this.meetingService
-      .updatePastMeetingSummary(this.pastMeetingUid, this.summaryUid, { edited_content: this.editedContent() })
+      .updatePastMeetingSummary(this.pastMeetingUid, this.summaryUid, { edited_content: editedContent })
       .pipe(take(1))
       .subscribe({
         next: () => {
@@ -70,7 +76,7 @@ export class SummaryModalComponent {
             detail: 'Summary updated successfully',
           });
           // Update the original content with the saved changes
-          this.originalContent.set(this.editedContent());
+          this.originalContent.set(editedContent);
           this.wasUpdated.set(true);
           this.isSaving.set(false);
           this.isEditMode.set(false);
@@ -120,9 +126,9 @@ export class SummaryModalComponent {
   public onClose(): void {
     // Return updated content if changes were saved
     if (this.wasUpdated()) {
-      this.ref.close({ updated: true, content: this.originalContent(), approved: this.isApproved() });
+      this.dialogRef.close({ updated: true, content: this.originalContent(), approved: this.isApproved() });
     } else {
-      this.ref.close();
+      this.dialogRef.close();
     }
   }
 }

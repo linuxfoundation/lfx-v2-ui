@@ -14,8 +14,7 @@
     <div class="flex items-center gap-2">
       <div
         class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-x-auto whitespace-nowrap cursor-text select-all"
-        data-testid="share-url-input"
-        (click)="selectUrl($event)">
+        data-testid="share-url-input">
         {{ shareUrl }}
       </div>
       <lfx-button label="Copy" icon="fa-light fa-copy" size="small" severity="secondary" data-testid="copy-url-button" (click)="copyShareUrl()"></lfx-button>
@@ -30,7 +29,8 @@
       size="small"
       severity="primary"
       data-testid="open-recording-button"
-      (click)="openRecording()"></lfx-button>
+      [href]="shareUrl"
+      target="_blank"></lfx-button>
     <lfx-button label="Close" size="small" severity="secondary" data-testid="close-button" (click)="onClose()"></lfx-button>
   </div>
 </div>
