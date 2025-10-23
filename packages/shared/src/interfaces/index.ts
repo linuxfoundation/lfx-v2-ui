@@ -60,3 +60,6 @@ export * from './analytics.interface';
 
 // Persona interfaces
 export * from './persona.interface';
+
+// Snowflake interfaces
+export * from './snowflake.interface';
