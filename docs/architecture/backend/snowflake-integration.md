@@ -115,7 +115,23 @@ private async createPool(): Promise<Pool<Connection>> {
 
 ### Pool Monitoring
 
+The Snowflake SDK uses the `generic-pool` library which exposes the following properties:
+
+- **`borrowed`** - Resources currently in use
+- **`available`** - Unused resources in the pool
+- **`pending`** - Callers waiting to acquire a resource
+- **`size`** - Total resources (borrowed + available)
+
 ```typescript
+/**
+ * Get connection pool statistics
+ *
+ * Maps generic-pool properties to our interface:
+ * - borrowed → activeConnections (resources currently in use)
+ * - available → idleConnections (unused resources in pool)
+ * - pending → waitingRequests (callers waiting for a resource)
+ * - size → totalConnections (total resources: borrowed + available)
+ */
 public getPoolStats(): SnowflakePoolStats {
   if (!this.pool) {
     return {
@@ -126,11 +142,14 @@ public getPoolStats(): SnowflakePoolStats {
     };
   }
 
+  // Snowflake SDK uses generic-pool which exposes: borrowed, available, pending, size
+  const poolAny = this.pool as any;
+
   return {
-    activeConnections: this.pool.activeConnections,
-    idleConnections: this.pool.idleConnections,
-    waitingRequests: this.pool.waitingRequests,
-    totalConnections: this.pool.totalConnections,
+    activeConnections: poolAny.borrowed || 0,
+    idleConnections: poolAny.available || 0,
+    waitingRequests: poolAny.pending || 0,
+    totalConnections: poolAny.size || 0,
   };
 }
 ```
@@ -346,38 +365,73 @@ public async execute<T = any>(
 
 #### 2. Read-Only Validation (Secondary Defense)
 
+The service validates queries are read-only by checking for write operations **anywhere** in the query, including inside CTEs (Common Table Expressions):
+
 ```typescript
+/**
+ * Validate that a query is read-only
+ * Blocks INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, TRUNCATE, MERGE anywhere in query
+ * This includes write operations inside CTEs (Common Table Expressions)
+ */
 private validateReadOnlyQuery(sqlText: string): void {
   const normalizedSql = sqlText.trim().toUpperCase();
 
-  // Block any non-SELECT statements
+  // Block write operations ANYWHERE in the query (including inside CTEs)
+  // Using \b for word boundaries to avoid false positives in identifiers
   const writePatterns = [
-    /^\s*INSERT/i,
-    /^\s*UPDATE/i,
-    /^\s*DELETE/i,
-    /^\s*DROP/i,
-    /^\s*CREATE/i,
-    /^\s*ALTER/i,
-    /^\s*TRUNCATE/i,
-    /^\s*MERGE/i,
+    /\bINSERT\s+INTO\b/i,
+    /\bUPDATE\s+/i,
+    /\bDELETE\s+FROM\b/i,
+    /\bDROP\s+/i,
+    /\bCREATE\s+/i,
+    /\bALTER\s+/i,
+    /\bTRUNCATE\s+/i,
+    /\bMERGE\s+INTO\b/i,
+    /\bGRANT\s+/i,
+    /\bREVOKE\s+/i,
+    /\bEXECUTE\s+/i,
+    /\bCALL\s+/i,
   ];
 
   for (const pattern of writePatterns) {
     if (pattern.test(normalizedSql)) {
       serverLogger.error(
-        { sql_preview: normalizedSql.substring(0, 50) },
-        'Blocked non-SELECT query attempt'
+        {
+          sql_preview: normalizedSql.substring(0, 100),
+          matched_pattern: pattern.toString(),
+        },
+        'Blocked query with write operation (including CTEs)'
       );
-      throw new Error('Only SELECT queries are allowed');
+      throw new Error('Only SELECT queries are allowed. Write operations detected.');
     }
   }
 
-  // Ensure it's a SELECT
-  if (!/^\s*SELECT/i.test(normalizedSql)) {
+  // Ensure query starts with SELECT or WITH (for CTEs)
+  if (!/^\s*SELECT\b/i.test(normalizedSql) && !/^\s*WITH\b/i.test(normalizedSql)) {
     throw new Error('Only SELECT queries are allowed');
   }
 }
 ```
+
+**Security Enhancement**: This validation prevents CTE-based bypass attempts like:
+
+```sql
+-- ❌ BLOCKED: Write operation inside CTE
+WITH updated AS (
+  UPDATE users SET active = false RETURNING *
+)
+SELECT * FROM updated;
+
+-- ✅ ALLOWED: Read-only CTE
+WITH user_stats AS (
+  SELECT user_id, COUNT(*) as activity_count
+  FROM activities
+  GROUP BY user_id
+)
+SELECT * FROM user_stats WHERE activity_count > 10;
+```
+
+The validation uses word boundaries (`\b`) to avoid false positives while catching write operations anywhere in the query text.
 
 #### 3. Database-Level Permissions (Tertiary Defense)
 
@@ -555,70 +609,94 @@ export enum SnowflakeLockStrategy {
 
 ## 🔗 Service Integration
 
-### Analytics Service Example
+### Using the Snowflake Service
+
+The `SnowflakeService` provides a simple, secure interface for executing read-only analytical queries:
 
 ```typescript
 import { SnowflakeService } from '../services/snowflake.service';
 import type { Bind } from 'snowflake-sdk';
-import { Request } from 'express';
 
-export class AnalyticsService {
-  private snowflakeService: SnowflakeService;
+export class AnalyticsController {
+  private snowflakeService: SnowflakeService | null = null;
 
-  constructor() {
-    this.snowflakeService = new SnowflakeService();
-  }
-
-  async getProjectMetrics(req: Request, projectId: string, startDate: Date) {
-    const result = await this.snowflakeService.execute<ProjectMetric>(
-      `SELECT
-        project_id,
-        metric_name,
-        metric_value,
-        recorded_at
-      FROM project_metrics
-      WHERE project_id = ?
-        AND recorded_at >= ?
-      ORDER BY recorded_at DESC`,
-      [projectId, startDate] // Date objects are automatically normalized
-    );
-
-    req.log.info(
-      {
-        project_id: projectId,
-        row_count: result.rows.length,
-      },
-      'Fetched project metrics from Snowflake'
-    );
-
-    return result.rows;
-  }
-
-  async getAggregatedData(req: Request, filters: MetricFilters) {
-    const binds: (Bind | Date)[] = [filters.startDate, filters.endDate];
-
-    let sql = `
-      SELECT
-        DATE_TRUNC('day', recorded_at) as date,
-        COUNT(*) as event_count,
-        SUM(metric_value) as total_value
-      FROM analytics_events
-      WHERE recorded_at BETWEEN ? AND ?
-    `;
-
-    if (filters.projectIds?.length) {
-      sql += ` AND project_id IN (${filters.projectIds.map(() => '?').join(',')})`;
-      binds.push(...filters.projectIds);
+  /**
+   * Lazy initialization of SnowflakeService
+   */
+  private getSnowflakeService(): SnowflakeService {
+    if (!this.snowflakeService) {
+      this.snowflakeService = new SnowflakeService();
     }
+    return this.snowflakeService;
+  }
 
-    sql += " GROUP BY DATE_TRUNC('day', recorded_at) ORDER BY date";
-
-    const result = await this.snowflakeService.execute<AggregatedMetric>(sql, binds);
+  /**
+   * Example: Query user activity data
+   */
+  async getUserActivity(userEmail: string, startDate: Date) {
+    // Execute parameterized query with automatic connection pooling and deduplication
+    const result = await this.getSnowflakeService().execute<ActivityRow>(
+      `SELECT
+        activity_date,
+        activity_count
+      FROM analytics_db.user_activity
+      WHERE email = ?
+        AND activity_date >= ?
+      ORDER BY activity_date ASC`,
+      [userEmail, startDate] // Date objects are automatically normalized
+    );
 
     return result.rows;
   }
+}
+```
 
-  async shutdown(): Promise<void> {
+### Best Practices for Callers
+
+1. **Lazy Initialization**: Create `SnowflakeService` instances on-demand to avoid startup overhead
+2. **Parameterized Queries**: Always use `?` placeholders with bind parameters - never concatenate user input
+3. **Date Handling**: Pass `Date` objects directly as bind parameters - they're automatically converted to ISO strings
+4. **Type Safety**: Define TypeScript interfaces for query result rows
+5. **Error Handling**: Catch and handle Snowflake-specific errors appropriately
+6. **Query Optimization**: Use specific column selection, appropriate WHERE clauses, and leverage Snowflake features
+
+### Example with Advanced Features
+
+```typescript
+async getAggregatedMetrics(filters: MetricFilters) {
+  const binds: (Bind | Date)[] = [filters.startDate, filters.endDate];
+
+  // Build dynamic query with parameterized filters
+  let sql = `
+    SELECT
+      DATE_TRUNC('day', recorded_at) as date,
+      COUNT(*) as event_count,
+      SUM(metric_value) as total_value
+    FROM analytics_events
+    WHERE recorded_at BETWEEN ? AND ?
+  `;
+
+  // Add optional filters with proper parameterization
+  if (filters.projectIds?.length) {
+    sql += ` AND project_id IN (${filters.projectIds.map(() => '?').join(',')})`;
+    binds.push(...filters.projectIds);
+  }
+
+  sql += " GROUP BY DATE_TRUNC('day', recorded_at) ORDER BY date";
+
+  // Execute with type-safe result
+  const result = await this.getSnowflakeService().execute<AggregatedMetric>(sql, binds);
+
+  return result.rows;
+}
+```
+
+### Service Lifecycle Management
+
+```typescript
+// Graceful shutdown on application termination
+async shutdown(): Promise<void> {
+  if (this.snowflakeService) {
     await this.snowflakeService.shutdown();
   }
 }

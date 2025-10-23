@@ -25,6 +25,7 @@ import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
+import analyticsRouter from './routes/analytics.route';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -160,7 +161,7 @@ const authConfig: ConfigParams = {
   authorizationParams: {
     response_type: 'code',
     audience: process.env['PCC_AUTH0_AUDIENCE'] || 'https://example.com',
-    scope: 'openid email profile access:api offline_access',
+    scope: 'openid email profile access:api offline_access update:current_user_metadata',
   },
   clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'bar',
   routes: {
@@ -205,6 +206,7 @@ app.use('/api/organizations', organizationsRouter);
 app.use('/api/past-meetings', pastMeetingsRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);

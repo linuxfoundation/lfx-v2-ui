@@ -56,7 +56,8 @@ export * from './user-profile.interface';
 export * from './user-statistics.interface';
 
 // Analytics interfaces
-export * from './analytics.interface';
+export * from './segment.interface';
+export * from './analytics-data.interface';
 
 // Persona interfaces
 export * from './persona.interface';

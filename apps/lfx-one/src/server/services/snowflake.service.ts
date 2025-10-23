@@ -4,13 +4,13 @@
 import { SNOWFLAKE_CONFIG } from '@lfx-one/shared/constants';
 import { SnowflakeLockStrategy } from '@lfx-one/shared/enums';
 import { LockStats, SnowflakePoolStats, SnowflakeQueryOptions, SnowflakeQueryResult } from '@lfx-one/shared/interfaces';
-import crypto from 'crypto';
-import { existsSync, readFileSync } from 'fs';
-import path from 'path';
-import { Bind, Connection, ConnectionOptions, createPool, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
+import snowflakeSdk from 'snowflake-sdk';
 
 import { serverLogger } from '../server';
 import { LockManager } from '../utils/lock-manager';
+
+import type { Bind, Connection, ConnectionOptions, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
+const { createPool } = snowflakeSdk;
 
 /**
  * Service for executing read-only queries against Snowflake DBT
@@ -134,6 +134,12 @@ export class SnowflakeService {
 
   /**
    * Get connection pool statistics
+   *
+   * Maps generic-pool properties to our interface:
+   * - borrowed → activeConnections (resources currently in use)
+   * - available → idleConnections (unused resources in pool)
+   * - pending → waitingRequests (callers waiting for a resource)
+   * - size → totalConnections (total resources: borrowed + available)
    */
   public getPoolStats(): SnowflakePoolStats {
     if (!this.pool) {
@@ -145,14 +151,11 @@ export class SnowflakeService {
       };
     }
 
-    // Snowflake SDK pool exposes these properties
-    const poolAny = this.pool as any;
-
     return {
-      activeConnections: poolAny.activeConnections || 0,
-      idleConnections: poolAny.idleConnections || 0,
-      waitingRequests: poolAny.waitingRequests || 0,
-      totalConnections: (poolAny.activeConnections || 0) + (poolAny.idleConnections || 0),
+      activeConnections: this.pool.borrowed || 0,
+      idleConnections: this.pool.available || 0,
+      waitingRequests: this.pool.pending || 0,
+      totalConnections: this.pool.size || 0,
     };
   }
 
@@ -175,16 +178,14 @@ export class SnowflakeService {
     // Drain connection pool
     if (this.pool) {
       try {
-        await new Promise<void>((resolve, reject) => {
-          this.pool!.drain();
-          serverLogger.info('Snowflake connection pool drained successfully');
-          resolve();
-
-          // Timeout after 30 seconds
-          setTimeout(() => {
-            reject(new Error('Pool drain timeout'));
-          }, 30000);
+        // Race drain operation against timeout
+        const drainPromise = this.pool.drain();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Pool drain timeout after 30 seconds')), 30000);
         });
+
+        await Promise.race([drainPromise, timeoutPromise]);
+        serverLogger.info('Snowflake connection pool drained successfully');
       } catch (error) {
         serverLogger.error({ error: error instanceof Error ? error.message : error }, 'Error during Snowflake pool shutdown');
       }
@@ -231,51 +232,14 @@ export class SnowflakeService {
   private async createPool(): Promise<Pool<Connection>> {
     serverLogger.info('Creating Snowflake connection pool');
 
-    // Dual authentication strategy
-    // Method 1: Try direct env var first (for containerized deployments)
-    let privateKey: string | undefined = process.env['SNOWFLAKE_API_KEY'];
+    // Get private key from environment variable
+    const privateKey: string | undefined = process.env['SNOWFLAKE_API_KEY'];
 
-    // Method 2: Fall back to rsa_key.p8 file in the app root directory (same location as .env)
     if (!privateKey) {
-      const privateKeyPath = path.join(__dirname, '../../../rsa_key.p8');
-
-      if (!existsSync(privateKeyPath)) {
-        const errorMsg =
-          'Snowflake authentication failed: Either SNOWFLAKE_API_KEY environment variable must be set ' +
-          'or rsa_key.p8 file must exist in the app root directory (same location as .env)';
-        throw new Error(errorMsg);
-      }
-
-      try {
-        const privateKeyFile = readFileSync(privateKeyPath);
-
-        // Get the private key from the file as an object
-        const privateKeyObject = crypto.createPrivateKey({
-          key: privateKeyFile,
-          format: 'pem',
-          passphrase: process.env['SNOWFLAKE_PRIVATE_KEY_PASSPHRASE'],
-        });
-
-        // Extract the private key from the object as a PEM-encoded string
-        privateKey = privateKeyObject.export({
-          format: 'pem',
-          type: 'pkcs8',
-        }) as string;
-
-        serverLogger.info({ path: privateKeyPath }, 'Successfully loaded and formatted private key from rsa_key.p8');
-      } catch (error) {
-        serverLogger.error(
-          {
-            error: error instanceof Error ? error.message : error,
-            path: privateKeyPath,
-          },
-          'Failed to read or format Snowflake private key from rsa_key.p8'
-        );
-        throw new Error('Failed to read Snowflake private key from rsa_key.p8 file');
-      }
-    } else {
-      serverLogger.info('Using SNOWFLAKE_API_KEY from environment variable');
+      throw new Error('Snowflake authentication failed: SNOWFLAKE_API_KEY environment variable must be set');
     }
+
+    serverLogger.info('Using SNOWFLAKE_API_KEY from environment variable');
 
     // Pool configuration
     const minConnections = Number(process.env['SNOWFLAKE_MIN_CONNECTIONS']) || SNOWFLAKE_CONFIG.MIN_CONNECTIONS;
@@ -327,44 +291,48 @@ export class SnowflakeService {
 
   /**
    * Validate that a query is read-only
-   * Blocks INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, TRUNCATE, MERGE
+   * Blocks INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, TRUNCATE, MERGE anywhere in query
+   * This includes write operations inside CTEs (Common Table Expressions)
    * @private
    */
   private validateReadOnlyQuery(sqlText: string): void {
     const normalizedSql = sqlText.trim().toUpperCase();
 
-    // Block any non-SELECT statements
+    // Block write operations ANYWHERE in the query (including inside CTEs)
+    // Using \b for word boundaries to avoid false positives in identifiers
     const writePatterns = [
-      /^\s*INSERT/i,
-      /^\s*UPDATE/i,
-      /^\s*DELETE/i,
-      /^\s*DROP/i,
-      /^\s*CREATE/i,
-      /^\s*ALTER/i,
-      /^\s*TRUNCATE/i,
-      /^\s*MERGE/i,
-      /^\s*GRANT/i,
-      /^\s*REVOKE/i,
+      /\bINSERT\s+INTO\b/i,
+      /\bUPDATE\s+/i,
+      /\bDELETE\s+FROM\b/i,
+      /\bDROP\s+/i,
+      /\bCREATE\s+/i,
+      /\bALTER\s+/i,
+      /\bTRUNCATE\s+/i,
+      /\bMERGE\s+INTO\b/i,
+      /\bGRANT\s+/i,
+      /\bREVOKE\s+/i,
+      /\bEXECUTE\s+/i,
+      /\bCALL\s+/i,
     ];
 
     for (const pattern of writePatterns) {
       if (pattern.test(normalizedSql)) {
         serverLogger.error(
           {
-            sql_preview: normalizedSql.substring(0, 50),
+            sql_preview: normalizedSql.substring(0, 100),
             matched_pattern: pattern.toString(),
           },
-          'Blocked non-SELECT query attempt'
+          'Blocked query with write operation (including CTEs)'
         );
-        throw new Error('Only SELECT queries are allowed');
+        throw new Error('Only SELECT queries are allowed. Write operations detected.');
       }
     }
 
-    // Ensure it's a SELECT
-    if (!/^\s*SELECT/i.test(normalizedSql) && !/^\s*WITH/i.test(normalizedSql)) {
+    // Ensure query starts with SELECT or WITH (for CTEs)
+    if (!/^\s*SELECT\b/i.test(normalizedSql) && !/^\s*WITH\b/i.test(normalizedSql)) {
       serverLogger.error(
         {
-          sql_preview: normalizedSql.substring(0, 50),
+          sql_preview: normalizedSql.substring(0, 100),
         },
         'Blocked non-SELECT query (not starting with SELECT or WITH)'
       );
