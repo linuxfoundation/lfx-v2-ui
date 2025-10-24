@@ -59,6 +59,22 @@ export class UserService {
   }
 
   /**
+   * Send verification code to an alternate email address
+   */
+  public sendEmailVerification(email: string): Observable<{ success: boolean; message?: string }> {
+    const data: AddEmailRequest = { email };
+    return this.http.post<{ success: boolean; message?: string }>('/api/profile/emails/send-verification', data).pipe(take(1));
+  }
+
+  /**
+   * Verify OTP code and link email to account
+   */
+  public verifyAndLinkEmail(email: string, otp: string): Observable<{ success: boolean; message?: string }> {
+    const data = { email, otp };
+    return this.http.post<{ success: boolean; message?: string }>('/api/profile/emails/verify', data).pipe(take(1));
+  }
+
+  /**
    * Add a new email address for the current user
    */
   public addEmail(email: string): Observable<UserEmail> {
