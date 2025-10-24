@@ -17,6 +17,7 @@ import pinoPretty from 'pino-pretty';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
+import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import meetingsRouter from './routes/meetings.route';
 import organizationsRouter from './routes/organizations.route';
@@ -25,7 +26,6 @@ import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
-import analyticsRouter from './routes/analytics.route';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
