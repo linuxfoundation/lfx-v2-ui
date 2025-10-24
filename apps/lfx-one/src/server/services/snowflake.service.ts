@@ -9,7 +9,7 @@ import snowflakeSdk from 'snowflake-sdk';
 import { serverLogger } from '../server';
 import { LockManager } from '../utils/lock-manager';
 
-import type { Bind, Connection, ConnectionOptions, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
+import type { Bind, Connection, ConnectionOptions, LogLevel, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
 const { createPool } = snowflakeSdk;
 
 /**
@@ -28,6 +28,11 @@ export class SnowflakeService {
   private lockManager: LockManager;
 
   public constructor() {
+    // Configure Snowflake SDK logging (defaults to ERROR to minimize verbose logs)
+    // Valid levels: 'OFF', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+    const logLevel = (process.env['SNOWFLAKE_LOG_LEVEL'] || 'ERROR') as LogLevel;
+    snowflakeSdk.configure({ logLevel });
+
     // Initialize lock manager with configured strategy
     const lockStrategy = (process.env['SNOWFLAKE_LOCK_STRATEGY'] || 'memory') as SnowflakeLockStrategy;
     this.lockManager = new LockManager(lockStrategy);
@@ -35,6 +40,7 @@ export class SnowflakeService {
     serverLogger.info(
       {
         lock_strategy: lockStrategy,
+        snowflake_log_level: logLevel,
       },
       'SnowflakeService initialized'
     );

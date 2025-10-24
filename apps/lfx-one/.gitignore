@@ -52,3 +52,6 @@ Thumbs.db
 # Snowflake
 rsa_key.p8
 rsa_key.pub
+
+# Logs
+snowflake.log
