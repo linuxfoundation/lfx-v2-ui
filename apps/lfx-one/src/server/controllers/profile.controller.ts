@@ -4,8 +4,10 @@
 import {
   AddEmailRequest,
   CombinedProfile,
+  EmailManagementData,
   ProfileUpdateRequest,
   UpdateEmailPreferencesRequest,
+  UserEmail,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserProfile,
@@ -278,6 +280,7 @@ export class ProfileController {
 
   /**
    * GET /api/profile/emails - Get current user's email management data
+   * Uses NATS as the authoritative source for user emails
    */
   public async getUserEmails(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_user_emails');
@@ -297,29 +300,74 @@ export class ProfileController {
         return next(validationError);
       }
 
-      const userId = await this.supabaseService.getUser(username);
+      // Fetch user emails from NATS
+      req.log.info({ username }, 'Fetching user emails from NATS');
+      const emailsResponse = await this.userService.getUserEmails(req, username);
 
-      if (!userId) {
-        Logger.error(req, 'get_user_emails', startTime, new Error('User not found'));
+      if (!emailsResponse.success || !emailsResponse.data) {
+        Logger.error(req, 'get_user_emails', startTime, new Error(emailsResponse.error || 'Failed to fetch user emails'));
 
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
+        const error = new MicroserviceError(emailsResponse.error || 'Failed to fetch user emails', 500, 'NATS_ERROR', {
           operation: 'get_user_emails',
-          service: 'profile_controller',
+          service: 'auth-service',
           path: req.path,
+          errorBody: { error: emailsResponse.error },
         });
 
-        return next(validationError);
+        return next(error);
       }
 
-      const emailData = await this.supabaseService.getEmailManagementData(userId.id);
+      // Transform NATS response to EmailManagementData format for frontend compatibility
+      const { primary_email, alternate_emails } = emailsResponse.data;
+      const now = new Date().toISOString();
+      
+      // Handle null alternate_emails from backend (treat as empty array)
+      const alternateEmailsList = alternate_emails || [];
+      
+      // Create primary email entry
+      const emails: UserEmail[] = [
+        {
+          id: 'primary',
+          user_id: username,
+          email: primary_email,
+          is_primary: true,
+          is_verified: true,
+          verification_token: null,
+          verified_at: now,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
 
-      Logger.success(req, 'get_user_emails', startTime, {
-        user_id: userId.id,
-        email_count: emailData.emails.length,
-        has_preferences: !!emailData.preferences,
+      // Add alternate emails
+      alternateEmailsList.forEach((altEmail, index) => {
+        emails.push({
+          id: `alternate-${index}`,
+          user_id: username,
+          email: altEmail.email,
+          is_primary: false,
+          is_verified: altEmail.verified,
+          verification_token: null,
+          verified_at: altEmail.verified ? now : null,
+          created_at: now,
+          updated_at: now,
+        });
       });
 
-      res.json(emailData);
+      // Create response matching EmailManagementData interface
+      const emailManagementData: EmailManagementData = {
+        emails,
+        preferences: null, // Preferences not available from NATS yet
+      };
+
+      Logger.success(req, 'get_user_emails', startTime, {
+        username,
+        primary_email,
+        alternate_email_count: alternateEmailsList.length,
+        total_emails: emails.length,
+      });
+
+      res.json(emailManagementData);
     } catch (error) {
       Logger.error(req, 'get_user_emails', startTime, error);
       next(error);

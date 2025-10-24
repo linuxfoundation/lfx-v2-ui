@@ -13,8 +13,7 @@
       <ng-template #content>
         <div class="flex flex-col gap-1">
           <p class="text-sm">
-            Add multiple email addresses to your account, set your primary email for account communications, and choose which emails receive specific types of
-            notifications. Verified emails can be used to sign in to your account.
+            View and manage the email addresses associated with your account.
           </p>
         </div>
       </ng-template>
@@ -41,7 +40,7 @@
                       [disabled]="!email.canSetPrimary && !email.isPrimary"
                       variant="text"
                       size="small"
-                      [pTooltip]="email.isPrimary ? 'Primary email' : email.is_verified ? 'Set as primary email' : 'Verify email to set as primary'"
+                      [pTooltip]="email.isPrimary ? 'Primary email' : 'Alternate email'"
                       tooltipPosition="top"
                       [icon]="email.isPrimary ? 'fa-solid fa-star' : 'fa-regular fa-star'"
                       [ngClass]="{
@@ -50,7 +49,7 @@
                         'text-gray-300 cursor-not-allowed': !email.canSetPrimary && !email.isPrimary,
                       }"
                       [attr.data-testid]="'primary-icon-' + email.id"
-                      [attr.aria-label]="email.isPrimary ? 'Primary email' : email.is_verified ? 'Set as primary email' : 'Verify email to set as primary'">
+                      [attr.aria-label]="email.isPrimary ? 'Primary email' : 'Alternate email'">
                     </lfx-button>
 
                     <div class="flex-1">
@@ -104,6 +103,12 @@
                     @if (addEmailForm.get('email')?.errors?.['email']) {
                       Please enter a valid email address
                     }
+                  </div>
+                }
+                @if (emailFieldError()) {
+                  <div class="text-red-600 text-xs mt-1" data-testid="email-already-linked-error">
+                    <i class="fa-light fa-circle-exclamation mr-1"></i>
+                    {{ emailFieldError() }}
                   </div>
                 }
               </div>
