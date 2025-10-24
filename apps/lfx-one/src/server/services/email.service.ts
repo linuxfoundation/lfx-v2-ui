@@ -23,7 +23,11 @@ interface EmailVerificationResponse {
 interface OTPVerificationResponse {
   success: boolean;
   data?: {
-    token: string;
+    access_token: string;
+    id_token: string;
+    scope: string;
+    expires_in: number;
+    token_type: string;
   };
   error?: string;
 }
@@ -49,8 +53,12 @@ interface IdentityLinkResponse {
  * Request payload for identity linking
  */
 interface LinkIdentityRequest {
-  user_token: string;
-  link_with: string;
+  user: {
+    auth_token: string;
+  };
+  link_with: {
+    identity_token: string;
+  };
 }
 
 /**
@@ -260,8 +268,12 @@ export class EmailService {
       req.log.info('Linking identity via NATS');
 
       const requestPayload: LinkIdentityRequest = {
-        user_token: userToken,
-        link_with: linkWithToken,
+        user: {
+          auth_token: userToken,
+        },
+        link_with: {
+          identity_token: linkWithToken,
+        },
       };
 
       const response = await this.natsService.request(
@@ -320,18 +332,18 @@ export class EmailService {
     otp: string,
     userToken: string
   ): Promise<IdentityLinkResponse> {
-    // Step 2: Verify OTP and get token
+    // Step 2: Verify OTP and get id_token
     const verificationResult = await this.verifyOTP(req, email, otp);
 
-    if (!verificationResult.success || !verificationResult.data?.token) {
+    if (!verificationResult.success || !verificationResult.data?.id_token) {
       throw new MicroserviceError('OTP verification failed', 400, 'OTP_VERIFICATION_FAILED', {
         operation: 'verify_and_link_email',
         service: 'email_service',
       });
     }
 
-    // Step 3: Link identity using the token from verification
-    return await this.linkIdentity(req, userToken, verificationResult.data.token);
+    // Step 3: Link identity using the id_token from verification
+    return await this.linkIdentity(req, userToken, verificationResult.data.id_token);
   }
 }
 

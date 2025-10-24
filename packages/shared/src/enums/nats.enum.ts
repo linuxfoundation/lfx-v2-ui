@@ -10,7 +10,8 @@ export enum NatsSubjects {
   USER_METADATA_READ = 'lfx.auth-service.user_metadata.read',
   EMAIL_TO_USERNAME = 'lfx.auth-service.email_to_username',
   EMAIL_TO_SUB = 'lfx.auth-service.email_to_sub',
-  USERNAME_TO_USER_INFO = 'lfx.auth-service.username_to_user_info',
+  // User emails
+  USER_EMAILS_READ = 'lfx.auth-service.user_emails.read',
   // Email linking
   EMAIL_LINKING_SEND_VERIFICATION = 'lfx.auth-service.email_linking.send_verification',
   EMAIL_LINKING_VERIFY = 'lfx.auth-service.email_linking.verify',

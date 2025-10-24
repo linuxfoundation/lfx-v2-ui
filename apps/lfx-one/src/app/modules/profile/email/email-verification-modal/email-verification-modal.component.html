@@ -53,7 +53,6 @@
               type="text"
               [id]="'digit' + digit"
               [formControlName]="'digit' + digit"
-              maxlength="1"
               inputmode="numeric"
               pattern="\d"
               (input)="onDigitInput($event, digit)"
@@ -77,6 +76,15 @@
           Enter the 6-digit code sent to your email address
         </p>
       </div>
+
+      <!-- Error Message Display -->
+      @if (errorMessage()) {
+        <lfx-message severity="error" icon="fa-light fa-circle-exclamation" styleClass="mb-6">
+          <ng-template #content>
+            <p class="text-sm">{{ errorMessage() }}</p>
+          </ng-template>
+        </lfx-message>
+      }
 
       <!-- Resend Code Link -->
       <div class="mb-6 text-center">

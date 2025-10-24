@@ -64,6 +64,13 @@ export class ProfileEmailComponent {
     email: new FormControl('', [Validators.required, Validators.email]),
   });
 
+  constructor() {
+    // Clear error message when user changes email input
+    this.addEmailForm.get('email')?.valueChanges.subscribe(() => {
+      this.emailFieldError.set(null);
+    });
+  }
+
   public preferencesForm = new FormGroup({
     meetingEmailId: new FormControl<string | null>(null),
     notificationEmailId: new FormControl<string | null>(null),
@@ -74,6 +81,7 @@ export class ProfileEmailComponent {
   public loading = signal(false);
   public addingEmail = signal(false);
   public updatingPreferences = signal(false);
+  public emailFieldError = signal<string | null>(null);
 
   // Data signals using toSignal with refresh
   public emailData = this.initializeEmailData();
@@ -89,8 +97,8 @@ export class ProfileEmailComponent {
       isMeetingEmail: this.preferences()?.meeting_email_id === email.id,
       isNotificationEmail: this.preferences()?.notification_email_id === email.id,
       isBillingEmail: this.preferences()?.billing_email_id === email.id,
-      canDelete: this.emails().length > 1 && !email.is_primary,
-      canSetPrimary: !email.is_primary && email.is_verified,
+      canDelete: false, // Temporarily disabled - email deletion via NATS not yet implemented
+      canSetPrimary: false, // Temporarily disabled - primary email management via NATS not yet implemented
     }))
   );
   // Public methods
@@ -99,6 +107,9 @@ export class ProfileEmailComponent {
     if (this.addEmailForm.invalid) {
       return;
     }
+
+    // Clear any previous error
+    this.emailFieldError.set(null);
 
     const email = this.addEmailForm.value.email!;
     this.addingEmail.set(true);
@@ -114,12 +125,26 @@ export class ProfileEmailComponent {
         },
         error: (error) => {
           console.error('Failed to send verification code:', error);
-          const message = error.error?.message || 'Failed to send verification code';
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: message,
-          });
+          
+          // Check for specific error cases
+          // ServiceValidationError structure: error.error.errors[0].message
+          const specificMessage = error.error?.errors?.[0]?.message || '';
+          const genericMessage = error.error?.message || error.message || '';
+          
+          // Check both the specific validation message and generic message
+          const errorText = (specificMessage + ' ' + genericMessage).toLowerCase();
+          
+          if (errorText.includes('already linked')) {
+            // Show error below the email field
+            this.emailFieldError.set('This email address is already linked as an alternate or primary email.');
+          } else {
+            // Show generic error as toast for other errors
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: 'Failed to send verification code. Please try again.',
+            });
+          }
         },
       });
   }
@@ -137,53 +162,27 @@ export class ProfileEmailComponent {
     });
 
     this.dialogRef.onClose.subscribe((result) => {
-      if (result && result.code) {
-        // Verification code was submitted - now verify and link
-        this.verifyAndLinkEmail(email, result.code);
-      } else {
-        // Modal was closed without verification
+      if (result && result.success) {
+        // Email was successfully verified and linked
         this.addEmailForm.reset();
+        this.emailFieldError.set(null);
+        this.refresh.next();
         this.messageService.add({
-          severity: 'info',
-          summary: 'Cancelled',
-          detail: 'Email verification was cancelled.',
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Email address verified and linked successfully',
         });
+      } else if (result && result.alreadyLinked) {
+        // This email address is already linked as an alternate or primary email - show error below field only
+        this.emailFieldError.set('This email address is already linked as an alternate or primary email.');
+        // Don't show a toast - the inline error is enough
+      } else if (result === null || result === undefined) {
+        // Modal was closed/cancelled by user (X button)
+        this.addEmailForm.reset();
+        this.emailFieldError.set(null);
+        // Don't show cancelled toast - it's unnecessary
       }
     });
-  }
-
-  private verifyAndLinkEmail(email: string, otp: string): void {
-    this.addingEmail.set(true);
-
-    // Step 1: Verify OTP and link identity to user account
-    this.userService
-      .verifyAndLinkEmail(email, otp)
-      .pipe(
-        // Step 2: Once verified and linked, add email to database
-        switchMap(() => this.userService.addEmail(email)),
-        finalize(() => this.addingEmail.set(false))
-      )
-      .subscribe({
-        next: () => {
-          this.addEmailForm.reset();
-          this.refresh.next();
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Email address verified and added successfully',
-          });
-        },
-        error: (error) => {
-          console.error('Failed to verify and add email:', error);
-          const message = error.error?.message || 'Failed to verify email address';
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: message,
-          });
-          this.addEmailForm.reset();
-        },
-      });
   }
 
   public setPrimary(email: UserEmail): void {
@@ -201,56 +200,74 @@ export class ProfileEmailComponent {
       return;
     }
 
-    this.userService.setPrimaryEmail(email.id).subscribe({
-      next: () => {
-        this.refresh.next();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Primary email updated successfully',
-        });
-      },
-      error: (error) => {
-        console.error('Failed to set primary email:', error);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to update primary email',
-        });
-      },
+    // Temporarily disabled - primary email management via NATS not yet implemented
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Feature Coming Soon',
+      detail: 'Changing the primary email is not yet available. This feature will be enabled soon.',
     });
+    return;
+
+    // TODO: Implement setPrimaryEmail via NATS
+    // this.userService.setPrimaryEmail(email.id).subscribe({
+    //   next: () => {
+    //     this.refresh.next();
+    //     this.messageService.add({
+    //       severity: 'success',
+    //       summary: 'Success',
+    //       detail: 'Primary email updated successfully',
+    //     });
+    //   },
+    //   error: (error) => {
+    //     console.error('Failed to set primary email:', error);
+    //     this.messageService.add({
+    //       severity: 'error',
+    //       summary: 'Error',
+    //       detail: 'Failed to update primary email',
+    //     });
+    //   },
+    // });
   }
 
   public deleteEmail(email: UserEmail): void {
-    this.confirmationService.confirm({
-      message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
-      header: 'Delete Email Address',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
-      accept: () => {
-        this.userService.deleteEmail(email.id).subscribe({
-          next: () => {
-            this.refresh.next();
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: 'Email address deleted successfully',
-            });
-          },
-          error: (error) => {
-            console.error('Failed to delete email:', error);
-            const message = error.error?.message || 'Failed to delete email address';
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: message,
-            });
-          },
-        });
-      },
+    // Temporarily disabled - email deletion via NATS not yet implemented
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Feature Coming Soon',
+      detail: 'Email deletion is not yet available. This feature will be enabled soon.',
     });
+    return;
+
+    // TODO: Implement deleteEmail via NATS
+    // this.confirmationService.confirm({
+    //   message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
+    //   header: 'Delete Email Address',
+    //   acceptLabel: 'Delete',
+    //   rejectLabel: 'Cancel',
+    //   acceptButtonStyleClass: 'p-button-danger p-button-sm',
+    //   rejectButtonStyleClass: 'p-button-outlined p-button-sm',
+    //   accept: () => {
+    //     this.userService.deleteEmail(email.id).subscribe({
+    //       next: () => {
+    //         this.refresh.next();
+    //         this.messageService.add({
+    //           severity: 'success',
+    //           summary: 'Success',
+    //           detail: 'Email address deleted successfully',
+    //         });
+    //       },
+    //       error: (error) => {
+    //         console.error('Failed to delete email:', error);
+    //         const message = error.error?.message || 'Failed to delete email address';
+    //         this.messageService.add({
+    //           severity: 'error',
+    //           summary: 'Error',
+    //           detail: message,
+    //         });
+    //       },
+    //     });
+    //   },
+    // });
   }
 
   public updatePreferences(): void {

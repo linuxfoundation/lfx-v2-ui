@@ -46,6 +46,7 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
   });
 
   public submitting = signal(false);
+  public errorMessage = signal<string | null>(null);
 
   public ngOnInit(): void {
     // Get email from dialog config
@@ -79,30 +80,123 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Clear any previous error message
+    this.errorMessage.set(null);
+
     // Combine all 6 digits into a single code
     const code = `${this.verificationForm.value.digit1}${this.verificationForm.value.digit2}${this.verificationForm.value.digit3}${this.verificationForm.value.digit4}${this.verificationForm.value.digit5}${this.verificationForm.value.digit6}`;
     this.submitting.set(true);
 
-    // Simulate submission - in real implementation this would call an API
-    setTimeout(() => {
-      this.submitting.set(false);
-      // Close the dialog and return the verification code
-      this.dialogRef.close({ code, email: this.email });
-    }, 500);
+    // Call the verification API
+    this.userService
+      .verifyAndLinkEmail(this.email, code)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        next: () => {
+          // On success, close the dialog and notify parent
+          this.dialogRef.close({ success: true, email: this.email });
+        },
+        error: (error) => {
+          console.error('Failed to verify code:', error);
+          
+          // Check for specific error cases
+          // ServiceValidationError structure: error.error.errors[0].message
+          const specificMessage = error.error?.errors?.[0]?.message || '';
+          const genericMessage = error.error?.message || error.message || '';
+          
+          // Check both the specific validation message and generic message
+          const errorText = (specificMessage + ' ' + genericMessage).toLowerCase();
+          
+          let errorMsg = 'Invalid verification code. Please try again.';
+          
+          if (errorText.includes('already linked')) {
+            // Email is already linked to another account - close modal and signal parent
+            this.dialogRef.close({ 
+              alreadyLinked: true, 
+              email: this.email 
+            });
+            return;
+          }
+          
+          // Show error message in the modal for other errors
+          this.errorMessage.set(errorMsg);
+
+          // Clear the form so user can try again
+          this.verificationForm.reset();
+
+          // Focus the first input
+          setTimeout(() => {
+            const firstInput = document.getElementById('digit1') as HTMLInputElement;
+            if (firstInput) {
+              firstInput.focus();
+            }
+          }, 100);
+        },
+      });
   }
 
   public onDigitInput(event: Event, digitNumber: number): void {
     const input = event.target as HTMLInputElement;
     const value = input.value;
 
-    // Only allow single digit numbers
-    if (value && !/^\d$/.test(value)) {
-      input.value = '';
+    // Check if this is a paste event (multiple characters)
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, '');
+      
+      if (digits.length >= 6) {
+        // This is a paste of 6 or more digits - fill all fields
+        this.verificationForm.patchValue({
+          digit1: digits[0] || '',
+          digit2: digits[1] || '',
+          digit3: digits[2] || '',
+          digit4: digits[3] || '',
+          digit5: digits[4] || '',
+          digit6: digits[5] || '',
+        });
+        
+        // Clear the current input and focus the last field
+        input.value = '';
+        setTimeout(() => {
+          const lastInput = document.getElementById('digit6') as HTMLInputElement;
+          if (lastInput) {
+            lastInput.focus();
+          }
+        }, 0);
+        return;
+      } else if (digits.length > 0) {
+        // Partial paste - just take the first digit
+        const firstDigit = digits[0];
+        input.value = firstDigit;
+        const controlName = `digit${digitNumber}` as 'digit1' | 'digit2' | 'digit3' | 'digit4' | 'digit5' | 'digit6';
+        this.verificationForm.get(controlName)?.setValue(firstDigit);
+        
+        // Move to next field
+        if (digitNumber < 6) {
+          const nextInput = document.getElementById(`digit${digitNumber + 1}`) as HTMLInputElement;
+          if (nextInput) {
+            nextInput.focus();
+            nextInput.select();
+          }
+        }
+        return;
+      }
+    }
+
+    // Filter out non-digit characters
+    const filteredValue = value.replace(/\D/g, '');
+    if (filteredValue !== value) {
+      input.value = filteredValue;
+      return;
+    }
+
+    // Limit to single digit
+    if (filteredValue.length > 1) {
+      input.value = filteredValue[0];
       return;
     }
 
     // If a digit was entered, move to next input
-    if (value && digitNumber < 6) {
+    if (filteredValue && digitNumber < 6) {
       const nextInput = document.getElementById(`digit${digitNumber + 1}`) as HTMLInputElement;
       if (nextInput) {
         nextInput.focus();
@@ -113,6 +207,13 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
 
   public onDigitKeyDown(event: KeyboardEvent, digitNumber: number): void {
     const input = event.target as HTMLInputElement;
+
+    // Handle Cmd+V (Mac) or Ctrl+V (Windows) paste
+    if ((event.metaKey || event.ctrlKey) && event.key === 'v') {
+      // Don't prevent default - let the paste happen
+      // The onDigitInput handler will process it
+      return;
+    }
 
     // Handle backspace - move to previous input if current is empty
     if (event.key === 'Backspace' && !input.value && digitNumber > 1) {
@@ -152,23 +253,52 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
 
   public onDigitPaste(event: ClipboardEvent): void {
     event.preventDefault();
+    event.stopPropagation();
+    
     const pastedData = event.clipboardData?.getData('text') || '';
     const digits = pastedData.replace(/\D/g, '').slice(0, 6);
 
-    if (digits.length > 0) {
-      // Fill in the digits
+    if (digits.length >= 6) {
+      // If we have 6 digits, fill all fields from the beginning
+      this.verificationForm.patchValue({
+        digit1: digits[0],
+        digit2: digits[1],
+        digit3: digits[2],
+        digit4: digits[3],
+        digit5: digits[4],
+        digit6: digits[5],
+      });
+      
+      // Focus the last input after filling all
+      setTimeout(() => {
+        const lastInput = document.getElementById('digit6') as HTMLInputElement;
+        if (lastInput) {
+          lastInput.focus();
+        }
+      }, 0);
+    } else if (digits.length > 0) {
+      // For partial pastes, fill sequentially from digit 1
+      const fieldMap: { [key: number]: 'digit1' | 'digit2' | 'digit3' | 'digit4' | 'digit5' | 'digit6' } = {
+        0: 'digit1',
+        1: 'digit2',
+        2: 'digit3',
+        3: 'digit4',
+        4: 'digit5',
+        5: 'digit6',
+      };
+      
       for (let i = 0; i < digits.length && i < 6; i++) {
-        const controlName = `digit${i + 1}` as 'digit1' | 'digit2' | 'digit3' | 'digit4' | 'digit5' | 'digit6';
-        this.verificationForm.get(controlName)?.setValue(digits[i]);
+        this.verificationForm.get(fieldMap[i])?.setValue(digits[i]);
       }
 
-      // Focus the next empty input or the last one
-      const nextEmptyIndex = digits.length < 6 ? digits.length + 1 : 6;
-      const nextInput = document.getElementById(`digit${nextEmptyIndex}`) as HTMLInputElement;
-      if (nextInput) {
-        nextInput.focus();
-        nextInput.select();
-      }
+      // Focus the next empty input
+      setTimeout(() => {
+        const nextIndex = Math.min(digits.length + 1, 6);
+        const nextInput = document.getElementById(`digit${nextIndex}`) as HTMLInputElement;
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 0);
     }
   }
 
