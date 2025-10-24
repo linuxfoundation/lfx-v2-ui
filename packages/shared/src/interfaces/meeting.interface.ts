@@ -164,6 +164,8 @@ export interface MeetingOccurrence {
   start_time: string;
   /** Meeting duration in minutes (0-600) */
   duration: number;
+  /** Whether this occurrence has been cancelled */
+  is_cancelled?: boolean;
 }
 
 export interface CreateMeetingRequest {
