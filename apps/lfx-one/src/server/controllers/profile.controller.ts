@@ -46,12 +46,26 @@ export class ProfileController {
         return next(validationError);
       }
 
+      // Get the bearer token from the request (set by auth middleware) or OIDC access token
+      const token = req.bearerToken || req.oidc?.accessToken?.access_token;
+      if (!token) {
+        Logger.error(req, 'get_current_user_profile', startTime, new Error('No authentication token found'));
+
+        const validationError = ServiceValidationError.forField('token', 'Authentication token required', {
+          operation: 'get_current_user_profile',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
       let combinedProfile: CombinedProfile | null = null;
 
       // Step 1: Try to get user metadata from NATS first (authoritative source)
       let natsUserData: UserMetadata | null = null;
       try {
-        const natsResponse = await this.userService.getUserInfo(req, userId);
+        const natsResponse = await this.userService.getUserInfo(req, token);
         req.log.info({ userId, natsSuccess: natsResponse.success }, 'Fetched user data from NATS');
 
         if (natsResponse.success && natsResponse.data) {
@@ -72,13 +86,43 @@ export class ProfileController {
       const user = await this.supabaseService.getUser(userId);
 
       if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User profile not found', {
-          operation: 'get_current_user_profile',
-          service: 'profile_controller',
-          path: req.path,
+        // If no Supabase user, return Auth0 user data only (from NATS)
+        req.log.info({ userId }, 'No Supabase user found, returning Auth0 user data only');
+
+        const auth0User = natsUserData;
+        if (!auth0User) {
+          const validationError = ServiceValidationError.forField('user_id', 'User profile not found', {
+            operation: 'get_current_user_profile',
+            service: 'profile_controller',
+            path: req.path,
+          });
+          return next(validationError);
+        }
+
+        // Build minimal user from Auth0 data
+        const minimalUser = {
+          id: userId,
+          username: userId,
+          email: (auth0User as any).email || '',
+          first_name: (auth0User as any).given_name || '',
+          last_name: (auth0User as any).family_name || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        combinedProfile = {
+          user: minimalUser,
+          profile: natsUserData || null,
+        };
+
+        Logger.success(req, 'get_current_user_profile', startTime, {
+          user_id: userId,
+          source: 'auth0_only',
+          has_nats_data: !!natsUserData,
         });
 
-        return next(validationError);
+        res.json(combinedProfile);
+        return;
       }
 
       // Step 3: Merge NATS data into Supabase user if available
@@ -94,18 +138,9 @@ export class ProfileController {
         profile: null,
       };
 
-      // Step 4: Get profile details from Supabase
+      // Step 4: Get profile details from Supabase (optional)
       const profile = await this.supabaseService.getProfile(user.id);
-
-      // If no profile details exist, create them
-      if (!profile) {
-        await this.supabaseService.createProfileIfNotExists(user.id);
-        // Refetch the combined profile with the newly created profile
-        const updatedProfile = await this.supabaseService.getProfile(user.id);
-        combinedProfile.profile = updatedProfile || null;
-      } else {
-        combinedProfile.profile = profile;
-      }
+      combinedProfile.profile = profile || null;
 
       // Step 5: Merge NATS metadata into profile if available
       if (natsUserData && combinedProfile.profile) {
