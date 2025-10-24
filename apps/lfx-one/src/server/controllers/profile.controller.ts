@@ -462,115 +462,115 @@ export class ProfileController {
     }
   }
  
-/**
- * POST /api/profile/emails/send-verification - Send verification code to email
- */
-public async sendEmailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const startTime = Logger.start(req, 'send_email_verification', {
-    request_body_keys: Object.keys(req.body),
-  });
-
-  try {
-    const { email }: AddEmailRequest = req.body;
-
-    if (!email || typeof email !== 'string') {
-      Logger.error(req, 'send_email_verification', startTime, new Error('Invalid email address'));
-
-      const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
-        operation: 'send_email_verification',
-        service: 'profile_controller',
-        path: req.path,
-      });
-
-      return next(validationError);
-    }
-
-    req.log.info({ email, nats_subject: 'lfx.auth-service.email_linking.send_verification' }, 'Attempting to send verification code');
-
-    const result = await this.emailService.sendVerificationCode(req, email);
-
-    Logger.success(req, 'send_email_verification', startTime, {
-      email,
-      success: result.success,
-      message: result.message,
+  /**
+   * POST /api/profile/emails/send-verification - Send verification code to email
+   */
+  public async sendEmailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'send_email_verification', {
+      request_body_keys: Object.keys(req.body),
     });
 
-    res.status(200).json(result);
-  } catch (error) {
-    Logger.error(req, 'send_email_verification', startTime, error);
-    
-    // Add helpful error message for NATS issues
-    if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
-      req.log.error('NATS timeout - check if auth service is running and NATS is accessible');
+    try {
+      const { email }: AddEmailRequest = req.body;
+
+      if (!email || typeof email !== 'string') {
+        Logger.error(req, 'send_email_verification', startTime, new Error('Invalid email address'));
+
+        const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
+          operation: 'send_email_verification',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      req.log.info({ email, nats_subject: 'lfx.auth-service.email_linking.send_verification' }, 'Attempting to send verification code');
+
+      const result = await this.emailService.sendVerificationCode(req, email);
+
+      Logger.success(req, 'send_email_verification', startTime, {
+        email,
+        success: result.success,
+        message: result.message,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      Logger.error(req, 'send_email_verification', startTime, error);
+      
+      // Add helpful error message for NATS issues
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        req.log.error('NATS timeout - check if auth service is running and NATS is accessible');
+      }
+      
+      next(error);
     }
-    
-    next(error);
   }
-}
 
-/**
- * POST /api/profile/emails/verify - Verify OTP and link email to account
- */
-public async verifyAndLinkEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const startTime = Logger.start(req, 'verify_and_link_email', {
-    request_body_keys: Object.keys(req.body),
-  });
-
-  try {
-    const { email, otp } = req.body;
-
-    if (!email || typeof email !== 'string') {
-      Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid email address'));
-
-      const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
-        operation: 'verify_and_link_email',
-        service: 'profile_controller',
-        path: req.path,
-      });
-
-      return next(validationError);
-    }
-
-    if (!otp || typeof otp !== 'string') {
-      Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid OTP code'));
-
-      const validationError = ServiceValidationError.forField('otp', 'Verification code is required', {
-        operation: 'verify_and_link_email',
-        service: 'profile_controller',
-        path: req.path,
-      });
-
-      return next(validationError);
-    }
-
-    // Get user token from auth middleware
-    const userToken = req.bearerToken;
-    if (!userToken) {
-      Logger.error(req, 'verify_and_link_email', startTime, new Error('User not authenticated'));
-
-      const authError = new AuthenticationError('User authentication required', {
-        operation: 'verify_and_link_email',
-        service: 'profile_controller',
-        path: req.path,
-      });
-
-      return next(authError);
-    }
-
-    // Verify OTP and link identity
-    const result = await this.emailService.verifyAndLinkEmail(req, email, otp, userToken);
-
-    Logger.success(req, 'verify_and_link_email', startTime, {
-      email,
-      success: result.success,
+  /**
+   * POST /api/profile/emails/verify - Verify OTP and link email to account
+   */
+  public async verifyAndLinkEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'verify_and_link_email', {
+      request_body_keys: Object.keys(req.body),
     });
 
-    res.status(200).json(result);
-  } catch (error) {
-    Logger.error(req, 'verify_and_link_email', startTime, error);
-    next(error);
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || typeof email !== 'string') {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid email address'));
+
+        const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      if (!otp || typeof otp !== 'string') {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid OTP code'));
+
+        const validationError = ServiceValidationError.forField('otp', 'Verification code is required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      // Get user token from auth middleware
+      const userToken = req.bearerToken;
+      if (!userToken) {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('User not authenticated'));
+
+        const authError = new AuthenticationError('User authentication required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(authError);
+      }
+
+      // Verify OTP and link identity
+      const result = await this.emailService.verifyAndLinkEmail(req, email, otp, userToken);
+
+      Logger.success(req, 'verify_and_link_email', startTime, {
+        email,
+        success: result.success,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      Logger.error(req, 'verify_and_link_email', startTime, error);
+      next(error);
+    }
   }
-}
 
   /**
    * DELETE /api/profile/emails/:emailId - Delete user email

@@ -74,7 +74,7 @@ export class EmailService {
 
   /**
    * Send verification code to an alternate email address
-   * Step 1 of the email verification flow
+   * This is the first step (step 1 of 3) in the email verification and linking flow.
    * 
    * @param req - Express request object for logging
    * @param email - The alternate email address to verify
@@ -150,7 +150,7 @@ export class EmailService {
 
   /**
    * Verify OTP code and get authentication token
-   * Step 2 of the email verification flow
+   * Step 2 of 3 in the email verification and linking flow
    * 
    * @param req - Express request object for logging
    * @param email - The email address that received the OTP
@@ -244,7 +244,7 @@ export class EmailService {
 
   /**
    * Link verified identity to user account
-   * Step 3 of the email verification flow
+   * Step 3 of 3 of the email verification flow
    * 
    * @param req - Express request object for logging
    * @param userToken - The user's authentication token
