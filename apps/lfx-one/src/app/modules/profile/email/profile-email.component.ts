@@ -15,9 +15,12 @@ import { SelectComponent } from '@shared/components/select/select.component';
 import { UserService } from '@shared/services/user.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, finalize, switchMap, tap } from 'rxjs';
+
+import { EmailVerificationModalComponent } from './email-verification-modal/email-verification-modal.component';
 
 interface EmailOption {
   label: string;
@@ -37,15 +40,21 @@ interface EmailOption {
     BadgeComponent,
     SelectComponent,
     ConfirmDialogModule,
+    DynamicDialogModule,
     ToastModule,
     TooltipModule,
   ],
+  providers: [DialogService],
   templateUrl: './profile-email.component.html',
 })
 export class ProfileEmailComponent {
   private readonly userService = inject(UserService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
+
+  // Dialog reference
+  private dialogRef: DynamicDialogRef | undefined;
 
   // Refresh mechanism
   private refresh = new BehaviorSubject<void>(undefined);
@@ -94,9 +103,66 @@ export class ProfileEmailComponent {
     const email = this.addEmailForm.value.email!;
     this.addingEmail.set(true);
 
+    // Step 1: Send verification code
     this.userService
-      .addEmail(email)
+      .sendEmailVerification(email)
       .pipe(finalize(() => this.addingEmail.set(false)))
+      .subscribe({
+        next: () => {
+          // Show verification modal
+          this.showVerificationModal(email);
+        },
+        error: (error) => {
+          console.error('Failed to send verification code:', error);
+          const message = error.error?.message || 'Failed to send verification code';
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: message,
+          });
+        },
+      });
+  }
+
+  private showVerificationModal(email: string): void {
+    this.dialogRef = this.dialogService.open(EmailVerificationModalComponent, {
+      header: 'Email Verification',
+      width: '500px',
+      modal: true,
+      dismissableMask: false,
+      closable: true,
+      data: {
+        email,
+      },
+    });
+
+    this.dialogRef.onClose.subscribe((result) => {
+      if (result && result.code) {
+        // Verification code was submitted - now verify and link
+        this.verifyAndLinkEmail(email, result.code);
+      } else {
+        // Modal was closed without verification
+        this.addEmailForm.reset();
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Cancelled',
+          detail: 'Email verification was cancelled.',
+        });
+      }
+    });
+  }
+
+  private verifyAndLinkEmail(email: string, otp: string): void {
+    this.addingEmail.set(true);
+
+    // Step 1: Verify OTP and link identity to user account
+    this.userService
+      .verifyAndLinkEmail(email, otp)
+      .pipe(
+        // Step 2: Once verified and linked, add email to database
+        switchMap(() => this.userService.addEmail(email)),
+        finalize(() => this.addingEmail.set(false))
+      )
       .subscribe({
         next: () => {
           this.addEmailForm.reset();
@@ -104,17 +170,18 @@ export class ProfileEmailComponent {
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
-            detail: 'Email address added successfully',
+            detail: 'Email address verified and added successfully',
           });
         },
         error: (error) => {
-          console.error('Failed to add email:', error);
-          const message = error.error?.message || 'Failed to add email address';
+          console.error('Failed to verify and add email:', error);
+          const message = error.error?.message || 'Failed to verify email address';
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
             detail: message,
           });
+          this.addEmailForm.reset();
         },
       });
   }
@@ -183,15 +250,6 @@ export class ProfileEmailComponent {
           },
         });
       },
-    });
-  }
-
-  public resendVerification(email: UserEmail): void {
-    // For now, just show a success toast. In the future, this will call an API endpoint
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Verification Email Sent',
-      detail: `Verification email has been sent to ${email.email}`,
     });
   }
 
