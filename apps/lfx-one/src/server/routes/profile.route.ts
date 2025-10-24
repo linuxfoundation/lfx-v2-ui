@@ -25,6 +25,12 @@ router.patch('/', (req, res, next) => profileController.updateUserMetadata(req, 
 // GET /api/profile/emails - Get current user's email management data
 router.get('/emails', (req, res, next) => profileController.getUserEmails(req, res, next));
 
+// POST /api/profile/emails/send-verification - Send verification code to email
+router.post('/emails/send-verification', (req, res, next) => profileController.sendEmailVerification(req, res, next));
+
+// POST /api/profile/emails/verify - Verify OTP and link email to account
+router.post('/emails/verify', (req, res, next) => profileController.verifyAndLinkEmail(req, res, next));
+
 // POST /api/profile/emails - Add new email for current user
 router.post('/emails', (req, res, next) => profileController.addUserEmail(req, res, next));
 

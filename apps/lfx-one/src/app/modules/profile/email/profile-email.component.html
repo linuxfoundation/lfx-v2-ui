@@ -67,20 +67,6 @@
 
                   <!-- Action Buttons -->
                   <div class="flex items-center gap-2">
-                    <!-- Resend Verification Button -->
-                    @if (!email.is_verified) {
-                      <lfx-button
-                        size="small"
-                        icon="fa-light fa-envelope"
-                        label="Resend verification"
-                        severity="secondary"
-                        variant="outlined"
-                        (onClick)="resendVerification(email)"
-                        [attr.data-testid]="'resend-verification-button-' + email.id"
-                        [attr.aria-label]="'Resend verification email to ' + email.email">
-                      </lfx-button>
-                    }
-
                     <!-- Delete Button -->
                     @if (email.canDelete) {
                       <lfx-button
