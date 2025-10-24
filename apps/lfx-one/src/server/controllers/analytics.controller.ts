@@ -273,7 +273,7 @@ export class AnalyticsController {
           SELECT DISTINCT PROJECT_ID, PROJECT_NAME, PROJECT_SLUG
           FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM.PROJECT_CODE_ACTIVITY
           WHERE ACTIVITY_DATE >= DATEADD(DAY, -30, CURRENT_DATE())
-          ORDER BY PROJECT_NAME
+          ORDER BY PROJECT_NAME, PROJECT_ID
           LIMIT ? OFFSET ?
         )
         SELECT
@@ -288,7 +288,7 @@ export class AnalyticsController {
         JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM.PROJECT_CODE_ACTIVITY a
           ON p.PROJECT_ID = a.PROJECT_ID
         WHERE a.ACTIVITY_DATE >= DATEADD(DAY, -30, CURRENT_DATE())
-        ORDER BY p.PROJECT_NAME, a.ACTIVITY_DATE ASC
+        ORDER BY p.PROJECT_NAME, p.PROJECT_ID, a.ACTIVITY_DATE ASC
       `;
 
       const result = await this.getSnowflakeService().execute<UserProjectActivityRow>(query, [limit, offset]);

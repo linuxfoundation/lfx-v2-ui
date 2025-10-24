@@ -10,12 +10,8 @@ import { AnalyticsService } from '@services/analytics.service';
 import { BehaviorSubject, finalize, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { ProjectItem } from '@lfx-one/shared/interfaces';
-
-interface ProjectItemWithCharts extends ProjectItem {
-  codeActivitiesChartData: ChartData<'line'>;
-  nonCodeActivitiesChartData: ChartData<'line'>;
-}
+import type { LazyLoadEvent } from 'primeng/api';
+import type { ProjectItemWithCharts } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-my-projects',
@@ -61,12 +57,11 @@ export class MyProjectsComponent {
   });
 
   public readonly totalRecords = computed(() => this.projectsResponse().totalProjects);
-  public readonly paginatedProjects = computed<ProjectItemWithCharts[]>(() => this.projects());
 
-  public onPageChange(event: { first: number; rows: number }): void {
-    const page = Math.floor(event.first / event.rows) + 1;
-    this.rows.set(event.rows);
-    this.paginationState$.next({ page, limit: event.rows });
+  public onPageChange(event: LazyLoadEvent): void {
+    const page = Math.floor((event.first ?? 0) / (event.rows ?? 10)) + 1;
+    this.rows.set(event.rows ?? 10);
+    this.paginationState$.next({ page, limit: event.rows ?? 10 });
   }
 
   private createChartData(data: number[], borderColor: string, backgroundColor: string): ChartData<'line'> {
