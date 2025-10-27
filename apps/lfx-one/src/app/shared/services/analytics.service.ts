@@ -3,7 +3,14 @@
 
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { ActiveWeeksStreakResponse, UserCodeCommitsResponse, UserProjectsResponse, UserPullRequestsResponse } from '@lfx-one/shared/interfaces';
+import {
+  ActiveWeeksStreakResponse,
+  MembershipTierResponse,
+  OrganizationMaintainersResponse,
+  UserCodeCommitsResponse,
+  UserProjectsResponse,
+  UserPullRequestsResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
 /**
@@ -81,6 +88,43 @@ export class AnalyticsService {
         return of({
           data: [],
           totalProjects: 0,
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level maintainer and project statistics
+   * @returns Observable of organization maintainers response
+   */
+  public getOrganizationMaintainers(): Observable<OrganizationMaintainersResponse> {
+    return this.http.get<OrganizationMaintainersResponse>('/api/analytics/organization-maintainers').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization maintainers:', error);
+        return of({
+          maintainers: 0,
+          projects: 0,
+          accountId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization membership tier details
+   * @returns Observable of membership tier response
+   */
+  public getMembershipTier(): Observable<MembershipTierResponse> {
+    return this.http.get<MembershipTierResponse>('/api/analytics/membership-tier').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch membership tier:', error);
+        return of({
+          tier: '',
+          membershipStartDate: '',
+          membershipEndDate: '',
+          membershipPrice: 0,
+          membershipStatus: '',
+          accountId: '',
         });
       })
     );

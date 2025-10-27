@@ -4,6 +4,8 @@
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
+  MembershipTierResponse,
+  OrganizationMaintainersResponse,
   ProjectItem,
   UserCodeCommitsResponse,
   UserCodeCommitsRow,
@@ -335,6 +337,133 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       Logger.error(req, 'get_my_projects', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-maintainers
+   * Get organization-level maintainer and project statistics
+   */
+  public async getOrganizationMaintainers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_maintainers');
+
+    try {
+      // TODO: Get organization ACCOUNT_ID from user profile or session
+      // For now, using hardcoded ACCOUNT_ID from example query
+      const accountId = '0014100000Te0OKAAZ';
+
+      // Execute both Snowflake queries
+      const maintainersQuery = `
+        SELECT COUNT(DISTINCT(MEMBER_ID)) AS MAINTAINERS
+        FROM ANALYTICS.SILVER_DIM.MAINTAINERS
+        WHERE ACCOUNT_ID = ?
+      `;
+
+      const projectsQuery = `
+        SELECT COUNT(DISTINCT(PROJECT_ID)) AS PROJECTS
+        FROM ANALYTICS.SILVER_DIM.MAINTAINERS
+        WHERE ACCOUNT_ID = ?
+      `;
+
+      // Execute queries in parallel
+      const [maintainersResult, projectsResult] = await Promise.all([
+        this.getSnowflakeService().execute<{ MAINTAINERS: number }>(maintainersQuery, [accountId]),
+        this.getSnowflakeService().execute<{ PROJECTS: number }>(projectsQuery, [accountId]),
+      ]);
+
+      // Build response
+      const response: OrganizationMaintainersResponse = {
+        maintainers: maintainersResult.rows[0]?.MAINTAINERS || 0,
+        projects: projectsResult.rows[0]?.PROJECTS || 0,
+        accountId,
+      };
+
+      Logger.success(req, 'get_organization_maintainers', startTime, {
+        account_id: accountId,
+        maintainers: response.maintainers,
+        projects: response.projects,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_maintainers', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/membership-tier
+   * Get organization membership tier details including dates and pricing
+   */
+  public async getMembershipTier(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_membership_tier');
+
+    try {
+      // TODO: Get PROJECT_ID and ACCOUNT_ID from user profile or session
+      // For now, using hardcoded values from example query
+      const projectId = 'a0941000002wBz9AAE';
+      const accountId = '0014100000Te0OKAAZ';
+
+      // Query for membership tier information
+      const query = `
+        SELECT
+          MEMBERSHIP_TIER,
+          CURRENT_MEMBERSHIP_START_DATE,
+          CURRENT_MEMBERSHIP_END_DATE,
+          MEMBERSHIP_PRICE,
+          MEMBERSHIP_STATUS
+        FROM ANALYTICS.PLATINUM.MEMBERSHIP_MEMBER_LIST
+        WHERE PROJECT_ID = ?
+          AND ACCOUNT_ID = ?
+        LIMIT 1
+      `;
+
+      const result = await this.getSnowflakeService().execute<{
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        MEMBERSHIP_TIER: string;
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        CURRENT_MEMBERSHIP_START_DATE: string;
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        CURRENT_MEMBERSHIP_END_DATE: string;
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        MEMBERSHIP_PRICE: number;
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        MEMBERSHIP_STATUS: string;
+      }>(query, [projectId, accountId]);
+
+      // If no data found, return 404
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Membership tier data', accountId, {
+          operation: 'get_membership_tier',
+        });
+      }
+
+      const row = result.rows[0];
+
+      // Extract tier name (remove " Membership" suffix if present)
+      const tier = row.MEMBERSHIP_TIER.replace(' Membership', '');
+
+      // Build response
+      const response: MembershipTierResponse = {
+        tier,
+        membershipStartDate: row.CURRENT_MEMBERSHIP_START_DATE,
+        membershipEndDate: row.CURRENT_MEMBERSHIP_END_DATE,
+        membershipPrice: row.MEMBERSHIP_PRICE,
+        membershipStatus: row.MEMBERSHIP_STATUS,
+        accountId,
+      };
+
+      Logger.success(req, 'get_membership_tier', startTime, {
+        account_id: accountId,
+        project_id: projectId,
+        tier: response.tier,
+        status: response.membershipStatus,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_membership_tier', startTime, error);
       next(error);
     }
   }

@@ -176,3 +176,60 @@ export interface UserProjectsResponse {
    */
   totalProjects: number;
 }
+
+/**
+ * API response for Organization Maintainers query
+ * Provides organization-level maintainer and project statistics
+ */
+export interface OrganizationMaintainersResponse {
+  /**
+   * Total number of distinct maintainers in the organization
+   */
+  maintainers: number;
+
+  /**
+   * Total number of distinct projects with maintainers
+   */
+  projects: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}
+
+/**
+ * API response for Membership Tier query
+ * Provides organization membership details including tier, dates, and pricing
+ */
+export interface MembershipTierResponse {
+  /**
+   * Membership tier level (e.g., "Platinum", "Gold", "Silver")
+   */
+  tier: string;
+
+  /**
+   * Start date of current membership period (YYYY-MM-DD format)
+   */
+  membershipStartDate: string;
+
+  /**
+   * End date of current membership period (YYYY-MM-DD format)
+   */
+  membershipEndDate: string;
+
+  /**
+   * Annual membership price in dollars
+   */
+  membershipPrice: number;
+
+  /**
+   * Membership status (e.g., "Active", "Pending", "Expired")
+   */
+  membershipStatus: string;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}
