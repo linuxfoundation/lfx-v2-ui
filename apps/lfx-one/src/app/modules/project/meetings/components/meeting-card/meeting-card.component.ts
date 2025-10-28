@@ -41,11 +41,8 @@ import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take
 import { MeetingCancelOccurrenceConfirmationComponent } from '../meeting-cancel-occurrence-confirmation/meeting-cancel-occurrence-confirmation.component';
 import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
-<<<<<<< HEAD
 import { MeetingDeleteTypeSelectionComponent, MeetingDeleteTypeResult } from '../meeting-delete-type-selection/meeting-delete-type-selection.component';
-=======
 import { RecordingModalComponent } from '../recording-modal/recording-modal.component';
->>>>>>> 42e9854e6d1aa4b8b233aad197fb599327f015ef
 import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
 import { SummaryModalComponent } from '../summary-modal/summary-modal.component';
 
@@ -505,10 +502,10 @@ export class MeetingCardComponent implements OnInit {
   }
 
   private showCancelOccurrenceModal(meeting: Meeting): void {
-    // Get the next occurrence for the meeting
-    const nextOccurrence = getCurrentOrNextOccurrence(meeting);
+    // Prefer the explicitly selected/current occurrence; fallback to next active
+    const occurrenceToCancel = this.occurrence() ?? getCurrentOrNextOccurrence(meeting);
 
-    if (!nextOccurrence) {
+    if (!occurrenceToCancel) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
@@ -526,7 +523,7 @@ export class MeetingCardComponent implements OnInit {
         dismissableMask: true,
         data: {
           meeting: meeting,
-          occurrence: nextOccurrence,
+          occurrence: occurrenceToCancel,
         },
       })
       .onClose.pipe(take(1))
