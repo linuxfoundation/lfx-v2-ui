@@ -548,3 +548,12 @@ export interface PastMeetingParticipant {
   /** Last update timestamp */
   updated_at: string;
 }
+
+/**
+ * Result of canceling a meeting occurrence
+ * @description Contains the result of canceling a meeting occurrence
+ */
+export interface MeetingCancelOccurrenceResult {
+  confirmed: boolean;
+  error?: string;
+}

@@ -11,11 +11,6 @@ import { MessageComponent } from '@components/message/message.component';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { HttpErrorResponse } from '@angular/common/http';
 
-export interface MeetingCancelOccurrenceResult {
-  confirmed: boolean;
-  error?: string;
-}
-
 @Component({
   selector: 'lfx-meeting-cancel-occurrence-confirmation',
   standalone: true,

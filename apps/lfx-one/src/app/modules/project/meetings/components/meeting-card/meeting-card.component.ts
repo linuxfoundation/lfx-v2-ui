@@ -20,6 +20,7 @@ import {
   getCurrentOrNextOccurrence,
   Meeting,
   MeetingAttachment,
+  MeetingCancelOccurrenceResult,
   MeetingOccurrence,
   MeetingRegistrant,
   PastMeeting,
@@ -35,10 +36,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
 
-import {
-  MeetingCancelOccurrenceConfirmationComponent,
-  MeetingCancelOccurrenceResult,
-} from '../meeting-cancel-occurrence-confirmation/meeting-cancel-occurrence-confirmation.component';
+import { MeetingCancelOccurrenceConfirmationComponent } from '../meeting-cancel-occurrence-confirmation/meeting-cancel-occurrence-confirmation.component';
 import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
 import { MeetingDeleteTypeSelectionComponent, MeetingDeleteTypeResult } from '../meeting-delete-type-selection/meeting-delete-type-selection.component';

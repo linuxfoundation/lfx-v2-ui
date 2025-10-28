@@ -11,19 +11,20 @@
   <div class="space-y-3 mb-6">
     <div
       class="border rounded-lg p-4 cursor-pointer transition-all"
-      [class.border-blue-500]="selectedType === 'occurrence'"
-      [class.bg-blue-50]="selectedType === 'occurrence'"
-      [class.border-gray-200]="selectedType !== 'occurrence'"
+      [ngClass]="{
+        'border-blue-500 bg-blue-50': selectedType === 'occurrence',
+        'border-gray-200': selectedType !== 'occurrence',
+      }"
       (click)="selectType('occurrence')"
       data-testid="delete-type-occurrence-option">
       <div class="flex items-start gap-3">
         <div class="mt-1">
           <i
             class="fa-light text-lg"
-            [class.fa-circle-dot]="selectedType === 'occurrence'"
-            [class.fa-circle]="selectedType !== 'occurrence'"
-            [class.text-blue-500]="selectedType === 'occurrence'"
-            [class.text-gray-400]="selectedType !== 'occurrence'"></i>
+            [ngClass]="{
+              'fa-circle-dot text-blue-500': selectedType === 'occurrence',
+              'fa-circle text-gray-400': selectedType !== 'occurrence',
+            }"></i>
         </div>
         <div class="flex-1">
           <h4 class="font-semibold text-gray-900 mb-1">Cancel This Occurrence</h4>
@@ -34,19 +35,20 @@
 
     <div
       class="border rounded-lg p-4 cursor-pointer transition-all"
-      [class.border-blue-500]="selectedType === 'series'"
-      [class.bg-blue-50]="selectedType === 'series'"
-      [class.border-gray-200]="selectedType !== 'series'"
+      [ngClass]="{
+        'border-blue-500 bg-blue-50': selectedType === 'series',
+        'border-gray-200': selectedType !== 'series',
+      }"
       (click)="selectType('series')"
       data-testid="delete-type-series-option">
       <div class="flex items-start gap-3">
         <div class="mt-1">
           <i
             class="fa-light text-lg"
-            [class.fa-circle-dot]="selectedType === 'series'"
-            [class.fa-circle]="selectedType !== 'series'"
-            [class.text-blue-500]="selectedType === 'series'"
-            [class.text-gray-400]="selectedType !== 'series'"></i>
+            [ngClass]="{
+              'fa-circle-dot text-blue-500': selectedType === 'series',
+              'fa-circle text-gray-400': selectedType !== 'series',
+            }"></i>
         </div>
         <div class="flex-1">
           <h4 class="font-semibold text-gray-900 mb-1">Delete Entire Series</h4>
