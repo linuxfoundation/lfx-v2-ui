@@ -16,16 +16,19 @@ import { ExpandableTextComponent } from '@components/expandable-text/expandable-
 import { MenuComponent } from '@components/menu/menu.component';
 import { environment } from '@environments/environment';
 import {
+  calculateRsvpCounts,
   extractUrlsWithDomains,
   getCurrentOrNextOccurrence,
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeeting,
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
+  RsvpCounts,
 } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -89,6 +92,8 @@ export class MeetingCardComponent implements OnInit {
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
   public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
+  public meetingRsvps: WritableSignal<MeetingRsvp[]> = signal([]);
+  public rsvpCounts: Signal<RsvpCounts> = this.initRsvpCounts();
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public recordingShareUrl: Signal<string | null> = computed(() => {
     const recording = this.recording();
@@ -142,6 +147,27 @@ export class MeetingCardComponent implements OnInit {
       } else {
         // For past meetings without occurrence input, set to null
         this.occurrence.set(null);
+      }
+    });
+
+    // Load RSVPs when meeting changes
+    effect(() => {
+      const meeting = this.meeting();
+      if (meeting?.uid && !this.pastMeeting()) {
+        this.meetingService
+          .getMeetingRsvps(meeting.uid)
+          .pipe(
+            tap((rsvps) => {
+              this.meetingRsvps.set(rsvps);
+            }),
+            catchError(() => {
+              this.meetingRsvps.set([]);
+              return of([]);
+            })
+          )
+          .subscribe();
+      } else {
+        this.meetingRsvps.set([]);
       }
     });
   }
@@ -594,6 +620,22 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
+  private initRsvpCounts(): Signal<RsvpCounts> {
+    return computed(() => {
+      // For past meetings, don't calculate RSVP counts
+      if (this.pastMeeting()) {
+        return { accepted: 0, declined: 0, maybe: 0, total: 0 };
+      }
+
+      const rsvps = this.meetingRsvps();
+      const occurrence = this.occurrence();
+      const meeting = this.meeting();
+
+      // Use the utility function to calculate counts
+      return calculateRsvpCounts(occurrence, rsvps, meeting.start_time);
+    });
+  }
+
   private initAttendancePercentage(): Signal<number> {
     return computed(() => {
       if (this.pastMeeting()) {
@@ -604,7 +646,7 @@ export class MeetingCardComponent implements OnInit {
       }
 
       const totalRegistrants = this.meetingRegistrantCount();
-      const acceptedCount = this.meeting().registrants_accepted_count || 0;
+      const acceptedCount = this.rsvpCounts().accepted;
       return totalRegistrants > 0 ? Math.round((acceptedCount / totalRegistrants) * 100) : 0;
     });
   }

@@ -687,3 +687,57 @@ export interface UpdatePastMeetingSummaryRequest {
   /** Approval status - optional when only editing content */
   approved?: boolean;
 }
+
+/**
+ * RSVP response type
+ * @description User's response to a meeting invitation
+ */
+export type RsvpResponse = 'accepted' | 'maybe' | 'declined';
+
+/**
+ * RSVP scope type
+ * @description Defines which occurrences of a recurring meeting the RSVP applies to
+ */
+export type RsvpScope = 'this' | 'all' | 'following';
+
+/**
+ * Meeting RSVP information
+ * @description User's RSVP response for a meeting
+ */
+export interface MeetingRsvp {
+  /** Unique identifier for the RSVP */
+  id: string;
+  /** Meeting UUID this RSVP belongs to */
+  meeting_uid: string;
+  /** User's registrant ID */
+  registrant_id: string;
+  /** User's username */
+  username: string;
+  /** User's email address */
+  email: string;
+  /** User's RSVP response */
+  response: RsvpResponse;
+  /** Scope of the RSVP (which occurrences it applies to) */
+  scope: RsvpScope;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last update timestamp */
+  updated_at: string;
+}
+
+/**
+ * Request payload for creating a meeting RSVP
+ * @description Data required to create or update a meeting RSVP
+ */
+export interface CreateMeetingRsvpRequest {
+  /** User's registrant ID (optional - backend derives from username if not provided) */
+  registrant_id?: string;
+  /** User's username (optional - backend derives from authenticated user if not provided) */
+  username?: string;
+  /** User's email (optional - backend derives from authenticated user if not provided) */
+  email?: string;
+  /** Scope of the RSVP */
+  scope: RsvpScope;
+  /** User's RSVP response */
+  response: RsvpResponse;
+}

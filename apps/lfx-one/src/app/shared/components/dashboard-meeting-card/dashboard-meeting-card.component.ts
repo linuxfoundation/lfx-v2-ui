@@ -3,14 +3,17 @@
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output, Signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
+import { RsvpScopeModalComponent } from '@app/shared/components/rsvp-scope-modal/rsvp-scope-modal.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { Meeting, MeetingAttachment, MeetingOccurrence } from '@lfx-one/shared';
+import { CreateMeetingRsvpRequest, Meeting, MeetingAttachment, MeetingOccurrence, MeetingRsvp, RsvpResponse, RsvpScope } from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
+import { MessageService } from 'primeng/api';
+import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 interface MeetingTypeBadge {
   label: string;
@@ -21,16 +24,21 @@ interface MeetingTypeBadge {
   selector: 'lfx-dashboard-meeting-card',
   standalone: true,
   imports: [CommonModule, ButtonComponent, TooltipModule, ClipboardModule, FileTypeIconPipe],
+  providers: [DialogService],
   templateUrl: './dashboard-meeting-card.component.html',
 })
 export class DashboardMeetingCardComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly dialogService = inject(DialogService);
+  private readonly messageService = inject(MessageService);
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
   public readonly onSeeMeeting = output<string>();
 
   public readonly attachments: Signal<MeetingAttachment[]>;
+  public readonly userRsvp: WritableSignal<MeetingRsvp | null> = signal(null);
+  public readonly rsvpLoading: WritableSignal<boolean> = signal(false);
 
   // Computed values
   public readonly meetingTypeInfo: Signal<MeetingTypeBadge> = computed(() => {
@@ -145,6 +153,10 @@ export class DashboardMeetingCardComponent {
     return occurrence?.title || meeting.title;
   });
 
+  public readonly isRecurringMeeting: Signal<boolean> = computed(() => {
+    return this.meeting().recurrence !== null;
+  });
+
   public constructor() {
     // Convert meeting input signal to observable and create reactive attachment stream
     const meeting$ = toObservable(this.meeting);
@@ -158,9 +170,78 @@ export class DashboardMeetingCardComponent {
     );
 
     this.attachments = toSignal(attachments$, { initialValue: [] });
+
+    // Load user's RSVP when meeting changes
+    effect(() => {
+      const meeting = this.meeting();
+      if (meeting?.uid) {
+        this.meetingService
+          .getUserMeetingRsvp(meeting.uid)
+          .pipe(
+            tap((rsvp) => {
+              this.userRsvp.set(rsvp);
+            })
+          )
+          .subscribe();
+      }
+    });
   }
 
   public handleSeeMeeting(): void {
     this.onSeeMeeting.emit(this.meeting().uid);
+  }
+
+  public handleRsvpClick(response: RsvpResponse): void {
+    if (this.isRecurringMeeting()) {
+      // Show scope selection modal for recurring meetings
+      const ref = this.dialogService.open(RsvpScopeModalComponent, {
+        header: 'RSVP Scope',
+        width: '500px',
+        modal: true,
+      });
+
+      ref.onClose.subscribe((scope: RsvpScope | null) => {
+        if (scope) {
+          this.submitRsvp(response, scope);
+        }
+      });
+    } else {
+      // For non-recurring meetings, use 'this' scope
+      this.submitRsvp(response, 'this');
+    }
+  }
+
+  private submitRsvp(response: RsvpResponse, scope: RsvpScope): void {
+    this.rsvpLoading.set(true);
+
+    const request: CreateMeetingRsvpRequest = {
+      response,
+      scope,
+    };
+
+    const meeting = this.meeting();
+    this.meetingService
+      .createMeetingRsvp(meeting.uid, request)
+      .pipe(
+        tap((rsvp) => {
+          this.userRsvp.set(rsvp);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'RSVP Submitted',
+            detail: `Your RSVP has been recorded as "${response}".`,
+          });
+        }),
+        catchError(() => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to submit RSVP. Please try again.',
+          });
+          return of(null);
+        })
+      )
+      .subscribe(() => {
+        this.rsvpLoading.set(false);
+      });
   }
 }

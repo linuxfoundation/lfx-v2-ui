@@ -4,9 +4,11 @@
 import {
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
+  CreateMeetingRsvpRequest,
   Meeting,
   MeetingJoinURL,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
@@ -627,6 +629,108 @@ export class MeetingService {
         'Failed to update past meeting summary'
       );
       throw error;
+    }
+  }
+
+  /**
+   * Create or update a meeting RSVP
+   */
+  public async createMeetingRsvp(req: Request, meetingUid: string, rsvpData: CreateMeetingRsvpRequest): Promise<MeetingRsvp> {
+    Logger.start(req, 'create_meeting_rsvp', {
+      meeting_uid: meetingUid,
+      response: rsvpData.response,
+      scope: rsvpData.scope,
+    });
+
+    // Backend derives user from bearer token, so we don't need to pass username/email/registrant_id
+    const requestData: CreateMeetingRsvpRequest = {
+      response: rsvpData.response,
+      scope: rsvpData.scope,
+    };
+
+    const rsvp = await this.microserviceProxy.proxyRequest<MeetingRsvp>(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}/rsvp`, 'POST', {}, requestData);
+
+    Logger.success(req, 'create_meeting_rsvp', Date.now(), {
+      rsvp_id: rsvp.id,
+    });
+
+    return rsvp;
+  }
+
+  /**
+   * Get user's RSVP for a meeting
+   */
+  public async getUserMeetingRsvp(req: Request, meetingUid: string): Promise<MeetingRsvp | null> {
+    Logger.start(req, 'get_user_meeting_rsvp', {
+      meeting_uid: meetingUid,
+    });
+
+    try {
+      const username = await getUsernameFromAuth(req);
+      const params = {
+        tags: `meeting_uid:${meetingUid},username:${username}`,
+        type: 'meeting_rsvp',
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      if (resources.length === 0) {
+        Logger.success(req, 'get_user_meeting_rsvp', Date.now(), {
+          found: false,
+        });
+        return null;
+      }
+
+      const rsvp = resources[0].data;
+
+      Logger.success(req, 'get_user_meeting_rsvp', Date.now(), {
+        found: true,
+        rsvp_id: rsvp.id,
+      });
+
+      return rsvp;
+    } catch (error) {
+      Logger.error(req, 'get_user_meeting_rsvp', Date.now(), error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all RSVPs for a meeting
+   */
+  public async getMeetingRsvps(req: Request, meetingUid: string): Promise<MeetingRsvp[]> {
+    Logger.start(req, 'get_meeting_rsvps', {
+      meeting_uid: meetingUid,
+    });
+
+    try {
+      const params = {
+        tags: `meeting_uid:${meetingUid}`,
+        type: 'meeting_rsvp',
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      Logger.success(req, 'get_meeting_rsvps', Date.now(), {
+        count: resources.length,
+      });
+
+      return resources.map((resource) => resource.data);
+    } catch (error) {
+      Logger.error(req, 'get_meeting_rsvps', Date.now(), error);
+      return [];
     }
   }
 

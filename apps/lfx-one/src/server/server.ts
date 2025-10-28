@@ -161,7 +161,7 @@ const authConfig: ConfigParams = {
   authorizationParams: {
     response_type: 'code',
     audience: process.env['PCC_AUTH0_AUDIENCE'] || 'https://example.com',
-    scope: 'openid email profile access:api offline_access update:current_user_metadata',
+    scope: 'openid email profile access:api offline_access',
   },
   clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'bar',
   routes: {
@@ -230,6 +230,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       if (!auth.user?.name) {
         auth.user = await req.oidc.fetchUserInfo();
       }
+      console.log('auth.user', auth.user);
     } catch (error) {
       // If userinfo fetch fails, fall back to basic user info from token
       req.log.warn(
