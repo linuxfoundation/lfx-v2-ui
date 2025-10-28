@@ -6,6 +6,7 @@ import { Component, computed, input } from '@angular/core';
 import { ChartComponent } from '@components/chart/chart.component';
 import { FOUNDATION_HEALTH_DATA } from '@lfx-one/shared/constants';
 import { Foundation, OrgDependencyRiskLevel } from '@lfx-one/shared/interfaces';
+import { hexToRgba } from '@lfx-one/shared/utils';
 
 import { HealthScoreTagComponent } from '../health-score-tag/health-score-tag.component';
 
@@ -136,7 +137,7 @@ export class FoundationHealthComponent {
         {
           data,
           borderColor: color,
-          backgroundColor: this.hexToRgba(color, 0.1),
+          backgroundColor: hexToRgba(color, 0.1),
           fill: true,
           tension: 0.4,
           borderWidth: 2,
@@ -217,15 +218,5 @@ export class FoundationHealthComponent {
       otherPath: this.createPieSlice(0, otherAngle),
       topPath: this.createPieSlice(otherAngle, 360),
     };
-  }
-
-  /**
-   * Convert hex color to rgba
-   */
-  private hexToRgba(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 }

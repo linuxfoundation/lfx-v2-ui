@@ -7,7 +7,16 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
 import { ChartComponent } from '@components/chart/chart.component';
 import { CONTRIBUTIONS_METRICS, IMPACT_METRICS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
-import { OrganizationInvolvementMetricWithChart } from '@lfx-one/shared/interfaces';
+import {
+  ContributionMetric,
+  ImpactMetric,
+  MembershipTierResponse,
+  OrganizationContributorsResponse,
+  OrganizationInvolvementMetricWithChart,
+  OrganizationMaintainersResponse,
+  PrimaryInvolvementMetric,
+} from '@lfx-one/shared/interfaces';
+import { hexToRgba } from '@lfx-one/shared/utils';
 
 @Component({
   selector: 'lfx-organization-involvement',
@@ -18,27 +27,55 @@ import { OrganizationInvolvementMetricWithChart } from '@lfx-one/shared/interfac
 })
 export class OrganizationInvolvementComponent {
   private readonly analyticsService = inject(AnalyticsService);
-
-  /**
-   * Organization maintainers data from Snowflake
-   */
-  private readonly organizationMaintainersData = toSignal(this.analyticsService.getOrganizationMaintainers());
-
-  /**
-   * Membership tier data from Snowflake
-   */
-  private readonly membershipTierData = toSignal(this.analyticsService.getMembershipTier());
-
-  /**
-   * Loading state - true while any data is being fetched
-   */
-  protected readonly isLoading = computed<boolean>(() => {
-    return !this.organizationMaintainersData() || !this.membershipTierData();
+  private readonly organizationMaintainersData = toSignal(this.analyticsService.getOrganizationMaintainers(), {
+    initialValue: {
+      maintainers: 0,
+      projects: 0,
+      accountId: '',
+    },
+  });
+  private readonly organizationContributorsData = toSignal(this.analyticsService.getOrganizationContributors(), {
+    initialValue: {
+      contributors: 0,
+      accountId: '',
+      accountName: '',
+      projects: 0,
+    },
+  });
+  private readonly membershipTierData = toSignal(this.analyticsService.getMembershipTier(), {
+    initialValue: {
+      tier: '',
+      membershipStartDate: '',
+      membershipEndDate: '',
+      membershipPrice: 0,
+      membershipStatus: '',
+      accountId: '',
+    },
+  });
+  private readonly eventAttendanceData = toSignal(this.analyticsService.getOrganizationEventAttendance(), {
+    initialValue: {
+      totalAttendees: 0,
+      totalSpeakers: 0,
+      totalEvents: 0,
+      accountId: '',
+      accountName: '',
+    },
+  });
+  private readonly technicalCommitteeData = toSignal(this.analyticsService.getOrganizationTechnicalCommittee(), {
+    initialValue: {
+      totalRepresentatives: 0,
+      totalProjects: 0,
+      accountId: '',
+    },
   });
 
-  /**
-   * Chart options for sparkline
-   */
+  protected readonly isLoading = computed<boolean>(() => {
+    const maintainersData = this.organizationMaintainersData();
+    const contributorsData = this.organizationContributorsData();
+    const tierData = this.membershipTierData();
+    return maintainersData.maintainers === 0 && contributorsData.contributors === 0 && tierData.tier === '';
+  });
+
   protected readonly sparklineChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -49,116 +86,202 @@ export class OrganizationInvolvementComponent {
     },
   };
 
-  /**
-   * Contributions metrics displayed in list format
-   */
-  protected readonly contributionsMetrics = CONTRIBUTIONS_METRICS;
+  protected readonly barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: {
+      x: { display: false },
+      y: { display: false },
+    },
+    datasets: {
+      bar: {
+        barPercentage: 0.9,
+        categoryPercentage: 0.95,
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+    },
+  };
 
-  /**
-   * Impact metrics displayed in list format
-   */
-  protected readonly impactMetrics = IMPACT_METRICS;
+  protected readonly contributionsMetrics = computed<ContributionMetric[]>((): ContributionMetric[] => {
+    const techCommitteeData = this.technicalCommitteeData();
 
-  /**
-   * Primary metrics with chart data precomputed
-   * Merges hardcoded metrics with real data from Snowflake
-   */
+    return CONTRIBUTIONS_METRICS.map((metric) => {
+      if (metric.title === 'TOC/TSC/TAG Participation') {
+        const hasData = techCommitteeData.totalRepresentatives > 0;
+        return {
+          ...metric,
+          descriptiveValue: hasData ? `${techCommitteeData.totalRepresentatives} representatives` : metric.descriptiveValue,
+          isConnected: hasData,
+        };
+      }
+      return {
+        ...metric,
+        isConnected: false, // Hardcoded data
+      };
+    });
+  });
+
+  protected readonly impactMetrics = computed<ImpactMetric[]>((): ImpactMetric[] => {
+    const eventData = this.eventAttendanceData();
+
+    return IMPACT_METRICS.map((metric) => {
+      if (metric.title === 'Event Attendees') {
+        const hasData = eventData.totalAttendees > 0;
+        return {
+          ...metric,
+          descriptiveValue: hasData ? `${eventData.totalAttendees} employees` : metric.descriptiveValue,
+          isConnected: hasData,
+        };
+      }
+      if (metric.title === 'Event Speakers') {
+        const hasData = eventData.totalSpeakers > 0;
+        return {
+          ...metric,
+          descriptiveValue: hasData ? `${eventData.totalSpeakers} speakers` : metric.descriptiveValue,
+          isConnected: hasData,
+        };
+      }
+      return {
+        ...metric,
+        isConnected: false, // Hardcoded placeholder data
+      };
+    });
+  });
+
   protected readonly primaryMetrics = computed<OrganizationInvolvementMetricWithChart[]>((): OrganizationInvolvementMetricWithChart[] => {
     const maintainersData = this.organizationMaintainersData();
+    const contributorsData = this.organizationContributorsData();
     const tierData = this.membershipTierData();
 
     return PRIMARY_INVOLVEMENT_METRICS.map((metric) => {
-      // Replace Maintainers metric with real data if available
-      if (metric.title === 'Maintainers' && maintainersData && maintainersData.maintainers > 0) {
-        return {
-          title: metric.title,
-          value: maintainersData.maintainers.toString(),
-          subtitle: `Across ${maintainersData.projects} projects`,
-          icon: metric.icon ?? '',
-          chartData: {
-            labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
-            datasets: [
-              {
-                data: metric.sparklineData ?? [],
-                borderColor: metric.sparklineColor ?? '',
-                backgroundColor: this.hexToRgba(metric.sparklineColor ?? '', 0.1),
-                fill: true,
-                tension: 0.4,
-                borderWidth: 2,
-                pointRadius: 0,
-              },
-            ],
-          },
-        };
+      if (metric.title === 'Active Contributors') {
+        return this.transformActiveContributors(contributorsData, metric);
       }
-
-      // Replace Membership tier card with real data if available
-      if (metric.isMembershipTier && tierData?.tier) {
-        const startDate = new Date(tierData.membershipStartDate);
-        const endDate = new Date(tierData.membershipEndDate);
-        const tierSince = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        const annualFee = `$${tierData.membershipPrice.toLocaleString()}`;
-
-        return {
-          title: metric.title,
-          value: tierData.tier,
-          subtitle: `since ${tierSince}`,
-          icon: metric.icon ?? '',
-          tier: tierData.tier,
-          tierSince,
-          annualFee,
-          nextDue,
-          isMembershipTier: metric.isMembershipTier,
-        };
+      if (metric.title === 'Maintainers') {
+        return this.transformMaintainers(maintainersData, metric);
       }
-
-      // Membership tier card with placeholder data
       if (metric.isMembershipTier) {
-        return {
-          title: metric.title,
-          value: metric.value,
-          subtitle: metric.subtitle,
-          icon: metric.icon ?? '',
-          tier: metric.tier,
-          tierSince: metric.tierSince,
-          annualFee: metric.annualFee,
-          nextDue: metric.nextDue,
-          isMembershipTier: metric.isMembershipTier,
-        };
+        return this.transformMembershipTier(tierData, metric);
       }
+      return this.transformDefaultMetric(metric);
+    });
+  });
 
-      // Regular metrics with sparkline data
+  private transformActiveContributors(data: OrganizationContributorsResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+    if (data.contributors === 0) {
+      return { ...this.transformDefaultMetric(metric), isConnected: false };
+    }
+
+    return {
+      title: metric.title,
+      value: data.contributors.toString(),
+      subtitle: 'Contributors from our organization',
+      icon: metric.icon ?? '',
+      isConnected: true,
+      chartData: {
+        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
+        datasets: [
+          {
+            data: metric.sparklineData ?? [],
+            borderColor: metric.sparklineColor ?? '',
+            backgroundColor: metric.sparklineColor ?? '',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
+    };
+  }
+
+  private transformMaintainers(data: OrganizationMaintainersResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+    if (data.maintainers === 0) {
+      return { ...this.transformDefaultMetric(metric), isConnected: false };
+    }
+
+    return {
+      title: metric.title,
+      value: data.maintainers.toString(),
+      subtitle: `Across ${data.projects} projects`,
+      icon: metric.icon ?? '',
+      isConnected: true,
+      chartData: {
+        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
+        datasets: [
+          {
+            data: metric.sparklineData ?? [],
+            borderColor: metric.sparklineColor ?? '',
+            backgroundColor: metric.sparklineColor ?? '',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
+    };
+  }
+
+  private transformMembershipTier(data: MembershipTierResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+    if (!data.tier) {
       return {
         title: metric.title,
         value: metric.value,
         subtitle: metric.subtitle,
         icon: metric.icon ?? '',
-        chartData: {
-          labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
-          datasets: [
-            {
-              data: metric.sparklineData ?? [],
-              borderColor: metric.sparklineColor ?? '',
-              backgroundColor: this.hexToRgba(metric.sparklineColor ?? '', 0.1),
-              fill: true,
-              tension: 0.4,
-              borderWidth: 2,
-              pointRadius: 0,
-            },
-          ],
-        },
+        tier: metric.tier,
+        tierSince: metric.tierSince,
+        annualFee: metric.annualFee,
+        nextDue: metric.nextDue,
+        isMembershipTier: metric.isMembershipTier,
+        isConnected: false,
       };
-    });
-  });
+    }
 
-  /**
-   * Convert hex color to rgba
-   */
-  private hexToRgba(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    const startDate = new Date(data.membershipStartDate);
+    const endDate = new Date(data.membershipEndDate);
+    const tierSince = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const annualFee = `$${data.membershipPrice.toLocaleString()}`;
+
+    return {
+      title: metric.title,
+      value: data.tier,
+      subtitle: `since ${tierSince}`,
+      icon: metric.icon ?? '',
+      tier: data.tier,
+      tierSince,
+      annualFee,
+      nextDue,
+      isMembershipTier: metric.isMembershipTier,
+      isConnected: true,
+    };
+  }
+
+  private transformDefaultMetric(metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+    return {
+      title: metric.title,
+      value: metric.value,
+      subtitle: metric.subtitle,
+      icon: metric.icon ?? '',
+      isConnected: false,
+      chartData: {
+        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
+        datasets: [
+          {
+            data: metric.sparklineData ?? [],
+            borderColor: metric.sparklineColor ?? '',
+            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
+    };
   }
 }

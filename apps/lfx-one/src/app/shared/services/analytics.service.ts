@@ -6,7 +6,10 @@ import { inject, Injectable } from '@angular/core';
 import {
   ActiveWeeksStreakResponse,
   MembershipTierResponse,
+  OrganizationContributorsResponse,
+  OrganizationEventAttendanceResponse,
   OrganizationMaintainersResponse,
+  OrganizationTechnicalCommitteeResponse,
   UserCodeCommitsResponse,
   UserProjectsResponse,
   UserPullRequestsResponse,
@@ -111,6 +114,24 @@ export class AnalyticsService {
   }
 
   /**
+   * Get organization-level contributor statistics
+   * @returns Observable of organization contributors response
+   */
+  public getOrganizationContributors(): Observable<OrganizationContributorsResponse> {
+    return this.http.get<OrganizationContributorsResponse>('/api/analytics/organization-contributors').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization contributors:', error);
+        return of({
+          contributors: 0,
+          accountId: '',
+          accountName: '',
+          projects: 0,
+        });
+      })
+    );
+  }
+
+  /**
    * Get organization membership tier details
    * @returns Observable of membership tier response
    */
@@ -124,6 +145,42 @@ export class AnalyticsService {
           membershipEndDate: '',
           membershipPrice: 0,
           membershipStatus: '',
+          accountId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level event attendance statistics
+   * @returns Observable of organization event attendance response
+   */
+  public getOrganizationEventAttendance(): Observable<OrganizationEventAttendanceResponse> {
+    return this.http.get<OrganizationEventAttendanceResponse>('/api/analytics/organization-event-attendance').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization event attendance:', error);
+        return of({
+          totalAttendees: 0,
+          totalSpeakers: 0,
+          totalEvents: 0,
+          accountId: '',
+          accountName: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level technical committee participation statistics
+   * @returns Observable of organization technical committee response
+   */
+  public getOrganizationTechnicalCommittee(): Observable<OrganizationTechnicalCommitteeResponse> {
+    return this.http.get<OrganizationTechnicalCommitteeResponse>('/api/analytics/organization-technical-committee').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization technical committee:', error);
+        return of({
+          totalRepresentatives: 0,
+          totalProjects: 0,
           accountId: '',
         });
       })

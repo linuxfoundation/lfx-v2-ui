@@ -233,3 +233,174 @@ export interface MembershipTierResponse {
    */
   accountId: string;
 }
+
+/**
+ * API response for Organization Contributors query
+ * Provides total count of active contributors for the organization
+ */
+export interface OrganizationContributorsResponse {
+  /**
+   * Total number of active contributors in the organization
+   */
+  contributors: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+
+  /**
+   * Organization/account name
+   */
+  accountName: string;
+
+  /**
+   * Total number of projects with contributors
+   */
+  projects: number;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_MAINTAINERS query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardMaintainersRow {
+  MAINTAINERS: number;
+  PROJECTS: number;
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_MEMBERSHIP_TIER query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MembershipTierRow {
+  PROJECT_ID: string;
+  PROJECT_NAME: string;
+  IS_PROJECT_ACTIVE: boolean;
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+  MEMBERSHIP_TIER: string;
+  MEMBERSHIP_PRICE: number;
+  START_DATE: string;
+  LAST_END_DATE: string;
+  RENEWAL_PRICE: number;
+  MEMBERSHIP_STATUS: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_CONTRIBUTORS query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface OrganizationContributorsRow {
+  CONTRIBUTORS: number;
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+  PROJECTS: number;
+}
+
+/**
+ * Snowflake row from project count query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface ProjectCountRow {
+  TOTAL_PROJECTS: number;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_EVENT_ATTENDANCE query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardEventAttendanceRow {
+  EVENT_NAME: string;
+  EVENT_END_DATE: string;
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+  ATTENDEES: number;
+  SPEAKERS: number;
+}
+
+/**
+ * Snowflake aggregated row from MEMBER_DASHBOARD_EVENT_ATTENDANCE query
+ * Raw response with Snowflake naming conventions (ALL_CAPS) for aggregated sums
+ */
+export interface OrganizationEventAttendanceRow {
+  TOTAL_ATTENDEES: number;
+  TOTAL_SPEAKERS: number;
+  TOTAL_EVENTS: number;
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+}
+
+/**
+ * API response for Organization Event Attendance query
+ * Provides aggregated event attendance statistics
+ */
+export interface OrganizationEventAttendanceResponse {
+  /**
+   * Total number of event attendees across all events
+   */
+  totalAttendees: number;
+
+  /**
+   * Total number of speakers across all events
+   */
+  totalSpeakers: number;
+
+  /**
+   * Total number of events with participation
+   */
+  totalEvents: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+
+  /**
+   * Organization/account name
+   */
+  accountName: string;
+}
+
+/**
+ * Snowflake row from TECHNICAL_COMMITTEE_MEMBER_COUNT query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface TechnicalCommitteeMemberCountRow {
+  PROJECT_ID: string;
+  ACCOUNT_ID: string;
+  COUNT: number;
+}
+
+/**
+ * Snowflake aggregated row from TECHNICAL_COMMITTEE_MEMBER_COUNT query
+ * Raw response with Snowflake naming conventions (ALL_CAPS) for aggregated sum
+ */
+export interface OrganizationTechnicalCommitteeRow {
+  TOTAL_REPRESENTATIVES: number;
+  TOTAL_PROJECTS: number;
+  ACCOUNT_ID: string;
+}
+
+/**
+ * API response for Organization Technical Committee Participation query
+ * Provides total count of TOC/TSC/TAG representatives
+ */
+export interface OrganizationTechnicalCommitteeResponse {
+  /**
+   * Total number of technical committee representatives across all projects
+   */
+  totalRepresentatives: number;
+
+  /**
+   * Total number of projects with technical committee participation
+   */
+  totalProjects: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}

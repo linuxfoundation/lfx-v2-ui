@@ -98,6 +98,8 @@ export interface ContributionMetric {
   descriptiveValue: string;
   /** Tooltip text explaining the metric */
   tooltip: string;
+  /** Whether the metric is connected to live API data (true) or using placeholder data (false) */
+  isConnected?: boolean;
 }
 
 /**
@@ -111,6 +113,8 @@ export interface ImpactMetric {
   descriptiveValue: string;
   /** Tooltip text explaining the metric */
   tooltip: string;
+  /** Whether the metric is connected to live API data (true) or using placeholder data (false) */
+  isConnected?: boolean;
 }
 
 /**
@@ -158,6 +162,8 @@ export interface OrganizationInvolvementMetricWithChart {
   nextDue?: string;
   /** Flag indicating this is a membership tier metric */
   isMembershipTier?: boolean;
+  /** Whether the metric is connected to live API data (true) or using placeholder data (false) */
+  isConnected?: boolean;
 }
 
 /**
