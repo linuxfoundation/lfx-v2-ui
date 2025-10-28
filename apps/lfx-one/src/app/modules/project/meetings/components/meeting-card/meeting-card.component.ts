@@ -25,6 +25,8 @@ import {
   MeetingRegistrant,
   PastMeeting,
   PastMeetingParticipant,
+  PastMeetingRecording,
+  PastMeetingSummary,
 } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -39,8 +41,13 @@ import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take
 import { MeetingCancelOccurrenceConfirmationComponent } from '../meeting-cancel-occurrence-confirmation/meeting-cancel-occurrence-confirmation.component';
 import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
 import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
+<<<<<<< HEAD
 import { MeetingDeleteTypeSelectionComponent, MeetingDeleteTypeResult } from '../meeting-delete-type-selection/meeting-delete-type-selection.component';
+=======
+import { RecordingModalComponent } from '../recording-modal/recording-modal.component';
+>>>>>>> 42e9854e6d1aa4b8b233aad197fb599327f015ef
 import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
+import { SummaryModalComponent } from '../summary-modal/summary-modal.component';
 
 @Component({
   selector: 'lfx-meeting-card',
@@ -88,6 +95,20 @@ export class MeetingCardComponent implements OnInit {
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
   public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
+  public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
+  public recordingShareUrl: Signal<string | null> = computed(() => {
+    const recording = this.recording();
+    return recording ? this.getLargestSessionShareUrl(recording) : null;
+  });
+  public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
+  public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
+  public summaryContent: Signal<string | null> = computed(() => {
+    const summary = this.summary();
+    return summary?.summary_data ? summary.summary_data.edited_content || summary.summary_data.content : null;
+  });
+  public summaryUid: Signal<string | null> = computed(() => this.summary()?.uid || null);
+  public summaryApproved: Signal<boolean> = computed(() => this.summary()?.approved || false);
+  public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
   public additionalParticipantsCount: WritableSignal<number> = signal(0);
   public actionMenuItems: Signal<MenuItem[]> = this.initializeActionMenuItems();
@@ -133,6 +154,8 @@ export class MeetingCardComponent implements OnInit {
 
   public ngOnInit(): void {
     this.attachments = this.initAttachments();
+    this.initRecording();
+    this.initSummary();
   }
 
   public onRegistrantsToggle(event: Event): void {
@@ -241,6 +264,74 @@ export class MeetingCardComponent implements OnInit {
       summary: 'Meeting Link Copied',
       detail: 'The meeting link has been copied to your clipboard',
     });
+  }
+
+  public openRecordingModal(): void {
+    if (!this.recordingShareUrl()) {
+      return;
+    }
+
+    this.dialogService.open(RecordingModalComponent, {
+      header: 'Meeting Recording',
+      width: '650px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        shareUrl: this.recordingShareUrl(),
+        meetingTitle: this.meeting().title,
+      },
+    });
+  }
+
+  public openSummaryModal(): void {
+    if (!this.summaryContent() || !this.summaryUid()) {
+      return;
+    }
+
+    const ref = this.dialogService.open(SummaryModalComponent, {
+      header: 'Meeting Summary',
+      width: '800px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        summaryContent: this.summaryContent(),
+        summaryUid: this.summaryUid(),
+        pastMeetingUid: this.meeting().uid,
+        meetingTitle: this.meeting().title,
+        approved: this.summaryApproved(),
+      },
+    });
+
+    // Update local content and approval status when changes are made
+    ref.onClose.pipe(take(1)).subscribe((result?: { updated: boolean; content: string; approved: boolean }) => {
+      if (result && result.updated) {
+        const currentSummary = this.summary();
+        if (currentSummary) {
+          this.summary.set({
+            ...currentSummary,
+            approved: result.approved,
+            summary_data: {
+              ...currentSummary.summary_data,
+              edited_content: result.content,
+            },
+          });
+        }
+      }
+    });
+  }
+
+  private getLargestSessionShareUrl(recording: PastMeetingRecording): string | null {
+    if (!recording.sessions || recording.sessions.length === 0) {
+      return null;
+    }
+
+    const largestSession = recording.sessions.reduce((largest, current) => {
+      return current.total_size > largest.total_size ? current : largest;
+    });
+
+    return largestSession.share_url || null;
   }
 
   private initMeetingRegistrantCount(): Signal<number> {
@@ -561,6 +652,30 @@ export class MeetingCardComponent implements OnInit {
   private initAttachments(): Signal<MeetingAttachment[]> {
     return runInInjectionContext(this.injector, () => {
       return toSignal(this.meetingService.getMeetingAttachments(this.meetingInput().uid).pipe(catchError(() => of([]))), { initialValue: [] });
+    });
+  }
+
+  private initRecording(): void {
+    runInInjectionContext(this.injector, () => {
+      toSignal(
+        this.meetingService.getPastMeetingRecording(this.meetingInput().uid).pipe(
+          catchError(() => of(null)),
+          tap((recording) => this.recording.set(recording))
+        ),
+        { initialValue: null }
+      );
+    });
+  }
+
+  private initSummary(): void {
+    runInInjectionContext(this.injector, () => {
+      toSignal(
+        this.meetingService.getPastMeetingSummary(this.meetingInput().uid).pipe(
+          catchError(() => of(null)),
+          tap((summary) => this.summary.set(summary))
+        ),
+        { initialValue: null }
+      );
     });
   }
 
