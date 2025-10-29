@@ -352,12 +352,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/organization-maintainers
    * Get organization-level maintainer and project statistics
+   * Query params: accountId (optional) - Organization account ID
    */
   public async getOrganizationMaintainers(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_maintainers');
 
     try {
-      const accountId = '0014100000Te0OKAAZ';
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
 
       const query = `
         SELECT MAINTAINERS, PROJECTS, ACCOUNT_ID, ACCOUNT_NAME
@@ -397,15 +399,16 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/membership-tier
    * Get organization membership tier details including dates and pricing
+   * Query params: accountId (optional) - Organization account ID
    */
   public async getMembershipTier(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_membership_tier');
 
     try {
-      // TODO: Get PROJECT_ID and ACCOUNT_ID from user profile or session
-      // For now, using hardcoded values from example query
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      // TODO: Get PROJECT_ID from user profile or session
       const projectId = 'a0941000002wBz9AAE';
-      const accountId = '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
 
       // Query for membership tier information from consolidated dashboard table
       const query = `
@@ -433,8 +436,8 @@ export class AnalyticsController {
       // Build response
       const response: MembershipTierResponse = {
         tier,
-        membershipStartDate: row.START_DATE,
-        membershipEndDate: row.LAST_END_DATE,
+        membershipStartDate: row.CURRENT_MEMBERSHIP_START_DATE,
+        membershipEndDate: row.CURRENT_MEMBERSHIP_END_DATE,
         membershipPrice: row.MEMBERSHIP_PRICE,
         membershipStatus: row.MEMBERSHIP_STATUS,
         accountId: row.ACCOUNT_ID,
@@ -457,14 +460,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/organization-contributors
    * Get organization-level contributor statistics
+   * Query params: accountId (optional) - Organization account ID
    */
   public async getOrganizationContributors(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_contributors');
 
     try {
-      // TODO: Get organization ACCOUNT_ID from user profile or session
-      // For now, using hardcoded ACCOUNT_ID from example query
-      const accountId = '0014100000Te0OKAAZ';
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
 
       // Query for organization contributors
       const query = `
@@ -509,12 +512,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/organization-event-attendance
    * Get organization event attendance statistics (total attendees and speakers)
+   * Query params: accountId (optional) - Organization account ID
    */
   public async getOrganizationEventAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_event_attendance');
 
     try {
-      const accountId = '0014100000Te0OKAAZ';
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
 
       const query = `
         SELECT
@@ -562,12 +567,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/organization-technical-committee
    * Get organization-level technical committee participation (TOC/TSC/TAG representatives)
+   * Query params: accountId (optional) - Organization account ID
    */
   public async getOrganizationTechnicalCommittee(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_technical_committee');
 
     try {
-      const accountId = '0014100000Te0OKAAZ';
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
 
       // Query with SQL aggregation for better performance
       const query = `

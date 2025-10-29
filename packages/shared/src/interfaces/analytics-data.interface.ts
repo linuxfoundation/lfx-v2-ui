@@ -283,8 +283,8 @@ export interface MembershipTierRow {
   ACCOUNT_NAME: string;
   MEMBERSHIP_TIER: string;
   MEMBERSHIP_PRICE: number;
-  START_DATE: string;
-  LAST_END_DATE: string;
+  CURRENT_MEMBERSHIP_START_DATE: string;
+  CURRENT_MEMBERSHIP_END_DATE: string;
   RENEWAL_PRICE: number;
   MEMBERSHIP_STATUS: string;
 }

@@ -3,7 +3,8 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { AccountContextService } from '@app/shared/services/account-context.service';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
 import { ChartComponent } from '@components/chart/chart.component';
 import { CONTRIBUTIONS_METRICS, IMPACT_METRICS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
@@ -17,6 +18,7 @@ import {
   PrimaryInvolvementMetric,
 } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
+import { map, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-organization-involvement',
@@ -27,22 +29,34 @@ import { hexToRgba } from '@lfx-one/shared/utils';
 })
 export class OrganizationInvolvementComponent {
   private readonly analyticsService = inject(AnalyticsService);
-  private readonly organizationMaintainersData = toSignal(this.analyticsService.getOrganizationMaintainers(), {
-    initialValue: {
-      maintainers: 0,
-      projects: 0,
-      accountId: '',
-    },
-  });
-  private readonly organizationContributorsData = toSignal(this.analyticsService.getOrganizationContributors(), {
-    initialValue: {
-      contributors: 0,
-      accountId: '',
-      accountName: '',
-      projects: 0,
-    },
-  });
-  private readonly membershipTierData = toSignal(this.analyticsService.getMembershipTier(), {
+  private readonly accountContextService = inject(AccountContextService);
+
+  private readonly selectedAccountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
+
+  private readonly organizationMaintainersData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationMaintainers(accountId))),
+    {
+      initialValue: {
+        maintainers: 0,
+        projects: 0,
+        accountId: '',
+      },
+    }
+  );
+
+  private readonly organizationContributorsData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationContributors(accountId))),
+    {
+      initialValue: {
+        contributors: 0,
+        accountId: '',
+        accountName: '',
+        projects: 0,
+      },
+    }
+  );
+
+  private readonly membershipTierData = toSignal(this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getMembershipTier(accountId))), {
     initialValue: {
       tier: '',
       membershipStartDate: '',
@@ -52,22 +66,30 @@ export class OrganizationInvolvementComponent {
       accountId: '',
     },
   });
-  private readonly eventAttendanceData = toSignal(this.analyticsService.getOrganizationEventAttendance(), {
-    initialValue: {
-      totalAttendees: 0,
-      totalSpeakers: 0,
-      totalEvents: 0,
-      accountId: '',
-      accountName: '',
-    },
-  });
-  private readonly technicalCommitteeData = toSignal(this.analyticsService.getOrganizationTechnicalCommittee(), {
-    initialValue: {
-      totalRepresentatives: 0,
-      totalProjects: 0,
-      accountId: '',
-    },
-  });
+
+  private readonly eventAttendanceData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationEventAttendance(accountId))),
+    {
+      initialValue: {
+        totalAttendees: 0,
+        totalSpeakers: 0,
+        totalEvents: 0,
+        accountId: '',
+        accountName: '',
+      },
+    }
+  );
+
+  private readonly technicalCommitteeData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationTechnicalCommittee(accountId))),
+    {
+      initialValue: {
+        totalRepresentatives: 0,
+        totalProjects: 0,
+        accountId: '',
+      },
+    }
+  );
 
   protected readonly isLoading = computed<boolean>(() => {
     const maintainersData = this.organizationMaintainersData();

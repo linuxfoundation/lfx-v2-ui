@@ -98,10 +98,12 @@ export class AnalyticsService {
 
   /**
    * Get organization-level maintainer and project statistics
+   * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of organization maintainers response
    */
-  public getOrganizationMaintainers(): Observable<OrganizationMaintainersResponse> {
-    return this.http.get<OrganizationMaintainersResponse>('/api/analytics/organization-maintainers').pipe(
+  public getOrganizationMaintainers(accountId?: string): Observable<OrganizationMaintainersResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationMaintainersResponse>('/api/analytics/organization-maintainers', options).pipe(
       catchError((error) => {
         console.error('Failed to fetch organization maintainers:', error);
         return of({
@@ -115,10 +117,12 @@ export class AnalyticsService {
 
   /**
    * Get organization-level contributor statistics
+   * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of organization contributors response
    */
-  public getOrganizationContributors(): Observable<OrganizationContributorsResponse> {
-    return this.http.get<OrganizationContributorsResponse>('/api/analytics/organization-contributors').pipe(
+  public getOrganizationContributors(accountId?: string): Observable<OrganizationContributorsResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationContributorsResponse>('/api/analytics/organization-contributors', options).pipe(
       catchError((error) => {
         console.error('Failed to fetch organization contributors:', error);
         return of({
@@ -133,10 +137,12 @@ export class AnalyticsService {
 
   /**
    * Get organization membership tier details
+   * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of membership tier response
    */
-  public getMembershipTier(): Observable<MembershipTierResponse> {
-    return this.http.get<MembershipTierResponse>('/api/analytics/membership-tier').pipe(
+  public getMembershipTier(accountId?: string): Observable<MembershipTierResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<MembershipTierResponse>('/api/analytics/membership-tier', options).pipe(
       catchError((error) => {
         console.error('Failed to fetch membership tier:', error);
         return of({
@@ -153,10 +159,12 @@ export class AnalyticsService {
 
   /**
    * Get organization-level event attendance statistics
+   * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of organization event attendance response
    */
-  public getOrganizationEventAttendance(): Observable<OrganizationEventAttendanceResponse> {
-    return this.http.get<OrganizationEventAttendanceResponse>('/api/analytics/organization-event-attendance').pipe(
+  public getOrganizationEventAttendance(accountId?: string): Observable<OrganizationEventAttendanceResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationEventAttendanceResponse>('/api/analytics/organization-event-attendance', options).pipe(
       catchError((error) => {
         console.error('Failed to fetch organization event attendance:', error);
         return of({
@@ -172,10 +180,12 @@ export class AnalyticsService {
 
   /**
    * Get organization-level technical committee participation statistics
+   * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of organization technical committee response
    */
-  public getOrganizationTechnicalCommittee(): Observable<OrganizationTechnicalCommitteeResponse> {
-    return this.http.get<OrganizationTechnicalCommitteeResponse>('/api/analytics/organization-technical-committee').pipe(
+  public getOrganizationTechnicalCommittee(accountId?: string): Observable<OrganizationTechnicalCommitteeResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationTechnicalCommitteeResponse>('/api/analytics/organization-technical-committee', options).pipe(
       catchError((error) => {
         console.error('Failed to fetch organization technical committee:', error);
         return of({
