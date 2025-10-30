@@ -136,6 +136,7 @@ export class SnowflakeService {
             query_hash: queryHash,
             duration_ms: duration,
           },
+          originalError: error instanceof Error ? error : undefined,
         });
       }
     });
@@ -325,9 +326,9 @@ export class SnowflakeService {
           idle_timeout_ms: SNOWFLAKE_CONFIG.IDLE_TIMEOUT,
           acquire_timeout_ms: SNOWFLAKE_CONFIG.CONNECTION_ACQUIRE_TIMEOUT,
           test_on_borrow: true,
-          account: process.env['SNOWFLAKE_ACCOUNT'],
-          warehouse: process.env['SNOWFLAKE_WAREHOUSE'],
-          database: process.env['SNOWFLAKE_DATABASE'],
+          account: requiredEnvVars.SNOWFLAKE_ACCOUNT,
+          warehouse: requiredEnvVars.SNOWFLAKE_WAREHOUSE,
+          database: requiredEnvVars.SNOWFLAKE_DATABASE,
         },
         'Snowflake connection pool created successfully'
       );
@@ -338,7 +339,7 @@ export class SnowflakeService {
       serverLogger.error(
         {
           error: errorMessage,
-          account: process.env['SNOWFLAKE_ACCOUNT'],
+          account: requiredEnvVars.SNOWFLAKE_ACCOUNT,
         },
         'Failed to create Snowflake connection pool'
       );
@@ -347,8 +348,9 @@ export class SnowflakeService {
         operation: 'snowflake_pool_creation',
         service: 'snowflake',
         errorBody: {
-          account: process.env['SNOWFLAKE_ACCOUNT'],
+          account: requiredEnvVars.SNOWFLAKE_ACCOUNT,
         },
+        originalError: error instanceof Error ? error : undefined,
       });
     }
   }
