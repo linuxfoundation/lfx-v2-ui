@@ -46,8 +46,10 @@
         <div class="flex-1 min-w-0">
           <!-- Status badge and name -->
           <div class="flex items-center gap-2 mb-1">
-            <!-- Status badge (will include invited/accepted/declined/maybe) -->
-            <lfx-badge value="Invited" severity="secondary" size="small" styleClass="inline-flex items-center"> </lfx-badge>
+            <!-- RSVP status badge (invited/accepted/declined/maybe) -->
+            <lfx-badge [value]="rsvpBadge().label" [severity]="rsvpBadge().severity" size="small" styleClass="inline-flex items-center gap-1">
+              <i [class]="rsvpBadge().icon + ' text-xs'"></i>
+            </lfx-badge>
             @if (registrant().host) {
               <lfx-badge value="Host" severity="success" size="small" styleClass="inline-flex items-center"> </lfx-badge>
             }

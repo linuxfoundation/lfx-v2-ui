@@ -4,7 +4,7 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
@@ -92,7 +92,7 @@ export class MeetingCardComponent implements OnInit {
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
   public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
-  public meetingRsvps: WritableSignal<MeetingRsvp[]> = signal([]);
+  public meetingRsvps: Signal<MeetingRsvp[]> = this.initMeetingRsvps();
   public rsvpCounts: Signal<RsvpCounts> = this.initRsvpCounts();
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public recordingShareUrl: Signal<string | null> = computed(() => {
@@ -147,27 +147,6 @@ export class MeetingCardComponent implements OnInit {
       } else {
         // For past meetings without occurrence input, set to null
         this.occurrence.set(null);
-      }
-    });
-
-    // Load RSVPs when meeting changes
-    effect(() => {
-      const meeting = this.meeting();
-      if (meeting?.uid && !this.pastMeeting()) {
-        this.meetingService
-          .getMeetingRsvps(meeting.uid)
-          .pipe(
-            tap((rsvps) => {
-              this.meetingRsvps.set(rsvps);
-            }),
-            catchError(() => {
-              this.meetingRsvps.set([]);
-              return of([]);
-            })
-          )
-          .subscribe();
-      } else {
-        this.meetingRsvps.set([]);
       }
     });
   }
@@ -449,7 +428,57 @@ export class MeetingCardComponent implements OnInit {
             .pipe(catchError(() => of([])))
             .pipe(
               map((registrants) => {
-                return registrants;
+                // Create a map of RSVPs by username and email for matching
+                const rsvps = this.meetingRsvps();
+                const rsvpMap = new Map<string, MeetingRsvp>();
+
+                rsvps.forEach((rsvp) => {
+                  if (rsvp.username) {
+                    const usernameKey = rsvp.username.toLowerCase().trim();
+                    const existing = rsvpMap.get(usernameKey);
+                    if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
+                      rsvpMap.set(usernameKey, rsvp);
+                    }
+                  }
+                  if (rsvp.email) {
+                    const emailKey = rsvp.email.toLowerCase().trim();
+                    const existing = rsvpMap.get(emailKey);
+                    if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
+                      rsvpMap.set(emailKey, rsvp);
+                    }
+                  }
+                });
+
+                // Match RSVPs to registrants and update invite_accepted based on RSVP response
+                return registrants.map((registrant) => {
+                  let rsvp: MeetingRsvp | undefined;
+
+                  // Try to find RSVP by username first, then email (case-insensitive)
+                  if (registrant.username) {
+                    rsvp = rsvpMap.get(registrant.username.toLowerCase().trim());
+                  }
+
+                  if (!rsvp && registrant.email) {
+                    rsvp = rsvpMap.get(registrant.email.toLowerCase().trim());
+                  }
+
+                  // Update invite_accepted based on RSVP response
+                  if (rsvp) {
+                    let inviteAccepted: boolean | null = null;
+                    if (rsvp.response === 'accepted') {
+                      inviteAccepted = true;
+                    } else if (rsvp.response === 'declined') {
+                      inviteAccepted = false;
+                    }
+
+                    return {
+                      ...registrant,
+                      invite_accepted: inviteAccepted,
+                    };
+                  }
+
+                  return registrant;
+                });
               }),
               // Sort registrants by first name
               map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
@@ -618,6 +647,22 @@ export class MeetingCardComponent implements OnInit {
         { initialValue: null }
       );
     });
+  }
+
+  private initMeetingRsvps(): Signal<MeetingRsvp[]> {
+    const meeting$ = toObservable(this.meeting);
+
+    return toSignal(
+      meeting$.pipe(
+        switchMap((meeting) => {
+          if (meeting?.uid && !this.pastMeeting()) {
+            return this.meetingService.getMeetingRsvps(meeting.uid).pipe(catchError(() => of([])));
+          }
+          return of([]);
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 
   private initRsvpCounts(): Signal<RsvpCounts> {

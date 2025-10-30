@@ -818,6 +818,9 @@ export class MeetingController {
     }
   }
 
+  /**
+   * GET /meetings/:uid/rsvps
+   */
   public async getMeetingRsvps(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
 

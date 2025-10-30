@@ -3,7 +3,7 @@
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
 import { RsvpScopeModalComponent } from '@app/shared/components/rsvp-scope-modal/rsvp-scope-modal.component';
@@ -13,7 +13,7 @@ import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 interface MeetingTypeBadge {
   label: string;
@@ -34,7 +34,10 @@ export class DashboardMeetingCardComponent {
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
+  public readonly refreshTrigger = input<number>(0);
+  public readonly skipRefreshMeetingUid = input<string | null>(null);
   public readonly onSeeMeeting = output<string>();
+  public readonly onRsvpSubmitted = output<{ response: RsvpResponse; scope: RsvpScope; meetingUid: string }>();
 
   public readonly attachments: Signal<MeetingAttachment[]>;
   public readonly userRsvp: WritableSignal<MeetingRsvp | null> = signal(null);
@@ -171,20 +174,42 @@ export class DashboardMeetingCardComponent {
 
     this.attachments = toSignal(attachments$, { initialValue: [] });
 
-    // Load user's RSVP when meeting changes
-    effect(() => {
-      const meeting = this.meeting();
-      if (meeting?.uid) {
-        this.meetingService
-          .getUserMeetingRsvp(meeting.uid)
-          .pipe(
-            tap((rsvp) => {
-              this.userRsvp.set(rsvp);
-            })
-          )
-          .subscribe();
-      }
-    });
+    // Create signal-based RSVP loading that handles both initial load and refresh
+    const rsvpFetchTrigger = computed(() => ({
+      meetingUid: this.meeting()?.uid,
+      refreshTrigger: this.refreshTrigger(),
+      skipUid: this.skipRefreshMeetingUid(),
+    }));
+
+    const rsvpFetchTrigger$ = toObservable(rsvpFetchTrigger);
+
+    // Fetch RSVP when meeting changes or when explicitly refreshed
+    rsvpFetchTrigger$
+      .pipe(
+        map(({ meetingUid, refreshTrigger, skipUid }) => {
+          // Don't fetch if no meeting
+          if (!meetingUid) return null;
+
+          // Skip refresh if this is the card that was just updated (but allow initial load)
+          if (refreshTrigger > 0 && skipUid && meetingUid === skipUid) {
+            return null;
+          }
+
+          // Return meeting UID to trigger fetch (include refreshTrigger to force new fetch on refresh)
+          return refreshTrigger === 0 ? meetingUid : `${meetingUid}-${refreshTrigger}`;
+        }),
+        switchMap((fetchKey) => {
+          if (!fetchKey) return of(null);
+
+          // Extract meeting UID (handle both "uid" and "uid-trigger" formats)
+          const meetingUid = fetchKey.split('-')[0];
+
+          return this.meetingService.getUserMeetingRsvp(meetingUid).pipe(catchError(() => of(null)));
+        })
+      )
+      .subscribe((rsvp) => {
+        this.userRsvp.set(rsvp);
+      });
   }
 
   public handleSeeMeeting(): void {
@@ -195,9 +220,13 @@ export class DashboardMeetingCardComponent {
     if (this.isRecurringMeeting()) {
       // Show scope selection modal for recurring meetings
       const ref = this.dialogService.open(RsvpScopeModalComponent, {
-        header: 'RSVP Scope',
+        header: 'RSVP',
         width: '500px',
         modal: true,
+        data: {
+          meeting: this.meeting(),
+          occurrence: this.occurrence(),
+        },
       });
 
       ref.onClose.subscribe((scope: RsvpScope | null) => {
@@ -206,8 +235,8 @@ export class DashboardMeetingCardComponent {
         }
       });
     } else {
-      // For non-recurring meetings, use 'this' scope
-      this.submitRsvp(response, 'this');
+      // For non-recurring meetings, use 'single' scope
+      this.submitRsvp(response, 'single');
     }
   }
 
@@ -230,6 +259,8 @@ export class DashboardMeetingCardComponent {
             summary: 'RSVP Submitted',
             detail: `Your RSVP has been recorded as "${response}".`,
           });
+          // Emit event so parent can refresh other cards if scope affects multiple occurrences
+          this.onRsvpSubmitted.emit({ response, scope, meetingUid: meeting.uid });
         }),
         catchError(() => {
           this.messageService.add({

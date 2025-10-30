@@ -667,9 +667,20 @@ export class MeetingService {
 
     try {
       const username = await getUsernameFromAuth(req);
+
+      if (!username) {
+        Logger.success(req, 'get_user_meeting_rsvp', Date.now(), {
+          found: false,
+          reason: 'no_username',
+        });
+        return null;
+      }
+
       const params = {
-        tags: `meeting_uid:${meetingUid},username:${username}`,
+        tags: `username:${username}`,
         type: 'meeting_rsvp',
+        order_by: 'updated_at',
+        order_direction: 'desc',
       };
 
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(
@@ -680,14 +691,18 @@ export class MeetingService {
         params
       );
 
-      if (resources.length === 0) {
+      // Filter by meeting_uid
+      const matchingRsvps = resources.filter((r) => r.data.meeting_uid === meetingUid);
+
+      if (matchingRsvps.length === 0) {
         Logger.success(req, 'get_user_meeting_rsvp', Date.now(), {
           found: false,
         });
         return null;
       }
 
-      const rsvp = resources[0].data;
+      // Return the most recent RSVP for this meeting (first one due to desc sort)
+      const rsvp = matchingRsvps[0].data;
 
       Logger.success(req, 'get_user_meeting_rsvp', Date.now(), {
         found: true,

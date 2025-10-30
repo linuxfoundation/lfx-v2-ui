@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { MeetingOccurrence, MeetingRsvp, RsvpResponse } from '../interfaces/meeting.interface';
+import { MeetingOccurrence, MeetingRsvp } from '../interfaces/meeting.interface';
 
 export interface RsvpCounts {
   accepted: number;
@@ -12,7 +12,7 @@ export interface RsvpCounts {
 
 /**
  * Calculate RSVP counts for a specific occurrence
- * Takes into account RSVP scope (this, all, following) and uses the most recent RSVP per user
+ * Takes into account RSVP scope (single, all, following) and uses the most recent RSVP per user
  *
  * @param occurrence - The meeting occurrence to calculate for (or null for non-recurring meetings)
  * @param allRsvps - All RSVPs for the meeting
@@ -38,7 +38,7 @@ export function calculateRsvpCounts(occurrence: MeetingOccurrence | null, allRsv
   // For each user, determine which RSVP applies to this occurrence
   const applicableRsvps: MeetingRsvp[] = [];
 
-  for (const [username, userRsvps] of rsvpsByUsername.entries()) {
+  for (const userRsvps of rsvpsByUsername.values()) {
     const applicableRsvp = getApplicableRsvp(occurrence, userRsvps, meetingStartTime);
     if (applicableRsvp) {
       applicableRsvps.push(applicableRsvp);
@@ -88,23 +88,21 @@ function getApplicableRsvp(occurrence: MeetingOccurrence | null, userRsvps: Meet
     return sortedRsvps[0] || null;
   }
 
-  const occurrenceId = (occurrence as any).occurrence_id;
+  const occurrenceId = occurrence.occurrence_id;
   const occurrenceDate = new Date(occurrence.start_time);
 
   // Check each RSVP from newest to oldest (most recent wins)
   // Return the first RSVP that applies to this occurrence
   for (const rsvp of sortedRsvps) {
-    const rsvpData = rsvp as any;
-
     // Check if this RSVP applies to the current occurrence
     if (rsvp.scope === 'all') {
       // 'all' scope applies to all occurrences
       return rsvp;
     }
 
-    // Check for 'single' or 'this' scope with matching occurrence_id
-    if ((rsvp.scope === 'this' || rsvpData.scope === 'single') && occurrenceId) {
-      if (rsvpData.occurrence_id === occurrenceId || rsvpData.occurrence_id === String(occurrenceId)) {
+    // Check for 'single' scope with matching occurrence_id
+    if (rsvp.scope === 'single' && occurrenceId) {
+      if (rsvp.occurrence_id === occurrenceId || rsvp.occurrence_id === String(occurrenceId)) {
         return rsvp;
       }
       // If occurrence_id doesn't match, this RSVP doesn't apply to this occurrence

@@ -372,6 +372,8 @@ export interface MeetingRegistrantWithState extends MeetingRegistrant {
   originalData?: MeetingRegistrant;
   /** Temporary ID for new registrants (starts with 'temp_') */
   tempId?: string;
+  /** RSVP response status for this registrant */
+  rsvpStatus?: RsvpResponse;
 }
 
 /**
@@ -698,7 +700,7 @@ export type RsvpResponse = 'accepted' | 'maybe' | 'declined';
  * RSVP scope type
  * @description Defines which occurrences of a recurring meeting the RSVP applies to
  */
-export type RsvpScope = 'this' | 'all' | 'following';
+export type RsvpScope = 'single' | 'all' | 'following';
 
 /**
  * Meeting RSVP information
@@ -719,6 +721,8 @@ export interface MeetingRsvp {
   response: RsvpResponse;
   /** Scope of the RSVP (which occurrences it applies to) */
   scope: RsvpScope;
+  /** Occurrence ID (only present when scope is 'single') */
+  occurrence_id?: string;
   /** Creation timestamp */
   created_at: string;
   /** Last update timestamp */

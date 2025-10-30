@@ -10,12 +10,12 @@ import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantPendingChanges, RegistrantState } from '@lfx-one/shared/interfaces';
+import { MeetingRegistrant, MeetingRegistrantWithState, MeetingRsvp, RegistrantPendingChanges, RegistrantState } from '@lfx-one/shared/interfaces';
 import { generateTempId } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { BehaviorSubject, catchError, finalize, of, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, forkJoin, of, take, tap } from 'rxjs';
 
 import { RegistrantCardComponent } from '../registrant-card/registrant-card.component';
 import { RegistrantFormComponent } from '../registrant-form/registrant-form.component';
@@ -286,12 +286,13 @@ export class MeetingRegistrantsComponent implements OnInit {
     });
   }
 
-  private createRegistrantWithState(registrant: MeetingRegistrant, state: RegistrantState = 'existing'): MeetingRegistrantWithState {
+  private createRegistrantWithState(registrant: MeetingRegistrant, state: RegistrantState = 'existing', rsvpStatus?: string): MeetingRegistrantWithState {
     return {
       ...registrant,
       state: state,
       originalData: state === 'existing' ? { ...registrant } : undefined,
       tempId: state === 'new' ? generateTempId() : undefined,
+      rsvpStatus: rsvpStatus as any,
     };
   }
 
@@ -299,24 +300,69 @@ export class MeetingRegistrantsComponent implements OnInit {
     const uid = this.meetingUid();
     if (!uid) return;
 
-    this.meetingService
-      .getMeetingRegistrants(uid)
+    // Fetch both registrants and RSVPs in parallel
+    forkJoin({
+      registrants: this.meetingService.getMeetingRegistrants(uid).pipe(
+        catchError((error) => {
+          console.error('Error fetching registrants:', error);
+          return of([]);
+        })
+      ),
+      rsvps: this.meetingService.getMeetingRsvps(uid).pipe(
+        catchError((error) => {
+          console.error('Error fetching RSVPs:', error);
+          return of([]);
+        })
+      ),
+    })
       .pipe(
         take(1),
-        catchError((error) => {
-          console.error('Error', error);
-          return of([]);
-        }),
         finalize(() => {
           this.loading.set(false);
         }),
-        tap((registrants) => {
+        tap(({ registrants, rsvps }) => {
           if (!registrants || registrants.length === 0) {
             this.registrantsWithState.set([]);
             return;
           }
 
-          this.registrantsWithState.set(registrants.map((r) => this.createRegistrantWithState(r, 'existing')));
+          // Create a map of username/email to RSVP status
+          const rsvpMap = new Map<string, MeetingRsvp>();
+          rsvps.forEach((rsvp) => {
+            // Create keys for both username and email to ensure matching works
+            if (rsvp.username) {
+              const usernameKey = rsvp.username.toLowerCase().trim();
+              const existing = rsvpMap.get(usernameKey);
+              if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
+                rsvpMap.set(usernameKey, rsvp);
+              }
+            }
+            if (rsvp.email) {
+              const emailKey = rsvp.email.toLowerCase().trim();
+              const existing = rsvpMap.get(emailKey);
+              if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
+                rsvpMap.set(emailKey, rsvp);
+              }
+            }
+          });
+
+          // Match registrants with their RSVP status
+          this.registrantsWithState.set(
+            registrants.map((r) => {
+              // Try to find RSVP by username first, then email (case-insensitive)
+              let rsvp: MeetingRsvp | undefined;
+
+              if (r.username) {
+                rsvp = rsvpMap.get(r.username.toLowerCase().trim());
+              }
+
+              if (!rsvp && r.email) {
+                rsvp = rsvpMap.get(r.email.toLowerCase().trim());
+              }
+
+              return this.createRegistrantWithState(r, 'existing', rsvp?.response);
+            })
+          );
         })
       )
       .subscribe();

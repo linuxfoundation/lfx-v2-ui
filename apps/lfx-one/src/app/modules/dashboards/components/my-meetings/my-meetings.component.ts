@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MeetingService } from '@app/shared/services/meeting.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { DashboardMeetingCardComponent } from '@components/dashboard-meeting-card/dashboard-meeting-card.component';
 
-import type { Meeting, MeetingOccurrence } from '@lfx-one/shared/interfaces';
+import type { Meeting, MeetingOccurrence, RsvpResponse, RsvpScope } from '@lfx-one/shared/interfaces';
 
 interface MeetingWithOccurrence {
   meeting: Meeting;
@@ -28,6 +28,11 @@ export class MyMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly router = inject(Router);
   private readonly allMeetings = toSignal(this.meetingService.getMeetings(), { initialValue: [] });
+
+  // Signal to trigger RSVP refresh across all cards
+  protected readonly refreshRsvpTrigger = signal<number>(0);
+  // Track which meeting was just updated (to skip refreshing it)
+  protected readonly skipRefreshMeetingUid = signal<string | null>(null);
 
   protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();
@@ -137,5 +142,19 @@ export class MyMeetingsComponent {
 
   public handleViewAll(): void {
     this.router.navigate(['/meetings']);
+  }
+
+  public handleRsvpSubmitted(event: { response: RsvpResponse; scope: RsvpScope; meetingUid: string }): void {
+    // If scope is "all" or "following", refresh all cards EXCEPT the one that was clicked
+    if (event.scope === 'all' || event.scope === 'following') {
+      // Store the meeting UID to skip refreshing it
+      this.skipRefreshMeetingUid.set(event.meetingUid);
+      // Increment the trigger to notify all cards to refresh
+      this.refreshRsvpTrigger.update((v) => v + 1);
+      // Clear the skip UID after a short delay
+      setTimeout(() => {
+        this.skipRefreshMeetingUid.set(null);
+      }, 1000);
+    }
   }
 }

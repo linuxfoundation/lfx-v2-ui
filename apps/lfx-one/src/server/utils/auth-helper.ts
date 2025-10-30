@@ -11,19 +11,12 @@ export async function getUsernameFromAuth(req: Request): Promise<string | null> 
   // Check if we have a bearer token
   const token = req.bearerToken;
   if (token) {
-    // If token starts with "authelia", try to get username from various fields
+    // If token starts with "authelia", query the authelia userinfo endpoint
     if (token.startsWith('authelia')) {
-      return (
-        req.oidc?.user?.['preferred_username'] ||
-        req.oidc?.user?.['username'] ||
-        req.oidc?.user?.['name'] ||
-        req.oidc?.user?.['email'] ||
-        req.oidc?.user?.['sub'] ||
-        null
-      );
+      return req.oidc?.user?.['preferred_username'] || null;
     }
   }
 
-  // For non-authelia tokens, try LFX SSO claim first
-  return req.oidc?.user?.['https://sso.linuxfoundation.org/claims/username'] || req.oidc?.user?.['username'] || req.oidc?.user?.['preferred_username'] || null;
+  // Fall back to OIDC claims for non-authelia tokens
+  return req.oidc?.user?.['sub'] || null;
 }

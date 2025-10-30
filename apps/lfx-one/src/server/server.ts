@@ -230,7 +230,6 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       if (!auth.user?.name) {
         auth.user = await req.oidc.fetchUserInfo();
       }
-      console.log('auth.user', auth.user);
     } catch (error) {
       // If userinfo fetch fails, fall back to basic user info from token
       req.log.warn(
