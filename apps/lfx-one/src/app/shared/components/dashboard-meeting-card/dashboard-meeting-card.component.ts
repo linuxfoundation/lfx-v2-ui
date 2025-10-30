@@ -35,9 +35,9 @@ export class DashboardMeetingCardComponent {
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
   public readonly refreshTrigger = input<number>(0);
-  public readonly skipRefreshMeetingUid = input<string | null>(null);
+  public readonly skipRefreshKey = input<string | null>(null);
   public readonly onSeeMeeting = output<string>();
-  public readonly onRsvpSubmitted = output<{ response: RsvpResponse; scope: RsvpScope; meetingUid: string }>();
+  public readonly onRsvpSubmitted = output<{ response: RsvpResponse; scope: RsvpScope; meetingUid: string; occurrenceId: string }>();
 
   public readonly attachments: Signal<MeetingAttachment[]>;
   public readonly userRsvp: WritableSignal<MeetingRsvp | null> = signal(null);
@@ -177,8 +177,9 @@ export class DashboardMeetingCardComponent {
     // Create signal-based RSVP loading that handles both initial load and refresh
     const rsvpFetchTrigger = computed(() => ({
       meetingUid: this.meeting()?.uid,
+      occurrenceId: this.occurrence()?.occurrence_id || '',
       refreshTrigger: this.refreshTrigger(),
-      skipUid: this.skipRefreshMeetingUid(),
+      skipKey: this.skipRefreshKey(),
     }));
 
     const rsvpFetchTrigger$ = toObservable(rsvpFetchTrigger);
@@ -186,25 +187,24 @@ export class DashboardMeetingCardComponent {
     // Fetch RSVP when meeting changes or when explicitly refreshed
     rsvpFetchTrigger$
       .pipe(
-        map(({ meetingUid, refreshTrigger, skipUid }) => {
+        map(({ meetingUid, occurrenceId, refreshTrigger, skipKey }) => {
           // Don't fetch if no meeting
           if (!meetingUid) return null;
 
+          // Create composite key for this card
+          const cardKey = `${meetingUid}:${occurrenceId}`;
+
           // Skip refresh if this is the card that was just updated (but allow initial load)
-          if (refreshTrigger > 0 && skipUid && meetingUid === skipUid) {
+          if (refreshTrigger > 0 && skipKey && cardKey === skipKey) {
             return null;
           }
 
           // Return meeting UID to trigger fetch (include refreshTrigger to force new fetch on refresh)
-          return refreshTrigger === 0 ? meetingUid : `${meetingUid}-${refreshTrigger}`;
+          return { meetingUid, refreshTrigger };
         }),
-        switchMap((fetchKey) => {
-          if (!fetchKey) return of(null);
-
-          // Extract meeting UID (handle both "uid" and "uid-trigger" formats)
-          const meetingUid = fetchKey.split('-')[0];
-
-          return this.meetingService.getUserMeetingRsvp(meetingUid).pipe(catchError(() => of(null)));
+        switchMap((data) => {
+          if (!data) return of(null);
+          return this.meetingService.getUserMeetingRsvp(data.meetingUid).pipe(catchError(() => of(null)));
         })
       )
       .subscribe((rsvp) => {
@@ -249,6 +249,7 @@ export class DashboardMeetingCardComponent {
     };
 
     const meeting = this.meeting();
+    const occurrence = this.occurrence();
     this.meetingService
       .createMeetingRsvp(meeting.uid, request)
       .pipe(
@@ -260,7 +261,7 @@ export class DashboardMeetingCardComponent {
             detail: `Your RSVP has been recorded as "${response}".`,
           });
           // Emit event so parent can refresh other cards if scope affects multiple occurrences
-          this.onRsvpSubmitted.emit({ response, scope, meetingUid: meeting.uid });
+          this.onRsvpSubmitted.emit({ response, scope, meetingUid: meeting.uid, occurrenceId: occurrence?.occurrence_id || '' });
         }),
         catchError(() => {
           this.messageService.add({

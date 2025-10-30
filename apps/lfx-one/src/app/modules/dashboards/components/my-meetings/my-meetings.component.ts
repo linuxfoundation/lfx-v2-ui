@@ -31,8 +31,8 @@ export class MyMeetingsComponent {
 
   // Signal to trigger RSVP refresh across all cards
   protected readonly refreshRsvpTrigger = signal<number>(0);
-  // Track which meeting was just updated (to skip refreshing it)
-  protected readonly skipRefreshMeetingUid = signal<string | null>(null);
+  // Track which occurrence was just updated (to skip refreshing it) - uses composite key: meetingUid:occurrenceId
+  protected readonly skipRefreshKey = signal<string | null>(null);
 
   protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();
@@ -144,16 +144,17 @@ export class MyMeetingsComponent {
     this.router.navigate(['/meetings']);
   }
 
-  public handleRsvpSubmitted(event: { response: RsvpResponse; scope: RsvpScope; meetingUid: string }): void {
+  public handleRsvpSubmitted(event: { response: RsvpResponse; scope: RsvpScope; meetingUid: string; occurrenceId: string }): void {
     // If scope is "all" or "following", refresh all cards EXCEPT the one that was clicked
     if (event.scope === 'all' || event.scope === 'following') {
-      // Store the meeting UID to skip refreshing it
-      this.skipRefreshMeetingUid.set(event.meetingUid);
+      // Store the composite key (meetingUid:occurrenceId) to skip refreshing this specific occurrence
+      const skipKey = `${event.meetingUid}:${event.occurrenceId}`;
+      this.skipRefreshKey.set(skipKey);
       // Increment the trigger to notify all cards to refresh
       this.refreshRsvpTrigger.update((v) => v + 1);
-      // Clear the skip UID after a short delay
+      // Clear the skip key after a short delay
       setTimeout(() => {
-        this.skipRefreshMeetingUid.set(null);
+        this.skipRefreshKey.set(null);
       }, 1000);
     }
   }
