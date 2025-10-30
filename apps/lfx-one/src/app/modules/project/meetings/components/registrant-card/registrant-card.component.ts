@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, input, OnInit, output, signal } from '@angular/core';
+import { Component, computed, input, OnInit, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -28,6 +28,38 @@ export class RegistrantCardComponent implements OnInit {
   // Internal state
   public isEditing = signal<boolean>(false);
   public form: FormGroup = new FormGroup({});
+
+  // Computed signal for RSVP status badge
+  public rsvpBadge = computed(() => {
+    const rsvpStatus = this.registrant().rsvpStatus;
+
+    switch (rsvpStatus) {
+      case 'accepted':
+        return {
+          label: 'Accepted',
+          severity: 'success' as const,
+          icon: 'fa-light fa-check',
+        };
+      case 'declined':
+        return {
+          label: 'Declined',
+          severity: 'danger' as const,
+          icon: 'fa-light fa-times',
+        };
+      case 'maybe':
+        return {
+          label: 'Maybe',
+          severity: 'warn' as const,
+          icon: 'fa-light fa-question',
+        };
+      default:
+        return {
+          label: 'Invited',
+          severity: 'secondary' as const,
+          icon: 'fa-light fa-envelope',
+        };
+    }
+  });
 
   public ngOnInit(): void {
     this.buildForm();

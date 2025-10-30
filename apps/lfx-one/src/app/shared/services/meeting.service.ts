@@ -8,6 +8,7 @@ import {
   BatchRegistrantOperationResponse,
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
+  CreateMeetingRsvpRequest,
   GenerateAgendaRequest,
   GenerateAgendaResponse,
   Meeting,
@@ -15,6 +16,7 @@ import {
   MeetingJoinURL,
   MeetingRegistrant,
   MeetingRegistrantWithState,
+  MeetingRsvp,
   PastMeeting,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -434,6 +436,34 @@ export class MeetingService {
       catchError((error) => {
         console.error('Failed to resend meeting invitation:', error);
         return throwError(() => error);
+      })
+    );
+  }
+
+  public createMeetingRsvp(meetingUid: string, request: CreateMeetingRsvpRequest): Observable<MeetingRsvp> {
+    return this.http.post<MeetingRsvp>(`/api/meetings/${meetingUid}/rsvp`, request).pipe(
+      take(1),
+      catchError((error) => {
+        console.error(`Failed to create RSVP for meeting ${meetingUid}:`, error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  public getUserMeetingRsvp(meetingUid: string): Observable<MeetingRsvp | null> {
+    return this.http.get<MeetingRsvp | null>(`/api/meetings/${meetingUid}/rsvp`).pipe(
+      catchError((error) => {
+        console.error(`Failed to get RSVP for meeting ${meetingUid}:`, error);
+        return of(null);
+      })
+    );
+  }
+
+  public getMeetingRsvps(meetingUid: string): Observable<MeetingRsvp[]> {
+    return this.http.get<MeetingRsvp[]>(`/api/meetings/${meetingUid}/rsvps`).pipe(
+      catchError((error) => {
+        console.error(`Failed to get RSVPs for meeting ${meetingUid}:`, error);
+        return of([]);
       })
     );
   }
