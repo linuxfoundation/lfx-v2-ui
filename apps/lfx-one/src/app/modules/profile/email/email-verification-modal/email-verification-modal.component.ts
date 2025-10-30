@@ -76,12 +76,12 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
   }
 
   public submitCode(): void {
+    // Clear any previous error message first, before validation
+    this.errorMessage.set(null);
+
     if (this.verificationForm.invalid || this.submitting() || this.timerExpired()) {
       return;
     }
-
-    // Clear any previous error message
-    this.errorMessage.set(null);
 
     // Combine all 6 digits into a single code
     const code = `${this.verificationForm.value.digit1}${this.verificationForm.value.digit2}${this.verificationForm.value.digit3}${this.verificationForm.value.digit4}${this.verificationForm.value.digit5}${this.verificationForm.value.digit6}`;
@@ -138,6 +138,9 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
   public onDigitInput(event: Event, digitNumber: number): void {
     const input = event.target as HTMLInputElement;
     const value = input.value;
+
+    // Clear any previous error message when user starts typing
+    this.errorMessage.set(null);
 
     // Check if this is a paste event (multiple characters)
     if (value.length > 1) {
@@ -255,6 +258,9 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     
+    // Clear any previous error message when user pastes
+    this.errorMessage.set(null);
+    
     const pastedData = event.clipboardData?.getData('text') || '';
     const digits = pastedData.replace(/\D/g, '').slice(0, 6);
 
@@ -337,6 +343,9 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
           this.timerExpired.set(false);
           this.verificationForm.enable();
           this.verificationForm.reset();
+          
+          // Clear any previous error message
+          this.errorMessage.set(null);
 
           // Restart the timer
           this.startTimer();
