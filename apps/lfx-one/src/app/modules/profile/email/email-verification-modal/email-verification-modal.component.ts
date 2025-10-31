@@ -130,7 +130,6 @@ export class EmailVerificationModalComponent implements OnInit {
           
           // Set error message AFTER reset to prevent it from being cleared
           this.errorMessage.set(errorMsg);
-          console.log('Error message signal value:', this.errorMessage());
         },
       });
   }
