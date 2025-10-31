@@ -136,7 +136,7 @@ export class ProfileEmailComponent {
           
           if (errorText.includes('already linked')) {
             // Show error below the email field
-            this.emailFieldError.set('This email address is already linked as an alternate or primary email.');
+            this.emailFieldError.set('This email address is already in use.');
           } else {
             // Show generic error as toast for other errors
             this.messageService.add({
@@ -173,8 +173,8 @@ export class ProfileEmailComponent {
           detail: 'Email address verified and linked successfully',
         });
       } else if (result && result.alreadyLinked) {
-        // This email address is already linked as an alternate or primary email - show error below field only
-        this.emailFieldError.set('This email address is already linked as an alternate or primary email.');
+        // This email address is already in use - show error below field only
+        this.emailFieldError.set('This email address is already in use.');
         // Don't show a toast - the inline error is enough
       } else if (result === null || result === undefined) {
         // Modal was closed/cancelled by user (X button)

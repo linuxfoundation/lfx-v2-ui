@@ -2,29 +2,32 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@shared/components/button/button.component';
 import { MessageComponent } from '@shared/components/message/message.component';
 import { UserService } from '@shared/services/user.service';
 import { MessageService } from 'primeng/api';
+import { AutoFocusModule } from 'primeng/autofocus';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { InputOtpModule } from 'primeng/inputotp';
 import { ToastModule } from 'primeng/toast';
-import { finalize, interval, Subject, takeUntil } from 'rxjs';
+import { finalize, interval } from 'rxjs';
 
 @Component({
   selector: 'lfx-email-verification-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, MessageComponent, ToastModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, MessageComponent, ToastModule, InputOtpModule, AutoFocusModule],
   providers: [MessageService],
   templateUrl: './email-verification-modal.component.html',
 })
-export class EmailVerificationModalComponent implements OnInit, OnDestroy {
+export class EmailVerificationModalComponent implements OnInit {
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
-  private readonly destroy$ = new Subject<void>();
+  private readonly destroyRef = takeUntilDestroyed();
 
   // Timer configuration (5 minutes = 300 seconds)
   private readonly TIMER_DURATION = 300;
@@ -32,17 +35,19 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
   public timerExpired = signal(false);
   public resending = signal(false);
 
+  // Computed signal for formatted time display
+  public formattedTime = computed(() => {
+    const minutes = Math.floor(this.timeRemaining() / 60);
+    const seconds = this.timeRemaining() % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  });
+
   // Email passed from parent
   public email = '';
 
-  // Form for verification code - 6 separate digit inputs
+  // Form for verification code - single control with 6-digit value
   public verificationForm = new FormGroup({
-    digit1: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
-    digit2: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
-    digit3: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
-    digit4: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
-    digit5: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
-    digit6: new FormControl('', [Validators.required, Validators.pattern(/^\d$/)]),
+    code: new FormControl('', [Validators.required, Validators.pattern(/^\d{6}$/)]),
   });
 
   public submitting = signal(false);
@@ -55,24 +60,16 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
     // Start the countdown timer
     this.startTimer();
 
-    // Auto-focus the first input field
-    setTimeout(() => {
-      const firstInput = document.getElementById('digit1') as HTMLInputElement;
-      if (firstInput) {
-        firstInput.focus();
-      }
-    }, 100);
-  }
-
-  public ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  public get formattedTime(): string {
-    const minutes = Math.floor(this.timeRemaining() / 60);
-    const seconds = this.timeRemaining() % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    // Clear error message when user starts typing (not on reset)
+    this.verificationForm
+      .get('code')
+      ?.valueChanges.pipe(this.destroyRef)
+      .subscribe((value) => {
+        // Only clear error if user is actually typing (value is not empty)
+        if (value) {
+          this.errorMessage.set(null);
+        }
+      });
   }
 
   public submitCode(): void {
@@ -83,8 +80,7 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Combine all 6 digits into a single code
-    const code = `${this.verificationForm.value.digit1}${this.verificationForm.value.digit2}${this.verificationForm.value.digit3}${this.verificationForm.value.digit4}${this.verificationForm.value.digit5}${this.verificationForm.value.digit6}`;
+    const code = this.verificationForm.value.code || '';
     this.submitting.set(true);
 
     // Call the verification API
@@ -104,11 +100,16 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
           const specificMessage = error.error?.errors?.[0]?.message || '';
           const genericMessage = error.error?.message || error.message || '';
           
+          // Check for microservice error format
+          const errorCode = error.error?.error_code || '';
+          const errorType = error.error?.error_type || '';
+          
           // Check both the specific validation message and generic message
-          const errorText = (specificMessage + ' ' + genericMessage).toLowerCase();
+          const errorText = (specificMessage + ' ' + genericMessage + ' ' + errorCode).toLowerCase();
           
           let errorMsg = 'Invalid verification code. Please try again.';
           
+          // Handle specific error cases
           if (errorText.includes('already linked')) {
             // Email is already linked to another account - close modal and signal parent
             this.dialogRef.close({ 
@@ -118,194 +119,19 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
             return;
           }
           
-          // Show error message in the modal for other errors
-          this.errorMessage.set(errorMsg);
-
-          // Clear the form so user can try again
+          // Handle OTP verification failed
+          if (errorCode === 'OTP_VERIFICATION_FAILED' || errorType === '_MicroserviceError') {
+            errorMsg = 'Invalid or expired verification code. Please try again.';
+          }
+          
+          // Clear the form first (this triggers valueChanges which would clear error message)
           this.verificationForm.reset();
-
-          // Focus the first input
-          setTimeout(() => {
-            const firstInput = document.getElementById('digit1') as HTMLInputElement;
-            if (firstInput) {
-              firstInput.focus();
-            }
-          }, 100);
+          
+          // Set error message AFTER reset to prevent it from being cleared
+          this.errorMessage.set(errorMsg);
+          console.log('Error message signal value:', this.errorMessage());
         },
       });
-  }
-
-  public onDigitInput(event: Event, digitNumber: number): void {
-    const input = event.target as HTMLInputElement;
-    const value = input.value;
-
-    // Clear any previous error message when user starts typing
-    this.errorMessage.set(null);
-
-    // Check if this is a paste event (multiple characters)
-    if (value.length > 1) {
-      const digits = value.replace(/\D/g, '');
-      
-      if (digits.length >= 6) {
-        // This is a paste of 6 or more digits - fill all fields
-        this.verificationForm.patchValue({
-          digit1: digits[0] || '',
-          digit2: digits[1] || '',
-          digit3: digits[2] || '',
-          digit4: digits[3] || '',
-          digit5: digits[4] || '',
-          digit6: digits[5] || '',
-        });
-        
-        // Clear the current input and focus the last field
-        input.value = '';
-        setTimeout(() => {
-          const lastInput = document.getElementById('digit6') as HTMLInputElement;
-          if (lastInput) {
-            lastInput.focus();
-          }
-        }, 0);
-        return;
-      } else if (digits.length > 0) {
-        // Partial paste - just take the first digit
-        const firstDigit = digits[0];
-        input.value = firstDigit;
-        const controlName = `digit${digitNumber}` as 'digit1' | 'digit2' | 'digit3' | 'digit4' | 'digit5' | 'digit6';
-        this.verificationForm.get(controlName)?.setValue(firstDigit);
-        
-        // Move to next field
-        if (digitNumber < 6) {
-          const nextInput = document.getElementById(`digit${digitNumber + 1}`) as HTMLInputElement;
-          if (nextInput) {
-            nextInput.focus();
-            nextInput.select();
-          }
-        }
-        return;
-      }
-    }
-
-    // Filter out non-digit characters
-    const filteredValue = value.replace(/\D/g, '');
-    if (filteredValue !== value) {
-      input.value = filteredValue;
-      return;
-    }
-
-    // Limit to single digit
-    if (filteredValue.length > 1) {
-      input.value = filteredValue[0];
-      return;
-    }
-
-    // If a digit was entered, move to next input
-    if (filteredValue && digitNumber < 6) {
-      const nextInput = document.getElementById(`digit${digitNumber + 1}`) as HTMLInputElement;
-      if (nextInput) {
-        nextInput.focus();
-        nextInput.select();
-      }
-    }
-  }
-
-  public onDigitKeyDown(event: KeyboardEvent, digitNumber: number): void {
-    const input = event.target as HTMLInputElement;
-
-    // Handle Cmd+V (Mac) or Ctrl+V (Windows) paste
-    if ((event.metaKey || event.ctrlKey) && event.key === 'v') {
-      // Don't prevent default - let the paste happen
-      // The onDigitInput handler will process it
-      return;
-    }
-
-    // Handle backspace - move to previous input if current is empty
-    if (event.key === 'Backspace' && !input.value && digitNumber > 1) {
-      event.preventDefault();
-      const prevInput = document.getElementById(`digit${digitNumber - 1}`) as HTMLInputElement;
-      if (prevInput) {
-        prevInput.focus();
-        prevInput.select();
-      }
-    }
-
-    // Handle arrow keys
-    if (event.key === 'ArrowLeft' && digitNumber > 1) {
-      event.preventDefault();
-      const prevInput = document.getElementById(`digit${digitNumber - 1}`) as HTMLInputElement;
-      if (prevInput) {
-        prevInput.focus();
-        prevInput.select();
-      }
-    }
-
-    if (event.key === 'ArrowRight' && digitNumber < 6) {
-      event.preventDefault();
-      const nextInput = document.getElementById(`digit${digitNumber + 1}`) as HTMLInputElement;
-      if (nextInput) {
-        nextInput.focus();
-        nextInput.select();
-      }
-    }
-
-    // Prevent non-numeric keys (except backspace, delete, arrows, tab)
-    const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
-    if (!allowedKeys.includes(event.key) && !/^\d$/.test(event.key)) {
-      event.preventDefault();
-    }
-  }
-
-  public onDigitPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    // Clear any previous error message when user pastes
-    this.errorMessage.set(null);
-    
-    const pastedData = event.clipboardData?.getData('text') || '';
-    const digits = pastedData.replace(/\D/g, '').slice(0, 6);
-
-    if (digits.length >= 6) {
-      // If we have 6 digits, fill all fields from the beginning
-      this.verificationForm.patchValue({
-        digit1: digits[0],
-        digit2: digits[1],
-        digit3: digits[2],
-        digit4: digits[3],
-        digit5: digits[4],
-        digit6: digits[5],
-      });
-      
-      // Focus the last input after filling all
-      setTimeout(() => {
-        const lastInput = document.getElementById('digit6') as HTMLInputElement;
-        if (lastInput) {
-          lastInput.focus();
-        }
-      }, 0);
-    } else if (digits.length > 0) {
-      // For partial pastes, fill sequentially from digit 1
-      const fieldMap: { [key: number]: 'digit1' | 'digit2' | 'digit3' | 'digit4' | 'digit5' | 'digit6' } = {
-        0: 'digit1',
-        1: 'digit2',
-        2: 'digit3',
-        3: 'digit4',
-        4: 'digit5',
-        5: 'digit6',
-      };
-      
-      for (let i = 0; i < digits.length && i < 6; i++) {
-        this.verificationForm.get(fieldMap[i])?.setValue(digits[i]);
-      }
-
-      // Focus the next empty input
-      setTimeout(() => {
-        const nextIndex = Math.min(digits.length + 1, 6);
-        const nextInput = document.getElementById(`digit${nextIndex}`) as HTMLInputElement;
-        if (nextInput) {
-          nextInput.focus();
-        }
-      }, 0);
-    }
   }
 
   public cancel(): void {
@@ -314,7 +140,7 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
 
   private startTimer(): void {
     interval(1000)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(this.destroyRef)
       .subscribe(() => {
         const remaining = this.timeRemaining() - 1;
         
@@ -322,7 +148,7 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
           this.timeRemaining.set(0);
           this.timerExpired.set(true);
           this.verificationForm.disable();
-          this.destroy$.next(); // Stop the timer
+          // Timer will auto-cleanup on component destroy
         } else {
           this.timeRemaining.set(remaining);
         }
@@ -356,14 +182,6 @@ export class EmailVerificationModalComponent implements OnInit, OnDestroy {
             summary: 'Code Sent',
             detail: 'A new verification code has been sent to your email',
           });
-
-          // Focus the first input
-          setTimeout(() => {
-            const firstInput = document.getElementById('digit1') as HTMLInputElement;
-            if (firstInput) {
-              firstInput.focus();
-            }
-          }, 100);
         },
         error: (error) => {
           console.error('Failed to resend verification code:', error);
