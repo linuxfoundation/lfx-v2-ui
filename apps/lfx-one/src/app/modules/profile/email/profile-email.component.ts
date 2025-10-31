@@ -3,7 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { EmailManagementData, EmailPreferences, UpdateEmailPreferencesRequest, UserEmail } from '@lfx-one/shared/interfaces';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -52,6 +52,7 @@ export class ProfileEmailComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
+  private readonly destroyRef = takeUntilDestroyed();
 
   // Dialog reference
   private dialogRef: DynamicDialogRef | undefined;
@@ -66,9 +67,12 @@ export class ProfileEmailComponent {
 
   constructor() {
     // Clear error message when user changes email input
-    this.addEmailForm.get('email')?.valueChanges.subscribe(() => {
-      this.emailFieldError.set(null);
-    });
+    this.addEmailForm
+      .get('email')
+      ?.valueChanges.pipe(this.destroyRef)
+      .subscribe(() => {
+        this.emailFieldError.set(null);
+      });
   }
 
   public preferencesForm = new FormGroup({

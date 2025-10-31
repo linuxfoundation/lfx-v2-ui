@@ -13,7 +13,7 @@ import { AutoFocusModule } from 'primeng/autofocus';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputOtpModule } from 'primeng/inputotp';
 import { ToastModule } from 'primeng/toast';
-import { finalize, interval } from 'rxjs';
+import { finalize, interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'lfx-email-verification-modal',
@@ -28,6 +28,7 @@ export class EmailVerificationModalComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = takeUntilDestroyed();
+  private timerSubscription: Subscription | null = null;
 
   // Timer configuration (5 minutes = 300 seconds)
   private readonly TIMER_DURATION = 300;
@@ -139,7 +140,12 @@ export class EmailVerificationModalComponent implements OnInit {
   }
 
   private startTimer(): void {
-    interval(1000)
+    // Cancel any existing timer to prevent multiple concurrent intervals
+    if (this.timerSubscription) {
+      this.timerSubscription.unsubscribe();
+    }
+
+    this.timerSubscription = interval(1000)
       .pipe(this.destroyRef)
       .subscribe(() => {
         const remaining = this.timeRemaining() - 1;
