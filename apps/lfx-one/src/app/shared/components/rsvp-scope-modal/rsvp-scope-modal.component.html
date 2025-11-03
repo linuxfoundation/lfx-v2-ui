@@ -22,10 +22,11 @@
       <button
         type="button"
         (click)="selectScope(option.value)"
-        [class]="
-          'flex flex-col gap-1 p-3 rounded-lg border-2 transition-all text-left ' +
-          (selectedScope() === option.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300')
-        "
+        class="flex flex-col gap-1 p-3 rounded-lg border-2 transition-all text-left"
+        [ngClass]="{
+          'border-blue-500 bg-blue-50': selectedScope() === option.value,
+          'border-gray-200 bg-white hover:border-gray-300': selectedScope() !== option.value,
+        }"
         [attr.data-testid]="'rsvp-scope-modal-option-' + option.value">
         <span class="text-sm font-medium text-gray-900">{{ option.label }}</span>
         <span class="text-xs text-gray-600">{{ option.description }}</span>

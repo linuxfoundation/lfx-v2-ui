@@ -152,10 +152,8 @@ export class MyMeetingsComponent {
       this.skipRefreshKey.set(skipKey);
       // Increment the trigger to notify all cards to refresh
       this.refreshRsvpTrigger.update((v) => v + 1);
-      // Clear the skip key after a short delay
-      setTimeout(() => {
-        this.skipRefreshKey.set(null);
-      }, 1000);
+      // Clear the skip key
+      this.skipRefreshKey.set(null);
     }
   }
 }

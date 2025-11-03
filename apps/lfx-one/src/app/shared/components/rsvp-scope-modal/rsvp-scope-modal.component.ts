@@ -4,14 +4,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, WritableSignal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
-import { Meeting, MeetingOccurrence, RsvpScope } from '@lfx-one/shared/interfaces';
+import { RSVP_SCOPE_OPTIONS } from '@lfx-one/shared/constants';
+import { Meeting, MeetingOccurrence, RsvpScope, RsvpScopeOption } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-
-interface ScopeOption {
-  value: RsvpScope;
-  label: string;
-  description: string;
-}
 
 @Component({
   selector: 'lfx-rsvp-scope-modal',
@@ -20,14 +15,14 @@ interface ScopeOption {
   templateUrl: './rsvp-scope-modal.component.html',
 })
 export class RsvpScopeModalComponent {
-  private readonly ref = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
+  private readonly dialogConfig = inject(DynamicDialogConfig);
 
   public selectedScope: WritableSignal<RsvpScope | null> = signal(null);
 
   // Meeting data from config
-  public readonly meeting: Meeting | undefined = this.config.data?.['meeting'];
-  public readonly occurrence: MeetingOccurrence | undefined = this.config.data?.['occurrence'];
+  public readonly meeting: Meeting | undefined = this.dialogConfig.data?.['meeting'];
+  public readonly occurrence: MeetingOccurrence | undefined = this.dialogConfig.data?.['occurrence'];
 
   // Computed meeting title and time
   public readonly meetingTitle = computed(() => {
@@ -53,23 +48,7 @@ export class RsvpScopeModalComponent {
     }
   });
 
-  public readonly scopeOptions: ScopeOption[] = [
-    {
-      value: 'single',
-      label: 'This occurrence only',
-      description: 'Apply this RSVP to only this specific meeting',
-    },
-    {
-      value: 'all',
-      label: 'All occurrences',
-      description: 'Apply this RSVP to all occurrences in the series',
-    },
-    {
-      value: 'following',
-      label: 'This and following occurrences',
-      description: 'Apply this RSVP to this meeting and all future occurrences',
-    },
-  ];
+  public readonly scopeOptions: RsvpScopeOption[] = RSVP_SCOPE_OPTIONS;
 
   public selectScope(scope: RsvpScope): void {
     this.selectedScope.set(scope);
@@ -78,11 +57,11 @@ export class RsvpScopeModalComponent {
   public onConfirm(): void {
     const scope = this.selectedScope();
     if (scope) {
-      this.ref.close(scope);
+      this.dialogRef.close(scope);
     }
   }
 
   public onCancel(): void {
-    this.ref.close(null);
+    this.dialogRef.close(null);
   }
 }

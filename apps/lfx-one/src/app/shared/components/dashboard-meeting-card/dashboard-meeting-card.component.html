@@ -99,12 +99,11 @@
               type="button"
               (click)="handleRsvpClick('accepted')"
               [disabled]="rsvpLoading()"
-              [class]="
-                'px-2 py-0.5 text-[11px] font-medium rounded transition-colors ' +
-                (userRsvp()?.response === 'accepted'
-                  ? 'bg-green-500 text-white border border-green-600'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100')
-              "
+              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
+              [ngClass]="{
+                'bg-green-500 text-white border border-green-600': userRsvp()?.response === 'accepted',
+                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'accepted',
+              }"
               data-testid="dashboard-meeting-card-rsvp-yes">
               Yes
             </button>
@@ -112,12 +111,11 @@
               type="button"
               (click)="handleRsvpClick('maybe')"
               [disabled]="rsvpLoading()"
-              [class]="
-                'px-2 py-0.5 text-[11px] font-medium rounded transition-colors ' +
-                (userRsvp()?.response === 'maybe'
-                  ? 'bg-yellow-500 text-white border border-yellow-600'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100')
-              "
+              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
+              [ngClass]="{
+                'bg-yellow-500 text-white border border-yellow-600': userRsvp()?.response === 'maybe',
+                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'maybe',
+              }"
               data-testid="dashboard-meeting-card-rsvp-maybe">
               Maybe
             </button>
@@ -125,12 +123,11 @@
               type="button"
               (click)="handleRsvpClick('declined')"
               [disabled]="rsvpLoading()"
-              [class]="
-                'px-2 py-0.5 text-[11px] font-medium rounded transition-colors ' +
-                (userRsvp()?.response === 'declined'
-                  ? 'bg-red-500 text-white border border-red-600'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100')
-              "
+              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
+              [ngClass]="{
+                'bg-red-500 text-white border border-red-600': userRsvp()?.response === 'declined',
+                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'declined',
+              }"
               data-testid="dashboard-meeting-card-rsvp-no">
               No
             </button>

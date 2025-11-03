@@ -13,7 +13,7 @@ import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, map, of, switchMap, tap } from 'rxjs';
+import { catchError, map, of, switchMap, take, tap } from 'rxjs';
 
 interface MeetingTypeBadge {
   label: string;
@@ -24,7 +24,6 @@ interface MeetingTypeBadge {
   selector: 'lfx-dashboard-meeting-card',
   standalone: true,
   imports: [CommonModule, ButtonComponent, TooltipModule, ClipboardModule, FileTypeIconPipe],
-  providers: [DialogService],
   templateUrl: './dashboard-meeting-card.component.html',
 })
 export class DashboardMeetingCardComponent {
@@ -229,7 +228,7 @@ export class DashboardMeetingCardComponent {
         },
       });
 
-      ref.onClose.subscribe((scope: RsvpScope | null) => {
+      ref.onClose.pipe(take(1)).subscribe((scope: RsvpScope | null) => {
         if (scope) {
           this.submitRsvp(response, scope);
         }

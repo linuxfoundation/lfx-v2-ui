@@ -1,14 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { MeetingOccurrence, MeetingRsvp } from '../interfaces/meeting.interface';
-
-export interface RsvpCounts {
-  accepted: number;
-  declined: number;
-  maybe: number;
-  total: number;
-}
+import { MeetingOccurrence, MeetingRsvp, RsvpCounts } from '../interfaces/meeting.interface';
 
 /**
  * Calculate RSVP counts for a specific occurrence

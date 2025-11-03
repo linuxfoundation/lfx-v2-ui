@@ -10,7 +10,14 @@ import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MeetingRegistrant, MeetingRegistrantWithState, MeetingRsvp, RegistrantPendingChanges, RegistrantState } from '@lfx-one/shared/interfaces';
+import {
+  MeetingRegistrant,
+  MeetingRegistrantWithState,
+  MeetingRsvp,
+  RegistrantPendingChanges,
+  RegistrantState,
+  RsvpResponse,
+} from '@lfx-one/shared/interfaces';
 import { generateTempId } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService } from 'primeng/api';
@@ -292,7 +299,7 @@ export class MeetingRegistrantsComponent implements OnInit {
       state: state,
       originalData: state === 'existing' ? { ...registrant } : undefined,
       tempId: state === 'new' ? generateTempId() : undefined,
-      rsvpStatus: rsvpStatus as any,
+      rsvpStatus: rsvpStatus as RsvpResponse | undefined,
     };
   }
 

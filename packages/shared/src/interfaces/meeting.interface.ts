@@ -703,6 +703,34 @@ export type RsvpResponse = 'accepted' | 'maybe' | 'declined';
 export type RsvpScope = 'single' | 'all' | 'following';
 
 /**
+ * RSVP scope option
+ * @description Configuration for displaying RSVP scope options in UI
+ */
+export interface RsvpScopeOption {
+  /** The scope value */
+  value: RsvpScope;
+  /** Display label for the option */
+  label: string;
+  /** Description text explaining the scope */
+  description: string;
+}
+
+/**
+ * RSVP counts by response type
+ * @description Aggregated counts of RSVPs grouped by response
+ */
+export interface RsvpCounts {
+  /** Number of accepted RSVPs */
+  accepted: number;
+  /** Number of declined RSVPs */
+  declined: number;
+  /** Number of maybe RSVPs */
+  maybe: number;
+  /** Total number of RSVPs */
+  total: number;
+}
+
+/**
  * Meeting RSVP information
  * @description User's RSVP response for a meeting
  */
