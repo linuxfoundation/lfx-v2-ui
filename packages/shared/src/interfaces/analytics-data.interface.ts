@@ -404,3 +404,315 @@ export interface OrganizationTechnicalCommitteeResponse {
    */
   accountId: string;
 }
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_PROJECTS_PARTICIPATING query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardProjectsParticipatingRow {
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Segment identifier for the organization
+   */
+  SEGMENT_ID: string;
+
+  /**
+   * Number of projects the organization is participating in
+   */
+  PROJECTS_PARTICIPATING: number;
+}
+
+/**
+ * API response for Organization Projects Participating query
+ * Provides count of projects the organization is actively participating in
+ */
+export interface OrganizationProjectsParticipatingResponse {
+  /**
+   * Number of projects the organization is participating in
+   */
+  projectsParticipating: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+
+  /**
+   * Segment identifier for the organization
+   */
+  segmentId: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_TOTAL_COMMITS query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardTotalCommitsRow {
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Segment identifier for the organization
+   */
+  SEGMENT_ID: string;
+
+  /**
+   * Total number of commits by the organization
+   */
+  TOTAL_COMMITS: number;
+}
+
+/**
+ * API response for Organization Total Commits query
+ * Provides total count of code commits by the organization
+ */
+export interface OrganizationTotalCommitsResponse {
+  /**
+   * Total number of commits by the organization
+   */
+  totalCommits: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+
+  /**
+   * Segment identifier for the organization
+   */
+  segmentId: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardCertifiedEmployeesRow {
+  /**
+   * Total number of certifications achieved
+   */
+  CERTIFICATIONS: number;
+
+  /**
+   * Number of certified employees in the organization
+   */
+  CERTIFIED_EMPLOYEES: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+}
+
+/**
+ * API response for Organization Certified Employees query
+ * Provides count of certifications and certified employees in the organization
+ */
+export interface OrganizationCertifiedEmployeesResponse {
+  /**
+   * Total number of certifications achieved
+   */
+  certifications: number;
+
+  /**
+   * Number of certified employees in the organization
+   */
+  certifiedEmployees: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardBoardMeetingAttendanceRow {
+  /**
+   * Total number of board meetings
+   */
+  TOTAL_MEETINGS: number;
+
+  /**
+   * Number of meetings attended by the organization
+   */
+  ATTENDED_MEETINGS: number;
+
+  /**
+   * Number of meetings not attended by the organization
+   */
+  NOT_ATTENDED_MEETINGS: number;
+
+  /**
+   * Attendance percentage calculated by SQL: (ATTENDED_MEETINGS / TOTAL_MEETINGS) * 100
+   */
+  ATTENDANCE_PERCENTAGE: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+}
+
+/**
+ * API response for Organization Board Meeting Attendance query
+ * Provides board meeting attendance statistics with calculated attendance percentage
+ */
+export interface OrganizationBoardMeetingAttendanceResponse {
+  /**
+   * Total number of board meetings
+   */
+  totalMeetings: number;
+
+  /**
+   * Number of meetings attended by the organization
+   */
+  attendedMeetings: number;
+
+  /**
+   * Number of meetings not attended by the organization
+   */
+  notAttendedMeetings: number;
+
+  /**
+   * Attendance percentage calculated as (attendedMeetings / totalMeetings) * 100
+   */
+  attendancePercentage: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}
+
+/**
+ * Snowflake row from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MemberDashboardEventSponsorshipRow {
+  /**
+   * Sponsorship price
+   */
+  PRICE: number;
+
+  /**
+   * Currency code (e.g., USD)
+   */
+  CURRENCY_CODE: string;
+
+  /**
+   * Event name
+   */
+  EVENT_NAME: string;
+
+  /**
+   * Event unique identifier
+   */
+  EVENT_ID: string;
+
+  /**
+   * Product/sponsorship package name
+   */
+  PRODUCT_NAME: string;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Timestamp when sponsorship was created
+   */
+  CREATED_TS: string;
+}
+
+/**
+ * Snowflake aggregated response from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query (per currency)
+ * Contains calculated totals via SQL aggregation grouped by currency
+ */
+export interface OrganizationEventSponsorshipsAggregateRow {
+  /**
+   * Total sponsorship amount for this currency (SUM of PRICE)
+   */
+  TOTAL_AMOUNT: number;
+
+  /**
+   * Currency code for this row (e.g., USD, INR, EUR)
+   */
+  CURRENCY_CODE: string;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  ACCOUNT_ID: string;
+}
+
+/**
+ * Snowflake event count response from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query
+ * Contains count of distinct events
+ */
+export interface OrganizationEventSponsorshipsEventCountRow {
+  /**
+   * Total number of distinct events sponsored
+   */
+  TOTAL_EVENTS: number;
+}
+
+/**
+ * Currency-specific sponsorship summary
+ */
+export interface CurrencySummary {
+  /**
+   * Total amount in this currency
+   */
+  amount: number;
+
+  /**
+   * Currency code (e.g., USD, INR, EUR)
+   */
+  currencyCode: string;
+}
+
+/**
+ * API response for Organization Event Sponsorships query
+ * Provides sponsorship amounts grouped by currency and total event count
+ */
+export interface OrganizationEventSponsorshipsResponse {
+  /**
+   * Array of sponsorship amounts grouped by currency
+   */
+  currencySummaries: CurrencySummary[];
+
+  /**
+   * Total number of unique events sponsored (across all currencies)
+   */
+  totalEvents: number;
+
+  /**
+   * Salesforce account ID for the organization
+   */
+  accountId: string;
+}

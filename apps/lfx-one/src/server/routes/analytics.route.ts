@@ -18,6 +18,11 @@ router.get('/organization-maintainers', (req, res, next) => analyticsController.
 router.get('/organization-contributors', (req, res, next) => analyticsController.getOrganizationContributors(req, res, next));
 router.get('/organization-event-attendance', (req, res, next) => analyticsController.getOrganizationEventAttendance(req, res, next));
 router.get('/organization-technical-committee', (req, res, next) => analyticsController.getOrganizationTechnicalCommittee(req, res, next));
+router.get('/organization-projects-participating', (req, res, next) => analyticsController.getOrganizationProjectsParticipating(req, res, next));
+router.get('/organization-total-commits', (req, res, next) => analyticsController.getOrganizationTotalCommits(req, res, next));
+router.get('/organization-certified-employees', (req, res, next) => analyticsController.getOrganizationCertifiedEmployees(req, res, next));
+router.get('/organization-board-meeting-attendance', (req, res, next) => analyticsController.getOrganizationBoardMeetingAttendance(req, res, next));
+router.get('/organization-event-sponsorships', (req, res, next) => analyticsController.getOrganizationEventSponsorships(req, res, next));
 router.get('/membership-tier', (req, res, next) => analyticsController.getMembershipTier(req, res, next));
 
 export default router;

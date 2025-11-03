@@ -4,16 +4,27 @@
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
+  MemberDashboardBoardMeetingAttendanceRow,
+  MemberDashboardCertifiedEmployeesRow,
   MemberDashboardMaintainersRow,
+  MemberDashboardProjectsParticipatingRow,
+  MemberDashboardTotalCommitsRow,
   MembershipTierResponse,
   MembershipTierRow,
+  OrganizationBoardMeetingAttendanceResponse,
+  OrganizationCertifiedEmployeesResponse,
   OrganizationContributorsResponse,
   OrganizationContributorsRow,
   OrganizationEventAttendanceResponse,
   OrganizationEventAttendanceRow,
+  OrganizationEventSponsorshipsAggregateRow,
+  OrganizationEventSponsorshipsEventCountRow,
+  OrganizationEventSponsorshipsResponse,
   OrganizationMaintainersResponse,
+  OrganizationProjectsParticipatingResponse,
   OrganizationTechnicalCommitteeResponse,
   OrganizationTechnicalCommitteeRow,
+  OrganizationTotalCommitsResponse,
   ProjectCountRow,
   ProjectItem,
   UserCodeCommitsResponse,
@@ -614,6 +625,292 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       Logger.error(req, 'get_organization_technical_committee', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-projects-participating
+   * Get organization-level projects participating count
+   * Query params: accountId (optional) - Organization account ID
+   */
+  public async getOrganizationProjectsParticipating(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_projects_participating');
+
+    try {
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      // Hardcoded segment_id as per user requirement
+      const segmentId = '8656081c-f2fc-485f-b5f2-389ffcd5621a';
+
+      const query = `
+        SELECT ACCOUNT_ID, SEGMENT_ID, PROJECTS_PARTICIPATING
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PROJECTS_PARTICIPATING
+        WHERE ACCOUNT_ID = ?
+          AND SEGMENT_ID = ?
+        LIMIT 1
+      `;
+
+      const result = await this.getSnowflakeService().execute<MemberDashboardProjectsParticipatingRow>(query, [accountId, segmentId]);
+
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Organization projects participating data', accountId, {
+          operation: 'get_organization_projects_participating',
+        });
+      }
+
+      const row = result.rows[0];
+      const response: OrganizationProjectsParticipatingResponse = {
+        projectsParticipating: row.PROJECTS_PARTICIPATING,
+        accountId: row.ACCOUNT_ID,
+        segmentId: row.SEGMENT_ID,
+      };
+
+      Logger.success(req, 'get_organization_projects_participating', startTime, {
+        account_id: accountId,
+        segment_id: segmentId,
+        projects_participating: response.projectsParticipating,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_projects_participating', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-total-commits
+   * Get organization-level total commits count
+   * Query params: accountId (optional) - Organization account ID
+   */
+  public async getOrganizationTotalCommits(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_total_commits');
+
+    try {
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      // Hardcoded segment_id as per user requirement
+      const segmentId = '8656081c-f2fc-485f-b5f2-389ffcd5621a';
+
+      const query = `
+        SELECT ACCOUNT_ID, SEGMENT_ID, TOTAL_COMMITS
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_TOTAL_COMMITS
+        WHERE ACCOUNT_ID = ?
+          AND SEGMENT_ID = ?
+        LIMIT 1
+      `;
+
+      const result = await this.getSnowflakeService().execute<MemberDashboardTotalCommitsRow>(query, [accountId, segmentId]);
+
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Organization total commits data', accountId, {
+          operation: 'get_organization_total_commits',
+        });
+      }
+
+      const row = result.rows[0];
+      const response: OrganizationTotalCommitsResponse = {
+        totalCommits: row.TOTAL_COMMITS,
+        accountId: row.ACCOUNT_ID,
+        segmentId: row.SEGMENT_ID,
+      };
+
+      Logger.success(req, 'get_organization_total_commits', startTime, {
+        account_id: accountId,
+        segment_id: segmentId,
+        total_commits: response.totalCommits,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_total_commits', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-certified-employees
+   * Get organization-level certified employees and certifications count
+   * Query params: accountId (optional) - Organization account ID
+   */
+  public async getOrganizationCertifiedEmployees(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_certified_employees');
+
+    try {
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      // TODO: Get PROJECT_ID from user profile or session
+      const projectId = 'a0941000002wBz9AAE';
+
+      const query = `
+        SELECT CERTIFICATIONS, CERTIFIED_EMPLOYEES, ACCOUNT_ID, PROJECT_ID
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES
+        WHERE ACCOUNT_ID = ?
+          AND PROJECT_ID = ?
+        LIMIT 1
+      `;
+
+      const result = await this.getSnowflakeService().execute<MemberDashboardCertifiedEmployeesRow>(query, [accountId, projectId]);
+
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Organization certified employees data', accountId, {
+          operation: 'get_organization_certified_employees',
+        });
+      }
+
+      const row = result.rows[0];
+      const response: OrganizationCertifiedEmployeesResponse = {
+        certifications: row.CERTIFICATIONS,
+        certifiedEmployees: row.CERTIFIED_EMPLOYEES,
+        accountId: row.ACCOUNT_ID,
+      };
+
+      Logger.success(req, 'get_organization_certified_employees', startTime, {
+        account_id: accountId,
+        project_id: projectId,
+        certifications: response.certifications,
+        certified_employees: response.certifiedEmployees,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_certified_employees', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-board-meeting-attendance
+   * Get organization-level board meeting attendance with percentage calculation
+   * Query params: accountId (optional) - Organization account ID
+   */
+  public async getOrganizationBoardMeetingAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_board_meeting_attendance');
+
+    try {
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      // TODO: Get PROJECT_ID from user profile or session
+      const projectId = 'a0941000002wBz9AAE';
+
+      const query = `
+        SELECT
+          TOTAL_MEETINGS,
+          ATTENDED_MEETINGS,
+          NOT_ATTENDED_MEETINGS,
+          CASE
+            WHEN TOTAL_MEETINGS > 0 THEN (ATTENDED_MEETINGS::FLOAT / TOTAL_MEETINGS::FLOAT) * 100
+            ELSE 0
+          END AS ATTENDANCE_PERCENTAGE,
+          ACCOUNT_ID,
+          PROJECT_ID
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE
+        WHERE ACCOUNT_ID = ?
+          AND PROJECT_ID = ?
+        LIMIT 1
+      `;
+
+      const result = await this.getSnowflakeService().execute<MemberDashboardBoardMeetingAttendanceRow>(query, [accountId, projectId]);
+
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Organization board meeting attendance data', accountId, {
+          operation: 'get_organization_board_meeting_attendance',
+        });
+      }
+
+      const row = result.rows[0];
+      const response: OrganizationBoardMeetingAttendanceResponse = {
+        totalMeetings: row.TOTAL_MEETINGS,
+        attendedMeetings: row.ATTENDED_MEETINGS,
+        notAttendedMeetings: row.NOT_ATTENDED_MEETINGS,
+        attendancePercentage: row.ATTENDANCE_PERCENTAGE,
+        accountId: row.ACCOUNT_ID,
+      };
+
+      Logger.success(req, 'get_organization_board_meeting_attendance', startTime, {
+        account_id: accountId,
+        project_id: projectId,
+        total_meetings: response.totalMeetings,
+        attended_meetings: response.attendedMeetings,
+        attendance_percentage: response.attendancePercentage,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_board_meeting_attendance', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-event-sponsorships
+   * Get organization-level event sponsorships grouped by currency with total event count
+   * Query params: accountId (optional) - Organization account ID
+   */
+  public async getOrganizationEventSponsorships(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_event_sponsorships');
+
+    try {
+      // Get accountId from query params, fallback to default Microsoft Corporation
+      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      // TODO: Get PROJECT_ID from user profile or session
+      const projectId = 'a0941000002wBz9AAE';
+
+      // Query to get sum per currency
+      const query = `
+        SELECT
+          SUM(PRICE) AS TOTAL_AMOUNT,
+          CURRENCY_CODE,
+          MAX(ACCOUNT_ID) AS ACCOUNT_ID
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_SPONSORSHIPS
+        WHERE ACCOUNT_ID = ?
+          AND PROJECT_ID = ?
+        GROUP BY CURRENCY_CODE
+        ORDER BY CURRENCY_CODE
+      `;
+
+      const result = await this.getSnowflakeService().execute<OrganizationEventSponsorshipsAggregateRow>(query, [accountId, projectId]);
+
+      if (result.rows.length === 0) {
+        throw new ResourceNotFoundError('Organization event sponsorships data', accountId, {
+          operation: 'get_organization_event_sponsorships',
+        });
+      }
+
+      // Query to get total distinct events (across all currencies)
+      const eventCountQuery = `
+        SELECT COUNT(DISTINCT EVENT_ID) AS TOTAL_EVENTS
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_SPONSORSHIPS
+        WHERE ACCOUNT_ID = ?
+          AND PROJECT_ID = ?
+      `;
+
+      const eventCountResult = await this.getSnowflakeService().execute<OrganizationEventSponsorshipsEventCountRow>(eventCountQuery, [accountId, projectId]);
+      const totalEvents = eventCountResult.rows[0]?.TOTAL_EVENTS || 0;
+
+      // Build currency summaries
+      const currencySummaries = result.rows.map((row) => ({
+        amount: row.TOTAL_AMOUNT,
+        currencyCode: row.CURRENCY_CODE,
+      }));
+
+      const response: OrganizationEventSponsorshipsResponse = {
+        currencySummaries,
+        totalEvents,
+        accountId: result.rows[0].ACCOUNT_ID,
+      };
+
+      Logger.success(req, 'get_organization_event_sponsorships', startTime, {
+        account_id: accountId,
+        project_id: projectId,
+        currency_summaries: currencySummaries,
+        total_events: totalEvents,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_event_sponsorships', startTime, error);
       next(error);
     }
   }

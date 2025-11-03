@@ -6,10 +6,15 @@ import { inject, Injectable } from '@angular/core';
 import {
   ActiveWeeksStreakResponse,
   MembershipTierResponse,
+  OrganizationBoardMeetingAttendanceResponse,
+  OrganizationCertifiedEmployeesResponse,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceResponse,
+  OrganizationEventSponsorshipsResponse,
   OrganizationMaintainersResponse,
+  OrganizationProjectsParticipatingResponse,
   OrganizationTechnicalCommitteeResponse,
+  OrganizationTotalCommitsResponse,
   UserCodeCommitsResponse,
   UserProjectsResponse,
   UserPullRequestsResponse,
@@ -191,6 +196,103 @@ export class AnalyticsService {
         return of({
           totalRepresentatives: 0,
           totalProjects: 0,
+          accountId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level projects participating count
+   * @param accountId - Optional account ID to filter by specific organization
+   * @returns Observable of organization projects participating response
+   */
+  public getOrganizationProjectsParticipating(accountId?: string): Observable<OrganizationProjectsParticipatingResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationProjectsParticipatingResponse>('/api/analytics/organization-projects-participating', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization projects participating:', error);
+        return of({
+          projectsParticipating: 0,
+          accountId: '',
+          segmentId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level total commits count
+   * @param accountId - Optional account ID to filter by specific organization
+   * @returns Observable of organization total commits response
+   */
+  public getOrganizationTotalCommits(accountId?: string): Observable<OrganizationTotalCommitsResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationTotalCommitsResponse>('/api/analytics/organization-total-commits', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization total commits:', error);
+        return of({
+          totalCommits: 0,
+          accountId: '',
+          segmentId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level certified employees and certifications count
+   * @param accountId - Optional account ID to filter by specific organization
+   * @returns Observable of organization certified employees response
+   */
+  public getOrganizationCertifiedEmployees(accountId?: string): Observable<OrganizationCertifiedEmployeesResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationCertifiedEmployeesResponse>('/api/analytics/organization-certified-employees', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization certified employees:', error);
+        return of({
+          certifications: 0,
+          certifiedEmployees: 0,
+          accountId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level board meeting attendance with percentage
+   * @param accountId - Optional account ID to filter by specific organization
+   * @returns Observable of organization board meeting attendance response
+   */
+  public getOrganizationBoardMeetingAttendance(accountId?: string): Observable<OrganizationBoardMeetingAttendanceResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationBoardMeetingAttendanceResponse>('/api/analytics/organization-board-meeting-attendance', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization board meeting attendance:', error);
+        return of({
+          totalMeetings: 0,
+          attendedMeetings: 0,
+          notAttendedMeetings: 0,
+          attendancePercentage: 0,
+          accountId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get organization-level event sponsorships grouped by currency with total event count
+   * @param accountId - Optional account ID to filter by specific organization
+   * @returns Observable of organization event sponsorships response
+   */
+  public getOrganizationEventSponsorships(accountId?: string): Observable<OrganizationEventSponsorshipsResponse> {
+    const options = accountId ? { params: { accountId } } : {};
+    return this.http.get<OrganizationEventSponsorshipsResponse>('/api/analytics/organization-event-sponsorships', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch organization event sponsorships:', error);
+        return of({
+          currencySummaries: [],
+          totalEvents: 0,
           accountId: '',
         });
       })

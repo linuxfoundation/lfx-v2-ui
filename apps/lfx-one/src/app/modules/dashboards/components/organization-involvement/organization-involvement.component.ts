@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AccountContextService } from '@app/shared/services/account-context.service';
@@ -13,6 +13,7 @@ import {
   ImpactMetric,
   MembershipTierResponse,
   OrganizationContributorsResponse,
+  OrganizationEventSponsorshipsResponse,
   OrganizationInvolvementMetricWithChart,
   OrganizationMaintainersResponse,
   PrimaryInvolvementMetric,
@@ -24,12 +25,14 @@ import { map, switchMap } from 'rxjs';
   selector: 'lfx-organization-involvement',
   standalone: true,
   imports: [CommonModule, ChartComponent],
+  providers: [CurrencyPipe],
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',
 })
 export class OrganizationInvolvementComponent {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly accountContextService = inject(AccountContextService);
+  private readonly currencyPipe = inject(CurrencyPipe);
 
   private readonly selectedAccountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
 
@@ -91,6 +94,63 @@ export class OrganizationInvolvementComponent {
     }
   );
 
+  private readonly projectsParticipatingData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationProjectsParticipating(accountId))),
+    {
+      initialValue: {
+        projectsParticipating: 0,
+        accountId: '',
+        segmentId: '',
+      },
+    }
+  );
+
+  private readonly totalCommitsData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationTotalCommits(accountId))),
+    {
+      initialValue: {
+        totalCommits: 0,
+        accountId: '',
+        segmentId: '',
+      },
+    }
+  );
+
+  private readonly certifiedEmployeesData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationCertifiedEmployees(accountId))),
+    {
+      initialValue: {
+        certifications: 0,
+        certifiedEmployees: 0,
+        accountId: '',
+      },
+    }
+  );
+
+  private readonly boardMeetingAttendanceData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationBoardMeetingAttendance(accountId))),
+    {
+      initialValue: {
+        totalMeetings: 0,
+        attendedMeetings: 0,
+        notAttendedMeetings: 0,
+        attendancePercentage: 0,
+        accountId: '',
+      },
+    }
+  );
+
+  private readonly eventSponsorshipsData = toSignal(
+    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationEventSponsorships(accountId))),
+    {
+      initialValue: {
+        currencySummaries: [],
+        totalEvents: 0,
+        accountId: '',
+      },
+    }
+  );
+
   protected readonly isLoading = computed<boolean>(() => {
     const maintainersData = this.organizationMaintainersData();
     const contributorsData = this.organizationContributorsData();
@@ -128,14 +188,30 @@ export class OrganizationInvolvementComponent {
 
   protected readonly contributionsMetrics = computed<ContributionMetric[]>((): ContributionMetric[] => {
     const techCommitteeData = this.technicalCommitteeData();
+    const commitsData = this.totalCommitsData();
+    const boardMeetingData = this.boardMeetingAttendanceData();
 
     return CONTRIBUTIONS_METRICS.map((metric) => {
       if (metric.title === 'TOC/TSC/TAG Participation') {
-        const hasData = techCommitteeData.totalRepresentatives > 0;
         return {
           ...metric,
-          descriptiveValue: hasData ? `${techCommitteeData.totalRepresentatives} representatives` : metric.descriptiveValue,
-          isConnected: hasData,
+          descriptiveValue: `${techCommitteeData.totalRepresentatives} representatives`,
+          isConnected: true,
+        };
+      }
+      if (metric.title === 'Total Commits') {
+        return {
+          ...metric,
+          descriptiveValue: `${commitsData.totalCommits.toLocaleString()} commits`,
+          isConnected: true,
+        };
+      }
+      if (metric.title === 'Board Meetings Participation') {
+        const percentage = boardMeetingData.attendancePercentage.toFixed(0);
+        return {
+          ...metric,
+          descriptiveValue: `${percentage}% attendance`,
+          isConnected: true,
         };
       }
       return {
@@ -147,22 +223,36 @@ export class OrganizationInvolvementComponent {
 
   protected readonly impactMetrics = computed<ImpactMetric[]>((): ImpactMetric[] => {
     const eventData = this.eventAttendanceData();
+    const projectsData = this.projectsParticipatingData();
+    const certifiedData = this.certifiedEmployeesData();
 
     return IMPACT_METRICS.map((metric) => {
       if (metric.title === 'Event Attendees') {
-        const hasData = eventData.totalAttendees > 0;
         return {
           ...metric,
-          descriptiveValue: hasData ? `${eventData.totalAttendees} employees` : metric.descriptiveValue,
-          isConnected: hasData,
+          descriptiveValue: `${eventData.totalAttendees} employees`,
+          isConnected: true,
         };
       }
       if (metric.title === 'Event Speakers') {
-        const hasData = eventData.totalSpeakers > 0;
         return {
           ...metric,
-          descriptiveValue: hasData ? `${eventData.totalSpeakers} speakers` : metric.descriptiveValue,
-          isConnected: hasData,
+          descriptiveValue: `${eventData.totalSpeakers} speakers`,
+          isConnected: true,
+        };
+      }
+      if (metric.title === 'Projects Participating') {
+        return {
+          ...metric,
+          descriptiveValue: `${projectsData.projectsParticipating} projects`,
+          isConnected: true,
+        };
+      }
+      if (metric.title === 'Certified Employees') {
+        return {
+          ...metric,
+          descriptiveValue: `${certifiedData.certifications.toLocaleString()} certifications (${certifiedData.certifiedEmployees} employees)`,
+          isConnected: true,
         };
       }
       return {
@@ -176,8 +266,12 @@ export class OrganizationInvolvementComponent {
     const maintainersData = this.organizationMaintainersData();
     const contributorsData = this.organizationContributorsData();
     const tierData = this.membershipTierData();
+    const sponsorshipsData = this.eventSponsorshipsData();
 
     return PRIMARY_INVOLVEMENT_METRICS.map((metric) => {
+      if (metric.title === 'Event Sponsorship') {
+        return this.transformEventSponsorship(sponsorshipsData, metric);
+      }
       if (metric.title === 'Active Contributors') {
         return this.transformActiveContributors(contributorsData, metric);
       }
@@ -192,10 +286,6 @@ export class OrganizationInvolvementComponent {
   });
 
   private transformActiveContributors(data: OrganizationContributorsResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
-    if (data.contributors === 0) {
-      return { ...this.transformDefaultMetric(metric), isConnected: false };
-    }
-
     return {
       title: metric.title,
       value: data.contributors.toString(),
@@ -220,10 +310,6 @@ export class OrganizationInvolvementComponent {
   }
 
   private transformMaintainers(data: OrganizationMaintainersResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
-    if (data.maintainers === 0) {
-      return { ...this.transformDefaultMetric(metric), isConnected: false };
-    }
-
     return {
       title: metric.title,
       value: data.maintainers.toString(),
@@ -251,15 +337,15 @@ export class OrganizationInvolvementComponent {
     if (!data.tier) {
       return {
         title: metric.title,
-        value: metric.value,
-        subtitle: metric.subtitle,
+        value: 'No Membership',
+        subtitle: 'Not a member',
         icon: metric.icon ?? '',
-        tier: metric.tier,
-        tierSince: metric.tierSince,
-        annualFee: metric.annualFee,
-        nextDue: metric.nextDue,
+        tier: '',
+        tierSince: '',
+        annualFee: '$0',
+        nextDue: '',
         isMembershipTier: metric.isMembershipTier,
-        isConnected: false,
+        isConnected: true,
       };
     }
 
@@ -280,6 +366,34 @@ export class OrganizationInvolvementComponent {
       nextDue,
       isMembershipTier: metric.isMembershipTier,
       isConnected: true,
+    };
+  }
+
+  private transformEventSponsorship(data: OrganizationEventSponsorshipsResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+    const formattedAmounts = data.currencySummaries.map((summary) => this.currencyPipe.transform(summary.amount, summary.currencyCode, 'symbol', '1.0-0'));
+
+    const displayValue = formattedAmounts.length > 0 ? formattedAmounts.join(' + ') : '$0';
+
+    return {
+      title: metric.title,
+      value: displayValue,
+      subtitle: `${data.totalEvents} events sponsored this year`,
+      icon: metric.icon ?? '',
+      isConnected: true,
+      chartData: {
+        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
+        datasets: [
+          {
+            data: metric.sparklineData ?? [],
+            borderColor: metric.sparklineColor ?? '',
+            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
     };
   }
 
