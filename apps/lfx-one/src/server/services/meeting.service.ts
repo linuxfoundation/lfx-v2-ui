@@ -221,8 +221,9 @@ export class MeetingService {
 
   /**
    * Fetches all registrants for a meeting
+   * @param includeRsvp - If true, includes RSVP status for each registrant
    */
-  public async getMeetingRegistrants(req: Request, meetingUid: string): Promise<MeetingRegistrant[]> {
+  public async getMeetingRegistrants(req: Request, meetingUid: string, includeRsvp: boolean = false): Promise<MeetingRegistrant[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
         req,
@@ -235,16 +236,54 @@ export class MeetingService {
         }
       );
 
-      req.log.info(
-        {
-          operation: 'get_meeting_registrants',
-          meeting_uid: meetingUid,
-          registrant_count: resources.length,
-        },
-        'Meeting registrants fetched successfully'
-      );
+      let registrants = resources.map((resource) => resource.data);
 
-      return resources.map((resource) => resource.data);
+      // If include_rsvp is true, fetch RSVP data and attach to registrants
+      if (includeRsvp) {
+        try {
+          const rsvps = await this.getMeetingRsvps(req, meetingUid);
+
+          // Create a map of username to RSVP for quick lookup
+          const rsvpMap = new Map(rsvps.map((rsvp) => [rsvp.username, rsvp]));
+
+          // Attach RSVP data to each registrant
+          registrants = registrants.map((registrant) => ({
+            ...registrant,
+            rsvp: registrant.username ? rsvpMap.get(registrant.username) || null : null,
+          }));
+
+          req.log.info(
+            {
+              operation: 'get_meeting_registrants',
+              meeting_uid: meetingUid,
+              registrant_count: registrants.length,
+              rsvp_count: rsvps.length,
+              include_rsvp: true,
+            },
+            'Meeting registrants with RSVPs fetched successfully'
+          );
+        } catch (error) {
+          req.log.warn(
+            {
+              operation: 'get_meeting_registrants',
+              meeting_uid: meetingUid,
+              error: error instanceof Error ? error.message : error,
+            },
+            'Failed to fetch RSVPs for registrants, returning registrants without RSVP data'
+          );
+        }
+      } else {
+        req.log.info(
+          {
+            operation: 'get_meeting_registrants',
+            meeting_uid: meetingUid,
+            registrant_count: registrants.length,
+          },
+          'Meeting registrants fetched successfully'
+        );
+      }
+
+      return registrants;
     } catch (error) {
       req.log.error(
         {

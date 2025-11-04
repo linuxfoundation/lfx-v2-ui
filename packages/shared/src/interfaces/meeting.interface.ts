@@ -300,6 +300,8 @@ export interface MeetingRegistrant {
   invite_accepted: boolean | null;
   /** Registrant's attended status */
   attended: boolean | null;
+  /** Registrant's RSVP (only included when include_rsvp=true) */
+  rsvp?: MeetingRsvp | null;
 }
 
 /**

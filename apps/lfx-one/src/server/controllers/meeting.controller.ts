@@ -290,8 +290,12 @@ export class MeetingController {
    */
   public async getMeetingRegistrants(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
+    const { include_rsvp } = req.query;
+    const includeRsvp = include_rsvp === 'true';
+
     const startTime = Logger.start(req, 'get_meeting_registrants', {
       meeting_uid: uid,
+      include_rsvp: includeRsvp,
     });
 
     try {
@@ -307,11 +311,12 @@ export class MeetingController {
       }
 
       // Get the meeting registrants
-      const registrants = await this.meetingService.getMeetingRegistrants(req, uid);
+      const registrants = await this.meetingService.getMeetingRegistrants(req, uid, includeRsvp);
 
       Logger.success(req, 'get_meeting_registrants', startTime, {
         meeting_uid: uid,
         registrant_count: registrants.length,
+        include_rsvp: includeRsvp,
       });
 
       // Send the registrants data to the client
@@ -320,6 +325,7 @@ export class MeetingController {
       // Log the error
       Logger.error(req, 'get_meeting_registrants', startTime, error, {
         meeting_uid: uid,
+        include_rsvp: includeRsvp,
       });
 
       // Send the error to the next middleware

@@ -306,8 +306,9 @@ export class MeetingService {
     );
   }
 
-  public getMeetingRegistrants(meetingUid: string): Observable<MeetingRegistrant[]> {
-    return this.http.get<MeetingRegistrant[]>(`/api/meetings/${meetingUid}/registrants`).pipe(
+  public getMeetingRegistrants(meetingUid: string, includeRsvp: boolean = false): Observable<MeetingRegistrant[]> {
+    const params = new HttpParams().set('include_rsvp', includeRsvp.toString());
+    return this.http.get<MeetingRegistrant[]>(`/api/meetings/${meetingUid}/registrants`, { params }).pipe(
       catchError((error) => {
         console.error(`Failed to load registrants for meeting ${meetingUid}:`, error);
         return of([]);
