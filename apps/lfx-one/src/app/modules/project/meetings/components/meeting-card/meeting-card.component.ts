@@ -4,7 +4,7 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
@@ -16,19 +16,16 @@ import { ExpandableTextComponent } from '@components/expandable-text/expandable-
 import { MenuComponent } from '@components/menu/menu.component';
 import { environment } from '@environments/environment';
 import {
-  calculateRsvpCounts,
   extractUrlsWithDomains,
   getCurrentOrNextOccurrence,
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
   MeetingRegistrant,
-  MeetingRsvp,
   PastMeeting,
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
-  RsvpCounts,
 } from '@lfx-one/shared';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -92,8 +89,6 @@ export class MeetingCardComponent implements OnInit {
   public registrants = this.initRegistrantsList();
   public pastMeetingParticipants = this.initPastMeetingParticipantsList();
   public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
-  public meetingRsvps: Signal<MeetingRsvp[]> = this.initMeetingRsvps();
-  public rsvpCounts: Signal<RsvpCounts> = this.initRsvpCounts();
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public recordingShareUrl: Signal<string | null> = computed(() => {
     const recording = this.recording();
@@ -428,57 +423,7 @@ export class MeetingCardComponent implements OnInit {
             .pipe(catchError(() => of([])))
             .pipe(
               map((registrants) => {
-                // Create a map of RSVPs by username and email for matching
-                const rsvps = this.meetingRsvps();
-                const rsvpMap = new Map<string, MeetingRsvp>();
-
-                rsvps.forEach((rsvp) => {
-                  if (rsvp.username) {
-                    const usernameKey = rsvp.username.toLowerCase().trim();
-                    const existing = rsvpMap.get(usernameKey);
-                    if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
-                      rsvpMap.set(usernameKey, rsvp);
-                    }
-                  }
-                  if (rsvp.email) {
-                    const emailKey = rsvp.email.toLowerCase().trim();
-                    const existing = rsvpMap.get(emailKey);
-                    if (!existing || new Date(rsvp.updated_at) > new Date(existing.updated_at)) {
-                      rsvpMap.set(emailKey, rsvp);
-                    }
-                  }
-                });
-
-                // Match RSVPs to registrants and update invite_accepted based on RSVP response
-                return registrants.map((registrant) => {
-                  let rsvp: MeetingRsvp | undefined;
-
-                  // Try to find RSVP by username first, then email (case-insensitive)
-                  if (registrant.username) {
-                    rsvp = rsvpMap.get(registrant.username.toLowerCase().trim());
-                  }
-
-                  if (!rsvp && registrant.email) {
-                    rsvp = rsvpMap.get(registrant.email.toLowerCase().trim());
-                  }
-
-                  // Update invite_accepted based on RSVP response
-                  if (rsvp) {
-                    let inviteAccepted: boolean | null = null;
-                    if (rsvp.response === 'accepted') {
-                      inviteAccepted = true;
-                    } else if (rsvp.response === 'declined') {
-                      inviteAccepted = false;
-                    }
-
-                    return {
-                      ...registrant,
-                      invite_accepted: inviteAccepted,
-                    };
-                  }
-
-                  return registrant;
-                });
+                return registrants;
               }),
               // Sort registrants by first name
               map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
@@ -649,38 +594,6 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  private initMeetingRsvps(): Signal<MeetingRsvp[]> {
-    const meeting$ = toObservable(this.meeting);
-
-    return toSignal(
-      meeting$.pipe(
-        switchMap((meeting) => {
-          if (meeting?.uid && !this.pastMeeting()) {
-            return this.meetingService.getMeetingRsvps(meeting.uid).pipe(catchError(() => of([])));
-          }
-          return of([]);
-        })
-      ),
-      { initialValue: [] }
-    );
-  }
-
-  private initRsvpCounts(): Signal<RsvpCounts> {
-    return computed(() => {
-      // For past meetings, don't calculate RSVP counts
-      if (this.pastMeeting()) {
-        return { accepted: 0, declined: 0, maybe: 0, total: 0 };
-      }
-
-      const rsvps = this.meetingRsvps();
-      const occurrence = this.occurrence();
-      const meeting = this.meeting();
-
-      // Use the utility function to calculate counts
-      return calculateRsvpCounts(occurrence, rsvps, meeting.start_time);
-    });
-  }
-
   private initAttendancePercentage(): Signal<number> {
     return computed(() => {
       if (this.pastMeeting()) {
@@ -691,7 +604,7 @@ export class MeetingCardComponent implements OnInit {
       }
 
       const totalRegistrants = this.meetingRegistrantCount();
-      const acceptedCount = this.rsvpCounts().accepted;
+      const acceptedCount = this.meeting().registrants_accepted_count || 0;
       return totalRegistrants > 0 ? Math.round((acceptedCount / totalRegistrants) * 100) : 0;
     });
   }

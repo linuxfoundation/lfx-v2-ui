@@ -10,7 +10,7 @@ import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantPendingChanges, RegistrantState, RsvpResponse } from '@lfx-one/shared/interfaces';
+import { MeetingRegistrant, MeetingRegistrantWithState, RegistrantPendingChanges, RegistrantState } from '@lfx-one/shared/interfaces';
 import { generateTempId } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService } from 'primeng/api';
@@ -286,13 +286,12 @@ export class MeetingRegistrantsComponent implements OnInit {
     });
   }
 
-  private createRegistrantWithState(registrant: MeetingRegistrant, state: RegistrantState = 'existing', rsvpStatus?: string): MeetingRegistrantWithState {
+  private createRegistrantWithState(registrant: MeetingRegistrant, state: RegistrantState = 'existing'): MeetingRegistrantWithState {
     return {
       ...registrant,
       state: state,
       originalData: state === 'existing' ? { ...registrant } : undefined,
       tempId: state === 'new' ? generateTempId() : undefined,
-      rsvpStatus: rsvpStatus as RsvpResponse | undefined,
     };
   }
 
@@ -300,11 +299,14 @@ export class MeetingRegistrantsComponent implements OnInit {
     const uid = this.meetingUid();
     if (!uid) return;
 
-    // Fetch registrants with RSVP data included in a single request
     this.meetingService
-      .getMeetingRegistrants(uid, true)
+      .getMeetingRegistrants(uid, false)
       .pipe(
         take(1),
+        catchError((error) => {
+          console.error('Error', error);
+          return of([]);
+        }),
         finalize(() => {
           this.loading.set(false);
         }),
@@ -314,13 +316,7 @@ export class MeetingRegistrantsComponent implements OnInit {
             return;
           }
 
-          // Map registrants with their RSVP status (already included in the response)
-          this.registrantsWithState.set(registrants.map((r) => this.createRegistrantWithState(r, 'existing', r.rsvp?.response)));
-        }),
-        catchError((error) => {
-          console.error('Error fetching registrants:', error);
-          this.registrantsWithState.set([]);
-          return of([]);
+          this.registrantsWithState.set(registrants.map((r) => this.createRegistrantWithState(r, 'existing')));
         })
       )
       .subscribe();

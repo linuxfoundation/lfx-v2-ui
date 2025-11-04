@@ -91,11 +91,9 @@
     <!-- Meeting time and actions -->
     <div class="space-y-2">
       <div class="flex items-center justify-between">
-        <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-1 text-gray-600" data-testid="dashboard-meeting-card-time">
-            <i class="fa-light fa-clock text-xs"></i>
-            <span class="text-xs">{{ formattedTime() }}</span>
-          </div>
+        <div class="flex items-center gap-1 text-gray-600" data-testid="dashboard-meeting-card-time">
+          <i class="fa-light fa-clock text-xs"></i>
+          <span class="text-xs">{{ formattedTime() }}</span>
         </div>
         <lfx-button
           label="See Meeting"
