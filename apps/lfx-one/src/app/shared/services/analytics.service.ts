@@ -169,7 +169,6 @@ export class AnalyticsService {
             tier: '',
             membershipStartDate: '',
             membershipEndDate: '',
-            membershipPrice: 0,
             membershipStatus: '',
           },
           certifiedEmployees: {

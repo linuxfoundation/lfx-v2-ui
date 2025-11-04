@@ -207,7 +207,6 @@ export interface BoardMemberDashboardConsolidatedRow {
   MEMBERSHIP_TIER: string | null;
   CURRENT_MEMBERSHIP_START_DATE: string | null;
   CURRENT_MEMBERSHIP_END_DATE: string | null;
-  MEMBERSHIP_PRICE: number | null;
   MEMBERSHIP_STATUS: string | null;
 
   // Certified Employees fields
@@ -343,7 +342,6 @@ export interface BoardMemberDashboardResponse {
     tier: string;
     membershipStartDate: string;
     membershipEndDate: string;
-    membershipPrice: number;
     membershipStatus: string;
   };
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule, CurrencyPipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
@@ -10,7 +10,7 @@ import { ChartComponent } from '@components/chart/chart.component';
 import { CONTRIBUTIONS_METRICS, IMPACT_METRICS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
 import { ContributionMetric, ImpactMetric, OrganizationInvolvementMetricWithChart, PrimaryInvolvementMetric } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
-import { map, switchMap } from 'rxjs';
+import { finalize, map, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-organization-involvement',
@@ -25,11 +25,22 @@ export class OrganizationInvolvementComponent {
   private readonly accountContextService = inject(AccountContextService);
   private readonly currencyPipe = inject(CurrencyPipe);
 
+  // Loading state signals for each API call
+  private readonly contributionsLoading = signal(true);
+  private readonly dashboardLoading = signal(true);
+  private readonly segmentLoading = signal(true);
+  private readonly eventsLoading = signal(true);
+
   private readonly selectedAccountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
 
   // Consolidated API call for contributions overview (maintainers + contributors + technical committee)
   private readonly contributionsOverviewData = toSignal(
-    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationContributionsOverview(accountId))),
+    this.selectedAccountId$.pipe(
+      switchMap((accountId) => {
+        this.contributionsLoading.set(true);
+        return this.analyticsService.getOrganizationContributionsOverview(accountId).pipe(finalize(() => this.contributionsLoading.set(false)));
+      })
+    ),
     {
       initialValue: {
         maintainers: {
@@ -52,14 +63,18 @@ export class OrganizationInvolvementComponent {
 
   // Consolidated API call for board member dashboard (membership tier + certified employees + board meeting attendance)
   private readonly boardMemberDashboardData = toSignal(
-    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getBoardMemberDashboard(accountId))),
+    this.selectedAccountId$.pipe(
+      switchMap((accountId) => {
+        this.dashboardLoading.set(true);
+        return this.analyticsService.getBoardMemberDashboard(accountId).pipe(finalize(() => this.dashboardLoading.set(false)));
+      })
+    ),
     {
       initialValue: {
         membershipTier: {
           tier: '',
           membershipStartDate: '',
           membershipEndDate: '',
-          membershipPrice: 0,
           membershipStatus: '',
         },
         certifiedEmployees: {
@@ -80,7 +95,12 @@ export class OrganizationInvolvementComponent {
 
   // Consolidated API call for segment overview (projects participating + total commits)
   private readonly segmentOverviewData = toSignal(
-    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationSegmentOverview(accountId))),
+    this.selectedAccountId$.pipe(
+      switchMap((accountId) => {
+        this.segmentLoading.set(true);
+        return this.analyticsService.getOrganizationSegmentOverview(accountId).pipe(finalize(() => this.segmentLoading.set(false)));
+      })
+    ),
     {
       initialValue: {
         projectsParticipating: 0,
@@ -93,7 +113,12 @@ export class OrganizationInvolvementComponent {
 
   // Consolidated API call for events overview (event attendance + event sponsorships)
   private readonly eventsOverviewData = toSignal(
-    this.selectedAccountId$.pipe(switchMap((accountId) => this.analyticsService.getOrganizationEventsOverview(accountId))),
+    this.selectedAccountId$.pipe(
+      switchMap((accountId) => {
+        this.eventsLoading.set(true);
+        return this.analyticsService.getOrganizationEventsOverview(accountId).pipe(finalize(() => this.eventsLoading.set(false)));
+      })
+    ),
     {
       initialValue: {
         eventAttendance: {
@@ -113,9 +138,7 @@ export class OrganizationInvolvementComponent {
   );
 
   protected readonly isLoading = computed<boolean>(() => {
-    const contributionsData = this.contributionsOverviewData();
-    const dashboardData = this.boardMemberDashboardData();
-    return contributionsData.maintainers.maintainers === 0 && contributionsData.contributors.contributors === 0 && dashboardData.membershipTier.tier === '';
+    return this.contributionsLoading() || this.dashboardLoading() || this.segmentLoading() || this.eventsLoading();
   });
 
   protected readonly sparklineChartOptions = {
@@ -302,7 +325,6 @@ export class OrganizationInvolvementComponent {
       tier: string;
       membershipStartDate: string;
       membershipEndDate: string;
-      membershipPrice: number;
       membershipStatus: string;
     },
     metric: PrimaryInvolvementMetric
@@ -315,7 +337,6 @@ export class OrganizationInvolvementComponent {
         icon: metric.icon ?? '',
         tier: '',
         tierSince: '',
-        annualFee: '$0',
         nextDue: '',
         isMembershipTier: metric.isMembershipTier,
         isConnected: true,
@@ -326,16 +347,14 @@ export class OrganizationInvolvementComponent {
     const endDate = new Date(data.membershipEndDate);
     const tierSince = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const annualFee = `$${data.membershipPrice.toLocaleString()}`;
 
     return {
       title: metric.title,
       value: data.tier,
-      subtitle: `since ${tierSince}`,
+      subtitle: `Active membership`,
       icon: metric.icon ?? '',
       tier: data.tier,
       tierSince,
-      annualFee,
       nextDue,
       isMembershipTier: metric.isMembershipTier,
       isConnected: true,
@@ -386,8 +405,8 @@ export class OrganizationInvolvementComponent {
   private transformDefaultMetric(metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
     return {
       title: metric.title,
-      value: metric.value,
-      subtitle: metric.subtitle,
+      value: metric.value ?? 'N/A',
+      subtitle: metric.subtitle ?? 'No data available',
       icon: metric.icon ?? '',
       isConnected: false,
       chartData: {

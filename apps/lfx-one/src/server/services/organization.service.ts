@@ -94,7 +94,6 @@ export class OrganizationService {
         tier,
         membershipStartDate: data.CURRENT_MEMBERSHIP_START_DATE || '',
         membershipEndDate: data.CURRENT_MEMBERSHIP_END_DATE || '',
-        membershipPrice: data.MEMBERSHIP_PRICE || 0,
         membershipStatus: data.MEMBERSHIP_STATUS || '',
       },
       certifiedEmployees: {
@@ -209,6 +208,7 @@ export class OrganizationService {
    */
   private async getContributionsData(accountId: string): Promise<OrganizationContributionsConsolidatedRow> {
     const query = `
+      WITH base AS (SELECT ? AS ACCOUNT_ID)
       SELECT
         m.MAINTAINERS,
         m.PROJECTS AS MAINTAINER_PROJECTS,
@@ -216,11 +216,13 @@ export class OrganizationService {
         c.PROJECTS AS CONTRIBUTOR_PROJECTS,
         tc.TOTAL_REPRESENTATIVES,
         tc.TOTAL_PROJECTS AS TOTAL_TC_PROJECTS,
-        COALESCE(m.ACCOUNT_ID, c.ACCOUNT_ID, tc.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(m.ACCOUNT_ID, c.ACCOUNT_ID, tc.ACCOUNT_ID, base.ACCOUNT_ID) AS ACCOUNT_ID,
         COALESCE(m.ACCOUNT_NAME, c.ACCOUNT_NAME) AS ACCOUNT_NAME
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MAINTAINERS m
+      FROM base
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MAINTAINERS m
+        ON base.ACCOUNT_ID = m.ACCOUNT_ID
       LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CONTRIBUTORS c
-        ON m.ACCOUNT_ID = c.ACCOUNT_ID
+        ON base.ACCOUNT_ID = c.ACCOUNT_ID
       LEFT JOIN (
         SELECT
           SUM(COUNT) AS TOTAL_REPRESENTATIVES,
@@ -230,8 +232,7 @@ export class OrganizationService {
         WHERE ACCOUNT_ID = ?
         GROUP BY ACCOUNT_ID
       ) tc
-        ON m.ACCOUNT_ID = tc.ACCOUNT_ID
-      WHERE m.ACCOUNT_ID = ?
+        ON base.ACCOUNT_ID = tc.ACCOUNT_ID
       LIMIT 1
     `;
 
@@ -254,16 +255,17 @@ export class OrganizationService {
    */
   private async getSegmentData(accountId: string, segmentId: string): Promise<SegmentContributionsConsolidatedRow> {
     const query = `
+      WITH base AS (SELECT ? AS ACCOUNT_ID, ? AS SEGMENT_ID)
       SELECT
         pp.PROJECTS_PARTICIPATING,
         tc.TOTAL_COMMITS,
-        COALESCE(pp.ACCOUNT_ID, tc.ACCOUNT_ID) AS ACCOUNT_ID,
-        COALESCE(pp.SEGMENT_ID, tc.SEGMENT_ID) AS SEGMENT_ID
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PROJECTS_PARTICIPATING pp
+        COALESCE(pp.ACCOUNT_ID, tc.ACCOUNT_ID, base.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(pp.SEGMENT_ID, tc.SEGMENT_ID, base.SEGMENT_ID) AS SEGMENT_ID
+      FROM base
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PROJECTS_PARTICIPATING pp
+        ON base.ACCOUNT_ID = pp.ACCOUNT_ID AND base.SEGMENT_ID = pp.SEGMENT_ID
       LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_TOTAL_COMMITS tc
-        ON pp.ACCOUNT_ID = tc.ACCOUNT_ID AND pp.SEGMENT_ID = tc.SEGMENT_ID
-      WHERE pp.ACCOUNT_ID = ?
-        AND pp.SEGMENT_ID = ?
+        ON base.ACCOUNT_ID = tc.ACCOUNT_ID AND base.SEGMENT_ID = tc.SEGMENT_ID
       LIMIT 1
     `;
 
@@ -286,11 +288,11 @@ export class OrganizationService {
    */
   private async getDashboardData(accountId: string, projectId: string): Promise<BoardMemberDashboardConsolidatedRow> {
     const query = `
+      WITH base AS (SELECT ? AS ACCOUNT_ID, ? AS PROJECT_ID)
       SELECT
         mt.MEMBERSHIP_TIER,
         mt.CURRENT_MEMBERSHIP_START_DATE,
         mt.CURRENT_MEMBERSHIP_END_DATE,
-        mt.MEMBERSHIP_PRICE,
         mt.MEMBERSHIP_STATUS,
         ce.CERTIFICATIONS,
         ce.CERTIFIED_EMPLOYEES,
@@ -301,15 +303,15 @@ export class OrganizationService {
           WHEN bma.TOTAL_MEETINGS > 0 THEN (bma.ATTENDED_MEETINGS::FLOAT / bma.TOTAL_MEETINGS::FLOAT) * 100
           ELSE 0
         END AS ATTENDANCE_PERCENTAGE,
-        COALESCE(mt.ACCOUNT_ID, ce.ACCOUNT_ID, bma.ACCOUNT_ID) AS ACCOUNT_ID,
-        COALESCE(mt.PROJECT_ID, ce.PROJECT_ID, bma.PROJECT_ID) AS PROJECT_ID
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MEMBERSHIP_TIER mt
+        COALESCE(mt.ACCOUNT_ID, ce.ACCOUNT_ID, bma.ACCOUNT_ID, base.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(mt.PROJECT_ID, ce.PROJECT_ID, bma.PROJECT_ID, base.PROJECT_ID) AS PROJECT_ID
+      FROM base
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MEMBERSHIP_TIER mt
+        ON base.ACCOUNT_ID = mt.ACCOUNT_ID AND base.PROJECT_ID = mt.PROJECT_ID
       LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES ce
-        ON mt.ACCOUNT_ID = ce.ACCOUNT_ID AND mt.PROJECT_ID = ce.PROJECT_ID
+        ON base.ACCOUNT_ID = ce.ACCOUNT_ID AND base.PROJECT_ID = ce.PROJECT_ID
       LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE bma
-        ON mt.ACCOUNT_ID = bma.ACCOUNT_ID AND mt.PROJECT_ID = bma.PROJECT_ID
-      WHERE mt.ACCOUNT_ID = ?
-        AND mt.PROJECT_ID = ?
+        ON base.ACCOUNT_ID = bma.ACCOUNT_ID AND base.PROJECT_ID = bma.PROJECT_ID
       LIMIT 1
     `;
 
