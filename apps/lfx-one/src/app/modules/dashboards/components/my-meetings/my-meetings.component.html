@@ -29,10 +29,7 @@
                 <lfx-dashboard-meeting-card
                   [meeting]="item.meeting"
                   [occurrence]="item.occurrence"
-                  [refreshTrigger]="refreshRsvpTrigger()"
-                  [skipRefreshKey]="skipRefreshKey()"
                   (onSeeMeeting)="handleSeeMeeting($event)"
-                  (onRsvpSubmitted)="handleRsvpSubmitted($event)"
                   [attr.data-testid]="'dashboard-my-meetings-today-item-' + item.meeting.uid" />
               }
             </div>
@@ -48,10 +45,7 @@
                 <lfx-dashboard-meeting-card
                   [meeting]="item.meeting"
                   [occurrence]="item.occurrence"
-                  [refreshTrigger]="refreshRsvpTrigger()"
-                  [skipRefreshKey]="skipRefreshKey()"
                   (onSeeMeeting)="handleSeeMeeting($event)"
-                  (onRsvpSubmitted)="handleRsvpSubmitted($event)"
                   [attr.data-testid]="'dashboard-my-meetings-upcoming-item-' + item.meeting.uid" />
               }
             </div>

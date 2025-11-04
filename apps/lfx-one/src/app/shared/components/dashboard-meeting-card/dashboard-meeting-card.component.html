@@ -92,46 +92,6 @@
     <div class="space-y-2">
       <div class="flex items-center justify-between">
         <div class="flex flex-col gap-1">
-          <!-- RSVP Section - Compact Top Left -->
-          <div class="inline-flex items-center gap-1 bg-gray-50 rounded-lg p-1" data-testid="dashboard-meeting-card-rsvp-section">
-            <span class="text-[10px] font-medium text-gray-500 uppercase px-1">RSVP</span>
-            <button
-              type="button"
-              (click)="handleRsvpClick('accepted')"
-              [disabled]="rsvpLoading()"
-              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
-              [ngClass]="{
-                'bg-green-500 text-white border border-green-600': userRsvp()?.response === 'accepted',
-                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'accepted',
-              }"
-              data-testid="dashboard-meeting-card-rsvp-yes">
-              Yes
-            </button>
-            <button
-              type="button"
-              (click)="handleRsvpClick('maybe')"
-              [disabled]="rsvpLoading()"
-              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
-              [ngClass]="{
-                'bg-yellow-500 text-white border border-yellow-600': userRsvp()?.response === 'maybe',
-                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'maybe',
-              }"
-              data-testid="dashboard-meeting-card-rsvp-maybe">
-              Maybe
-            </button>
-            <button
-              type="button"
-              (click)="handleRsvpClick('declined')"
-              [disabled]="rsvpLoading()"
-              class="px-2 py-0.5 text-[11px] font-medium rounded transition-colors"
-              [ngClass]="{
-                'bg-red-500 text-white border border-red-600': userRsvp()?.response === 'declined',
-                'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100': userRsvp()?.response !== 'declined',
-              }"
-              data-testid="dashboard-meeting-card-rsvp-no">
-              No
-            </button>
-          </div>
           <div class="flex items-center gap-1 text-gray-600" data-testid="dashboard-meeting-card-time">
             <i class="fa-light fa-clock text-xs"></i>
             <span class="text-xs">{{ formattedTime() }}</span>
