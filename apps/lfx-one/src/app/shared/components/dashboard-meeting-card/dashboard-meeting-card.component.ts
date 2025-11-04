@@ -3,14 +3,16 @@
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output, Signal } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
+import { Component, computed, inject, input, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
 import { ButtonComponent } from '@components/button/button.component';
-import { Meeting, MeetingAttachment, MeetingOccurrence } from '@lfx-one/shared';
+import { Meeting, MeetingAttachment, MeetingOccurrence, User } from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
+import { UserService } from '@services/user.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 interface MeetingTypeBadge {
   label: string;
@@ -25,12 +27,13 @@ interface MeetingTypeBadge {
 })
 export class DashboardMeetingCardComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly userService = inject(UserService);
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
-  public readonly onSeeMeeting = output<string>();
 
   public readonly attachments: Signal<MeetingAttachment[]>;
+  public readonly joinUrl: Signal<string | null>;
 
   // Computed values
   public readonly meetingTypeInfo: Signal<MeetingTypeBadge> = computed(() => {
@@ -145,6 +148,33 @@ export class DashboardMeetingCardComponent {
     return occurrence?.title || meeting.title;
   });
 
+  public readonly borderColorClass: Signal<string> = computed(() => {
+    const type = this.meeting().meeting_type?.toLowerCase();
+
+    switch (type) {
+      case 'technical':
+        return 'border-purple-500';
+      case 'maintainers':
+        return 'border-blue-500';
+      case 'board':
+        return 'border-red-500';
+      case 'marketing':
+        return 'border-green-500';
+      case 'legal':
+        return 'border-amber-500';
+      case 'other':
+        return 'border-gray-500';
+      default:
+        return 'border-gray-400';
+    }
+  });
+
+  public readonly seeMeetingButtonClass: Signal<string> = computed(() => {
+    const baseClasses = 'border border-gray-300 text-gray-900 hover:bg-gray-50 h-8 text-sm font-medium';
+    const widthClass = this.isTodayMeeting() ? 'flex-1' : 'w-full';
+    return `${baseClasses} ${widthClass}`;
+  });
+
   public constructor() {
     // Convert meeting input signal to observable and create reactive attachment stream
     const meeting$ = toObservable(this.meeting);
@@ -158,9 +188,40 @@ export class DashboardMeetingCardComponent {
     );
 
     this.attachments = toSignal(attachments$, { initialValue: [] });
+
+    // Convert user signal to observable and create reactive join URL stream
+    const user$ = toObservable(this.userService.user);
+    const authenticated$ = toObservable(this.userService.authenticated);
+
+    const joinUrl$ = combineLatest([meeting$, user$, authenticated$]).pipe(
+      switchMap(([meeting, user, authenticated]) => {
+        // Only fetch join URL for today's meetings with authenticated users
+        if (meeting.uid && authenticated && user?.email && this.isTodayMeeting()) {
+          return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email: user.email }).pipe(
+            map((res) => this.buildJoinUrlWithParams(res.join_url, user)),
+            catchError(() => of(null))
+          );
+        }
+        return of(null);
+      })
+    );
+
+    this.joinUrl = toSignal(joinUrl$, { initialValue: null });
   }
 
-  public handleSeeMeeting(): void {
-    this.onSeeMeeting.emit(this.meeting().uid);
+  /**
+   * Build join URL with user parameters (matches meeting-join component logic)
+   * @param joinUrl - Base join URL from API
+   * @param user - Authenticated user
+   * @returns Join URL with encoded user parameters
+   */
+  private buildJoinUrlWithParams(joinUrl: string, user: User): string {
+    const displayName = user.name || user.email;
+    const encodedName = btoa(unescape(encodeURIComponent(displayName)));
+
+    const queryParams = new HttpParams().set('uname', displayName).set('un', encodedName);
+
+    const separator = joinUrl.includes('?') ? '&' : '?';
+    return `${joinUrl}${separator}${queryParams.toString()}`;
   }
 }

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MeetingService } from '@app/shared/services/meeting.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { DashboardMeetingCardComponent } from '@components/dashboard-meeting-card/dashboard-meeting-card.component';
+import { SkeletonModule } from 'primeng/skeleton';
+import { finalize, tap } from 'rxjs';
 
 import type { Meeting, MeetingOccurrence } from '@lfx-one/shared/interfaces';
 
@@ -20,14 +22,21 @@ interface MeetingWithOccurrence {
 @Component({
   selector: 'lfx-my-meetings',
   standalone: true,
-  imports: [CommonModule, DashboardMeetingCardComponent, ButtonComponent],
+  imports: [CommonModule, DashboardMeetingCardComponent, ButtonComponent, SkeletonModule],
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
 export class MyMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly router = inject(Router);
-  private readonly allMeetings = toSignal(this.meetingService.getMeetings(), { initialValue: [] });
+  protected readonly loading = signal(true);
+  private readonly allMeetings = toSignal(
+    this.meetingService.getMeetings().pipe(
+      tap(() => this.loading.set(true)),
+      finalize(() => this.loading.set(false))
+    ),
+    { initialValue: [] }
+  );
 
   protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();
@@ -130,10 +139,6 @@ export class MyMeetingsComponent {
     // Sort by earliest time first and limit to 5
     return meetings.sort((a, b) => a.sortTime - b.sortTime).slice(0, 5);
   });
-
-  public handleSeeMeeting(meetingId: string): void {
-    this.router.navigate(['/meetings', meetingId]);
-  }
 
   public handleViewAll(): void {
     this.router.navigate(['/meetings']);
