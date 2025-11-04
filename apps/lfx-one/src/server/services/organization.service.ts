@@ -2,29 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 import {
-  MemberDashboardBoardMeetingAttendanceRow,
-  MemberDashboardCertifiedEmployeesRow,
-  MemberDashboardMaintainersRow,
-  MemberDashboardProjectsParticipatingRow,
-  MemberDashboardTotalCommitsRow,
-  MembershipTierResponse,
-  MembershipTierRow,
-  OrganizationBoardMeetingAttendanceResponse,
-  OrganizationCertifiedEmployeesResponse,
-  OrganizationContributorsResponse,
-  OrganizationContributorsRow,
-  OrganizationEventAttendanceResponse,
+  BoardMemberDashboardConsolidatedRow,
+  BoardMemberDashboardResponse,
+  OrganizationContributionsConsolidatedRow,
+  OrganizationContributionsOverviewResponse,
   OrganizationEventAttendanceRow,
+  OrganizationEventsOverviewResponse,
   OrganizationEventSponsorshipsAggregateRow,
-  OrganizationEventSponsorshipsEventCountRow,
-  OrganizationEventSponsorshipsResponse,
-  OrganizationMaintainersResponse,
-  OrganizationProjectsParticipatingResponse,
+  OrganizationSegmentOverviewResponse,
   OrganizationSuggestion,
   OrganizationSuggestionsResponse,
-  OrganizationTechnicalCommitteeResponse,
-  OrganizationTechnicalCommitteeRow,
-  OrganizationTotalCommitsResponse,
+  SegmentContributionsConsolidatedRow,
 } from '@lfx-one/shared';
 import { Request } from 'express';
 
@@ -64,111 +52,91 @@ export class OrganizationService {
   }
 
   /**
-   * Get organization-level maintainer and project statistics
+   * Get organization contributions overview (maintainers + contributors + technical committee)
    * @param accountId - Organization account ID
-   * @returns Maintainer and project counts
+   * @returns Complete contributions overview
    */
-  public async getMaintainers(accountId: string): Promise<OrganizationMaintainersResponse> {
-    const query = `
-      SELECT MAINTAINERS, PROJECTS, ACCOUNT_ID, ACCOUNT_NAME
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MAINTAINERS
-      WHERE ACCOUNT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MemberDashboardMaintainersRow>(query, [accountId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization maintainers data', accountId, {
-        operation: 'get_organization_maintainers',
-      });
-    }
-
-    const row = result.rows[0];
+  public async getContributionsOverview(accountId: string): Promise<OrganizationContributionsOverviewResponse> {
+    const data = await this.getContributionsData(accountId);
 
     return {
-      maintainers: row.MAINTAINERS,
-      projects: row.PROJECTS,
-      accountId: row.ACCOUNT_ID,
+      maintainers: {
+        maintainers: data.MAINTAINERS || 0,
+        projects: data.MAINTAINER_PROJECTS || 0,
+      },
+      contributors: {
+        contributors: data.CONTRIBUTORS || 0,
+        projects: data.CONTRIBUTOR_PROJECTS || 0,
+      },
+      technicalCommittee: {
+        totalRepresentatives: data.TOTAL_REPRESENTATIVES || 0,
+        totalProjects: data.TOTAL_TC_PROJECTS || 0,
+      },
+      accountId: data.ACCOUNT_ID,
+      accountName: data.ACCOUNT_NAME,
     };
   }
 
   /**
-   * Get organization membership tier details including dates and pricing
+   * Get board member dashboard (membership tier + certified employees + board meeting attendance)
    * @param accountId - Organization account ID
    * @param projectId - Project ID
-   * @returns Membership tier information
+   * @returns Complete board member dashboard
    */
-  public async getMembershipTier(accountId: string, projectId: string): Promise<MembershipTierResponse> {
-    const query = `
-      SELECT *
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MEMBERSHIP_TIER
-      WHERE ACCOUNT_ID = ?
-        AND PROJECT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MembershipTierRow>(query, [accountId, projectId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Membership tier data', accountId, {
-        operation: 'get_membership_tier',
-      });
-    }
-
-    const row = result.rows[0];
+  public async getBoardMemberDashboardData(accountId: string, projectId: string): Promise<BoardMemberDashboardResponse> {
+    const data = await this.getDashboardData(accountId, projectId);
 
     // Extract tier name (remove " Membership" suffix if present)
-    const tier = row.MEMBERSHIP_TIER.replace(' Membership', '');
+    const tier = data.MEMBERSHIP_TIER ? data.MEMBERSHIP_TIER.replace(' Membership', '') : '';
 
     return {
-      tier,
-      membershipStartDate: row.CURRENT_MEMBERSHIP_START_DATE,
-      membershipEndDate: row.CURRENT_MEMBERSHIP_END_DATE,
-      membershipPrice: row.MEMBERSHIP_PRICE,
-      membershipStatus: row.MEMBERSHIP_STATUS,
-      accountId: row.ACCOUNT_ID,
+      membershipTier: {
+        tier,
+        membershipStartDate: data.CURRENT_MEMBERSHIP_START_DATE || '',
+        membershipEndDate: data.CURRENT_MEMBERSHIP_END_DATE || '',
+        membershipPrice: data.MEMBERSHIP_PRICE || 0,
+        membershipStatus: data.MEMBERSHIP_STATUS || '',
+      },
+      certifiedEmployees: {
+        certifications: data.CERTIFICATIONS || 0,
+        certifiedEmployees: data.CERTIFIED_EMPLOYEES || 0,
+      },
+      boardMeetingAttendance: {
+        totalMeetings: data.TOTAL_MEETINGS || 0,
+        attendedMeetings: data.ATTENDED_MEETINGS || 0,
+        notAttendedMeetings: data.NOT_ATTENDED_MEETINGS || 0,
+        attendancePercentage: data.ATTENDANCE_PERCENTAGE || 0,
+      },
+      accountId: data.ACCOUNT_ID,
+      projectId: data.PROJECT_ID,
     };
   }
 
   /**
-   * Get organization-level contributor statistics
+   * Get organization segment overview (projects participating + total commits)
    * @param accountId - Organization account ID
-   * @returns Contributor statistics
+   * @param segmentId - Segment ID
+   * @returns Segment overview
    */
-  public async getContributors(accountId: string): Promise<OrganizationContributorsResponse> {
-    const query = `
-      SELECT CONTRIBUTORS, ACCOUNT_ID, ACCOUNT_NAME, PROJECTS
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CONTRIBUTORS
-      WHERE ACCOUNT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<OrganizationContributorsRow>(query, [accountId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization contributors data', accountId, {
-        operation: 'get_organization_contributors',
-      });
-    }
-
-    const row = result.rows[0];
+  public async getSegmentOverview(accountId: string, segmentId: string): Promise<OrganizationSegmentOverviewResponse> {
+    const data = await this.getSegmentData(accountId, segmentId);
 
     return {
-      contributors: row.CONTRIBUTORS,
-      accountId: row.ACCOUNT_ID,
-      accountName: row.ACCOUNT_NAME,
-      projects: row.PROJECTS,
+      projectsParticipating: data.PROJECTS_PARTICIPATING || 0,
+      totalCommits: data.TOTAL_COMMITS || 0,
+      accountId: data.ACCOUNT_ID,
+      segmentId: data.SEGMENT_ID,
     };
   }
 
   /**
-   * Get organization event attendance statistics
+   * Get organization events overview (event attendance + event sponsorships)
    * @param accountId - Organization account ID
-   * @returns Total attendees, speakers, and events
+   * @param projectId - Project ID
+   * @returns Events overview
    */
-  public async getEventAttendance(accountId: string): Promise<OrganizationEventAttendanceResponse> {
-    const query = `
+  public async getEventsOverview(accountId: string, projectId: string): Promise<OrganizationEventsOverviewResponse> {
+    const attendanceQuery = `
       SELECT
         SUM(ATTENDEES) AS TOTAL_ATTENDEES,
         SUM(SPEAKERS) AS TOTAL_SPEAKERS,
@@ -180,210 +148,14 @@ export class OrganizationService {
       GROUP BY ACCOUNT_ID
     `;
 
-    const result = await this.snowflakeService.execute<OrganizationEventAttendanceRow>(query, [accountId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization event attendance data', accountId, {
-        operation: 'get_organization_event_attendance',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      totalAttendees: row.TOTAL_ATTENDEES,
-      totalSpeakers: row.TOTAL_SPEAKERS,
-      totalEvents: row.TOTAL_EVENTS,
-      accountId: row.ACCOUNT_ID,
-      accountName: row.ACCOUNT_NAME,
-    };
-  }
-
-  /**
-   * Get organization-level technical committee participation
-   * @param accountId - Organization account ID
-   * @returns TOC/TSC/TAG representatives count
-   */
-  public async getTechnicalCommittee(accountId: string): Promise<OrganizationTechnicalCommitteeResponse> {
-    const query = `
-      SELECT
-        SUM(COUNT) AS TOTAL_REPRESENTATIVES,
-        COUNT(DISTINCT PROJECT_ID) AS TOTAL_PROJECTS,
-        MAX(ACCOUNT_ID) AS ACCOUNT_ID
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.TECHNICAL_COMMITTEE_MEMBER_COUNT
-      WHERE ACCOUNT_ID = ?
-      GROUP BY ACCOUNT_ID
-    `;
-
-    const result = await this.snowflakeService.execute<OrganizationTechnicalCommitteeRow>(query, [accountId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization technical committee data', accountId, {
-        operation: 'get_organization_technical_committee',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      totalRepresentatives: row.TOTAL_REPRESENTATIVES,
-      totalProjects: row.TOTAL_PROJECTS,
-      accountId: row.ACCOUNT_ID,
-    };
-  }
-
-  /**
-   * Get organization-level projects participating count
-   * @param accountId - Organization account ID
-   * @param segmentId - Segment ID (temporary mapping for project IDs)
-   * @returns Projects participating count
-   */
-  public async getProjectsParticipating(accountId: string, segmentId: string): Promise<OrganizationProjectsParticipatingResponse> {
-    const query = `
-      SELECT ACCOUNT_ID, SEGMENT_ID, PROJECTS_PARTICIPATING
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PROJECTS_PARTICIPATING
-      WHERE ACCOUNT_ID = ?
-        AND SEGMENT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MemberDashboardProjectsParticipatingRow>(query, [accountId, segmentId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization projects participating data', accountId, {
-        operation: 'get_organization_projects_participating',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      projectsParticipating: row.PROJECTS_PARTICIPATING,
-      accountId: row.ACCOUNT_ID,
-      segmentId: row.SEGMENT_ID,
-    };
-  }
-
-  /**
-   * Get organization-level total commits count
-   * @param accountId - Organization account ID
-   * @param segmentId - Segment ID (temporary mapping for project IDs)
-   * @returns Total commits count
-   */
-  public async getTotalCommits(accountId: string, segmentId: string): Promise<OrganizationTotalCommitsResponse> {
-    const query = `
-      SELECT ACCOUNT_ID, SEGMENT_ID, TOTAL_COMMITS
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_TOTAL_COMMITS
-      WHERE ACCOUNT_ID = ?
-        AND SEGMENT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MemberDashboardTotalCommitsRow>(query, [accountId, segmentId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization total commits data', accountId, {
-        operation: 'get_organization_total_commits',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      totalCommits: row.TOTAL_COMMITS,
-      accountId: row.ACCOUNT_ID,
-      segmentId: row.SEGMENT_ID,
-    };
-  }
-
-  /**
-   * Get organization-level certified employees and certifications count
-   * @param accountId - Organization account ID
-   * @param projectId - Project ID
-   * @returns Certified employees and certifications count
-   */
-  public async getCertifiedEmployees(accountId: string, projectId: string): Promise<OrganizationCertifiedEmployeesResponse> {
-    const query = `
-      SELECT CERTIFICATIONS, CERTIFIED_EMPLOYEES, ACCOUNT_ID, PROJECT_ID
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES
-      WHERE ACCOUNT_ID = ?
-        AND PROJECT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MemberDashboardCertifiedEmployeesRow>(query, [accountId, projectId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization certified employees data', accountId, {
-        operation: 'get_organization_certified_employees',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      certifications: row.CERTIFICATIONS,
-      certifiedEmployees: row.CERTIFIED_EMPLOYEES,
-      accountId: row.ACCOUNT_ID,
-    };
-  }
-
-  /**
-   * Get organization-level board meeting attendance with percentage
-   * @param accountId - Organization account ID
-   * @param projectId - Project ID
-   * @returns Board meeting attendance statistics
-   */
-  public async getBoardMeetingAttendance(accountId: string, projectId: string): Promise<OrganizationBoardMeetingAttendanceResponse> {
-    const query = `
-      SELECT
-        TOTAL_MEETINGS,
-        ATTENDED_MEETINGS,
-        NOT_ATTENDED_MEETINGS,
-        CASE
-          WHEN TOTAL_MEETINGS > 0 THEN (ATTENDED_MEETINGS::FLOAT / TOTAL_MEETINGS::FLOAT) * 100
-          ELSE 0
-        END AS ATTENDANCE_PERCENTAGE,
-        ACCOUNT_ID,
-        PROJECT_ID
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE
-      WHERE ACCOUNT_ID = ?
-        AND PROJECT_ID = ?
-      LIMIT 1
-    `;
-
-    const result = await this.snowflakeService.execute<MemberDashboardBoardMeetingAttendanceRow>(query, [accountId, projectId]);
-
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization board meeting attendance data', accountId, {
-        operation: 'get_organization_board_meeting_attendance',
-      });
-    }
-
-    const row = result.rows[0];
-
-    return {
-      totalMeetings: row.TOTAL_MEETINGS,
-      attendedMeetings: row.ATTENDED_MEETINGS,
-      notAttendedMeetings: row.NOT_ATTENDED_MEETINGS,
-      attendancePercentage: row.ATTENDANCE_PERCENTAGE,
-      accountId: row.ACCOUNT_ID,
-    };
-  }
-
-  /**
-   * Get organization-level event sponsorships grouped by currency
-   * @param accountId - Organization account ID
-   * @param projectId - Project ID
-   * @returns Event sponsorships by currency with total event count
-   */
-  public async getEventSponsorships(accountId: string, projectId: string): Promise<OrganizationEventSponsorshipsResponse> {
-    // Query to get sum per currency
-    const query = `
+    const sponsorshipsQuery = `
       SELECT
         SUM(PRICE) AS TOTAL_AMOUNT,
         CURRENCY_CODE,
-        MAX(ACCOUNT_ID) AS ACCOUNT_ID
+        MAX(ACCOUNT_ID) AS ACCOUNT_ID,
+        (SELECT COUNT(DISTINCT EVENT_ID)
+         FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_SPONSORSHIPS
+         WHERE ACCOUNT_ID = ? AND PROJECT_ID = ?) AS TOTAL_EVENTS
       FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_SPONSORSHIPS
       WHERE ACCOUNT_ID = ?
         AND PROJECT_ID = ?
@@ -391,35 +163,164 @@ export class OrganizationService {
       ORDER BY CURRENCY_CODE
     `;
 
-    const result = await this.snowflakeService.execute<OrganizationEventSponsorshipsAggregateRow>(query, [accountId, projectId]);
+    const [attendanceResult, sponsorshipsResult] = await Promise.all([
+      this.snowflakeService.execute<OrganizationEventAttendanceRow>(attendanceQuery, [accountId]),
+      this.snowflakeService.execute<OrganizationEventSponsorshipsAggregateRow>(sponsorshipsQuery, [accountId, projectId, accountId, projectId]),
+    ]);
 
-    if (result.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization event sponsorships data', accountId, {
-        operation: 'get_organization_event_sponsorships',
+    if (attendanceResult.rows.length === 0) {
+      throw new ResourceNotFoundError('Organization event attendance data', accountId, {
+        operation: 'get_organization_events_overview',
       });
     }
 
-    // Query to get total distinct events (across all currencies)
-    const eventCountQuery = `
-      SELECT COUNT(DISTINCT EVENT_ID) AS TOTAL_EVENTS
-      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_SPONSORSHIPS
-      WHERE ACCOUNT_ID = ?
-        AND PROJECT_ID = ?
-    `;
+    if (sponsorshipsResult.rows.length === 0) {
+      throw new ResourceNotFoundError('Organization event sponsorships data', accountId, {
+        operation: 'get_organization_events_overview',
+      });
+    }
 
-    const eventCountResult = await this.snowflakeService.execute<OrganizationEventSponsorshipsEventCountRow>(eventCountQuery, [accountId, projectId]);
-    const totalEvents = eventCountResult.rows[0]?.TOTAL_EVENTS || 0;
-
-    // Build currency summaries
-    const currencySummaries = result.rows.map((row) => ({
+    const attendanceRow = attendanceResult.rows[0];
+    const currencySummaries = sponsorshipsResult.rows.map((row) => ({
       amount: row.TOTAL_AMOUNT,
       currencyCode: row.CURRENCY_CODE,
     }));
 
     return {
-      currencySummaries,
-      totalEvents,
-      accountId: result.rows[0].ACCOUNT_ID,
+      eventAttendance: {
+        totalAttendees: attendanceRow.TOTAL_ATTENDEES,
+        totalSpeakers: attendanceRow.TOTAL_SPEAKERS,
+        totalEvents: attendanceRow.TOTAL_EVENTS,
+        accountName: attendanceRow.ACCOUNT_NAME,
+      },
+      eventSponsorships: {
+        currencySummaries,
+        totalEvents: sponsorshipsResult.rows[0].TOTAL_EVENTS,
+      },
+      accountId: attendanceRow.ACCOUNT_ID,
+      projectId,
     };
+  }
+
+  /**
+   * Get organization contributions data from database
+   * @param accountId - Organization account ID
+   * @returns Contributions data row
+   */
+  private async getContributionsData(accountId: string): Promise<OrganizationContributionsConsolidatedRow> {
+    const query = `
+      SELECT
+        m.MAINTAINERS,
+        m.PROJECTS AS MAINTAINER_PROJECTS,
+        c.CONTRIBUTORS,
+        c.PROJECTS AS CONTRIBUTOR_PROJECTS,
+        tc.TOTAL_REPRESENTATIVES,
+        tc.TOTAL_PROJECTS AS TOTAL_TC_PROJECTS,
+        COALESCE(m.ACCOUNT_ID, c.ACCOUNT_ID, tc.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(m.ACCOUNT_NAME, c.ACCOUNT_NAME) AS ACCOUNT_NAME
+      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MAINTAINERS m
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CONTRIBUTORS c
+        ON m.ACCOUNT_ID = c.ACCOUNT_ID
+      LEFT JOIN (
+        SELECT
+          SUM(COUNT) AS TOTAL_REPRESENTATIVES,
+          COUNT(DISTINCT PROJECT_ID) AS TOTAL_PROJECTS,
+          ACCOUNT_ID
+        FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.TECHNICAL_COMMITTEE_MEMBER_COUNT
+        WHERE ACCOUNT_ID = ?
+        GROUP BY ACCOUNT_ID
+      ) tc
+        ON m.ACCOUNT_ID = tc.ACCOUNT_ID
+      WHERE m.ACCOUNT_ID = ?
+      LIMIT 1
+    `;
+
+    const result = await this.snowflakeService.execute<OrganizationContributionsConsolidatedRow>(query, [accountId, accountId]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Organization contributions data', accountId, {
+        operation: 'get_contributions_data',
+      });
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Get segment contributions data from database
+   * @param accountId - Organization account ID
+   * @param segmentId - Segment ID
+   * @returns Segment contributions data row
+   */
+  private async getSegmentData(accountId: string, segmentId: string): Promise<SegmentContributionsConsolidatedRow> {
+    const query = `
+      SELECT
+        pp.PROJECTS_PARTICIPATING,
+        tc.TOTAL_COMMITS,
+        COALESCE(pp.ACCOUNT_ID, tc.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(pp.SEGMENT_ID, tc.SEGMENT_ID) AS SEGMENT_ID
+      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PROJECTS_PARTICIPATING pp
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_TOTAL_COMMITS tc
+        ON pp.ACCOUNT_ID = tc.ACCOUNT_ID AND pp.SEGMENT_ID = tc.SEGMENT_ID
+      WHERE pp.ACCOUNT_ID = ?
+        AND pp.SEGMENT_ID = ?
+      LIMIT 1
+    `;
+
+    const result = await this.snowflakeService.execute<SegmentContributionsConsolidatedRow>(query, [accountId, segmentId]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Segment contributions data', accountId, {
+        operation: 'get_segment_data',
+      });
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Get board member dashboard data from database
+   * @param accountId - Organization account ID
+   * @param projectId - Project ID
+   * @returns Dashboard data row
+   */
+  private async getDashboardData(accountId: string, projectId: string): Promise<BoardMemberDashboardConsolidatedRow> {
+    const query = `
+      SELECT
+        mt.MEMBERSHIP_TIER,
+        mt.CURRENT_MEMBERSHIP_START_DATE,
+        mt.CURRENT_MEMBERSHIP_END_DATE,
+        mt.MEMBERSHIP_PRICE,
+        mt.MEMBERSHIP_STATUS,
+        ce.CERTIFICATIONS,
+        ce.CERTIFIED_EMPLOYEES,
+        bma.TOTAL_MEETINGS,
+        bma.ATTENDED_MEETINGS,
+        bma.NOT_ATTENDED_MEETINGS,
+        CASE
+          WHEN bma.TOTAL_MEETINGS > 0 THEN (bma.ATTENDED_MEETINGS::FLOAT / bma.TOTAL_MEETINGS::FLOAT) * 100
+          ELSE 0
+        END AS ATTENDANCE_PERCENTAGE,
+        COALESCE(mt.ACCOUNT_ID, ce.ACCOUNT_ID, bma.ACCOUNT_ID) AS ACCOUNT_ID,
+        COALESCE(mt.PROJECT_ID, ce.PROJECT_ID, bma.PROJECT_ID) AS PROJECT_ID
+      FROM ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MEMBERSHIP_TIER mt
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES ce
+        ON mt.ACCOUNT_ID = ce.ACCOUNT_ID AND mt.PROJECT_ID = ce.PROJECT_ID
+      LEFT JOIN ANALYTICS_DEV.DEV_JEVANS_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE bma
+        ON mt.ACCOUNT_ID = bma.ACCOUNT_ID AND mt.PROJECT_ID = bma.PROJECT_ID
+      WHERE mt.ACCOUNT_ID = ?
+        AND mt.PROJECT_ID = ?
+      LIMIT 1
+    `;
+
+    const result = await this.snowflakeService.execute<BoardMemberDashboardConsolidatedRow>(query, [accountId, projectId]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Board member dashboard data', accountId, {
+        operation: 'get_dashboard_data',
+      });
+    }
+
+    return result.rows[0];
   }
 }

@@ -147,279 +147,130 @@ export class AnalyticsController {
   }
 
   /**
-   * GET /api/analytics/organization-maintainers
-   * Get organization-level maintainer and project statistics
+   * GET /api/analytics/organization-contributions-overview
+   * Get consolidated organization contributions data (maintainers + contributors + technical committee) in a single request
+   * Optimized endpoint that executes a single database query for all three metrics
    * Query params: accountId (optional) - Organization account ID
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
    */
-  public async getOrganizationMaintainers(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_maintainers');
+  public async getOrganizationContributionsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_contributions_overview');
 
     try {
       const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
-      const response = await this.organizationService.getMaintainers(accountId);
+      // Single database query for all three metrics (maintainers + contributors + technical committee)
+      const response = await this.organizationService.getContributionsOverview(accountId);
 
-      Logger.success(req, 'get_organization_maintainers', startTime, {
+      Logger.success(req, 'get_organization_contributions_overview', startTime, {
         account_id: accountId,
-        maintainers: response.maintainers,
-        projects: response.projects,
+        maintainers: response.maintainers.maintainers,
+        contributors: response.contributors.contributors,
+        technical_committee_representatives: response.technicalCommittee.totalRepresentatives,
       });
 
       res.json(response);
     } catch (error) {
-      Logger.error(req, 'get_organization_maintainers', startTime, error);
+      Logger.error(req, 'get_organization_contributions_overview', startTime, error);
       next(error);
     }
   }
 
   /**
-   * GET /api/analytics/membership-tier
-   * Get organization membership tier details including dates and pricing
+   * GET /api/analytics/organization-segment-overview
+   * Get consolidated organization segment data (projects participating + total commits) in a single request
+   * Optimized endpoint that executes a single database query for both metrics
    * Query params: accountId (optional) - Organization account ID
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
    */
-  public async getMembershipTier(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_membership_tier');
-
-    try {
-      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-
-      const response = await this.organizationService.getMembershipTier(accountId, projectId);
-
-      Logger.success(req, 'get_membership_tier', startTime, {
-        account_id: accountId,
-        project_id: projectId,
-        tier: response.tier,
-        status: response.membershipStatus,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_membership_tier', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-contributors
-   * Get organization-level contributor statistics
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationContributors(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_contributors');
-
-    try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-
-      const response = await this.organizationService.getContributors(accountId);
-
-      Logger.success(req, 'get_organization_contributors', startTime, {
-        account_id: accountId,
-        contributors: response.contributors,
-        projects: response.projects,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_contributors', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-event-attendance
-   * Get organization event attendance statistics (total attendees and speakers)
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationEventAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_event_attendance');
-
-    try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-
-      const response = await this.organizationService.getEventAttendance(accountId);
-
-      Logger.success(req, 'get_organization_event_attendance', startTime, {
-        account_id: accountId,
-        total_attendees: response.totalAttendees,
-        total_speakers: response.totalSpeakers,
-        total_events: response.totalEvents,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_event_attendance', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-technical-committee
-   * Get organization-level technical committee participation (TOC/TSC/TAG representatives)
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationTechnicalCommittee(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_technical_committee');
-
-    try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-
-      const response = await this.organizationService.getTechnicalCommittee(accountId);
-
-      Logger.success(req, 'get_organization_technical_committee', startTime, {
-        account_id: accountId,
-        total_representatives: response.totalRepresentatives,
-        total_projects: response.totalProjects,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_technical_committee', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-projects-participating
-   * Get organization-level projects participating count
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationProjectsParticipating(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_projects_participating');
+  public async getOrganizationSegmentOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_segment_overview');
 
     try {
       const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       const segmentId = ANALYTICS_DEFAULTS.SEGMENT_ID;
 
-      const response = await this.organizationService.getProjectsParticipating(accountId, segmentId);
+      // Single database query for both metrics (projects participating + total commits)
+      const response = await this.organizationService.getSegmentOverview(accountId, segmentId);
 
-      Logger.success(req, 'get_organization_projects_participating', startTime, {
+      Logger.success(req, 'get_organization_segment_overview', startTime, {
         account_id: accountId,
         segment_id: segmentId,
         projects_participating: response.projectsParticipating,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_projects_participating', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-total-commits
-   * Get organization-level total commits count
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationTotalCommits(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_total_commits');
-
-    try {
-      // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-      // Hardcoded segment_id as per user requirement
-      const segmentId = ANALYTICS_DEFAULTS.SEGMENT_ID;
-
-      const response = await this.organizationService.getTotalCommits(accountId, segmentId);
-
-      Logger.success(req, 'get_organization_total_commits', startTime, {
-        account_id: accountId,
-        segment_id: segmentId,
         total_commits: response.totalCommits,
       });
 
       res.json(response);
     } catch (error) {
-      Logger.error(req, 'get_organization_total_commits', startTime, error);
+      Logger.error(req, 'get_organization_segment_overview', startTime, error);
       next(error);
     }
   }
 
   /**
-   * GET /api/analytics/organization-certified-employees
-   * Get organization-level certified employees and certifications count
+   * GET /api/analytics/board-member-dashboard
+   * Get consolidated board member dashboard data (membership tier + certified employees + board meeting attendance)
+   * Optimized endpoint that executes a single database query for all three metrics
    * Query params: accountId (optional) - Organization account ID
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
    */
-  public async getOrganizationCertifiedEmployees(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_certified_employees');
+  public async getBoardMemberDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_board_member_dashboard');
 
     try {
-      // Get accountId from query params, fallback to default Microsoft Corporation
       const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-      // TODO: Get PROJECT_ID from user profile or session
       const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
 
-      const response = await this.organizationService.getCertifiedEmployees(accountId, projectId);
+      // Single database query for all three metrics (membership tier + certified employees + board meeting attendance)
+      const response = await this.organizationService.getBoardMemberDashboardData(accountId, projectId);
 
-      Logger.success(req, 'get_organization_certified_employees', startTime, {
+      Logger.success(req, 'get_board_member_dashboard', startTime, {
         account_id: accountId,
         project_id: projectId,
-        certifications: response.certifications,
-        certified_employees: response.certifiedEmployees,
+        tier: response.membershipTier.tier,
+        certifications: response.certifiedEmployees.certifications,
+        attendance_percentage: response.boardMeetingAttendance.attendancePercentage,
       });
 
       res.json(response);
     } catch (error) {
-      Logger.error(req, 'get_organization_certified_employees', startTime, error);
+      Logger.error(req, 'get_board_member_dashboard', startTime, error);
       next(error);
     }
   }
 
   /**
-   * GET /api/analytics/organization-board-meeting-attendance
-   * Get organization-level board meeting attendance with percentage calculation
+   * GET /api/analytics/organization-events-overview
+   * Get consolidated organization events data (event attendance + event sponsorships) in a single request
+   * Uses parallel database queries (two different tables) for optimal performance
    * Query params: accountId (optional) - Organization account ID
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
    */
-  public async getOrganizationBoardMeetingAttendance(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_board_meeting_attendance');
-
-    try {
-      // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-      // TODO: Get PROJECT_ID from user profile or session
-      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
-
-      const response = await this.organizationService.getBoardMeetingAttendance(accountId, projectId);
-
-      Logger.success(req, 'get_organization_board_meeting_attendance', startTime, {
-        account_id: accountId,
-        project_id: projectId,
-        total_meetings: response.totalMeetings,
-        attended_meetings: response.attendedMeetings,
-        attendance_percentage: response.attendancePercentage,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_board_meeting_attendance', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/organization-event-sponsorships
-   * Get organization-level event sponsorships grouped by currency with total event count
-   * Query params: accountId (optional) - Organization account ID
-   */
-  public async getOrganizationEventSponsorships(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_event_sponsorships');
+  public async getOrganizationEventsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_events_overview');
 
     try {
       const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
 
-      const response = await this.organizationService.getEventSponsorships(accountId, projectId);
+      // Parallel database queries for event metrics (two different tables)
+      const response = await this.organizationService.getEventsOverview(accountId, projectId);
 
-      Logger.success(req, 'get_organization_event_sponsorships', startTime, {
+      Logger.success(req, 'get_organization_events_overview', startTime, {
         account_id: accountId,
         project_id: projectId,
-        currency_summaries: response.currencySummaries,
-        total_events: response.totalEvents,
+        total_attendees: response.eventAttendance.totalAttendees,
+        total_speakers: response.eventAttendance.totalSpeakers,
+        sponsored_events: response.eventSponsorships.totalEvents,
       });
 
       res.json(response);
     } catch (error) {
-      Logger.error(req, 'get_organization_event_sponsorships', startTime, error);
+      Logger.error(req, 'get_organization_events_overview', startTime, error);
       next(error);
     }
   }

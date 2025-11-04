@@ -178,147 +178,11 @@ export interface UserProjectsResponse {
 }
 
 /**
- * API response for Organization Maintainers query
- * Provides organization-level maintainer and project statistics
- */
-export interface OrganizationMaintainersResponse {
-  /**
-   * Total number of distinct maintainers in the organization
-   */
-  maintainers: number;
-
-  /**
-   * Total number of distinct projects with maintainers
-   */
-  projects: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-}
-
-/**
- * API response for Membership Tier query
- * Provides organization membership details including tier, dates, and pricing
- */
-export interface MembershipTierResponse {
-  /**
-   * Membership tier level (e.g., "Platinum", "Gold", "Silver")
-   */
-  tier: string;
-
-  /**
-   * Start date of current membership period (YYYY-MM-DD format)
-   */
-  membershipStartDate: string;
-
-  /**
-   * End date of current membership period (YYYY-MM-DD format)
-   */
-  membershipEndDate: string;
-
-  /**
-   * Annual membership price in dollars
-   */
-  membershipPrice: number;
-
-  /**
-   * Membership status (e.g., "Active", "Pending", "Expired")
-   */
-  membershipStatus: string;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-}
-
-/**
- * API response for Organization Contributors query
- * Provides total count of active contributors for the organization
- */
-export interface OrganizationContributorsResponse {
-  /**
-   * Total number of active contributors in the organization
-   */
-  contributors: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-
-  /**
-   * Organization/account name
-   */
-  accountName: string;
-
-  /**
-   * Total number of projects with contributors
-   */
-  projects: number;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_MAINTAINERS query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardMaintainersRow {
-  MAINTAINERS: number;
-  PROJECTS: number;
-  ACCOUNT_ID: string;
-  ACCOUNT_NAME: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_MEMBERSHIP_TIER query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MembershipTierRow {
-  PROJECT_ID: string;
-  PROJECT_NAME: string;
-  IS_PROJECT_ACTIVE: boolean;
-  ACCOUNT_ID: string;
-  ACCOUNT_NAME: string;
-  MEMBERSHIP_TIER: string;
-  MEMBERSHIP_PRICE: number;
-  CURRENT_MEMBERSHIP_START_DATE: string;
-  CURRENT_MEMBERSHIP_END_DATE: string;
-  RENEWAL_PRICE: number;
-  MEMBERSHIP_STATUS: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_CONTRIBUTORS query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface OrganizationContributorsRow {
-  CONTRIBUTORS: number;
-  ACCOUNT_ID: string;
-  ACCOUNT_NAME: string;
-  PROJECTS: number;
-}
-
-/**
  * Snowflake row from project count query
  * Raw response with Snowflake naming conventions (ALL_CAPS)
  */
 export interface ProjectCountRow {
   TOTAL_PROJECTS: number;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_EVENT_ATTENDANCE query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardEventAttendanceRow {
-  EVENT_NAME: string;
-  EVENT_END_DATE: string;
-  ACCOUNT_ID: string;
-  ACCOUNT_NAME: string;
-  ATTENDEES: number;
-  SPEAKERS: number;
 }
 
 /**
@@ -334,24 +198,101 @@ export interface OrganizationEventAttendanceRow {
 }
 
 /**
- * API response for Organization Event Attendance query
- * Provides aggregated event attendance statistics
+ * Consolidated Snowflake response joining membership tier, certified employees, and board meeting attendance
+ * Uses LEFT JOINs to handle partial data scenarios with nullable fields
+ * All fields from joined tables are nullable to support flexible NULL handling
  */
-export interface OrganizationEventAttendanceResponse {
+export interface BoardMemberDashboardConsolidatedRow {
+  // Membership Tier fields
+  MEMBERSHIP_TIER: string | null;
+  CURRENT_MEMBERSHIP_START_DATE: string | null;
+  CURRENT_MEMBERSHIP_END_DATE: string | null;
+  MEMBERSHIP_PRICE: number | null;
+  MEMBERSHIP_STATUS: string | null;
+
+  // Certified Employees fields
+  CERTIFICATIONS: number | null;
+  CERTIFIED_EMPLOYEES: number | null;
+
+  // Board Meeting Attendance fields
+  TOTAL_MEETINGS: number | null;
+  ATTENDED_MEETINGS: number | null;
+  NOT_ATTENDED_MEETINGS: number | null;
+  ATTENDANCE_PERCENTAGE: number | null;
+
+  // Common fields
+  ACCOUNT_ID: string;
+  PROJECT_ID: string;
+}
+
+/**
+ * Consolidated Snowflake response joining organization-level contributions (maintainers + contributors)
+ * Uses LEFT JOIN to combine data from maintainers and contributors tables
+ * Nullable fields support partial data scenarios
+ */
+export interface OrganizationContributionsConsolidatedRow {
+  // Maintainers fields
+  MAINTAINERS: number | null;
+  MAINTAINER_PROJECTS: number | null;
+
+  // Contributors fields
+  CONTRIBUTORS: number | null;
+  CONTRIBUTOR_PROJECTS: number | null;
+
+  // Technical Committee fields
+  TOTAL_REPRESENTATIVES: number | null;
+  TOTAL_TC_PROJECTS: number | null;
+
+  // Common fields
+  ACCOUNT_ID: string;
+  ACCOUNT_NAME: string;
+}
+
+/**
+ * Consolidated Snowflake response joining segment-level contributions (projects participating + total commits)
+ * Uses LEFT JOIN to combine data from projects participating and total commits tables
+ * Nullable fields support partial data scenarios
+ */
+export interface SegmentContributionsConsolidatedRow {
+  // Projects Participating fields
+  PROJECTS_PARTICIPATING: number | null;
+
+  // Total Commits fields
+  TOTAL_COMMITS: number | null;
+
+  // Common fields
+  ACCOUNT_ID: string;
+  SEGMENT_ID: string;
+}
+
+/**
+ * Consolidated API response for organization contributions overview
+ * Combines maintainers, contributors, and technical committee data in a single response
+ */
+export interface OrganizationContributionsOverviewResponse {
   /**
-   * Total number of event attendees across all events
+   * Maintainer statistics
    */
-  totalAttendees: number;
+  maintainers: {
+    maintainers: number;
+    projects: number;
+  };
 
   /**
-   * Total number of speakers across all events
+   * Contributor statistics
    */
-  totalSpeakers: number;
+  contributors: {
+    contributors: number;
+    projects: number;
+  };
 
   /**
-   * Total number of events with participation
+   * Technical Committee statistics (TOC/TSC/TAG)
    */
-  totalEvents: number;
+  technicalCommittee: {
+    totalRepresentatives: number;
+    totalProjects: number;
+  };
 
   /**
    * Salesforce account ID for the organization
@@ -365,116 +306,17 @@ export interface OrganizationEventAttendanceResponse {
 }
 
 /**
- * Snowflake row from TECHNICAL_COMMITTEE_MEMBER_COUNT query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
+ * Consolidated API response for organization segment contributions overview
+ * Combines projects participating and total commits data in a single response
  */
-export interface TechnicalCommitteeMemberCountRow {
-  PROJECT_ID: string;
-  ACCOUNT_ID: string;
-  COUNT: number;
-}
-
-/**
- * Snowflake aggregated row from TECHNICAL_COMMITTEE_MEMBER_COUNT query
- * Raw response with Snowflake naming conventions (ALL_CAPS) for aggregated sum
- */
-export interface OrganizationTechnicalCommitteeRow {
-  TOTAL_REPRESENTATIVES: number;
-  TOTAL_PROJECTS: number;
-  ACCOUNT_ID: string;
-}
-
-/**
- * API response for Organization Technical Committee Participation query
- * Provides total count of TOC/TSC/TAG representatives
- */
-export interface OrganizationTechnicalCommitteeResponse {
-  /**
-   * Total number of technical committee representatives across all projects
-   */
-  totalRepresentatives: number;
-
-  /**
-   * Total number of projects with technical committee participation
-   */
-  totalProjects: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_PROJECTS_PARTICIPATING query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardProjectsParticipatingRow {
-  /**
-   * Salesforce account ID for the organization
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Segment identifier for the organization
-   */
-  SEGMENT_ID: string;
-
-  /**
-   * Number of projects the organization is participating in
-   */
-  PROJECTS_PARTICIPATING: number;
-}
-
-/**
- * API response for Organization Projects Participating query
- * Provides count of projects the organization is actively participating in
- */
-export interface OrganizationProjectsParticipatingResponse {
+export interface OrganizationSegmentOverviewResponse {
   /**
    * Number of projects the organization is participating in
    */
   projectsParticipating: number;
 
   /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-
-  /**
-   * Segment identifier for the organization
-   */
-  segmentId: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_TOTAL_COMMITS query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardTotalCommitsRow {
-  /**
-   * Salesforce account ID for the organization
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Segment identifier for the organization
-   */
-  SEGMENT_ID: string;
-
-  /**
-   * Total number of commits by the organization
-   */
-  TOTAL_COMMITS: number;
-}
-
-/**
- * API response for Organization Total Commits query
- * Provides total count of code commits by the organization
- */
-export interface OrganizationTotalCommitsResponse {
-  /**
-   * Total number of commits by the organization
+   * Total number of commits
    */
   totalCommits: number;
 
@@ -484,174 +326,99 @@ export interface OrganizationTotalCommitsResponse {
   accountId: string;
 
   /**
-   * Segment identifier for the organization
+   * Segment ID (temporary mapping for project IDs)
    */
   segmentId: string;
 }
 
 /**
- * Snowflake row from MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
+ * Consolidated API response for board member dashboard
+ * Combines membership tier, certified employees, and board meeting attendance in a single response
  */
-export interface MemberDashboardCertifiedEmployeesRow {
+export interface BoardMemberDashboardResponse {
   /**
-   * Total number of certifications achieved
+   * Membership tier information
    */
-  CERTIFICATIONS: number;
+  membershipTier: {
+    tier: string;
+    membershipStartDate: string;
+    membershipEndDate: string;
+    membershipPrice: number;
+    membershipStatus: string;
+  };
 
   /**
-   * Number of certified employees in the organization
+   * Certified employees information
    */
-  CERTIFIED_EMPLOYEES: number;
+  certifiedEmployees: {
+    certifications: number;
+    certifiedEmployees: number;
+  };
 
   /**
-   * Salesforce account ID for the organization
+   * Board meeting attendance information
    */
-  ACCOUNT_ID: string;
-
-  /**
-   * Project ID
-   */
-  PROJECT_ID: string;
-}
-
-/**
- * API response for Organization Certified Employees query
- * Provides count of certifications and certified employees in the organization
- */
-export interface OrganizationCertifiedEmployeesResponse {
-  /**
-   * Total number of certifications achieved
-   */
-  certifications: number;
-
-  /**
-   * Number of certified employees in the organization
-   */
-  certifiedEmployees: number;
+  boardMeetingAttendance: {
+    totalMeetings: number;
+    attendedMeetings: number;
+    notAttendedMeetings: number;
+    attendancePercentage: number;
+  };
 
   /**
    * Salesforce account ID for the organization
    */
   accountId: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_BOARD_MEETING_ATTENDANCE query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardBoardMeetingAttendanceRow {
-  /**
-   * Total number of board meetings
-   */
-  TOTAL_MEETINGS: number;
-
-  /**
-   * Number of meetings attended by the organization
-   */
-  ATTENDED_MEETINGS: number;
-
-  /**
-   * Number of meetings not attended by the organization
-   */
-  NOT_ATTENDED_MEETINGS: number;
-
-  /**
-   * Attendance percentage calculated by SQL: (ATTENDED_MEETINGS / TOTAL_MEETINGS) * 100
-   */
-  ATTENDANCE_PERCENTAGE: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  ACCOUNT_ID: string;
 
   /**
    * Project ID
    */
-  PROJECT_ID: string;
+  projectId: string;
 }
 
 /**
- * API response for Organization Board Meeting Attendance query
- * Provides board meeting attendance statistics with calculated attendance percentage
+ * Consolidated API response for organization events overview
+ * Combines event attendance and event sponsorships data in a single response
+ *
+ * Generated with [Claude Code](https://claude.ai/code)
  */
-export interface OrganizationBoardMeetingAttendanceResponse {
+export interface OrganizationEventsOverviewResponse {
   /**
-   * Total number of board meetings
+   * Event attendance information
    */
-  totalMeetings: number;
+  eventAttendance: {
+    totalAttendees: number;
+    totalSpeakers: number;
+    totalEvents: number;
+    accountName: string;
+  };
 
   /**
-   * Number of meetings attended by the organization
+   * Event sponsorships information
    */
-  attendedMeetings: number;
-
-  /**
-   * Number of meetings not attended by the organization
-   */
-  notAttendedMeetings: number;
-
-  /**
-   * Attendance percentage calculated as (attendedMeetings / totalMeetings) * 100
-   */
-  attendancePercentage: number;
+  eventSponsorships: {
+    currencySummaries: Array<{
+      amount: number;
+      currencyCode: string;
+    }>;
+    totalEvents: number;
+  };
 
   /**
    * Salesforce account ID for the organization
    */
   accountId: string;
-}
-
-/**
- * Snowflake row from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MemberDashboardEventSponsorshipRow {
-  /**
-   * Sponsorship price
-   */
-  PRICE: number;
 
   /**
-   * Currency code (e.g., USD)
+   * Project ID (used for sponsorships filtering)
    */
-  CURRENCY_CODE: string;
-
-  /**
-   * Event name
-   */
-  EVENT_NAME: string;
-
-  /**
-   * Event unique identifier
-   */
-  EVENT_ID: string;
-
-  /**
-   * Product/sponsorship package name
-   */
-  PRODUCT_NAME: string;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Project ID
-   */
-  PROJECT_ID: string;
-
-  /**
-   * Timestamp when sponsorship was created
-   */
-  CREATED_TS: string;
+  projectId: string;
 }
 
 /**
  * Snowflake aggregated response from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query (per currency)
  * Contains calculated totals via SQL aggregation grouped by currency
+ * Includes window function for total event count (repeated across rows)
  */
 export interface OrganizationEventSponsorshipsAggregateRow {
   /**
@@ -668,15 +435,10 @@ export interface OrganizationEventSponsorshipsAggregateRow {
    * Salesforce account ID for the organization
    */
   ACCOUNT_ID: string;
-}
 
-/**
- * Snowflake event count response from MEMBER_DASHBOARD_EVENT_SPONSORSHIPS query
- * Contains count of distinct events
- */
-export interface OrganizationEventSponsorshipsEventCountRow {
   /**
-   * Total number of distinct events sponsored
+   * Total number of distinct events sponsored (across all currencies)
+   * Computed via window function, repeated in each row
    */
   TOTAL_EVENTS: number;
 }
@@ -694,25 +456,4 @@ export interface CurrencySummary {
    * Currency code (e.g., USD, INR, EUR)
    */
   currencyCode: string;
-}
-
-/**
- * API response for Organization Event Sponsorships query
- * Provides sponsorship amounts grouped by currency and total event count
- */
-export interface OrganizationEventSponsorshipsResponse {
-  /**
-   * Array of sponsorship amounts grouped by currency
-   */
-  currencySummaries: CurrencySummary[];
-
-  /**
-   * Total number of unique events sponsored (across all currencies)
-   */
-  totalEvents: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
 }
