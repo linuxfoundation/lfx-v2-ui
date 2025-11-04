@@ -320,32 +320,6 @@ export const RECURRENCE_WEEKLY_ORDINALS = [
 ];
 
 // ============================================================================
-// RSVP Scope Options
-// ============================================================================
-
-/**
- * RSVP scope options for recurring meetings
- * @description Pre-defined options for selecting which occurrences an RSVP applies to
- */
-export const RSVP_SCOPE_OPTIONS = [
-  {
-    value: 'single' as const,
-    label: 'This occurrence only',
-    description: 'Apply this RSVP to only this specific meeting',
-  },
-  {
-    value: 'all' as const,
-    label: 'All occurrences',
-    description: 'Apply this RSVP to all occurrences in the series',
-  },
-  {
-    value: 'following' as const,
-    label: 'This and following occurrences',
-    description: 'Apply this RSVP to this meeting and all future occurrences',
-  },
-];
-
-// ============================================================================
 // Template Re-exports
 // ============================================================================
 
