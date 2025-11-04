@@ -9,15 +9,9 @@ import { MeetingService } from '@app/shared/services/meeting.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { DashboardMeetingCardComponent } from '@components/dashboard-meeting-card/dashboard-meeting-card.component';
 import { SkeletonModule } from 'primeng/skeleton';
-import { finalize, tap } from 'rxjs';
+import { finalize } from 'rxjs';
 
-import type { Meeting, MeetingOccurrence } from '@lfx-one/shared/interfaces';
-
-interface MeetingWithOccurrence {
-  meeting: Meeting;
-  occurrence: MeetingOccurrence;
-  sortTime: number;
-}
+import type { MeetingWithOccurrence } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-my-meetings',
@@ -30,13 +24,7 @@ export class MyMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly router = inject(Router);
   protected readonly loading = signal(true);
-  private readonly allMeetings = toSignal(
-    this.meetingService.getMeetings().pipe(
-      tap(() => this.loading.set(true)),
-      finalize(() => this.loading.set(false))
-    ),
-    { initialValue: [] }
-  );
+  private readonly allMeetings = toSignal(this.meetingService.getMeetings().pipe(finalize(() => this.loading.set(false))), { initialValue: [] });
 
   protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();

@@ -11,11 +11,6 @@
       <span class="text-xs px-2 py-1 font-medium rounded" [ngClass]="meetingTypeInfo().className" data-testid="dashboard-meeting-card-type-badge">
         {{ meetingTypeInfo().label }}
       </span>
-      @if (meeting().project_name) {
-        <span class="border border-gray-300 bg-white text-gray-700 text-xs px-2 py-1 font-medium rounded" data-testid="dashboard-meeting-card-project-badge">
-          {{ meeting().project_name }}
-        </span>
-      }
     </div>
 
     <!-- Meeting title with file icons -->
@@ -122,7 +117,6 @@
             label="Join Meeting"
             [href]="joinUrl()!"
             target="_blank"
-            rel="noopener noreferrer"
             type="button"
             rel="noopener noreferrer"
             icon="fa-light fa-video"
@@ -139,7 +133,6 @@
             [queryParams]="{ password: meeting().password || '' }"
             target="_blank"
             type="button"
-            rel="noopener noreferrer"
             type="button"
             rel="noopener noreferrer"
             icon="fa-light fa-video"
