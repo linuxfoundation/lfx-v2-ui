@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ANALYTICS_DEFAULTS } from '@lfx-one/shared/constants';
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
@@ -370,7 +371,7 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
       const query = `
         SELECT MAINTAINERS, PROJECTS, ACCOUNT_ID, ACCOUNT_NAME
@@ -418,8 +419,8 @@ export class AnalyticsController {
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
       // TODO: Get PROJECT_ID from user profile or session
-      const projectId = 'a0941000002wBz9AAE';
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
       // Query for membership tier information from consolidated dashboard table
       const query = `
@@ -478,7 +479,7 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
       // Query for organization contributors
       const query = `
@@ -530,7 +531,7 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
       const query = `
         SELECT
@@ -585,7 +586,7 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
 
       // Query with SQL aggregation for better performance
       const query = `
@@ -639,9 +640,9 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       // Hardcoded segment_id as per user requirement
-      const segmentId = '8656081c-f2fc-485f-b5f2-389ffcd5621a';
+      const segmentId = ANALYTICS_DEFAULTS.SEGMENT_ID;
 
       const query = `
         SELECT ACCOUNT_ID, SEGMENT_ID, PROJECTS_PARTICIPATING
@@ -689,9 +690,9 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       // Hardcoded segment_id as per user requirement
-      const segmentId = '8656081c-f2fc-485f-b5f2-389ffcd5621a';
+      const segmentId = ANALYTICS_DEFAULTS.SEGMENT_ID;
 
       const query = `
         SELECT ACCOUNT_ID, SEGMENT_ID, TOTAL_COMMITS
@@ -739,9 +740,9 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       // TODO: Get PROJECT_ID from user profile or session
-      const projectId = 'a0941000002wBz9AAE';
+      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
 
       const query = `
         SELECT CERTIFICATIONS, CERTIFIED_EMPLOYEES, ACCOUNT_ID, PROJECT_ID
@@ -790,9 +791,9 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       // TODO: Get PROJECT_ID from user profile or session
-      const projectId = 'a0941000002wBz9AAE';
+      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
 
       const query = `
         SELECT
@@ -853,9 +854,9 @@ export class AnalyticsController {
 
     try {
       // Get accountId from query params, fallback to default Microsoft Corporation
-      const accountId = (req.query['accountId'] as string) || '0014100000Te0OKAAZ';
+      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
       // TODO: Get PROJECT_ID from user profile or session
-      const projectId = 'a0941000002wBz9AAE';
+      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
 
       // Query to get sum per currency
       const query = `

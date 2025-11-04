@@ -370,7 +370,11 @@ export class OrganizationInvolvementComponent {
   }
 
   private transformEventSponsorship(data: OrganizationEventSponsorshipsResponse, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
-    const formattedAmounts = data.currencySummaries.map((summary) => this.currencyPipe.transform(summary.amount, summary.currencyCode, 'symbol', '1.0-0'));
+    // Filter out summaries with null/empty currency codes and transform remaining valid entries
+    const formattedAmounts = data.currencySummaries
+      .filter((summary) => summary.currencyCode && summary.currencyCode.trim() !== '')
+      .map((summary) => this.currencyPipe.transform(summary.amount, summary.currencyCode, 'symbol', '1.0-0'))
+      .filter((formatted) => formatted !== null);
 
     const displayValue = formattedAmounts.length > 0 ? formattedAmounts.join(' + ') : '$0';
 
