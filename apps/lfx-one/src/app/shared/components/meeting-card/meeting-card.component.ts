@@ -11,7 +11,13 @@ import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { RecurrenceSummaryPipe } from '@app/shared/pipes/recurrence-summary.pipe';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { CancelOccurrenceConfirmationComponent } from '@components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
+import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '@components/meeting-delete-confirmation/meeting-delete-confirmation.component';
+import {
+  MeetingDeleteTypeResult,
+  MeetingDeleteTypeSelectionComponent,
+} from '@components/meeting-delete-type-selection/meeting-delete-type-selection.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { environment } from '@environments/environment';
 import {
@@ -23,6 +29,7 @@ import {
   Meeting,
   MEETING_TYPE_CONFIGS,
   MeetingAttachment,
+  MeetingCancelOccurrenceResult,
   MeetingOccurrence,
   MeetingRegistrant,
   PastMeeting,
@@ -30,6 +37,10 @@ import {
   PastMeetingRecording,
   PastMeetingSummary,
 } from '@lfx-one/shared';
+import { MeetingCommitteeModalComponent } from '@modules/project/meetings/components/meeting-committee-modal/meeting-committee-modal.component';
+import { RecordingModalComponent } from '@modules/project/meetings/components/recording-modal/recording-modal.component';
+import { RegistrantModalComponent } from '@modules/project/meetings/components/registrant-modal/registrant-modal.component';
+import { SummaryModalComponent } from '@modules/project/meetings/components/summary-modal/summary-modal.component';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
@@ -40,15 +51,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
-
-import { MeetingCommitteeModalComponent } from '../../../modules/project/meetings/components/meeting-committee-modal/meeting-committee-modal.component';
-import {
-  MeetingDeleteConfirmationComponent,
-  MeetingDeleteResult,
-} from '../../../modules/project/meetings/components/meeting-delete-confirmation/meeting-delete-confirmation.component';
-import { RecordingModalComponent } from '../../../modules/project/meetings/components/recording-modal/recording-modal.component';
-import { RegistrantModalComponent } from '../../../modules/project/meetings/components/registrant-modal/registrant-modal.component';
-import { SummaryModalComponent } from '../../../modules/project/meetings/components/summary-modal/summary-modal.component';
 
 @Component({
   selector: 'lfx-meeting-card',
@@ -494,6 +496,85 @@ export class MeetingCardComponent implements OnInit {
     const meeting = this.meeting();
     if (!meeting) return;
 
+    // Check if meeting is recurring
+    const isRecurring = !!meeting.recurrence;
+
+    if (isRecurring) {
+      // For recurring meetings, first show the delete type selection modal
+      this.dialogService
+        .open(MeetingDeleteTypeSelectionComponent, {
+          header: 'Delete Recurring Meeting',
+          width: '500px',
+          modal: true,
+          closable: true,
+          dismissableMask: true,
+          data: {
+            meeting: meeting,
+          },
+        })
+        .onClose.pipe(take(1))
+        .subscribe((typeResult: MeetingDeleteTypeResult) => {
+          if (typeResult) {
+            if (typeResult.deleteType === 'occurrence') {
+              // User wants to cancel just this occurrence
+              this.showCancelOccurrenceModal(meeting);
+            } else {
+              // User wants to delete the entire series
+              this.showDeleteMeetingModal(meeting);
+            }
+          }
+        });
+    } else {
+      // For non-recurring meetings, show delete confirmation directly
+      this.showDeleteMeetingModal(meeting);
+    }
+  }
+
+  private showCancelOccurrenceModal(meeting: Meeting): void {
+    // Prefer the explicitly selected/current occurrence; fallback to next active
+    const occurrenceToCancel = this.occurrence() ?? getCurrentOrNextOccurrence(meeting);
+
+    if (!occurrenceToCancel) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No upcoming occurrence found to cancel.',
+      });
+      return;
+    }
+
+    this.dialogService
+      .open(CancelOccurrenceConfirmationComponent, {
+        header: 'Cancel Occurrence',
+        width: '450px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: {
+          meeting: meeting,
+          occurrence: occurrenceToCancel,
+        },
+      })
+      .onClose.pipe(take(1))
+      .subscribe((result: MeetingCancelOccurrenceResult) => {
+        if (result?.confirmed) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Meeting occurrence canceled successfully',
+          });
+          this.meetingDeleted.emit();
+        } else if (result?.error) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: result.error,
+          });
+        }
+      });
+  }
+
+  private showDeleteMeetingModal(meeting: Meeting): void {
     this.dialogService
       .open(MeetingDeleteConfirmationComponent, {
         header: 'Delete Meeting',
@@ -507,7 +588,7 @@ export class MeetingCardComponent implements OnInit {
       })
       .onClose.pipe(take(1))
       .subscribe((result: MeetingDeleteResult) => {
-        if (result) {
+        if (result?.confirmed) {
           this.meetingDeleted.emit();
         }
       });
