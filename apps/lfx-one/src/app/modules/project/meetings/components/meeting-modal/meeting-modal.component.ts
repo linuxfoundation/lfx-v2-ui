@@ -4,7 +4,7 @@
 import { Component, inject } from '@angular/core';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
-import { MeetingCardComponent } from '../meeting-card/meeting-card.component';
+import { MeetingCardComponent } from '../../../../../shared/components/meeting-card/meeting-card.component';
 
 @Component({
   selector: 'lfx-meeting-modal',
