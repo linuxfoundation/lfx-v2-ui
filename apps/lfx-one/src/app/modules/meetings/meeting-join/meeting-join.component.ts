@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
@@ -26,6 +27,7 @@ import {
   User,
 } from '@lfx-one/shared';
 import { FileSizePipe } from '@pipes/file-size.pipe';
+import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
@@ -38,6 +40,7 @@ import { catchError, combineLatest, debounceTime, filter, map, Observable, of, s
   selector: 'lfx-meeting-join',
   standalone: true,
   imports: [
+    ClipboardModule,
     CommonModule,
     ReactiveFormsModule,
     ButtonComponent,
@@ -50,6 +53,7 @@ import { catchError, combineLatest, debounceTime, filter, map, Observable, of, s
     RecurrenceSummaryPipe,
     LinkifyPipe,
     FileSizePipe,
+    FileTypeIconPipe,
     ExpandableTextComponent,
   ],
   providers: [],
@@ -62,6 +66,7 @@ export class MeetingJoinComponent {
   private readonly router = inject(Router);
   private readonly meetingService = inject(MeetingService);
   private readonly userService = inject(UserService);
+  private readonly clipboard = inject(Clipboard);
 
   // Class variables with types
   public authenticated: WritableSignal<boolean>;
@@ -75,13 +80,13 @@ export class MeetingJoinComponent {
   public returnTo: Signal<string | undefined>;
   public password: WritableSignal<string | null> = signal<string | null>(null);
   public canJoinMeeting: Signal<boolean>;
-  public joinUrlWithParams: Signal<string | undefined>;
   public fetchedJoinUrl: Signal<string | undefined>;
   public isLoadingJoinUrl: WritableSignal<boolean> = signal<boolean>(false);
   public joinUrlError: WritableSignal<string | null> = signal<string | null>(null);
   public attachments: Signal<MeetingAttachment[]>;
   public messageSeverity: Signal<'success' | 'info' | 'warn'>;
   public messageIcon: Signal<string>;
+  public alertMessage: Signal<string>;
   private hasAutoJoined: WritableSignal<boolean> = signal<boolean>(false);
 
   // Form value signals for reactivity
@@ -98,12 +103,23 @@ export class MeetingJoinComponent {
     this.importantLinks = this.initializeImportantLinks();
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
-    this.joinUrlWithParams = this.initializeJoinUrlWithParams();
     this.fetchedJoinUrl = this.initializeFetchedJoinUrl();
     this.attachments = this.initializeAttachments();
     this.messageSeverity = this.initializeMessageSeverity();
     this.messageIcon = this.initializeMessageIcon();
+    this.alertMessage = this.initializeAlertMessage();
     this.initializeAutoJoin();
+  }
+
+  public handleCopyLink(): void {
+    const meetingUrl: URL = new URL(environment.urls.home + '/meetings/' + this.meeting().uid);
+    meetingUrl.searchParams.set('password', this.password() || '');
+    this.clipboard.copy(meetingUrl.toString());
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Meeting Link Copied',
+      detail: 'The meeting link has been copied to your clipboard',
+    });
   }
 
   private initializeAutoJoin(): void {
@@ -424,5 +440,18 @@ export class MeetingJoinComponent {
       ),
       { initialValue: [] }
     );
+  }
+
+  private initializeAlertMessage(): Signal<string> {
+    return computed(() => {
+      const canJoin = this.canJoinMeeting();
+      const meeting = this.meeting();
+      const earlyJoinMinutes = meeting?.early_join_time_minutes || 10;
+
+      if (canJoin) {
+        return 'The meeting is in progress.';
+      }
+      return `You may only join the meeting up to ${earlyJoinMinutes} minutes before the start time.`;
+    });
   }
 }
