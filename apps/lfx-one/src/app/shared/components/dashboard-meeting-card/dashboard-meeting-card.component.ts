@@ -3,19 +3,24 @@
 
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output, Signal } from '@angular/core';
+import { Component, computed, inject, input, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
 import { ButtonComponent } from '@components/button/button.component';
-import { Meeting, MeetingAttachment, MeetingOccurrence } from '@lfx-one/shared';
+import {
+  buildJoinUrlWithParams,
+  canJoinMeeting,
+  DEFAULT_MEETING_TYPE_CONFIG,
+  Meeting,
+  MeetingAttachment,
+  MeetingOccurrence,
+  MeetingTypeBadge,
+  MEETING_TYPE_CONFIGS,
+} from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
+import { UserService } from '@services/user.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, of, switchMap } from 'rxjs';
-
-interface MeetingTypeBadge {
-  label: string;
-  className: string;
-}
+import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-dashboard-meeting-card',
@@ -25,33 +30,23 @@ interface MeetingTypeBadge {
 })
 export class DashboardMeetingCardComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly userService = inject(UserService);
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
-  public readonly onSeeMeeting = output<string>();
 
   public readonly attachments: Signal<MeetingAttachment[]>;
+  public readonly joinUrl: Signal<string | null>;
 
   // Computed values
   public readonly meetingTypeInfo: Signal<MeetingTypeBadge> = computed(() => {
     const type = this.meeting().meeting_type?.toLowerCase();
+    const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
 
-    switch (type) {
-      case 'technical':
-        return { label: 'Technical', className: 'bg-purple-100 text-purple-600' };
-      case 'maintainers':
-        return { label: 'Maintainers', className: 'bg-blue-100 text-blue-600' };
-      case 'board':
-        return { label: 'Board', className: 'bg-red-100 text-red-600' };
-      case 'marketing':
-        return { label: 'Marketing', className: 'bg-green-100 text-green-600' };
-      case 'legal':
-        return { label: 'Legal', className: 'bg-amber-100 text-amber-600' };
-      case 'other':
-        return { label: 'Other', className: 'bg-gray-100 text-gray-600' };
-      default:
-        return { label: 'Meeting', className: 'bg-gray-100 text-gray-400' };
-    }
+    return {
+      label: config.label,
+      className: `${config.bgColor} ${config.textColor}`,
+    };
   });
 
   public readonly meetingStartTime: Signal<string> = computed(() => {
@@ -145,6 +140,16 @@ export class DashboardMeetingCardComponent {
     return occurrence?.title || meeting.title;
   });
 
+  public readonly borderColorClass: Signal<string> = computed(() => {
+    const type = this.meeting().meeting_type?.toLowerCase();
+    const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
+    return config.borderColor;
+  });
+
+  public readonly canJoinMeeting: Signal<boolean> = computed(() => {
+    return canJoinMeeting(this.meeting(), this.occurrence());
+  });
+
   public constructor() {
     // Convert meeting input signal to observable and create reactive attachment stream
     const meeting$ = toObservable(this.meeting);
@@ -158,9 +163,24 @@ export class DashboardMeetingCardComponent {
     );
 
     this.attachments = toSignal(attachments$, { initialValue: [] });
-  }
 
-  public handleSeeMeeting(): void {
-    this.onSeeMeeting.emit(this.meeting().uid);
+    // Convert user signal to observable and create reactive join URL stream
+    const user$ = toObservable(this.userService.user);
+    const authenticated$ = toObservable(this.userService.authenticated);
+
+    const joinUrl$ = combineLatest([meeting$, user$, authenticated$]).pipe(
+      switchMap(([meeting, user, authenticated]) => {
+        // Only fetch join URL for meetings that can be joined with authenticated users
+        if (meeting.uid && authenticated && user?.email && this.canJoinMeeting()) {
+          return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email: user.email }).pipe(
+            map((res) => buildJoinUrlWithParams(res.join_url, user)),
+            catchError(() => of(null))
+          );
+        }
+        return of(null);
+      })
+    );
+
+    this.joinUrl = toSignal(joinUrl$, { initialValue: null });
   }
 }

@@ -4,22 +4,32 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
 import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { RecurrenceSummaryPipe } from '@app/shared/pipes/recurrence-summary.pipe';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
+import { CancelOccurrenceConfirmationComponent } from '@components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
+import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '@components/meeting-delete-confirmation/meeting-delete-confirmation.component';
+import {
+  MeetingDeleteTypeResult,
+  MeetingDeleteTypeSelectionComponent,
+} from '@components/meeting-delete-type-selection/meeting-delete-type-selection.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { environment } from '@environments/environment';
 import {
+  buildJoinUrlWithParams,
+  canJoinMeeting,
+  DEFAULT_MEETING_TYPE_CONFIG,
   extractUrlsWithDomains,
   getCurrentOrNextOccurrence,
   Meeting,
+  MEETING_TYPE_CONFIGS,
   MeetingAttachment,
+  MeetingCancelOccurrenceResult,
   MeetingOccurrence,
   MeetingRegistrant,
   PastMeeting,
@@ -27,28 +37,26 @@ import {
   PastMeetingRecording,
   PastMeetingSummary,
 } from '@lfx-one/shared';
+import { MeetingCommitteeModalComponent } from '@modules/project/meetings/components/meeting-committee-modal/meeting-committee-modal.component';
+import { RecordingModalComponent } from '@modules/project/meetings/components/recording-modal/recording-modal.component';
+import { RegistrantModalComponent } from '@modules/project/meetings/components/registrant-modal/registrant-modal.component';
+import { SummaryModalComponent } from '@modules/project/meetings/components/summary-modal/summary-modal.component';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
+import { UserService } from '@services/user.service';
 import { AnimateOnScrollModule } from 'primeng/animateonscroll';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
-
-import { MeetingCommitteeModalComponent } from '../meeting-committee-modal/meeting-committee-modal.component';
-import { MeetingDeleteConfirmationComponent, MeetingDeleteResult } from '../meeting-delete-confirmation/meeting-delete-confirmation.component';
-import { RecordingModalComponent } from '../recording-modal/recording-modal.component';
-import { RegistrantModalComponent } from '../registrant-modal/registrant-modal.component';
-import { SummaryModalComponent } from '../summary-modal/summary-modal.component';
+import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-card',
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
     ButtonComponent,
     MenuComponent,
     MeetingTimePipe,
@@ -73,6 +81,7 @@ export class MeetingCardComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly injector = inject(Injector);
   private readonly clipboard = inject(Clipboard);
+  private readonly userService = inject(UserService);
 
   public readonly meetingInput = input.required<Meeting | PastMeeting>();
   public readonly occurrenceInput = input<MeetingOccurrence | null>(null);
@@ -115,11 +124,14 @@ export class MeetingCardComponent implements OnInit {
   public readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
   public readonly meetingTypeBadge: Signal<{ badgeClass: string; icon?: string; text: string } | null> = this.initMeetingTypeBadge();
   public readonly containerClass: Signal<string> = this.initContainerClass();
+  public readonly borderColorClass: Signal<string> = this.initBorderColorClass();
   public readonly attendedCount: Signal<number> = this.initAttendedCount();
   public readonly notAttendedCount: Signal<number> = this.initNotAttendedCount();
   public readonly participantCount: Signal<number> = this.initParticipantCount();
   public readonly currentOccurrence: Signal<MeetingOccurrence | null> = this.initCurrentOccurrence();
   public readonly meetingStartTime: Signal<string | null> = this.initMeetingStartTime();
+  public readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
+  public readonly joinUrl: Signal<string | null>;
 
   public readonly meetingDeleted = output<void>();
   public readonly project = this.projectService.project;
@@ -144,6 +156,28 @@ export class MeetingCardComponent implements OnInit {
         this.occurrence.set(null);
       }
     });
+
+    // Initialize join URL stream
+    const meeting$ = toObservable(this.meetingInput);
+    const occurrence$ = toObservable(this.occurrence);
+    const user$ = toObservable(this.userService.user);
+    const authenticated$ = toObservable(this.userService.authenticated);
+    const pastMeeting$ = toObservable(this.pastMeeting);
+
+    const joinUrl$ = combineLatest([meeting$, occurrence$, user$, authenticated$, pastMeeting$]).pipe(
+      switchMap(([meeting, occurrence, user, authenticated, isPastMeeting]) => {
+        // Only fetch join URL for meetings that can be joined with authenticated users
+        if (meeting.uid && authenticated && user?.email && !isPastMeeting && canJoinMeeting(meeting, occurrence)) {
+          return this.meetingService.getPublicMeetingJoinUrl(meeting.uid, meeting.password, { email: user.email }).pipe(
+            map((res) => buildJoinUrlWithParams(res.join_url, user)),
+            catchError(() => of(null))
+          );
+        }
+        return of(null);
+      })
+    );
+
+    this.joinUrl = toSignal(joinUrl$, { initialValue: null });
   }
 
   public ngOnInit(): void {
@@ -152,9 +186,7 @@ export class MeetingCardComponent implements OnInit {
     this.initSummary();
   }
 
-  public onRegistrantsToggle(event: Event): void {
-    event.stopPropagation();
-
+  public onRegistrantsToggle(): void {
     if (this.pastMeeting()) {
       // For past meetings, just show/hide participants
       this.registrantsLoading.set(true);
@@ -464,6 +496,85 @@ export class MeetingCardComponent implements OnInit {
     const meeting = this.meeting();
     if (!meeting) return;
 
+    // Check if meeting is recurring
+    const isRecurring = !!meeting.recurrence;
+
+    if (isRecurring) {
+      // For recurring meetings, first show the delete type selection modal
+      this.dialogService
+        .open(MeetingDeleteTypeSelectionComponent, {
+          header: 'Delete Recurring Meeting',
+          width: '500px',
+          modal: true,
+          closable: true,
+          dismissableMask: true,
+          data: {
+            meeting: meeting,
+          },
+        })
+        .onClose.pipe(take(1))
+        .subscribe((typeResult: MeetingDeleteTypeResult) => {
+          if (typeResult) {
+            if (typeResult.deleteType === 'occurrence') {
+              // User wants to cancel just this occurrence
+              this.showCancelOccurrenceModal(meeting);
+            } else {
+              // User wants to delete the entire series
+              this.showDeleteMeetingModal(meeting);
+            }
+          }
+        });
+    } else {
+      // For non-recurring meetings, show delete confirmation directly
+      this.showDeleteMeetingModal(meeting);
+    }
+  }
+
+  private showCancelOccurrenceModal(meeting: Meeting): void {
+    // Prefer the explicitly selected/current occurrence; fallback to next active
+    const occurrenceToCancel = this.occurrence() ?? getCurrentOrNextOccurrence(meeting);
+
+    if (!occurrenceToCancel) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No upcoming occurrence found to cancel.',
+      });
+      return;
+    }
+
+    this.dialogService
+      .open(CancelOccurrenceConfirmationComponent, {
+        header: 'Cancel Occurrence',
+        width: '450px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: {
+          meeting: meeting,
+          occurrence: occurrenceToCancel,
+        },
+      })
+      .onClose.pipe(take(1))
+      .subscribe((result: MeetingCancelOccurrenceResult) => {
+        if (result?.confirmed) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Meeting occurrence canceled successfully',
+          });
+          this.meetingDeleted.emit();
+        } else if (result?.error) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: result.error,
+          });
+        }
+      });
+  }
+
+  private showDeleteMeetingModal(meeting: Meeting): void {
     this.dialogService
       .open(MeetingDeleteConfirmationComponent, {
         header: 'Delete Meeting',
@@ -477,7 +588,7 @@ export class MeetingCardComponent implements OnInit {
       })
       .onClose.pipe(take(1))
       .subscribe((result: MeetingDeleteResult) => {
-        if (result) {
+        if (result?.confirmed) {
           this.meetingDeleted.emit();
         }
       });
@@ -672,34 +783,22 @@ export class MeetingCardComponent implements OnInit {
         return '';
       }
 
-      const baseClasses = 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md h-full border-l-4 transition-all duration-300';
-      const meetingType = this.meeting().meeting_type?.toLowerCase();
+      const type = this.meeting().meeting_type?.toLowerCase();
+      const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
+      const leftBorderColor = config.borderColor;
 
-      let borderClass = '';
-      switch (meetingType) {
-        case 'board':
-          borderClass = 'border-l-red-300';
-          break;
-        case 'maintainers':
-          borderClass = 'border-l-blue-300';
-          break;
-        case 'marketing':
-          borderClass = 'border-l-green-300';
-          break;
-        case 'technical':
-          borderClass = 'border-l-purple-300';
-          break;
-        case 'legal':
-          borderClass = 'border-l-amber-300';
-          break;
-        case 'other':
-        case 'none':
-        default:
-          borderClass = 'border-l-gray-300';
-          break;
-      }
+      const baseClasses = 'bg-white rounded-lg border-t border-r border-b border-l-4';
+      const styleClasses = 'shadow-sm hover:shadow-md h-full transition-all duration-300';
 
-      return `${baseClasses} ${borderClass}`;
+      return `${baseClasses} ${leftBorderColor} ${styleClasses}`;
+    });
+  }
+
+  private initBorderColorClass(): Signal<string> {
+    return computed(() => {
+      const type = this.meeting().meeting_type?.toLowerCase();
+      const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
+      return config.borderColor;
     });
   }
 
@@ -764,6 +863,15 @@ export class MeetingCardComponent implements OnInit {
       }
 
       return null;
+    });
+  }
+
+  private initCanJoinMeeting(): Signal<boolean> {
+    return computed(() => {
+      if (this.pastMeeting()) {
+        return false;
+      }
+      return canJoinMeeting(this.meeting(), this.occurrence());
     });
   }
 }

@@ -5,6 +5,7 @@ import {
   BatchRegistrantOperationResponse,
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
+  CreateMeetingRsvpRequest,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -13,7 +14,6 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { Logger } from '../helpers/logger';
 import { validateUidParameter } from '../helpers/validation.helper';
-import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
 
 /**
@@ -21,7 +21,6 @@ import { MeetingService } from '../services/meeting.service';
  */
 export class MeetingController {
   private meetingService: MeetingService = new MeetingService();
-  private committeeService: CommitteeService = new CommitteeService();
 
   /**
    * GET /meetings
@@ -33,7 +32,7 @@ export class MeetingController {
 
     try {
       // Get the meetings
-      const meetings = await this.meetingService.getMeetings(req, req.query as Record<string, any>);
+      const meetings = await this.meetingService.getMeetings(req, req.query as Record<string, any>, 'meeting', true);
       // TODO: Remove this once we have a way to get the registrants count
       const counts = await Promise.all(
         meetings.map(async (m) => {
@@ -285,12 +284,77 @@ export class MeetingController {
   }
 
   /**
+   * DELETE /meetings/:uid/occurrences/:occurrenceId
+   */
+  public async cancelOccurrence(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid, occurrenceId } = req.params;
+    const startTime = Logger.start(req, 'cancel_occurrence', {
+      meeting_uid: uid,
+      occurrence_id: occurrenceId,
+    });
+
+    try {
+      // Check if the meeting UID is provided
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'cancel_occurrence',
+          service: 'meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      // Check if the occurrence ID is provided
+      if (!occurrenceId) {
+        const validationError = ServiceValidationError.forField('occurrenceId', 'Occurrence ID is required', {
+          operation: 'cancel_occurrence',
+          service: 'meeting_controller',
+        });
+
+        Logger.error(req, 'cancel_occurrence', startTime, validationError, {
+          meeting_uid: uid,
+          occurrence_id: occurrenceId,
+        });
+
+        return next(validationError);
+      }
+
+      // Cancel the occurrence
+      await this.meetingService.cancelOccurrence(req, uid, occurrenceId);
+
+      // Log the success
+      Logger.success(req, 'cancel_occurrence', startTime, {
+        meeting_uid: uid,
+        occurrence_id: occurrenceId,
+        status_code: 204,
+      });
+
+      // Send the response to the client
+      res.status(204).send();
+    } catch (error) {
+      // Log the error
+      Logger.error(req, 'cancel_occurrence', startTime, error, {
+        meeting_uid: uid,
+        occurrence_id: occurrenceId,
+      });
+
+      // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  /**
    * GET /meetings/:uid/registrants
    */
   public async getMeetingRegistrants(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
+    const { include_rsvp } = req.query;
+    const includeRsvp = include_rsvp === 'true';
+
     const startTime = Logger.start(req, 'get_meeting_registrants', {
       meeting_uid: uid,
+      include_rsvp: includeRsvp,
     });
 
     try {
@@ -306,11 +370,12 @@ export class MeetingController {
       }
 
       // Get the meeting registrants
-      const registrants = await this.meetingService.getMeetingRegistrants(req, uid);
+      const registrants = await this.meetingService.getMeetingRegistrants(req, uid, includeRsvp);
 
       Logger.success(req, 'get_meeting_registrants', startTime, {
         meeting_uid: uid,
         registrant_count: registrants.length,
+        include_rsvp: includeRsvp,
       });
 
       // Send the registrants data to the client
@@ -319,6 +384,7 @@ export class MeetingController {
       // Log the error
       Logger.error(req, 'get_meeting_registrants', startTime, error, {
         meeting_uid: uid,
+        include_rsvp: includeRsvp,
       });
 
       // Send the error to the next middleware
@@ -724,6 +790,137 @@ export class MeetingController {
   }
 
   /**
+   * POST /meetings/:uid/rsvp
+   */
+  public async createMeetingRsvp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const rsvpData: CreateMeetingRsvpRequest = req.body;
+
+    const startTime = Logger.start(req, 'create_meeting_rsvp', {
+      meeting_uid: uid,
+      registrant_id: rsvpData.registrant_id,
+      response: rsvpData.response,
+      scope: rsvpData.scope,
+    });
+
+    try {
+      // Validate meeting UID
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'create_meeting_rsvp',
+        })
+      ) {
+        return;
+      }
+
+      // Validate RSVP data
+      if (!rsvpData.response || !rsvpData.scope) {
+        throw ServiceValidationError.fromFieldErrors(
+          {
+            response: !rsvpData.response ? 'Response is required' : [],
+            scope: !rsvpData.scope ? 'Scope is required' : [],
+          },
+          'RSVP data validation failed',
+          {
+            operation: 'create_meeting_rsvp',
+            service: 'meeting_controller',
+          }
+        );
+      }
+
+      // Create the RSVP
+      const rsvp = await this.meetingService.createMeetingRsvp(req, uid, rsvpData);
+
+      // Log success
+      Logger.success(req, 'create_meeting_rsvp', startTime, {
+        rsvp_id: rsvp.id,
+      });
+
+      // Send response
+      res.json(rsvp);
+    } catch (error) {
+      // Log error
+      Logger.error(req, 'create_meeting_rsvp', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /meetings/:uid/rsvp
+   */
+  public async getUserMeetingRsvp(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+
+    const startTime = Logger.start(req, 'get_user_meeting_rsvp', {
+      meeting_uid: uid,
+    });
+
+    try {
+      // Validate meeting UID
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_user_meeting_rsvp',
+        })
+      ) {
+        return;
+      }
+
+      // Get the user's RSVP
+      const rsvp = await this.meetingService.getUserMeetingRsvp(req, uid);
+
+      // Log success
+      Logger.success(req, 'get_user_meeting_rsvp', startTime, {
+        found: !!rsvp,
+        rsvp_id: rsvp?.id,
+      });
+
+      // Send response
+      res.json(rsvp);
+    } catch (error) {
+      // Log error
+      Logger.error(req, 'get_user_meeting_rsvp', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /meetings/:uid/rsvps
+   */
+  public async getMeetingRsvps(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+
+    const startTime = Logger.start(req, 'get_meeting_rsvps', {
+      meeting_uid: uid,
+    });
+
+    try {
+      // Validate meeting UID
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_meeting_rsvps',
+        })
+      ) {
+        return;
+      }
+
+      // Get all RSVPs for the meeting
+      const rsvps = await this.meetingService.getMeetingRsvps(req, uid);
+
+      // Log success
+      Logger.success(req, 'get_meeting_rsvps', startTime, {
+        count: rsvps.length,
+      });
+
+      // Send response
+      res.json(rsvps);
+    } catch (error) {
+      // Log error
+      Logger.error(req, 'get_meeting_rsvps', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
    * Private helper to process registrant operations with fail-fast for 403 errors
    */
   private async processRegistrantOperations<T, R>(
@@ -779,9 +976,6 @@ export class MeetingController {
     }
   }
 
-  /**
-   * Private helper to create batch response from results
-   */
   private createBatchResponse<T, I>(
     results: PromiseSettledResult<T>[],
     inputData: I[],

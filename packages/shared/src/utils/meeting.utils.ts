@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpParams } from '@angular/common/http';
+
 import { RECURRENCE_DAYS_OF_WEEK, RECURRENCE_WEEKLY_ORDINALS } from '../constants';
-import { CustomRecurrencePattern, Meeting, MeetingOccurrence, RecurrenceSummary } from '../interfaces';
+import { CustomRecurrencePattern, Meeting, MeetingOccurrence, RecurrenceSummary, User } from '../interfaces';
 
 /**
  * Build a human-readable recurrence summary from custom recurrence pattern
@@ -104,6 +106,15 @@ export function buildRecurrenceSummary(pattern: CustomRecurrencePattern): Recurr
 }
 
 /**
+ * Filter out cancelled occurrences from a list
+ * @param occurrences Array of meeting occurrences
+ * @returns Array of active (non-cancelled) occurrences
+ */
+export function getActiveOccurrences(occurrences: MeetingOccurrence[]): MeetingOccurrence[] {
+  return occurrences.filter((occurrence) => !occurrence.is_cancelled);
+}
+
+/**
  * Get the current joinable occurrence or next upcoming occurrence for a meeting
  * @param meeting The meeting object with occurrences
  * @returns The current/next occurrence or null if none available
@@ -116,8 +127,15 @@ export function getCurrentOrNextOccurrence(meeting: Meeting): MeetingOccurrence 
   const now = new Date();
   const earlyJoinMinutes = meeting.early_join_time_minutes || 10;
 
+  // Filter out cancelled occurrences
+  const activeOccurrences = getActiveOccurrences(meeting.occurrences);
+
+  if (activeOccurrences.length === 0) {
+    return null;
+  }
+
   // Find the first occurrence that is currently joinable (within the join window)
-  const joinableOccurrence = meeting.occurrences.find((occurrence) => {
+  const joinableOccurrence = activeOccurrences.find((occurrence) => {
     const startTime = new Date(occurrence.start_time);
     const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
     const latestJoinTime = new Date(startTime.getTime() + occurrence.duration * 60000 + 40 * 60000); // 40 minutes after end
@@ -130,9 +148,64 @@ export function getCurrentOrNextOccurrence(meeting: Meeting): MeetingOccurrence 
   }
 
   // If no joinable occurrence, find the next future occurrence
-  const futureOccurrences = meeting.occurrences
+  const futureOccurrences = activeOccurrences
     .filter((occurrence) => new Date(occurrence.start_time) > now)
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
   return futureOccurrences.length > 0 ? futureOccurrences[0] : null;
+}
+
+/**
+ * Check if a meeting can be joined based on current time
+ * @param meeting The meeting object
+ * @param occurrence Optional specific occurrence (for recurring meetings)
+ * @returns True if the meeting can be joined, false otherwise
+ * @description
+ * A meeting can be joined when:
+ * - Current time is after (start time - early join time)
+ * - Current time is before (start time + duration + 40 minute buffer)
+ */
+export function canJoinMeeting(meeting: Meeting, occurrence?: MeetingOccurrence | null): boolean {
+  // If we have an occurrence, use its timing
+  if (occurrence) {
+    const now = new Date();
+    const startTime = new Date(occurrence.start_time);
+    const earlyJoinMinutes = meeting.early_join_time_minutes || 10;
+    const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
+    const latestJoinTime = new Date(startTime.getTime() + occurrence.duration * 60000 + 40 * 60000); // 40 minutes after end
+
+    return now >= earliestJoinTime && now <= latestJoinTime;
+  }
+
+  // Fallback to original meeting logic if no occurrences
+  if (!meeting?.start_time) {
+    return false;
+  }
+
+  const now = new Date();
+  const startTime = new Date(meeting.start_time);
+  const earlyJoinMinutes = meeting.early_join_time_minutes || 10; // Default to 10 minutes
+  const earliestJoinTime = new Date(startTime.getTime() - earlyJoinMinutes * 60000);
+  const latestJoinTime = new Date(startTime.getTime() + meeting.duration * 60000 + 40 * 60000); // 40 minutes after end
+
+  return now >= earliestJoinTime && now <= latestJoinTime;
+}
+
+/**
+ * Build join URL with user parameters for meeting join link
+ * @param joinUrl - Base join URL from API
+ * @param user - Authenticated user
+ * @returns Join URL with encoded user parameters (uname and un)
+ * @description
+ * Adds user display name and encoded name as query parameters to the join URL.
+ * The display name is either the user's name or email, and is encoded for the meeting platform.
+ */
+export function buildJoinUrlWithParams(joinUrl: string, user: User): string {
+  const displayName = user.name || user.email;
+  const encodedName = btoa(unescape(encodeURIComponent(displayName)));
+
+  const queryParams = new HttpParams().set('uname', displayName).set('un', encodedName);
+
+  const separator = joinUrl.includes('?') ? '&' : '?';
+  return `${joinUrl}${separator}${queryParams.toString()}`;
 }
