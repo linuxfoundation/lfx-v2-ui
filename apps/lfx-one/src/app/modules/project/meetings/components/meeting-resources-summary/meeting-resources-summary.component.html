@@ -46,6 +46,8 @@
               </div>
               @if (attachment.uploading) {
                 <i class="fa-light fa-spinner fa-spin text-blue-600"></i>
+              } @else if (attachment.uploaded) {
+                <i class="fa-light fa-check text-green-600"></i>
               } @else {
                 <button
                   (click)="removeAttachment(attachment.id)"

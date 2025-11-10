@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -80,7 +80,6 @@ export class MeetingManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
@@ -166,16 +165,7 @@ export class MeetingManageComponent {
         // Create a new array reference to ensure Angular detects the change
         // This is important when the component is inside an ng-template (like in p-step-panel)
         this.attachments.set([...attachments]);
-        // Manually trigger change detection for PrimeNG stepper's ng-template
-        this.cdr.markForCheck();
       });
-
-    // Debug effect to monitor attachment signal changes
-    effect(() => {
-      const count = this.attachments().length;
-      const ids = this.attachments().map((a) => a.uid);
-      console.info('[Attachments Signal] Count:', count, 'IDs:', ids);
-    });
   }
 
   public goToStep(step: number | undefined): void {
@@ -378,8 +368,11 @@ export class MeetingManageComponent {
   private handleMeetingSuccess(meeting: Meeting, project: any): void {
     this.meetingId.set(meeting.uid);
 
-    // If we're in create mode and not on the last step, continue to next step
-    if (!this.isEditMode() && this.currentStep() < this.totalSteps) {
+    // In create mode, only save attachments when on step 4 (Resources) or later
+    // Before step 4, just create the meeting and move to next step
+    const shouldSaveAttachments = this.isEditMode() || this.currentStep() >= this.totalSteps - 1;
+
+    if (!shouldSaveAttachments) {
       this.nextStep();
       this.submitting.set(false);
       return;
@@ -510,7 +503,14 @@ export class MeetingManageComponent {
       this.attachmentsRefresh$.next();
     }
 
-    this.router.navigate(['/project', project.slug, 'meetings']);
+    // In create mode on step 4, move to step 5 (Manage Guests)
+    // In all other cases, navigate back to meetings list
+    if (!this.isEditMode() && this.currentStep() === this.totalSteps - 1) {
+      this.nextStep();
+      this.submitting.set(false);
+    } else {
+      this.router.navigate(['/project', project.slug, 'meetings']);
+    }
   }
 
   private showDeleteAttachmentConfirmation(meetingId: string, attachmentId: string, fileName: string): void {
@@ -820,7 +820,9 @@ export class MeetingManageComponent {
   }
 
   private savePendingAttachments(meetingId: string): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
-    const attachmentsToSave = this.pendingAttachments.filter((attachment) => !attachment.uploading && !attachment.uploadError && attachment.file);
+    const attachmentsToSave = this.pendingAttachments.filter(
+      (attachment) => !attachment.uploading && !attachment.uploadError && !attachment.uploaded && attachment.file
+    );
 
     if (attachmentsToSave.length === 0) {
       return of({ successes: [], failures: [] });

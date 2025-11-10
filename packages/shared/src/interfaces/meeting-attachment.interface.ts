@@ -66,6 +66,8 @@ export interface PendingAttachment {
   mimeType: string;
   /** Whether upload is currently in progress */
   uploading?: boolean;
+  /** Whether upload completed successfully */
+  uploaded?: boolean;
   /** Error message if upload failed */
   uploadError?: string;
 }

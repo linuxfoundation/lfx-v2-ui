@@ -184,8 +184,8 @@ export class MeetingResourcesSummaryComponent implements OnInit {
       // Upload directly to LFX V2 API
       this.meetingService.createFileAttachment(meetingId, file).subscribe({
         next: (attachment) => {
-          // Remove from pending attachments since it's now saved
-          this.pendingAttachments.update((current) => current.filter((pa) => pa.id !== pendingAttachment.id));
+          // Mark as successfully uploaded instead of removing
+          this.pendingAttachments.update((current) => current.map((pa) => (pa.id === pendingAttachment.id ? { ...pa, uploading: false, uploaded: true } : pa)));
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
