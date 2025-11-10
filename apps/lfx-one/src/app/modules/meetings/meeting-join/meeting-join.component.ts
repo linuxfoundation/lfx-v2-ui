@@ -14,7 +14,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
-import { MessageComponent } from '@components/message/message.component';
+import { RsvpButtonGroupComponent } from '@components/rsvp-button-group/rsvp-button-group.component';
 import { environment } from '@environments/environment';
 import {
   canJoinMeeting,
@@ -26,7 +26,6 @@ import {
   Project,
   User,
 } from '@lfx-one/shared';
-import { FileSizePipe } from '@pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
@@ -46,13 +45,12 @@ import { catchError, combineLatest, debounceTime, filter, map, Observable, of, s
     ButtonComponent,
     CardComponent,
     InputTextComponent,
-    MessageComponent,
+    RsvpButtonGroupComponent,
     ToastModule,
     TooltipModule,
     MeetingTimePipe,
     RecurrenceSummaryPipe,
     LinkifyPipe,
-    FileSizePipe,
     FileTypeIconPipe,
     ExpandableTextComponent,
   ],
@@ -284,21 +282,6 @@ export class MeetingJoinComponent {
   private initializeCanJoinMeeting(): Signal<boolean> {
     return computed(() => {
       return canJoinMeeting(this.meeting(), this.currentOccurrence());
-    });
-  }
-
-  private initializeJoinUrlWithParams(): Signal<string | undefined> {
-    return computed(() => {
-      const meeting = this.meeting();
-      const joinUrl = meeting?.join_url;
-
-      if (!joinUrl) {
-        return undefined;
-      }
-
-      // Access form values to trigger reactivity
-      const formValues = this.formValues();
-      return this.buildJoinUrlWithParams(joinUrl, formValues);
     });
   }
 
