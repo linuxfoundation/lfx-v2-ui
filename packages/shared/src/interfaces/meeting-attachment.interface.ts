@@ -7,17 +7,21 @@
  */
 export interface MeetingAttachment {
   /** Unique attachment identifier */
-  id: string;
+  uid: string;
   /** Meeting this attachment belongs to */
-  meeting_id: string;
-  /** Original filename */
-  file_name: string;
-  /** Storage URL for the file */
-  file_url: string;
+  meeting_uid: string;
+  /** Attachment type: 'file' for uploaded files, 'link' for external URLs */
+  type: 'file' | 'link';
+  /** Attachment name */
+  name: string;
+  /** External link URL for link-type attachments */
+  link?: string;
   /** File size in bytes */
   file_size?: number;
   /** MIME type of the file */
   mime_type?: string;
+  /** Description of the attachment */
+  description?: string;
   /** User ID who uploaded the file */
   uploaded_by?: string;
   /** Timestamp when attachment was created */
@@ -46,21 +50,6 @@ export interface CreateMeetingAttachmentRequest {
 }
 
 /**
- * Response from file upload service
- * @description Information about successfully uploaded file
- */
-export interface UploadFileResponse {
-  /** Public URL to access the uploaded file */
-  url: string;
-  /** Storage path of the uploaded file */
-  path: string;
-  /** File size in bytes */
-  size: number;
-  /** MIME type of the uploaded file */
-  mimeType: string;
-}
-
-/**
  * Temporary attachment during upload process
  * @description Represents an attachment being uploaded with status tracking
  */
@@ -69,8 +58,8 @@ export interface PendingAttachment {
   id: string;
   /** Original filename */
   fileName: string;
-  /** Storage URL (available after upload) */
-  fileUrl: string;
+  /** The actual File object to be uploaded */
+  file: File;
   /** File size in bytes */
   fileSize: number;
   /** MIME type of the file */

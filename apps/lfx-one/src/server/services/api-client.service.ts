@@ -35,12 +35,31 @@ export class ApiClientService {
   }
 
   private async makeRequest<T>(method: string, url: string, bearerToken?: string, data?: any, customHeaders?: Record<string, string>): Promise<ApiResponse<T>> {
+    // Check if data is FormData (from form-data package for Node.js)
+    const isFormData = data && typeof data === 'object' && typeof data.append === 'function' && typeof data.getHeaders === 'function';
+
     const headers: Record<string, string> = {
-      ...customHeaders,
       Accept: 'application/json',
-      ['Content-Type']: 'application/json',
       ['User-Agent']: 'LFX-PCC-Server/1.0',
     };
+
+    // If data is FormData, get its headers (includes Content-Type with boundary)
+    if (isFormData) {
+      const formDataHeaders = data.getHeaders();
+      Object.assign(headers, formDataHeaders);
+    } else if (!customHeaders?.['Content-Type']) {
+      // Only set Content-Type to JSON if not provided and not FormData
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Add custom headers (but don't override FormData Content-Type)
+    if (customHeaders) {
+      Object.keys(customHeaders).forEach((key) => {
+        if (key !== 'Content-Type' || !isFormData) {
+          headers[key] = customHeaders[key];
+        }
+      });
+    }
 
     // Only add Authorization header if bearerToken is provided
     if (bearerToken) {
@@ -54,7 +73,32 @@ export class ApiClientService {
     };
 
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      requestInit.body = JSON.stringify(data);
+      if (isFormData) {
+        // For FormData (from form-data package in Node.js), we need to:
+        // 1. Convert FormData to a buffer (since Node.js fetch doesn't handle streams well)
+        // 2. Calculate and set Content-Length header
+        try {
+          // Get the FormData as a buffer
+          const formDataBuffer = data.getBuffer();
+          const contentLength = formDataBuffer.length;
+
+          // Set Content-Length header
+          headers['Content-Length'] = String(contentLength);
+
+          // Use the buffer as the body
+          requestInit.body = formDataBuffer;
+        } catch {
+          // Fallback: try to use the FormData directly as a stream
+          const contentLength = data.getLengthSync?.();
+          if (contentLength) {
+            headers['Content-Length'] = String(contentLength);
+          }
+          requestInit.body = data as any;
+        }
+      } else {
+        // For regular JSON data, stringify it
+        requestInit.body = JSON.stringify(data);
+      }
     }
 
     return this.executeRequest<T>(url, requestInit);

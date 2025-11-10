@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -80,6 +80,7 @@ export class MeetingManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
@@ -95,7 +96,7 @@ export class MeetingManageComponent {
   public meeting = this.initializeMeeting();
   // Initialize meeting attachments with refresh capability
   private attachmentsRefresh$ = new BehaviorSubject<void>(undefined);
-  public attachments = this.initializeAttachments();
+  public attachments = signal<MeetingAttachment[]>([]);
   // Stepper state
   public currentStep = signal<number>(1);
   public readonly totalSteps = TOTAL_STEPS;
@@ -148,6 +149,33 @@ export class MeetingManageComponent {
       .subscribe((meeting) => {
         this.populateFormWithMeetingData(meeting);
       });
+
+    // Subscribe to attachments refresh observable and update signal
+    this.attachmentsRefresh$
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap(() => {
+          const meetingId = this.route.snapshot.paramMap.get('id');
+          if (meetingId) {
+            return this.meetingService.getMeetingAttachments(meetingId).pipe(catchError(() => of([])));
+          }
+          return of([]);
+        })
+      )
+      .subscribe((attachments) => {
+        // Create a new array reference to ensure Angular detects the change
+        // This is important when the component is inside an ng-template (like in p-step-panel)
+        this.attachments.set([...attachments]);
+        // Manually trigger change detection for PrimeNG stepper's ng-template
+        this.cdr.markForCheck();
+      });
+
+    // Debug effect to monitor attachment signal changes
+    effect(() => {
+      const count = this.attachments().length;
+      const ids = this.attachments().map((a) => a.uid);
+      console.info('[Attachments Signal] Count:', count, 'IDs:', ids);
+    });
   }
 
   public goToStep(step: number | undefined): void {
@@ -223,10 +251,15 @@ export class MeetingManageComponent {
     const meetingId = this.meetingId();
     if (!meetingId) return;
 
-    const attachment = this.attachments().find((att: MeetingAttachment) => att.id === attachmentId);
-    const fileName = attachment?.file_name || 'this attachment';
+    const attachment = this.attachments().find((att: MeetingAttachment) => att.uid === attachmentId);
+    const fileName = attachment?.name || 'this attachment';
 
     this.showDeleteAttachmentConfirmation(meetingId, attachmentId, fileName);
+  }
+
+  public onAttachmentUploadSuccess(attachment: MeetingAttachment): void {
+    // Add the newly uploaded attachment to the attachments array
+    this.attachments.update((attachments) => [...attachments, attachment]);
   }
 
   public onManageRegistrants(): void {
@@ -352,10 +385,44 @@ export class MeetingManageComponent {
       return;
     }
 
-    // If we have pending attachments, save them to the database
-    if (this.pendingAttachments.length > 0) {
-      this.savePendingAttachments(meeting.uid)
-        .pipe(take(1))
+    // Get important links from the form
+    const importantLinksFormArray = this.form().get('important_links') as FormArray;
+    const hasFileAttachments = this.pendingAttachments.length > 0;
+    const hasLinkAttachments = importantLinksFormArray && importantLinksFormArray.length > 0;
+
+    // If we have any attachments (files or links), save them to the database
+    if (hasFileAttachments || hasLinkAttachments) {
+      // Create an array of observables for all attachment operations
+      const attachmentOperations: Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }>[] = [];
+
+      // Add file attachments operation
+      if (hasFileAttachments) {
+        attachmentOperations.push(this.savePendingAttachments(meeting.uid));
+      }
+
+      // Add link attachments operation
+      if (hasLinkAttachments) {
+        attachmentOperations.push(this.saveImportantLinks(meeting.uid, importantLinksFormArray));
+      }
+
+      // Execute all attachment operations and combine results
+      concat(...attachmentOperations)
+        .pipe(
+          toArray(),
+          take(1),
+          switchMap((results) => {
+            // Combine all successes and failures from multiple operations
+            const combinedResult = results.reduce(
+              (acc, curr) => {
+                acc.successes.push(...curr.successes);
+                acc.failures.push(...curr.failures);
+                return acc;
+              },
+              { successes: [], failures: [] } as { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }
+            );
+            return of(combinedResult);
+          })
+        )
         .subscribe({
           next: (result) => {
             // Process attachments after meeting save
@@ -466,7 +533,8 @@ export class MeetingManageComponent {
               summary: 'Success',
               detail: 'Attachment deleted successfully',
             });
-            this.attachmentsRefresh$.next();
+            // Directly remove the deleted attachment from the signal array
+            this.attachments.update((attachments) => attachments.filter((a) => a.uid !== attachmentId));
             this.deletingAttachmentId.set(null);
           },
           error: (error) => {
@@ -752,15 +820,16 @@ export class MeetingManageComponent {
   }
 
   private savePendingAttachments(meetingId: string): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
-    const attachmentsToSave = this.pendingAttachments.filter((attachment) => !attachment.uploading && !attachment.uploadError && attachment.fileUrl);
+    const attachmentsToSave = this.pendingAttachments.filter((attachment) => !attachment.uploading && !attachment.uploadError && attachment.file);
 
     if (attachmentsToSave.length === 0) {
       return of({ successes: [], failures: [] });
     }
 
+    // Upload files directly to LFX V2 API
     return from(attachmentsToSave).pipe(
       mergeMap((attachment) =>
-        this.meetingService.createAttachmentFromUrl(meetingId, attachment.fileName, attachment.fileUrl, attachment.fileSize, attachment.mimeType).pipe(
+        this.meetingService.createFileAttachment(meetingId, attachment.file).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
         )
@@ -775,20 +844,43 @@ export class MeetingManageComponent {
     );
   }
 
-  private initializeAttachments() {
-    return toSignal(
-      this.attachmentsRefresh$.pipe(
-        takeUntilDestroyed(this.destroyRef),
-        switchMap(() => this.route.paramMap),
-        switchMap((params) => {
-          const meetingId = params.get('id');
-          if (meetingId) {
-            return this.meetingService.getMeetingAttachments(meetingId).pipe(catchError(() => of([])));
-          }
-          return of([]);
-        })
+  private saveImportantLinks(
+    meetingId: string,
+    importantLinksFormArray: FormArray
+  ): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
+    if (!importantLinksFormArray || importantLinksFormArray.length === 0) {
+      return of({ successes: [], failures: [] });
+    }
+
+    // Extract link data from FormArray
+    const links = importantLinksFormArray.controls.map((control) => ({
+      title: control.get('title')?.value || 'Untitled Link',
+      url: control.get('url')?.value || '',
+    }));
+
+    // Filter out invalid links
+    const validLinks = links.filter((link) => link.url && link.url.trim() !== '');
+
+    if (validLinks.length === 0) {
+      return of({ successes: [], failures: [] });
+    }
+
+    // Create attachment for each link using the createAttachmentFromUrl method
+    // Note: For links, we use fileSize=0 and mimeType='' as they're not relevant
+    return from(validLinks).pipe(
+      mergeMap((link) =>
+        this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
+          switchMap((result) => of({ success: result, failure: null })),
+          catchError((error) => of({ success: null, failure: { fileName: link.title, error } }))
+        )
       ),
-      { initialValue: [] }
+      toArray(),
+      switchMap((results) => {
+        const successes = results.filter((r) => r.success).map((r) => r.success!);
+        const failures = results.filter((r) => r.failure).map((r) => r.failure!);
+        return of({ successes, failures });
+      }),
+      take(1)
     );
   }
 
