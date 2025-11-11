@@ -3,21 +3,7 @@
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  Injector,
-  input,
-  OnInit,
-  output,
-  runInInjectionContext,
-  signal,
-  Signal,
-  ViewChild,
-  WritableSignal,
-} from '@angular/core';
+import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
@@ -91,8 +77,6 @@ import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
   templateUrl: './meeting-card.component.html',
 })
 export class MeetingCardComponent implements OnInit {
-  @ViewChild('registrantsComponent', { static: false }) private readonly registrantsComponent!: MeetingRegistrantsComponent;
-
   private readonly projectService = inject(ProjectService);
   private readonly meetingService = inject(MeetingService);
   private readonly dialogService = inject(DialogService);

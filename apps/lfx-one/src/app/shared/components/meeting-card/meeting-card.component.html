@@ -323,6 +323,7 @@
       [meeting]="meeting()"
       [pastMeeting]="pastMeeting()"
       [visible]="showRegistrants()"
+      [showAddRegistrant]="!pastMeeting()"
       (registrantsCountChange)="additionalRegistrantsCount.set($event)">
     </lfx-meeting-registrants>
 

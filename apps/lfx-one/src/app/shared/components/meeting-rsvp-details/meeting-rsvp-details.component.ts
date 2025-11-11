@@ -41,10 +41,10 @@ export class MeetingRsvpDetailsComponent {
   public readonly attendancePercentage: Signal<number> = this.initializeAttendancePercentage();
   public readonly showPoorAttendanceWarning: Signal<boolean> = computed(() => this.pastMeeting() && this.attendancePercentage() < 50);
   public readonly backgroundClasses: Signal<string> = this.initializeBackgroundClasses();
+  public readonly editLink: Signal<string> = this.initializeEditLink();
   public readonly borderClasses: Signal<string> = this.initializeBorderClasses();
   public readonly headerTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-600' : 'text-gray-600'));
   public readonly summaryTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-900' : 'text-gray-900'));
-  public readonly editLink: Signal<string> = computed(() => `/project/${this.project()?.slug}/meetings/${this.meeting().uid}/edit`);
 
   public onAddParticipantClick(): void {
     this.addParticipant.emit();
@@ -126,6 +126,16 @@ export class MeetingRsvpDetailsComponent {
         return `border ${this.borderColor()}`;
       }
       return '';
+    });
+  }
+
+  private initializeEditLink(): Signal<string> {
+    return computed(() => {
+      const slug = this.project()?.slug;
+      if (slug) {
+        return `/project/${slug}/meetings/${this.meeting().uid}/edit`;
+      }
+      return `/meetings/${this.meeting().uid}/edit`;
     });
   }
 }
