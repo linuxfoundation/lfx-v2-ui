@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Foundation } from '../interfaces/dashboard.interface';
+import { Foundation, AggregateFoundationMetrics, ProjectHealthDistribution, CompanyBusFactor, TopProjectByValue } from '../interfaces';
 
 /**
  * Generate smooth trend data for sparkline charts
@@ -59,3 +59,108 @@ export const FOUNDATION_HEALTH_DATA: Foundation[] = [
     healthScore: 'excellent',
   },
 ];
+
+/**
+ * Chart.js configuration for sparkline charts (line charts showing trends)
+ * Used for displaying small trend visualizations in foundation health metrics
+ */
+export const FOUNDATION_SPARKLINE_CHART_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { enabled: false } },
+  scales: {
+    x: { display: false },
+    y: { display: false },
+  },
+};
+
+/**
+ * Chart.js configuration for bar charts
+ * Used for displaying bar chart visualizations in foundation health metrics
+ */
+export const FOUNDATION_BAR_CHART_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { enabled: false } },
+  scales: {
+    x: { display: false },
+    y: { display: false },
+  },
+  datasets: {
+    bar: {
+      barPercentage: 0.9,
+      categoryPercentage: 0.95,
+      borderRadius: 4,
+      borderSkipped: false,
+    },
+  },
+};
+
+/**
+ * Calculate average from array of numbers
+ */
+const calculateAverage = (data: number[]): number => {
+  return Math.round(data.reduce((sum, val) => sum + val, 0) / data.length);
+};
+
+/**
+ * Calculate total from array of numbers
+ */
+const calculateTotal = (data: number[]): number => {
+  return data.reduce((sum, val) => sum + val, 0);
+};
+
+/**
+ * Project health score distribution for all foundations
+ * Mock data showing distribution of projects across health categories
+ */
+export const PROJECT_HEALTH_DISTRIBUTION: ProjectHealthDistribution = {
+  excellent: 350,
+  healthy: 438,
+  stable: 238,
+  unsteady: 88,
+  critical: 25,
+};
+
+/**
+ * Company bus factor data
+ * Shows concentration risk from top contributing companies
+ */
+export const COMPANY_BUS_FACTOR: CompanyBusFactor = {
+  topCompaniesCount: 28,
+  topCompaniesPercentage: 52,
+  otherCompaniesCount: 142,
+  otherCompaniesPercentage: 48,
+};
+
+/**
+ * Top projects by software value
+ * Highest value projects across all foundations
+ */
+export const TOP_PROJECTS_BY_VALUE: TopProjectByValue[] = [
+  { name: 'Kubernetes', value: 985 },
+  { name: 'Linux Kernel', value: 847 },
+  { name: 'Envoy', value: 623 },
+];
+
+/**
+ * Aggregate foundation metrics across all foundations
+ * Mock data for demonstration purposes
+ */
+export const AGGREGATE_FOUNDATION_METRICS: AggregateFoundationMetrics = {
+  totalProjects: Object.values(PROJECT_HEALTH_DISTRIBUTION).reduce((sum, val) => sum + val, 0),
+  totalProjectsData: generateSmoothData(365, 1139, 50),
+  totalMembers: 485,
+  totalMembersData: generateSmoothData(365, 485, 25),
+  softwareValue: 2800,
+  softwareValueData: generateSmoothData(365, 2800, 150),
+  topProjectsByValue: TOP_PROJECTS_BY_VALUE,
+  companyBusFactor: COMPANY_BUS_FACTOR,
+  avgActiveContributors: calculateAverage(FOUNDATION_HEALTH_DATA[0].activeContributors),
+  activeContributorsData: FOUNDATION_HEALTH_DATA[0].activeContributors,
+  avgMaintainers: calculateAverage(FOUNDATION_HEALTH_DATA[0].maintainers),
+  maintainersData: FOUNDATION_HEALTH_DATA[0].maintainers,
+  totalEvents: calculateTotal(FOUNDATION_HEALTH_DATA[0].eventsMonthly),
+  eventsMonthlyData: FOUNDATION_HEALTH_DATA[0].eventsMonthly,
+  projectHealthDistribution: PROJECT_HEALTH_DISTRIBUTION,
+};
