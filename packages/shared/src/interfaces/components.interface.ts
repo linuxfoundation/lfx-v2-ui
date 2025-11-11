@@ -310,7 +310,7 @@ export interface ProgressItem {
   /** Metric value */
   value: string;
   /** Trend direction indicator */
-  trend: 'up' | 'down';
+  trend?: 'up' | 'down';
 }
 
 /**

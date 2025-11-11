@@ -10,6 +10,7 @@ import {
   OrganizationEventsOverviewResponse,
   OrganizationSegmentOverviewResponse,
   ProjectIssuesResolutionResponse,
+  ProjectPullRequestsWeeklyResponse,
   ProjectsListResponse,
   UserCodeCommitsResponse,
   UserProjectsResponse,
@@ -260,5 +261,30 @@ export class AnalyticsService {
         });
       })
     );
+  }
+
+  /**
+   * Get project pull requests weekly data (merge velocity) from Snowflake
+   * @param projectId - Project ID to filter by specific project (required)
+   * @returns Observable of project pull requests weekly response with aggregated metrics
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public getProjectPullRequestsWeekly(projectId: string): Observable<ProjectPullRequestsWeeklyResponse> {
+    return this.http
+      .get<ProjectPullRequestsWeeklyResponse>('/api/analytics/project-pull-requests-weekly', {
+        params: { projectId },
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch project pull requests weekly:', error);
+          return of({
+            data: [],
+            totalMergedPRs: 0,
+            avgMergeTime: 0,
+            totalWeeks: 0,
+          });
+        })
+      );
   }
 }

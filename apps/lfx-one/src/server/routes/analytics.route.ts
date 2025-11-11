@@ -27,4 +27,7 @@ router.get('/projects', (req, res, next) => analyticsController.getProjects(req,
 // Project issues resolution endpoint
 router.get('/project-issues-resolution', (req, res, next) => analyticsController.getProjectIssuesResolution(req, res, next));
 
+// Project pull requests weekly endpoint
+router.get('/project-pull-requests-weekly', (req, res, next) => analyticsController.getProjectPullRequestsWeekly(req, res, next));
+
 export default router;

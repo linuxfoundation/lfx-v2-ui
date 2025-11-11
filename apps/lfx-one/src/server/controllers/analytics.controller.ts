@@ -331,4 +331,38 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/project-pull-requests-weekly
+   * Get project pull requests weekly data (merge velocity) from Snowflake
+   * Query params: projectId (required) - Project ID to filter by specific project
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public async getProjectPullRequestsWeekly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_project_pull_requests_weekly');
+
+    try {
+      const projectId = req.query['projectId'] as string | undefined;
+
+      if (!projectId) {
+        res.status(400).json({ error: 'projectId query parameter is required' });
+        return;
+      }
+
+      const response = await this.projectService.getProjectPullRequestsWeekly(projectId);
+
+      Logger.success(req, 'get_project_pull_requests_weekly', startTime, {
+        project_id: projectId,
+        total_weeks: response.totalWeeks,
+        total_merged_prs: response.totalMergedPRs,
+        avg_merge_time: response.avgMergeTime,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_project_pull_requests_weekly', startTime, error);
+      next(error);
+    }
+  }
 }

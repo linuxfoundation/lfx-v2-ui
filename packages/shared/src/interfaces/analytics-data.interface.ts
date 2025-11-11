@@ -587,3 +587,59 @@ export interface ProjectIssuesResolutionResponse {
    */
   totalDays: number;
 }
+
+/**
+ * Snowflake row from project pull requests weekly query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface ProjectPullRequestsWeeklyRow {
+  /**
+   * Week start date (YYYY-MM-DD format)
+   */
+  WEEK_START_DATE: string;
+
+  /**
+   * Number of PRs merged during this week
+   */
+  MERGED_PR_COUNT: number;
+
+  /**
+   * Average time to merge in days
+   */
+  AVG_MERGED_IN_DAYS: number;
+
+  /**
+   * Average number of reviewers per PR
+   */
+  AVG_REVIEWERS_PER_PR: number;
+
+  /**
+   * Number of pending PRs at the end of the week
+   */
+  PENDING_PR_COUNT: number;
+}
+
+/**
+ * API response for project pull requests weekly query
+ */
+export interface ProjectPullRequestsWeeklyResponse {
+  /**
+   * Array of weekly PR data
+   */
+  data: ProjectPullRequestsWeeklyRow[];
+
+  /**
+   * Total PRs merged across all weeks
+   */
+  totalMergedPRs: number;
+
+  /**
+   * Average merge time across all weeks (in days)
+   */
+  avgMergeTime: number;
+
+  /**
+   * Number of weeks with data
+   */
+  totalWeeks: number;
+}

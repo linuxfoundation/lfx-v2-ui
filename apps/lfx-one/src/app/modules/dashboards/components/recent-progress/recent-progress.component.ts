@@ -16,6 +16,7 @@ import type {
   ActiveWeeksStreakResponse,
   ProgressItemWithChart,
   ProjectIssuesResolutionResponse,
+  ProjectPullRequestsWeeklyResponse,
   UserCodeCommitsResponse,
   UserPullRequestsResponse,
 } from '@lfx-one/shared/interfaces';
@@ -88,6 +89,29 @@ export class RecentProgressComponent {
   );
 
   /**
+   * Project pull requests weekly data from Snowflake
+   * Automatically refetches when projectId input changes
+   */
+  private readonly projectPullRequestsWeeklyData = toSignal(
+    toObservable(this.projectId).pipe(
+      switchMap((projectId) => {
+        if (!projectId) {
+          return [{ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 }];
+        }
+        return this.analyticsService.getProjectPullRequestsWeekly(projectId);
+      })
+    ),
+    {
+      initialValue: {
+        data: [],
+        totalMergedPRs: 0,
+        avgMergeTime: 0,
+        totalWeeks: 0,
+      },
+    }
+  );
+
+  /**
    * Computed signal that returns progress metrics based on the current persona
    * Merges hardcoded metrics with real data from Snowflake
    */
@@ -97,6 +121,7 @@ export class RecentProgressComponent {
     const pullRequestsData = this.pullRequestsMergedData();
     const codeCommitsDataValue = this.codeCommitsData();
     const issuesResolutionData = this.projectIssuesResolutionData();
+    const prWeeklyData = this.projectPullRequestsWeeklyData();
 
     const baseMetrics = persona === 'maintainer' ? MAINTAINER_PROGRESS_METRICS : CORE_DEVELOPER_PROGRESS_METRICS;
 
@@ -113,6 +138,9 @@ export class RecentProgressComponent {
       }
       if (metric.label === 'Open vs Closed Issues Trend') {
         return this.transformProjectIssuesResolution(issuesResolutionData);
+      }
+      if (metric.label === 'PR Review & Merge Velocity') {
+        return this.transformProjectPullRequestsWeekly(prWeeklyData);
       }
       return metric;
     });
@@ -422,6 +450,148 @@ export class RecentProgressComponent {
                   return `${datasetLabel}: ${count.toLocaleString()}`;
                 } catch (e) {
                   console.error('Error in label callback:', e);
+                  return '';
+                }
+              },
+            },
+          },
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false },
+        },
+      },
+    };
+  }
+
+  /**
+   * Transform Project Pull Requests Weekly API response to chart format
+   * API returns data in descending order by WEEK_START_DATE (newest first)
+   * Reverse it so oldest week is on the left, newest on the right
+   */
+  private transformProjectPullRequestsWeekly(data: ProjectPullRequestsWeeklyResponse): ProgressItemWithChart {
+    // Reverse the data to show oldest week on the left
+    const chartData = [...data.data].reverse();
+
+    // Calculate average merge time and round to 1 decimal place
+    const avgMergeTime = data.avgMergeTime ? Math.round(data.avgMergeTime * 10) / 10 : 0;
+    const totalMergedPRs = data.totalMergedPRs || 0;
+
+    // Calculate average pending PRs and reviewers
+    const avgPendingPRs =
+      chartData.length > 0 ? Math.round(chartData.reduce((sum, row) => sum + row.PENDING_PR_COUNT, 0) / chartData.length) : 0;
+    const avgReviewers =
+      chartData.length > 0
+        ? Math.round((chartData.reduce((sum, row) => sum + row.AVG_REVIEWERS_PER_PR, 0) / chartData.length) * 10) / 10
+        : 0;
+
+    return {
+      label: 'PR Review & Merge Velocity',
+      value: `${avgMergeTime}`,
+      subtitle: 'Avg days to merge',
+      tooltipText: `Total PRs merged: ${totalMergedPRs.toLocaleString()}\nAvg reviewers per PR: ${avgReviewers}\nPending PRs: ${avgPendingPRs}`,
+      isConnected: true,
+      chartType: 'bar',
+      chartData: {
+        labels: chartData.map((row) => row.WEEK_START_DATE),
+        datasets: [
+          {
+            label: 'Avg Days to Merge',
+            data: chartData.map((row) => row.AVG_MERGED_IN_DAYS),
+            borderColor: '#0094FF',
+            backgroundColor: 'rgba(0, 148, 255, 0.5)',
+            borderWidth: 0,
+            borderRadius: 2,
+            barPercentage: 0.95,
+            categoryPercentage: 0.95,
+          },
+        ],
+      },
+      chartOptions: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 5,
+            bottom: 5,
+          },
+        },
+        interaction: {
+          mode: 'index' as const,
+          intersect: false,
+        },
+        hover: {
+          mode: 'index' as const,
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            enabled: true,
+            mode: 'index' as const,
+            intersect: false,
+            position: 'nearest' as const,
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            titleColor: '#1f2937',
+            bodyColor: '#4b5563',
+            footerColor: '#6b7280',
+            borderColor: 'rgba(209, 213, 219, 0.8)',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false,
+            bodySpacing: 6,
+            footerSpacing: 4,
+            footerMarginTop: 8,
+            cornerRadius: 8,
+            caretSize: 6,
+            caretPadding: 8,
+            titleFont: {
+              size: 13,
+              weight: 'bold' as const,
+            },
+            bodyFont: {
+              size: 12,
+            },
+            footerFont: {
+              size: 11,
+              weight: 'normal' as const,
+            },
+            callbacks: {
+              title: (context: any) => {
+                try {
+                  const dateStr = context[0]?.label || '';
+                  if (!dateStr) return '';
+                  const date = parseLocalDateString(dateStr);
+                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  return `Week of ${formattedDate}`;
+                } catch (e) {
+                  console.error('Error in title callback:', e);
+                  return context[0]?.label || '';
+                }
+              },
+              label: (context: any) => {
+                try {
+                  const dataIndex = context.dataIndex;
+                  const weekData = chartData[dataIndex];
+                  return `Avg days to merge: ${Math.round(weekData.AVG_MERGED_IN_DAYS * 10) / 10}`;
+                } catch (e) {
+                  console.error('Error in label callback:', e);
+                  return '';
+                }
+              },
+              footer: (context: any) => {
+                try {
+                  const dataIndex = context[0]?.dataIndex;
+                  if (dataIndex === undefined) return '';
+                  const weekData = chartData[dataIndex];
+                  return [
+                    `PRs merged: ${weekData.MERGED_PR_COUNT}`,
+                    `Avg reviewers: ${Math.round(weekData.AVG_REVIEWERS_PER_PR * 10) / 10}`
+                  ];
+                } catch (e) {
+                  console.error('Error in footer callback:', e);
                   return '';
                 }
               },

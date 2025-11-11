@@ -8,6 +8,8 @@ import {
   ProjectIssuesResolutionAggregatedRow,
   ProjectIssuesResolutionResponse,
   ProjectIssuesResolutionRow,
+  ProjectPullRequestsWeeklyResponse,
+  ProjectPullRequestsWeeklyRow,
   ProjectRow,
   ProjectSettings,
   ProjectSlugToIdResponse,
@@ -657,7 +659,7 @@ export class ProjectService {
       aggregatedParams.push(projectId);
     }
 
-    dailyQuery += ' ORDER BY METRIC_DATE DESC LIMIT 90';
+    dailyQuery += ' ORDER BY METRIC_DATE DESC';
     
     // If no project specified, aggregate across all projects
     if (!projectId) {
@@ -692,6 +694,43 @@ export class ProjectService {
       resolutionRatePct: aggregated.RESOLUTION_RATE_PCT,
       medianDaysToClose: aggregated.MEDIAN_DAYS_TO_CLOSE,
       totalDays: dailyResult.rows.length,
+    };
+  }
+
+  /**
+   * Get project pull requests weekly data from Snowflake
+   * @param projectId - Project ID to filter by specific project (required)
+   * @returns Weekly PR merge velocity data with aggregated metrics
+   */
+  public async getProjectPullRequestsWeekly(projectId: string): Promise<ProjectPullRequestsWeeklyResponse> {
+    // Query for weekly trend data
+    const query = `
+      SELECT 
+        WEEK_START_DATE,
+        MERGED_PR_COUNT,
+        AVG_MERGED_IN_DAYS,
+        AVG_REVIEWERS_PER_PR,
+        PENDING_PR_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_PULL_REQUESTS_WEEKLY
+      WHERE PROJECT_ID = ?
+      ORDER BY WEEK_START_DATE DESC
+      LIMIT 26
+    `;
+
+    const result = await this.snowflakeService.execute<ProjectPullRequestsWeeklyRow>(query, [projectId]);
+
+    // Calculate aggregated metrics
+    const totalMergedPRs = result.rows.reduce((sum, row) => sum + row.MERGED_PR_COUNT, 0);
+    const avgMergeTime =
+      result.rows.length > 0
+        ? result.rows.reduce((sum, row) => sum + row.AVG_MERGED_IN_DAYS, 0) / result.rows.length
+        : 0;
+
+    return {
+      data: result.rows,
+      totalMergedPRs,
+      avgMergeTime: Math.round(avgMergeTime * 10) / 10, // Round to 1 decimal place
+      totalWeeks: result.rows.length,
     };
   }
 }
