@@ -66,6 +66,10 @@ export class ApiClientService {
       headers['Authorization'] = `Bearer ${bearerToken}`;
     }
 
+    if (customHeaders) {
+      Object.assign(headers, customHeaders);
+    }
+
     const requestInit: RequestInit = {
       method,
       headers,
