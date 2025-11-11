@@ -90,11 +90,7 @@
               [attr.data-testid]="'dashboard-meeting-card-file-icon-' + (index + 1)"
               [pTooltip]="attachment.name"
               tooltipPosition="top">
-              @if (attachment.type === 'link') {
-                <i class="text-xs text-primary fa-light fa-paperclip"></i>
-              } @else {
-                <i class="text-xs text-primary" [ngClass]="attachment.mime_type || '' | fileTypeIcon"></i>
-              }
+              <i class="text-xs text-primary" [ngClass]="attachment.mime_type || '' | fileTypeIcon"></i>
             </a>
           }
         </div>

@@ -95,7 +95,7 @@ export class MeetingManageComponent {
   public meeting = this.initializeMeeting();
   // Initialize meeting attachments with refresh capability
   private attachmentsRefresh$ = new BehaviorSubject<void>(undefined);
-  public attachments = signal<MeetingAttachment[]>([]);
+  public attachments = this.initializeAttachments();
   // Stepper state
   public currentStep = signal<number>(1);
   public readonly totalSteps = TOTAL_STEPS;
@@ -147,24 +147,6 @@ export class MeetingManageComponent {
       )
       .subscribe((meeting) => {
         this.populateFormWithMeetingData(meeting);
-      });
-
-    // Subscribe to attachments refresh observable and update signal
-    this.attachmentsRefresh$
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        switchMap(() => {
-          const meetingId = this.route.snapshot.paramMap.get('id');
-          if (meetingId) {
-            return this.meetingService.getMeetingAttachments(meetingId).pipe(catchError(() => of([])));
-          }
-          return of([]);
-        })
-      )
-      .subscribe((attachments) => {
-        // Create a new array reference to ensure Angular detects the change
-        // This is important when the component is inside an ng-template (like in p-step-panel)
-        this.attachments.set([...attachments]);
       });
   }
 
@@ -245,11 +227,6 @@ export class MeetingManageComponent {
     const fileName = attachment?.name || 'this attachment';
 
     this.showDeleteAttachmentConfirmation(meetingId, attachmentId, fileName);
-  }
-
-  public onAttachmentUploadSuccess(attachment: MeetingAttachment): void {
-    // Add the newly uploaded attachment to the attachments array
-    this.attachments.update((attachments) => [...attachments, attachment]);
   }
 
   public onManageRegistrants(): void {
@@ -368,54 +345,18 @@ export class MeetingManageComponent {
   private handleMeetingSuccess(meeting: Meeting, project: any): void {
     this.meetingId.set(meeting.uid);
 
-    // In create mode, only save attachments when on step 4 (Resources) or later
-    // Before step 4, just create the meeting and move to next step
-    const shouldSaveAttachments = this.isEditMode() || this.currentStep() >= this.totalSteps - 1;
-
-    if (!shouldSaveAttachments) {
+    // If we're in create mode and not on the last step, continue to next step
+    if (!this.isEditMode() && this.currentStep() < this.totalSteps) {
       this.nextStep();
       this.submitting.set(false);
       return;
     }
 
-    // Get important links from the form
-    const importantLinksFormArray = this.form().get('important_links') as FormArray;
-    const hasFileAttachments = this.pendingAttachments.length > 0;
-    const hasLinkAttachments = importantLinksFormArray && importantLinksFormArray.length > 0;
+    // If we have pending attachments, save them to the database
+    if (this.pendingAttachments.length > 0) {
+      this.savePendingAttachments(meeting.uid)
+        .pipe(take(1))
 
-    // If we have any attachments (files or links), save them to the database
-    if (hasFileAttachments || hasLinkAttachments) {
-      // Create an array of observables for all attachment operations
-      const attachmentOperations: Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }>[] = [];
-
-      // Add file attachments operation
-      if (hasFileAttachments) {
-        attachmentOperations.push(this.savePendingAttachments(meeting.uid));
-      }
-
-      // Add link attachments operation
-      if (hasLinkAttachments) {
-        attachmentOperations.push(this.saveImportantLinks(meeting.uid, importantLinksFormArray));
-      }
-
-      // Execute all attachment operations and combine results
-      concat(...attachmentOperations)
-        .pipe(
-          toArray(),
-          take(1),
-          switchMap((results) => {
-            // Combine all successes and failures from multiple operations
-            const combinedResult = results.reduce(
-              (acc, curr) => {
-                acc.successes.push(...curr.successes);
-                acc.failures.push(...curr.failures);
-                return acc;
-              },
-              { successes: [], failures: [] } as { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }
-            );
-            return of(combinedResult);
-          })
-        )
         .subscribe({
           next: (result) => {
             // Process attachments after meeting save
@@ -426,7 +367,6 @@ export class MeetingManageComponent {
             const warningMessage = this.isEditMode()
               ? 'Meeting updated but attachments failed to save. You can add them later.'
               : 'Meeting created but attachments failed to save. You can add them later.';
-
             this.messageService.add({
               severity: 'warn',
               summary: this.isEditMode() ? 'Meeting Updated' : 'Meeting Created',
@@ -503,14 +443,7 @@ export class MeetingManageComponent {
       this.attachmentsRefresh$.next();
     }
 
-    // In create mode on step 4, move to step 5 (Manage Guests)
-    // In all other cases, navigate back to meetings list
-    if (!this.isEditMode() && this.currentStep() === this.totalSteps - 1) {
-      this.nextStep();
-      this.submitting.set(false);
-    } else {
-      this.router.navigate(['/project', project.slug, 'meetings']);
-    }
+    this.router.navigate(['/project', project.slug, 'meetings']);
   }
 
   private showDeleteAttachmentConfirmation(meetingId: string, attachmentId: string, fileName: string): void {
@@ -534,7 +467,7 @@ export class MeetingManageComponent {
               detail: 'Attachment deleted successfully',
             });
             // Directly remove the deleted attachment from the signal array
-            this.attachments.update((attachments) => attachments.filter((a) => a.uid !== attachmentId));
+            this.attachmentsRefresh$.next();
             this.deletingAttachmentId.set(null);
           },
           error: (error) => {
@@ -846,43 +779,20 @@ export class MeetingManageComponent {
     );
   }
 
-  private saveImportantLinks(
-    meetingId: string,
-    importantLinksFormArray: FormArray
-  ): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
-    if (!importantLinksFormArray || importantLinksFormArray.length === 0) {
-      return of({ successes: [], failures: [] });
-    }
-
-    // Extract link data from FormArray
-    const links = importantLinksFormArray.controls.map((control) => ({
-      title: control.get('title')?.value || 'Untitled Link',
-      url: control.get('url')?.value || '',
-    }));
-
-    // Filter out invalid links
-    const validLinks = links.filter((link) => link.url && link.url.trim() !== '');
-
-    if (validLinks.length === 0) {
-      return of({ successes: [], failures: [] });
-    }
-
-    // Create attachment for each link using the createAttachmentFromUrl method
-    // Note: For links, we use fileSize=0 and mimeType='' as they're not relevant
-    return from(validLinks).pipe(
-      mergeMap((link) =>
-        this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
-          switchMap((result) => of({ success: result, failure: null })),
-          catchError((error) => of({ success: null, failure: { fileName: link.title, error } }))
-        )
+  private initializeAttachments() {
+    return toSignal(
+      this.attachmentsRefresh$.pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap(() => this.route.paramMap),
+        switchMap((params) => {
+          const meetingId = params.get('id');
+          if (meetingId) {
+            return this.meetingService.getMeetingAttachments(meetingId).pipe(catchError(() => of([])));
+          }
+          return of([]);
+        })
       ),
-      toArray(),
-      switchMap((results) => {
-        const successes = results.filter((r) => r.success).map((r) => r.success!);
-        const failures = results.filter((r) => r.failure).map((r) => r.failure!);
-        return of({ successes, failures });
-      }),
-      take(1)
+      { initialValue: [] }
     );
   }
 

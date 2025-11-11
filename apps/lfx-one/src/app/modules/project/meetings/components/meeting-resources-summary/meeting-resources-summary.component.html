@@ -46,8 +46,6 @@
               </div>
               @if (attachment.uploading) {
                 <i class="fa-light fa-spinner fa-spin text-blue-600"></i>
-              } @else if (attachment.uploaded) {
-                <i class="fa-light fa-check text-green-600"></i>
               } @else {
                 <button
                   (click)="removeAttachment(attachment.id)"
@@ -73,11 +71,7 @@
               [attr.data-testid]="'existing-attachment-item-' + i">
               <div class="flex items-center gap-3">
                 <div class="p-2 bg-green-100 rounded-lg">
-                  @if (attachment.type === 'link') {
-                    <i class="fa-light fa-paperclip text-green-600"></i>
-                  } @else {
-                    <i class="fa-light fa-file text-green-600"></i>
-                  }
+                  <i class="fa-light fa-file text-green-600"></i>
                 </div>
                 <div>
                   <p class="text-sm font-medium text-slate-900">{{ attachment.name }}</p>
@@ -90,19 +84,10 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                @if (attachment.type === 'link' && attachment.link) {
-                  <a
-                    [href]="attachment.link"
-                    target="_blank"
-                    class="h-6 w-6 p-0 text-slate-400 hover:text-blue-500 flex items-center justify-center"
-                    data-testid="download-attachment-btn">
-                    <i class="fa-light fa-external-link w-3 h-3"></i>
-                  </a>
-                } @else if (attachment.type === 'file' && meetingId()) {
+                @if (attachment.link) {
                   <a
                     [href]="'/api/meetings/' + meetingId() + '/attachments/' + attachment.uid"
                     target="_blank"
-                    [download]="attachment.name"
                     class="h-6 w-6 p-0 text-slate-400 hover:text-blue-500 flex items-center justify-center"
                     data-testid="download-attachment-btn">
                     <i class="fa-light fa-download w-3 h-3"></i>

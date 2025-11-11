@@ -49,10 +49,9 @@ export class MeetingResourcesSummaryComponent implements OnInit {
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
 
-  // Navigation and events
+  // Navigation
   public readonly goToStep = output<number>();
   public readonly deleteAttachment = output<string>();
-  public readonly uploadSuccess = output<MeetingAttachment>();
 
   // File upload configuration
   public readonly acceptString = generateAcceptString();
@@ -86,14 +85,49 @@ export class MeetingResourcesSummaryComponent implements OnInit {
 
     if (!files || files.length === 0) return;
 
-    // In edit mode, if we have a meetingId, upload directly to LFX V2 API
-    const meetingId = this.meetingId();
-    if (this.isEditMode() && meetingId) {
-      this.uploadFilesDirectly(files, meetingId);
-    } else {
-      // In create mode, store files as pending attachments to be uploaded after meeting creation
-      this.storeFilesPending(files);
-    }
+    const newAttachments = Array.from(files)
+      .map((file) => {
+        const validationError = this.validateFile(file);
+        if (validationError) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'File Upload Error',
+            detail: validationError,
+            life: 5000,
+          });
+          return null;
+        }
+
+        const pendingAttachment: PendingAttachment = {
+          id: crypto.randomUUID(),
+          fileName: file.name,
+          file: file,
+          fileSize: file.size,
+          mimeType: file.type,
+          uploading: true,
+        };
+
+        // Start the upload
+        this.meetingService.createFileAttachment(this.meetingId()!, file).subscribe({
+          next: (result) => {
+            this.pendingAttachments.update((current) =>
+              current.map((pa) => (pa.id === pendingAttachment.id ? { ...pa, link: result.link, uploading: false } : pa))
+            );
+            this.form().get('attachments')?.setValue(this.pendingAttachments());
+          },
+          error: (error) => {
+            this.pendingAttachments.update((current) =>
+              current.map((pa) => (pa.id === pendingAttachment.id ? { ...pa, uploading: false, uploadError: error.message || 'Upload failed' } : pa))
+            );
+            console.error(`Failed to upload ${file.name}:`, error);
+          },
+        });
+
+        return pendingAttachment;
+      })
+      .filter(Boolean) as PendingAttachment[];
+
+    this.pendingAttachments.update((current) => [...current, ...newAttachments]);
   }
 
   public removeAttachment(id: string): void {
@@ -155,92 +189,6 @@ export class MeetingResourcesSummaryComponent implements OnInit {
     }
 
     return null; // File is valid
-  }
-
-  private uploadFilesDirectly(files: File[], meetingId: string): void {
-    Array.from(files).forEach((file) => {
-      const validationError = this.validateFile(file);
-      if (validationError) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'File Upload Error',
-          detail: validationError,
-          life: 5000,
-        });
-        return;
-      }
-
-      const pendingAttachment: PendingAttachment = {
-        id: crypto.randomUUID(),
-        fileName: file.name,
-        file: file,
-        fileSize: file.size,
-        mimeType: file.type,
-        uploading: true,
-      };
-
-      this.pendingAttachments.update((current) => [...current, pendingAttachment]);
-
-      // Upload directly to LFX V2 API
-      this.meetingService.createFileAttachment(meetingId, file).subscribe({
-        next: (attachment) => {
-          // Mark as successfully uploaded instead of removing
-          this.pendingAttachments.update((current) => current.map((pa) => (pa.id === pendingAttachment.id ? { ...pa, uploading: false, uploaded: true } : pa)));
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: `File "${file.name}" uploaded successfully`,
-            life: 3000,
-          });
-          // Emit event to parent to refresh attachments list
-          this.uploadSuccess.emit(attachment);
-        },
-        error: (error) => {
-          this.pendingAttachments.update((current) =>
-            current.map((pa) => (pa.id === pendingAttachment.id ? { ...pa, uploading: false, uploadError: error.message || 'Upload failed' } : pa))
-          );
-          console.error(`Failed to upload ${file.name}:`, error);
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Upload Failed',
-            detail: `Failed to upload "${file.name}". Please try again.`,
-            life: 5000,
-          });
-        },
-      });
-    });
-  }
-
-  private storeFilesPending(files: File[]): void {
-    const newAttachments = Array.from(files)
-      .map((file) => {
-        const validationError = this.validateFile(file);
-        if (validationError) {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'File Upload Error',
-            detail: validationError,
-            life: 5000,
-          });
-          return null;
-        }
-
-        // Store the File object to be uploaded after meeting creation
-        const pendingAttachment: PendingAttachment = {
-          id: crypto.randomUUID(),
-          fileName: file.name,
-          file: file,
-          fileSize: file.size,
-          mimeType: file.type,
-          uploading: false,
-        };
-
-        return pendingAttachment;
-      })
-      .filter(Boolean) as PendingAttachment[];
-
-    this.pendingAttachments.update((current) => [...current, ...newAttachments]);
-    this.form().get('attachments')?.setValue(this.pendingAttachments());
   }
 
   // Summary formatting methods

@@ -496,17 +496,7 @@ export class MeetingCardComponent implements OnInit {
 
   private initAttachments(): Signal<MeetingAttachment[]> {
     return runInInjectionContext(this.injector, () => {
-      // Convert meeting input signal to observable and create reactive attachment stream
-      const meeting$ = toObservable(this.meetingInput);
-      const attachments$ = meeting$.pipe(
-        switchMap((meeting) => {
-          if (meeting.uid) {
-            return this.meetingService.getMeetingAttachments(meeting.uid).pipe(catchError(() => of([])));
-          }
-          return of([]);
-        })
-      );
-      return toSignal(attachments$, { initialValue: [] });
+      return toSignal(this.meetingService.getMeetingAttachments(this.meetingInput().uid).pipe(catchError(() => of([]))), { initialValue: [] });
     });
   }
 

@@ -54,10 +54,8 @@
                   [existingAttachments]="attachments()"
                   [isEditMode]="isEditMode()"
                   [deletingAttachmentId]="deletingAttachmentId()"
-                  [meetingId]="meetingId()"
                   (goToStep)="goToStep($event)"
-                  (deleteAttachment)="deleteAttachment($event)"
-                  (uploadSuccess)="onAttachmentUploadSuccess($event)">
+                  (deleteAttachment)="deleteAttachment($event)">
                 </lfx-meeting-resources-summary>
               </ng-template>
             </p-step-panel>
@@ -114,7 +112,6 @@
                     [existingAttachments]="attachments()"
                     [isEditMode]="isEditMode()"
                     [deletingAttachmentId]="deletingAttachmentId()"
-                    [meetingId]="meetingId()"
                     (goToStep)="goToStep($event)"
                     (deleteAttachment)="deleteAttachment($event)">
                   </lfx-meeting-resources-summary>
