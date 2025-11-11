@@ -106,11 +106,13 @@ export class OrganizationInvolvementComponent {
   }
 
   public scrollLeft(): void {
+    if (!this.carouselScrollContainer?.nativeElement) return;
     const container = this.carouselScrollContainer.nativeElement;
     container.scrollBy({ left: -300, behavior: 'smooth' });
   }
 
   public scrollRight(): void {
+    if (!this.carouselScrollContainer?.nativeElement) return;
     const container = this.carouselScrollContainer.nativeElement;
     container.scrollBy({ left: 300, behavior: 'smooth' });
   }

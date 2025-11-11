@@ -20,7 +20,7 @@ export class FilterPillsComponent {
   public readonly selectedFilter = input.required<string>();
   public readonly filterChange = output<string>();
 
-  protected handleFilterChange(filterId: string): void {
+  public handleFilterChange(filterId: string): void {
     this.filterChange.emit(filterId);
   }
 }
