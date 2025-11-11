@@ -356,7 +356,6 @@ export class MeetingManageComponent {
     if (this.pendingAttachments.length > 0) {
       this.savePendingAttachments(meeting.uid)
         .pipe(take(1))
-
         .subscribe({
           next: (result) => {
             // Process attachments after meeting save
@@ -466,7 +465,6 @@ export class MeetingManageComponent {
               summary: 'Success',
               detail: 'Attachment deleted successfully',
             });
-            // Directly remove the deleted attachment from the signal array
             this.attachmentsRefresh$.next();
             this.deletingAttachmentId.set(null);
           },
@@ -761,7 +759,6 @@ export class MeetingManageComponent {
       return of({ successes: [], failures: [] });
     }
 
-    // Upload files directly to LFX V2 API
     return from(attachmentsToSave).pipe(
       mergeMap((attachment) =>
         this.meetingService.createFileAttachment(meetingId, attachment.file).pipe(

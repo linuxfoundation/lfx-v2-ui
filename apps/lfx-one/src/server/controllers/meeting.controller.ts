@@ -1053,7 +1053,11 @@ export class MeetingController {
         filename = metadata.name || filename;
         contentType = metadata.mime_type || metadata.content_type || contentType;
       } catch (metadataError) {
-        req.log.warn({ error: metadataError }, 'Failed to fetch metadata, using defaults');
+        Logger.warning(req, 'get_meeting_attachment_metadata', 'Failed to fetch metadata, using defaults', {
+          meeting_uid: uid,
+          attachment_id: attachmentId,
+          error: metadataError instanceof Error ? metadataError.message : metadataError,
+        });
       }
 
       Logger.success(req, 'get_meeting_attachment', startTime, {

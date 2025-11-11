@@ -852,9 +852,13 @@ export class MeetingService {
    * @returns The created meeting attachment
    */
   public async createMeetingAttachment(req: Request, meetingUid: string, attachmentData: any): Promise<any> {
-    Logger.start(req, 'create_meeting_attachment', {
-      meeting_uid: meetingUid,
-    });
+    req.log.info(
+      {
+        operation: 'create_meeting_attachment',
+        meeting_uid: meetingUid,
+      },
+      'Creating meeting attachment'
+    );
 
     try {
       // Call the LFX V2 API endpoint with multipart/form-data
@@ -869,16 +873,25 @@ export class MeetingService {
         attachmentData
       );
 
-      Logger.success(req, 'create_meeting_attachment', Date.now(), {
-        attachment_uid: attachment.uid,
-        meeting_uid: meetingUid,
-      });
+      req.log.info(
+        {
+          operation: 'create_meeting_attachment',
+          attachment_uid: attachment.uid,
+          meeting_uid: meetingUid,
+        },
+        'Meeting attachment created successfully'
+      );
 
       return attachment;
     } catch (error) {
-      Logger.error(req, 'create_meeting_attachment', Date.now(), error, {
-        meeting_uid: meetingUid,
-      });
+      req.log.error(
+        {
+          operation: 'create_meeting_attachment',
+          meeting_uid: meetingUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to create meeting attachment'
+      );
       throw error;
     }
   }
@@ -891,66 +904,40 @@ export class MeetingService {
    * @returns The attachment file data
    */
   public async getMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<Buffer> {
-    const startTime = Logger.start(req, 'get_meeting_attachment', {
-      meeting_uid: meetingUid,
-      attachment_uid: attachmentUid,
-    });
-
-    try {
-      // Make a direct fetch request to download the binary file
-      // We can't use the regular API client because it parses responses as JSON
-      const baseUrl = process.env['LFX_V2_SERVICE'] || 'http://lfx-api.k8s.orb.local';
-      const url = `${baseUrl}/meetings/${meetingUid}/attachments/${attachmentUid}`;
-      const token = req.bearerToken;
-
-      const headers: Record<string, string> = {
-        ['User-Agent']: 'LFX-PCC-Server/1.0',
-      };
-
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      req.log.debug({ url, method: 'GET' }, 'Fetching attachment file');
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-        signal: AbortSignal.timeout(30000),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        req.log.error({ status: response.status, error: errorText }, 'Failed to fetch attachment');
-        throw new Error(`Failed to fetch attachment: ${response.statusText}`);
-      }
-
-      // Log the response headers for debugging
-      const responseContentType = response.headers.get('content-type');
-      req.log.debug(
-        {
-          content_type: responseContentType,
-          content_length: response.headers.get('content-length'),
-        },
-        'Attachment download response headers'
-      );
-
-      // Get the file as an ArrayBuffer and convert to Buffer
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      Logger.success(req, 'get_meeting_attachment', startTime, {
+    req.log.info(
+      {
+        operation: 'get_meeting_attachment',
         meeting_uid: meetingUid,
         attachment_uid: attachmentUid,
-        file_size: buffer.length,
-      });
+      },
+      'Fetching meeting attachment'
+    );
+
+    try {
+      // Use the microservice proxy to download the binary file
+      const buffer = await this.microserviceProxy.proxyBinaryRequest(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}/attachments/${attachmentUid}`, 'GET');
+
+      req.log.info(
+        {
+          operation: 'get_meeting_attachment',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+          file_size: buffer.length,
+        },
+        'Meeting attachment fetched successfully'
+      );
 
       return buffer;
     } catch (error) {
-      Logger.error(req, 'get_meeting_attachment', startTime, error, {
-        meeting_uid: meetingUid,
-        attachment_uid: attachmentUid,
-      });
+      req.log.error(
+        {
+          operation: 'get_meeting_attachment',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to fetch meeting attachment'
+      );
       throw error;
     }
   }
@@ -962,33 +949,50 @@ export class MeetingService {
    * @param attachmentUid - Attachment UID to delete
    */
   public async deleteMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<void> {
-    Logger.start(req, 'delete_meeting_attachment', {
-      meeting_uid: meetingUid,
-      attachment_uid: attachmentUid,
-    });
+    req.log.info(
+      {
+        operation: 'delete_meeting_attachment',
+        meeting_uid: meetingUid,
+        attachment_uid: attachmentUid,
+      },
+      'Deleting meeting attachment'
+    );
 
     try {
       // Call the LFX V2 API endpoint to delete the attachment
       await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/meetings/${meetingUid}/attachments/${attachmentUid}`, 'DELETE');
 
-      Logger.success(req, 'delete_meeting_attachment', Date.now(), {
-        meeting_uid: meetingUid,
-        attachment_uid: attachmentUid,
-      });
+      req.log.info(
+        {
+          operation: 'delete_meeting_attachment',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+        },
+        'Meeting attachment deleted successfully'
+      );
     } catch (error) {
-      Logger.error(req, 'delete_meeting_attachment', Date.now(), error, {
-        meeting_uid: meetingUid,
-        attachment_uid: attachmentUid,
-      });
+      req.log.error(
+        {
+          operation: 'delete_meeting_attachment',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to delete meeting attachment'
+      );
       throw error;
     }
   }
 
   public async getMeetingAttachmentMetadata(req: Request, meetingUid: string, attachmentUid: string): Promise<any> {
-    Logger.start(req, 'get_meeting_attachment_metadata', {
-      meeting_uid: meetingUid,
-      attachment_uid: attachmentUid,
-    });
+    req.log.info(
+      {
+        operation: 'get_meeting_attachment_metadata',
+        meeting_uid: meetingUid,
+        attachment_uid: attachmentUid,
+      },
+      'Fetching meeting attachment metadata'
+    );
 
     try {
       const metadata = await this.microserviceProxy.proxyRequest<any>(
@@ -998,17 +1002,26 @@ export class MeetingService {
         'GET'
       );
 
-      Logger.success(req, 'get_meeting_attachment_metadata', Date.now(), {
-        meeting_uid: meetingUid,
-        attachment_uid: attachmentUid,
-      });
+      req.log.info(
+        {
+          operation: 'get_meeting_attachment_metadata',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+        },
+        'Meeting attachment metadata fetched successfully'
+      );
 
       return metadata;
     } catch (error) {
-      Logger.error(req, 'get_meeting_attachment_metadata', Date.now(), error, {
-        meeting_uid: meetingUid,
-        attachment_uid: attachmentUid,
-      });
+      req.log.error(
+        {
+          operation: 'get_meeting_attachment_metadata',
+          meeting_uid: meetingUid,
+          attachment_uid: attachmentUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to fetch meeting attachment metadata'
+      );
       throw error;
     }
   }
@@ -1020,9 +1033,13 @@ export class MeetingService {
    * @returns Array of meeting attachments
    */
   public async getMeetingAttachments(req: Request, meetingUid: string): Promise<any[]> {
-    Logger.start(req, 'get_meeting_attachments', {
-      meeting_uid: meetingUid,
-    });
+    req.log.info(
+      {
+        operation: 'get_meeting_attachments',
+        meeting_uid: meetingUid,
+      },
+      'Fetching meeting attachments'
+    );
 
     try {
       const params = {
@@ -1030,7 +1047,7 @@ export class MeetingService {
         tags: `meeting_uid:${meetingUid}`,
       };
 
-      req.log.info(
+      req.log.debug(
         {
           meeting_uid: meetingUid,
           query_params: params,
@@ -1042,27 +1059,25 @@ export class MeetingService {
 
       const attachments = resources.map((resource) => resource.data);
 
-      // Debug log to see actual attachment data
       req.log.info(
         {
+          operation: 'get_meeting_attachments',
           meeting_uid: meetingUid,
           attachment_count: attachments.length,
-          attachment_ids: attachments.map((a) => a.uid),
-          attachment_names: attachments.map((a) => a.name),
         },
-        'Attachments retrieved for meeting'
+        'Meeting attachments retrieved successfully'
       );
-
-      Logger.success(req, 'get_meeting_attachments', Date.now(), {
-        meeting_uid: meetingUid,
-        attachment_count: attachments.length,
-      });
 
       return attachments;
     } catch (error) {
-      Logger.error(req, 'get_meeting_attachments', Date.now(), error, {
-        meeting_uid: meetingUid,
-      });
+      req.log.error(
+        {
+          operation: 'get_meeting_attachments',
+          meeting_uid: meetingUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to get meeting attachments'
+      );
       throw error;
     }
   }
@@ -1074,9 +1089,13 @@ export class MeetingService {
    * @returns Array of past meeting attachments
    */
   public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<any[]> {
-    Logger.start(req, 'get_past_meeting_attachments', {
-      past_meeting_uid: pastMeetingUid,
-    });
+    req.log.info(
+      {
+        operation: 'get_past_meeting_attachments',
+        past_meeting_uid: pastMeetingUid,
+      },
+      'Fetching past meeting attachments'
+    );
 
     try {
       const params = {
@@ -1084,7 +1103,7 @@ export class MeetingService {
         tags: `past_meeting_uid:${pastMeetingUid}`,
       };
 
-      req.log.info(
+      req.log.debug(
         {
           past_meeting_uid: pastMeetingUid,
           query_params: params,
@@ -1098,24 +1117,23 @@ export class MeetingService {
 
       req.log.info(
         {
+          operation: 'get_past_meeting_attachments',
           past_meeting_uid: pastMeetingUid,
           attachment_count: attachments.length,
-          attachment_ids: attachments.map((a) => a.uid),
-          attachment_names: attachments.map((a) => a.name),
         },
-        'Retrieved past meeting attachments'
+        'Past meeting attachments retrieved successfully'
       );
-
-      Logger.success(req, 'get_past_meeting_attachments', Date.now(), {
-        past_meeting_uid: pastMeetingUid,
-        attachment_count: attachments.length,
-      });
 
       return attachments;
     } catch (error) {
-      Logger.error(req, 'get_past_meeting_attachments', Date.now(), error, {
-        past_meeting_uid: pastMeetingUid,
-      });
+      req.log.error(
+        {
+          operation: 'get_past_meeting_attachments',
+          past_meeting_uid: pastMeetingUid,
+          error: error instanceof Error ? error.message : error,
+        },
+        'Failed to get past meeting attachments'
+      );
       throw error;
     }
   }
