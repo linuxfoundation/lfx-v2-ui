@@ -72,7 +72,7 @@
               <!-- Top Projects List -->
               @case ('top-projects') {
                 @if (card.topProjects) {
-                  <div class="space-y-0.5 pt-0 pr-5 pb-0 pl-[60px] mt-0 mr-0 mb-[5px] ml-0">
+                  <div class="space-y-0.5 p-0 pr-5 pl-[60px] m-0 mb-[5px]">
                     <div class="text-xs font-medium text-muted-foreground">Top 3 Projects by Value</div>
                     @for (project of card.topProjects; track project.name) {
                       <div class="flex items-center justify-between text-sm">

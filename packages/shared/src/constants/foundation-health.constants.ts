@@ -26,39 +26,37 @@ const generateSmoothData = (days: number, baseValue: number, variation: number):
 
 /**
  * Foundation health data for board member dashboard
- * Matches the React implementation with mock data for 5 major foundations
+ * Mock aggregate data across all foundations
  */
-export const FOUNDATION_HEALTH_DATA: Foundation[] = [
-  {
-    id: 'cncf',
-    name: 'CNCF',
-    logo: 'https://www.cncf.io/wp-content/uploads/2023/04/cncf-color.svg',
-    projectBreakdown: {
-      sandbox: 45,
-      incubating: 28,
-      graduated: 18,
-    },
-    totalMembers: 485,
-    memberBreakdown: {
-      platinum: 100,
-      gold: 150,
-      silver: 235,
-    },
-    softwareValue: 2800, // $2.8B
-    activeContributors: generateSmoothData(365, 3000, 200),
-    maintainers: generateSmoothData(365, 415, 35),
-    eventsMonthly: [2, 1, 2, 3, 2, 1, 2, 3, 2, 1, 3, 2],
-    upcomingEvents: 10,
-    orgDependency: {
-      topOrgsCount: 28,
-      topOrgsPercentage: 52,
-      otherOrgsCount: 497,
-      otherOrgsPercentage: 48,
-      riskLevel: 'low',
-    },
-    healthScore: 'excellent',
+export const FOUNDATION_HEALTH_DATA: Foundation = {
+  id: 'aggregate',
+  name: 'All Foundations',
+  logo: '',
+  projectBreakdown: {
+    sandbox: 45,
+    incubating: 28,
+    graduated: 18,
   },
-];
+  totalMembers: 485,
+  memberBreakdown: {
+    platinum: 100,
+    gold: 150,
+    silver: 235,
+  },
+  softwareValue: 2800,
+  activeContributors: generateSmoothData(365, 3000, 200),
+  maintainers: generateSmoothData(365, 415, 35),
+  eventsMonthly: [2, 1, 2, 3, 2, 1, 2, 3, 2, 1, 3, 2],
+  upcomingEvents: 10,
+  orgDependency: {
+    topOrgsCount: 28,
+    topOrgsPercentage: 52,
+    otherOrgsCount: 497,
+    otherOrgsPercentage: 48,
+    riskLevel: 'low',
+  },
+  healthScore: 'excellent',
+};
 
 /**
  * Chart.js configuration for sparkline charts (line charts showing trends)
@@ -156,11 +154,11 @@ export const AGGREGATE_FOUNDATION_METRICS: AggregateFoundationMetrics = {
   softwareValueData: generateSmoothData(365, 2800, 150),
   topProjectsByValue: TOP_PROJECTS_BY_VALUE,
   companyBusFactor: COMPANY_BUS_FACTOR,
-  avgActiveContributors: calculateAverage(FOUNDATION_HEALTH_DATA[0].activeContributors),
-  activeContributorsData: FOUNDATION_HEALTH_DATA[0].activeContributors,
-  avgMaintainers: calculateAverage(FOUNDATION_HEALTH_DATA[0].maintainers),
-  maintainersData: FOUNDATION_HEALTH_DATA[0].maintainers,
-  totalEvents: calculateTotal(FOUNDATION_HEALTH_DATA[0].eventsMonthly),
-  eventsMonthlyData: FOUNDATION_HEALTH_DATA[0].eventsMonthly,
+  avgActiveContributors: calculateAverage(FOUNDATION_HEALTH_DATA.activeContributors),
+  activeContributorsData: FOUNDATION_HEALTH_DATA.activeContributors,
+  avgMaintainers: calculateAverage(FOUNDATION_HEALTH_DATA.maintainers),
+  maintainersData: FOUNDATION_HEALTH_DATA.maintainers,
+  totalEvents: calculateTotal(FOUNDATION_HEALTH_DATA.eventsMonthly),
+  eventsMonthlyData: FOUNDATION_HEALTH_DATA.eventsMonthly,
   projectHealthDistribution: PROJECT_HEALTH_DISTRIBUTION,
 };
