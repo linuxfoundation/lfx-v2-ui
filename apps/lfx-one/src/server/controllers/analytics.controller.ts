@@ -7,6 +7,7 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthenticationError } from '../errors';
 import { Logger } from '../helpers/logger';
 import { OrganizationService } from '../services/organization.service';
+import { ProjectService } from '../services/project.service';
 import { UserService } from '../services/user.service';
 
 /**
@@ -18,10 +19,12 @@ import { UserService } from '../services/user.service';
 export class AnalyticsController {
   private userService: UserService;
   private organizationService: OrganizationService;
+  private projectService: ProjectService;
 
   public constructor() {
     this.userService = new UserService();
     this.organizationService = new OrganizationService();
+    this.projectService = new ProjectService();
   }
 
   /**
@@ -271,6 +274,60 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       Logger.error(req, 'get_organization_events_overview', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/projects
+   * Get list of all projects from Snowflake
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_projects_list');
+
+    try {
+      const response = await this.projectService.getProjectsList();
+
+      Logger.success(req, 'get_projects_list', startTime, {
+        project_count: response.projects.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_projects_list', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/project-issues-resolution
+   * Get project issues resolution data (opened vs closed issues) from Snowflake
+   * Query params: projectId (optional) - Project ID to filter by specific project
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public async getProjectIssuesResolution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_project_issues_resolution');
+
+    try {
+      const projectId = req.query['projectId'] as string | undefined;
+
+      const response = await this.projectService.getProjectIssuesResolution(projectId);
+
+      Logger.success(req, 'get_project_issues_resolution', startTime, {
+        project_id: projectId || 'all',
+        total_days: response.totalDays,
+        total_opened: response.totalOpenedIssues,
+        total_closed: response.totalClosedIssues,
+        resolution_rate: response.resolutionRatePct,
+        median_days_to_close: response.medianDaysToClose,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_project_issues_resolution', startTime, error);
       next(error);
     }
   }

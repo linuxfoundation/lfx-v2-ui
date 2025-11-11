@@ -9,6 +9,8 @@ import {
   OrganizationContributionsOverviewResponse,
   OrganizationEventsOverviewResponse,
   OrganizationSegmentOverviewResponse,
+  ProjectIssuesResolutionResponse,
+  ProjectsListResponse,
   UserCodeCommitsResponse,
   UserProjectsResponse,
   UserPullRequestsResponse,
@@ -214,6 +216,47 @@ export class AnalyticsService {
           },
           accountId: '',
           projectId: '',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get list of all projects from Snowflake
+   * @returns Observable of projects list response
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public getProjects(): Observable<ProjectsListResponse> {
+    return this.http.get<ProjectsListResponse>('/api/analytics/projects').pipe(
+      catchError((error) => {
+        console.error('Failed to fetch projects:', error);
+        return of({
+          projects: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get project issues resolution data (opened vs closed issues) from Snowflake
+   * @param projectId - Optional project ID to filter by specific project
+   * @returns Observable of project issues resolution response with aggregated metrics
+   *
+   * Generated with [Claude Code](https://claude.ai/code)
+   */
+  public getProjectIssuesResolution(projectId?: string): Observable<ProjectIssuesResolutionResponse> {
+    const options = projectId ? { params: { projectId } } : {};
+    return this.http.get<ProjectIssuesResolutionResponse>('/api/analytics/project-issues-resolution', options).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch project issues resolution:', error);
+        return of({
+          data: [],
+          totalOpenedIssues: 0,
+          totalClosedIssues: 0,
+          resolutionRatePct: 0,
+          medianDaysToClose: 0,
+          totalDays: 0,
         });
       })
     );

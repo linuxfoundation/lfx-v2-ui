@@ -327,6 +327,10 @@ export interface ProgressItemWithChart extends ProgressItem {
   chartOptions: ChartOptions<ChartType>;
   /** Optional subtitle text displayed below the value */
   subtitle?: string;
+  /** Optional tooltip text to display on hover */
+  tooltipText?: string;
+  /** Indicates if the metric is connected to live data */
+  isConnected?: boolean;
 }
 
 /**

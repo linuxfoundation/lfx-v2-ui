@@ -45,12 +45,21 @@
       @for (item of progressItems(); track item.label) {
         <div class="p-4 bg-white rounded-lg border border-slate-200 flex-shrink-0 w-80" [attr.data-testid]="'dashboard-recent-progress-item-' + item.label">
           <div class="space-y-3">
-            <h5 class="text-sm font-medium w-full">{{ item.label }}</h5>
-            <div class="w-full h-8">
+            <div class="flex items-center gap-2">
+              <h5 class="text-sm font-medium w-full">{{ item.label }}</h5>
+              <span
+                [class]="item.isConnected ? 'text-green-500' : 'text-gray-400'"
+                class="text-xs cursor-help"
+                [pTooltip]="item.isConnected ? 'Connected to live data' : 'Using placeholder data'"
+                tooltipPosition="top">
+                ●
+              </span>
+            </div>
+            <div class="w-full h-24 relative">
               <lfx-chart [type]="item.chartType" [data]="item.chartData" [options]="item.chartOptions" height="100%"></lfx-chart>
             </div>
             <div class="space-y-1">
-              <div class="text-xl font-medium">{{ item.value }}</div>
+              <div class="text-xl font-medium" [title]="item.tooltipText || ''" [class.cursor-help]="item.tooltipText">{{ item.value }}</div>
               @if (item.subtitle) {
                 <div class="text-xs text-gray-500">{{ item.subtitle }}</div>
               }

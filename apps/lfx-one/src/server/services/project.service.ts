@@ -3,7 +3,17 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { Project, ProjectSettings, ProjectSlugToIdResponse, QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import {
+  Project,
+  ProjectIssuesResolutionAggregatedRow,
+  ProjectIssuesResolutionResponse,
+  ProjectIssuesResolutionRow,
+  ProjectRow,
+  ProjectSettings,
+  ProjectSlugToIdResponse,
+  ProjectsListResponse,
+  QueryServiceResponse,
+} from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -12,6 +22,7 @@ import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
+import { SnowflakeService } from './snowflake.service';
 
 /**
  * Service for handling project business logic
@@ -21,12 +32,14 @@ export class ProjectService {
   private microserviceProxy: MicroserviceProxyService;
   private natsService: NatsService;
   private etagService: ETagService;
+  private snowflakeService: SnowflakeService;
 
   public constructor() {
     this.accessCheckService = new AccessCheckService();
     this.microserviceProxy = new MicroserviceProxyService();
     this.natsService = new NatsService();
     this.etagService = new ETagService();
+    this.snowflakeService = new SnowflakeService();
   }
 
   /**
@@ -580,5 +593,105 @@ export class ProjectService {
 
       throw error;
     }
+  }
+
+  /**
+   * Get list of projects from Snowflake
+   * @returns List of projects with ID, name, and slug
+   */
+  public async getProjectsList(): Promise<ProjectsListResponse> {
+    const query = `
+      SELECT PROJECT_ID, NAME, SLUG
+      FROM ANALYTICS.SILVER_DIM.PROJECTS
+      ORDER BY NAME
+    `;
+
+    const result = await this.snowflakeService.execute<ProjectRow>(query, []);
+
+    // Transform Snowflake response to camelCase API response
+    const projects = result.rows.map((row) => ({
+      projectId: row.PROJECT_ID,
+      name: row.NAME,
+      slug: row.SLUG,
+    }));
+
+    return { projects };
+  }
+
+  /**
+   * Get project issues resolution data (opened vs closed issues) from Snowflake
+   * Combines daily trend data with aggregated metrics
+   * @param projectId - Optional project ID to filter by specific project
+   * @returns Daily issue resolution data with aggregated totals and metrics
+   */
+  public async getProjectIssuesResolution(projectId?: string): Promise<ProjectIssuesResolutionResponse> {
+    // Query for daily trend data
+    let dailyQuery = `
+      SELECT 
+        PROJECT_ID,
+        PROJECT_NAME,
+        PROJECT_SLUG,
+        METRIC_DATE,
+        OPENED_ISSUES_COUNT,
+        CLOSED_ISSUES_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION_DAILY
+    `;
+
+    // Query for aggregated metrics
+    let aggregatedQuery = `
+      SELECT 
+        OPENED_ISSUES,
+        CLOSED_ISSUES,
+        RESOLUTION_RATE_PCT,
+        MEDIAN_DAYS_TO_CLOSE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION
+    `;
+
+    const params: string[] = [];
+    const aggregatedParams: string[] = [];
+
+    if (projectId) {
+      dailyQuery += ' WHERE PROJECT_ID = ?';
+      aggregatedQuery += ' WHERE PROJECT_ID = ?';
+      params.push(projectId);
+      aggregatedParams.push(projectId);
+    }
+
+    dailyQuery += ' ORDER BY METRIC_DATE DESC LIMIT 90';
+    
+    // If no project specified, aggregate across all projects
+    if (!projectId) {
+      aggregatedQuery = `
+        SELECT 
+          SUM(OPENED_ISSUES) AS OPENED_ISSUES,
+          SUM(CLOSED_ISSUES) AS CLOSED_ISSUES,
+          ROUND(AVG(RESOLUTION_RATE_PCT), 2) AS RESOLUTION_RATE_PCT,
+          ROUND(AVG(MEDIAN_DAYS_TO_CLOSE), 2) AS MEDIAN_DAYS_TO_CLOSE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION
+      `;
+    }
+
+    // Execute both queries in parallel
+    const [dailyResult, aggregatedResult] = await Promise.all([
+      this.snowflakeService.execute<ProjectIssuesResolutionRow>(dailyQuery, params),
+      this.snowflakeService.execute<ProjectIssuesResolutionAggregatedRow>(aggregatedQuery, aggregatedParams),
+    ]);
+
+    // Get aggregated metrics or use defaults
+    const aggregated = aggregatedResult.rows[0] || {
+      OPENED_ISSUES: 0,
+      CLOSED_ISSUES: 0,
+      RESOLUTION_RATE_PCT: 0,
+      MEDIAN_DAYS_TO_CLOSE: 0,
+    };
+
+    return {
+      data: dailyResult.rows,
+      totalOpenedIssues: aggregated.OPENED_ISSUES,
+      totalClosedIssues: aggregated.CLOSED_ISSUES,
+      resolutionRatePct: aggregated.RESOLUTION_RATE_PCT,
+      medianDaysToClose: aggregated.MEDIAN_DAYS_TO_CLOSE,
+      totalDays: dailyResult.rows.length,
+    };
   }
 }

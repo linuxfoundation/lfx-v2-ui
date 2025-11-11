@@ -43,6 +43,17 @@ export const parseISODateString = (dateString: string | null | undefined): Date 
 };
 
 /**
+ * Parse a date string in YYYY-MM-DD format as a local date (not UTC)
+ * This avoids timezone shifting issues when displaying dates from analytics data
+ * @param dateString Date string in YYYY-MM-DD format
+ * @returns Date object representing the local date
+ */
+export const parseLocalDateString = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
+/**
  * Combines a date and time string into an ISO string in the specified timezone
  * @param date The date object
  * @param time The time string in 12-hour format (e.g., "12:45 AM")

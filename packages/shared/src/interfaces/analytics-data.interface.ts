@@ -455,3 +455,135 @@ export interface CurrencySummary {
    */
   currencyCode: string;
 }
+
+/**
+ * Snowflake row from projects dimension table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface ProjectRow {
+  /**
+   * Project unique identifier
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project display name
+   */
+  NAME: string;
+
+  /**
+   * Project URL slug
+   */
+  SLUG: string;
+}
+
+/**
+ * API response for projects list query
+ */
+export interface ProjectsListResponse {
+  /**
+   * Array of projects
+   */
+  projects: {
+    projectId: string;
+    name: string;
+    slug: string;
+  }[];
+}
+
+/**
+ * Snowflake row from project issues resolution daily query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface ProjectIssuesResolutionRow {
+  /**
+   * Project unique identifier
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project display name
+   */
+  PROJECT_NAME: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Date of the metric (YYYY-MM-DD format)
+   */
+  METRIC_DATE: string;
+
+  /**
+   * Number of issues opened on this date
+   */
+  OPENED_ISSUES_COUNT: number;
+
+  /**
+   * Number of issues closed on this date
+   */
+  CLOSED_ISSUES_COUNT: number;
+}
+
+/**
+ * Snowflake row from project issues resolution aggregated query
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface ProjectIssuesResolutionAggregatedRow {
+  /**
+   * Total number of issues opened
+   */
+  OPENED_ISSUES: number;
+
+  /**
+   * Total number of issues closed
+   */
+  CLOSED_ISSUES: number;
+
+  /**
+   * Resolution rate as a percentage
+   */
+  RESOLUTION_RATE_PCT: number;
+
+  /**
+   * Median number of days to close an issue
+   */
+  MEDIAN_DAYS_TO_CLOSE: number;
+}
+
+/**
+ * API response for project issues resolution query
+ */
+export interface ProjectIssuesResolutionResponse {
+  /**
+   * Array of daily issue resolution data
+   */
+  data: ProjectIssuesResolutionRow[];
+
+  /**
+   * Total opened issues across all dates
+   */
+  totalOpenedIssues: number;
+
+  /**
+   * Total closed issues across all dates
+   */
+  totalClosedIssues: number;
+
+  /**
+   * Resolution rate as a percentage from database
+   */
+  resolutionRatePct: number;
+
+  /**
+   * Median days to close an issue
+   */
+  medianDaysToClose: number;
+
+  /**
+   * Number of days with data
+   */
+  totalDays: number;
+}
