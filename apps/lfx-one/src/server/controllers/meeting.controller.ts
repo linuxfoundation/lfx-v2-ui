@@ -1225,6 +1225,46 @@ export class MeetingController {
   }
 
   /**
+   * GET /meetings/past/:uid/attachments
+   */
+  public async getPastMeetingAttachments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+
+    const startTime = Logger.start(req, 'get_past_meeting_attachments', {
+      past_meeting_uid: uid,
+    });
+
+    try {
+      // Validate past meeting UID
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_past_meeting_attachments',
+          service: 'meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      // Get attachments via Query Service
+      const attachments = await this.meetingService.getPastMeetingAttachments(req, uid);
+
+      Logger.success(req, 'get_past_meeting_attachments', startTime, {
+        past_meeting_uid: uid,
+        attachment_count: attachments.length,
+        status_code: 200,
+      });
+
+      res.status(200).json(attachments);
+    } catch (error) {
+      Logger.error(req, 'get_past_meeting_attachments', startTime, error, {
+        past_meeting_uid: uid,
+      });
+      next(error);
+    }
+  }
+
+  /**
    * Private helper to process registrant operations with fail-fast for 403 errors
    */
   private async processRegistrantOperations<T, R>(

@@ -18,6 +18,7 @@ import {
   MeetingRegistrantWithState,
   MeetingRsvp,
   PastMeeting,
+  PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
@@ -331,6 +332,10 @@ export class MeetingService {
 
   public getPastMeetingSummary(pastMeetingUid: string): Observable<PastMeetingSummary> {
     return this.http.get<PastMeetingSummary>(`/api/past-meetings/${pastMeetingUid}/summary`);
+  }
+
+  public getPastMeetingAttachments(pastMeetingUid: string): Observable<PastMeetingAttachment[]> {
+    return this.http.get<PastMeetingAttachment[]>(`/api/past-meetings/${pastMeetingUid}/attachments`);
   }
 
   public updatePastMeetingSummary(pastMeetingUid: string, summaryUid: string, updateData: UpdatePastMeetingSummaryRequest): Observable<PastMeetingSummary> {

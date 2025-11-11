@@ -1031,6 +1031,59 @@ export class MeetingService {
     }
   }
 
+  /**
+   * Gets all past meeting attachments via Query Service
+   * @param req - Express request object
+   * @param pastMeetingUid - Past meeting UID to get attachments for
+   * @returns Array of past meeting attachments
+   */
+  public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<any[]> {
+    Logger.start(req, 'get_past_meeting_attachments', {
+      past_meeting_uid: pastMeetingUid,
+    });
+
+    try {
+      const params = {
+        type: 'past_meeting_attachment',
+        tags: `past_meeting_uid:${pastMeetingUid}`,
+      };
+
+      req.log.info(
+        {
+          past_meeting_uid: pastMeetingUid,
+          query_params: params,
+        },
+        'Fetching past meeting attachments with query params'
+      );
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+
+      const attachments = resources.map((resource) => resource.data);
+
+      req.log.info(
+        {
+          past_meeting_uid: pastMeetingUid,
+          attachment_count: attachments.length,
+          attachment_ids: attachments.map((a) => a.uid),
+          attachment_names: attachments.map((a) => a.name),
+        },
+        'Retrieved past meeting attachments'
+      );
+
+      Logger.success(req, 'get_past_meeting_attachments', Date.now(), {
+        past_meeting_uid: pastMeetingUid,
+        attachment_count: attachments.length,
+      });
+
+      return attachments;
+    } catch (error) {
+      Logger.error(req, 'get_past_meeting_attachments', Date.now(), error, {
+        past_meeting_uid: pastMeetingUid,
+      });
+      throw error;
+    }
+  }
+
   private async getMeetingCommittees(req: Request, meetings: Meeting[]): Promise<Meeting[]> {
     // Get unique committee UIDs
     const uniqueCommitteeUids = [

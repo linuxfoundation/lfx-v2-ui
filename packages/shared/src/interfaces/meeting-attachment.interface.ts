@@ -71,3 +71,34 @@ export interface PendingAttachment {
   /** Error message if upload failed */
   uploadError?: string;
 }
+
+/**
+ * Past meeting attachment entity with file metadata
+ * @description Represents a file or link attached to a past meeting
+ */
+export interface PastMeetingAttachment {
+  /** Unique attachment identifier */
+  uid: string;
+  /** Past meeting this attachment belongs to */
+  past_meeting_uid: string;
+  /** Attachment type: 'file' for uploaded files, 'link' for external URLs */
+  type: 'file' | 'link';
+  /** Custom name for the attachment */
+  name: string;
+  /** URL for link-type attachments */
+  link?: string;
+  /** The name of the file (only for type='file') */
+  file_name?: string;
+  /** File size in bytes (only for type='file') */
+  file_size?: number;
+  /** The MIME type of the file (only for type='file') */
+  content_type?: string;
+  /** Optional description of the attachment */
+  description?: string;
+  /** The UID of the file in the shared Object Store (only for type='file') */
+  source_object_uid?: string;
+  /** The username of the user who uploaded the file or link */
+  uploaded_by?: string;
+  /** RFC3339 timestamp when the file was uploaded */
+  uploaded_at: string;
+}
