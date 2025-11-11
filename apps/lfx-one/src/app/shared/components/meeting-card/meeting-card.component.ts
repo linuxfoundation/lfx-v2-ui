@@ -4,12 +4,11 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FileSizePipe } from '@app/shared/pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@app/shared/pipes/file-type-icon.pipe';
 import { LinkifyPipe } from '@app/shared/pipes/linkify.pipe';
 import { RecurrenceSummaryPipe } from '@app/shared/pipes/recurrence-summary.pipe';
-import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CancelOccurrenceConfirmationComponent } from '@components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
@@ -18,7 +17,10 @@ import {
   MeetingDeleteTypeResult,
   MeetingDeleteTypeSelectionComponent,
 } from '@components/meeting-delete-type-selection/meeting-delete-type-selection.component';
+import { MeetingRegistrantsComponent } from '@components/meeting-registrants/meeting-registrants.component';
+import { MeetingRsvpDetailsComponent } from '@components/meeting-rsvp-details/meeting-rsvp-details.component';
 import { MenuComponent } from '@components/menu/menu.component';
+import { RsvpButtonGroupComponent } from '@components/rsvp-button-group/rsvp-button-group.component';
 import { environment } from '@environments/environment';
 import {
   buildJoinUrlWithParams,
@@ -31,9 +33,7 @@ import {
   MeetingAttachment,
   MeetingCancelOccurrenceResult,
   MeetingOccurrence,
-  MeetingRegistrant,
   PastMeeting,
-  PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
 } from '@lfx-one/shared';
@@ -50,7 +50,7 @@ import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-card',
@@ -61,7 +61,6 @@ import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, 
     MenuComponent,
     MeetingTimePipe,
     RecurrenceSummaryPipe,
-    AvatarComponent,
     TooltipModule,
     AnimateOnScrollModule,
     ConfirmDialogModule,
@@ -70,6 +69,9 @@ import { BehaviorSubject, catchError, combineLatest, filter, finalize, map, of, 
     FileTypeIconPipe,
     FileSizePipe,
     ClipboardModule,
+    RsvpButtonGroupComponent,
+    MeetingRsvpDetailsComponent,
+    MeetingRegistrantsComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-card.component.html',
@@ -88,37 +90,25 @@ export class MeetingCardComponent implements OnInit {
   public readonly pastMeeting = input<boolean>(false);
   public readonly loading = input<boolean>(false);
   public readonly showBorder = input<boolean>(false);
-  public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
-  public readonly registrantResponseBreakdown: Signal<string> = this.initRegistrantResponseBreakdown();
+
   public showRegistrants: WritableSignal<boolean> = signal(false);
   public meeting: WritableSignal<Meeting | PastMeeting> = signal({} as Meeting | PastMeeting);
   public occurrence: WritableSignal<MeetingOccurrence | null> = signal(null);
-  public registrantsLoading: WritableSignal<boolean> = signal(true);
-  private refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  public registrants = this.initRegistrantsList();
-  public pastMeetingParticipants = this.initPastMeetingParticipantsList();
-  public registrantsLabel: Signal<string> = this.initRegistrantsLabel();
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
-  public recordingShareUrl: Signal<string | null> = computed(() => {
-    const recording = this.recording();
-    return recording ? this.getLargestSessionShareUrl(recording) : null;
-  });
-  public hasRecording: Signal<boolean> = computed(() => this.recordingShareUrl() !== null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
-  public summaryContent: Signal<string | null> = computed(() => {
-    const summary = this.summary();
-    return summary?.summary_data ? summary.summary_data.edited_content || summary.summary_data.content : null;
-  });
-  public summaryUid: Signal<string | null> = computed(() => this.summary()?.uid || null);
-  public summaryApproved: Signal<boolean> = computed(() => this.summary()?.approved || false);
-  public hasSummary: Signal<boolean> = computed(() => this.summaryContent() !== null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
-  public additionalParticipantsCount: WritableSignal<number> = signal(0);
   public actionMenuItems: Signal<MenuItem[]> = this.initializeActionMenuItems();
   public attachments: Signal<MeetingAttachment[]> = signal([]);
 
   // Computed values for template
+  public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
+  public readonly summaryContent: Signal<string | null> = this.initSummaryContent();
+  public readonly summaryUid: Signal<string | null> = this.initSummaryUid();
+  public readonly summaryApproved: Signal<boolean> = this.initSummaryApproved();
+  public readonly hasSummary: Signal<boolean> = this.initHasSummary();
   public readonly attendancePercentage: Signal<number> = this.initAttendancePercentage();
+  public readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
+  public readonly hasRecording: Signal<boolean> = this.initHasRecording();
   public readonly attendanceBarColor: Signal<string> = this.initAttendanceBarColor();
   public readonly totalResourcesCount: Signal<number> = this.initTotalResourcesCount();
   public readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
@@ -132,6 +122,7 @@ export class MeetingCardComponent implements OnInit {
   public readonly meetingStartTime: Signal<string | null> = this.initMeetingStartTime();
   public readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
   public readonly joinUrl: Signal<string | null>;
+  public readonly authenticated: Signal<boolean> = this.userService.authenticated;
 
   public readonly meetingDeleted = output<void>();
   public readonly project = this.projectService.project;
@@ -187,36 +178,16 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public onRegistrantsToggle(): void {
-    if (this.pastMeeting()) {
-      // For past meetings, just show/hide participants
-      this.registrantsLoading.set(true);
-
-      if (!this.showRegistrants()) {
-        this.refresh$.next(true);
-      }
-
-      this.showRegistrants.set(!this.showRegistrants());
-      return;
-    }
-
     if (this.meetingRegistrantCount() === 0) {
-      // Open add registrant modal
       this.openAddRegistrantModal();
       return;
-    }
-
-    // Show/hide inline registrants display
-    this.registrantsLoading.set(true);
-
-    if (!this.showRegistrants()) {
-      this.refresh$.next(true);
     }
 
     this.showRegistrants.set(!this.showRegistrants());
   }
 
   public openAddRegistrantModal(): void {
-    const dialogRef = this.dialogService.open(RegistrantModalComponent, {
+    this.dialogService.open(RegistrantModalComponent, {
       header: 'Add Guests',
       width: '650px',
       modal: true,
@@ -224,14 +195,8 @@ export class MeetingCardComponent implements OnInit {
       dismissableMask: true,
       data: {
         meetingId: this.meeting().uid,
-        registrant: null, // Add mode
+        registrant: null,
       },
-    });
-
-    dialogRef.onChildComponentLoaded.pipe(take(1)).subscribe((component) => {
-      component.registrantSaved.subscribe(() => {
-        this.refresh$.next(true);
-      });
     });
   }
 
@@ -252,31 +217,6 @@ export class MeetingCardComponent implements OnInit {
       .subscribe((result) => {
         if (result) {
           this.refreshMeeting();
-        }
-      });
-  }
-
-  public onRegistrantEdit(registrant: MeetingRegistrant, event: Event): void {
-    event.stopPropagation();
-
-    this.dialogService
-      .open(RegistrantModalComponent, {
-        header: registrant.type === 'committee' ? 'Committee Member' : 'Edit Guest',
-        width: '650px',
-        modal: true,
-        closable: true,
-        dismissableMask: true,
-        data: {
-          meetingId: this.meeting().uid,
-          registrant: registrant,
-          isCommitteeMember: registrant.type === 'committee',
-        },
-      })
-      .onClose.pipe(take(1))
-      .subscribe((result) => {
-        if (result) {
-          // Refresh the current registrant display
-          this.refresh$.next(true);
         }
       });
   }
@@ -370,126 +310,6 @@ export class MeetingCardComponent implements OnInit {
       // For upcoming meetings, show registrant count
       return (this.meeting()?.individual_registrants_count || 0) + (this.meeting()?.committee_members_count || 0) + (this.additionalRegistrantsCount() || 0);
     });
-  }
-
-  private initRegistrantsLabel(): Signal<string> {
-    return computed(() => {
-      if (this.pastMeeting()) {
-        const totalParticipants = this.meetingRegistrantCount();
-        if (totalParticipants === 0) {
-          return 'No Participants';
-        }
-        if (totalParticipants === 1) {
-          return '1 Participant';
-        }
-        return `${totalParticipants} Participants`;
-      }
-
-      if (this.meetingRegistrantCount() === 0 && this.meeting()?.organizer) {
-        return 'Add Guests';
-      }
-
-      const totalGuests = this.meetingRegistrantCount();
-
-      if (totalGuests === 1) {
-        return '1 Guest';
-      }
-
-      return `${totalGuests} Guests`;
-    });
-  }
-
-  private initRegistrantResponseBreakdown(): Signal<string> {
-    return computed(() => {
-      const meeting = this.meeting();
-      if (!meeting) return '';
-
-      if (this.pastMeeting()) {
-        // For past meetings, use counts from meeting object (calculated server-side)
-        const invitedCount = meeting.individual_registrants_count || 0;
-        const attendedCount = meeting.attended_count || 0;
-        const totalParticipants = meeting.participant_count || 0;
-        const didNotAttendCount = totalParticipants - attendedCount;
-
-        const parts: string[] = [];
-
-        // Show invited count if there were formal invitations
-        if (invitedCount > 0) {
-          parts.push(`${invitedCount} Invited`);
-        }
-
-        // Show attendance breakdown
-        if (attendedCount > 0) parts.push(`${attendedCount} Attended`);
-        if (didNotAttendCount > 0) parts.push(`${didNotAttendCount} Did Not Attend`);
-
-        return parts.join(', ');
-      }
-
-      const accepted = meeting.registrants_accepted_count || 0;
-      const declined = meeting.registrants_declined_count || 0;
-      const pending = meeting.registrants_pending_count || 0;
-
-      // Only show breakdown if there are individual registrants with responses
-      if (accepted === 0 && declined === 0 && pending === 0) {
-        return '';
-      }
-
-      const parts: string[] = [];
-      if (accepted > 0) parts.push(`${accepted} Attending`);
-      if (declined > 0) parts.push(`${declined} Not Attending`);
-      if (pending > 0) parts.push(`${pending} Pending Response`);
-
-      return parts.join(', ');
-    });
-  }
-
-  private initRegistrantsList() {
-    return toSignal(
-      this.refresh$.pipe(
-        takeUntilDestroyed(),
-        filter((refresh) => refresh && !this.pastMeeting()),
-        switchMap(() => {
-          this.registrantsLoading.set(true);
-          return this.meetingService
-            .getMeetingRegistrants(this.meeting().uid)
-            .pipe(catchError(() => of([])))
-            .pipe(
-              map((registrants) => {
-                return registrants;
-              }),
-              // Sort registrants by first name
-              map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
-              tap((registrants) => {
-                const baseCount = (this.meeting().individual_registrants_count || 0) + (this.meeting().committee_members_count || 0);
-                this.additionalRegistrantsCount.set(Math.max(0, (registrants?.length || 0) - baseCount));
-              }),
-              finalize(() => this.registrantsLoading.set(false))
-            );
-        })
-      ),
-      { initialValue: [] }
-    );
-  }
-
-  private initPastMeetingParticipantsList() {
-    return toSignal(
-      this.refresh$.pipe(
-        takeUntilDestroyed(),
-        filter((refresh) => refresh && this.pastMeeting()),
-        switchMap(() => {
-          this.registrantsLoading.set(true);
-          return this.meetingService
-            .getPastMeetingParticipants(this.meeting().uid)
-            .pipe(catchError(() => of([])))
-            .pipe(
-              // Sort participants by first name
-              map((participants) => participants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as PastMeetingParticipant[]),
-              finalize(() => this.registrantsLoading.set(false))
-            );
-        })
-      ),
-      { initialValue: [] }
-    );
   }
 
   private deleteMeeting(): void {
@@ -657,8 +477,7 @@ export class MeetingCardComponent implements OnInit {
         tap((meeting) => {
           this.additionalRegistrantsCount.set(0);
           this.meeting.set(meeting);
-        }),
-        finalize(() => this.refresh$.next(true))
+        })
       )
       .subscribe();
   }
@@ -873,5 +692,35 @@ export class MeetingCardComponent implements OnInit {
       }
       return canJoinMeeting(this.meeting(), this.occurrence());
     });
+  }
+
+  private initRecordingShareUrl(): Signal<string | null> {
+    return computed(() => {
+      const recording = this.recording();
+      return recording ? this.getLargestSessionShareUrl(recording) : null;
+    });
+  }
+
+  private initHasRecording(): Signal<boolean> {
+    return computed(() => this.recordingShareUrl() !== null);
+  }
+
+  private initSummaryContent(): Signal<string | null> {
+    return computed(() => {
+      const summary = this.summary();
+      return summary?.summary_data ? summary.summary_data.edited_content || summary.summary_data.content : null;
+    });
+  }
+
+  private initSummaryUid(): Signal<string | null> {
+    return computed(() => this.summary()?.uid || null);
+  }
+
+  private initSummaryApproved(): Signal<boolean> {
+    return computed(() => this.summary()?.approved || false);
+  }
+
+  private initHasSummary(): Signal<boolean> {
+    return computed(() => this.summaryContent() !== null);
   }
 }
