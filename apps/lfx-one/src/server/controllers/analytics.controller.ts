@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ANALYTICS_DEFAULTS } from '@lfx-one/shared/constants';
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
@@ -151,13 +150,18 @@ export class AnalyticsController {
    * GET /api/analytics/organization-contributions-overview
    * Get consolidated organization contributions data (maintainers + contributors + technical committee) in a single request
    * Optimized endpoint that executes a single database query for all three metrics
-   * Query params: accountId (optional) - Organization account ID
+   * Query params: accountId (required) - Organization account ID
    *   */
   public async getOrganizationContributionsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_contributions_overview');
 
     try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
+      const accountId = req.query['accountId'] as string | undefined;
+
+      if (!accountId) {
+        res.status(400).json({ error: 'accountId query parameter is required' });
+        return;
+      }
 
       // Single database query for all three metrics (maintainers + contributors + technical committee)
       const response = await this.organizationService.getContributionsOverview(accountId);
@@ -180,24 +184,34 @@ export class AnalyticsController {
    * GET /api/analytics/board-member-dashboard
    * Get consolidated board member dashboard data (membership tier + certified employees + board meeting attendance)
    * Optimized endpoint that executes a single database query for all three metrics
-   * Query params: accountId (optional) - Organization account ID
+   * Query params: accountId (required) - Organization account ID, projectSlug (required) - Foundation project slug
    *   */
   public async getBoardMemberDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_board_member_dashboard');
 
     try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
+      const accountId = req.query['accountId'] as string | undefined;
+      const projectSlug = req.query['projectSlug'] as string | undefined;
 
-      // Single database query for all three metrics (membership tier + certified employees + board meeting attendance)
-      const response = await this.organizationService.getBoardMemberDashboardData(accountId, projectId);
+      if (!accountId) {
+        res.status(400).json({ error: 'accountId query parameter is required' });
+        return;
+      }
+
+      if (!projectSlug) {
+        res.status(400).json({ error: 'projectSlug query parameter is required' });
+        return;
+      }
+
+      // Single database query for metrics (membership tier + certified employees)
+      // Uses PROJECT_SLUG directly in the database query
+      const response = await this.organizationService.getBoardMemberDashboardData(accountId, projectSlug);
 
       Logger.success(req, 'get_board_member_dashboard', startTime, {
         account_id: accountId,
-        project_id: projectId,
+        project_slug: projectSlug,
         tier: response.membershipTier.tier,
         certifications: response.certifiedEmployees.certifications,
-        attendance_percentage: response.boardMeetingAttendance.attendancePercentage,
       });
 
       res.json(response);
@@ -210,22 +224,24 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/organization-events-overview
    * Get consolidated organization events data (event attendance + event sponsorships) in a single request
-   * Uses parallel database queries (two different tables) for optimal performance
-   * Query params: accountId (optional) - Organization account ID
+   * Query params: accountId (required) - Organization account ID
    *   */
   public async getOrganizationEventsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_events_overview');
 
     try {
-      const accountId = (req.query['accountId'] as string) || ANALYTICS_DEFAULTS.ACCOUNT_ID;
-      const projectId = ANALYTICS_DEFAULTS.PROJECT_ID;
+      const accountId = req.query['accountId'] as string | undefined;
 
-      // Parallel database queries for event metrics (two different tables)
-      const response = await this.organizationService.getEventsOverview(accountId, projectId);
+      if (!accountId) {
+        res.status(400).json({ error: 'accountId query parameter is required' });
+        return;
+      }
+
+      // Query for event metrics
+      const response = await this.organizationService.getEventsOverview(accountId);
 
       Logger.success(req, 'get_organization_events_overview', startTime, {
         account_id: accountId,
-        project_id: projectId,
         total_attendees: response.eventAttendance.totalAttendees,
         total_speakers: response.eventAttendance.totalSpeakers,
       });
