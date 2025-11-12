@@ -66,22 +66,20 @@ export class MaintainerDashboardComponent {
       if (projects.length > 0 && !this.hasInitialized) {
         this.hasInitialized = true;
         
-        const storedProjectId = untracked(() => this.projectContextService.getProjectId());
         const currentFormValue = untracked(() => this.filterForm.get('projectId')?.value);
         
-        // Try to restore stored project
-        if (storedProjectId && !currentFormValue) {
-          const storedProject = projects.find((p) => p.projectId === storedProjectId);
-          if (storedProject) {
-            this.filterForm.get('projectId')?.setValue(storedProject.projectId, { emitEvent: true });
+        // Validate current selection exists in loaded projects
+        if (currentFormValue) {
+          const validProject = projects.find((p) => p.projectId === currentFormValue);
+          if (validProject) {
+            // Valid selection, ensure service has full project object
+            this.projectContextService.setProject(validProject);
             return;
           }
         }
         
-        // If no stored project or stored project not found, auto-select first project
-        if (!currentFormValue || currentFormValue === '') {
-          this.filterForm.get('projectId')?.setValue(projects[0].projectId, { emitEvent: true });
-        }
+        // No valid selection - auto-select first project
+        this.filterForm.get('projectId')?.setValue(projects[0].projectId, { emitEvent: true });
       }
     });
   }
