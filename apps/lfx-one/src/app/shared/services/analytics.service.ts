@@ -213,14 +213,15 @@ export class AnalyticsService {
 
   /**
    * Get project issues resolution data (opened vs closed issues) from Snowflake
-   * @param projectId - Optional project ID to filter by specific project
+   * @param projectId - Project ID to filter by specific project (required)
    * @returns Observable of project issues resolution response with aggregated metrics
    *
    * Generated with [Claude Code](https://claude.ai/code)
    */
-  public getProjectIssuesResolution(projectId?: string): Observable<ProjectIssuesResolutionResponse> {
-    const options = projectId ? { params: { projectId } } : {};
-    return this.http.get<ProjectIssuesResolutionResponse>('/api/analytics/project-issues-resolution', options).pipe(
+  public getProjectIssuesResolution(projectId: string): Observable<ProjectIssuesResolutionResponse> {
+    return this.http.get<ProjectIssuesResolutionResponse>('/api/analytics/project-issues-resolution', {
+      params: { projectId },
+    }).pipe(
       catchError((error) => {
         console.error('Failed to fetch project issues resolution:', error);
         return of({

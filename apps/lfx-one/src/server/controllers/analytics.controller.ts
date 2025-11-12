@@ -247,7 +247,7 @@ export class AnalyticsController {
 
   /**
    * GET /api/analytics/projects
-   * Get list of all projects from Snowflake
+   * Get list of projects with maintainers from Snowflake
    *
    * Generated with [Claude Code](https://claude.ai/code)
    */
@@ -255,7 +255,7 @@ export class AnalyticsController {
     const startTime = Logger.start(req, 'get_projects_list');
 
     try {
-      const response = await this.projectService.getProjectsList();
+      const response = await this.projectService.getProjectsWithMaintainersList();
 
       Logger.success(req, 'get_projects_list', startTime, {
         project_count: response.projects.length,
@@ -271,7 +271,7 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/project-issues-resolution
    * Get project issues resolution data (opened vs closed issues) from Snowflake
-   * Query params: projectId (optional) - Project ID to filter by specific project
+   * Query params: projectId (required) - Project ID to filter by specific project
    *
    * Generated with [Claude Code](https://claude.ai/code)
    */
@@ -281,10 +281,15 @@ export class AnalyticsController {
     try {
       const projectId = req.query['projectId'] as string | undefined;
 
+      if (!projectId) {
+        res.status(400).json({ error: 'projectId query parameter is required' });
+        return;
+      }
+
       const response = await this.projectService.getProjectIssuesResolution(projectId);
 
       Logger.success(req, 'get_project_issues_resolution', startTime, {
-        project_id: projectId || 'all',
+        project_id: projectId,
         total_days: response.totalDays,
         total_opened: response.totalOpenedIssues,
         total_closed: response.totalClosedIssues,

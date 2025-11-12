@@ -97,6 +97,10 @@ export class RecentProgressComponent {
   private readonly projectIssuesResolutionData = toSignal(
     toObservable(this.projectId).pipe(
       switchMap((projectId) => {
+        if (!projectId) {
+          this.projectIssuesResolutionLoading.set(false);
+          return [{ data: [], totalOpenedIssues: 0, totalClosedIssues: 0, resolutionRatePct: 0, medianDaysToClose: 0, totalDays: 0 }];
+        }
         this.projectIssuesResolutionLoading.set(true);
         return this.analyticsService.getProjectIssuesResolution(projectId).pipe(
           finalize(() => this.projectIssuesResolutionLoading.set(false))
