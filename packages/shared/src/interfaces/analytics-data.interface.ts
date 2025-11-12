@@ -248,23 +248,6 @@ export interface OrganizationContributionsConsolidatedRow {
 }
 
 /**
- * Consolidated Snowflake response joining segment-level contributions (projects participating + total commits)
- * Uses LEFT JOIN to combine data from projects participating and total commits tables
- * Nullable fields support partial data scenarios
- */
-export interface SegmentContributionsConsolidatedRow {
-  // Projects Participating fields
-  PROJECTS_PARTICIPATING: number | null;
-
-  // Total Commits fields
-  TOTAL_COMMITS: number | null;
-
-  // Common fields
-  ACCOUNT_ID: string;
-  SEGMENT_ID: string;
-}
-
-/**
  * Consolidated API response for organization contributions overview
  * Combines maintainers, contributors, and technical committee data in a single response
  */
@@ -302,32 +285,6 @@ export interface OrganizationContributionsOverviewResponse {
    * Organization/account name
    */
   accountName: string;
-}
-
-/**
- * Consolidated API response for organization segment contributions overview
- * Combines projects participating and total commits data in a single response
- */
-export interface OrganizationSegmentOverviewResponse {
-  /**
-   * Number of projects the organization is participating in
-   */
-  projectsParticipating: number;
-
-  /**
-   * Total number of commits
-   */
-  totalCommits: number;
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-
-  /**
-   * Segment ID (temporary mapping for project IDs)
-   */
-  segmentId: string;
 }
 
 /**
@@ -376,7 +333,7 @@ export interface BoardMemberDashboardResponse {
 
 /**
  * Consolidated API response for organization events overview
- * Combines event attendance and event sponsorships data in a single response
+ * Contains event attendance data including attendees and speakers
  *
  * Generated with [Claude Code](https://claude.ai/code)
  */
@@ -389,17 +346,6 @@ export interface OrganizationEventsOverviewResponse {
     totalSpeakers: number;
     totalEvents: number;
     accountName: string;
-  };
-
-  /**
-   * Event sponsorships information
-   */
-  eventSponsorships: {
-    currencySummaries: Array<{
-      amount: number;
-      currencyCode: string;
-    }>;
-    totalEvents: number;
   };
 
   /**
