@@ -2,63 +2,43 @@
 // SPDX-License-Identifier: MIT
 
 import { Injectable, signal, WritableSignal } from '@angular/core';
-
-export interface ProjectContext {
-  projectId: string;
-  name: string;
-  slug: string;
-}
+import { ProjectContext } from '@lfx-one/shared/interfaces';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ProjectContextService {
   private readonly storageKey = 'lfx-selected-project';
-  public readonly selectedProject: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
+  public readonly selectedProject: WritableSignal<ProjectContext | null>;
+  public readonly availableProjects: ProjectContext[] = [];
 
   public constructor() {
-    const storedProjectId = this.loadStoredProjectId();
-    if (storedProjectId) {
-      // Store the projectId, will be set when projects are loaded
-      this.selectedProject.set({ projectId: storedProjectId, name: '', slug: '' });
-    }
+    const stored = this.loadStoredProject();
+    this.selectedProject = signal<ProjectContext | null>(stored || null);
   }
 
-  /**
-   * Set the selected project and persist to storage
-   */
   public setProject(project: ProjectContext): void {
     this.selectedProject.set(project);
-    this.persistProjectId(project.projectId);
+    this.persistProject(project);
   }
 
-  /**
-   * Get the currently selected project ID
-   */
-  public getProjectId(): string | null {
-    return this.selectedProject()?.projectId || null;
+  public getProjectId(): string {
+    return this.selectedProject()?.projectId || '';
   }
 
-  /**
-   * Clear the selected project
-   */
-  public clearProject(): void {
-    this.selectedProject.set(null);
-    localStorage.removeItem(this.storageKey);
+  private persistProject(project: ProjectContext): void {
+    localStorage.setItem(this.storageKey, JSON.stringify(project));
   }
 
-  private persistProjectId(projectId: string): void {
-    localStorage.setItem(this.storageKey, projectId);
-  }
-
-  private loadStoredProjectId(): string | null {
+  private loadStoredProject(): ProjectContext | null {
     try {
       const stored = localStorage.getItem(this.storageKey);
-      return stored || null;
+      if (stored) {
+        return JSON.parse(stored) as ProjectContext;
+      }
     } catch {
       // Invalid data in localStorage, ignore
-      return null;
     }
+    return null;
   }
 }
-

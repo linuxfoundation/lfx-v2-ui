@@ -16,7 +16,7 @@ export class PersonaService {
 
   public constructor() {
     // Initialize with default value
-    this.currentPersona = signal<PersonaType>('board-member');
+    this.currentPersona = signal<PersonaType>('maintainer');
   }
 
   /**

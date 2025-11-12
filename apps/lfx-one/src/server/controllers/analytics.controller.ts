@@ -13,8 +13,6 @@ import { UserService } from '../services/user.service';
 /**
  * Controller for handling analytics HTTP requests
  * Routes requests to appropriate domain services
- *
- * Generated with [Claude Code](https://claude.ai/code)
  */
 export class AnalyticsController {
   private userService: UserService;
@@ -154,9 +152,7 @@ export class AnalyticsController {
    * Get consolidated organization contributions data (maintainers + contributors + technical committee) in a single request
    * Optimized endpoint that executes a single database query for all three metrics
    * Query params: accountId (optional) - Organization account ID
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getOrganizationContributionsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_contributions_overview');
 
@@ -185,9 +181,7 @@ export class AnalyticsController {
    * Get consolidated board member dashboard data (membership tier + certified employees + board meeting attendance)
    * Optimized endpoint that executes a single database query for all three metrics
    * Query params: accountId (optional) - Organization account ID
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getBoardMemberDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_board_member_dashboard');
 
@@ -218,9 +212,7 @@ export class AnalyticsController {
    * Get consolidated organization events data (event attendance + event sponsorships) in a single request
    * Uses parallel database queries (two different tables) for optimal performance
    * Query params: accountId (optional) - Organization account ID
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getOrganizationEventsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_organization_events_overview');
 
@@ -248,9 +240,7 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/projects
    * Get list of projects with maintainers from Snowflake
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_projects_list');
 
@@ -272,9 +262,7 @@ export class AnalyticsController {
    * GET /api/analytics/project-issues-resolution
    * Get project issues resolution data (opened vs closed issues) from Snowflake
    * Query params: projectId (required) - Project ID to filter by specific project
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getProjectIssuesResolution(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_project_issues_resolution');
 
@@ -308,9 +296,7 @@ export class AnalyticsController {
    * GET /api/analytics/project-pull-requests-weekly
    * Get project pull requests weekly data (merge velocity) from Snowflake
    * Query params: projectId (required) - Project ID to filter by specific project
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
-   */
+   *   */
   public async getProjectPullRequestsWeekly(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_project_pull_requests_weekly');
 

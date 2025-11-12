@@ -102,8 +102,6 @@ export class AnalyticsService {
    * Optimized endpoint that reduces API roundtrips by combining related metrics
    * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of consolidated contributions overview response
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getOrganizationContributionsOverview(accountId?: string): Observable<OrganizationContributionsOverviewResponse> {
     const options = accountId ? { params: { accountId } } : {};
@@ -135,8 +133,6 @@ export class AnalyticsService {
    * Optimized endpoint that reduces API roundtrips by combining related metrics in a single API call
    * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of consolidated board member dashboard response
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getBoardMemberDashboard(accountId?: string): Observable<BoardMemberDashboardResponse> {
     const options = accountId ? { params: { accountId } } : {};
@@ -172,8 +168,6 @@ export class AnalyticsService {
    * Optimized endpoint that reduces API roundtrips by combining related event metrics
    * @param accountId - Optional account ID to filter by specific organization
    * @returns Observable of consolidated events overview response
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getOrganizationEventsOverview(accountId?: string): Observable<OrganizationEventsOverviewResponse> {
     const options = accountId ? { params: { accountId } } : {};
@@ -197,8 +191,6 @@ export class AnalyticsService {
   /**
    * Get list of all projects from Snowflake
    * @returns Observable of projects list response
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getProjects(): Observable<ProjectsListResponse> {
     return this.http.get<ProjectsListResponse>('/api/analytics/projects').pipe(
@@ -215,33 +207,31 @@ export class AnalyticsService {
    * Get project issues resolution data (opened vs closed issues) from Snowflake
    * @param projectId - Project ID to filter by specific project (required)
    * @returns Observable of project issues resolution response with aggregated metrics
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getProjectIssuesResolution(projectId: string): Observable<ProjectIssuesResolutionResponse> {
-    return this.http.get<ProjectIssuesResolutionResponse>('/api/analytics/project-issues-resolution', {
-      params: { projectId },
-    }).pipe(
-      catchError((error) => {
-        console.error('Failed to fetch project issues resolution:', error);
-        return of({
-          data: [],
-          totalOpenedIssues: 0,
-          totalClosedIssues: 0,
-          resolutionRatePct: 0,
-          medianDaysToClose: 0,
-          totalDays: 0,
-        });
+    return this.http
+      .get<ProjectIssuesResolutionResponse>('/api/analytics/project-issues-resolution', {
+        params: { projectId },
       })
-    );
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch project issues resolution:', error);
+          return of({
+            data: [],
+            totalOpenedIssues: 0,
+            totalClosedIssues: 0,
+            resolutionRatePct: 0,
+            medianDaysToClose: 0,
+            totalDays: 0,
+          });
+        })
+      );
   }
 
   /**
    * Get project pull requests weekly data (merge velocity) from Snowflake
    * @param projectId - Project ID to filter by specific project (required)
    * @returns Observable of project pull requests weekly response with aggregated metrics
-   *
-   * Generated with [Claude Code](https://claude.ai/code)
    */
   public getProjectPullRequestsWeekly(projectId: string): Observable<ProjectPullRequestsWeeklyResponse> {
     return this.http

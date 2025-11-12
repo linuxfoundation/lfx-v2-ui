@@ -12,8 +12,8 @@ import {
   ProjectPullRequestsWeeklyRow,
   ProjectRow,
   ProjectSettings,
-  ProjectSlugToIdResponse,
   ProjectsListResponse,
+  ProjectSlugToIdResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
@@ -553,51 +553,6 @@ export class ProjectService {
   }
 
   /**
-   * Get project ID by slug using NATS request-reply pattern
-   * @private
-   */
-  private async getProjectIdBySlug(slug: string): Promise<ProjectSlugToIdResponse> {
-    const codec = this.natsService.getCodec();
-
-    try {
-      const response = await this.natsService.request(NatsSubjects.PROJECT_SLUG_TO_UID, codec.encode(slug), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
-
-      const projectId = codec.decode(response.data);
-
-      // Check if we got a valid project ID
-      if (!projectId || projectId.trim() === '') {
-        serverLogger.info({ slug }, 'Project slug not found via NATS');
-        return {
-          projectId: '',
-          slug,
-          exists: false,
-        };
-      }
-
-      serverLogger.info({ slug, project_id: projectId }, 'Successfully resolved project slug to ID');
-
-      return {
-        projectId: projectId.trim(),
-        slug,
-        exists: true,
-      };
-    } catch (error) {
-      serverLogger.error({ error: error instanceof Error ? error.message : error, slug }, 'Failed to resolve project slug via NATS');
-
-      // If it's a timeout or no responder error, treat as not found
-      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
-        return {
-          projectId: '',
-          slug,
-          exists: false,
-        };
-      }
-
-      throw error;
-    }
-  }
-
-  /**
    * Get list of projects with maintainers from Snowflake
    * @returns List of projects with ID, name, and slug that have maintainers
    */
@@ -630,7 +585,7 @@ export class ProjectService {
   public async getProjectIssuesResolution(projectId: string): Promise<ProjectIssuesResolutionResponse> {
     // Query for daily trend data
     const dailyQuery = `
-      SELECT 
+      SELECT
         PROJECT_ID,
         PROJECT_NAME,
         PROJECT_SLUG,
@@ -644,7 +599,7 @@ export class ProjectService {
 
     // Query for aggregated metrics
     const aggregatedQuery = `
-      SELECT 
+      SELECT
         OPENED_ISSUES,
         CLOSED_ISSUES,
         RESOLUTION_RATE_PCT,
@@ -702,7 +657,7 @@ export class ProjectService {
 
     // Query for weekly trend data
     const query = `
-      SELECT 
+      SELECT
         WEEK_START_DATE,
         MERGED_PR_COUNT,
         AVG_MERGED_IN_DAYS,
@@ -727,5 +682,50 @@ export class ProjectService {
       avgMergeTime: Math.round(avgMergeTime * 10) / 10, // Round to 1 decimal place
       totalWeeks: result.rows.length,
     };
+  }
+
+  /**
+   * Get project ID by slug using NATS request-reply pattern
+   * @private
+   */
+  private async getProjectIdBySlug(slug: string): Promise<ProjectSlugToIdResponse> {
+    const codec = this.natsService.getCodec();
+
+    try {
+      const response = await this.natsService.request(NatsSubjects.PROJECT_SLUG_TO_UID, codec.encode(slug), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
+
+      const projectId = codec.decode(response.data);
+
+      // Check if we got a valid project ID
+      if (!projectId || projectId.trim() === '') {
+        serverLogger.info({ slug }, 'Project slug not found via NATS');
+        return {
+          projectId: '',
+          slug,
+          exists: false,
+        };
+      }
+
+      serverLogger.info({ slug, project_id: projectId }, 'Successfully resolved project slug to ID');
+
+      return {
+        projectId: projectId.trim(),
+        slug,
+        exists: true,
+      };
+    } catch (error) {
+      serverLogger.error({ error: error instanceof Error ? error.message : error, slug }, 'Failed to resolve project slug via NATS');
+
+      // If it's a timeout or no responder error, treat as not found
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        return {
+          projectId: '',
+          slug,
+          exists: false,
+        };
+      }
+
+      throw error;
+    }
   }
 }
