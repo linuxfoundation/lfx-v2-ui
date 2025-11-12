@@ -13,7 +13,7 @@ import { MeetingType } from '@lfx-one/shared/enums';
 import { Project } from '@lfx-one/shared/interfaces';
 import { ProjectService } from '@services/project.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { map } from 'rxjs';
+import { map, of } from 'rxjs';
 
 interface MeetingTypeInfo {
   icon: string;
@@ -117,7 +117,7 @@ export class MeetingTypeSelectionComponent {
     const currentProject = this.projectService.project();
 
     if (!currentProject) {
-      return toSignal(this.projectService.getProjects().pipe(map(() => [])), { initialValue: [] });
+      return toSignal(of([]), { initialValue: [] });
     }
 
     const params = new HttpParams().set('tags', `parent_uid:${currentProject.uid}`);

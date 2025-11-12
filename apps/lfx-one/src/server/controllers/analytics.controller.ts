@@ -3,7 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthenticationError } from '../errors';
+import { AuthenticationError, ServiceValidationError } from '../errors';
 import { Logger } from '../helpers/logger';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
@@ -159,8 +159,9 @@ export class AnalyticsController {
       const accountId = req.query['accountId'] as string | undefined;
 
       if (!accountId) {
-        res.status(400).json({ error: 'accountId query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_organization_contributions_overview',
+        });
       }
 
       // Single database query for all three metrics (maintainers + contributors + technical committee)
@@ -194,13 +195,15 @@ export class AnalyticsController {
       const projectSlug = req.query['projectSlug'] as string | undefined;
 
       if (!accountId) {
-        res.status(400).json({ error: 'accountId query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_board_member_dashboard',
+        });
       }
 
       if (!projectSlug) {
-        res.status(400).json({ error: 'projectSlug query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_board_member_dashboard',
+        });
       }
 
       // Single database query for metrics (membership tier + certified employees)
@@ -233,8 +236,9 @@ export class AnalyticsController {
       const accountId = req.query['accountId'] as string | undefined;
 
       if (!accountId) {
-        res.status(400).json({ error: 'accountId query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_organization_events_overview',
+        });
       }
 
       // Query for event metrics
@@ -286,8 +290,9 @@ export class AnalyticsController {
       const projectId = req.query['projectId'] as string | undefined;
 
       if (!projectId) {
-        res.status(400).json({ error: 'projectId query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('projectId', 'projectId query parameter is required', {
+          operation: 'get_project_issues_resolution',
+        });
       }
 
       const response = await this.projectService.getProjectIssuesResolution(projectId);
@@ -320,8 +325,9 @@ export class AnalyticsController {
       const projectId = req.query['projectId'] as string | undefined;
 
       if (!projectId) {
-        res.status(400).json({ error: 'projectId query parameter is required' });
-        return;
+        throw ServiceValidationError.forField('projectId', 'projectId query parameter is required', {
+          operation: 'get_project_pull_requests_weekly',
+        });
       }
 
       const response = await this.projectService.getProjectPullRequestsWeekly(projectId);
