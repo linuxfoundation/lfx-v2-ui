@@ -4,6 +4,7 @@
 import { Component, computed, effect, inject, Signal, untracked } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { catchError, of } from 'rxjs';
 import { SelectComponent } from '@app/shared/components/select/select.component';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
@@ -29,9 +30,15 @@ export class MaintainerDashboardComponent {
   });
 
   // Fetch projects from Snowflake
-  private readonly projectsData = toSignal(this.analyticsService.getProjects(), {
-    initialValue: { projects: [] },
-  });
+  private readonly projectsData = toSignal(
+    this.analyticsService.getProjects().pipe(
+      catchError((error) => {
+        console.error('Failed to load projects:', error);
+        return of({ projects: [] });
+      })
+    ),
+    { initialValue: { projects: [] } }
+  );
 
   // Available projects for dropdown
   public readonly availableProjects: Signal<Array<{ projectId: string; name: string; slug: string }>> = computed(() => this.projectsData().projects);
