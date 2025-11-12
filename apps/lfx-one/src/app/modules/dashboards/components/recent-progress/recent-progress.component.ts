@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, inject, input, ViewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, input, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
 import { PersonaService } from '@app/shared/services/persona.service';
 import { ChartComponent } from '@components/chart/chart.component';
 import { CORE_DEVELOPER_PROGRESS_METRICS, MAINTAINER_PROGRESS_METRICS } from '@lfx-one/shared/constants';
-import { parseLocalDateString } from '@lfx-one/shared/utils';
 import { TooltipModule } from 'primeng/tooltip';
-import { switchMap } from 'rxjs';
+import { finalize, switchMap } from 'rxjs';
+import { parseLocalDateString } from '@lfx-one/shared/utils';
 
 import type {
   ActiveWeeksStreakResponse,
@@ -20,6 +20,7 @@ import type {
   UserCodeCommitsResponse,
   UserPullRequestsResponse,
 } from '@lfx-one/shared/interfaces';
+import type { TooltipItem } from 'chart.js';
 
 @Component({
   selector: 'lfx-recent-progress',
@@ -37,10 +38,21 @@ export class RecentProgressComponent {
   private readonly personaService = inject(PersonaService);
   private readonly analyticsService = inject(AnalyticsService);
 
+  // Loading state signals for each API call
+  private readonly activeWeeksStreakLoading = signal(true);
+  private readonly pullRequestsMergedLoading = signal(true);
+  private readonly codeCommitsLoading = signal(true);
+  private readonly projectIssuesResolutionLoading = signal(true);
+  private readonly projectPullRequestsWeeklyLoading = signal(true);
+
   /**
    * Active weeks streak data from Snowflake
    */
-  private readonly activeWeeksStreakData = toSignal(this.analyticsService.getActiveWeeksStreak(), {
+  private readonly activeWeeksStreakData = toSignal(
+    this.analyticsService.getActiveWeeksStreak().pipe(
+      finalize(() => this.activeWeeksStreakLoading.set(false))
+    ),
+    {
     initialValue: {
       data: [],
       currentStreak: 0,
@@ -51,7 +63,11 @@ export class RecentProgressComponent {
   /**
    * Pull requests merged data from Snowflake
    */
-  private readonly pullRequestsMergedData = toSignal(this.analyticsService.getPullRequestsMerged(), {
+  private readonly pullRequestsMergedData = toSignal(
+    this.analyticsService.getPullRequestsMerged().pipe(
+      finalize(() => this.pullRequestsMergedLoading.set(false))
+    ),
+    {
     initialValue: {
       data: [],
       totalPullRequests: 0,
@@ -62,7 +78,11 @@ export class RecentProgressComponent {
   /**
    * Code commits data from Snowflake
    */
-  private readonly codeCommitsData = toSignal(this.analyticsService.getCodeCommits(), {
+  private readonly codeCommitsData = toSignal(
+    this.analyticsService.getCodeCommits().pipe(
+      finalize(() => this.codeCommitsLoading.set(false))
+    ),
+    {
     initialValue: {
       data: [],
       totalCommits: 0,
@@ -75,7 +95,14 @@ export class RecentProgressComponent {
    * Automatically refetches when projectId input changes
    */
   private readonly projectIssuesResolutionData = toSignal(
-    toObservable(this.projectId).pipe(switchMap((projectId) => this.analyticsService.getProjectIssuesResolution(projectId))),
+    toObservable(this.projectId).pipe(
+      switchMap((projectId) => {
+        this.projectIssuesResolutionLoading.set(true);
+        return this.analyticsService.getProjectIssuesResolution(projectId).pipe(
+          finalize(() => this.projectIssuesResolutionLoading.set(false))
+        );
+      })
+    ),
     {
       initialValue: {
         data: [],
@@ -96,9 +123,13 @@ export class RecentProgressComponent {
     toObservable(this.projectId).pipe(
       switchMap((projectId) => {
         if (!projectId) {
+          this.projectPullRequestsWeeklyLoading.set(false);
           return [{ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 }];
         }
-        return this.analyticsService.getProjectPullRequestsWeekly(projectId);
+        this.projectPullRequestsWeeklyLoading.set(true);
+        return this.analyticsService.getProjectPullRequestsWeekly(projectId).pipe(
+          finalize(() => this.projectPullRequestsWeeklyLoading.set(false))
+        );
       })
     ),
     {
@@ -110,6 +141,19 @@ export class RecentProgressComponent {
       },
     }
   );
+
+  /**
+   * Computed signal that checks if any data is still loading
+   */
+  protected readonly isLoading = computed<boolean>(() => {
+    return (
+      this.activeWeeksStreakLoading() ||
+      this.pullRequestsMergedLoading() ||
+      this.codeCommitsLoading() ||
+      this.projectIssuesResolutionLoading() ||
+      this.projectPullRequestsWeeklyLoading()
+    );
+  });
 
   /**
    * Computed signal that returns progress metrics based on the current persona
@@ -157,6 +201,93 @@ export class RecentProgressComponent {
   }
 
   /**
+   * Check if item has a tooltip
+   */
+  protected hasTooltip(label: string): boolean {
+    return label === 'Open vs Closed Issues Trend' || label === 'PR Review & Merge Velocity';
+  }
+
+  /**
+   * Get tooltip HTML content based on item label (similar to Chart.js callbacks)
+   */
+  protected getTooltipContent(label: string): string {
+    if (label === 'Open vs Closed Issues Trend') {
+      const dataStore = this.issuesTooltipDataStore();
+      if (!dataStore) {
+        return '';
+      }
+      return `<div class="flex flex-col">
+        <div>Opened: ${dataStore.opened}</div>
+        <div>Closed: ${dataStore.closed}</div>
+        <div>Median time to close: ${dataStore.median}</div>
+      </div>`;
+    }
+    if (label === 'PR Review & Merge Velocity') {
+      const dataStore = this.prVelocityTooltipDataStore();
+      if (!dataStore) {
+        return '';
+      }
+      return `<div class="flex flex-col">
+        <div>Total PRs merged: ${dataStore.total}</div>
+        <div>Avg reviewers per PR: ${dataStore.reviewers}</div>
+        <div>Pending PRs: ${dataStore.pending}</div>
+      </div>`;
+    }
+    return '';
+  }
+
+  /**
+   * Tooltip data for issues resolution - stored directly from API response
+   */
+  private readonly issuesTooltipDataStore = signal<{ opened: string; closed: string; median: string } | null>(null);
+
+  /**
+   * Tooltip data for PR velocity - stored directly from API response
+   */
+  private readonly prVelocityTooltipDataStore = signal<{ total: string; reviewers: string; pending: string } | null>(null);
+
+  /**
+   * Effect to update tooltip stores when data changes
+   * This runs outside of computed signals to avoid the "writing to signals in computed" error
+   */
+  constructor() {
+    effect(() => {
+      // Update issues tooltip data when issues resolution data changes
+      const issuesData = this.projectIssuesResolutionData();
+      if (issuesData && issuesData.data.length > 0) {
+        const totalOpened = issuesData.totalOpenedIssues || 0;
+        const totalClosed = issuesData.totalClosedIssues || 0;
+        const medianDays = issuesData.medianDaysToClose ? Math.round(issuesData.medianDaysToClose * 10) / 10 : 0;
+
+        this.issuesTooltipDataStore.set({
+          opened: totalOpened.toLocaleString(),
+          closed: totalClosed.toLocaleString(),
+          median: `${medianDays} days`,
+        });
+      }
+
+      // Update PR velocity tooltip data when PR weekly data changes
+      const prData = this.projectPullRequestsWeeklyData();
+      if (prData && prData.data.length > 0) {
+        const chartData = [...prData.data].reverse();
+        const totalMergedPRs = prData.totalMergedPRs || 0;
+        const avgPendingPRs =
+          chartData.length > 0 ? Math.round(chartData.reduce((sum, row) => sum + row.PENDING_PR_COUNT, 0) / chartData.length) : 0;
+        const avgReviewers =
+          chartData.length > 0
+            ? Math.round((chartData.reduce((sum, row) => sum + row.AVG_REVIEWERS_PER_PR, 0) / chartData.length) * 10) / 10
+            : 0;
+
+        this.prVelocityTooltipDataStore.set({
+          total: totalMergedPRs.toLocaleString(),
+          reviewers: avgReviewers.toString(),
+          pending: avgPendingPRs.toString(),
+        });
+      }
+    });
+  }
+
+  /**
    * Transform Active Weeks Streak API response to chart format
    * API returns data in ascending order by WEEKS_AGO (0, 1, 2, 3...)
    * Display as-is with newest week (week 0) on the left
@@ -195,8 +326,8 @@ export class RecentProgressComponent {
             yAlign: 'bottom' as const,
             position: 'nearest' as const,
             callbacks: {
-              title: (context) => context[0].label,
-              label: (context) => {
+              title: (context: TooltipItem<'bar'>[]) => context[0].label,
+              label: (context: TooltipItem<'bar'>) => {
                 const isActive = context.parsed.y === 1;
                 return isActive ? 'Active' : 'Inactive';
               },
@@ -249,12 +380,12 @@ export class RecentProgressComponent {
             yAlign: 'bottom' as const,
             position: 'nearest' as const,
             callbacks: {
-              title: (context) => {
+              title: (context: TooltipItem<'line'>[]) => {
                 const dateStr = context[0].label;
                 const date = parseLocalDateString(dateStr);
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               },
-              label: (context) => {
+              label: (context: TooltipItem<'line'>) => {
                 const count = context.parsed.y;
                 return `PRs Merged: ${count}`;
               },
@@ -305,12 +436,12 @@ export class RecentProgressComponent {
           tooltip: {
             enabled: true,
             callbacks: {
-              title: (context) => {
+              title: (context: TooltipItem<'line'>[]) => {
                 const dateStr = context[0].label;
                 const date = parseLocalDateString(dateStr);
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               },
-              label: (context) => {
+              label: (context: TooltipItem<'line'>) => {
                 const count = context.parsed.y;
                 return `Commits: ${count}`;
               },
@@ -339,13 +470,14 @@ export class RecentProgressComponent {
     const totalOpened = data.totalOpenedIssues || 0;
     const totalClosed = data.totalClosedIssues || 0;
     const medianDays = data.medianDaysToClose ? Math.round(data.medianDaysToClose * 10) / 10 : 0;
- 
+
+    // Note: Tooltip data is updated via effect() in constructor to avoid writing to signals in computed
+
     return {
       label: 'Open vs Closed Issues Trend',
       value: `${resolutionRate}%`,
       trend: resolutionRate >= 50 ? 'up' : 'down',
       subtitle: 'Issue resolution rate',
-      tooltipText: `Opened: ${totalOpened.toLocaleString()}\nClosed: ${totalClosed.toLocaleString()}\nMedian time to close: ${medianDays} days`,
       isConnected: true,
       chartType: 'line',
       chartData: {
@@ -432,26 +564,15 @@ export class RecentProgressComponent {
                   rotation: 0,
                 };
               },
-              title: (context: any) => {
-                try {
-                  const dateStr = context[0]?.label || '';
-                  if (!dateStr) return '';
-                  const date = parseLocalDateString(dateStr);
-                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                } catch (e) {
-                  console.error('Error in title callback:', e);
-                  return context[0]?.label || '';
-                }
+              title: (context: TooltipItem<'line'>[]) => {
+                const dateStr = context[0].label;
+                const date = parseLocalDateString(dateStr);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               },
-              label: (context: any) => {
-                try {
-                  const datasetLabel = context.dataset?.label || '';
-                  const count = context.parsed?.y || 0;
-                  return `${datasetLabel}: ${count.toLocaleString()}`;
-                } catch (e) {
-                  console.error('Error in label callback:', e);
-                  return '';
-                }
+              label: (context: TooltipItem<'line'>) => {
+                const datasetLabel = context.dataset?.label || '';
+                const count = context.parsed.y;
+                return `${datasetLabel}: ${count.toLocaleString()}`;
               },
             },
           },
@@ -485,11 +606,12 @@ export class RecentProgressComponent {
         ? Math.round((chartData.reduce((sum, row) => sum + row.AVG_REVIEWERS_PER_PR, 0) / chartData.length) * 10) / 10
         : 0;
 
+    // Note: Tooltip data is updated via effect() in constructor to avoid writing to signals in computed
+
     return {
       label: 'PR Review & Merge Velocity',
       value: `${avgMergeTime}`,
       subtitle: 'Avg days to merge',
-      tooltipText: `Total PRs merged: ${totalMergedPRs.toLocaleString()}\nAvg reviewers per PR: ${avgReviewers}\nPending PRs: ${avgPendingPRs}`,
       isConnected: true,
       chartType: 'bar',
       chartData: {
@@ -559,7 +681,7 @@ export class RecentProgressComponent {
               weight: 'normal' as const,
             },
             callbacks: {
-              title: (context: any) => {
+              title: (context: TooltipItem<'bar'>[]) => {
                 try {
                   const dateStr = context[0]?.label || '';
                   if (!dateStr) return '';
@@ -571,7 +693,7 @@ export class RecentProgressComponent {
                   return context[0]?.label || '';
                 }
               },
-              label: (context: any) => {
+              label: (context: TooltipItem<'bar'>) => {
                 try {
                   const dataIndex = context.dataIndex;
                   const weekData = chartData[dataIndex];
@@ -581,7 +703,7 @@ export class RecentProgressComponent {
                   return '';
                 }
               },
-              footer: (context: any) => {
+              footer: (context: TooltipItem<'bar'>[]) => {
                 try {
                   const dataIndex = context[0]?.dataIndex;
                   if (dataIndex === undefined) return '';

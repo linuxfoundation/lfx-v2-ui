@@ -623,12 +623,26 @@ export class ProjectService {
   /**
    * Get project issues resolution data (opened vs closed issues) from Snowflake
    * Combines daily trend data with aggregated metrics
-   * @param projectId - Optional project ID to filter by specific project
+   * @param projectId - Optional project ID to filter by specific project. If not provided, uses the first project from the list.
    * @returns Daily issue resolution data with aggregated totals and metrics
    */
   public async getProjectIssuesResolution(projectId?: string): Promise<ProjectIssuesResolutionResponse> {
+    // If no projectId provided, get the first project from the list
+    let resolvedProjectId = projectId;
+    if (!resolvedProjectId) {
+      const projectsList = await this.getProjectsList();
+      if (!projectsList.projects || projectsList.projects.length === 0) {
+        throw new ResourceNotFoundError('Project', 'first project', {
+          operation: 'get_project_issues_resolution',
+          service: 'project_service',
+          path: '/projects/issues-resolution',
+        });
+      }
+      resolvedProjectId = projectsList.projects[0].projectId;
+    }
+
     // Query for daily trend data
-    let dailyQuery = `
+    const dailyQuery = `
       SELECT 
         PROJECT_ID,
         PROJECT_NAME,
@@ -637,41 +651,23 @@ export class ProjectService {
         OPENED_ISSUES_COUNT,
         CLOSED_ISSUES_COUNT
       FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION_DAILY
+      WHERE PROJECT_ID = ?
+      ORDER BY METRIC_DATE DESC
     `;
 
     // Query for aggregated metrics
-    let aggregatedQuery = `
+    const aggregatedQuery = `
       SELECT 
         OPENED_ISSUES,
         CLOSED_ISSUES,
         RESOLUTION_RATE_PCT,
         MEDIAN_DAYS_TO_CLOSE
       FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION
+      WHERE PROJECT_ID = ?
     `;
 
-    const params: string[] = [];
-    const aggregatedParams: string[] = [];
-
-    if (projectId) {
-      dailyQuery += ' WHERE PROJECT_ID = ?';
-      aggregatedQuery += ' WHERE PROJECT_ID = ?';
-      params.push(projectId);
-      aggregatedParams.push(projectId);
-    }
-
-    dailyQuery += ' ORDER BY METRIC_DATE DESC';
-    
-    // If no project specified, aggregate across all projects
-    if (!projectId) {
-      aggregatedQuery = `
-        SELECT 
-          SUM(OPENED_ISSUES) AS OPENED_ISSUES,
-          SUM(CLOSED_ISSUES) AS CLOSED_ISSUES,
-          ROUND(AVG(RESOLUTION_RATE_PCT), 2) AS RESOLUTION_RATE_PCT,
-          ROUND(AVG(MEDIAN_DAYS_TO_CLOSE), 2) AS MEDIAN_DAYS_TO_CLOSE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION
-      `;
-    }
+    const params = [resolvedProjectId];
+    const aggregatedParams = [resolvedProjectId];
 
     // Execute both queries in parallel
     const [dailyResult, aggregatedResult] = await Promise.all([
@@ -721,10 +717,8 @@ export class ProjectService {
 
     // Calculate aggregated metrics
     const totalMergedPRs = result.rows.reduce((sum, row) => sum + row.MERGED_PR_COUNT, 0);
-    const avgMergeTime =
-      result.rows.length > 0
-        ? result.rows.reduce((sum, row) => sum + row.AVG_MERGED_IN_DAYS, 0) / result.rows.length
-        : 0;
+    const totalMergeTime = result.rows.reduce((sum, row) => sum + row.AVG_MERGED_IN_DAYS * row.MERGED_PR_COUNT, 0);
+    const avgMergeTime = totalMergedPRs > 0 ? totalMergeTime / totalMergedPRs : 0;
 
     return {
       data: result.rows,

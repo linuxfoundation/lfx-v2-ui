@@ -22,7 +22,7 @@ export class MaintainerDashboardComponent {
   private readonly analyticsService = inject(AnalyticsService);
 
   public readonly filterForm = new FormGroup({
-    projectId: new FormControl<string>('a0941000002wBz4AAE'),
+    projectId: new FormControl<string>(''),
   });
 
   // Fetch projects from Snowflake
