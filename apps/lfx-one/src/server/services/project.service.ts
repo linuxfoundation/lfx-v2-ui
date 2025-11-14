@@ -584,13 +584,15 @@ export class ProjectService {
    */
   public async getProjectIssuesResolution(projectSlug: string): Promise<ProjectIssuesResolutionResponse> {
     // Query for daily trend data using PROJECT_SLUG
+    // First, determine the foundation slug for the given project slug
+    // Then, get all data for projects under that foundation
     const dailyQuery = `
-      WITH project_segments AS (
-        SELECT segment_id, grandparents_slug, parent_slug, slug
+      WITH foundation_lookup AS (
+        SELECT
+          COALESCE(grandparents_slug, parent_slug, slug) as foundation_slug
         FROM analytics.silver_dim.active_segments
         WHERE slug = ?
-            OR parent_slug = ?
-            OR grandparents_slug = ?
+        LIMIT 1
       )
       SELECT
           pisd.PROJECT_ID,
@@ -599,21 +601,25 @@ export class ProjectService {
           pisd.METRIC_DATE,
           pisd.OPENED_ISSUES_COUNT,
           pisd.CLOSED_ISSUES_COUNT,
-          COALESCE(t.grandparents_slug, t.parent_slug, t.slug) as foundation_slug
+          COALESCE(seg.grandparents_slug, seg.parent_slug, seg.slug) as foundation_slug
         FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION_DAILY pisd
-        INNER JOIN project_segments t ON pisd.project_slug = t.slug
-        WHERE foundation_slug = ?
+        INNER JOIN analytics.silver_dim.active_segments seg
+          ON pisd.project_slug = seg.slug
+        CROSS JOIN foundation_lookup fl
+        WHERE COALESCE(seg.grandparents_slug, seg.parent_slug, seg.slug) = fl.foundation_slug
         ORDER BY METRIC_DATE DESC
     `;
 
     // Query for aggregated metrics using PROJECT_SLUG
+    // First, determine the foundation slug for the given project slug
+    // Then, get all data for projects under that foundation
     const aggregatedQuery = `
-      WITH project_segments AS (
-        SELECT segment_id, grandparents_slug, parent_slug, slug
+      WITH foundation_lookup AS (
+        SELECT
+          COALESCE(grandparents_slug, parent_slug, slug) as foundation_slug
         FROM analytics.silver_dim.active_segments
         WHERE slug = ?
-            OR parent_slug = ?
-            OR grandparents_slug = ?
+        LIMIT 1
       )
       SELECT
         OPENED_ISSUES,
@@ -621,12 +627,14 @@ export class ProjectService {
         RESOLUTION_RATE_PCT,
         MEDIAN_DAYS_TO_CLOSE
       FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_ISSUES_RESOLUTION pir
-      INNER JOIN project_segments t ON pir.PROJECT_SLUG = t.slug
-      WHERE COALESCE(t.grandparents_slug, t.parent_slug, t.slug) = ?
+      INNER JOIN analytics.silver_dim.active_segments seg
+        ON pir.PROJECT_SLUG = seg.slug
+      CROSS JOIN foundation_lookup fl
+      WHERE COALESCE(seg.grandparents_slug, seg.parent_slug, seg.slug) = fl.foundation_slug
     `;
 
-    const params = [projectSlug, projectSlug, projectSlug, projectSlug];
-    const aggregatedParams = [projectSlug, projectSlug, projectSlug, projectSlug];
+    const params = [projectSlug];
+    const aggregatedParams = [projectSlug];
 
     // Execute both queries in parallel
     const [dailyResult, aggregatedResult] = await Promise.all([
@@ -675,13 +683,15 @@ export class ProjectService {
     }
 
     // Query for weekly trend data using PROJECT_SLUG
+    // First, determine the foundation slug for the given project slug
+    // Then, get all data for projects under that foundation
     const query = `
-      WITH project_segments AS (
-        SELECT segment_id, grandparents_slug, parent_slug, slug
+      WITH foundation_lookup AS (
+        SELECT
+          COALESCE(grandparents_slug, parent_slug, slug) as foundation_slug
         FROM analytics.silver_dim.active_segments
         WHERE slug = ?
-            OR parent_slug = ?
-            OR grandparents_slug = ?
+        LIMIT 1
       )
       SELECT
         WEEK_START_DATE,
@@ -690,18 +700,15 @@ export class ProjectService {
         AVG_REVIEWERS_PER_PR,
         PENDING_PR_COUNT
       FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_PULL_REQUESTS_WEEKLY pprw
-      INNER JOIN project_segments t ON pprw.PROJECT_SLUG = t.slug
-      WHERE COALESCE(t.grandparents_slug, t.parent_slug, t.slug) = ?
+      INNER JOIN analytics.silver_dim.active_segments seg
+        ON pprw.PROJECT_SLUG = seg.slug
+      CROSS JOIN foundation_lookup fl
+      WHERE COALESCE(seg.grandparents_slug, seg.parent_slug, seg.slug) = fl.foundation_slug
       ORDER BY WEEK_START_DATE DESC
       LIMIT 26
     `;
 
-    const result = await this.snowflakeService.execute<ProjectPullRequestsWeeklyRow>(query, [
-      resolvedProjectSlug,
-      resolvedProjectSlug,
-      resolvedProjectSlug,
-      resolvedProjectSlug,
-    ]);
+    const result = await this.snowflakeService.execute<ProjectPullRequestsWeeklyRow>(query, [resolvedProjectSlug]);
 
     // Calculate aggregated metrics
     const totalMergedPRs = result.rows.reduce((sum, row) => sum + row.MERGED_PR_COUNT, 0);

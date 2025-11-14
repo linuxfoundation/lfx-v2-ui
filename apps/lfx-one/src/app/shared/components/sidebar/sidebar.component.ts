@@ -64,6 +64,13 @@ export class SidebarComponent {
   protected readonly foundationProjects = computed(() => this.projects().filter((p: Project) => (this.isBoardMember() ? p.slug === 'tlf' : true)));
 
   protected readonly selectedProject = computed(() => {
+    // First check if a specific project is selected (child project)
+    const project = this.projectContextService.selectedProject();
+    if (project) {
+      return this.projects().find((p: Project) => p.slug === project.slug) || null;
+    }
+
+    // Otherwise check for foundation selection
     const foundation = this.projectContextService.selectedFoundation();
     if (!foundation) {
       return null;
@@ -113,19 +120,9 @@ export class SidebarComponent {
       this.projectContextService.setFoundation(projectContext);
       this.projectContextService.clearProject();
     } else {
-      // Non-foundation project selected - set as selected project and update foundation if needed
+      // Child project selected - set as selected project and clear foundation
       this.projectContextService.setProject(projectContext);
-
-      // Ensure the parent is set as the foundation
-      const parentProject = allProjects.find((p) => p.uid === project.parent_uid);
-      if (parentProject) {
-        const foundationContext: ProjectContext = {
-          projectId: parentProject.uid,
-          name: parentProject.name,
-          slug: parentProject.slug,
-        };
-        this.projectContextService.setFoundation(foundationContext);
-      }
+      this.projectContextService.clearFoundation();
     }
   }
 
