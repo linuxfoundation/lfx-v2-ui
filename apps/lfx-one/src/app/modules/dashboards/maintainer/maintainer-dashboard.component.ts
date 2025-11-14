@@ -19,5 +19,5 @@ import { RecentProgressComponent } from '../components/recent-progress/recent-pr
 export class MaintainerDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
-  public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
+  public readonly selectedProject = computed(() => this.projectContextService.selectedFoundation() || this.projectContextService.selectedProject());
 }

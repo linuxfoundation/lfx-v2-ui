@@ -54,7 +54,7 @@ export class RecentProgressComponent {
     projectIssuesResolution: true,
     projectPullRequestsWeekly: true,
   });
-  public readonly projectSlug = computed(() => this.projectContextService.selectedFoundation()?.slug);
+  public readonly projectSlug = computed(() => this.projectContextService.selectedFoundation()?.slug || this.projectContextService.selectedProject()?.slug);
   private readonly activeWeeksStreakData = this.initializeActiveWeeksStreakData();
   private readonly pullRequestsMergedData = this.initializePullRequestsMergedData();
   private readonly codeCommitsData = this.initializeCodeCommitsData();
