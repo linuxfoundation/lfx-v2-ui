@@ -108,7 +108,7 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                @if (attachment.link && !isPendingDeletion(attachment.uid)) {
+                @if (attachment.type === 'file' && !isPendingDeletion(attachment.uid)) {
                   <a
                     [href]="'/api/meetings/' + meetingId() + '/attachments/' + attachment.uid"
                     target="_blank"

@@ -23,6 +23,7 @@ import { MeetingVisibility } from '@lfx-one/shared/enums';
 import {
   BatchRegistrantOperationResponse,
   CreateMeetingRequest,
+  ImportantLinkFormValue,
   Meeting,
   MeetingAttachment,
   MeetingRegistrant,
@@ -506,8 +507,8 @@ export class MeetingManageComponent {
       console.error(`Failed to delete attachment ${attachmentId}`);
     });
 
-    // Clear pending deletions on success
-    if (totalDeleteSuccesses > 0) {
+    // Clear pending deletions when operations complete without failures
+    if (totalDeleteFailures === 0 && this.pendingAttachmentDeletions().length > 0) {
       this.pendingAttachmentDeletions.set([]);
     }
 
@@ -868,14 +869,14 @@ export class MeetingManageComponent {
     const importantLinksArray = this.form().get('important_links') as FormArray;
     // Only save links that don't have a uid (new links)
     // Links with uid already exist as attachments and don't need to be recreated
-    const linksToSave = importantLinksArray.value.filter((link: any) => link.title && link.url && !link.uid);
+    const linksToSave = (importantLinksArray.value as ImportantLinkFormValue[]).filter((link) => link.title && link.url && !link.uid);
 
     if (linksToSave.length === 0) {
       return of({ successes: [], failures: [] });
     }
 
     return from(linksToSave).pipe(
-      mergeMap((link: any) =>
+      mergeMap((link: ImportantLinkFormValue) =>
         this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { linkName: link.title, error } }))
