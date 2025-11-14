@@ -40,6 +40,16 @@ export class ProjectContextService {
   }
 
   /**
+   * Clear the selected sub-project
+   */
+  public clearProject(): void {
+    this.selectedProject.set(null);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(this.projectStorageKey);
+    }
+  }
+
+  /**
    * Get the current project ID (sub-project if set, otherwise foundation)
    */
   public getProjectId(): string {
@@ -54,7 +64,9 @@ export class ProjectContextService {
   }
 
   private persistToStorage(key: string, project: ProjectContext): void {
-    localStorage.setItem(key, JSON.stringify(project));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(project));
+    }
   }
 
   private loadFromStorage(key: string): ProjectContext | null {
