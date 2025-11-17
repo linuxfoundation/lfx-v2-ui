@@ -72,9 +72,13 @@ Secrets are passed to Docker builds using BuildKit secret mounts, which:
 **Dockerfile:**
 
 ```dockerfile
+# Build shared package first (doesn't need --define flag)
+RUN yarn workspace @lfx-one/shared build:${BUILD_ENV}
+
+# Build the Angular application with LaunchDarkly client ID from secret
 RUN --mount=type=secret,id=LAUNCHDARKLY_CLIENT_ID \
     LAUNCHDARKLY_CLIENT_ID=$(cat /run/secrets/LAUNCHDARKLY_CLIENT_ID) && \
-    yarn build:${BUILD_ENV} --define=LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
+    yarn workspace lfx-one-ui build:${BUILD_ENV} --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
 ```
 
 ### 4. Angular Build-Time Injection
@@ -146,15 +150,21 @@ This means:
 
 ### Using `yarn build`
 
-Local builds can be tested with the define flag:
+Local builds can be tested with the define flag. Note that you must build the shared package separately first, then build the UI with the define flag:
 
 ```bash
-# Build with define (note the --define= syntax with equals sign, no -- separator needed)
-yarn build:development --define=LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
+# First, build the shared package (required dependency)
+yarn workspace @lfx-one/shared build:development
+
+# Then build the Angular UI with define
+yarn workspace lfx-one-ui build:development --define LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
 
 # Or for production build
-yarn build:production --define=LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
+yarn workspace @lfx-one/shared build:production
+yarn workspace lfx-one-ui build:production --define LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
 ```
+
+**Why separate builds?** The shared package uses TypeScript compiler which doesn't understand the `--define` flag. Building them separately ensures the shared package builds without errors while allowing the Angular UI to use the define feature.
 
 ## Workflow Integration
 
@@ -254,16 +264,20 @@ env:
 
 ### Step 4: Update Dockerfile
 
-Add secret mount:
+Update the Angular UI build step to include the new secret:
 
 ```dockerfile
+# Build shared package first (doesn't need --define flag)
+RUN yarn workspace @lfx-one/shared build:${BUILD_ENV}
+
+# Build the Angular application with secrets
 RUN --mount=type=secret,id=LAUNCHDARKLY_CLIENT_ID \
     --mount=type=secret,id=NEW_SECRET \
     LAUNCHDARKLY_CLIENT_ID=$(cat /run/secrets/LAUNCHDARKLY_CLIENT_ID) && \
     NEW_SECRET=$(cat /run/secrets/NEW_SECRET) && \
-    yarn build:${BUILD_ENV} \
-      --define=LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'" \
-      --define=NEW_SECRET="'${NEW_SECRET}'"
+    yarn workspace lfx-one-ui build:${BUILD_ENV} \
+      --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'" \
+      --define NEW_SECRET="'${NEW_SECRET}'"
 ```
 
 ### Step 5: Update Angular Configuration
