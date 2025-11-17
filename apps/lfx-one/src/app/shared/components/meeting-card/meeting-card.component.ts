@@ -606,10 +606,10 @@ export class MeetingCardComponent implements OnInit {
       const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
       const leftBorderColor = config.borderColor;
 
-      const baseClasses = 'bg-white rounded-lg border-t border-r border-b border-l-4';
-      const styleClasses = 'shadow-sm hover:shadow-md h-full transition-all duration-300';
+      const baseClasses = 'bg-white rounded-lg';
+      const styleClasses = 'shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.10),0px_1px_3px_0px_rgba(0,0,0,0.10)] hover:shadow-md h-full transition-all duration-300';
 
-      return `${baseClasses} ${leftBorderColor} ${styleClasses}`;
+      return `${baseClasses} ${styleClasses}`;
     });
   }
 

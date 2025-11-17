@@ -82,12 +82,14 @@
               <!-- Top Projects List -->
               @case ('top-projects') {
                 @if (card.topProjects) {
-                  <div class="space-y-0.5 p-0 pr-5 pl-[60px] m-0 mb-[5px]">
-                    <div class="text-xs font-medium text-muted-foreground">Top 3 Projects by Value</div>
+                  <div class="space-y-0.5 p-[0px] mt-[0px] mr-[0px] mb-[5px] ml-[0px] flex flex-col items-end">
+                    <div class="flex items-center justify-between w-[180px]">
+                      <span class="text-xs text-muted-foreground">Top 3 Projects by Value</span>
+                    </div>
                     @for (project of card.topProjects; track project.name) {
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-muted-foreground">{{ project.name }}</span>
-                        <span class="font-medium">{{ project.formattedValue }}</span>
+                      <div class="flex items-center justify-between w-[180px]">
+                        <span class="text-xs text-muted-foreground">{{ project.name }}</span>
+                        <span class="font-medium text-xs">{{ project.formattedValue }}</span>
                       </div>
                     }
                   </div>
@@ -147,7 +149,7 @@
                   <div class="text-xl font-medium">{{ card.value }}</div>
                 }
                 @if (card.subtitle) {
-                  <div class="text-xs text-muted-foreground">{{ card.subtitle }}</div>
+                  <div class="text-xs text-gray-500">{{ card.subtitle }}</div>
                 }
               </div>
             }

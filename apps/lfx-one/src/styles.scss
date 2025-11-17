@@ -129,6 +129,19 @@ html {
   background-color: #f9fafb;
 }
 
+/* Global Layout Constraints */
+.page-wrapper {
+  max-width: 1440px !important;
+  margin: 0 auto !important;
+  padding: 32px !important;
+  box-sizing: border-box !important;
+}
+
+/* Page content - applies to direct children of page wrapper */
+.page-wrapper > * {
+  max-width: 1245px !important;
+}
+
 a:not([pButton]) {
   @apply font-sans text-primary-700 hover:text-primary-900;
 }

@@ -70,7 +70,7 @@ export class FoundationHealthComponent implements AfterViewInit {
         icon: 'fa-light fa-chart-bar',
         title: 'Software Value',
         value: this.formatSoftwareValue(metrics.softwareValue),
-        subtitle: 'Estimated total value of software managed',
+        subtitle: "Estimated total value of all foundation's projects",
         category: 'projects' as MetricCategory,
         testId: 'foundation-health-card-software-value',
         customContentType: 'top-projects',
