@@ -49,6 +49,9 @@ export * from './foundation-metrics.interface';
 // AI interfaces
 export * from './ai.interface';
 
+// Feature flags interfaces
+export * from './feature-flags.interface';
+
 // Access check interfaces
 export * from './access-check.interface';
 

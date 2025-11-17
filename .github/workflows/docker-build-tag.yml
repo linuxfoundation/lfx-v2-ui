@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  packages: write
 
 env:
   REGISTRY: ghcr.io
@@ -18,12 +20,14 @@ env:
   HELM_VERSION: v3.18.4
 
 jobs:
+  get-secrets:
+    uses: ./.github/workflows/get-launchdarkly-secrets.yml
+
   build-and-push:
+    needs: get-secrets
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
+    env:
+      LAUNCHDARKLY_CLIENT_ID: ${{ needs.get-secrets.outputs.ld_client_id }}
     outputs:
       app_version: ${{ steps.prepare.outputs.app_version }}
       chart_name: ${{ steps.prepare.outputs.chart_name }}
@@ -86,6 +90,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_ENV=production
+          secret-envs: |
+            LAUNCHDARKLY_CLIENT_ID=LAUNCHDARKLY_CLIENT_ID
 
   release-helm-chart:
     needs: build-and-push

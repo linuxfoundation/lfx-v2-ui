@@ -11,18 +11,22 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  packages: write
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  get-secrets:
+    uses: ./.github/workflows/get-launchdarkly-secrets.yml
+
   build-and-push:
+    needs: get-secrets
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
+    env:
+      LAUNCHDARKLY_CLIENT_ID: ${{ needs.get-secrets.outputs.ld_client_id }}
 
     steps:
       - name: Checkout repository
@@ -68,3 +72,5 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_ENV=development
+          secret-envs: |
+            LAUNCHDARKLY_CLIENT_ID=LAUNCHDARKLY_CLIENT_ID
