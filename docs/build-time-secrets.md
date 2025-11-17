@@ -31,24 +31,40 @@ Secret format (JSON):
 }
 ```
 
-### 2. Reusable Workflow
+### 2. GitHub Actions Secret Retrieval
 
-We use a reusable GitHub Actions workflow (`.github/workflows/get-launchdarkly-secrets.yml`) that:
+Each workflow retrieves secrets directly using AWS Secrets Manager:
 
 1. Authenticates with AWS using OIDC
 2. Retrieves secrets from AWS Secrets Manager
 3. Validates required secrets exist
-4. Masks secrets in logs
-5. Outputs secrets to calling workflows
+4. Sets secrets as environment variables using `GITHUB_ENV`
 
-**Key feature:** Uses workflow outputs (not `GITHUB_ENV`) to pass secrets between jobs.
+**Key feature:** Uses `GITHUB_ENV` to make secrets available to subsequent steps in the same job. LaunchDarkly client-side IDs are NOT masked because they're meant to be public values embedded in browser JavaScript.
 
 ```yaml
-jobs:
-  get-secrets:
-    runs-on: ubuntu-latest
-    outputs:
-      ld_client_id: ${{ steps.set-output.outputs.ld_client_id }}
+steps:
+  - name: OIDC Auth
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      audience: sts.amazonaws.com
+      role-to-assume: arn:aws:iam::788942260905:role/github-actions-deploy
+      aws-region: us-west-2
+
+  - name: Get LaunchDarkly client ID from AWS Secrets Manager
+    uses: aws-actions/aws-secretsmanager-get-secrets@v2
+    with:
+      secret-ids: |
+        LAUNCHDARKLY, /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
+
+  - name: Set LaunchDarkly client ID environment variable
+    run: |
+      LAUNCHDARKLY_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+      if [ -z "$LAUNCHDARKLY_CLIENT_ID" ]; then
+        echo "❌ LaunchDarkly client ID not found in AWS Secrets Manager"
+        exit 1
+      fi
+      echo "LAUNCHDARKLY_CLIENT_ID=$LAUNCHDARKLY_CLIENT_ID" >> $GITHUB_ENV
 ```
 
 ### 3. Docker BuildKit Secret Mounts
@@ -117,9 +133,9 @@ AWS Secrets Manager
     ↓
 GitHub Actions (OIDC Auth)
     ↓
-Reusable Workflow (get-launchdarkly-secrets.yml)
+AWS Secrets Manager Retrieval (per job)
     ↓
-Job Outputs
+GITHUB_ENV (job environment)
     ↓
 Docker Build (BuildKit Secret Mount)
     ↓
@@ -168,24 +184,43 @@ yarn workspace lfx-one-ui build:production --define LAUNCHDARKLY_CLIENT_ID="'you
 
 ## Workflow Integration
 
-All three Docker build workflows use the reusable workflow:
+All three Docker build workflows retrieve secrets directly in the job:
 
 1. **docker-build-main.yml** - Development environment deployments
 2. **docker-build-tag.yml** - Production releases
 3. **docker-build-pr.yml** - PR preview deployments
 
-Example integration:
+Each workflow follows the same pattern - retrieve secrets from AWS Secrets Manager and set them as environment variables using `GITHUB_ENV`:
 
 ```yaml
 jobs:
-  get-secrets:
-    uses: ./.github/workflows/get-launchdarkly-secrets.yml
-
   build-and-push:
-    needs: get-secrets
     runs-on: ubuntu-latest
-    env:
-      LAUNCHDARKLY_CLIENT_ID: ${{ needs.get-secrets.outputs.ld_client_id }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: OIDC Auth
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: arn:aws:iam::788942260905:role/github-actions-deploy
+          aws-region: us-west-2
+
+      - name: Get LaunchDarkly client ID from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            LAUNCHDARKLY, /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
+
+      - name: Set LaunchDarkly client ID environment variable
+        run: |
+          LAUNCHDARKLY_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+          if [ -z "$LAUNCHDARKLY_CLIENT_ID" ]; then
+            echo "❌ LaunchDarkly client ID not found in AWS Secrets Manager"
+            exit 1
+          fi
+          echo "LAUNCHDARKLY_CLIENT_ID=$LAUNCHDARKLY_CLIENT_ID" >> $GITHUB_ENV
 ```
 
 ## Security Considerations
@@ -195,8 +230,8 @@ jobs:
 - **AWS Secrets Manager** - Centralized secret storage with access control
 - **OIDC Authentication** - No long-lived AWS credentials in GitHub
 - **BuildKit Secret Mounts** - Secrets don't persist in image layers
-- **Log Masking** - `::add-mask::` prevents secrets from appearing in logs
 - **Validation Steps** - Fail fast if secrets are missing
+- **No Masking for Client IDs** - LaunchDarkly client-side IDs are public values (not masked in logs)
 
 ### ⚠️ Important Notes
 
@@ -216,50 +251,46 @@ aws secretsmanager create-secret \
   --secret-string '{"key": "value"}'
 ```
 
-### Step 2: Update Reusable Workflow
+### Step 2: Update Docker Build Workflows
 
-Edit `.github/workflows/get-launchdarkly-secrets.yml`:
+Update the secret retrieval section in all three workflows (docker-build-main.yml, docker-build-tag.yml, docker-build-pr.yml):
 
 ```yaml
-- name: Read secrets from AWS Secrets Manager
+- name: Get secrets from AWS Secrets Manager
   uses: aws-actions/aws-secretsmanager-get-secrets@v2
   with:
     secret-ids: |
       LAUNCHDARKLY, /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
       NEWSECRET, /cloudops/managed-secrets/service/lfx_one/new_secret
 
-- name: Set up sensitive environment variables and output
+- name: Set environment variables
   run: |
-    # Extract new secret
-    NEW_SECRET_VALUE=$(echo "$NEWSECRET" | jq -r '.key // empty')
-    echo "::add-mask::$NEW_SECRET_VALUE"
-    echo "new_secret=$NEW_SECRET_VALUE" >> $GITHUB_OUTPUT
+    LAUNCHDARKLY_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+    NEW_SECRET=$(echo "$NEWSECRET" | jq -r '.key // empty')
+
+    if [ -z "$LAUNCHDARKLY_CLIENT_ID" ]; then
+      echo "❌ LaunchDarkly client ID not found in AWS Secrets Manager"
+      exit 1
+    fi
+    if [ -z "$NEW_SECRET" ]; then
+      echo "❌ New secret not found in AWS Secrets Manager"
+      exit 1
+    fi
+
+    echo "LAUNCHDARKLY_CLIENT_ID=$LAUNCHDARKLY_CLIENT_ID" >> $GITHUB_ENV
+    echo "NEW_SECRET=$NEW_SECRET" >> $GITHUB_ENV
 ```
 
-Add output:
+**Note:** Add `::add-mask::$NEW_SECRET` before setting GITHUB_ENV if the new secret is truly sensitive (not a public client-side ID).
 
-```yaml
-outputs:
-  ld_client_id: ${{ jobs.get-secrets.outputs.ld_client_id }}
-  new_secret: ${{ jobs.get-secrets.outputs.new_secret }}
-```
+### Step 3: Update Docker secret-envs
 
-### Step 3: Update Docker Build Workflows
-
-Add to `secret-envs` in all three workflows:
+Add to `secret-envs` in the Docker build step of all three workflows:
 
 ```yaml
 secret-envs: |
   LAUNCHDARKLY_CLIENT_ID=LAUNCHDARKLY_CLIENT_ID
   NEW_SECRET=NEW_SECRET
-```
-
-Update job env:
-
-```yaml
-env:
-  LAUNCHDARKLY_CLIENT_ID: ${{ needs.get-secrets.outputs.ld_client_id }}
-  NEW_SECRET: ${{ needs.get-secrets.outputs.new_secret }}
 ```
 
 ### Step 4: Update Dockerfile

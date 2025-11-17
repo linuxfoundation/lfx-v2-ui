@@ -19,18 +19,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  get-secrets:
-    # Only get secrets if the PR is still open, it's labeled with
-    # 'deploy-preview' and does not come from a fork.
-    if: >
-      github.event.action != 'closed' &&
-      github.event.pull_request.state == 'open' &&
-      github.event.pull_request.head.repo.fork == false &&
-      contains(github.event.pull_request.labels.*.name, 'deploy-preview')
-    uses: ./.github/workflows/get-launchdarkly-secrets.yml
-
   build-and-push:
-    needs: get-secrets
     # Only build a container if the PR is still open, it's labeled with
     # 'deploy-preview' and does not come from a fork.
     if: >
@@ -39,11 +28,32 @@ jobs:
       github.event.pull_request.head.repo.fork == false &&
       contains(github.event.pull_request.labels.*.name, 'deploy-preview')
     runs-on: ubuntu-latest
-    env:
-      LAUNCHDARKLY_CLIENT_ID: ${{ needs.get-secrets.outputs.ld_client_id }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: OIDC Auth
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: arn:aws:iam::788942260905:role/github-actions-deploy
+          aws-region: us-west-2
+
+      - name: Get LaunchDarkly client ID from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            LAUNCHDARKLY, /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
+
+      - name: Set LaunchDarkly client ID environment variable
+        run: |
+          LAUNCHDARKLY_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+          if [ -z "$LAUNCHDARKLY_CLIENT_ID" ]; then
+            echo "❌ LaunchDarkly client ID not found in AWS Secrets Manager"
+            exit 1
+          fi
+          echo "LAUNCHDARKLY_CLIENT_ID=$LAUNCHDARKLY_CLIENT_ID" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
