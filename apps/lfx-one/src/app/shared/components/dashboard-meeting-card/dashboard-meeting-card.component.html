@@ -3,13 +3,8 @@
 
 <!-- Card wrapper with border and shadow -->
 <div
-  class="bg-white rounded-xl border-t border-r border-b border-gray-200 shadow-sm hover:shadow-md transition-shadow relative"
+  class="bg-white rounded-xl shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.10),0px_1px_3px_0px_rgba(0,0,0,0.10)] hover:shadow-md transition-shadow relative"
   data-testid="dashboard-meeting-card">
-  <!-- Colored left border overlay -->
-  <div
-    aria-hidden="true"
-    class="absolute border-0 border-l-4 border-t border-b border-r border-solid inset-0 pointer-events-none rounded-xl"
-    [ngClass]="borderColorClass()"></div>
   <div class="p-4 space-y-3">
     <!-- Header with meeting type and project badges -->
     <div class="flex items-center gap-2 flex-wrap">
@@ -21,9 +16,9 @@
     <!-- Meeting title with file icons -->
     <div class="flex items-start justify-between gap-2">
       <div class="flex flex-col gap-1">
-        <h4 class="line-clamp-2 text-sm leading-tight font-medium text-gray-900" data-testid="dashboard-meeting-card-title">
+        <h3 class="line-clamp-2 leading-tight text-gray-900" data-testid="dashboard-meeting-card-title">
           {{ meetingTitle() }}
-        </h4>
+        </h3>
         <!-- Date/time with feature icons - directly under title -->
         <div class="flex items-center gap-2 flex-wrap mt-0.5">
           <span class="text-xs text-gray-600 whitespace-nowrap" data-testid="dashboard-meeting-card-time">

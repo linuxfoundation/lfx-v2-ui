@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, signal, ViewChild, input } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, signal, ViewChild, input } from '@angular/core';
 import { ChartComponent } from '@components/chart/chart.component';
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { AGGREGATE_FOUNDATION_METRICS, FOUNDATION_SPARKLINE_CHART_OPTIONS, FOUNDATION_BAR_CHART_OPTIONS } from '@lfx-one/shared/constants';
@@ -16,10 +16,13 @@ import { hexToRgba } from '@lfx-one/shared/utils';
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
 })
-export class FoundationHealthComponent {
+export class FoundationHealthComponent implements AfterViewInit {
   @ViewChild('carouselScroll') public carouselScrollContainer!: ElementRef;
 
   public readonly title = input<string>('Foundation Health');
+
+  public readonly canScrollLeft = signal<boolean>(false);
+  public readonly canScrollRight = signal<boolean>(false);
 
   public readonly selectedFilter = signal<string>('all');
 
@@ -33,6 +36,11 @@ export class FoundationHealthComponent {
   public readonly sparklineOptions = FOUNDATION_SPARKLINE_CHART_OPTIONS;
 
   public readonly barChartOptions = FOUNDATION_BAR_CHART_OPTIONS;
+
+  public ngAfterViewInit(): void {
+    // Initialize scroll state after view is ready
+    setTimeout(() => this.onScroll(), 0);
+  }
 
   private readonly allMetricCards = computed<FoundationMetricCard[]>(() => {
     const metrics = AGGREGATE_FOUNDATION_METRICS;
@@ -166,6 +174,18 @@ export class FoundationHealthComponent {
     if (!this.carouselScrollContainer?.nativeElement) return;
     const container = this.carouselScrollContainer.nativeElement;
     container.scrollBy({ left: 320, behavior: 'smooth' });
+  }
+
+  public onScroll(): void {
+    if (!this.carouselScrollContainer?.nativeElement) return;
+    const container = this.carouselScrollContainer.nativeElement;
+    
+    // Check if can scroll left (not at the start)
+    this.canScrollLeft.set(container.scrollLeft > 0);
+    
+    // Check if can scroll right (not at the end)
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    this.canScrollRight.set(container.scrollLeft < maxScrollLeft - 1);
   }
 
   private formatSoftwareValue(valueInMillions: number): string {

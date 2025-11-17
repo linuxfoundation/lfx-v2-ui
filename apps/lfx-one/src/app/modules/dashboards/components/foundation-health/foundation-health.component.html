@@ -4,7 +4,7 @@
 <section data-testid="foundation-health-section">
   <div class="flex items-center justify-between mb-4">
     <div class="flex flex-col md:flex-row md:items-center gap-3">
-      <h2 class="font-['Roboto_Slab'] font-semibold text-[16px]">{{ title() }}</h2>
+      <h2>{{ title() }}</h2>
 
       <!-- Filter Pills -->
       <lfx-filter-pills
@@ -36,15 +36,25 @@
   </div>
 
   <!-- Carousel Container -->
-  <div class="overflow-hidden">
-    <div #carouselScroll class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar scroll-smooth" data-testid="foundation-health-carousel">
+  <div class="relative overflow-hidden">
+    <!-- Left Fade Gradient -->
+    @if (canScrollLeft()) {
+      <div class="hidden md:block absolute top-0 bottom-0 left-0 w-24 pointer-events-none z-10" style="background: linear-gradient(to right, #f8f8f9 0%, transparent 100%);"></div>
+    }
+    
+    <!-- Right Fade Gradient -->
+    @if (canScrollRight()) {
+      <div class="hidden md:block absolute top-0 bottom-0 right-0 w-24 pointer-events-none z-10" style="background: linear-gradient(to left, #f8f8f9 0%, transparent 100%);"></div>
+    }
+    
+    <div #carouselScroll class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar scroll-smooth" data-testid="foundation-health-carousel" (scroll)="onScroll()">
       @for (card of metricCards(); track card.title) {
-        <div class="p-4 bg-white rounded-lg border border-slate-200 flex-shrink-0 w-[calc(100vw-3rem)] md:w-80" [attr.data-testid]="card.testId">
+        <div class="p-4 bg-white rounded-lg flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.10),0px_1px_3px_0px_rgba(0,0,0,0.10)]" [attr.data-testid]="card.testId">
           <div class="flex flex-col h-full justify-between">
             <!-- Card Header -->
             <div class="flex items-center gap-2">
               <i [class]="card.icon + ' w-4 h-4 text-muted-foreground'"></i>
-              <h5 class="text-sm font-medium">{{ card.title }}</h5>
+              <h4>{{ card.title }}</h4>
             </div>
 
             <!-- Custom Content -->

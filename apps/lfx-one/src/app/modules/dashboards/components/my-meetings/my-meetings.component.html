@@ -4,7 +4,7 @@
 <section class="flex flex-col flex-1" data-testid="dashboard-my-meetings-section">
   <!-- Header -->
   <div class="flex items-center justify-between mb-4">
-    <h2 class="font-display font-semibold text-gray-900">My Meetings</h2>
+    <h2>My Meetings</h2>
     <lfx-button
       label="View All"
       icon="fa-light fa-chevron-right"
@@ -17,19 +17,29 @@
   </div>
 
   <!-- Scrollable Content -->
-  <div class="flex flex-col flex-1">
+  <div class="relative flex flex-col flex-1 -my-1">
     @if (loading()) {
       <div class="flex flex-col gap-3" data-testid="dashboard-my-meetings-loading">
         <p-skeleton width="100%" height="140px"></p-skeleton>
         <p-skeleton width="100%" height="140px"></p-skeleton>
       </div>
     } @else {
-      <div class="flex flex-col gap-6 overflow-scroll max-h-[30rem]" data-testid="dashboard-my-meetings-list">
+      <!-- Top Fade Gradient -->
+      @if (canScrollUp()) {
+        <div class="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10" style="background: linear-gradient(to bottom, #f8f8f9 0%, transparent 100%);"></div>
+      }
+      
+      <!-- Bottom Fade Gradient -->
+      @if (canScrollDown()) {
+        <div class="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10" style="background: linear-gradient(to top, #f8f8f9 0%, transparent 100%);"></div>
+      }
+      
+      <div #scrollContainer class="flex flex-col gap-6 overflow-scroll max-h-[30rem] px-1 -mx-1 py-1" (scroll)="onScroll()" data-testid="dashboard-my-meetings-list">
         @if (todayMeetings().length > 0 || upcomingMeetings().length > 0) {
           <!-- TODAY Section - only show if there are meetings today -->
           @if (todayMeetings().length > 0) {
             <div>
-              <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">Today</h4>
+              <h4 class="text-gray-500 mb-3">Today</h4>
               <div class="flex flex-col gap-3">
                 @for (item of todayMeetings(); track item.meeting.uid) {
                   <lfx-dashboard-meeting-card
@@ -44,7 +54,7 @@
           <!-- UPCOMING Section - only show if there are upcoming meetings -->
           @if (upcomingMeetings().length > 0) {
             <div>
-              <h4 class="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">Upcoming</h4>
+              <h4 class="text-gray-500 mb-3">Upcoming</h4>
               <div class="flex flex-col gap-3">
                 @for (item of upcomingMeetings(); track item.meeting.uid) {
                   <lfx-dashboard-meeting-card
