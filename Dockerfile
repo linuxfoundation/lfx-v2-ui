@@ -27,6 +27,9 @@ COPY . .
 # Build the application with specified environment
 RUN yarn build:${BUILD_ENV}
 
+# Add test secret
+RUN --mount=type=secret,id=LD_CLIENT_ID cat /run/secrets/LD_CLIENT_ID > LD_CLIENT_ID
+
 # Expose port 4000
 EXPOSE 4000
 
