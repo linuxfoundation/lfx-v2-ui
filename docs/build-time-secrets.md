@@ -74,7 +74,7 @@ Secrets are passed to Docker builds using BuildKit secret mounts, which:
 ```dockerfile
 RUN --mount=type=secret,id=LAUNCHDARKLY_CLIENT_ID \
     LAUNCHDARKLY_CLIENT_ID=$(cat /run/secrets/LAUNCHDARKLY_CLIENT_ID) && \
-    yarn build:${BUILD_ENV} --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
+    yarn build:${BUILD_ENV} --define=LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
 ```
 
 ### 4. Angular Build-Time Injection
@@ -146,14 +146,14 @@ This means:
 
 ### Using `yarn build`
 
-Local builds can be tested with environment variables:
+Local builds can be tested with the define flag:
 
 ```bash
-# Export the secret
-export LAUNCHDARKLY_CLIENT_ID="your-client-id"
+# Build with define (note the --define= syntax with equals sign, no -- separator needed)
+yarn build:development --define=LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
 
-# Build with define
-yarn build --define LAUNCHDARKLY_CLIENT_ID="'$LAUNCHDARKLY_CLIENT_ID'"
+# Or for production build
+yarn build:production --define=LAUNCHDARKLY_CLIENT_ID="'your-client-id-here'"
 ```
 
 ## Workflow Integration
@@ -262,8 +262,8 @@ RUN --mount=type=secret,id=LAUNCHDARKLY_CLIENT_ID \
     LAUNCHDARKLY_CLIENT_ID=$(cat /run/secrets/LAUNCHDARKLY_CLIENT_ID) && \
     NEW_SECRET=$(cat /run/secrets/NEW_SECRET) && \
     yarn build:${BUILD_ENV} \
-      --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'" \
-      --define NEW_SECRET="'${NEW_SECRET}'"
+      --define=LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'" \
+      --define=NEW_SECRET="'${NEW_SECRET}'"
 ```
 
 ### Step 5: Update Angular Configuration
