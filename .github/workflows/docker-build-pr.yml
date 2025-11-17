@@ -12,6 +12,7 @@ permissions:
   packages: write
   pull-requests: write
   issues: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -40,6 +41,57 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: OIDC Auth for AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        id: oidc-auth
+        with:
+          audience: sts.amazonaws.com
+          role-to-assume: arn:aws:iam::788942260905:role/github-actions-deploy
+          aws-region: us-west-2
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        id: get_secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            LAUNCHDARKLY, /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
+
+      - name: Validate required secrets for Docker build
+        id: validate-secrets
+        run: |
+          missing_secrets=""
+
+          # Check AWS Secrets Manager secrets (masked environment variables)
+          if [ -z "$LAUNCHDARKLY" ]; then
+            missing_secrets="$missing_secrets LAUNCHDARKLY (from AWS Secrets Manager)"
+          else
+            LD_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+            if [ -z "$LD_CLIENT_ID" ]; then
+              missing_secrets="$missing_secrets LAUNCHDARKLY.ld_client_id (from AWS Secrets Manager)"
+            fi
+          fi
+
+          if [ -n "$missing_secrets" ]; then
+            echo "❌ Missing required secrets for Docker build:$missing_secrets"
+            echo "Please configure these secrets to run docker build."
+            exit 1
+          else
+            echo "✅ All required secrets are configured"
+            exit 0
+          fi
+      
+      - name: Set up sensitive environment variables
+        run: |
+          # Parse and set LaunchDarkly secrets with explicit masking
+          if [ -n "$LAUNCHDARKLY" ]; then
+            LD_CLIENT_ID=$(echo "$LAUNCHDARKLY" | jq -r '.ld_client_id // empty')
+
+            # Explicitly mask the values
+            echo "::add-mask::$LD_CLIENT_ID"
+            echo "LD_CLIENT_ID=$LD_CLIENT_ID" >> $GITHUB_ENV
+          fi
+
 
       - name: Extract metadata
         id: meta
@@ -72,6 +124,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_ENV=development
+          secret-envs: |
+            LD_CLIENT_ID=LD_CLIENT_ID
 
       - name: Comment deployment URL on PR
         uses: actions/github-script@v7
