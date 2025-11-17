@@ -19,7 +19,7 @@ Build-time secrets are configuration values that:
 
 Secrets are stored in AWS Secrets Manager under the `/cloudops/managed-secrets/` namespace:
 
-```
+```text
 /cloudops/managed-secrets/launchdarkly/lfx_one/ld_client_id
 ```
 
@@ -27,7 +27,7 @@ Secret format (JSON):
 
 ```json
 {
-  "ld_client_id": "691b727361cbf309e9d74468"
+  "ld_client_id": "your-launchdarkly-client-id"
 }
 ```
 
@@ -100,7 +100,7 @@ Angular 19's `define` feature (Vite) replaces constant references at build time:
 declare const LAUNCHDARKLY_CLIENT_ID: string | undefined;
 
 export const environment = {
-  launchDarklyClientId: typeof LAUNCHDARKLY_CLIENT_ID !== 'undefined' ? LAUNCHDARKLY_CLIENT_ID : '691b727361cbf309e9d74468', // Dev fallback for local ng serve
+  launchDarklyClientId: typeof LAUNCHDARKLY_CLIENT_ID !== 'undefined' ? LAUNCHDARKLY_CLIENT_ID : 'dev-client-id-fallback', // Dev fallback for local ng serve
 };
 ```
 
@@ -108,7 +108,7 @@ The `--define LAUNCHDARKLY_CLIENT_ID="'value'"` flag replaces all occurrences of
 
 ## Data Flow
 
-```
+```text
 AWS Secrets Manager
     ↓
 GitHub Actions (OIDC Auth)
@@ -134,7 +134,7 @@ The `ng serve` command doesn't support the `--define` flag, so environment files
 launchDarklyClientId:
   typeof LAUNCHDARKLY_CLIENT_ID !== 'undefined'
     ? LAUNCHDARKLY_CLIENT_ID
-    : '691b727361cbf309e9d74468', // Dev client ID for local ng serve
+    : 'dev-client-id-fallback', // Dev client ID for local ng serve
 ```
 
 This means:

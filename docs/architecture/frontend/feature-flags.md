@@ -53,7 +53,7 @@ The feature flag system consists of three main components:
 │                     Application Startup                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. APP_INITIALIZER (provideFeatureFlags)                   │
+│  1. provideAppInitializer (provideFeatureFlags)             │
 │     └─> Initialize LaunchDarkly Provider                     │
 │         └─> OpenFeature.setProviderAndWait()                │
 │                                                               │
@@ -212,16 +212,15 @@ function initializeOpenFeature(): () => Promise<void> {
   };
 }
 
-export const provideFeatureFlags = (): Provider => ({
-  provide: APP_INITIALIZER,
-  useFactory: initializeOpenFeature,
-  multi: true,
-});
+/**
+ * Provider for OpenFeature initialization using Angular 19's provideAppInitializer
+ */
+export const provideFeatureFlags = (): EnvironmentProviders => provideAppInitializer(initializeOpenFeature());
 ```
 
 **Provider Configuration:**
 
-- **APP_INITIALIZER**: Runs during application bootstrap before any components render
+- **provideAppInitializer**: Angular 19's modern API for app initialization, runs during application bootstrap before components render
 - **SSR Guard**: `typeof window === 'undefined'` check prevents server-side execution
 - **Graceful Degradation**: Missing configuration or errors allow app to continue with default flag values
 - **Streaming Mode**: Real-time flag updates from LaunchDarkly

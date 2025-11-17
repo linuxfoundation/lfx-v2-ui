@@ -27,7 +27,7 @@ COPY . .
 # Build the application with specified environment and LaunchDarkly client ID from secret
 RUN --mount=type=secret,id=LAUNCHDARKLY_CLIENT_ID \
     LAUNCHDARKLY_CLIENT_ID=$(cat /run/secrets/LAUNCHDARKLY_CLIENT_ID) && \
-    yarn build:${BUILD_ENV} --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
+    yarn build:${BUILD_ENV} -- --define LAUNCHDARKLY_CLIENT_ID="'${LAUNCHDARKLY_CLIENT_ID}'"
 
 # Expose port 4000
 EXPOSE 4000

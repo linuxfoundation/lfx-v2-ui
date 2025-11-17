@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, Injectable, Signal, signal } from '@angular/core';
+import { User } from '@lfx-one/shared';
 import { Client, EvaluationContext, JsonValue, OpenFeature, ProviderEvents } from '@openfeature/web-sdk';
 
 @Injectable({
@@ -19,7 +20,7 @@ export class FeatureFlagService {
    * Initialize OpenFeature client with user context
    * Call this method from app.component when user is authenticated
    */
-  public async initialize(user: any): Promise<void> {
+  public async initialize(user: User): Promise<void> {
     if (this.isInitialized()) {
       return;
     }
@@ -29,7 +30,7 @@ export class FeatureFlagService {
         kind: 'user',
         name: user.name || '',
         email: user.email || '',
-        targetingKey: user.preferred_username || user.username || user.sub || '',
+        targetingKey: user.preferred_username || user.username || user.sub,
       };
 
       await OpenFeature.setContext(userContext);
