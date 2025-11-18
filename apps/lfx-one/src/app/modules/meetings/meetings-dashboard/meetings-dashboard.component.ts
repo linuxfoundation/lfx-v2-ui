@@ -11,7 +11,7 @@ import { Meeting, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces
 import { getCurrentOrNextOccurrence } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
-import { BehaviorSubject, catchError, map, merge, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap } from 'rxjs';
 
 import { MeetingsTopBarComponent } from './components/meetings-top-bar/meetings-top-bar.component';
 
@@ -51,7 +51,7 @@ export class MeetingsDashboardComponent {
 
     // Initialize state
     this.meetingsLoading = signal<boolean>(true);
-    this.pastMeetingsLoading = signal<boolean>(true);
+    this.pastMeetingsLoading = signal<boolean>(false);
     this.refresh$ = new BehaviorSubject<void>(undefined);
     this.currentView = signal<'list' | 'calendar'>('list');
     this.searchQuery = signal<string>('');
@@ -75,22 +75,20 @@ export class MeetingsDashboardComponent {
   }
 
   private initializeUpcomingMeetings(): Signal<Meeting[]> {
-    // Convert project signal to observable to react to project changes
+    // Convert signals to observables to react to changes
     const project$ = toObservable(this.project);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      merge(
-        project$, // Triggers on project context changes
-        this.refresh$ // Triggers on manual refresh
-      ).pipe(
-        tap(() => this.meetingsLoading.set(true)),
-        switchMap(() => {
-          const project = this.project();
-          if (!project?.projectId) {
+      combineLatest([project$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([project, timeFilter]) => {
+          // Only load upcoming meetings when upcoming filter is selected
+          if (!project?.projectId || timeFilter !== 'upcoming') {
             this.meetingsLoading.set(false);
             return of([]);
           }
 
+          this.meetingsLoading.set(true);
           return this.meetingService.getMeetingsByProject(project.projectId, 100).pipe(
             map((meetings) => {
               // Sort meetings by current or next occurrence start time (earliest first)
@@ -113,10 +111,9 @@ export class MeetingsDashboardComponent {
             }),
             catchError((error) => {
               console.error('Failed to load upcoming meetings:', error);
-              this.meetingsLoading.set(false);
               return of([]);
             }),
-            tap(() => this.meetingsLoading.set(false))
+            finalize(() => this.meetingsLoading.set(false))
           );
         })
       ),
@@ -125,29 +122,26 @@ export class MeetingsDashboardComponent {
   }
 
   private initializePastMeetings(): Signal<PastMeeting[]> {
-    // Convert project signal to observable to react to project changes
+    // Convert signals to observables to react to changes
     const project$ = toObservable(this.project);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      merge(
-        project$, // Triggers on project context changes
-        this.refresh$ // Triggers on manual refresh
-      ).pipe(
-        tap(() => this.pastMeetingsLoading.set(true)),
-        switchMap(() => {
-          const project = this.project();
-          if (!project?.projectId) {
+      combineLatest([project$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([project, timeFilter]) => {
+          // Only load past meetings when past filter is selected
+          if (!project?.projectId || timeFilter !== 'past') {
             this.pastMeetingsLoading.set(false);
             return of([]);
           }
 
+          this.pastMeetingsLoading.set(true);
           return this.meetingService.getPastMeetingsByProject(project.projectId, 100).pipe(
             catchError((error) => {
               console.error('Failed to load past meetings:', error);
-              this.pastMeetingsLoading.set(false);
               return of([]);
             }),
-            tap(() => this.pastMeetingsLoading.set(false))
+            finalize(() => this.pastMeetingsLoading.set(false))
           );
         })
       ),

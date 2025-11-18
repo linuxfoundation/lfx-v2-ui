@@ -75,7 +75,7 @@
           }
         </div>
       </div>
-    } @else if (filteredMeetings().length === 0) {
+    } @else if (filteredMeetings().length === 0 && project()?.projectId) {
       <div class="flex items-center justify-center p-16 bg-white border border-dashed border-slate-300 rounded-lg">
         <div class="text-center max-w-md">
           <div class="text-slate-400 mb-4">
@@ -85,7 +85,7 @@
           <p class="text-slate-600 mt-2">Try adjusting your search or filter criteria</p>
         </div>
       </div>
-    } @else {
+    } @else if (filteredMeetings().length > 0) {
       @if (currentView() === 'list') {
         <div class="flex flex-col gap-4">
           @for (meeting of filteredMeetings(); track meeting.uid; let i = $index) {
