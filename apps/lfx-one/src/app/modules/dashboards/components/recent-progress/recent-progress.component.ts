@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
 import { PersonaService } from '@app/shared/services/persona.service';
@@ -38,8 +38,11 @@ import type { TooltipItem } from 'chart.js';
   templateUrl: './recent-progress.component.html',
   styleUrl: './recent-progress.component.scss',
 })
-export class RecentProgressComponent {
+export class RecentProgressComponent implements AfterViewInit {
   @ViewChild('progressScroll') protected progressScrollContainer!: ElementRef;
+
+  public readonly canScrollLeft = signal<boolean>(false);
+  public readonly canScrollRight = signal<boolean>(false);
 
   private readonly personaService = inject(PersonaService);
   private readonly analyticsService = inject(AnalyticsService);
@@ -90,6 +93,11 @@ export class RecentProgressComponent {
     { id: 'projectHealth', label: 'Project Health' },
   ];
 
+  public ngAfterViewInit(): void {
+    // Initialize scroll state after view is ready
+    setTimeout(() => this.onScroll(), 0);
+  }
+
   protected setFilter(filter: string): void {
     this.selectedFilter.set(filter);
     // Reset scroll position when filter changes
@@ -106,6 +114,18 @@ export class RecentProgressComponent {
   protected scrollRight(): void {
     const container = this.progressScrollContainer.nativeElement;
     container.scrollBy({ left: 300, behavior: 'smooth' });
+  }
+
+  public onScroll(): void {
+    if (!this.progressScrollContainer?.nativeElement) return;
+    const container = this.progressScrollContainer.nativeElement;
+    
+    // Check if can scroll left (not at the start)
+    this.canScrollLeft.set(container.scrollLeft > 0);
+    
+    // Check if can scroll right (not at the end)
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    this.canScrollRight.set(container.scrollLeft < maxScrollLeft - 1);
   }
 
   private transformActiveWeeksStreak(data: ActiveWeeksStreakResponse): ProgressItemWithChart {

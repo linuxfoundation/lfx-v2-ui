@@ -30,9 +30,13 @@
   }
 
   <!-- Main Content Area -->
-  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-64 px-[21px] md:px-[32px] py-[24px]" data-testid="main-content">
-    <router-outlet />
-    <!-- Footer Component -->
-    <lfx-footer class="py-8"></lfx-footer>
+  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-64" data-testid="main-content">
+    <div class="w-full max-w-[1440px] mx-auto px-8 py-8">
+      <div class="max-w-[1245px]">
+        <router-outlet />
+      </div>
+      <!-- Footer Component -->
+      <lfx-footer class="py-8"></lfx-footer>
+    </div>
   </main>
 </div>

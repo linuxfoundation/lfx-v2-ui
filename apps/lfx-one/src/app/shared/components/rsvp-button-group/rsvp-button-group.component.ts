@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ButtonComponent } from '@components/button/button.component';
 import { RsvpScopeModalComponent } from '@components/rsvp-scope-modal/rsvp-scope-modal.component';
 import { CreateMeetingRsvpRequest, Meeting, MeetingRsvp, RsvpResponse, RsvpScope, User } from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
@@ -17,7 +16,7 @@ import { catchError, combineLatest, finalize, of, switchMap, tap } from 'rxjs';
 @Component({
   selector: 'lfx-rsvp-button-group',
   standalone: true,
-  imports: [CommonModule, ButtonComponent],
+  imports: [CommonModule],
   providers: [DialogService],
   templateUrl: './rsvp-button-group.component.html',
 })

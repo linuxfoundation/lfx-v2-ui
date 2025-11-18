@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MeetingService } from '@app/shared/services/meeting.service';
@@ -21,11 +21,33 @@ import type { MeetingWithOccurrence } from '@lfx-one/shared/interfaces';
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
-export class MyMeetingsComponent {
+export class MyMeetingsComponent implements AfterViewInit {
+  @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
+
   private readonly meetingService = inject(MeetingService);
   private readonly router = inject(Router);
   protected readonly loading = signal(true);
   private readonly allMeetings = toSignal(this.meetingService.getMeetings().pipe(finalize(() => this.loading.set(false))), { initialValue: [] });
+
+  public readonly canScrollUp = signal<boolean>(false);
+  public readonly canScrollDown = signal<boolean>(false);
+
+  public ngAfterViewInit(): void {
+    // Initialize scroll state after view is ready
+    setTimeout(() => this.onScroll(), 0);
+  }
+
+  public onScroll(): void {
+    if (!this.scrollContainer?.nativeElement) return;
+    const container = this.scrollContainer.nativeElement;
+    
+    // Check if can scroll up (not at the top)
+    this.canScrollUp.set(container.scrollTop > 0);
+    
+    // Check if can scroll down (not at the bottom)
+    const maxScrollTop = container.scrollHeight - container.clientHeight;
+    this.canScrollDown.set(container.scrollTop < maxScrollTop - 1);
+  }
 
   protected readonly todayMeetings = computed<MeetingWithOccurrence[]>(() => {
     const now = new Date();

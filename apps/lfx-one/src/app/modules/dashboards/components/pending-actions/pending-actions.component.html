@@ -4,7 +4,7 @@
 <section class="flex flex-col flex-1" data-testid="dashboard-pending-actions-section">
   <!-- Header -->
   <div class="flex items-center justify-between mb-4">
-    <h2 class="font-display font-semibold text-gray-900">Pending Actions</h2>
+    <h2>Pending Actions</h2>
     <lfx-button
       label="View All"
       icon="fa-light fa-chevron-right"
@@ -17,60 +17,49 @@
   </div>
 
   <!-- Scrollable Content -->
-  <div class="flex flex-col flex-1 max-h-[28.125rem] overflow-y-auto">
-    <div class="flex flex-col gap-3" data-testid="dashboard-pending-actions-list">
+  <div class="relative flex flex-col flex-1 -my-1">
+    <!-- Top Fade Gradient -->
+    @if (canScrollUp()) {
+      <div class="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10" style="background: linear-gradient(to bottom, #f8f8f9 0%, transparent 100%);"></div>
+    }
+    
+    <!-- Bottom Fade Gradient -->
+    @if (canScrollDown()) {
+      <div class="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10" style="background: linear-gradient(to top, #f8f8f9 0%, transparent 100%);"></div>
+    }
+    
+    <div #scrollContainer class="flex flex-col flex-1 max-h-[28.125rem] overflow-y-auto px-1 -mx-1 py-1" (scroll)="onScroll()">
+      <div class="flex flex-col gap-3" data-testid="dashboard-pending-actions-list">
       @for (item of pendingActions(); track item.text) {
         <div
-          class="p-4 border rounded-lg"
+          class="p-4 rounded-lg shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.10),0px_1px_3px_0px_rgba(0,0,0,0.10)]"
           [ngClass]="{
-            'bg-amber-50 border-amber-200': item.color === 'amber',
-            'bg-blue-50 border-blue-200': item.color === 'blue',
-            'bg-green-50 border-green-200': item.color === 'green',
-            'bg-purple-50 border-purple-200': item.color === 'purple',
+            'bg-amber-50': item.color === 'amber',
+            'bg-blue-50': item.color === 'blue',
+            'bg-green-50': item.color === 'green',
+            'bg-purple-50': item.color === 'purple',
           }"
           [attr.data-testid]="'dashboard-pending-actions-item-' + item.type">
-          <!-- Header with Type and Badge -->
-          <div class="flex items-start justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <div
-                [ngClass]="{
-                  'text-amber-700': item.color === 'amber',
-                  'text-blue-700': item.color === 'blue',
-                  'text-green-700': item.color === 'green',
-                  'text-purple-700': item.color === 'purple',
-                }">
-                <i [ngClass]="[item.icon, 'w-4', 'h-4']"></i>
-              </div>
-              <span
-                class="text-xs font-medium"
-                [ngClass]="{
-                  'text-amber-700': item.color === 'amber',
-                  'text-blue-700': item.color === 'blue',
-                  'text-green-700': item.color === 'green',
-                  'text-purple-700': item.color === 'purple',
-                }">
-                {{ item.type }}
-              </span>
-            </div>
+          <!-- Header with Type Tag -->
+          <div class="flex items-start gap-2 mb-3">
             <span
-              class="inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-medium bg-white text-gray-700 border border-gray-200"
-              data-testid="dashboard-pending-actions-badge">
-              {{ item.badge }}
+              class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs"
+              [ngClass]="{
+                'bg-amber-100 text-amber-700': item.color === 'amber',
+                'bg-blue-100 text-blue-700': item.color === 'blue',
+                'bg-green-100 text-green-700': item.color === 'green',
+                'bg-purple-100 text-purple-700': item.color === 'purple',
+              }">
+              <i [ngClass]="[item.icon, 'w-4', 'h-4']"></i>
+              <span class="font-medium">{{ item.type }}</span>
             </span>
           </div>
 
           <!-- Action Text -->
           <div class="mb-4">
-            <p
-              class="text-sm font-medium"
-              [ngClass]="{
-                'text-amber-900': item.color === 'amber',
-                'text-blue-900': item.color === 'blue',
-                'text-green-900': item.color === 'green',
-                'text-purple-900': item.color === 'purple',
-              }">
+            <h3 class="text-gray-900">
               {{ item.text }}
-            </p>
+            </h3>
           </div>
 
           <!-- Action Button -->
@@ -83,6 +72,7 @@
           </button>
         </div>
       }
+      </div>
     </div>
   </div>
 </section>

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { AnalyticsService } from '@app/shared/services/analytics.service';
@@ -22,12 +22,15 @@ import { combineLatest, finalize, map, of, switchMap } from 'rxjs';
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',
 })
-export class OrganizationInvolvementComponent {
+export class OrganizationInvolvementComponent implements AfterViewInit {
   @ViewChild('carouselScroll') public carouselScrollContainer!: ElementRef;
 
   private readonly analyticsService = inject(AnalyticsService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly projectContextService = inject(ProjectContextService);
+
+  public readonly canScrollLeft = signal<boolean>(false);
+  public readonly canScrollRight = signal<boolean>(false);
 
   private readonly contributionsLoading = signal(true);
   private readonly dashboardLoading = signal(true);
@@ -49,6 +52,11 @@ export class OrganizationInvolvementComponent {
     { id: 'events', label: 'Events' },
     { id: 'education', label: 'Education' },
   ];
+
+  public ngAfterViewInit(): void {
+    // Initialize scroll state after view is ready
+    setTimeout(() => this.onScroll(), 0);
+  }
 
   public readonly primaryMetrics = computed<OrganizationInvolvementMetricWithChart[]>((): OrganizationInvolvementMetricWithChart[] => {
     const contributionsData = this.contributionsOverviewData();
@@ -119,6 +127,18 @@ export class OrganizationInvolvementComponent {
     if (!this.carouselScrollContainer?.nativeElement) return;
     const container = this.carouselScrollContainer.nativeElement;
     container.scrollBy({ left: 300, behavior: 'smooth' });
+  }
+
+  public onScroll(): void {
+    if (!this.carouselScrollContainer?.nativeElement) return;
+    const container = this.carouselScrollContainer.nativeElement;
+    
+    // Check if can scroll left (not at the start)
+    this.canScrollLeft.set(container.scrollLeft > 0);
+    
+    // Check if can scroll right (not at the end)
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    this.canScrollRight.set(container.scrollLeft < maxScrollLeft - 1);
   }
 
   private initializeContributionsOverviewData() {

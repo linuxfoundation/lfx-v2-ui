@@ -2,57 +2,70 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <!-- RSVP Container -->
-<div class="relative flex flex-col gap-2 p-3 w-full rounded-md bg-blue-50" [attr.data-testid]="'meeting-rsvp-container'">
-  <!-- Border overlay -->
-  <div aria-hidden="true" class="absolute inset-0 border border-blue-500 rounded-md pointer-events-none"></div>
+<div 
+  class="relative flex flex-col gap-2 p-[12px] w-full rounded-[6px] border-solid"
+  [ngClass]="{
+    'bg-slate-50 border border-slate-200': selectedResponse(),
+    'bg-[#f8fbff] border-[0.5px] border-[#009aff]': !selectedResponse()
+  }"
+  [attr.data-testid]="'meeting-rsvp-container'">
 
   <!-- Header (conditional) -->
   @if (showHeader()) {
     <div class="flex items-center gap-2" [attr.data-testid]="'meeting-rsvp-header'">
       <i class="fa-light fa-calendar-check text-gray-500 text-sm"></i>
-      <h3 class="text-sm text-gray-500">RSVP for This Meeting</h3>
+      <h3 class="text-sm text-gray-500">RSVP</h3>
     </div>
   }
 
   <!-- RSVP Buttons -->
   <div class="flex gap-2" [attr.data-testid]="'meeting-rsvp-buttons'">
     <!-- Yes Button -->
-    <lfx-button
-      class="w-full"
-      label="Yes"
-      icon="fa-light fa-check"
-      [severity]="acceptedSeverity()"
-      size="small"
-      styleClass="w-full"
+    <button
+      type="button"
+      class="flex-1 h-[28px] rounded-[3.5px] border border-solid flex items-center justify-center gap-1.5 transition-colors font-medium text-[10.5px] leading-[14px] tracking-[0.1846px]"
+      [ngClass]="{
+        'bg-blue-50 border-[#0094ff] text-neutral-950': selectedResponse() !== 'accepted' && !isLoading(),
+        'bg-[#0094ff] border-[#0094ff] text-white hover:bg-[#0084e0]': selectedResponse() === 'accepted' && !isLoading(),
+        'bg-gray-200 border-[rgba(0,0,0,0.1)] text-neutral-950 opacity-60 cursor-not-allowed': isLoading()
+      }"
       [disabled]="isLoading()"
-      (onClick)="handleRsvpClick('accepted')"
+      (click)="handleRsvpClick('accepted')"
       [attr.data-testid]="'meeting-rsvp-button-yes'">
-    </lfx-button>
+      <i class="fa-light fa-check text-[10.5px]"></i>
+      <span>Yes</span>
+    </button>
 
     <!-- No Button -->
-    <lfx-button
-      class="w-full"
-      label="No"
-      icon="fa-light fa-xmark"
-      [severity]="declinedSeverity()"
-      size="small"
-      styleClass="w-full"
+    <button
+      type="button"
+      class="flex-1 h-[28px] rounded-[3.5px] border border-solid flex items-center justify-center gap-1.5 transition-colors font-medium text-[10.5px] leading-[14px] tracking-[0.1846px]"
+      [ngClass]="{
+        'bg-red-50 border-[#dc2626] text-neutral-950': selectedResponse() !== 'declined' && !isLoading(),
+        'bg-[#dc2626] border-[#dc2626] text-white hover:bg-[#c72020]': selectedResponse() === 'declined' && !isLoading(),
+        'bg-gray-200 border-[rgba(0,0,0,0.1)] text-neutral-950 opacity-60 cursor-not-allowed': isLoading()
+      }"
       [disabled]="isLoading()"
-      (onClick)="handleRsvpClick('declined')"
+      (click)="handleRsvpClick('declined')"
       [attr.data-testid]="'meeting-rsvp-button-no'">
-    </lfx-button>
+      <i class="fa-light fa-xmark text-[10.5px]"></i>
+      <span>No</span>
+    </button>
 
     <!-- Maybe Button -->
-    <lfx-button
-      class="w-full"
-      label="Maybe"
-      icon="fa-light fa-question"
-      [severity]="maybeSeverity()"
-      size="small"
-      styleClass="w-full"
+    <button
+      type="button"
+      class="flex-1 h-[28px] rounded-[3.5px] border border-solid flex items-center justify-center gap-1.5 transition-colors font-medium text-[10.5px] leading-[14px] tracking-[0.1846px]"
+      [ngClass]="{
+        'bg-amber-50 border-[#f59e0b] text-neutral-950': selectedResponse() !== 'maybe' && !isLoading(),
+        'bg-[#f59e0b] border-[#f59e0b] text-white hover:bg-[#e08e00]': selectedResponse() === 'maybe' && !isLoading(),
+        'bg-gray-200 border-[rgba(0,0,0,0.1)] text-neutral-950 opacity-60 cursor-not-allowed': isLoading()
+      }"
       [disabled]="isLoading()"
-      (onClick)="handleRsvpClick('maybe')"
+      (click)="handleRsvpClick('maybe')"
       [attr.data-testid]="'meeting-rsvp-button-maybe'">
-    </lfx-button>
+      <i class="fa-light fa-question text-[10.5px]"></i>
+      <span>Maybe</span>
+    </button>
   </div>
 </div>
