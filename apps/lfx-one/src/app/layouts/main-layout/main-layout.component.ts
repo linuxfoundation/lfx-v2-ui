@@ -34,7 +34,7 @@ export class MainLayoutComponent {
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
 
   // Feature flags
-  private readonly showProjectsInSidebar = this.featureFlagService.getBooleanFlag('sidebar-projects', true);
+  private readonly showProjectsInSidebar = this.featureFlagService.getBooleanFlag('sidebar-projects', false);
 
   // Base sidebar navigation items - matching React NavigationSidebar design
   private readonly baseSidebarItems: SidebarMenuItem[] = [
