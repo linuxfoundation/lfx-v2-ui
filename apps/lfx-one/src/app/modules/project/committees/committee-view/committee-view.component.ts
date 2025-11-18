@@ -152,7 +152,7 @@ export class CommitteeViewComponent {
                 summary: 'Error',
                 detail: 'Failed to load committee',
               });
-              this.router.navigate(['/project', this.project()!.slug, 'committees']);
+              this.router.navigate(['/', 'groups']);
               return throwError(() => new Error('Failed to load committee'));
             })
           );
