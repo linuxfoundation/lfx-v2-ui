@@ -275,20 +275,25 @@
             [additionalRegistrantsCount]="additionalRegistrantsCount()"
             (addParticipant)="openAddRegistrantModal()">
           </lfx-meeting-rsvp-details>
+        } @else if (!pastMeeting()) {
+          <!-- Show RSVP Selection for authenticated non-organizers (upcoming meetings only) -->
+          <lfx-rsvp-button-group [meeting]="meeting()" [occurrenceId]="occurrence()?.occurrence_id"> </lfx-rsvp-button-group>
         } @else if (pastMeeting() && !meeting().organizer) {
           <!-- Show Recording and AI Summary buttons for past meetings (non-organizers) -->
           <div class="flex flex-col gap-2">
-            <lfx-button
-              class="w-full"
-              icon="fa-light fa-play"
-              label="See Recording"
-              size="small"
-              severity="secondary"
-              styleClass="w-full"
-              data-testid="see-recording-button"
-              (click)="openRecordingModal()">
-            </lfx-button>
-            @if (hasSummary()) {
+            @if (hasRecording()) {
+              <lfx-button
+                class="w-full"
+                icon="fa-light fa-play"
+                label="See Recording"
+                size="small"
+                severity="secondary"
+                styleClass="w-full"
+                data-testid="see-recording-button"
+                (click)="openRecordingModal()">
+              </lfx-button>
+            }
+            @if (hasSummary() && summaryApproved()) {
               <lfx-button
                 class="w-full"
                 icon="fa-light fa-sparkles"
@@ -299,22 +304,8 @@
                 data-testid="see-ai-summary-button"
                 (click)="openSummaryModal()">
               </lfx-button>
-            } @else {
-              <lfx-button
-                class="w-full"
-                icon="fa-light fa-sparkles"
-                label="AI Summary Pending"
-                size="small"
-                severity="secondary"
-                styleClass="w-full"
-                [disabled]="true"
-                data-testid="ai-summary-pending-button">
-              </lfx-button>
             }
           </div>
-        } @else {
-          <!-- Show RSVP Selection for authenticated non-organizers (upcoming meetings only) -->
-          <lfx-rsvp-button-group [meeting]="meeting()" [occurrenceId]="occurrence()?.occurrence_id"> </lfx-rsvp-button-group>
         }
 
         <!-- Action Buttons for People Column -->

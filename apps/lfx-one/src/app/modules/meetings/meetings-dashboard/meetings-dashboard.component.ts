@@ -51,7 +51,7 @@ export class MeetingsDashboardComponent {
 
     // Initialize state
     this.meetingsLoading = signal<boolean>(true);
-    this.pastMeetingsLoading = signal<boolean>(false);
+    this.pastMeetingsLoading = signal<boolean>(true);
     this.refresh$ = new BehaviorSubject<void>(undefined);
     this.currentView = signal<'list' | 'calendar'>('list');
     this.searchQuery = signal<string>('');
@@ -75,7 +75,7 @@ export class MeetingsDashboardComponent {
   }
 
   private initializeUpcomingMeetings(): Signal<Meeting[]> {
-    // Convert signals to observables to react to changes
+    // Convert project signal to observable to react to project changes
     const project$ = toObservable(this.project);
     const timeFilter$ = toObservable(this.timeFilter);
 
@@ -111,6 +111,7 @@ export class MeetingsDashboardComponent {
             }),
             catchError((error) => {
               console.error('Failed to load upcoming meetings:', error);
+              this.meetingsLoading.set(false);
               return of([]);
             }),
             finalize(() => this.meetingsLoading.set(false))
@@ -139,6 +140,7 @@ export class MeetingsDashboardComponent {
           return this.meetingService.getPastMeetingsByProject(project.projectId, 100).pipe(
             catchError((error) => {
               console.error('Failed to load past meetings:', error);
+              this.pastMeetingsLoading.set(false);
               return of([]);
             }),
             finalize(() => this.pastMeetingsLoading.set(false))
