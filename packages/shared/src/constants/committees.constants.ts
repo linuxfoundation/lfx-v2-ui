@@ -117,10 +117,10 @@ export const COMMITTEE_TYPE_COLORS = {
   Committers: 'bg-blue-100 text-blue-800',
 
   // Marketing and outreach
-  'Marketing Oversight Committee/Marketing Advisory Committee': 'bg-green-100 text-green-800',
-  'Marketing Committee/Sub Committee': 'bg-green-100 text-green-800',
-  'Marketing Mailing List': 'bg-green-100 text-green-800',
-  Ambassador: 'bg-green-100 text-green-800',
+  'Marketing Oversight Committee/Marketing Advisory Committee': 'bg-pink-100 text-pink-800',
+  'Marketing Committee/Sub Committee': 'bg-pink-100 text-pink-800',
+  'Marketing Mailing List': 'bg-pink-100 text-pink-800',
+  Ambassador: 'bg-pink-100 text-pink-800',
 
   // Finance
   'Finance Committee': 'bg-emerald-100 text-emerald-800',

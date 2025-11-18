@@ -13,6 +13,7 @@ import { ToggleComponent } from '@components/toggle/toggle.component';
 import { COMMITTEE_CATEGORIES, COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
+import { ProjectContextService } from '@services/project-context.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { map } from 'rxjs';
 
@@ -25,6 +26,7 @@ import { map } from 'rxjs';
 })
 export class CommitteeFormComponent {
   private readonly committeeService = inject(CommitteeService);
+  private readonly projectContextService = inject(ProjectContextService);
 
   // Signal inputs
   public form = input.required<FormGroup>();
@@ -53,8 +55,11 @@ export class CommitteeFormComponent {
   }
 
   private initializeParentCommitteeOptions(): Signal<{ label: string; value: string | null }[]> {
+    // Get project ID from context (project or foundation)
+    const projectId = this.projectContextService.getProjectId() || this.projectContextService.getFoundationId();
+
     const committees = toSignal(
-      this.committeeService.getCommittees().pipe(
+      this.committeeService.getCommitteesByProject(projectId).pipe(
         map((committees: Committee[]) => {
           // Filter to only top-level committees (no parent_uid)
           const topLevelCommittees = committees.filter((committee) => !committee.parent_uid);

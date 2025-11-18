@@ -6,7 +6,7 @@
     <table class="min-w-full" data-testid="committee-dashboard-table">
       <thead>
         <tr>
-          <th class="px-3 py-3 text-left text-xs font-medium text-[#62748e] w-[180px]">Group</th>
+          <th class="px-3 py-3 text-left text-xs font-medium text-[#62748e] w-[180px]">{{ committeeLabel() }}</th>
           <th class="px-3 py-3 text-left text-xs font-medium text-[#62748e] min-w-[300px]">Description</th>
           <th class="px-3 py-3 text-left text-xs font-medium text-[#62748e] w-[80px]">Members</th>
           <th class="px-3 py-3 text-left text-xs font-medium text-[#62748e] w-[80px]">Voting</th>
@@ -68,7 +68,7 @@
                     styleClass="h-8 w-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     (onClick)="onEditCommittee(committee)"
                     [attr.data-testid]="'committee-edit-' + committee.uid"
-                    [pTooltip]="'Edit Group'"
+                    [pTooltip]="'Edit ' + committeeLabel"
                     tooltipPosition="top">
                   </lfx-button>
                   <lfx-button
@@ -80,7 +80,7 @@
                     (onClick)="onDeleteCommittee(committee)"
                     [disabled]="isDeleting()"
                     [attr.data-testid]="'committee-delete-' + committee.uid"
-                    [pTooltip]="'Delete Group'"
+                    [pTooltip]="'Delete ' + committeeLabel"
                     tooltipPosition="top">
                   </lfx-button>
                 </div>
