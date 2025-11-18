@@ -180,10 +180,7 @@ export class MeetingManageComponent {
   }
 
   public onCancel(): void {
-    const project = this.projectService.project();
-    if (project?.slug) {
-      this.router.navigate(['/project', project.slug, 'meetings']);
-    }
+    this.router.navigate(['/', 'meetings']);
   }
 
   public onSubmit(): void {
@@ -268,7 +265,7 @@ export class MeetingManageComponent {
           this.showRegistrantOperationToast(totalSuccess, totalFailed, totalOperations);
 
           if (!this.isEditMode()) {
-            this.router.navigate(['/project', this.projectService.project()?.slug, 'meetings']);
+            this.router.navigate(['/', 'meetings']);
           } else {
             this.registrantUpdatesRefresh$.next();
             // Reset registrant updates only if there were some successes

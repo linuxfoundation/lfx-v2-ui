@@ -15,7 +15,7 @@
     <div class="w-full space-y-6">
       <!-- Page Title with Create Group Button -->
       <div class="flex items-center justify-between">
-        <h1 class="font-['Inter'] text-xl font-semibold">{{ committeeLabel }}</h1>
+        <h1 class="font-inter text-xl font-semibold">{{ committeeLabelPlural }}</h1>
         @if (canCreateGroup()) {
           <lfx-button
             [label]="'Create ' + committeeLabel"

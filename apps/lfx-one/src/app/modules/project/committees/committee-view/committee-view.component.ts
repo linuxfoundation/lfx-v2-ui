@@ -75,10 +75,7 @@ export class CommitteeViewComponent {
   }
 
   public goBack(): void {
-    const project = this.project();
-    if (project) {
-      this.router.navigate(['/project', project.slug, 'committees']);
-    }
+    this.router.navigate(['/', 'groups']);
   }
 
   public toggleActionMenu(event: Event, menuComponent: MenuComponent): void {
