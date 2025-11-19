@@ -36,7 +36,7 @@
             </td>
             <td class="px-3 py-3 text-xs min-w-[300px]">{{ committee.description || '-' }}</td>
             <td class="px-3 py-3 w-[140px]">
-              <a [routerLink]="['/groups', committee.uid]" class="text-xs text-[#009aff] hover:text-[#0080dd] hover:underline cursor-pointer">
+              <a [routerLink]="['/groups', committee.uid]" class="text-xs text-brand-500 hover:text-brand-600 hover:underline cursor-pointer">
                 {{ committee.total_members || 0 }}
               </a>
             </td>
