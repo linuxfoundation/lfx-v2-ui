@@ -11,7 +11,7 @@
   <div class="flex flex-col flex-1 max-h-[28.125rem] overflow-y-auto">
     @if (pendingActions().length > 0) {
       <div class="flex flex-col gap-3" data-testid="dashboard-pending-actions-list">
-        @for (item of pendingActions(); track item.text) {
+        @for (item of pendingActions(); track $index) {
           <div
             class="p-4 border rounded-lg"
             [ngClass]="{
