@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpParams } from '@angular/common/http';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { afterNextRender, Component, computed, inject, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -62,6 +62,7 @@ export class MeetingJoinComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // Class variables with types
   public authenticated: WritableSignal<boolean>;
@@ -74,10 +75,10 @@ export class MeetingJoinComponent {
   public returnTo: Signal<string | undefined>;
   public password: WritableSignal<string | null> = signal<string | null>(null);
   public canJoinMeeting: Signal<boolean>;
-  public fetchedJoinUrl: Signal<string | undefined>;
+  public fetchedJoinUrl!: Signal<string | undefined>;
   public isLoadingJoinUrl: WritableSignal<boolean> = signal<boolean>(false);
   public joinUrlError: WritableSignal<string | null> = signal<string | null>(null);
-  public attachments: Signal<MeetingAttachment[]>;
+  public attachments!: Signal<MeetingAttachment[]>;
   public messageSeverity: Signal<'success' | 'info' | 'warn'>;
   public messageIcon: Signal<string>;
   public alertMessage: Signal<string>;
@@ -97,12 +98,22 @@ export class MeetingJoinComponent {
     this.meetingTypeBadge = this.initializeMeetingTypeBadge();
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
-    this.fetchedJoinUrl = this.initializeFetchedJoinUrl();
-    this.attachments = this.initializeAttachments();
     this.messageSeverity = this.initializeMessageSeverity();
     this.messageIcon = this.initializeMessageIcon();
     this.alertMessage = this.initializeAlertMessage();
-    this.initializeAutoJoin();
+
+    // Defer async operations until after hydration to prevent mismatch
+    if (isPlatformBrowser(this.platformId)) {
+      afterNextRender(() => {
+        this.fetchedJoinUrl = this.initializeFetchedJoinUrl();
+        this.attachments = this.initializeAttachments();
+        this.initializeAutoJoin();
+      });
+    } else {
+      // For SSR, initialize with empty/default values
+      this.fetchedJoinUrl = signal(undefined);
+      this.attachments = signal([]);
+    }
   }
 
   public handleCopyLink(): void {

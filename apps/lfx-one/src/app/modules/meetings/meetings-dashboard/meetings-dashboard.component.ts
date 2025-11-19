@@ -83,13 +83,13 @@ export class MeetingsDashboardComponent {
       combineLatest([project$, timeFilter$, this.refresh$]).pipe(
         switchMap(([project, timeFilter]) => {
           // Only load upcoming meetings when upcoming filter is selected
-          if (!project?.projectId || timeFilter !== 'upcoming') {
+          if (!project?.uid || timeFilter !== 'upcoming') {
             this.meetingsLoading.set(false);
             return of([]);
           }
 
           this.meetingsLoading.set(true);
-          return this.meetingService.getMeetingsByProject(project.projectId, 100).pipe(
+          return this.meetingService.getMeetingsByProject(project.uid, 100).pipe(
             map((meetings) => {
               // Sort meetings by current or next occurrence start time (earliest first)
               return meetings.sort((a, b) => {
@@ -131,13 +131,13 @@ export class MeetingsDashboardComponent {
       combineLatest([project$, timeFilter$, this.refresh$]).pipe(
         switchMap(([project, timeFilter]) => {
           // Only load past meetings when past filter is selected
-          if (!project?.projectId || timeFilter !== 'past') {
+          if (!project?.uid || timeFilter !== 'past') {
             this.pastMeetingsLoading.set(false);
             return of([]);
           }
 
           this.pastMeetingsLoading.set(true);
-          return this.meetingService.getPastMeetingsByProject(project.projectId, 100).pipe(
+          return this.meetingService.getPastMeetingsByProject(project.uid, 100).pipe(
             catchError((error) => {
               console.error('Failed to load past meetings:', error);
               this.pastMeetingsLoading.set(false);
