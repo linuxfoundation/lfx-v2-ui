@@ -62,15 +62,15 @@ export class MainLayoutComponent {
 
   // Computed sidebar items based on feature flags
   protected readonly sidebarItems = computed(() => {
-    const items = [...this.baseSidebarItems];
+    let items = [...this.baseSidebarItems];
 
     // Filter out Projects if feature flag is disabled
     if (!this.showProjectsInSidebar()) {
-      return items.filter((item) => item.label !== 'Projects');
+      items = items.filter((item) => item.label !== 'Projects');
     }
 
     if (this.personaService.currentPersona() === 'board-member') {
-      return items.filter((item) => item.label !== COMMITTEE_LABEL.plural);
+      items = items.filter((item) => item.label !== COMMITTEE_LABEL.plural);
     }
 
     return items;
@@ -87,6 +87,11 @@ export class MainLayoutComponent {
       label: 'Profile',
       icon: 'fa-light fa-user',
       routerLink: '/profile',
+    },
+    {
+      label: 'Logout',
+      icon: 'fa-light fa-sign-out',
+      url: '/logout',
     },
   ];
 

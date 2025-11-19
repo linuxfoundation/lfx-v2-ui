@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { PersonaType } from './persona.interface';
+
 /**
  * User profile information from Auth0/LFX SSO
  * @description Complete user data structure from authentication provider
@@ -51,6 +53,8 @@ export interface AuthContext {
   authenticated: boolean;
   /** User profile data (null if not authenticated) */
   user: User | null;
+  /** User's persona type (auto-determined from Board committee membership, null if not a Board member) */
+  persona?: PersonaType | null;
 }
 
 /**

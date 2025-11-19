@@ -26,6 +26,7 @@ import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
+import { fetchUserPersona } from './utils/persona-helper';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -219,6 +220,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
   const auth: AuthContext = {
     authenticated: false,
     user: null,
+    persona: null,
   };
 
   if (req.oidc?.isAuthenticated() && !req.oidc?.accessToken?.isExpired()) {
@@ -242,6 +244,20 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
 
       res.oidc.logout();
       return;
+    }
+
+    // Fetch user persona based on committee membership (non-critical, don't block SSR)
+    try {
+      auth.persona = await fetchUserPersona(req);
+    } catch (error) {
+      req.log.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          path: req.path,
+        },
+        'Failed to fetch user persona, continuing with null persona'
+      );
+      auth.persona = null;
     }
   }
 
