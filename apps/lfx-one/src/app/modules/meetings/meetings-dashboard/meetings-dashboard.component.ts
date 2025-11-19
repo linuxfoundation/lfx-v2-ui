@@ -111,7 +111,6 @@ export class MeetingsDashboardComponent {
             }),
             catchError((error) => {
               console.error('Failed to load upcoming meetings:', error);
-              this.meetingsLoading.set(false);
               return of([]);
             }),
             finalize(() => this.meetingsLoading.set(false))
@@ -140,7 +139,6 @@ export class MeetingsDashboardComponent {
           return this.meetingService.getPastMeetingsByProject(project.uid, 100).pipe(
             catchError((error) => {
               console.error('Failed to load past meetings:', error);
-              this.pastMeetingsLoading.set(false);
               return of([]);
             }),
             finalize(() => this.pastMeetingsLoading.set(false))
