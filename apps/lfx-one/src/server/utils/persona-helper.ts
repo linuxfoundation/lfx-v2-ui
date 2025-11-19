@@ -14,6 +14,7 @@ import { getUsernameFromAuth } from './auth-helper';
 const COMMITTEE_CATEGORY_TO_PERSONA: Record<string, PersonaType> = {
   Board: 'board-member',
   Maintainers: 'maintainer',
+  Committers: 'core-developer',
 };
 
 /**

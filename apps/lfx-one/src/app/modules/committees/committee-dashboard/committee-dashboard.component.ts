@@ -53,7 +53,6 @@ export class CommitteeDashboardComponent {
 
   // Permission signals
   public isMaintainer: Signal<boolean>;
-  public isNonFoundationProjectSelected: Signal<boolean>;
   public canCreateGroup: Signal<boolean>;
 
   // Statistics calculations
@@ -68,7 +67,6 @@ export class CommitteeDashboardComponent {
 
     // Initialize permission checks
     this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
-    this.isNonFoundationProjectSelected = computed(() => this.projectContextService.selectedProject() !== null);
     this.canCreateGroup = computed(() => this.isMaintainer());
 
     // Initialize state

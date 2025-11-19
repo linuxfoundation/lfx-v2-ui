@@ -247,18 +247,8 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Fetch user persona based on committee membership (non-critical, don't block SSR)
-    try {
-      auth.persona = await fetchUserPersona(req);
-    } catch (error) {
-      req.log.warn(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          path: req.path,
-        },
-        'Failed to fetch user persona, continuing with null persona'
-      );
-      auth.persona = null;
-    }
+    // Note: fetchUserPersona handles errors internally and returns null on failure
+    auth.persona = await fetchUserPersona(req);
   }
 
   angularApp

@@ -380,7 +380,7 @@ export class CommitteeService {
    * @param req - Express request object
    * @param username - Username to filter by
    * @param userEmail - User email to filter by (as fallback)
-   * @param category - Committee category to filter (e.g., 'Board', 'Technical', 'Governance')
+   * @param category - Committee category to filter (currently supports: 'Board', 'Maintainers')
    */
   public async getCommitteeMembersByCategory(req: Request, username: string, userEmail: string, category: string): Promise<CommitteeMember[]> {
     const params = {
@@ -402,7 +402,7 @@ export class CommitteeService {
       .map((resource) => resource.data)
       .filter((member) => {
         // Match by username or email
-        return member.username === username || (userEmail && member.email === userEmail);
+        return member.username === username || (userEmail && member.email.toLowerCase() === userEmail.toLowerCase());
       });
 
     req.log.info(

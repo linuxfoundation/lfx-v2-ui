@@ -53,7 +53,7 @@ export interface AuthContext {
   authenticated: boolean;
   /** User profile data (null if not authenticated) */
   user: User | null;
-  /** User's persona type (auto-determined from Board committee membership, null if not a Board member) */
+  /** User's persona type (auto-determined from committee memberships, null if not a member of any committees) */
   persona?: PersonaType | null;
 }
 
