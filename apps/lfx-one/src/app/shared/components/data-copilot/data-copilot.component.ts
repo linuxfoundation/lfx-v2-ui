@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { afterNextRender, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { AccountContextService } from '@app/shared/services/account-context.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
@@ -20,49 +20,45 @@ export class DataCopilotComponent {
   private readonly accountContextService = inject(AccountContextService);
   private readonly projectContextService = inject(ProjectContextService);
 
-  // Computed values from context services
-  private readonly organizationId = computed(() => this.accountContextService.selectedAccount().accountId);
-  private readonly organizationName = computed(() => this.accountContextService.selectedAccount().accountName);
+  // Computed values from context services with null safety
+  private readonly organizationId = computed(() => this.accountContextService.selectedAccount()?.accountId ?? '');
+  private readonly organizationName = computed(() => this.accountContextService.selectedAccount()?.accountName ?? '');
   private readonly projectContext = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
-  private readonly projectSlug = computed(() => this.projectContext()?.slug || '');
-  private readonly projectName = computed(() => this.projectContext()?.name || '');
+  private readonly projectSlug = computed(() => this.projectContext()?.slug ?? '');
+  private readonly projectName = computed(() => this.projectContext()?.name ?? '');
 
   // Drawer visibility control
   public readonly visible = signal<boolean>(false);
 
   private iframeCreated = false;
 
-  public constructor() {
-    afterNextRender(() => {
-      // Create iframe only when drawer is visible and hasn't been created yet
-      if (this.visible() && !this.iframeCreated) {
-        this.createIframe();
-      }
-    });
-  }
-
   /**
    * Open the drawer
    */
   protected openDrawer(): void {
     this.visible.set(true);
+  }
 
-    // Create iframe after drawer opens if not already created
+  /**
+   * Handle drawer show event (after animation completes)
+   */
+  protected onShow(): void {
+    this.visible.set(true);
+
+    // Create iframe when drawer is fully visible
     if (!this.iframeCreated) {
-      setTimeout(() => this.createIframe(), 100);
+      this.createIframe();
     }
   }
 
   /**
-   * Handle drawer visibility change
+   * Handle drawer hide event
    */
-  protected onVisibleChange(isVisible: boolean): void {
-    this.visible.set(isVisible);
+  protected onHide(): void {
+    this.visible.set(false);
 
     // Destroy iframe when drawer is closed
-    if (!isVisible) {
-      this.destroyIframe();
-    }
+    this.destroyIframe();
   }
 
   /**

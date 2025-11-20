@@ -12,11 +12,12 @@
 
 <!-- Drawer -->
 <p-drawer
-  [(visible)]="visible"
+  [visible]="visible()"
   header="LFX Data Copilot"
   position="right"
   styleClass="md:w-1/2 w-full"
-  (onHide)="onVisibleChange(false)"
+  (onShow)="onShow()"
+  (onHide)="onHide()"
   data-testid="data-copilot-drawer">
   <div #iframeContainer class="iframe-container" data-testid="data-copilot-iframe-container"></div>
 </p-drawer>
