@@ -128,7 +128,7 @@ export class CommitteeService {
           {
             operation: 'create_committee',
             committee_id: newCommittee.uid,
-            error: error instanceof Error ? error.message : error,
+            err: error,
           },
           'Failed to update committee settings, but committee was created successfully'
         );
@@ -179,7 +179,7 @@ export class CommitteeService {
           {
             operation: 'update_committee',
             committee_id: committeeId,
-            error: error instanceof Error ? error.message : error,
+            err: error,
           },
           'Failed to update committee settings, but committee was updated successfully'
         );

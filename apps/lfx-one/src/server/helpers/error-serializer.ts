@@ -13,7 +13,7 @@ export const customErrorSerializer = (err: any) => {
 
   const serialized: any = {
     type: err.constructor?.name || err.name || 'Error',
-    message: err.message,
+    message: err.message || String(err),
   };
 
   // Add common error properties if they exist

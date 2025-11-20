@@ -293,7 +293,7 @@ export class MeetingService {
             {
               operation: 'get_meeting_registrants',
               meeting_uid: meetingUid,
-              error: error instanceof Error ? error.message : error,
+              err: error,
             },
             'Failed to fetch RSVPs for registrants, returning registrants without RSVP data'
           );
@@ -315,7 +315,7 @@ export class MeetingService {
         {
           operation: 'get_meeting_registrants',
           meeting_uid: meetingUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to fetch meeting registrants'
       );
@@ -367,7 +367,7 @@ export class MeetingService {
         {
           operation: 'add_meeting_registrant',
           meeting_uid: registrantData.meeting_uid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to create meeting registrant'
       );
@@ -422,7 +422,7 @@ export class MeetingService {
           operation: 'update_meeting_registrant',
           meeting_uid: meetingUid,
           registrant_uid: registrantUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to update meeting registrant'
       );
@@ -460,7 +460,7 @@ export class MeetingService {
           operation: 'delete_meeting_registrant',
           meeting_uid: meetingUid,
           registrant_uid: registrantUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to delete meeting registrant'
       );
@@ -490,7 +490,7 @@ export class MeetingService {
           operation: 'resend_meeting_invitation',
           meeting_uid: meetingUid,
           registrant_id: registrantId,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to resend meeting invitation'
       );
@@ -584,7 +584,7 @@ export class MeetingService {
         {
           operation: 'get_past_meeting_recording',
           past_meeting_uid: pastMeetingUid,
-          error: error instanceof Error ? error.message : String(error),
+          err: error,
         },
         'Failed to retrieve past meeting recording'
       );
@@ -640,7 +640,7 @@ export class MeetingService {
         {
           operation: 'get_past_meeting_summary',
           past_meeting_uid: pastMeetingUid,
-          error: error instanceof Error ? error.message : String(error),
+          err: error,
         },
         'Failed to retrieve past meeting summary'
       );
@@ -697,7 +697,7 @@ export class MeetingService {
           operation: 'update_past_meeting_summary',
           past_meeting_uid: pastMeetingUid,
           summary_uid: summaryUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to update past meeting summary'
       );
@@ -800,7 +800,7 @@ export class MeetingService {
           operation: 'get_meeting_rsvp_by_username',
           meeting_uid: meetingUid,
           occurrence_id: occurrenceId,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to get meeting RSVP by username'
       );
@@ -841,7 +841,7 @@ export class MeetingService {
         {
           operation: 'get_meeting_rsvps',
           meeting_uid: meetingUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to get meeting RSVPs'
       );
@@ -893,7 +893,7 @@ export class MeetingService {
         {
           operation: 'create_meeting_attachment',
           meeting_uid: meetingUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to create meeting attachment'
       );
@@ -939,7 +939,7 @@ export class MeetingService {
           operation: 'get_meeting_attachment',
           meeting_uid: meetingUid,
           attachment_uid: attachmentUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to fetch meeting attachment'
       );
@@ -981,7 +981,7 @@ export class MeetingService {
           operation: 'delete_meeting_attachment',
           meeting_uid: meetingUid,
           attachment_uid: attachmentUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to delete meeting attachment'
       );
@@ -1023,7 +1023,7 @@ export class MeetingService {
           operation: 'get_meeting_attachment_metadata',
           meeting_uid: meetingUid,
           attachment_uid: attachmentUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to fetch meeting attachment metadata'
       );
@@ -1079,7 +1079,7 @@ export class MeetingService {
         {
           operation: 'get_meeting_attachments',
           meeting_uid: meetingUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to get meeting attachments'
       );
@@ -1135,7 +1135,7 @@ export class MeetingService {
         {
           operation: 'get_past_meeting_attachments',
           past_meeting_uid: pastMeetingUid,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Failed to get past meeting attachments'
       );
@@ -1162,10 +1162,7 @@ export class MeetingService {
           const committee = await this.committeeService.getCommitteeById(req, uid);
           return { uid: committee.uid, name: committee.name };
         } catch (error) {
-          req.log.warn(
-            { operation: 'get_meeting_committees', committee_uid: uid, error: error instanceof Error ? error.message : String(error) },
-            'Committee enrichment failed; continuing without name'
-          );
+          req.log.warn({ operation: 'get_meeting_committees', committee_uid: uid, err: error }, 'Committee enrichment failed; continuing without name');
           return { uid, name: undefined };
         }
       })

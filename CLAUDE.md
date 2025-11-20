@@ -100,7 +100,7 @@ lfx-v2-ui/
 - Authentication is handled by Auth0/Authelia with express-openid-connect middleware
 - **Logging System**: Uses Pino for structured JSON logs with sensitive data redaction
 - **Logger Helper Pattern**: All controller functions must use Logger helper methods:
-  - `Logger.start(req, 'operation_name', metadata)` - Returns startTime, logs at DEBUG
+  - `Logger.start(req, 'operation_name', metadata)` - Returns startTime, logs at INFO
   - `Logger.success(req, 'operation_name', startTime, metadata)` - Logs at INFO
   - `Logger.error(req, 'operation_name', startTime, error, metadata)` - Logs at ERROR with 'err' field
   - `Logger.warning(req, 'operation_name', message, metadata)` - Logs at WARN

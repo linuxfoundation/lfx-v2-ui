@@ -140,7 +140,7 @@ export class UserService {
       req.log.error(
         {
           username: updates.username,
-          error: error instanceof Error ? error.message : error,
+          err: error,
         },
         'Error in user metadata update service'
       );
@@ -481,7 +481,7 @@ export class UserService {
     } catch (error) {
       serverLogger.error(
         {
-          error: error instanceof Error ? error.message : error,
+          err: error,
           username: request.username,
         },
         'Failed to update user metadata via NATS'

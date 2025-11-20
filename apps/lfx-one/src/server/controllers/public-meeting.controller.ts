@@ -117,7 +117,7 @@ export class PublicMeetingController {
           // If organizer check fails, log but continue with organizer = false
           req.log.warn(
             {
-              error: error instanceof Error ? error.message : error,
+              err: error,
               meeting_uid: id,
             },
             'Failed to check organizer status, continuing with organizer = false'
@@ -311,7 +311,7 @@ export class PublicMeetingController {
       Logger.warning(req, 'handle_join_url_for_public_meeting', 'Failed to fetch join URL, continuing without it', {
         meeting_uid: id,
         has_token: !!req.bearerToken,
-        error: error instanceof Error ? error.message : error,
+        err: error,
       });
     }
   }

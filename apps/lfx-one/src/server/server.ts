@@ -249,7 +249,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       // If userinfo fetch fails, fall back to basic user info from token
       req.log.warn(
         {
-          error: error instanceof Error ? error.message : String(error),
+          err: error,
           path: req.path,
         },
         'Failed to fetch user info, using basic user data'
