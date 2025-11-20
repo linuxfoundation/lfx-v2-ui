@@ -4,6 +4,7 @@
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { ButtonComponent } from '@app/shared/components/button/button.component';
 import { AccountContextService } from '@app/shared/services/account-context.service';
+import { FeatureFlagService } from '@app/shared/services/feature-flag.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
 
@@ -19,6 +20,10 @@ export class DataCopilotComponent {
 
   private readonly accountContextService = inject(AccountContextService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly featureFlagService = inject(FeatureFlagService);
+
+  // Feature flag for LFX Lens visibility
+  protected readonly isLfxLensEnabled = this.featureFlagService.getBooleanFlag('lfx-lens', false);
 
   // Computed values from context services with null safety
   private readonly organizationId = computed(() => this.accountContextService.selectedAccount()?.accountId ?? '');

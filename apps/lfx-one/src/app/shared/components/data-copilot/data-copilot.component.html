@@ -2,13 +2,15 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <!-- Trigger Button -->
-<lfx-button
-  severity="secondary"
-  icon="fa-light fa-microchip-ai"
-  (click)="openDrawer()"
-  data-testid="data-copilot-button"
-  label="Ask LFX Lens"
-  size="small"></lfx-button>
+@if (isLfxLensEnabled()) {
+  <lfx-button
+    severity="secondary"
+    icon="fa-light fa-microchip-ai"
+    (click)="openDrawer()"
+    data-testid="data-copilot-button"
+    label="Ask LFX Lens"
+    size="small"></lfx-button>
+}
 
 <!-- Drawer -->
 <p-drawer
