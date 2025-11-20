@@ -237,7 +237,7 @@ export class CommitteeService {
    * Fetches count of all members for a specific committee
    */
   public async getCommitteeMembersCount(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<number> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_committee_members_count',
         committee_id: committeeId,
@@ -405,7 +405,7 @@ export class CommitteeService {
         return member.username === username || (userEmail && member.email.toLowerCase() === userEmail.toLowerCase());
       });
 
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_committee_members_by_category',
         username,

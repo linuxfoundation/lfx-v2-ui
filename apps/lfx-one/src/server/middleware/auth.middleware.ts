@@ -415,7 +415,7 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
       const duration = Date.now() - startTime;
       req.log.error(
         {
-          error: error instanceof Error ? error.message : error,
+          err: error,
           path: req.path,
           method: req.method,
           duration,

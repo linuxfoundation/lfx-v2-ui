@@ -66,7 +66,7 @@ export class NatsService {
         await this.connection.drain();
         serverLogger.info('NATS connection closed successfully');
       } catch (error) {
-        serverLogger.error({ error: error instanceof Error ? error.message : error }, 'Error during NATS shutdown');
+        serverLogger.error({ err: error }, 'Error during NATS shutdown');
       }
     }
     this.connection = null;

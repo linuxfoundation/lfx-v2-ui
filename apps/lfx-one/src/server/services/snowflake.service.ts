@@ -196,7 +196,7 @@ export class SnowflakeService {
         await Promise.race([drainPromise, timeoutPromise]);
         serverLogger.info('Snowflake connection pool drained successfully');
       } catch (error) {
-        serverLogger.error({ error: error instanceof Error ? error.message : error }, 'Error during Snowflake pool shutdown');
+        serverLogger.error({ err: error }, 'Error during Snowflake pool shutdown');
       }
 
       this.pool = null;

@@ -137,7 +137,7 @@ export class MeetingService {
     };
 
     const sanitizedPayload = Logger.sanitize({ createPayload });
-    req.log.info(sanitizedPayload, 'Creating meeting payload');
+    req.log.debug(sanitizedPayload, 'Creating meeting payload');
 
     const newMeeting = await this.microserviceProxy.proxyRequest<Meeting>(req, 'LFX_V2_SERVICE', '/meetings', 'POST', undefined, createPayload);
 
@@ -181,7 +181,7 @@ export class MeetingService {
     };
 
     const sanitizedPayload = Logger.sanitize({ updatePayload, editType });
-    req.log.info(sanitizedPayload, 'Updating meeting payload');
+    req.log.debug(sanitizedPayload, 'Updating meeting payload');
 
     // Step 2: Update meeting with ETag, including editType query parameter if provided
     let path = `/meetings/${meetingUid}`;
@@ -340,7 +340,7 @@ export class MeetingService {
   public async addMeetingRegistrant(req: Request, registrantData: CreateMeetingRegistrantRequest): Promise<MeetingRegistrant> {
     try {
       const sanitizedPayload = Logger.sanitize({ registrantData });
-      req.log.info(sanitizedPayload, 'Creating meeting registrant');
+      req.log.debug(sanitizedPayload, 'Creating meeting registrant');
 
       const newRegistrant = await this.microserviceProxy.proxyRequest<MeetingRegistrant>(
         req,
@@ -394,7 +394,7 @@ export class MeetingService {
       );
 
       const sanitizedPayload = Logger.sanitize({ updateData });
-      req.log.info(sanitizedPayload, 'Updating meeting registrant payload');
+      req.log.debug(sanitizedPayload, 'Updating meeting registrant payload');
 
       // Step 2: Update registrant with ETag
       const updatedRegistrant = await this.etagService.updateWithETag<MeetingRegistrant>(
@@ -667,7 +667,7 @@ export class MeetingService {
       );
 
       const sanitizedPayload = Logger.sanitize({ updateData });
-      req.log.info(sanitizedPayload, 'Updating past meeting summary payload');
+      req.log.debug(sanitizedPayload, 'Updating past meeting summary payload');
 
       // Step 2: Update summary with ETag
       const updatedSummary = await this.etagService.updateWithETag<PastMeetingSummary>(
@@ -857,7 +857,7 @@ export class MeetingService {
    * @returns The created meeting attachment
    */
   public async createMeetingAttachment(req: Request, meetingUid: string, attachmentData: any): Promise<any> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'create_meeting_attachment',
         meeting_uid: meetingUid,
@@ -909,7 +909,7 @@ export class MeetingService {
    * @returns The attachment file data
    */
   public async getMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<Buffer> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_meeting_attachment',
         meeting_uid: meetingUid,
@@ -954,7 +954,7 @@ export class MeetingService {
    * @param attachmentUid - Attachment UID to delete
    */
   public async deleteMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<void> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'delete_meeting_attachment',
         meeting_uid: meetingUid,
@@ -990,7 +990,7 @@ export class MeetingService {
   }
 
   public async getMeetingAttachmentMetadata(req: Request, meetingUid: string, attachmentUid: string): Promise<any> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_meeting_attachment_metadata',
         meeting_uid: meetingUid,
@@ -1038,7 +1038,7 @@ export class MeetingService {
    * @returns Array of meeting attachments
    */
   public async getMeetingAttachments(req: Request, meetingUid: string): Promise<any[]> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_meeting_attachments',
         meeting_uid: meetingUid,
@@ -1094,7 +1094,7 @@ export class MeetingService {
    * @returns Array of past meeting attachments
    */
   public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<any[]> {
-    req.log.info(
+    req.log.debug(
       {
         operation: 'get_past_meeting_attachments',
         past_meeting_uid: pastMeetingUid,
