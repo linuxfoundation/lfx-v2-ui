@@ -3,7 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -73,11 +73,14 @@ export class MeetingsDashboardComponent {
     });
 
     // Subscribe to time filter changes
-    this.filterForm.get('timeFilter')?.valueChanges.subscribe((value) => {
-      if (value) {
-        this.timeFilter.set(value);
-      }
-    });
+    this.filterForm
+      .get('timeFilter')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((value) => {
+        if (value) {
+          this.timeFilter.set(value);
+        }
+      });
 
     // Initialize meeting type options
     this.meetingTypeOptions = this.initializeMeetingTypeOptions();

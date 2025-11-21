@@ -50,11 +50,6 @@ export class RsvpButtonGroupComponent {
   public readonly selectedResponse: Signal<RsvpResponse | null> = this.initializeSelectedResponse();
 
   public handleRsvpClick(response: RsvpResponse): void {
-    // If clicking the same response, do nothing
-    if (this.selectedResponse() === response) {
-      return;
-    }
-
     // For recurring meetings, show scope modal
     if (this.isRecurring()) {
       this.showScopeModal(response);

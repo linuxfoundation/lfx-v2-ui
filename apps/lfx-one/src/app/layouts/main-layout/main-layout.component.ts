@@ -123,4 +123,10 @@ export class MainLayoutComponent {
   public toggleMobileSidebar(): void {
     this.appService.toggleMobileSidebar();
   }
+
+  public onDrawerVisibilityChange(visible: boolean): void {
+    if (!visible) {
+      this.appService.closeMobileSidebar();
+    }
+  }
 }

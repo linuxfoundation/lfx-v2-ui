@@ -242,6 +242,17 @@ export class MeetingManageComponent {
       return;
     }
 
+    // Mark all form controls as touched to show validation errors
+    Object.keys(this.form().controls).forEach((key) => {
+      const control = this.form().get(key);
+      control?.markAsTouched();
+      control?.markAsDirty();
+    });
+
+    if (this.form().invalid) {
+      return;
+    }
+
     this.submitting.set(true);
 
     // Prepare meeting data

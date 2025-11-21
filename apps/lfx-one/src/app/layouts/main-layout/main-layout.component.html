@@ -9,7 +9,8 @@
 
   <!-- Sidebar - Mobile Drawer -->
   <p-drawer
-    [(visible)]="showMobileSidebar"
+    [visible]="showMobileSidebar()"
+    (visibleChange)="onDrawerVisibilityChange($event)"
     position="left"
     [modal]="true"
     [dismissable]="true"

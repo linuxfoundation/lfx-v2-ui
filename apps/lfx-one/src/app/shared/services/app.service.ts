@@ -12,26 +12,28 @@ import { Injectable, signal } from '@angular/core';
 })
 export class AppService {
   // Mobile sidebar state
-  public readonly showMobileSidebar = signal(false);
+  private readonly showMobileSidebarSignal = signal(false);
+
+  public readonly showMobileSidebar = this.showMobileSidebarSignal.asReadonly();
 
   /**
    * Toggle mobile sidebar visibility
    */
   public toggleMobileSidebar(): void {
-    this.showMobileSidebar.update((value) => !value);
+    this.showMobileSidebarSignal.update((value) => !value);
   }
 
   /**
    * Close mobile sidebar
    */
   public closeMobileSidebar(): void {
-    this.showMobileSidebar.set(false);
+    this.showMobileSidebarSignal.set(false);
   }
 
   /**
    * Open mobile sidebar
    */
   public openMobileSidebar(): void {
-    this.showMobileSidebar.set(true);
+    this.showMobileSidebarSignal.set(true);
   }
 }

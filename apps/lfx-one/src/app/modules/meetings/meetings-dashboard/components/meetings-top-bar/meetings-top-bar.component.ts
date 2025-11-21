@@ -3,6 +3,7 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -30,9 +31,12 @@ export class MeetingsTopBarComponent {
     });
 
     // Subscribe to form changes and emit events
-    this.searchForm.get('search')?.valueChanges.subscribe((value) => {
-      this.searchQueryChange.emit(value || '');
-    });
+    this.searchForm
+      .get('search')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((value) => {
+        this.searchQueryChange.emit(value || '');
+      });
   }
 
   public onMeetingTypeChange(value: string | null): void {
