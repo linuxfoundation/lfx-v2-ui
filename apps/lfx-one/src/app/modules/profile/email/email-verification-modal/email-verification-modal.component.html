@@ -1,0 +1,147 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="p-6">
+  <!-- Header -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Verify Your Email Address</h2>
+    <p class="text-sm text-gray-600">
+      We've sent a verification code to <strong class="text-gray-900">{{ email }}</strong>. Please enter the 6-digit code below to verify your email address.
+    </p>
+  </div>
+
+  <!-- Timer Display - Only show when not expired -->
+  @if (!timerExpired()) {
+    <div class="mb-6">
+      <div class="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center gap-2">
+          <i class="fa-light fa-clock text-blue-600 text-lg"></i>
+          <span class="text-sm font-medium text-blue-900">Time Remaining</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="text-2xl font-bold tabular-nums"
+            [ngClass]="{
+              'text-blue-600': timeRemaining() > 60,
+              'text-orange-600': timeRemaining() <= 60 && timeRemaining() > 30,
+              'text-red-600': timeRemaining() <= 30,
+            }">
+            {{ formattedTime() }}
+          </span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Expired Message -->
+  @if (timerExpired()) {
+    <lfx-message severity="error" icon="fa-light fa-circle-exclamation" styleClass="mb-6">
+      <ng-template #content>
+        <p class="text-sm">The verification code has expired. Please request a new verification code.</p>
+      </ng-template>
+    </lfx-message>
+  }
+
+  <!-- Verification Code Form - Only show when not expired -->
+  @if (!timerExpired()) {
+    <form [formGroup]="verificationForm" (ngSubmit)="submitCode()">
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-3">Verification Code</label>
+        <div class="flex justify-center mb-3">
+          <p-inputOtp
+            formControlName="code"
+            [length]="6"
+            [integerOnly]="true"
+            [autofocus]="true"
+            styleClass="gap-3"
+            inputClass="w-12 h-14 text-center text-2xl font-bold"
+            data-testid="otp-input">
+          </p-inputOtp>
+        </div>
+        @if (verificationForm.get('code')?.invalid && (verificationForm.get('code')?.touched || verificationForm.get('code')?.dirty)) {
+          <div class="text-red-600 text-xs text-center mb-2" data-testid="verification-code-error">
+            Please enter all 6 digits
+          </div>
+        }
+        <p class="text-xs text-gray-500 text-center">
+          <i class="fa-light fa-info-circle mr-1"></i>
+          Enter the 6-digit code sent to your email address
+        </p>
+      </div>
+
+      <!-- Error Message Display -->
+      @if (errorMessage()) {
+        <lfx-message severity="error" icon="fa-light fa-circle-exclamation" styleClass="mb-6">
+          <ng-template #content>
+            <p class="text-sm">{{ errorMessage() }}</p>
+          </ng-template>
+        </lfx-message>
+      }
+
+      <!-- Resend Code Link -->
+      <div class="mb-6 text-center">
+        <p class="text-xs text-gray-600">
+          Didn't receive the code?
+          <button 
+            type="button" 
+            class="text-blue-600 hover:text-blue-700 font-medium ml-1 underline disabled:opacity-50 disabled:cursor-not-allowed" 
+            (click)="resendCode()" 
+            [disabled]="resending()"
+            data-testid="resend-link">
+            {{ resending() ? 'Sending...' : 'Resend code' }}
+          </button>
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-end gap-3">
+        <lfx-button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          variant="outlined"
+          (onClick)="cancel()"
+          [disabled]="submitting()"
+          data-testid="cancel-button">
+        </lfx-button>
+        <lfx-button
+          type="submit"
+          label="Verify Email"
+          severity="primary"
+          icon="fa-light fa-check"
+          [disabled]="verificationForm.invalid"
+          [loading]="submitting()"
+          data-testid="verify-button">
+        </lfx-button>
+      </div>
+    </form>
+  }
+
+  <!-- Expired State Actions -->
+  @if (timerExpired()) {
+    <div class="flex justify-end gap-3">
+      <lfx-button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        variant="outlined"
+        (onClick)="cancel()"
+        data-testid="cancel-button-expired">
+      </lfx-button>
+      <lfx-button
+        type="button"
+        label="Resend Code"
+        severity="primary"
+        icon="fa-light fa-envelope"
+        (onClick)="resendCode()"
+        [loading]="resending()"
+        [disabled]="resending()"
+        data-testid="resend-code-button">
+      </lfx-button>
+    </div>
+  }
+</div>
+
+<!-- Toast messages -->
+<p-toast position="top-right" />
+
