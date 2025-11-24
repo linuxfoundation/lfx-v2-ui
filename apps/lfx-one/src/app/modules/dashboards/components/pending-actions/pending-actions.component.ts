@@ -26,8 +26,4 @@ export class PendingActionsComponent {
     this.hiddenActionsService.hideAction(item);
     this.actionClick.emit(item);
   }
-
-  protected handleDismiss(item: PendingActionItem): void {
-    this.hiddenActionsService.hideAction(item);
-  }
 }

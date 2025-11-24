@@ -1,20 +1,22 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { PendingActionItem } from '@lfx-one/shared';
+import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
 /**
  * Service for managing hidden pending actions using browser cookies.
  * Provides 24-hour automatic expiration without manual cleanup.
- * SSR-compatible as cookies work on both server and client.
+ * SSR-compatible using SsrCookieService.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class HiddenActionsService {
+  private readonly cookieService = inject(SsrCookieService);
   private readonly cookiePrefix = 'lfx_hidden_';
-  private readonly maxAgeSeconds = 86400; // 24 hours
+  private readonly maxAgeDays = 1; // 24 hours
 
   /**
    * Hide an action for 24 hours by setting a cookie.
@@ -25,7 +27,11 @@ export class HiddenActionsService {
   public hideAction(item: PendingActionItem): void {
     const identifier = this.getActionIdentifier(item);
     const cookieName = this.getCookieName(identifier);
-    this.setCookie(cookieName, '1', this.maxAgeSeconds);
+    this.cookieService.set(cookieName, '1', {
+      expires: this.maxAgeDays,
+      path: '/',
+      sameSite: 'Strict',
+    });
   }
 
   /**
@@ -38,12 +44,13 @@ export class HiddenActionsService {
   public isActionHidden(item: PendingActionItem): boolean {
     const identifier = this.getActionIdentifier(item);
     const cookieName = this.getCookieName(identifier);
-    return this.getCookie(cookieName) !== null;
+    return this.cookieService.check(cookieName);
   }
 
   /**
    * Generate a unique identifier for an action.
-   * Uses buttonLink URL if available, otherwise combines type and badge.
+   * Uses buttonLink URL if available, otherwise combines type, badge, and text.
+   * Including text ensures uniqueness when multiple actions have the same type and badge.
    *
    * @param item The pending action item
    * @returns A unique string identifier
@@ -52,7 +59,7 @@ export class HiddenActionsService {
     if (item.buttonLink) {
       return item.buttonLink;
     }
-    return `${item.type}-${item.badge}`;
+    return `${item.type}-${item.badge}-${item.text}`;
   }
 
   /**
@@ -82,28 +89,5 @@ export class HiddenActionsService {
     }
     // Convert to unsigned and return as hex string
     return Math.abs(hash).toString(16).padStart(8, '0').substring(0, 8);
-  }
-
-  /**
-   * Set a cookie with specified name, value, and max-age.
-   *
-   * @param name Cookie name
-   * @param value Cookie value
-   * @param maxAge Expiration time in seconds
-   */
-  private setCookie(name: string, value: string, maxAge: number): void {
-    document.cookie = `${name}=${value}; max-age=${maxAge}; path=/; SameSite=Strict`;
-  }
-
-  /**
-   * Get a cookie value by name.
-   *
-   * @param name Cookie name
-   * @returns Cookie value if found, null otherwise
-   */
-  private getCookie(name: string): string | null {
-    const cookies = document.cookie.split('; ');
-    const cookie = cookies.find((c) => c.startsWith(`${name}=`));
-    return cookie ? cookie.split('=')[1] : null;
   }
 }
