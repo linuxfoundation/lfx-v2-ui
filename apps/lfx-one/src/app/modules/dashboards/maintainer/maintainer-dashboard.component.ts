@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAINTAINER_ACTION_ITEMS } from '@lfx-one/shared/constants';
+import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
@@ -19,7 +20,11 @@ import { RecentProgressComponent } from '../components/recent-progress/recent-pr
 })
 export class MaintainerDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly hiddenActionsService = inject(HiddenActionsService);
 
   public readonly selectedProject = computed(() => this.projectContextService.selectedFoundation() || this.projectContextService.selectedProject());
-  public readonly maintainerActions = signal(MAINTAINER_ACTION_ITEMS);
+  private readonly rawMaintainerActions = signal(MAINTAINER_ACTION_ITEMS);
+  public readonly maintainerActions = computed(() => {
+    return this.rawMaintainerActions().filter((item) => !this.hiddenActionsService.isActionHidden(item));
+  });
 }
