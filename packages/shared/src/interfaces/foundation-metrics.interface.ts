@@ -8,6 +8,28 @@
 export type MetricCategory = 'contributors' | 'projects' | 'events';
 
 /**
+ * Primary foundation health metric configuration
+ * @description Configuration template for foundation health primary metrics.
+ * Contains UI configuration (icons, chart styling, categories). Data values are provided by API transform functions.
+ */
+export interface PrimaryFoundationHealthMetric {
+  /** Metric title (used for matching to transform functions) */
+  title: string;
+  /** Icon class for the metric */
+  icon: string;
+  /** Category for filtering */
+  category: string;
+  /** Test ID for E2E testing */
+  testId: string;
+  /** Custom content type for the card */
+  customContentType: 'sparkline' | 'bar-chart' | 'top-projects' | 'bus-factor' | 'health-scores';
+  /** Color for sparkline chart (optional - used for sparkline charts) */
+  sparklineColor?: string;
+  /** Color for bar chart (optional - used for bar charts) */
+  chartColor?: string;
+}
+
+/**
  * Foundation metric card configuration
  * @description Configuration for individual metric cards in the foundation health carousel
  */
@@ -39,6 +61,8 @@ export interface FoundationMetricCard {
       pointRadius?: number;
     }[];
   };
+  /** Custom Chart.js options for this specific metric (optional) */
+  chartOptions?: any;
   /** Data for top projects list */
   topProjects?: TopProjectDisplay[];
   /** Data for company bus factor */
