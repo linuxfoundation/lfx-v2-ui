@@ -143,9 +143,9 @@ export class FoundationHealthComponent {
   private formatSoftwareValue(valueInMillions: number): string {
     if (valueInMillions >= 1000) {
       const billions = valueInMillions / 1000;
-      return `${billions.toFixed(1)}B`;
+      return `${billions.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}B`;
     }
-    return `${valueInMillions.toFixed(1).toLocaleString()}M`;
+    return `${valueInMillions.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
   }
 
   private formatTopProjects(projects: { name: string; value: number }[]): TopProjectDisplay[] {

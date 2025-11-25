@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ChartOptions, ChartType } from 'chart.js';
+
 /**
  * Metric category type for foundation health filtering
  * @description Used to categorize and filter foundation health metrics
@@ -62,7 +64,7 @@ export interface FoundationMetricCard {
     }[];
   };
   /** Custom Chart.js options for this specific metric (optional) */
-  chartOptions?: any;
+  chartOptions?: ChartOptions<ChartType>;
   /** Data for top projects list */
   topProjects?: TopProjectDisplay[];
   /** Data for company bus factor */
