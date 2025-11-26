@@ -51,9 +51,8 @@ export class PersonaService {
       // Board members should only work at the foundation level
       if (persona === 'board-member') {
         this.projectContextService.clearProject();
+        this.router.navigate(['/']);
       }
-
-      // this.router.navigate(['/']);
     }
   }
 }
