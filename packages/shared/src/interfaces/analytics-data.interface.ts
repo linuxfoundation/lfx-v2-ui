@@ -1433,3 +1433,424 @@ export interface HealthEventsMonthlyResponse {
    */
   totalMonths: number;
 }
+
+/**
+ * Certified Employees row from Snowflake MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface CertifiedEmployeesRow {
+  /**
+   * Total number of certifications held by employees
+   */
+  CERTIFICATIONS: number;
+
+  /**
+   * Number of certified employees
+   */
+  CERTIFIED_EMPLOYEES: number;
+
+  /**
+   * Organization account ID
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+}
+
+/**
+ * API response for Certified Employees query
+ * Contains certification data for an organization within a foundation
+ */
+export interface CertifiedEmployeesResponse {
+  /**
+   * Total number of certifications held by employees
+   */
+  certifications: number;
+
+  /**
+   * Number of certified employees
+   */
+  certifiedEmployees: number;
+
+  /**
+   * Organization account ID
+   */
+  accountId: string;
+
+  /**
+   * Project ID
+   */
+  projectId: string;
+
+  /**
+   * Project URL slug
+   */
+  projectSlug: string;
+}
+
+/**
+ * Membership Tier row from Snowflake MEMBER_DASHBOARD_MEMBERSHIP_TIER table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface MembershipTierRow {
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project name
+   */
+  PROJECT_NAME: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Whether the project is active
+   */
+  IS_PROJECT_ACTIVE: boolean;
+
+  /**
+   * Organization account ID
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Organization account name
+   */
+  ACCOUNT_NAME: string;
+
+  /**
+   * Membership tier name (e.g., "Platinum Membership")
+   */
+  MEMBERSHIP_TIER: string;
+
+  /**
+   * Membership price in dollars
+   */
+  MEMBERSHIP_PRICE: number;
+
+  /**
+   * Membership start date (YYYY-MM-DD format)
+   */
+  START_DATE: string;
+
+  /**
+   * Membership end date (YYYY-MM-DD format)
+   */
+  LAST_END_DATE: string;
+
+  /**
+   * Renewal price in dollars
+   */
+  RENEWAL_PRICE: number;
+
+  /**
+   * Membership status (e.g., "Active")
+   */
+  MEMBERSHIP_STATUS: string;
+}
+
+/**
+ * API response for Membership Tier query
+ * Contains membership tier data for an organization within a foundation
+ */
+export interface MembershipTierResponse {
+  /**
+   * Project ID
+   */
+  projectId: string;
+
+  /**
+   * Project name
+   */
+  projectName: string;
+
+  /**
+   * Project URL slug
+   */
+  projectSlug: string;
+
+  /**
+   * Whether the project is active
+   */
+  isProjectActive: boolean;
+
+  /**
+   * Organization account ID
+   */
+  accountId: string;
+
+  /**
+   * Organization account name
+   */
+  accountName: string;
+
+  /**
+   * Membership tier name (cleaned, e.g., "Platinum" without "Membership" suffix)
+   */
+  membershipTier: string;
+
+  /**
+   * Membership price in dollars
+   */
+  membershipPrice: number;
+
+  /**
+   * Membership start date (YYYY-MM-DD format)
+   */
+  startDate: string;
+
+  /**
+   * Membership end date (YYYY-MM-DD format)
+   */
+  endDate: string;
+
+  /**
+   * Renewal price in dollars
+   */
+  renewalPrice: number;
+
+  /**
+   * Membership status (e.g., "Active")
+   */
+  membershipStatus: string;
+}
+
+/**
+ * Maintainers row from Snowflake MEMBER_DASHBOARD_MAINTAINERS table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface OrganizationMaintainersRow {
+  /**
+   * Number of maintainers from the organization
+   */
+  MAINTAINERS: number;
+
+  /**
+   * Number of projects where the organization has maintainers
+   */
+  PROJECTS: number;
+
+  /**
+   * Organization account ID
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Organization account name
+   */
+  ACCOUNT_NAME: string;
+}
+
+/**
+ * API response for Organization Maintainers query
+ * Contains maintainer data for an organization
+ */
+export interface OrganizationMaintainersResponse {
+  /**
+   * Number of maintainers from the organization
+   */
+  maintainers: number;
+
+  /**
+   * Number of projects where the organization has maintainers
+   */
+  projects: number;
+
+  /**
+   * Organization account ID
+   */
+  accountId: string;
+
+  /**
+   * Organization account name
+   */
+  accountName: string;
+}
+
+/**
+ * Contributors row from Snowflake MEMBER_DASHBOARD_CONTRIBUTORS table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface OrganizationContributorsRow {
+  /**
+   * Number of contributors from the organization
+   */
+  CONTRIBUTORS: number;
+
+  /**
+   * Number of projects where the organization has contributors
+   */
+  PROJECTS: number;
+
+  /**
+   * Organization account ID
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Organization account name
+   */
+  ACCOUNT_NAME: string;
+}
+
+/**
+ * API response for Organization Contributors query
+ * Contains contributor data for an organization
+ */
+export interface OrganizationContributorsResponse {
+  /**
+   * Number of contributors from the organization
+   */
+  contributors: number;
+
+  /**
+   * Number of projects where the organization has contributors
+   */
+  projects: number;
+
+  /**
+   * Organization account ID
+   */
+  accountId: string;
+
+  /**
+   * Organization account name
+   */
+  accountName: string;
+}
+
+/**
+ * Training Enrollment row from Snowflake MEMBER_DASHBOARD_TRAINING_ENROLLMENTS table
+ * Raw response with Snowflake naming conventions (ALL_CAPS)
+ */
+export interface TrainingEnrollmentRow {
+  /**
+   * Unique enrollment identifier
+   */
+  ENROLLMENT_ID: string;
+
+  /**
+   * Course identifier
+   */
+  COURSE_ID: string;
+
+  /**
+   * Course display name
+   */
+  COURSE_NAME: string;
+
+  /**
+   * Course URL slug
+   */
+  COURSE_SLUG: string;
+
+  /**
+   * Enrollment timestamp (ISO format)
+   */
+  ENROLLMENT_TS: string;
+
+  /**
+   * User identifier
+   */
+  USER_ID: string;
+
+  /**
+   * User email address
+   */
+  USER_EMAIL: string;
+
+  /**
+   * Organization account ID
+   */
+  ACCOUNT_ID: string;
+
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Segment ID
+   */
+  SEGMENT_ID: string;
+}
+
+/**
+ * Daily training enrollment aggregation from Snowflake
+ * Used for cumulative chart visualization
+ */
+export interface TrainingEnrollmentDailyRow {
+  /**
+   * Date of enrollments (YYYY-MM-DD format)
+   */
+  ENROLLMENT_DATE: string;
+
+  /**
+   * Number of enrollments on this date
+   */
+  DAILY_COUNT: number;
+
+  /**
+   * Cumulative count up to this date
+   */
+  CUMULATIVE_COUNT: number;
+}
+
+/**
+ * API response for Training Enrollments query
+ * Contains enrollment data for an organization within a foundation
+ */
+export interface TrainingEnrollmentsResponse {
+  /**
+   * Total number of training enrollments this year
+   */
+  totalEnrollments: number;
+
+  /**
+   * Daily enrollment data for cumulative chart
+   */
+  dailyData: {
+    /**
+     * Date of enrollments (YYYY-MM-DD format)
+     */
+    date: string;
+
+    /**
+     * Number of enrollments on this date
+     */
+    count: number;
+
+    /**
+     * Cumulative count up to this date
+     */
+    cumulativeCount: number;
+  }[];
+
+  /**
+   * Organization account ID
+   */
+  accountId: string;
+
+  /**
+   * Project URL slug
+   */
+  projectSlug: string;
+}

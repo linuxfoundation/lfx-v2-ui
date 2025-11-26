@@ -111,31 +111,107 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
     title: 'Active Contributors',
     icon: 'fa-light fa-code',
     chartType: 'bar',
-    chartData: EMPTY_CHART_DATA,
+    chartData: {
+      labels: Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`),
+      datasets: [
+        {
+          data: Array.from({ length: 12 }, (_, i) => {
+            const base = 15 + i * 3;
+            return Math.floor(base + Math.random() * 10);
+          }),
+          borderColor: lfxColors.gray[500],
+          backgroundColor: hexToRgba(lfxColors.gray[500], 0.5),
+          borderWidth: 0,
+          borderRadius: 4,
+        },
+      ],
+    },
   },
   {
     title: 'Maintainers',
     icon: 'fa-light fa-user-check',
     chartType: 'bar',
-    chartData: EMPTY_CHART_DATA,
+    chartData: {
+      labels: Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`),
+      datasets: [
+        {
+          data: Array.from({ length: 12 }, (_, i) => {
+            const base = 5 + i * 1;
+            return Math.floor(base + Math.random() * 4);
+          }),
+          borderColor: lfxColors.gray[500],
+          backgroundColor: hexToRgba(lfxColors.gray[500], 0.5),
+          borderWidth: 0,
+          borderRadius: 4,
+        },
+      ],
+    },
   },
   {
     title: 'Event Attendees',
     icon: 'fa-light fa-user-group',
     chartType: 'line',
-    chartData: EMPTY_CHART_DATA,
+    chartData: {
+      labels: Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`),
+      datasets: [
+        {
+          data: Array.from({ length: 12 }, (_, i) => {
+            const base = 20 + i * 5;
+            return Math.floor(base + Math.random() * 15);
+          }),
+          borderColor: lfxColors.gray[500],
+          backgroundColor: hexToRgba(lfxColors.gray[500], 0.1),
+          fill: true,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    },
   },
   {
     title: 'Event Speakers',
     icon: 'fa-light fa-award-simple',
     chartType: 'line',
-    chartData: EMPTY_CHART_DATA,
+    chartData: {
+      labels: Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`),
+      datasets: [
+        {
+          data: Array.from({ length: 12 }, (_, i) => {
+            const base = 3 + i * 2;
+            return Math.floor(base + Math.random() * 5);
+          }),
+          borderColor: lfxColors.gray[500],
+          backgroundColor: hexToRgba(lfxColors.gray[500], 0.1),
+          fill: true,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    },
   },
   {
     title: 'Certified Employees',
     icon: 'fa-light fa-graduation-cap',
     chartType: 'line',
-    chartData: EMPTY_CHART_DATA,
+    chartData: {
+      labels: Array.from({ length: 12 }, (_, i) => `Month ${i + 1}`),
+      datasets: [
+        {
+          data: Array.from({ length: 12 }, (_, i) => {
+            const base = 5 + i * 3;
+            return Math.floor(base + Math.random() * 8);
+          }),
+          borderColor: lfxColors.gray[500],
+          backgroundColor: hexToRgba(lfxColors.gray[500], 0.1),
+          fill: true,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    },
   },
   {
     title: 'Training Enrollments',

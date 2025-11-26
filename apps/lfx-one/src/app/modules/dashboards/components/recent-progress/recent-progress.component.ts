@@ -637,7 +637,19 @@ export class RecentProgressComponent {
 
   private initializeActiveWeeksStreakData() {
     return toSignal(
-      this.analyticsService.getActiveWeeksStreak().pipe(finalize(() => this.loadingState.update((state) => ({ ...state, activeWeeksStreak: false })))),
+      toObservable(this.personaService.currentPersona).pipe(
+        switchMap((persona) => {
+          // Only fetch for core-developer persona
+          if (persona === 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, activeWeeksStreak: false }));
+            return [{ data: [], currentStreak: 0, totalWeeks: 0 }];
+          }
+          this.loadingState.update((state) => ({ ...state, activeWeeksStreak: true }));
+          return this.analyticsService
+            .getActiveWeeksStreak()
+            .pipe(finalize(() => this.loadingState.update((state) => ({ ...state, activeWeeksStreak: false }))));
+        })
+      ),
       {
         initialValue: {
           data: [],
@@ -650,7 +662,19 @@ export class RecentProgressComponent {
 
   private initializePullRequestsMergedData() {
     return toSignal(
-      this.analyticsService.getPullRequestsMerged().pipe(finalize(() => this.loadingState.update((state) => ({ ...state, pullRequestsMerged: false })))),
+      toObservable(this.personaService.currentPersona).pipe(
+        switchMap((persona) => {
+          // Only fetch for core-developer persona
+          if (persona === 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, pullRequestsMerged: false }));
+            return [{ data: [], totalPullRequests: 0, totalDays: 0 }];
+          }
+          this.loadingState.update((state) => ({ ...state, pullRequestsMerged: true }));
+          return this.analyticsService
+            .getPullRequestsMerged()
+            .pipe(finalize(() => this.loadingState.update((state) => ({ ...state, pullRequestsMerged: false }))));
+        })
+      ),
       {
         initialValue: {
           data: [],
@@ -662,13 +686,26 @@ export class RecentProgressComponent {
   }
 
   private initializeCodeCommitsData() {
-    return toSignal(this.analyticsService.getCodeCommits().pipe(finalize(() => this.loadingState.update((state) => ({ ...state, codeCommits: false })))), {
-      initialValue: {
-        data: [],
-        totalCommits: 0,
-        totalDays: 0,
-      },
-    });
+    return toSignal(
+      toObservable(this.personaService.currentPersona).pipe(
+        switchMap((persona) => {
+          // Only fetch for core-developer persona
+          if (persona === 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, codeCommits: false }));
+            return [{ data: [], totalCommits: 0, totalDays: 0 }];
+          }
+          this.loadingState.update((state) => ({ ...state, codeCommits: true }));
+          return this.analyticsService.getCodeCommits().pipe(finalize(() => this.loadingState.update((state) => ({ ...state, codeCommits: false }))));
+        })
+      ),
+      {
+        initialValue: {
+          data: [],
+          totalCommits: 0,
+          totalDays: 0,
+        },
+      }
+    );
   }
 
   private initializeProjectIssuesResolutionData() {

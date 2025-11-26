@@ -8,13 +8,21 @@ import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-c
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
+import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
+import { hexToRgba } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { combineLatest, finalize, map, of, switchMap } from 'rxjs';
 
-import type { DashboardMetricCard } from '@lfx-one/shared/interfaces';
+import type {
+  CertifiedEmployeesResponse,
+  DashboardMetricCard,
+  MembershipTierResponse,
+  OrganizationContributorsResponse,
+  OrganizationMaintainersResponse,
+  TrainingEnrollmentsResponse,
+} from '@lfx-one/shared/interfaces';
 import type { ChartOptions, TooltipItem } from 'chart.js';
 
 @Component({
@@ -31,16 +39,30 @@ export class OrganizationInvolvementComponent {
   private readonly accountContextService = inject(AccountContextService);
   private readonly projectContextService = inject(ProjectContextService);
 
-  private readonly contributionsLoading = signal(true);
-  private readonly dashboardLoading = signal(true);
+  private readonly maintainersLoading = signal(true);
+  private readonly contributorsLoading = signal(true);
+  private readonly membershipTierLoading = signal(true);
+  private readonly certifiedEmployeesLoading = signal(true);
+  private readonly trainingEnrollmentsLoading = signal(true);
   private readonly eventsLoading = signal(true);
   private readonly selectedAccountId$ = toObservable(this.accountContextService.selectedAccount).pipe(map((account) => account.accountId));
   private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((foundation) => foundation?.slug || ''));
   public readonly hasFoundationSelected = computed<boolean>(() => !!this.projectContextService.selectedFoundation());
-  private readonly contributionsOverviewData = this.initializeContributionsOverviewData();
-  private readonly boardMemberDashboardData = this.initializeBoardMemberDashboardData();
+  private readonly maintainersData = this.initializeMaintainersData();
+  private readonly contributorsData = this.initializeContributorsData();
+  private readonly membershipTierData = this.initializeMembershipTierData();
+  private readonly certifiedEmployeesData = this.initializeCertifiedEmployeesData();
+  private readonly trainingEnrollmentsData = this.initializeTrainingEnrollmentsData();
   private readonly eventsOverviewData = this.initializeEventsOverviewData();
-  public readonly isLoading = computed<boolean>(() => this.contributionsLoading() || this.dashboardLoading() || this.eventsLoading());
+  public readonly isLoading = computed<boolean>(
+    () =>
+      this.maintainersLoading() ||
+      this.contributorsLoading() ||
+      this.membershipTierLoading() ||
+      this.certifiedEmployeesLoading() ||
+      this.trainingEnrollmentsLoading() ||
+      this.eventsLoading()
+  );
   public readonly selectedFilter = signal<string>('all');
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
   public readonly filterOptions: FilterOption[] = [
@@ -51,17 +73,20 @@ export class OrganizationInvolvementComponent {
   ];
 
   public readonly primaryMetrics = computed<DashboardMetricCard[]>((): DashboardMetricCard[] => {
-    const contributionsData = this.contributionsOverviewData();
-    const dashboardData = this.boardMemberDashboardData();
+    const maintainersData = this.maintainersData();
+    const contributorsData = this.contributorsData();
+    const membershipTierData = this.membershipTierData();
+    const certifiedEmployeesData = this.certifiedEmployeesData();
+    const trainingEnrollmentsData = this.trainingEnrollmentsData();
     const eventsData = this.eventsOverviewData();
     const filter = this.selectedFilter();
 
     const allMetrics = PRIMARY_INVOLVEMENT_METRICS.map((metric) => {
       if (metric.title === 'Active Contributors') {
-        return this.transformActiveContributors(contributionsData.contributors, metric);
+        return this.transformActiveContributors(contributorsData, metric);
       }
       if (metric.title === 'Maintainers') {
-        return this.transformMaintainers(contributionsData.maintainers, metric);
+        return this.transformMaintainers(maintainersData, metric);
       }
       if (metric.title === 'Event Attendees') {
         return this.transformEventAttendees(eventsData.eventAttendance, metric);
@@ -70,13 +95,13 @@ export class OrganizationInvolvementComponent {
         return this.transformEventSpeakers(eventsData.eventAttendance, metric);
       }
       if (metric.title === 'Certified Employees') {
-        return this.transformCertifiedEmployees(dashboardData.certifiedEmployees, metric);
+        return this.transformCertifiedEmployees(certifiedEmployeesData, metric);
       }
       if (metric.title === 'Training Enrollments') {
-        return this.transformTrainingEnrollments(metric);
+        return this.transformTrainingEnrollments(trainingEnrollmentsData, metric);
       }
       if (metric.isMembershipTier) {
-        return this.transformMembershipTier(dashboardData.membershipTier, metric);
+        return this.transformMembershipTier(membershipTierData, metric);
       }
       return this.transformDefaultMetric(metric);
     });
@@ -121,78 +146,151 @@ export class OrganizationInvolvementComponent {
     container.scrollBy({ left: 300, behavior: 'smooth' });
   }
 
-  private initializeContributionsOverviewData() {
+  private initializeMaintainersData() {
     return toSignal(
       this.selectedAccountId$.pipe(
         switchMap((accountId) => {
-          this.contributionsLoading.set(true);
-          return this.analyticsService.getOrganizationContributionsOverview(accountId).pipe(finalize(() => this.contributionsLoading.set(false)));
+          this.maintainersLoading.set(true);
+          return this.analyticsService.getOrganizationMaintainers(accountId).pipe(finalize(() => this.maintainersLoading.set(false)));
         })
       ),
       {
         initialValue: {
-          maintainers: {
-            maintainers: 0,
-            projects: 0,
-          },
-          contributors: {
-            contributors: 0,
-            projects: 0,
-          },
-          technicalCommittee: {
-            totalRepresentatives: 0,
-            totalProjects: 0,
-          },
+          maintainers: 0,
+          projects: 0,
           accountId: '',
           accountName: '',
-        },
+        } as OrganizationMaintainersResponse,
       }
     );
   }
 
-  private initializeBoardMemberDashboardData() {
+  private initializeContributorsData() {
     return toSignal(
-      combineLatest([this.selectedAccountId$, this.selectedFoundationSlug$]).pipe(
-        switchMap(([accountId, foundationSlug]) => {
-          this.dashboardLoading.set(true);
-
-          // Return empty data if no foundation is selected
-          if (!foundationSlug) {
-            this.dashboardLoading.set(false);
-            return of({
-              membershipTier: {
-                tier: '',
-                membershipStartDate: '',
-                membershipEndDate: '',
-                membershipStatus: '',
-              },
-              certifiedEmployees: {
-                certifications: 0,
-                certifiedEmployees: 0,
-              },
-              accountId: '',
-              uid: '',
-            });
-          }
-
-          return this.analyticsService.getBoardMemberDashboard(accountId, foundationSlug).pipe(finalize(() => this.dashboardLoading.set(false)));
+      this.selectedAccountId$.pipe(
+        switchMap((accountId) => {
+          this.contributorsLoading.set(true);
+          return this.analyticsService.getOrganizationContributors(accountId).pipe(finalize(() => this.contributorsLoading.set(false)));
         })
       ),
       {
         initialValue: {
-          membershipTier: {
-            tier: '',
-            membershipStartDate: '',
-            membershipEndDate: '',
-            membershipStatus: '',
-          },
-          certifiedEmployees: {
-            certifications: 0,
-            certifiedEmployees: 0,
-          },
+          contributors: 0,
+          projects: 0,
           accountId: '',
-          uid: '',
-        },
+          accountName: '',
+        } as OrganizationContributorsResponse,
+      }
+    );
+  }
+
+  private initializeMembershipTierData() {
+    return toSignal(
+      combineLatest([this.selectedAccountId$, this.selectedFoundationSlug$]).pipe(
+        switchMap(([accountId, foundationSlug]) => {
+          this.membershipTierLoading.set(true);
+
+          // Return empty data if no foundation is selected
+          if (!foundationSlug) {
+            this.membershipTierLoading.set(false);
+            return of({
+              projectId: '',
+              projectName: '',
+              projectSlug: '',
+              isProjectActive: false,
+              accountId: '',
+              accountName: '',
+              membershipTier: '',
+              membershipPrice: 0,
+              startDate: '',
+              endDate: '',
+              renewalPrice: 0,
+              membershipStatus: '',
+            } as MembershipTierResponse);
+          }
+
+          return this.analyticsService.getMembershipTier(accountId, foundationSlug).pipe(finalize(() => this.membershipTierLoading.set(false)));
+        })
+      ),
+      {
+        initialValue: {
+          projectId: '',
+          projectName: '',
+          projectSlug: '',
+          isProjectActive: false,
+          accountId: '',
+          accountName: '',
+          membershipTier: '',
+          membershipPrice: 0,
+          startDate: '',
+          endDate: '',
+          renewalPrice: 0,
+          membershipStatus: '',
+        } as MembershipTierResponse,
+      }
+    );
+  }
+
+  private initializeCertifiedEmployeesData() {
+    return toSignal(
+      combineLatest([this.selectedAccountId$, this.selectedFoundationSlug$]).pipe(
+        switchMap(([accountId, foundationSlug]) => {
+          this.certifiedEmployeesLoading.set(true);
+
+          // Return empty data if no foundation is selected
+          if (!foundationSlug) {
+            this.certifiedEmployeesLoading.set(false);
+            return of({
+              certifications: 0,
+              certifiedEmployees: 0,
+              accountId: '',
+              projectId: '',
+              projectSlug: '',
+            } as CertifiedEmployeesResponse);
+          }
+
+          return this.analyticsService.getCertifiedEmployees(accountId, foundationSlug).pipe(finalize(() => this.certifiedEmployeesLoading.set(false)));
+        })
+      ),
+      {
+        initialValue: {
+          certifications: 0,
+          certifiedEmployees: 0,
+          accountId: '',
+          projectId: '',
+          projectSlug: '',
+        } as CertifiedEmployeesResponse,
+      }
+    );
+  }
+
+  private initializeTrainingEnrollmentsData() {
+    return toSignal(
+      combineLatest([this.selectedAccountId$, this.selectedFoundationSlug$]).pipe(
+        switchMap(([accountId, foundationSlug]) => {
+          this.trainingEnrollmentsLoading.set(true);
+
+          // Return empty data if no foundation is selected
+          if (!foundationSlug) {
+            this.trainingEnrollmentsLoading.set(false);
+            return of({
+              totalEnrollments: 0,
+              dailyData: [],
+              accountId: '',
+              projectSlug: '',
+            } as TrainingEnrollmentsResponse);
+          }
+
+          return this.analyticsService.getTrainingEnrollments(accountId, foundationSlug).pipe(finalize(() => this.trainingEnrollmentsLoading.set(false)));
+        })
+      ),
+      {
+        initialValue: {
+          totalEnrollments: 0,
+          dailyData: [],
+          accountId: '',
+          projectSlug: '',
+        } as TrainingEnrollmentsResponse,
       }
     );
   }
@@ -219,7 +317,7 @@ export class OrganizationInvolvementComponent {
     );
   }
 
-  private transformActiveContributors(data: { contributors: number; projects: number }, metric: DashboardMetricCard): DashboardMetricCard {
+  private transformActiveContributors(data: OrganizationContributorsResponse, metric: DashboardMetricCard): DashboardMetricCard {
     return {
       ...metric,
       value: data.contributors.toString(),
@@ -228,7 +326,7 @@ export class OrganizationInvolvementComponent {
     };
   }
 
-  private transformMaintainers(data: { maintainers: number; projects: number }, metric: DashboardMetricCard): DashboardMetricCard {
+  private transformMaintainers(data: OrganizationMaintainersResponse, metric: DashboardMetricCard): DashboardMetricCard {
     return {
       ...metric,
       value: data.maintainers.toString(),
@@ -237,16 +335,8 @@ export class OrganizationInvolvementComponent {
     };
   }
 
-  private transformMembershipTier(
-    data: {
-      tier: string;
-      membershipStartDate: string;
-      membershipEndDate: string;
-      membershipStatus: string;
-    },
-    metric: DashboardMetricCard
-  ): DashboardMetricCard {
-    if (!data.tier) {
+  private transformMembershipTier(data: MembershipTierResponse, metric: DashboardMetricCard): DashboardMetricCard {
+    if (!data.membershipTier) {
       return {
         ...metric,
         value: 'No Membership',
@@ -257,16 +347,16 @@ export class OrganizationInvolvementComponent {
       };
     }
 
-    const startDate = new Date(data.membershipStartDate);
-    const endDate = new Date(data.membershipEndDate);
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
     const tierSince = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     return {
       ...metric,
-      value: data.tier,
+      value: data.membershipTier,
       subtitle: `Active membership`,
-      tier: data.tier,
+      tier: data.membershipTier,
       tierSince,
       nextDue,
     };
@@ -296,7 +386,7 @@ export class OrganizationInvolvementComponent {
     };
   }
 
-  private transformCertifiedEmployees(data: { certifications: number; certifiedEmployees: number }, metric: DashboardMetricCard): DashboardMetricCard {
+  private transformCertifiedEmployees(data: CertifiedEmployeesResponse, metric: DashboardMetricCard): DashboardMetricCard {
     return {
       ...metric,
       value: `${data.certifiedEmployees} employees`,
@@ -305,12 +395,29 @@ export class OrganizationInvolvementComponent {
     };
   }
 
-  private transformTrainingEnrollments(metric: DashboardMetricCard): DashboardMetricCard {
+  private transformTrainingEnrollments(data: TrainingEnrollmentsResponse, metric: DashboardMetricCard): DashboardMetricCard {
     return {
       ...metric,
-      value: '0',
-      subtitle: 'Employees enrolled in training',
+      value: data.totalEnrollments.toString(),
+      subtitle: 'Training courses enrolled this year',
       chartOptions: this.createLineChartOptions('Training enrollments'),
+      chartData: {
+        labels: data.dailyData.map((row) => {
+          const date = new Date(row.date);
+          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }),
+        datasets: [
+          {
+            data: data.dailyData.map((row) => row.cumulativeCount),
+            borderColor: lfxColors.blue[500],
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+            fill: true,
+            tension: 0,
+            borderWidth: 2,
+            pointRadius: 0,
+          },
+        ],
+      },
     };
   }
 

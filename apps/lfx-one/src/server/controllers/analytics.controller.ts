@@ -144,84 +144,6 @@ export class AnalyticsController {
   }
 
   /**
-   * GET /api/analytics/organization-contributions-overview
-   * Get consolidated organization contributions data (maintainers + contributors + technical committee) in a single request
-   * Optimized endpoint that executes a single database query for all three metrics
-   * Query params: accountId (required) - Organization account ID
-   *   */
-  public async getOrganizationContributionsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_contributions_overview');
-
-    try {
-      const accountId = req.query['accountId'] as string | undefined;
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_organization_contributions_overview',
-        });
-      }
-
-      // Single database query for all three metrics (maintainers + contributors + technical committee)
-      const response = await this.organizationService.getContributionsOverview(accountId);
-
-      Logger.success(req, 'get_organization_contributions_overview', startTime, {
-        account_id: accountId,
-        maintainers: response.maintainers.maintainers,
-        contributors: response.contributors.contributors,
-        technical_committee_representatives: response.technicalCommittee.totalRepresentatives,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_contributions_overview', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/board-member-dashboard
-   * Get consolidated board member dashboard data (membership tier + certified employees + board meeting attendance)
-   * Optimized endpoint that executes a single database query for all three metrics
-   * Query params: accountId (required) - Organization account ID, projectSlug (required) - Foundation project slug
-   *   */
-  public async getBoardMemberDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_board_member_dashboard');
-
-    try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const projectSlug = req.query['projectSlug'] as string | undefined;
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_board_member_dashboard',
-        });
-      }
-
-      if (!projectSlug) {
-        throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
-          operation: 'get_board_member_dashboard',
-        });
-      }
-
-      // Single database query for metrics (membership tier + certified employees)
-      // Uses PROJECT_SLUG directly in the database query
-      const response = await this.organizationService.getBoardMemberDashboardData(accountId, projectSlug);
-
-      Logger.success(req, 'get_board_member_dashboard', startTime, {
-        account_id: accountId,
-        project_slug: projectSlug,
-        tier: response.membershipTier.tier,
-        certifications: response.certifiedEmployees.certifications,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_board_member_dashboard', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
    * GET /api/analytics/organization-events-overview
    * Get consolidated organization events data (event attendance + event sponsorships) in a single request
    * Query params: accountId (required) - Organization account ID
@@ -250,6 +172,190 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       Logger.error(req, 'get_organization_events_overview', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/certified-employees
+   * Get certified employees data for an organization
+   * Query params: accountId (required) - Organization account ID, projectSlug (required) - Foundation project slug
+   */
+  public async getCertifiedEmployees(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_certified_employees');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const projectSlug = req.query['projectSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_certified_employees',
+        });
+      }
+
+      if (!projectSlug) {
+        throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_certified_employees',
+        });
+      }
+
+      const response = await this.organizationService.getCertifiedEmployees(accountId, projectSlug);
+
+      Logger.success(req, 'get_certified_employees', startTime, {
+        account_id: accountId,
+        project_slug: projectSlug,
+        certifications: response.certifications,
+        certified_employees: response.certifiedEmployees,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_certified_employees', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/membership-tier
+   * Get membership tier data for an organization
+   * Query params: accountId (required) - Organization account ID, projectSlug (required) - Foundation project slug
+   */
+  public async getMembershipTier(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_membership_tier');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const projectSlug = req.query['projectSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_membership_tier',
+        });
+      }
+
+      if (!projectSlug) {
+        throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_membership_tier',
+        });
+      }
+
+      const response = await this.organizationService.getMembershipTier(accountId, projectSlug);
+
+      Logger.success(req, 'get_membership_tier', startTime, {
+        account_id: accountId,
+        project_slug: projectSlug,
+        membership_tier: response.membershipTier,
+        membership_status: response.membershipStatus,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_membership_tier', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-maintainers
+   * Get maintainers data for an organization
+   * Query params: accountId (required) - Organization account ID
+   */
+  public async getOrganizationMaintainers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_maintainers');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_organization_maintainers',
+        });
+      }
+
+      const response = await this.organizationService.getOrganizationMaintainers(accountId);
+
+      Logger.success(req, 'get_organization_maintainers', startTime, {
+        account_id: accountId,
+        maintainers: response.maintainers,
+        projects: response.projects,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_maintainers', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/organization-contributors
+   * Get contributors data for an organization
+   * Query params: accountId (required) - Organization account ID
+   */
+  public async getOrganizationContributors(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_organization_contributors');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_organization_contributors',
+        });
+      }
+
+      const response = await this.organizationService.getOrganizationContributors(accountId);
+
+      Logger.success(req, 'get_organization_contributors', startTime, {
+        account_id: accountId,
+        contributors: response.contributors,
+        projects: response.projects,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_organization_contributors', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/training-enrollments
+   * Get training enrollments data for an organization
+   * Query params: accountId (required) - Organization account ID, projectSlug (required) - Foundation project slug
+   */
+  public async getTrainingEnrollments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_training_enrollments');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const projectSlug = req.query['projectSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_training_enrollments',
+        });
+      }
+
+      if (!projectSlug) {
+        throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_training_enrollments',
+        });
+      }
+
+      const response = await this.organizationService.getTrainingEnrollments(accountId, projectSlug);
+
+      Logger.success(req, 'get_training_enrollments', startTime, {
+        account_id: accountId,
+        project_slug: projectSlug,
+        total_enrollments: response.totalEnrollments,
+        daily_data_points: response.dailyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_training_enrollments', startTime, error);
       next(error);
     }
   }
