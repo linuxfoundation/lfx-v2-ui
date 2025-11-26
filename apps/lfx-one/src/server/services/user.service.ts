@@ -481,10 +481,9 @@ export class UserService {
    * @param projectUid - Project UID to filter meetings by
    * @returns Array of Meeting objects the user is registered for or has access to
    */
-  public async getUserMeetings(req: Request, email: string, projectUid: string): Promise<Meeting[]> {
+  public async getUserMeetings(req: Request, email: string, projectUid: string, query: Record<string, any>): Promise<Meeting[]> {
     try {
       // Step 1: Get all meetings the user has access to, filtered by project
-      const query = { tags_all: `project_uid:${projectUid}` };
       const meetings = await this.meetingService.getMeetings(req, query, 'meeting', false);
 
       req.log.info(
@@ -598,17 +597,18 @@ export class UserService {
 
   /**
    * Get pending actions for board member persona
-   * Fetches surveys from Snowflake and meetings from LFX microservice
+   * Fetches surveys from Snowflake and user-specific meetings from LFX microservice
    */
   private async getBoardMemberActions(req: Request, email: string, projectSlug: string, projectUid: string): Promise<PendingActionItem[]> {
-    // Fetch surveys and meetings in parallel
+    // Fetch surveys and user-specific meetings in parallel
     const [surveys, meetings] = await Promise.all([
       this.projectService.getPendingActionSurveys(email, projectSlug).catch((error) => {
         req.log.warn({ err: error }, 'Failed to fetch surveys for pending actions');
         return [];
       }),
-      this.meetingService.getMeetings(req, { tags_all: `project_uid:${projectUid}` }, 'meeting', false).catch((error) => {
-        req.log.warn({ err: error }, 'Failed to fetch meetings for pending actions');
+
+      this.getUserMeetings(req, email, projectUid, { tags_all: [`project_uid:${projectUid}`, 'meeting_type:Board'] }).catch((error) => {
+        req.log.warn({ err: error }, 'Failed to fetch user meetings for pending actions');
         return [];
       }),
     ]);

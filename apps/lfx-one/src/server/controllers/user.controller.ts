@@ -144,7 +144,8 @@ export class UserController {
       }
 
       // Get user's meetings from service
-      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid);
+      const query = { tags_all: `project_uid:${projectUid}` };
+      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid, query);
 
       Logger.success(req, 'get_user_meetings', startTime, {
         project_uid: projectUid,
