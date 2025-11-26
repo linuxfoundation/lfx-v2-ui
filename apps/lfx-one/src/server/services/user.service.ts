@@ -587,8 +587,8 @@ export class UserService {
       req.log.error(
         {
           operation: 'get_user_meetings',
-          email,
           err: error,
+          project_uid: projectUid,
         },
         'Failed to get user meetings'
       );

@@ -147,7 +147,6 @@ export class UserController {
       const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid);
 
       Logger.success(req, 'get_user_meetings', startTime, {
-        email: userEmail,
         project_uid: projectUid,
         meeting_count: meetings.length,
       });

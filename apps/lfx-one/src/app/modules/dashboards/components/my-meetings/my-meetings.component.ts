@@ -153,7 +153,6 @@ export class MyMeetingsComponent {
         switchMap((project) => {
           // If no project/foundation selected, return empty array
           if (!project?.uid) {
-            this.loading.set(false);
             return of([]);
           }
 
