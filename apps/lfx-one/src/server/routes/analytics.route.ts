@@ -50,4 +50,13 @@ router.get('/foundation-maintainers', (req, res, next) => analyticsController.ge
 // Foundation health score distribution endpoint
 router.get('/foundation-health-score-distribution', (req, res, next) => analyticsController.getFoundationHealthScoreDistribution(req, res, next));
 
+// Health metrics daily endpoint
+router.get('/health-metrics-daily', (req, res, next) => analyticsController.getHealthMetricsDaily(req, res, next));
+
+// Unique contributors daily endpoint
+router.get('/unique-contributors-daily', (req, res, next) => analyticsController.getUniqueContributorsDaily(req, res, next));
+
+// Health events monthly endpoint
+router.get('/health-events-monthly', (req, res, next) => analyticsController.getHealthEventsMonthly(req, res, next));
+
 export default router;

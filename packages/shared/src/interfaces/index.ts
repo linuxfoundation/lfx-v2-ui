@@ -40,6 +40,9 @@ export * from './meeting-attachment.interface';
 // Dashboard interfaces
 export * from './dashboard.interface';
 
+// Unified dashboard metric interface
+export * from './dashboard-metric.interface';
+
 // Foundation metrics interfaces
 export * from './foundation-metrics.interface';
 

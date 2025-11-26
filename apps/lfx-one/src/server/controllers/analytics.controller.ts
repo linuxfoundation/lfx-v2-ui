@@ -619,4 +619,145 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/health-metrics-daily
+   * Get health metrics daily data from Snowflake
+   * Query params: slug (required), entityType (required)
+   */
+  public async getHealthMetricsDaily(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_health_metrics_daily');
+
+    try {
+      const slug = req.query['slug'] as string | undefined;
+      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+
+      if (!slug) {
+        throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
+          operation: 'get_health_metrics_daily',
+        });
+      }
+
+      if (!entityType) {
+        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
+          operation: 'get_health_metrics_daily',
+        });
+      }
+
+      // Validate entityType
+      if (entityType !== 'foundation' && entityType !== 'project') {
+        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_health_metrics_daily',
+        });
+      }
+
+      const response = await this.projectService.getHealthMetricsDaily(slug, entityType);
+
+      Logger.success(req, 'get_health_metrics_daily', startTime, {
+        slug,
+        entity_type: entityType,
+        total_days: response.totalDays,
+        current_avg_health_score: response.currentAvgHealthScore,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_health_metrics_daily', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/unique-contributors-daily
+   * Get unique contributors daily data from Snowflake
+   * Query params: slug (required), entityType (required)
+   */
+  public async getUniqueContributorsDaily(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_unique_contributors_daily');
+
+    try {
+      const slug = req.query['slug'] as string | undefined;
+      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+
+      if (!slug) {
+        throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
+          operation: 'get_unique_contributors_daily',
+        });
+      }
+
+      if (!entityType) {
+        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
+          operation: 'get_unique_contributors_daily',
+        });
+      }
+
+      // Validate entityType
+      if (entityType !== 'foundation' && entityType !== 'project') {
+        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_unique_contributors_daily',
+        });
+      }
+
+      const response = await this.projectService.getUniqueContributorsDaily(slug, entityType);
+
+      Logger.success(req, 'get_unique_contributors_daily', startTime, {
+        slug,
+        entity_type: entityType,
+        total_days: response.totalDays,
+        avg_contributors: response.avgContributors,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_unique_contributors_daily', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/health-events-monthly
+   * Get health events monthly data from Snowflake
+   * Query params: slug (required), entityType (required)
+   */
+  public async getHealthEventsMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'get_health_events_monthly');
+
+    try {
+      const slug = req.query['slug'] as string | undefined;
+      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+
+      if (!slug) {
+        throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
+          operation: 'get_health_events_monthly',
+        });
+      }
+
+      if (!entityType) {
+        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
+          operation: 'get_health_events_monthly',
+        });
+      }
+
+      // Validate entityType
+      if (entityType !== 'foundation' && entityType !== 'project') {
+        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_health_events_monthly',
+        });
+      }
+
+      const response = await this.projectService.getHealthEventsMonthly(slug, entityType);
+
+      Logger.success(req, 'get_health_events_monthly', startTime, {
+        slug,
+        entity_type: entityType,
+        total_months: response.totalMonths,
+        total_events: response.totalEvents,
+      });
+
+      res.json(response);
+    } catch (error) {
+      Logger.error(req, 'get_health_events_monthly', startTime, error);
+      next(error);
+    }
+  }
 }

@@ -5,22 +5,22 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, ElementRef, inject, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
-import { ChartComponent } from '@components/chart/chart.component';
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
+import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
-import { OrganizationInvolvementMetricWithChart, PrimaryInvolvementMetric } from '@lfx-one/shared/interfaces';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import type { DashboardMetricCard } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { TooltipModule } from 'primeng/tooltip';
 import { combineLatest, finalize, map, of, switchMap } from 'rxjs';
+
+import type { TooltipItem } from 'chart.js';
 
 @Component({
   selector: 'lfx-organization-involvement',
   standalone: true,
-  imports: [CommonModule, ChartComponent, TooltipModule, FilterPillsComponent, TagComponent, DataCopilotComponent],
+  imports: [CommonModule, FilterPillsComponent, MetricCardComponent, TagComponent, DataCopilotComponent],
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',
 })
@@ -43,8 +43,110 @@ export class OrganizationInvolvementComponent {
   public readonly isLoading = computed<boolean>(() => this.contributionsLoading() || this.dashboardLoading() || this.eventsLoading());
   public readonly selectedFilter = signal<string>('all');
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
-  public readonly sparklineChartOptions = BASE_LINE_CHART_OPTIONS;
-  public readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
+  private readonly lineChartOptions = BASE_LINE_CHART_OPTIONS;
+  private readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
+
+  private readonly activeContributorsChartOptions = {
+    ...BASE_BAR_CHART_OPTIONS,
+    plugins: {
+      ...BASE_BAR_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'bar'>[]) => context[0].label,
+          label: (context: TooltipItem<'bar'>) => {
+            const count = context.parsed.y;
+            return `Active contributors: ${count}`;
+          },
+        },
+      },
+    },
+  };
+
+  private readonly maintainersChartOptions = {
+    ...BASE_BAR_CHART_OPTIONS,
+    plugins: {
+      ...BASE_BAR_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'bar'>[]) => context[0].label,
+          label: (context: TooltipItem<'bar'>) => {
+            const count = context.parsed.y;
+            return `Maintainers: ${count}`;
+          },
+        },
+      },
+    },
+  };
+
+  private readonly eventAttendeesChartOptions = {
+    ...BASE_LINE_CHART_OPTIONS,
+    plugins: {
+      ...BASE_LINE_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'line'>[]) => context[0].label,
+          label: (context: TooltipItem<'line'>) => {
+            const count = context.parsed.y;
+            return `Event attendees: ${count}`;
+          },
+        },
+      },
+    },
+  };
+
+  private readonly eventSpeakersChartOptions = {
+    ...BASE_LINE_CHART_OPTIONS,
+    plugins: {
+      ...BASE_LINE_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'line'>[]) => context[0].label,
+          label: (context: TooltipItem<'line'>) => {
+            const count = context.parsed.y;
+            return `Event speakers: ${count}`;
+          },
+        },
+      },
+    },
+  };
+
+  private readonly certifiedEmployeesChartOptions = {
+    ...BASE_LINE_CHART_OPTIONS,
+    plugins: {
+      ...BASE_LINE_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'line'>[]) => context[0].label,
+          label: (context: TooltipItem<'line'>) => {
+            const count = context.parsed.y;
+            return `Certified employees: ${count}`;
+          },
+        },
+      },
+    },
+  };
+
+  private readonly trainingEnrollmentsChartOptions = {
+    ...BASE_LINE_CHART_OPTIONS,
+    plugins: {
+      ...BASE_LINE_CHART_OPTIONS.plugins,
+      tooltip: {
+        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
+        callbacks: {
+          title: (context: TooltipItem<'line'>[]) => context[0].label,
+          label: (context: TooltipItem<'line'>) => {
+            const count = context.parsed.y;
+            return `Training enrollments: ${count}`;
+          },
+        },
+      },
+    },
+  };
   public readonly filterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributions', label: 'Contribution' },
@@ -52,7 +154,7 @@ export class OrganizationInvolvementComponent {
     { id: 'education', label: 'Education' },
   ];
 
-  public readonly primaryMetrics = computed<OrganizationInvolvementMetricWithChart[]>((): OrganizationInvolvementMetricWithChart[] => {
+  public readonly primaryMetrics = computed<DashboardMetricCard[]>((): DashboardMetricCard[] => {
     const contributionsData = this.contributionsOverviewData();
     const dashboardData = this.boardMemberDashboardData();
     const eventsData = this.eventsOverviewData();
@@ -221,52 +323,21 @@ export class OrganizationInvolvementComponent {
     );
   }
 
-  private transformActiveContributors(
-    data: { contributors: number; projects: number },
-    metric: PrimaryInvolvementMetric
-  ): OrganizationInvolvementMetricWithChart {
+  private transformActiveContributors(data: { contributors: number; projects: number }, metric: DashboardMetricCard): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: data.contributors.toString(),
       subtitle: 'Contributors from our organization',
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Month ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: metric.sparklineColor ?? '',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.activeContributorsChartOptions,
     };
   }
 
-  private transformMaintainers(data: { maintainers: number; projects: number }, metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+  private transformMaintainers(data: { maintainers: number; projects: number }, metric: DashboardMetricCard): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: data.maintainers.toString(),
       subtitle: `Across ${data.projects} projects`,
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Month ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: metric.sparklineColor ?? '',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.maintainersChartOptions,
     };
   }
 
@@ -277,18 +348,16 @@ export class OrganizationInvolvementComponent {
       membershipEndDate: string;
       membershipStatus: string;
     },
-    metric: PrimaryInvolvementMetric
-  ): OrganizationInvolvementMetricWithChart {
+    metric: DashboardMetricCard
+  ): DashboardMetricCard {
     if (!data.tier) {
       return {
-        title: metric.title,
+        ...metric,
         value: 'No Membership',
         subtitle: 'Not a member',
-        icon: metric.icon ?? '',
         tier: '',
         tierSince: '',
         nextDue: '',
-        isMembershipTier: metric.isMembershipTier,
       };
     }
 
@@ -298,138 +367,63 @@ export class OrganizationInvolvementComponent {
     const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     return {
-      title: metric.title,
+      ...metric,
       value: data.tier,
       subtitle: `Active membership`,
-      icon: metric.icon ?? '',
       tier: data.tier,
       tierSince,
       nextDue,
-      isMembershipTier: metric.isMembershipTier,
     };
   }
 
   private transformEventAttendees(
     data: { totalAttendees: number; totalSpeakers: number; totalEvents: number; accountName: string },
-    metric: PrimaryInvolvementMetric
-  ): OrganizationInvolvementMetricWithChart {
+    metric: DashboardMetricCard
+  ): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: data.totalAttendees.toString(),
       subtitle: 'Employees at foundation events',
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Day ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.eventAttendeesChartOptions,
     };
   }
 
   private transformEventSpeakers(
     data: { totalAttendees: number; totalSpeakers: number; totalEvents: number; accountName: string },
-    metric: PrimaryInvolvementMetric
-  ): OrganizationInvolvementMetricWithChart {
+    metric: DashboardMetricCard
+  ): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: data.totalSpeakers.toString(),
       subtitle: 'Employee speakers at events',
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Day ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.eventSpeakersChartOptions,
     };
   }
 
-  private transformCertifiedEmployees(
-    data: { certifications: number; certifiedEmployees: number },
-    metric: PrimaryInvolvementMetric
-  ): OrganizationInvolvementMetricWithChart {
+  private transformCertifiedEmployees(data: { certifications: number; certifiedEmployees: number }, metric: DashboardMetricCard): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: `${data.certifiedEmployees} employees`,
       subtitle: `${data.certifications} total certifications`,
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Day ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.certifiedEmployeesChartOptions,
     };
   }
 
-  private transformTrainingEnrollments(metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+  private transformTrainingEnrollments(metric: DashboardMetricCard): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: '156',
       subtitle: 'Employees enrolled in training',
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Day ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: this.trainingEnrollmentsChartOptions,
     };
   }
 
-  private transformDefaultMetric(metric: PrimaryInvolvementMetric): OrganizationInvolvementMetricWithChart {
+  private transformDefaultMetric(metric: DashboardMetricCard): DashboardMetricCard {
     return {
-      title: metric.title,
+      ...metric,
       value: metric.value ?? 'N/A',
       subtitle: metric.subtitle ?? 'No data available',
-      icon: metric.icon ?? '',
-      chartData: {
-        labels: Array.from({ length: metric.sparklineData?.length ?? 0 }, (_, i) => `Point ${i + 1}`),
-        datasets: [
-          {
-            data: metric.sparklineData ?? [],
-            borderColor: metric.sparklineColor ?? '',
-            backgroundColor: hexToRgba(metric.sparklineColor ?? '', 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartOptions: metric.chartType === 'bar' ? this.barChartOptions : this.lineChartOptions,
     };
   }
 }

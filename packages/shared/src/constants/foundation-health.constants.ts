@@ -1,11 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import {
+import type {
   AggregateFoundationMetrics,
   CompanyBusFactor,
+  DashboardMetricCard,
   Foundation,
-  PrimaryFoundationHealthMetric,
   ProjectHealthDistribution,
   TopProjectByValue,
 } from '../interfaces';
@@ -140,10 +140,11 @@ export const AGGREGATE_FOUNDATION_METRICS: AggregateFoundationMetrics = {
  * NOTE: This contains only UI configuration (icons, categories, test IDs). Data values come from APIs or fallback to mock data.
  * This serves as a configuration template for building metric cards with consistent structure.
  */
-export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] = [
+export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
   {
     title: 'Total Projects',
     icon: 'fa-light fa-chart-bar',
+    chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-total-projects',
     customContentType: 'sparkline',
@@ -151,7 +152,8 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] 
   },
   {
     title: 'Total Members',
-    icon: 'fa-light fa-users',
+    icon: 'fa-light fa-user-group',
+    chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-total-members',
     customContentType: 'sparkline',
@@ -160,6 +162,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] 
   {
     title: 'Software Value',
     icon: 'fa-light fa-chart-bar',
+    chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-software-value',
     customContentType: 'top-projects',
@@ -167,6 +170,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] 
   {
     title: 'Company Bus Factor',
     icon: 'fa-light fa-shield',
+    chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-company-bus-factor',
     customContentType: 'bus-factor',
@@ -174,14 +178,16 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] 
   {
     title: 'Active Contributors',
     icon: 'fa-light fa-code',
+    chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-active-contributors',
     customContentType: 'sparkline',
-    sparklineColor: lfxColors.gray[500],
+    sparklineColor: lfxColors.blue[500],
   },
   {
     title: 'Maintainers',
     icon: 'fa-light fa-user-check',
+    chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-maintainers',
     customContentType: 'sparkline',
@@ -190,14 +196,16 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: PrimaryFoundationHealthMetric[] 
   {
     title: 'Events',
     icon: 'fa-light fa-calendar',
+    chartType: 'bar',
     category: 'events',
     testId: 'foundation-health-card-events',
     customContentType: 'bar-chart',
-    chartColor: lfxColors.gray[500],
+    chartColor: lfxColors.blue[500],
   },
   {
     title: 'Project Health Scores',
     icon: 'fa-light fa-chart-bar',
+    chartType: 'bar',
     category: 'projects',
     testId: 'foundation-health-card-project-health-scores',
     customContentType: 'health-scores',

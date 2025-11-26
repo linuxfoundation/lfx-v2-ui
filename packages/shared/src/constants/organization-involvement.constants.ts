@@ -1,17 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { PrimaryInvolvementMetric } from '../interfaces/dashboard.interface';
+import type { DashboardMetricCard } from '../interfaces';
 import { lfxColors } from './colors.constants';
 
 /**
- * Helper function to generate trend data for spark line charts
+ * Empty chart data placeholder for metrics populated by live data
  */
-const generateTrendData = (months: number, baseValue: number): number[] => {
-  return Array.from({ length: months }, (_, i) => {
-    const trendValue = i * 2;
-    return Math.max(0, baseValue + trendValue + (Math.random() * 10 - 5));
-  });
+const EMPTY_CHART_DATA = {
+  labels: [],
+  datasets: [],
 };
 
 /**
@@ -19,52 +17,53 @@ const generateTrendData = (months: number, baseValue: number): number[] => {
  * NOTE: This contains only UI configuration (icons, chart styling). All data values come from live API.
  * This serves as a configuration template matched by title to determine visual presentation.
  */
-export const PRIMARY_INVOLVEMENT_METRICS: PrimaryInvolvementMetric[] = [
+export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
   {
     title: 'Membership Tier',
     icon: 'fa-light fa-dollar-sign',
+    chartType: 'line',
     isMembershipTier: true,
   },
   {
     title: 'Active Contributors',
-    icon: 'fa-light fa-users',
-    sparklineData: generateTrendData(12, 60),
+    icon: 'fa-light fa-code',
+    chartType: 'bar',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.blue[300],
-    chartType: 'line' as const,
   },
   {
     title: 'Maintainers',
     icon: 'fa-light fa-user-check',
-    sparklineData: generateTrendData(12, 60),
+    chartType: 'bar',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.blue[300],
-    chartType: 'line' as const,
   },
   {
     title: 'Event Attendees',
     icon: 'fa-light fa-user-group',
-    sparklineData: generateTrendData(30, 150),
+    chartType: 'line',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.violet[500],
-    chartType: 'line' as const,
   },
   {
     title: 'Event Speakers',
-    icon: 'fa-light fa-microphone',
-    sparklineData: generateTrendData(30, 20),
+    icon: 'fa-light fa-award-simple',
+    chartType: 'line',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.emerald[500],
-    chartType: 'line' as const,
   },
   {
     title: 'Certified Employees',
-    icon: 'fa-light fa-certificate',
-    sparklineData: generateTrendData(30, 45),
+    icon: 'fa-light fa-graduation-cap',
+    chartType: 'line',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.amber[500],
-    chartType: 'line' as const,
   },
   {
     title: 'Training Enrollments',
     icon: 'fa-light fa-graduation-cap',
-    sparklineData: generateTrendData(30, 80),
+    chartType: 'line',
+    chartData: EMPTY_CHART_DATA,
     sparklineColor: lfxColors.gray[300],
-    chartType: 'line' as const,
   },
 ];

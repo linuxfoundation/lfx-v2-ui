@@ -12,11 +12,14 @@ import {
   FoundationSoftwareValueResponse,
   FoundationTotalMembersResponse,
   FoundationTotalProjectsResponse,
+  HealthEventsMonthlyResponse,
+  HealthMetricsDailyResponse,
   OrganizationContributionsOverviewResponse,
   OrganizationEventsOverviewResponse,
   ProjectIssuesResolutionResponse,
   ProjectPullRequestsWeeklyResponse,
   ProjectsListResponse,
+  UniqueContributorsDailyResponse,
   UniqueContributorsWeeklyResponse,
   UserCodeCommitsResponse,
   UserProjectsResponse,
@@ -389,6 +392,78 @@ export class AnalyticsService {
             totalUniqueContributors: 0,
             avgUniqueContributors: 0,
             totalWeeks: 0,
+          });
+        })
+      );
+  }
+
+  /**
+   * Get health metrics daily data from Snowflake
+   * @param slug - Foundation or project slug
+   * @param entityType - Query scope: 'foundation' (foundation-level data) or 'project' (single project data)
+   * @returns Observable of health metrics daily response with current average health score
+   */
+  public getHealthMetricsDaily(slug: string, entityType: 'foundation' | 'project'): Observable<HealthMetricsDailyResponse> {
+    const params = { slug, entityType };
+    return this.http
+      .get<HealthMetricsDailyResponse>('/api/analytics/health-metrics-daily', {
+        params,
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch health metrics daily:', error);
+          return of({
+            data: [],
+            currentAvgHealthScore: 0,
+            totalDays: 0,
+          });
+        })
+      );
+  }
+
+  /**
+   * Get unique contributors daily data from Snowflake
+   * @param slug - Foundation or project slug
+   * @param entityType - Query scope: 'foundation' (foundation-level data) or 'project' (single project data)
+   * @returns Observable of unique contributors daily response with average contributors
+   */
+  public getUniqueContributorsDaily(slug: string, entityType: 'foundation' | 'project'): Observable<UniqueContributorsDailyResponse> {
+    const params = { slug, entityType };
+    return this.http
+      .get<UniqueContributorsDailyResponse>('/api/analytics/unique-contributors-daily', {
+        params,
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch unique contributors daily:', error);
+          return of({
+            data: [],
+            avgContributors: 0,
+            totalDays: 0,
+          });
+        })
+      );
+  }
+
+  /**
+   * Get health events monthly data from Snowflake
+   * @param slug - Foundation or project slug
+   * @param entityType - Query scope: 'foundation' (foundation-level data) or 'project' (single project data)
+   * @returns Observable of health events monthly response with total events
+   */
+  public getHealthEventsMonthly(slug: string, entityType: 'foundation' | 'project'): Observable<HealthEventsMonthlyResponse> {
+    const params = { slug, entityType };
+    return this.http
+      .get<HealthEventsMonthlyResponse>('/api/analytics/health-events-monthly', {
+        params,
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch health events monthly:', error);
+          return of({
+            data: [],
+            totalEvents: 0,
+            totalMonths: 0,
           });
         })
       );

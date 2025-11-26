@@ -1089,3 +1089,347 @@ export interface FoundationHealthScoreDistributionResponse {
    */
   critical: number;
 }
+
+/**
+ * Foundation health metrics daily row from Snowflake
+ * Raw response from FOUNDATION_HEALTH_METRICS_DAILY table
+ */
+export interface FoundationHealthMetricsDailyRow {
+  /**
+   * Foundation ID
+   */
+  FOUNDATION_ID: string;
+
+  /**
+   * Foundation URL slug
+   */
+  FOUNDATION_SLUG: string;
+
+  /**
+   * Metric date (YYYY-MM-DD format)
+   */
+  METRIC_DATE: string;
+
+  /**
+   * Average health score across all projects
+   */
+  AVG_HEALTH_SCORE: number;
+
+  /**
+   * Minimum health score among projects
+   */
+  MIN_HEALTH_SCORE: number;
+
+  /**
+   * Maximum health score among projects
+   */
+  MAX_HEALTH_SCORE: number;
+
+  /**
+   * Count of projects with health score data
+   */
+  PROJECTS_WITH_HEALTH_SCORE_COUNT: number;
+
+  /**
+   * Total software value in dollars
+   */
+  TOTAL_SOFTWARE_VALUE: number;
+
+  /**
+   * Average software value per project
+   */
+  AVG_SOFTWARE_VALUE: number;
+
+  /**
+   * Count of projects with software value data
+   */
+  PROJECTS_WITH_SOFTWARE_VALUE_COUNT: number;
+
+  /**
+   * Total projects count (for foundation level)
+   */
+  TOTAL_PROJECTS_COUNT?: number;
+
+  /**
+   * Total sub-projects count (for project level)
+   */
+  TOTAL_SUB_PROJECTS_COUNT?: number;
+}
+
+/**
+ * Project health metrics daily row from Snowflake
+ * Raw response from PROJECT_HEALTH_METRICS_DAILY table
+ */
+export interface ProjectHealthMetricsDailyRow {
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Metric date (YYYY-MM-DD format)
+   */
+  METRIC_DATE: string;
+
+  /**
+   * Average health score across all sub-projects
+   */
+  AVG_HEALTH_SCORE: number;
+
+  /**
+   * Minimum health score among sub-projects
+   */
+  MIN_HEALTH_SCORE: number;
+
+  /**
+   * Maximum health score among sub-projects
+   */
+  MAX_HEALTH_SCORE: number;
+
+  /**
+   * Count of sub-projects with health score data
+   */
+  PROJECTS_WITH_HEALTH_SCORE_COUNT: number;
+
+  /**
+   * Total software value in dollars
+   */
+  TOTAL_SOFTWARE_VALUE: number;
+
+  /**
+   * Average software value per sub-project
+   */
+  AVG_SOFTWARE_VALUE: number;
+
+  /**
+   * Count of sub-projects with software value data
+   */
+  PROJECTS_WITH_SOFTWARE_VALUE_COUNT: number;
+
+  /**
+   * Total sub-projects count
+   */
+  TOTAL_SUB_PROJECTS_COUNT: number;
+}
+
+/**
+ * API response for health metrics daily query
+ * Contains daily trend data with aggregated metrics
+ */
+export interface HealthMetricsDailyResponse {
+  /**
+   * Array of daily health metrics data
+   */
+  data: FoundationHealthMetricsDailyRow[] | ProjectHealthMetricsDailyRow[];
+
+  /**
+   * Current average health score (from most recent date)
+   */
+  currentAvgHealthScore: number;
+
+  /**
+   * Number of days with data
+   */
+  totalDays: number;
+}
+
+/**
+ * Foundation unique contributors daily row from Snowflake
+ * Raw response from FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY table
+ */
+export interface FoundationUniqueContributorsDailyRow {
+  /**
+   * Foundation ID
+   */
+  FOUNDATION_ID: string;
+
+  /**
+   * Foundation name
+   */
+  FOUNDATION_NAME: string;
+
+  /**
+   * Foundation URL slug
+   */
+  FOUNDATION_SLUG: string;
+
+  /**
+   * Activity date (YYYY-MM-DD format)
+   */
+  ACTIVITY_DATE: string;
+
+  /**
+   * Number of unique contributors on this date
+   */
+  DAILY_UNIQUE_CONTRIBUTORS: number;
+
+  /**
+   * Average contributors (calculated aggregate)
+   */
+  AVG_CONTRIBUTORS: number;
+
+  /**
+   * Total days with data
+   */
+  TOTAL_DAYS: number;
+}
+
+/**
+ * Project unique contributors daily row from Snowflake
+ * Raw response from PROJECT_UNIQUE_CONTRIBUTORS_DAILY table
+ */
+export interface ProjectUniqueContributorsDailyRow {
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project name
+   */
+  PROJECT_NAME: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Activity date (YYYY-MM-DD format)
+   */
+  ACTIVITY_DATE: string;
+
+  /**
+   * Number of unique contributors on this date
+   */
+  DAILY_UNIQUE_CONTRIBUTORS: number;
+
+  /**
+   * Average contributors (calculated aggregate)
+   */
+  AVG_CONTRIBUTORS: number;
+
+  /**
+   * Total days with data
+   */
+  TOTAL_DAYS: number;
+}
+
+/**
+ * API response for unique contributors daily query
+ * Contains daily trend data with aggregated metrics
+ */
+export interface UniqueContributorsDailyResponse {
+  /**
+   * Array of daily unique contributors data
+   */
+  data: FoundationUniqueContributorsDailyRow[] | ProjectUniqueContributorsDailyRow[];
+
+  /**
+   * Average unique contributors per day
+   */
+  avgContributors: number;
+
+  /**
+   * Number of days with data
+   */
+  totalDays: number;
+}
+
+/**
+ * Foundation health events monthly row from Snowflake
+ * Raw response from FOUNDATION_HEALTH_EVENTS_MONTHLY table
+ */
+export interface FoundationHealthEventsMonthlyRow {
+  /**
+   * Foundation ID
+   */
+  FOUNDATION_ID: string;
+
+  /**
+   * Foundation name
+   */
+  FOUNDATION_NAME: string;
+
+  /**
+   * Foundation URL slug
+   */
+  FOUNDATION_SLUG: string;
+
+  /**
+   * Month start date (YYYY-MM-DD format)
+   */
+  MONTH_START_DATE: string;
+
+  /**
+   * Number of events in this month
+   */
+  EVENT_COUNT: number;
+
+  /**
+   * Total events across all months
+   */
+  TOTAL_EVENTS: number;
+}
+
+/**
+ * Project health events monthly row from Snowflake
+ * Raw response from PROJECT_HEALTH_EVENTS_MONTHLY table
+ */
+export interface ProjectHealthEventsMonthlyRow {
+  /**
+   * Project ID
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Project name
+   */
+  PROJECT_NAME: string;
+
+  /**
+   * Project URL slug
+   */
+  PROJECT_SLUG: string;
+
+  /**
+   * Month start date (YYYY-MM-DD format)
+   */
+  MONTH_START_DATE: string;
+
+  /**
+   * Number of events in this month
+   */
+  EVENT_COUNT: number;
+
+  /**
+   * Total events across all months
+   */
+  TOTAL_EVENTS: number;
+}
+
+/**
+ * API response for health events monthly query
+ * Contains monthly trend data with aggregated metrics
+ */
+export interface HealthEventsMonthlyResponse {
+  /**
+   * Array of monthly events data
+   */
+  data: FoundationHealthEventsMonthlyRow[] | ProjectHealthEventsMonthlyRow[];
+
+  /**
+   * Total events across all months
+   */
+  totalEvents: number;
+
+  /**
+   * Number of months with data
+   */
+  totalMonths: number;
+}

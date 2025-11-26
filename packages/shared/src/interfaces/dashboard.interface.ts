@@ -121,6 +121,9 @@ export interface OrganizationInvolvementMetricWithChart {
       pointRadius: number;
     }[];
   };
+  /** Chart.js options configuration */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  chartOptions?: Record<string, any>;
   /** Membership tier value (only for membership tier metrics) */
   tier?: string;
   /** Date when membership tier started (only for membership tier metrics) */
