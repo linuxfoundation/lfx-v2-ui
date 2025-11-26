@@ -37,14 +37,8 @@ export * from './search.interface';
 // Meeting attachment interfaces
 export * from './meeting-attachment.interface';
 
-// Dashboard interfaces
-export * from './dashboard.interface';
-
-// Unified dashboard metric interface
+// Dashboard metric interfaces (unified)
 export * from './dashboard-metric.interface';
-
-// Foundation metrics interfaces
-export * from './foundation-metrics.interface';
 
 // AI interfaces
 export * from './ai.interface';

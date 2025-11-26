@@ -23,7 +23,7 @@ export class MetricCardComponent {
   public readonly testId = input<string>();
 
   // Chart inputs
-  public readonly chartType = input<ChartType>();
+  public readonly chartType = input.required<ChartType>();
   public readonly chartData = input<ChartData<ChartType>>();
   public readonly chartOptions = input<ChartOptions<ChartType>>();
 

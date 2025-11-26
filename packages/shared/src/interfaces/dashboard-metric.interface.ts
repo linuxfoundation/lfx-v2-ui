@@ -4,6 +4,12 @@
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 
 /**
+ * Health score type for foundations
+ * @description Indicates the overall health status of a foundation
+ */
+export type FoundationHealthScore = 'excellent' | 'healthy' | 'stable' | 'unsteady' | 'critical';
+
+/**
  * Metric category type for dashboard filtering
  * @description Used to categorize and filter dashboard metrics
  */
@@ -13,7 +19,7 @@ export type MetricCategory = 'contributors' | 'projects' | 'events' | 'code' | '
  * Custom content type for specialized metric cards
  * @description Determines what type of custom content to render in the metric card
  */
-export type CustomContentType = 'sparkline' | 'bar-chart' | 'top-projects' | 'bus-factor' | 'health-scores';
+export type CustomContentType = 'bar-chart' | 'top-projects' | 'bus-factor' | 'health-scores';
 
 /**
  * Unified dashboard metric card interface
@@ -52,9 +58,6 @@ export interface DashboardMetricCard {
 
   /** Chart.js options configuration */
   chartOptions?: ChartOptions<ChartType>;
-
-  /** Color for sparkline/line chart */
-  sparklineColor?: string;
 
   /** Color for bar chart */
   chartColor?: string;

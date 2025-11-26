@@ -7,13 +7,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
-import {
-  AGGREGATE_FOUNDATION_METRICS,
-  BASE_BAR_CHART_OPTIONS,
-  BASE_LINE_CHART_OPTIONS,
-  lfxColors,
-  PRIMARY_FOUNDATION_HEALTH_METRICS,
-} from '@lfx-one/shared/constants';
+import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, COMPANY_BUS_FACTOR, lfxColors, PRIMARY_FOUNDATION_HEALTH_METRICS } from '@lfx-one/shared/constants';
 import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -260,13 +254,11 @@ export class FoundationHealthComponent {
 
   private transformCompanyBusFactor(metric: DashboardMetricCard): DashboardMetricCard {
     // TODO: Replace with real API data when endpoint is available
-    const metrics = AGGREGATE_FOUNDATION_METRICS;
-
     return {
       ...metric,
-      value: metrics.companyBusFactor.topCompaniesCount.toString(),
+      value: COMPANY_BUS_FACTOR.topCompaniesCount.toString(),
       subtitle: 'Companies account for >50% code contributions',
-      busFactor: metrics.companyBusFactor,
+      busFactor: COMPANY_BUS_FACTOR,
     };
   }
 

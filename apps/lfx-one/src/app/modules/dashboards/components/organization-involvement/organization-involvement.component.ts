@@ -9,13 +9,13 @@ import { FilterOption, FilterPillsComponent } from '@components/filter-pills/fil
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
-import type { DashboardMetricCard } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { combineLatest, finalize, map, of, switchMap } from 'rxjs';
 
-import type { TooltipItem } from 'chart.js';
+import type { DashboardMetricCard } from '@lfx-one/shared/interfaces';
+import type { ChartOptions, TooltipItem } from 'chart.js';
 
 @Component({
   selector: 'lfx-organization-involvement',
@@ -43,110 +43,6 @@ export class OrganizationInvolvementComponent {
   public readonly isLoading = computed<boolean>(() => this.contributionsLoading() || this.dashboardLoading() || this.eventsLoading());
   public readonly selectedFilter = signal<string>('all');
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
-  private readonly lineChartOptions = BASE_LINE_CHART_OPTIONS;
-  private readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
-
-  private readonly activeContributorsChartOptions = {
-    ...BASE_BAR_CHART_OPTIONS,
-    plugins: {
-      ...BASE_BAR_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'bar'>[]) => context[0].label,
-          label: (context: TooltipItem<'bar'>) => {
-            const count = context.parsed.y;
-            return `Active contributors: ${count}`;
-          },
-        },
-      },
-    },
-  };
-
-  private readonly maintainersChartOptions = {
-    ...BASE_BAR_CHART_OPTIONS,
-    plugins: {
-      ...BASE_BAR_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'bar'>[]) => context[0].label,
-          label: (context: TooltipItem<'bar'>) => {
-            const count = context.parsed.y;
-            return `Maintainers: ${count}`;
-          },
-        },
-      },
-    },
-  };
-
-  private readonly eventAttendeesChartOptions = {
-    ...BASE_LINE_CHART_OPTIONS,
-    plugins: {
-      ...BASE_LINE_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'line'>[]) => context[0].label,
-          label: (context: TooltipItem<'line'>) => {
-            const count = context.parsed.y;
-            return `Event attendees: ${count}`;
-          },
-        },
-      },
-    },
-  };
-
-  private readonly eventSpeakersChartOptions = {
-    ...BASE_LINE_CHART_OPTIONS,
-    plugins: {
-      ...BASE_LINE_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'line'>[]) => context[0].label,
-          label: (context: TooltipItem<'line'>) => {
-            const count = context.parsed.y;
-            return `Event speakers: ${count}`;
-          },
-        },
-      },
-    },
-  };
-
-  private readonly certifiedEmployeesChartOptions = {
-    ...BASE_LINE_CHART_OPTIONS,
-    plugins: {
-      ...BASE_LINE_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'line'>[]) => context[0].label,
-          label: (context: TooltipItem<'line'>) => {
-            const count = context.parsed.y;
-            return `Certified employees: ${count}`;
-          },
-        },
-      },
-    },
-  };
-
-  private readonly trainingEnrollmentsChartOptions = {
-    ...BASE_LINE_CHART_OPTIONS,
-    plugins: {
-      ...BASE_LINE_CHART_OPTIONS.plugins,
-      tooltip: {
-        ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
-        callbacks: {
-          title: (context: TooltipItem<'line'>[]) => context[0].label,
-          label: (context: TooltipItem<'line'>) => {
-            const count = context.parsed.y;
-            return `Training enrollments: ${count}`;
-          },
-        },
-      },
-    },
-  };
   public readonly filterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributions', label: 'Contribution' },
@@ -328,7 +224,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: data.contributors.toString(),
       subtitle: 'Contributors from our organization',
-      chartOptions: this.activeContributorsChartOptions,
+      chartOptions: this.createBarChartOptions('Active contributors'),
     };
   }
 
@@ -337,7 +233,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: data.maintainers.toString(),
       subtitle: `Across ${data.projects} projects`,
-      chartOptions: this.maintainersChartOptions,
+      chartOptions: this.createBarChartOptions('Maintainers'),
     };
   }
 
@@ -384,7 +280,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: data.totalAttendees.toString(),
       subtitle: 'Employees at foundation events',
-      chartOptions: this.eventAttendeesChartOptions,
+      chartOptions: this.createLineChartOptions('Event attendees'),
     };
   }
 
@@ -396,7 +292,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: data.totalSpeakers.toString(),
       subtitle: 'Employee speakers at events',
-      chartOptions: this.eventSpeakersChartOptions,
+      chartOptions: this.createLineChartOptions('Event speakers'),
     };
   }
 
@@ -405,16 +301,16 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: `${data.certifiedEmployees} employees`,
       subtitle: `${data.certifications} total certifications`,
-      chartOptions: this.certifiedEmployeesChartOptions,
+      chartOptions: this.createLineChartOptions('Certified employees'),
     };
   }
 
   private transformTrainingEnrollments(metric: DashboardMetricCard): DashboardMetricCard {
     return {
       ...metric,
-      value: '156',
+      value: '0',
       subtitle: 'Employees enrolled in training',
-      chartOptions: this.trainingEnrollmentsChartOptions,
+      chartOptions: this.createLineChartOptions('Training enrollments'),
     };
   }
 
@@ -423,7 +319,39 @@ export class OrganizationInvolvementComponent {
       ...metric,
       value: metric.value ?? 'N/A',
       subtitle: metric.subtitle ?? 'No data available',
-      chartOptions: metric.chartType === 'bar' ? this.barChartOptions : this.lineChartOptions,
+      chartOptions: metric.chartType === 'bar' ? BASE_BAR_CHART_OPTIONS : BASE_LINE_CHART_OPTIONS,
+    };
+  }
+
+  private createBarChartOptions(label: string): ChartOptions<'bar'> {
+    return {
+      ...BASE_BAR_CHART_OPTIONS,
+      plugins: {
+        ...BASE_BAR_CHART_OPTIONS.plugins,
+        tooltip: {
+          ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
+          callbacks: {
+            title: (context: TooltipItem<'bar'>[]) => context[0].label,
+            label: (context: TooltipItem<'bar'>) => `${label}: ${context.parsed.y}`,
+          },
+        },
+      },
+    };
+  }
+
+  private createLineChartOptions(label: string): ChartOptions<'line'> {
+    return {
+      ...BASE_LINE_CHART_OPTIONS,
+      plugins: {
+        ...BASE_LINE_CHART_OPTIONS.plugins,
+        tooltip: {
+          ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
+          callbacks: {
+            title: (context: TooltipItem<'line'>[]) => context[0].label,
+            label: (context: TooltipItem<'line'>) => `${label}: ${context.parsed.y}`,
+          },
+        },
+      },
     };
   }
 }

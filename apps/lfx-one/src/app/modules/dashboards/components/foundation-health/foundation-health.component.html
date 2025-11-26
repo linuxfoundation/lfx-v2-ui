@@ -63,19 +63,6 @@
       <div #carouselScroll class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar scroll-smooth" data-testid="foundation-health-carousel">
         @for (card of metricCards(); track card.title) {
           @switch (card.customContentType) {
-            <!-- Sparkline Chart - Use shared metric card -->
-            @case ('sparkline') {
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [chartData]="card.chartData"
-                [chartOptions]="card.chartOptions || sparklineOptions"
-                [value]="card.value"
-                [subtitle]="card.subtitle"></lfx-metric-card>
-            }
-
             <!-- Bar Chart - Use shared metric card -->
             @case ('bar-chart') {
               <lfx-metric-card
@@ -91,7 +78,13 @@
 
             <!-- Top Projects List - Custom content -->
             @case ('top-projects') {
-              <lfx-metric-card [title]="card.title" [icon]="card.icon" [testId]="card.testId" [value]="card.value" [subtitle]="card.subtitle">
+              <lfx-metric-card
+                [title]="card.title"
+                [icon]="card.icon"
+                [testId]="card.testId"
+                [chartType]="card.chartType"
+                [value]="card.value"
+                [subtitle]="card.subtitle">
                 <ng-template #customContent>
                   @if (card.topProjects) {
                     <div class="space-y-0.5 p-0 pl-[60px] m-0 mb-[5px]">
@@ -110,7 +103,13 @@
 
             <!-- Company Bus Factor - Custom content -->
             @case ('bus-factor') {
-              <lfx-metric-card [title]="card.title" [icon]="card.icon" [testId]="card.testId" [value]="card.value" [subtitle]="card.subtitle">
+              <lfx-metric-card
+                [title]="card.title"
+                [icon]="card.icon"
+                [testId]="card.testId"
+                [chartType]="card.chartType"
+                [value]="card.value"
+                [subtitle]="card.subtitle">
                 <ng-template #customContent>
                   @if (card.busFactor) {
                     <div class="flex-1 flex flex-col justify-end pb-2">
@@ -134,7 +133,13 @@
 
             <!-- Project Health Scores - Custom content -->
             @case ('health-scores') {
-              <lfx-metric-card [title]="card.title" [icon]="card.icon" [testId]="card.testId" [value]="card.value" [subtitle]="card.subtitle">
+              <lfx-metric-card
+                [title]="card.title"
+                [icon]="card.icon"
+                [testId]="card.testId"
+                [chartType]="card.chartType"
+                [value]="card.value"
+                [subtitle]="card.subtitle">
                 <ng-template #customContent>
                   @if (card.healthScores) {
                     <div class="flex-1 flex flex-col justify-end p-0">
