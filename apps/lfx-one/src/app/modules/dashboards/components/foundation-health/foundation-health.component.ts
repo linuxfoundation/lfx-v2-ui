@@ -163,7 +163,7 @@ export class FoundationHealthComponent {
 
       return data.map((item) => ({
         ...item,
-        heightPx: Math.round((item.count / maxCount) * 64),
+        heightPx: maxCount > 0 ? Math.round((item.count / maxCount) * 64) : 0,
       }));
     });
   }
