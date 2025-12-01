@@ -144,39 +144,6 @@ export class AnalyticsController {
   }
 
   /**
-   * GET /api/analytics/organization-events-overview
-   * Get consolidated organization events data (event attendance + event sponsorships) in a single request
-   * Query params: accountId (required) - Organization account ID
-   *   */
-  public async getOrganizationEventsOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_organization_events_overview');
-
-    try {
-      const accountId = req.query['accountId'] as string | undefined;
-
-      if (!accountId) {
-        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
-          operation: 'get_organization_events_overview',
-        });
-      }
-
-      // Query for event metrics
-      const response = await this.organizationService.getEventsOverview(accountId);
-
-      Logger.success(req, 'get_organization_events_overview', startTime, {
-        account_id: accountId,
-        total_attendees: response.eventAttendance.totalAttendees,
-        total_speakers: response.eventAttendance.totalSpeakers,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_organization_events_overview', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
    * GET /api/analytics/certified-employees
    * Get certified employees data for an organization with monthly trend data
    * Query params: accountId (required) - Organization account ID, foundationSlug (required) - Foundation slug
@@ -415,27 +382,6 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       Logger.error(req, 'get_event_attendance_monthly', startTime, error);
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/analytics/projects
-   * Get list of projects with maintainers from Snowflake
-   *   */
-  public async getProjects(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = Logger.start(req, 'get_projects_list');
-
-    try {
-      const response = await this.projectService.getProjectsWithMaintainersList();
-
-      Logger.success(req, 'get_projects_list', startTime, {
-        project_count: response.projects.length,
-      });
-
-      res.json(response);
-    } catch (error) {
-      Logger.error(req, 'get_projects_list', startTime, error);
       next(error);
     }
   }

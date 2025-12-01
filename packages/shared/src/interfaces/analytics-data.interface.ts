@@ -319,29 +319,6 @@ export interface OrganizationEventAttendanceMonthlyResponse {
 }
 
 /**
- * Consolidated API response for organization events overview
- * Contains event attendance data including attendees and speakers
- *
- * Generated with [Claude Code](https://claude.ai/code)
- */
-export interface OrganizationEventsOverviewResponse {
-  /**
-   * Event attendance information
-   */
-  eventAttendance: {
-    totalAttendees: number;
-    totalSpeakers: number;
-    totalEvents: number;
-    accountName: string;
-  };
-
-  /**
-   * Salesforce account ID for the organization
-   */
-  accountId: string;
-}
-
-/**
  * Snowflake row from projects dimension table
  * Raw response with Snowflake naming conventions (ALL_CAPS)
  */
@@ -664,73 +641,6 @@ export interface UniqueContributorsWeeklyResponse {
    * Total number of weeks with data
    */
   totalWeeks: number;
-}
-
-/**
- * Monthly project count aggregation from Snowflake
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface MonthlyProjectCountRow {
-  /**
-   * Month start date (first day of month)
-   */
-  MONTH_START: string;
-
-  /**
-   * Number of projects added in this month
-   */
-  PROJECT_COUNT: number;
-}
-
-/**
- * Foundation total projects row from Snowflake MEMBER_DASHBOARD_TOTAL_PROJECTS table
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface FoundationTotalProjectsRow {
-  /**
-   * Foundation segment ID (parent)
-   */
-  FOUNDATION_SEGMENT_ID: string;
-
-  /**
-   * Foundation name (parent)
-   */
-  FOUNDATION_NAME: string;
-
-  /**
-   * Foundation source ID from Salesforce (parent)
-   */
-  FOUNDATION_SOURCE_ID: string;
-
-  /**
-   * Foundation URL slug (parent)
-   */
-  FOUNDATION_SLUG: string;
-
-  /**
-   * Child project segment ID
-   */
-  CHILD_SEGMENT_ID: string;
-
-  /**
-   * Child project name
-   */
-  CHILD_NAME: string;
-
-  /**
-   * Child project source ID from Salesforce
-   */
-  CHILD_SOURCE_ID: string;
-
-  /**
-   * Child project URL slug
-   */
-  CHILD_SLUG: string;
-
-  /**
-   * Date when the child project started (YYYY-MM-DD format)
-   */
-  CHILD_START_DATE: string;
 }
 
 /**
@@ -1395,37 +1305,6 @@ export interface HealthEventsMonthlyResponse {
 }
 
 /**
- * Certified Employees row from Snowflake MEMBER_DASHBOARD_CERTIFIED_EMPLOYEES table
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface CertifiedEmployeesRow {
-  /**
-   * Total number of certifications held by employees
-   */
-  CERTIFICATIONS: number;
-
-  /**
-   * Number of certified employees
-   */
-  CERTIFIED_EMPLOYEES: number;
-
-  /**
-   * Organization account ID
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Project ID
-   */
-  PROJECT_ID: string;
-
-  /**
-   * Project URL slug
-   */
-  PROJECT_SLUG: string;
-}
-
-/**
  * Certified Employees Monthly row from Snowflake
  * Raw response with Snowflake naming conventions (ALL_CAPS)
  * Contains monthly certification metrics for board member dashboard charts
@@ -1648,32 +1527,6 @@ export interface MembershipTierResponse {
 }
 
 /**
- * Maintainers row from Snowflake MEMBER_DASHBOARD_MAINTAINERS table
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface OrganizationMaintainersRow {
-  /**
-   * Number of maintainers from the organization
-   */
-  MAINTAINERS: number;
-
-  /**
-   * Number of projects where the organization has maintainers
-   */
-  PROJECTS: number;
-
-  /**
-   * Organization account ID
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Organization account name
-   */
-  ACCOUNT_NAME: string;
-}
-
-/**
  * Organization Maintainers Monthly row from Snowflake
  * Raw response with Snowflake naming conventions (ALL_CAPS)
  * Contains monthly maintainer metrics for board member dashboard charts
@@ -1771,32 +1624,6 @@ export interface OrganizationMaintainersResponse {
    * Array of month strings (e.g., ['Jan 2024', 'Feb 2024']) matching monthlyData
    */
   monthlyLabels: string[];
-}
-
-/**
- * Contributors row from Snowflake MEMBER_DASHBOARD_CONTRIBUTORS table
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface OrganizationContributorsRow {
-  /**
-   * Number of contributors from the organization
-   */
-  CONTRIBUTORS: number;
-
-  /**
-   * Number of projects where the organization has contributors
-   */
-  PROJECTS: number;
-
-  /**
-   * Organization account ID
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Organization account name
-   */
-  ACCOUNT_NAME: string;
 }
 
 /**
@@ -1966,67 +1793,6 @@ export interface FoundationCompanyBusFactorResponse {
    * Percentage of contributions from other companies
    */
   otherCompaniesPercentage: number;
-}
-
-/**
- * Training Enrollment row from Snowflake MEMBER_DASHBOARD_TRAINING_ENROLLMENTS table
- * Raw response with Snowflake naming conventions (ALL_CAPS)
- */
-export interface TrainingEnrollmentRow {
-  /**
-   * Unique enrollment identifier
-   */
-  ENROLLMENT_ID: string;
-
-  /**
-   * Course identifier
-   */
-  COURSE_ID: string;
-
-  /**
-   * Course display name
-   */
-  COURSE_NAME: string;
-
-  /**
-   * Course URL slug
-   */
-  COURSE_SLUG: string;
-
-  /**
-   * Enrollment timestamp (ISO format)
-   */
-  ENROLLMENT_TS: string;
-
-  /**
-   * User identifier
-   */
-  USER_ID: string;
-
-  /**
-   * User email address
-   */
-  USER_EMAIL: string;
-
-  /**
-   * Organization account ID
-   */
-  ACCOUNT_ID: string;
-
-  /**
-   * Project ID
-   */
-  PROJECT_ID: string;
-
-  /**
-   * Project URL slug
-   */
-  PROJECT_SLUG: string;
-
-  /**
-   * Segment ID
-   */
-  SEGMENT_ID: string;
 }
 
 /**

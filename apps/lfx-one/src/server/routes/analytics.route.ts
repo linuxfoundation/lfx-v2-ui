@@ -15,9 +15,6 @@ router.get('/pull-requests-merged', (req, res, next) => analyticsController.getP
 router.get('/code-commits', (req, res, next) => analyticsController.getCodeCommits(req, res, next));
 router.get('/my-projects', (req, res, next) => analyticsController.getMyProjects(req, res, next));
 
-// Organization-specific analytics endpoints
-router.get('/organization-events-overview', (req, res, next) => analyticsController.getOrganizationEventsOverview(req, res, next));
-
 // Certified employees endpoint
 router.get('/certified-employees', (req, res, next) => analyticsController.getCertifiedEmployees(req, res, next));
 
@@ -35,9 +32,6 @@ router.get('/training-enrollments', (req, res, next) => analyticsController.getT
 
 // Event attendance monthly endpoint
 router.get('/event-attendance-monthly', (req, res, next) => analyticsController.getEventAttendanceMonthly(req, res, next));
-
-// Projects list endpoint
-router.get('/projects', (req, res, next) => analyticsController.getProjects(req, res, next));
 
 // Project issues resolution endpoint
 router.get('/project-issues-resolution', (req, res, next) => analyticsController.getProjectIssuesResolution(req, res, next));

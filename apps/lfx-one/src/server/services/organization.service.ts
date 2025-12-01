@@ -12,8 +12,6 @@ import {
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
   OrganizationEventAttendanceMonthlyRow,
-  OrganizationEventAttendanceRow,
-  OrganizationEventsOverviewResponse,
   OrganizationMaintainersMonthlyRow,
   OrganizationMaintainersResponse,
   OrganizationSuggestion,
@@ -54,45 +52,6 @@ export class OrganizationService {
     const response = await this.microserviceProxy.proxyRequest<OrganizationSuggestionsResponse>(req, 'LFX_V2_SERVICE', '/query/orgs/suggest', 'GET', params);
 
     return response.suggestions || [];
-  }
-
-  /**
-   * Get organization events overview (event attendance + event sponsorships)
-   * @param accountId - Organization account ID
-   * @returns Events overview
-   */
-  public async getEventsOverview(accountId: string): Promise<OrganizationEventsOverviewResponse> {
-    const attendanceQuery = `
-      SELECT
-        SUM(ATTENDEES) AS TOTAL_ATTENDEES,
-        SUM(SPEAKERS) AS TOTAL_SPEAKERS,
-        COUNT(*) AS TOTAL_EVENTS,
-        MAX(ACCOUNT_ID) AS ACCOUNT_ID,
-        MAX(ACCOUNT_NAME) AS ACCOUNT_NAME
-      FROM ANALYTICS_DEV.DEV_ADESILVA_PLATINUM_LFX_ONE.MEMBER_DASHBOARD_EVENT_ATTENDANCE
-      WHERE ACCOUNT_ID = ?
-      GROUP BY ACCOUNT_ID
-    `;
-
-    const attendanceResult = await this.snowflakeService.execute<OrganizationEventAttendanceRow>(attendanceQuery, [accountId]);
-
-    if (attendanceResult.rows.length === 0) {
-      throw new ResourceNotFoundError('Organization event attendance data', accountId, {
-        operation: 'get_organization_events_overview',
-      });
-    }
-
-    const attendanceRow = attendanceResult.rows[0];
-
-    return {
-      eventAttendance: {
-        totalAttendees: attendanceRow.TOTAL_ATTENDEES,
-        totalSpeakers: attendanceRow.TOTAL_SPEAKERS,
-        totalEvents: attendanceRow.TOTAL_EVENTS,
-        accountName: attendanceRow.ACCOUNT_NAME,
-      },
-      accountId: attendanceRow.ACCOUNT_ID,
-    };
   }
 
   /**

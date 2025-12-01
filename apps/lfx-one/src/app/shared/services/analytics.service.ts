@@ -18,11 +18,9 @@ import {
   MembershipTierResponse,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
-  OrganizationEventsOverviewResponse,
   OrganizationMaintainersResponse,
   ProjectIssuesResolutionResponse,
   ProjectPullRequestsWeeklyResponse,
-  ProjectsListResponse,
   TrainingEnrollmentsResponse,
   UniqueContributorsDailyResponse,
   UniqueContributorsWeeklyResponse,
@@ -230,29 +228,6 @@ export class AnalyticsService {
   }
 
   /**
-   * Get consolidated organization events overview (event attendance + event sponsorships) in a single API call
-   * Optimized endpoint that reduces API roundtrips by combining related event metrics
-   * @param accountId - Required account ID to filter by specific organization
-   * @returns Observable of consolidated events overview response
-   */
-  public getOrganizationEventsOverview(accountId: string): Observable<OrganizationEventsOverviewResponse> {
-    return this.http.get<OrganizationEventsOverviewResponse>('/api/analytics/organization-events-overview', { params: { accountId } }).pipe(
-      catchError((error) => {
-        console.error('Failed to fetch organization events overview:', error);
-        return of({
-          eventAttendance: {
-            totalAttendees: 0,
-            totalSpeakers: 0,
-            totalEvents: 0,
-            accountName: '',
-          },
-          accountId: '',
-        });
-      })
-    );
-  }
-
-  /**
    * Get event attendance monthly data for an organization with cumulative trends
    * Returns separate data for event attendees and event speakers charts
    * @param accountId - Required account ID to filter by specific organization
@@ -382,21 +357,6 @@ export class AnalyticsService {
           topCompaniesPercentage: 0,
           otherCompaniesCount: 0,
           otherCompaniesPercentage: 0,
-        });
-      })
-    );
-  }
-
-  /**
-   * Get list of all projects from Snowflake
-   * @returns Observable of projects list response
-   */
-  public getProjects(): Observable<ProjectsListResponse> {
-    return this.http.get<ProjectsListResponse>('/api/analytics/projects').pipe(
-      catchError((error) => {
-        console.error('Failed to fetch projects:', error);
-        return of({
-          projects: [],
         });
       })
     );
