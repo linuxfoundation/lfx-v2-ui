@@ -33,6 +33,9 @@ router.get('/organization-contributors', (req, res, next) => analyticsController
 // Training enrollments endpoint
 router.get('/training-enrollments', (req, res, next) => analyticsController.getTrainingEnrollments(req, res, next));
 
+// Event attendance monthly endpoint
+router.get('/event-attendance-monthly', (req, res, next) => analyticsController.getEventAttendanceMonthly(req, res, next));
+
 // Projects list endpoint
 router.get('/projects', (req, res, next) => analyticsController.getProjects(req, res, next));
 
@@ -62,6 +65,9 @@ router.get('/foundation-maintainers', (req, res, next) => analyticsController.ge
 
 // Foundation health score distribution endpoint
 router.get('/foundation-health-score-distribution', (req, res, next) => analyticsController.getFoundationHealthScoreDistribution(req, res, next));
+
+// Company bus factor endpoint
+router.get('/company-bus-factor', (req, res, next) => analyticsController.getCompanyBusFactor(req, res, next));
 
 // Health metrics daily endpoint
 router.get('/health-metrics-daily', (req, res, next) => analyticsController.getHealthMetricsDaily(req, res, next));
