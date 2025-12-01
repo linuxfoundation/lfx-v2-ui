@@ -151,7 +151,7 @@ export class OrganizationInvolvementComponent {
         return allCards.map((item) => item.card);
       }
 
-      return allCards.filter((item) => item.category === 'membership' || item.category === filter).map((item) => item.card);
+      return allCards.filter((item) => item.category === filter).map((item) => item.card);
     });
   }
 
