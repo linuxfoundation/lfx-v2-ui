@@ -541,8 +541,8 @@ export class OrganizationInvolvementComponent {
               datasets: [
                 {
                   data: data.attendeesMonthlyData,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+                  borderColor: lfxColors.emerald[500],
+                  backgroundColor: hexToRgba(lfxColors.emerald[500], 0.1),
                   fill: true,
                   tension: 0,
                   borderWidth: 2,
@@ -568,8 +568,8 @@ export class OrganizationInvolvementComponent {
               datasets: [
                 {
                   data: data.speakersMonthlyData,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+                  borderColor: lfxColors.amber[500],
+                  backgroundColor: hexToRgba(lfxColors.amber[500], 0.1),
                   fill: true,
                   tension: 0,
                   borderWidth: 2,
@@ -595,8 +595,8 @@ export class OrganizationInvolvementComponent {
               datasets: [
                 {
                   data: data.monthlyData,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+                  borderColor: lfxColors.violet[500],
+                  backgroundColor: hexToRgba(lfxColors.violet[500], 0.1),
                   fill: true,
                   tension: 0,
                   borderWidth: 2,
