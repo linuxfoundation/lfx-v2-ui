@@ -65,7 +65,7 @@
         [label]="isEditMode ? 'Update Registrant' : 'Add Registrant'"
         [loading]="submitting()"
         [disabled]="form.invalid || submitting() || isCommitteeMember"
-        [tooltip]="isCommitteeMember ? 'Committee member details must be updated via the committee' : ''"
+        [tooltip]="isCommitteeMember ? committeeLabel.singular + ' member details must be updated via the ' + committeeLabel.singular : ''"
         tooltipPosition="top"
         type="submit"
         size="small"
