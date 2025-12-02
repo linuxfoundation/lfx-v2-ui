@@ -160,3 +160,28 @@ export interface UserMetadataUpdateResponse {
   data?: UserMetadata;
   error?: string;
 }
+
+/**
+ * Alternate email from NATS user_emails.read
+ */
+export interface AlternateEmail {
+  email: string;
+  verified: boolean;
+}
+
+/**
+ * User emails data from NATS user_emails.read
+ */
+export interface UserEmailsData {
+  primary_email: string;
+  alternate_emails: AlternateEmail[] | null;
+}
+
+/**
+ * User emails response from NATS user_emails.read
+ */
+export interface UserEmailsResponse {
+  success: boolean;
+  data?: UserEmailsData;
+  error?: string;
+}

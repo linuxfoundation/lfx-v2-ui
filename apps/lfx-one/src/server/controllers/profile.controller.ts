@@ -4,8 +4,10 @@
 import {
   AddEmailRequest,
   CombinedProfile,
+  EmailManagementData,
   ProfileUpdateRequest,
   UpdateEmailPreferencesRequest,
+  UserEmail,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserProfile,
@@ -14,6 +16,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, AuthorizationError, MicroserviceError, ResourceNotFoundError, ServiceValidationError } from '../errors';
 import { Logger } from '../helpers/logger';
+import { EmailService } from '../services/email.service';
 import { SupabaseService } from '../services/supabase.service';
 import { UserService } from '../services/user.service';
 import { getUsernameFromAuth } from '../utils/auth-helper';
@@ -24,6 +27,7 @@ import { getUsernameFromAuth } from '../utils/auth-helper';
 export class ProfileController {
   private supabaseService: SupabaseService = new SupabaseService();
   private userService: UserService = new UserService();
+  private emailService: EmailService = new EmailService();
 
   /**
    * GET /api/profile - Get current user's combined profile
@@ -276,6 +280,7 @@ export class ProfileController {
 
   /**
    * GET /api/profile/emails - Get current user's email management data
+   * Uses NATS as the authoritative source for user emails
    */
   public async getUserEmails(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = Logger.start(req, 'get_user_emails');
@@ -295,29 +300,74 @@ export class ProfileController {
         return next(validationError);
       }
 
-      const userId = await this.supabaseService.getUser(username);
+      // Fetch user emails from NATS
+      req.log.info({ username }, 'Fetching user emails from NATS');
+      const emailsResponse = await this.userService.getUserEmails(req, username);
 
-      if (!userId) {
-        Logger.error(req, 'get_user_emails', startTime, new Error('User not found'));
+      if (!emailsResponse.success || !emailsResponse.data) {
+        Logger.error(req, 'get_user_emails', startTime, new Error(emailsResponse.error || 'Failed to fetch user emails'));
 
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
+        const error = new MicroserviceError(emailsResponse.error || 'Failed to fetch user emails', 500, 'NATS_ERROR', {
           operation: 'get_user_emails',
-          service: 'profile_controller',
+          service: 'auth-service',
           path: req.path,
+          errorBody: { error: emailsResponse.error },
         });
 
-        return next(validationError);
+        return next(error);
       }
 
-      const emailData = await this.supabaseService.getEmailManagementData(userId.id);
+      // Transform NATS response to EmailManagementData format for frontend compatibility
+      const { primary_email, alternate_emails } = emailsResponse.data;
+      const now = new Date().toISOString();
+      
+      // Handle null alternate_emails from backend (treat as empty array)
+      const alternateEmailsList = alternate_emails || [];
+      
+      // Create primary email entry
+      const emails: UserEmail[] = [
+        {
+          id: 'primary',
+          user_id: username,
+          email: primary_email,
+          is_primary: true,
+          is_verified: true,
+          verification_token: null,
+          verified_at: now,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
 
-      Logger.success(req, 'get_user_emails', startTime, {
-        user_id: userId.id,
-        email_count: emailData.emails.length,
-        has_preferences: !!emailData.preferences,
+      // Add alternate emails
+      alternateEmailsList.forEach((altEmail, index) => {
+        emails.push({
+          id: `alternate-${index}`,
+          user_id: username,
+          email: altEmail.email,
+          is_primary: false,
+          is_verified: altEmail.verified,
+          verification_token: null,
+          verified_at: altEmail.verified ? now : null,
+          created_at: now,
+          updated_at: now,
+        });
       });
 
-      res.json(emailData);
+      // Create response matching EmailManagementData interface
+      const emailManagementData: EmailManagementData = {
+        emails,
+        preferences: null, // Preferences not available from NATS yet
+      };
+
+      Logger.success(req, 'get_user_emails', startTime, {
+        username,
+        primary_email,
+        alternate_email_count: alternateEmailsList.length,
+        total_emails: emails.length,
+      });
+
+      res.json(emailManagementData);
     } catch (error) {
       Logger.error(req, 'get_user_emails', startTime, error);
       next(error);
@@ -408,6 +458,116 @@ export class ProfileController {
         });
         return next(validationError);
       }
+      next(error);
+    }
+  }
+ 
+  /**
+   * POST /api/profile/emails/send-verification - Send verification code to email
+   */
+  public async sendEmailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'send_email_verification', {
+      request_body_keys: Object.keys(req.body),
+    });
+
+    try {
+      const { email }: AddEmailRequest = req.body;
+
+      if (!email || typeof email !== 'string') {
+        Logger.error(req, 'send_email_verification', startTime, new Error('Invalid email address'));
+
+        const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
+          operation: 'send_email_verification',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      req.log.info({ email, nats_subject: 'lfx.auth-service.email_linking.send_verification' }, 'Attempting to send verification code');
+
+      const result = await this.emailService.sendVerificationCode(req, email);
+
+      Logger.success(req, 'send_email_verification', startTime, {
+        email,
+        success: result.success,
+        message: result.message,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      Logger.error(req, 'send_email_verification', startTime, error);
+      
+      // Add helpful error message for NATS issues
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        req.log.error('NATS timeout - check if auth service is running and NATS is accessible');
+      }
+      
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/profile/emails/verify - Verify OTP and link email to account
+   */
+  public async verifyAndLinkEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = Logger.start(req, 'verify_and_link_email', {
+      request_body_keys: Object.keys(req.body),
+    });
+
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || typeof email !== 'string') {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid email address'));
+
+        const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      if (!otp || typeof otp !== 'string') {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('Invalid OTP code'));
+
+        const validationError = ServiceValidationError.forField('otp', 'Verification code is required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(validationError);
+      }
+
+      // Get user token from auth middleware
+      const userToken = req.bearerToken;
+      if (!userToken) {
+        Logger.error(req, 'verify_and_link_email', startTime, new Error('User not authenticated'));
+
+        const authError = new AuthenticationError('User authentication required', {
+          operation: 'verify_and_link_email',
+          service: 'profile_controller',
+          path: req.path,
+        });
+
+        return next(authError);
+      }
+
+      // Verify OTP and link identity
+      const result = await this.emailService.verifyAndLinkEmail(req, email, otp, userToken);
+
+      Logger.success(req, 'verify_and_link_email', startTime, {
+        email,
+        success: result.success,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      Logger.error(req, 'verify_and_link_email', startTime, error);
       next(error);
     }
   }

@@ -16,6 +16,7 @@ import {
   QueryServiceResponse,
   UserCodeCommitsResponse,
   UserCodeCommitsRow,
+  UserEmailsResponse,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserMetadataUpdateResponse,
@@ -100,6 +101,55 @@ export class UserService {
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Fetch user emails by username using NATS request-reply pattern
+   * Supports hybrid input: JWT tokens, subject identifiers, or usernames
+   * @param req - Express request object for logging
+   * @param userArg - Username, sub, or token
+   * @returns UserEmailsResponse object with success, data (primary_email and alternate_emails), and error
+   */
+  public async getUserEmails(req: Request, userArg: string): Promise<UserEmailsResponse> {
+    const codec = this.natsService.getCodec();
+
+    try {
+      req.log.info({ userArgProvided: !!userArg }, 'Fetching user emails via NATS');
+
+      const response = await this.natsService.request(NatsSubjects.USER_EMAILS_READ, codec.encode(userArg), { timeout: NATS_CONFIG.REQUEST_TIMEOUT });
+
+      const responseText = codec.decode(response.data);
+
+      const userEmails: UserEmailsResponse = JSON.parse(responseText);
+
+      if (!userEmails || typeof userEmails !== 'object') {
+        req.log.error('Invalid response format from NATS user_emails.read');
+        return {
+          success: false,
+          error: 'Invalid response format',
+        };
+      }
+
+      if (!userEmails.success) {
+        req.log.warn({ error: userEmails.error }, 'Failed to fetch user emails via NATS');
+      }
+
+      return userEmails;
+    } catch (error) {
+      req.log.error({ error: error instanceof Error ? error.message : error, userArgProvided: !!userArg }, 'Error fetching user emails via NATS');
+
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        return {
+          success: false,
+          error: 'Service temporarily unavailable',
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Failed to fetch user emails',
+      };
     }
   }
 
