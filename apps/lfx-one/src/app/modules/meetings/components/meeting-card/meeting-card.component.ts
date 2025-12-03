@@ -154,7 +154,7 @@ export class MeetingCardComponent implements OnInit {
 
   public constructor() {
     effect(() => {
-      if (!this.meeting()?.uid && !this.meeting().id) {
+      if (!this.meeting()?.uid && !this.meeting()?.id) {
         this.meeting.set(this.meetingInput());
       }
       // Priority: explicit occurrenceInput > current occurrence for upcoming > null for past without input

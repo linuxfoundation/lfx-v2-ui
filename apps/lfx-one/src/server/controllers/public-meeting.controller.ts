@@ -270,7 +270,6 @@ export class PublicMeetingController {
 
     const startTime = Logger.start(req, 'register_for_public_meeting', {
       meeting_uid: meetingId,
-      email: registrantData.email,
     });
 
     try {
@@ -358,7 +357,6 @@ export class PublicMeetingController {
       Logger.success(req, 'register_for_public_meeting', startTime, {
         meeting_uid: meetingId,
         registrant_uid: newRegistrant.uid,
-        email: registrantData.email,
       });
 
       res.status(201).json(newRegistrant);

@@ -38,7 +38,7 @@ export async function isUserInvitedToMeeting(req: Request, meetingUid: string, e
  */
 export async function addInvitedStatusToMeeting(req: Request, meeting: Meeting, email: string, m2mToken?: string): Promise<Meeting> {
   const meetingUid = meeting.uid || (meeting.id as string);
-  const invited = await isUserInvitedToMeeting(req, meetingUid, email, m2mToken);
+  const invited = meeting.organizer ? false : await isUserInvitedToMeeting(req, meetingUid, email, m2mToken);
 
   return {
     ...meeting,
@@ -55,6 +55,14 @@ export async function addInvitedStatusToMeeting(req: Request, meeting: Meeting, 
  */
 export async function addInvitedStatusToMeetings(req: Request, meetings: Meeting[], email: string): Promise<Meeting[]> {
   if (!email || meetings.length === 0) {
+    return meetings.map((m) => ({ ...m, invited: false }));
+  }
+
+  // Filter out meetings that are organizers
+  const nonOrganizerMeetings = meetings.filter((m) => !m.organizer);
+
+  // If there are no non-organizer meetings, return the meetings with invited status set to false
+  if (nonOrganizerMeetings.length === 0) {
     return meetings.map((m) => ({ ...m, invited: false }));
   }
 
