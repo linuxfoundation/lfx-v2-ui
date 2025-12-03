@@ -31,7 +31,7 @@ export class PublicMeetingController {
     const { id } = req.params;
     let v1 = false; // Default to v2 meetings
 
-    // Validate the that ID is a UUID -- if not, set v1 to true
+    // Validate the meeting ID is a UUID -- if not, set v1 to true
     if (!isUuid(id)) {
       v1 = true;
     }

@@ -118,6 +118,14 @@ export class MeetingService {
         tags: `${meetingUid}`,
       });
 
+      if (!resources || resources.length === 0) {
+        throw new ResourceNotFoundError('Meeting', meetingUid, {
+          operation: 'get_meeting_by_id',
+          service: 'meeting_service',
+          path: `/meetings/${meetingUid}`,
+        });
+      }
+
       meeting = resources[0].data;
       // Remove join_url, passcode, host_key, user_id from V1 meetings
       delete meeting.host_key;
@@ -666,7 +674,7 @@ export class MeetingService {
 
   /**
    * Fetches past meeting summary by past meeting UID
-   * @param v1 - If true, use v1_past_meeting_summary type and id tag format for legacy meetings
+   * @param v1 - If true, use v1_past_meeting_summary type for legacy meetings
    */
   // TODO(v1-migration): Remove V1 summary type parameter and handling once all meetings are migrated to V2
   public async getPastMeetingSummary(req: Request, pastMeetingUid: string, v1: boolean = false): Promise<PastMeetingSummary | null> {

@@ -205,8 +205,6 @@ export interface Meeting {
   last_end_time?: string;
   /** V1: Modified at timestamp (v1 uses 'modified_at', v2 uses 'updated_at') */
   modified_at?: string;
-  /** V1: Meeting ID */
-  meeting_id?: string;
 }
 
 /**

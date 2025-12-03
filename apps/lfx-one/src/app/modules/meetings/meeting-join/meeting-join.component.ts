@@ -21,6 +21,7 @@ import {
   canJoinMeeting,
   ComponentSeverity,
   getCurrentOrNextOccurrence,
+  getEarlyJoinTimeMinutes,
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
@@ -454,7 +455,7 @@ export class MeetingJoinComponent {
     return computed(() => {
       const canJoin = this.canJoinMeeting();
       const meeting = this.meeting();
-      const earlyJoinMinutes = meeting?.early_join_time_minutes || 10;
+      const earlyJoinMinutes = getEarlyJoinTimeMinutes(meeting) || 10;
 
       if (canJoin) {
         return 'The meeting is in progress.';
