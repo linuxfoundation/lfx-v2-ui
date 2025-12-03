@@ -45,10 +45,11 @@ export class RecurrenceSummaryPipe implements PipeTransform {
     else if (type === 3) patternType = 'monthly';
 
     // Determine monthly type
+    // Use explicit undefined checks to handle 0 values correctly (0 is a valid day-of-week for Sunday)
     let monthlyType: 'dayOfMonth' | 'dayOfWeek' = 'dayOfMonth';
-    if (monthlyDay) {
+    if (monthlyDay !== undefined) {
       monthlyType = 'dayOfMonth';
-    } else if (monthlyWeek && monthlyWeekDay) {
+    } else if (monthlyWeek !== undefined && monthlyWeekDay !== undefined) {
       monthlyType = 'dayOfWeek';
     }
 
