@@ -695,7 +695,7 @@ export class UserService {
       minute: '2-digit',
     });
 
-    let buttonLink = meeting.password ? `/meetings/${meeting.uid || meeting.id}?password=${meeting.password}` : `/meetings/${meeting.uid}`;
+    let buttonLink = meeting.password ? `/meetings/${meeting.uid}?password=${meeting.password}` : `/meetings/${meeting.uid}`;
 
     if (meeting.version === 'v1') {
       buttonLink = `/meetings/${meeting.id}?password=${meeting.password}&v1=true`;
