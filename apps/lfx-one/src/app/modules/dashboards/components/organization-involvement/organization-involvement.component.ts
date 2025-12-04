@@ -644,7 +644,7 @@ export class OrganizationInvolvementComponent {
           ...(BASE_BAR_CHART_OPTIONS.plugins?.tooltip ?? {}),
           callbacks: {
             title: (context) => context[0]?.label ?? '',
-            label: (context) => `${label}: ${context.parsed.y}`,
+            label: (context) => `${label}: ${context.parsed.y ?? 0}`,
           },
         },
       },
@@ -660,7 +660,7 @@ export class OrganizationInvolvementComponent {
           ...(BASE_LINE_CHART_OPTIONS.plugins?.tooltip ?? {}),
           callbacks: {
             title: (context) => context[0]?.label ?? '',
-            label: (context) => `${label}: ${context.parsed.y}`,
+            label: (context) => `${label}: ${context.parsed.y ?? 0}`,
           },
         },
       },

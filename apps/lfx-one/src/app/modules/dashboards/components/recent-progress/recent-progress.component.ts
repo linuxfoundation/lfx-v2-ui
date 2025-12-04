@@ -203,7 +203,7 @@ export class RecentProgressComponent {
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               },
               label: (context) => {
-                const count = context.parsed.y;
+                const count = context.parsed.y ?? 0;
                 return `PRs Merged: ${count}`;
               },
             },
@@ -246,7 +246,7 @@ export class RecentProgressComponent {
                 return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               },
               label: (context) => {
-                const count = context.parsed.y;
+                const count = context.parsed.y ?? 0;
                 return `Commits: ${count}`;
               },
             },
