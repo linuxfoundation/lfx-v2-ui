@@ -41,21 +41,21 @@
           <!-- Step 1: Category Selection -->
           <p-step-panel [value]="1" data-testid="committee-manage-panel-1">
             <ng-template #content let-activateCallback="activateCallback">
-              <lfx-committee-category-selection [form]="form()"></lfx-committee-category-selection>
+              <lfx-committee-category-selection [form]="form"></lfx-committee-category-selection>
             </ng-template>
           </p-step-panel>
 
           <!-- Step 2: Basic Information -->
           <p-step-panel [value]="2" data-testid="committee-manage-panel-2">
             <ng-template #content let-activateCallback="activateCallback">
-              <lfx-committee-basic-info [form]="form()" [committeeId]="committeeId()"></lfx-committee-basic-info>
+              <lfx-committee-basic-info [form]="form" [committeeId]="committeeId()"></lfx-committee-basic-info>
             </ng-template>
           </p-step-panel>
 
           <!-- Step 3: Settings -->
           <p-step-panel [value]="3" data-testid="committee-manage-panel-3">
             <ng-template #content let-activateCallback="activateCallback">
-              <lfx-committee-settings [form]="form()"></lfx-committee-settings>
+              <lfx-committee-settings [form]="form"></lfx-committee-settings>
             </ng-template>
           </p-step-panel>
 

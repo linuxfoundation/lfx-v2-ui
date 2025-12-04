@@ -69,12 +69,7 @@ export class CommitteeMembersManagerComponent implements OnInit {
   // Simple computed signals
   public readonly visibleMembers = computed(() => this.membersWithState().filter((m) => m.state !== 'deleted'));
   public readonly memberCount = computed(() => this.visibleMembers().length);
-  public readonly votingCount = computed(
-    () =>
-      this.visibleMembers().filter(
-        (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
-      ).length
-  );
+  public readonly votingCount = computed(() => this.visibleMembers().filter((m) => this.isVotingMember(m)).length);
 
   // Complex computed signals (using private initializers)
   public readonly filteredMembers = this.initFilteredMembers();
@@ -96,13 +91,19 @@ export class CommitteeMembersManagerComponent implements OnInit {
     });
 
     // Subscribe to form changes and update signals
-    this.searchForm.get('search')?.valueChanges.subscribe((value) => {
-      this.searchTerm.set(value || '');
-    });
+    this.searchForm
+      .get('search')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((value) => {
+        this.searchTerm.set(value || '');
+      });
 
-    this.searchForm.get('status')?.valueChanges.subscribe((value) => {
-      this.statusFilter.set(value);
-    });
+    this.searchForm
+      .get('status')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe((value) => {
+        this.statusFilter.set(value);
+      });
   }
 
   public ngOnInit(): void {
@@ -326,20 +327,23 @@ export class CommitteeMembersManagerComponent implements OnInit {
       if (status) {
         switch (status) {
           case 'voting':
-            filtered = filtered.filter(
-              (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
-            );
+            filtered = filtered.filter((m) => this.isVotingMember(m));
             break;
           case 'non-voting':
-            filtered = filtered.filter(
-              (m) => m.voting?.status !== CommitteeMemberVotingStatus.VOTING_REP && m.voting?.status !== CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
-            );
+            filtered = filtered.filter((m) => !this.isVotingMember(m));
             break;
         }
       }
 
       return filtered;
     });
+  }
+
+  /**
+   * Checks if a member has voting rights (Voting Rep or Alternate Voting Rep)
+   */
+  private isVotingMember(member: CommitteeMemberWithState): boolean {
+    return member.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || member.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP;
   }
 
   private createMemberWithState(member: CommitteeMember, state: CommitteeMemberState = 'existing'): CommitteeMemberWithState {

@@ -68,7 +68,7 @@ export class CommitteeManageComponent {
   public readonly formSteps = COMMITTEE_FORM_STEPS;
 
   // Form state
-  public form = signal<FormGroup>(this.createCommitteeFormGroup());
+  public readonly form: FormGroup = this.createCommitteeFormGroup();
   public submitting = signal<boolean>(false);
 
   // Validation signals for template
@@ -111,11 +111,9 @@ export class CommitteeManageComponent {
     );
 
     // Subscribe to form value changes and update validation signals
-    this.form()
-      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.updateCanProceed();
-      });
+    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.updateCanProceed();
+    });
 
     // Effect for step changes - handles validation
     effect(() => {
@@ -180,13 +178,13 @@ export class CommitteeManageComponent {
 
   public onSubmit(): void {
     // Mark all form controls as touched to show validation errors
-    Object.keys(this.form().controls).forEach((key) => {
-      const control = this.form().get(key);
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
       control?.markAsTouched();
       control?.markAsDirty();
     });
 
-    if (this.form().invalid) {
+    if (this.form.invalid) {
       this.messageService.add({
         severity: 'error',
         summary: 'Validation Error',
@@ -198,12 +196,12 @@ export class CommitteeManageComponent {
     this.submitting.set(true);
 
     const formValue = {
-      ...this.form().value,
+      ...this.form.value,
       calendar: {
-        public: this.form().value.public || false,
+        public: this.form.value.public || false,
       },
-      display_name: this.form().value.display_name || this.form().value.name,
-      website: this.form().value.website || null,
+      display_name: this.form.value.display_name || this.form.value.name,
+      website: this.form.value.website || null,
       project_uid: this.project()?.uid || null,
     };
 
@@ -274,13 +272,13 @@ export class CommitteeManageComponent {
     }
 
     // Mark all form controls as touched to show validation errors
-    Object.keys(this.form().controls).forEach((key) => {
-      const control = this.form().get(key);
+    Object.keys(this.form.controls).forEach((key) => {
+      const control = this.form.get(key);
       control?.markAsTouched();
       control?.markAsDirty();
     });
 
-    if (this.form().invalid) {
+    if (this.form.invalid) {
       this.messageService.add({
         severity: 'error',
         summary: 'Validation Error',
@@ -292,12 +290,12 @@ export class CommitteeManageComponent {
     this.submitting.set(true);
 
     const formValue = {
-      ...this.form().value,
+      ...this.form.value,
       calendar: {
-        public: this.form().value.public || false,
+        public: this.form.value.public || false,
       },
-      display_name: this.form().value.display_name || this.form().value.name,
-      website: this.form().value.website || null,
+      display_name: this.form.value.display_name || this.form.value.name,
+      website: this.form.value.website || null,
       project_uid: this.project()?.uid || null,
     };
 
@@ -370,7 +368,7 @@ export class CommitteeManageComponent {
   }
 
   private populateFormWithCommitteeData(committee: Committee): void {
-    this.form().patchValue({
+    this.form.patchValue({
       name: committee.name,
       category: committee.category,
       description: committee.description,
@@ -488,16 +486,14 @@ export class CommitteeManageComponent {
   }
 
   private isStepValid(step: number): boolean {
-    const form = this.form();
-
     switch (step) {
       case this.formSteps.CATEGORY:
         // Category must be selected
-        return !!(form.get('category')?.value && form.get('category')?.valid);
+        return !!(this.form.get('category')?.value && this.form.get('category')?.valid);
 
       case this.formSteps.BASIC_INFO:
         // Name is required
-        return !!(form.get('name')?.value && form.get('name')?.valid);
+        return !!(this.form.get('name')?.value && this.form.get('name')?.valid);
 
       case this.formSteps.SETTINGS:
         // Settings step is always valid (all toggles are optional)
@@ -513,7 +509,11 @@ export class CommitteeManageComponent {
   }
 
   private getStepTitle(step: number): string {
-    return this.stepTitles[step - 1] || '';
+    const index = step - 1;
+    if (index < 0 || index >= this.stepTitles.length) {
+      return '';
+    }
+    return this.stepTitles[index];
   }
 
   private scrollToStepper(): void {
@@ -528,13 +528,12 @@ export class CommitteeManageComponent {
   }
 
   private generateGroupName(): void {
-    const form = this.form();
-    const category = form.get('category')?.value;
-    const currentName = form.get('name')?.value;
+    const category = this.form.get('category')?.value;
+    const currentName = this.form.get('name')?.value;
 
     // Only auto-generate if category is selected and name is empty
     if (category && (!currentName || currentName.trim() === '')) {
-      form.get('name')?.setValue(category);
+      this.form.get('name')?.setValue(category);
     }
   }
 
