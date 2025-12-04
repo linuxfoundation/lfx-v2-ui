@@ -21,7 +21,7 @@ import type {
   TopProjectDisplay,
   UniqueContributorsDailyResponse,
 } from '@lfx-one/shared/interfaces';
-import type { TooltipItem } from 'chart.js';
+import type { ChartOptions, ChartType, TooltipItem } from 'chart.js';
 
 @Component({
   selector: 'lfx-foundation-health',
@@ -225,8 +225,8 @@ export class FoundationHealthComponent {
           tooltip: {
             ...(this.sparklineOptions.plugins?.tooltip ?? {}),
             callbacks: {
-              title: (context: TooltipItem<'line'>[]) => context[0].label,
-              label: (context: TooltipItem<'line'>) => {
+              title: (context: TooltipItem<ChartType>[]) => context[0]?.label ?? '',
+              label: (context: TooltipItem<ChartType>) => {
                 const count = context.parsed.y;
                 return `Total projects: ${count}`;
               },
@@ -266,8 +266,8 @@ export class FoundationHealthComponent {
           tooltip: {
             ...(this.sparklineOptions.plugins?.tooltip ?? {}),
             callbacks: {
-              title: (context: TooltipItem<'line'>[]) => context[0].label,
-              label: (context: TooltipItem<'line'>) => {
+              title: (context: TooltipItem<ChartType>[]) => context[0]?.label ?? '',
+              label: (context: TooltipItem<ChartType>) => {
                 const count = context.parsed.y;
                 return `Total members: ${count}`;
               },
@@ -346,15 +346,15 @@ export class FoundationHealthComponent {
           tooltip: {
             ...(this.sparklineOptions.plugins?.tooltip ?? {}),
             callbacks: {
-              title: (context: TooltipItem<'line'>[]) => context[0].label,
-              label: (context: TooltipItem<'line'>) => {
-                const count = context.parsed.y;
+              title: (context: TooltipItem<ChartType>[]) => context[0]?.label ?? '',
+              label: (context: TooltipItem<ChartType>) => {
+                const count = context.parsed.y ?? 0;
                 return `Active contributors: ${count.toLocaleString()}`;
               },
             },
           },
         },
-      },
+      } as ChartOptions<ChartType>,
     };
   }
 
@@ -387,9 +387,9 @@ export class FoundationHealthComponent {
           tooltip: {
             ...(this.sparklineOptions.plugins?.tooltip ?? {}),
             callbacks: {
-              title: (context: TooltipItem<'line'>[]) => context[0].label,
-              label: (context: TooltipItem<'line'>) => {
-                const count = context.parsed.y;
+              title: (context: TooltipItem<ChartType>[]) => context[0]?.label ?? '',
+              label: (context: TooltipItem<ChartType>) => {
+                const count = context.parsed.y ?? 0;
                 return `Active maintainers: ${count}`;
               },
             },
@@ -433,9 +433,9 @@ export class FoundationHealthComponent {
           tooltip: {
             ...(this.barChartOptions.plugins?.tooltip ?? {}),
             callbacks: {
-              title: (context: TooltipItem<'bar'>[]) => context[0].label,
-              label: (context: TooltipItem<'bar'>) => {
-                const count = context.parsed.y;
+              title: (context: TooltipItem<ChartType>[]) => context[0]?.label ?? '',
+              label: (context: TooltipItem<ChartType>) => {
+                const count = context.parsed.y ?? 0;
                 return `Events: ${count.toLocaleString()}`;
               },
             },
