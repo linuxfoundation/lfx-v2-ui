@@ -80,7 +80,7 @@ export const ALLOWED_FILE_TYPES = [
 ] as const;
 
 /**
- * Maximum file size in bytes (10MB)
+ * Maximum file size in bytes (100MB)
  * @description File upload size limit to prevent server overload and ensure reasonable upload times
  * @example
  * // Check if file is within size limit
@@ -88,13 +88,13 @@ export const ALLOWED_FILE_TYPES = [
  *   throw new Error('File too large');
  * }
  */
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
 /**
- * Maximum file size in megabytes (10MB)
- * @description Human-readable file size limit for display in UI
+ * Maximum file size in megabytes
+ * @description Human-readable file size limit for display in UI, derived from MAX_FILE_SIZE_BYTES
  * @example
  * // Display in UI
  * <p>Maximum file size: {MAX_FILE_SIZE_MB}MB</p>
  */
-export const MAX_FILE_SIZE_MB = 10;
+export const MAX_FILE_SIZE_MB = MAX_FILE_SIZE_BYTES / (1024 * 1024);

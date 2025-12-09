@@ -167,8 +167,12 @@ export function isFileTypeAllowed(mimeType: string, fileName: string, allowedTyp
   }
 
   // If MIME type is empty or generic, fall back to extension-based validation
-  if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
-    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+  if (!mimeType || mimeType === 'application/octet-stream') {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex === -1) {
+      return false; // No extension found
+    }
+    const extension = fileName.toLowerCase().substring(lastDotIndex);
     const inferredMime = EXTENSION_TO_MIME[extension];
     if (inferredMime && allowedTypes.includes(inferredMime)) {
       return true;
@@ -179,27 +183,41 @@ export function isFileTypeAllowed(mimeType: string, fileName: string, allowedTyp
 }
 
 /**
- * Get user-friendly file extension from MIME type
+ * Get user-friendly file extension from MIME type with optional filename fallback
  * @param mimeType - The MIME type to convert (e.g., 'application/pdf', 'image/jpeg')
- * @returns User-friendly extension (e.g., 'PDF', 'JPG') or the original type if not found
+ * @param fileName - Optional filename to extract extension from when MIME type is empty/unknown
+ * @returns User-friendly extension (e.g., 'PDF', 'JPG') or 'Unknown' if not determinable
  * @example
- * // Returns: "PDF"
- * getMimeTypeDisplayName('application/pdf');
- * // Returns: "DOCX"
- * getMimeTypeDisplayName('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+ * getMimeTypeDisplayName('application/pdf'); // Returns: "PDF"
+ * getMimeTypeDisplayName('', 'document.docx'); // Returns: "DOCX"
+ * getMimeTypeDisplayName('application/octet-stream', 'file.md'); // Returns: "MD"
  */
-export function getMimeTypeDisplayName(mimeType: string): string {
-  const extensions = MIME_TO_EXTENSIONS[mimeType];
-  if (extensions && extensions.length > 0) {
-    // Return the first extension without the dot, in uppercase
-    return extensions[0].substring(1).toUpperCase();
+export function getMimeTypeDisplayName(mimeType: string, fileName?: string): string {
+  // Try to get extension from MIME type mapping
+  if (mimeType) {
+    const extensions = MIME_TO_EXTENSIONS[mimeType];
+    if (extensions && extensions.length > 0) {
+      return extensions[0].substring(1).toUpperCase();
+    }
   }
-  // Fallback: try to extract something meaningful from the MIME type
-  const parts = mimeType.split('/');
-  if (parts.length === 2) {
-    return parts[1].toUpperCase();
+
+  // Fallback to filename extension if MIME type is empty, unknown, or generic
+  if (fileName && (!mimeType || mimeType === 'application/octet-stream' || !MIME_TO_EXTENSIONS[mimeType])) {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+      return fileName.substring(lastDotIndex + 1).toUpperCase();
+    }
   }
-  return mimeType;
+
+  // Last resort: try to extract something from MIME type
+  if (mimeType) {
+    const parts = mimeType.split('/');
+    if (parts.length === 2) {
+      return parts[1].toUpperCase();
+    }
+  }
+
+  return 'Unknown';
 }
 
 /**

@@ -164,14 +164,14 @@ export class MeetingResourcesSummaryComponent implements OnInit {
 
   // Private methods
   private validateFile(file: File): string | null {
-    // Check file size (10MB limit)
+    // Check file size
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return `File "${file.name}" is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`;
     }
 
     // Check file type (with fallback to extension-based validation for empty/generic MIME types)
     if (!isFileTypeAllowed(file.type, file.name, ALLOWED_FILE_TYPES)) {
-      const fileTypeDisplay = file.type ? getMimeTypeDisplayName(file.type) : file.name.split('.').pop()?.toUpperCase() || 'Unknown';
+      const fileTypeDisplay = getMimeTypeDisplayName(file.type, file.name);
       const allowedTypes = getAcceptedFileTypesDisplay();
       return `File type "${fileTypeDisplay}" is not supported. Allowed types: ${allowedTypes}.`;
     }
