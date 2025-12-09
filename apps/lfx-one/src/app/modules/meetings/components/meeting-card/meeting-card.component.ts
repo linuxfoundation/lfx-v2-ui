@@ -107,7 +107,6 @@ export class MeetingCardComponent implements OnInit {
   // Computed values for template
   public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
   public readonly summaryContent: Signal<string | null> = this.initSummaryContent();
-  public readonly summaryUid: Signal<string | null> = this.initSummaryUid();
   public readonly summaryApproved: Signal<boolean> = this.initSummaryApproved();
   public readonly hasSummary: Signal<boolean> = this.initHasSummary();
   public readonly attendancePercentage: Signal<number> = this.initAttendancePercentage();
@@ -302,7 +301,7 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public openSummaryModal(): void {
-    if (!this.summaryContent() || !this.summaryUid()) {
+    if (!this.summaryContent() || !this.summary()?.uid) {
       return;
     }
 
@@ -314,7 +313,7 @@ export class MeetingCardComponent implements OnInit {
       dismissableMask: false,
       data: {
         summaryContent: this.summaryContent(),
-        summaryUid: this.summaryUid(),
+        summaryUid: this.summary()?.uid,
         pastMeetingUid: this.meeting().uid,
         meetingTitle: this.meetingTitle(),
         approved: this.summaryApproved(),
@@ -687,10 +686,6 @@ export class MeetingCardComponent implements OnInit {
       if (!summary?.summary_data) return null;
       return summary.summary_data.edited_content || summary.summary_data.content;
     });
-  }
-
-  private initSummaryUid(): Signal<string | null> {
-    return computed(() => this.summary()?.uid || null);
   }
 
   private initSummaryApproved(): Signal<boolean> {
