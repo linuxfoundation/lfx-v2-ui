@@ -7,20 +7,40 @@ import { ALLOWED_FILE_TYPES } from '../constants/file-upload.constants';
  * Map of MIME types to file extensions
  */
 const MIME_TO_EXTENSIONS: Record<string, string[]> = {
+  // Image files
   'image/jpeg': ['.jpeg', '.jpg'],
   'image/jpg': ['.jpg'],
+  'image/pjpeg': ['.jpg', '.jpeg'],
   'image/png': ['.png'],
+  'image/x-png': ['.png'],
   'image/gif': ['.gif'],
   'image/webp': ['.webp'],
+  'image/svg+xml': ['.svg'],
+  // Document files
   'application/pdf': ['.pdf'],
+  'application/x-pdf': ['.pdf'],
   'application/msword': ['.doc'],
+  'application/x-msword': ['.doc'],
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  // Spreadsheet files
   'application/vnd.ms-excel': ['.xls'],
+  'application/x-excel': ['.xls'],
+  'application/x-msexcel': ['.xls'],
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  // Presentation files
   'application/vnd.ms-powerpoint': ['.ppt'],
+  'application/x-mspowerpoint': ['.ppt'],
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  // Text files
   'text/plain': ['.txt'],
   'text/markdown': ['.md', '.markdown'],
+  'text/x-markdown': ['.md', '.markdown'],
+  // Data files
+  'text/csv': ['.csv'],
+  'application/csv': ['.csv'],
+  // Rich text files
+  'application/rtf': ['.rtf'],
+  'text/rtf': ['.rtf'],
 };
 
 /**
@@ -60,9 +80,9 @@ export function generateAcceptString(): string {
 export function getAcceptedFileTypesDisplay(): string {
   const fileTypeGroups: { [key: string]: Set<string> } = {
     PDF: new Set(),
-    Word: new Set(),
-    Excel: new Set(),
-    PowerPoint: new Set(),
+    Documents: new Set(),
+    Spreadsheets: new Set(),
+    Presentations: new Set(),
     Images: new Set(),
     Text: new Set(),
   };
@@ -78,12 +98,12 @@ export function getAcceptedFileTypesDisplay(): string {
     // Categorize based on MIME type
     if (mimeType.includes('pdf')) {
       displayExtensions.forEach((ext) => fileTypeGroups['PDF'].add(ext));
-    } else if (mimeType.includes('word')) {
-      displayExtensions.forEach((ext) => fileTypeGroups['Word'].add(ext));
-    } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
-      displayExtensions.forEach((ext) => fileTypeGroups['Excel'].add(ext));
+    } else if (mimeType.includes('word') || mimeType.includes('rtf')) {
+      displayExtensions.forEach((ext) => fileTypeGroups['Documents'].add(ext));
+    } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || mimeType.includes('csv')) {
+      displayExtensions.forEach((ext) => fileTypeGroups['Spreadsheets'].add(ext));
     } else if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) {
-      displayExtensions.forEach((ext) => fileTypeGroups['PowerPoint'].add(ext));
+      displayExtensions.forEach((ext) => fileTypeGroups['Presentations'].add(ext));
     } else if (mimeType.startsWith('image/')) {
       displayExtensions.forEach((ext) => fileTypeGroups['Images'].add(ext));
     } else if (mimeType.startsWith('text/')) {
@@ -105,6 +125,81 @@ export function getAcceptedFileTypesDisplay(): string {
   });
 
   return displayParts.join(', ');
+}
+
+/**
+ * Map of file extensions to their MIME types for fallback validation
+ * Used when browser reports empty or generic MIME type
+ */
+const EXTENSION_TO_MIME: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.txt': 'text/plain',
+  '.md': 'text/markdown',
+  '.markdown': 'text/markdown',
+  '.csv': 'text/csv',
+  '.rtf': 'application/rtf',
+};
+
+/**
+ * Check if a file type is allowed, with fallback to extension-based validation
+ * Handles cases where browsers report empty or generic MIME types
+ * @param mimeType - The MIME type reported by the browser
+ * @param fileName - The file name to extract extension from as fallback
+ * @param allowedTypes - Array of allowed MIME types
+ * @returns true if the file type is allowed
+ */
+export function isFileTypeAllowed(mimeType: string, fileName: string, allowedTypes: readonly string[]): boolean {
+  // First, check if the MIME type is directly in the allowed list
+  if (mimeType && allowedTypes.includes(mimeType)) {
+    return true;
+  }
+
+  // If MIME type is empty or generic, fall back to extension-based validation
+  if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
+    const extension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+    const inferredMime = EXTENSION_TO_MIME[extension];
+    if (inferredMime && allowedTypes.includes(inferredMime)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Get user-friendly file extension from MIME type
+ * @param mimeType - The MIME type to convert (e.g., 'application/pdf', 'image/jpeg')
+ * @returns User-friendly extension (e.g., 'PDF', 'JPG') or the original type if not found
+ * @example
+ * // Returns: "PDF"
+ * getMimeTypeDisplayName('application/pdf');
+ * // Returns: "DOCX"
+ * getMimeTypeDisplayName('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+ */
+export function getMimeTypeDisplayName(mimeType: string): string {
+  const extensions = MIME_TO_EXTENSIONS[mimeType];
+  if (extensions && extensions.length > 0) {
+    // Return the first extension without the dot, in uppercase
+    return extensions[0].substring(1).toUpperCase();
+  }
+  // Fallback: try to extract something meaningful from the MIME type
+  const parts = mimeType.split('/');
+  if (parts.length === 2) {
+    return parts[1].toUpperCase();
+  }
+  return mimeType;
 }
 
 /**
