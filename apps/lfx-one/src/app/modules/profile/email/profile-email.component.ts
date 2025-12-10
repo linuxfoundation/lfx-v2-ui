@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -29,7 +29,7 @@ interface EmailOption {
 @Component({
   selector: 'lfx-profile-email',
   imports: [
-    CommonModule,
+    NgClass,
     ReactiveFormsModule,
     CardComponent,
     InputTextComponent,

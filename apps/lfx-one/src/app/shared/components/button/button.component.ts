@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ButtonProps } from '@lfx-one/shared/interfaces';
@@ -10,7 +10,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-button',
-  imports: [CommonModule, ButtonModule, RouterModule, TooltipModule],
+  imports: [NgClass, ButtonModule, RouterModule, TooltipModule],
   templateUrl: './button.component.html',
 })
 export class ButtonComponent {

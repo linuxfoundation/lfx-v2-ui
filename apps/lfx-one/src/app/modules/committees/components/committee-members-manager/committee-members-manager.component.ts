@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input, OnInit, output, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -30,7 +30,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
   selector: 'lfx-committee-members-manager',
-  imports: [CommonModule, ReactiveFormsModule, ButtonComponent, InputTextComponent, SelectComponent, ConfirmDialogModule, DynamicDialogModule, TooltipModule],
+  imports: [NgClass, ReactiveFormsModule, ButtonComponent, InputTextComponent, SelectComponent, ConfirmDialogModule, DynamicDialogModule, TooltipModule],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-members-manager.component.html',
 })

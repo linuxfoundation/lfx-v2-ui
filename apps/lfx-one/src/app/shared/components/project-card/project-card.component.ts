@@ -4,7 +4,7 @@
 import { Component, input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { TagComponent } from '@components/tag/tag.component';
-import { ComponentSeverity, ProjectCardMetric } from '@lfx-one/shared';
+import { ProjectCardMetric, TagSeverity } from '@lfx-one/shared';
 import { CardModule } from 'primeng/card';
 
 @Component({
@@ -21,7 +21,7 @@ export class ProjectCardComponent {
   public readonly url = input<string | undefined>('');
 
   // Map 'warning' to 'warn' for PrimeNG tag compatibility
-  public mapSeverity(severity: string): ComponentSeverity {
-    return severity === 'warning' ? 'warn' : (severity as ComponentSeverity);
+  public mapSeverity(severity: string): TagSeverity {
+    return severity === 'warning' ? 'warn' : (severity as TagSeverity);
   }
 }

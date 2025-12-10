@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { TagProps } from '@lfx-one/shared/interfaces';
 import { TagModule } from 'primeng/tag';
 
@@ -16,9 +16,4 @@ export class TagComponent {
   public readonly icon = input<TagProps['icon']>();
   public readonly rounded = input<TagProps['rounded']>(false);
   public readonly styleClass = input<TagProps['styleClass']>('');
-
-  protected readonly mappedSeverity = computed(() => {
-    const sev = this.severity();
-    return sev === 'primary' ? 'contrast' : sev;
-  });
 }

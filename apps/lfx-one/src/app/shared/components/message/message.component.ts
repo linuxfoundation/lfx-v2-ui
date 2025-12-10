@@ -1,14 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
 import { MessageProps } from '@lfx-one/shared/interfaces';
 import { MessageModule } from 'primeng/message';
 
 @Component({
   selector: 'lfx-message',
-  imports: [CommonModule, MessageModule],
+  imports: [NgTemplateOutlet, MessageModule],
   templateUrl: './message.component.html',
 })
 export class MessageComponent {

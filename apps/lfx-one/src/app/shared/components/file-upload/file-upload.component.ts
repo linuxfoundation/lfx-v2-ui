@@ -1,14 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
 import { getAcceptedFileTypesDisplay } from '@lfx-one/shared/utils';
 import { FileUploadModule } from 'primeng/fileupload';
 
 @Component({
   selector: 'lfx-file-upload',
-  imports: [CommonModule, FileUploadModule],
+  imports: [DecimalPipe, NgTemplateOutlet, FileUploadModule],
   templateUrl: './file-upload.component.html',
 })
 export class FileUploadComponent {

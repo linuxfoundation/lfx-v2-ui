@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -15,7 +15,7 @@ import { catchError, combineLatest, finalize, of, switchMap, take, tap } from 'r
 
 @Component({
   selector: 'lfx-rsvp-button-group',
-  imports: [CommonModule],
+  imports: [NgClass],
   providers: [DialogService],
   templateUrl: './rsvp-button-group.component.html',
 })

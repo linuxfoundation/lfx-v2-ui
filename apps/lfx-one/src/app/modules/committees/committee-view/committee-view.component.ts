@@ -8,7 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MenuComponent } from '@components/menu/menu.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { Committee, COMMITTEE_CATEGORY_SEVERITY, CommitteeMember, ComponentSeverity } from '@lfx-one/shared';
+import { Committee, COMMITTEE_CATEGORY_SEVERITY, CommitteeMember, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
@@ -56,7 +56,7 @@ export class CommitteeViewComponent {
   public formattedCreatedDate: Signal<string>;
   public formattedUpdatedDate: Signal<string>;
   public refresh: BehaviorSubject<void>;
-  public categorySeverity: Signal<ComponentSeverity>;
+  public categorySeverity: Signal<TagSeverity>;
 
   public constructor() {
     // Initialize all class variables

@@ -1,14 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgIf, NgTemplateOutlet } from '@angular/common';
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { MenubarModule } from 'primeng/menubar';
 
 @Component({
   selector: 'lfx-menubar',
-  imports: [CommonModule, MenubarModule],
+  imports: [NgIf, NgTemplateOutlet, MenubarModule],
   templateUrl: './menubar.component.html',
 })
 export class MenubarComponent {

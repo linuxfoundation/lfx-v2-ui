@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -27,7 +27,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
 @Component({
   selector: 'lfx-committee-members',
   imports: [
-    CommonModule,
+    TitleCasePipe,
     ReactiveFormsModule,
     CardComponent,
     MemberCardComponent,

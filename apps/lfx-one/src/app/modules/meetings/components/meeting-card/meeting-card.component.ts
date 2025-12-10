@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { CommonModule } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -24,7 +24,6 @@ import {
   buildJoinUrlWithParams,
   canJoinMeeting,
   COMMITTEE_LABEL,
-  ComponentSeverity,
   getCurrentOrNextOccurrence,
   Meeting,
   MeetingAttachment,
@@ -33,6 +32,7 @@ import {
   PastMeeting,
   PastMeetingRecording,
   PastMeetingSummary,
+  TagSeverity,
 } from '@lfx-one/shared';
 import { MeetingCommitteeModalComponent } from '@modules/meetings/components/meeting-committee-modal/meeting-committee-modal.component';
 import { RecordingModalComponent } from '@modules/meetings/components/recording-modal/recording-modal.component';
@@ -59,7 +59,7 @@ import { PublicRegistrationModalComponent } from '../../components/public-regist
 @Component({
   selector: 'lfx-meeting-card',
   imports: [
-    CommonModule,
+    NgClass,
     ButtonComponent,
     TagComponent,
     MeetingTimePipe,
@@ -116,7 +116,7 @@ export class MeetingCardComponent implements OnInit {
   public readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
   public readonly meetingTypeBadge: Signal<{
     badgeClass: string;
-    severity: ComponentSeverity;
+    severity: TagSeverity;
     icon?: string;
     text: string;
   } | null> = this.initMeetingTypeBadge();
@@ -553,7 +553,7 @@ export class MeetingCardComponent implements OnInit {
 
   private initMeetingTypeBadge(): Signal<{
     badgeClass: string;
-    severity: ComponentSeverity;
+    severity: TagSeverity;
     icon?: string;
     text: string;
   } | null> {
@@ -571,7 +571,7 @@ export class MeetingCardComponent implements OnInit {
         case 'marketing':
           return { badgeClass: 'bg-green-100 text-green-500', severity: 'success', icon: 'fa-light fa-chart-line-up', text: meetingType };
         case 'technical':
-          return { badgeClass: 'bg-purple-100 text-purple-500', severity: 'primary', icon: 'fa-light fa-code', text: meetingType };
+          return { badgeClass: 'bg-purple-100 text-purple-500', severity: 'contrast', icon: 'fa-light fa-code', text: meetingType };
         case 'legal':
           return { badgeClass: 'bg-amber-100 text-amber-500', severity: 'warn', icon: 'fa-light fa-scale-balanced', text: meetingType };
         default:

@@ -1,13 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
+import { NgIf, NgTemplateOutlet } from '@angular/common';
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
 import { TableModule } from 'primeng/table';
 
 @Component({
   selector: 'lfx-table',
-  imports: [CommonModule, TableModule],
+  imports: [NgIf, NgTemplateOutlet, TableModule],
   templateUrl: './table.component.html',
   host: {
     ngSkipHydration: 'true',
