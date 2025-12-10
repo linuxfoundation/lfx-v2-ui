@@ -32,7 +32,7 @@ import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
-import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, debounceTime, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
@@ -178,26 +178,25 @@ export class MeetingJoinComponent {
     const meeting = this.meeting();
     const user = this.user();
 
-    this.dialogService
-      .open(PublicRegistrationModalComponent, {
-        header: 'Register for Meeting',
-        width: '500px',
-        modal: true,
-        closable: true,
-        dismissableMask: true,
-        data: {
-          meetingId: meeting.uid,
-          meetingTitle: this.meetingTitle(),
-          user: user,
-        },
-      })
-      .onClose.pipe(take(1))
-      .subscribe((result: { registered: boolean } | undefined) => {
-        if (result?.registered) {
-          // Trigger refresh to update meeting data with invitation status
-          this.refreshTrigger$.next();
-        }
-      });
+    const dialogRef = this.dialogService.open(PublicRegistrationModalComponent, {
+      header: 'Register for Meeting',
+      width: '500px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: {
+        meetingId: meeting.uid,
+        meetingTitle: this.meetingTitle(),
+        user: user,
+      },
+    }) as DynamicDialogRef;
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: { registered: boolean } | undefined) => {
+      if (result?.registered) {
+        // Trigger refresh to update meeting data with invitation status
+        this.refreshTrigger$.next();
+      }
+    });
   }
 
   private initializeAutoJoin(): void {

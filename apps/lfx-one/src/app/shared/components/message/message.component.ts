@@ -29,10 +29,6 @@ export class MessageComponent {
   public readonly icon = input<string | undefined>(undefined);
   public readonly closeIcon = input<string | undefined>(undefined);
 
-  // Animation properties
-  public readonly showTransitionOptions = input<string>('300ms ease-out');
-  public readonly hideTransitionOptions = input<string>('200ms cubic-bezier(0.86, 0, 0.07, 1)');
-
   // Auto-dismiss functionality
   public readonly life = input<number | undefined>(undefined);
 

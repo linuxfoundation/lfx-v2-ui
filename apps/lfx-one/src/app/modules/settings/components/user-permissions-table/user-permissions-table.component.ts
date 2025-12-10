@@ -11,7 +11,7 @@ import { PermissionsService } from '@services/permissions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { take } from 'rxjs';
 
@@ -44,8 +44,8 @@ export class UserPermissionsTableComponent {
   protected onEditUser(user: ProjectPermissionUser): void {
     if (!user) return;
 
-    this.dialogService
-      .open(UserFormComponent, {
+    (
+      this.dialogService.open(UserFormComponent, {
         header: 'Edit User Permissions',
         width: '500px',
         modal: true,
@@ -55,8 +55,9 @@ export class UserPermissionsTableComponent {
           isEditing: true,
           user: user,
         },
-      })
-      .onClose.pipe(take(1))
+      }) as DynamicDialogRef
+    ).onClose
+      .pipe(take(1))
       .subscribe((result) => {
         if (result) {
           this.refresh.emit();

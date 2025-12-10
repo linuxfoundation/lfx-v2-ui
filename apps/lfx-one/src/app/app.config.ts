@@ -7,8 +7,8 @@ import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions, 
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withInMemoryScrolling, withPreloading } from '@angular/router';
 import { lfxPreset } from '@linuxfoundation/lfx-ui-core';
-import { definePreset } from '@primeng/themes';
-import Aura from '@primeng/themes/aura';
+import { definePreset } from '@primeuix/themes';
+import Aura from '@primeuix/themes/aura';
 import { authenticationInterceptor } from '@shared/interceptors/authentication.interceptor';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
@@ -23,7 +23,7 @@ const customPreset = definePreset(Aura, {
   semantic: lfxPreset.semantic,
   components: {
     ...lfxPreset.component,
-  },
+  } as any,
 });
 
 export const appConfig: ApplicationConfig = {

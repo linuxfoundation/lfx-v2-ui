@@ -13,7 +13,7 @@ import { CommitteeService } from '@services/committee.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { BehaviorSubject, catchError, combineLatest, of, switchMap, throwError } from 'rxjs';
 
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
@@ -46,7 +46,6 @@ export class CommitteeViewComponent {
   private readonly messageService = inject(MessageService);
 
   // Class variables with types
-  private dialogRef: DynamicDialogRef | undefined;
   public committee: Signal<Committee | null>;
   public members: WritableSignal<CommitteeMember[]>;
   public membersLoading: WritableSignal<boolean>;

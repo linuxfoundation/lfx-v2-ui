@@ -4129,15 +4129,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@linuxfoundation/lfx-ui-core@npm:^0.0.21":
-  version: 0.0.21
-  resolution: "@linuxfoundation/lfx-ui-core@npm:0.0.21"
+"@linuxfoundation/lfx-ui-core@npm:^0.0.22":
+  version: 0.0.22
+  resolution: "@linuxfoundation/lfx-ui-core@npm:0.0.22"
   peerDependencies:
     prettier: ">=3.0.0"
   peerDependenciesMeta:
     prettier:
       optional: true
-  checksum: 10c0/db80340bef8420aa5c795634d0aecfe34037717df94290554e0d0f5ab4a316851f31357b42eec9d847ef93441209d82f419f8d9317e6afb61011938bb3534074
+  checksum: 10c0/0cab9673f5c5b67082d1e5632955c0ce47d5ceb029e0e934688106028e1a72e034aaf0f37f01a50a5644ef9d9a4c9a6560de4b05f87cbcb8f35ed4c27b23e5d5
+  languageName: node
+  linkType: hard
+
+"@linuxfoundation/lfx-ui-core@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@linuxfoundation/lfx-ui-core@npm:0.1.0"
+  peerDependencies:
+    prettier: ">=3.0.0"
+  peerDependenciesMeta:
+    prettier:
+      optional: true
+  checksum: 10c0/b8d7759201276c9c6b7cca55e8406c197a63af80ff6bbed9ebfff0a10f1f98d397a3cc495cee11231313186469bf4d2d28c53b6903c77b09b58fd03ee4ebea81
   languageName: node
   linkType: hard
 
@@ -4848,28 +4860,37 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@primeng/themes@npm:^19.1.4":
-  version: 19.1.4
-  resolution: "@primeng/themes@npm:19.1.4"
+"@primeuix/styled@npm:^0.7.3, @primeuix/styled@npm:^0.7.4":
+  version: 0.7.4
+  resolution: "@primeuix/styled@npm:0.7.4"
   dependencies:
-    "@primeuix/styled": "npm:^0.3.2"
-  checksum: 10c0/7d99616b08cbcda94a70a87ea70c04770e3e020e8ed7db79deedee90df748586b2e453dbe5e10d884cf15865564ff8a7469397804f8edd7f320985c30f1ff75b
+    "@primeuix/utils": "npm:^0.6.1"
+  checksum: 10c0/e1ed3e6c4a36bd5a6722b8fcd3e79d9fd60a36f174e5d822fd2fa0ecace49508c548228462ff8033961e1aa1bece6ec87c04879097c3691044314629120e968c
   languageName: node
   linkType: hard
 
-"@primeuix/styled@npm:^0.3.2":
-  version: 0.3.2
-  resolution: "@primeuix/styled@npm:0.3.2"
+"@primeuix/styles@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@primeuix/styles@npm:1.2.5"
   dependencies:
-    "@primeuix/utils": "npm:^0.3.2"
-  checksum: 10c0/e97b85095847084844e28fbb252cbfb2090be47fed88e36cd86e886cdf9bd88f1dafa60d407123eaa6503702158347e96c8199e1e38bcbf4f5d65eda5767f261
+    "@primeuix/styled": "npm:^0.7.3"
+  checksum: 10c0/49d8f5fca435e095c13bc7004187ee1d741004cf2696ed615e6a72d6732d928c55670f0f98700c3e040058746669d11abc7906f16c9b2f5631635d1260d01212
   languageName: node
   linkType: hard
 
-"@primeuix/utils@npm:^0.3.2":
-  version: 0.3.2
-  resolution: "@primeuix/utils@npm:0.3.2"
-  checksum: 10c0/3ada284a982519c4e3cae9ed83e17dbae9d6e505a16b699fa37d69ca14e46350076389f70ef3a5b1a359ba6a0891299a20ec4f9a6ed330ab3bbda7d227e9b84f
+"@primeuix/themes@npm:^2.0.2":
+  version: 2.0.2
+  resolution: "@primeuix/themes@npm:2.0.2"
+  dependencies:
+    "@primeuix/styled": "npm:^0.7.4"
+  checksum: 10c0/a79a6d8121de206a280316a2bf4da433d2e4a7c858ea2055f99287c2d7f95f756e950a61544d7e99f0cb7552656fdc0cf8d8b487ca8caf8b4108d6b8ebcb15da
+  languageName: node
+  linkType: hard
+
+"@primeuix/utils@npm:^0.6.1, @primeuix/utils@npm:^0.6.2":
+  version: 0.6.3
+  resolution: "@primeuix/utils@npm:0.6.3"
+  checksum: 10c0/d08638b0bea6a0124f1461c9eee54e9ad275cde5a061d85861a5b31970bc3714401dccc44abecec74ae37c971a6d795c36c3818637b54c0d7b46acb7b2c46ed9
   languageName: node
   linkType: hard
 
@@ -11705,12 +11726,12 @@ __metadata:
     "@fullcalendar/daygrid": "npm:^6.1.19"
     "@fullcalendar/timegrid": "npm:^6.1.19"
     "@lfx-one/shared": "workspace:*"
-    "@linuxfoundation/lfx-ui-core": "npm:^0.0.21"
+    "@linuxfoundation/lfx-ui-core": "npm:^0.1.0"
     "@openfeature/core": "npm:^1.9.1"
     "@openfeature/launchdarkly-client-provider": "npm:^0.3.3"
     "@openfeature/web-sdk": "npm:^1.7.1"
     "@playwright/test": "npm:^1.54.2"
-    "@primeng/themes": "npm:^19.1.4"
+    "@primeuix/themes": "npm:^2.0.2"
     "@types/compression": "npm:^1"
     "@types/express": "npm:^4.17.17"
     "@types/node": "npm:^18.18.0"
@@ -11737,7 +11758,7 @@ __metadata:
     prettier: "npm:^3.7.4"
     prettier-plugin-organize-imports: "npm:^4.2.0"
     prettier-plugin-tailwindcss: "npm:^0.6.14"
-    primeng: "npm:^19.1.4"
+    primeng: "npm:^20.4.0"
     rxjs: "npm:~7.8.2"
     snowflake-sdk: "npm:^2.3.1"
     tailwindcss: "npm:^3.4.17"
@@ -11753,7 +11774,7 @@ __metadata:
   dependencies:
     "@commitlint/cli": "npm:^20.1.0"
     "@commitlint/config-angular": "npm:^20.0.0"
-    "@linuxfoundation/lfx-ui-core": "npm:^0.0.21"
+    "@linuxfoundation/lfx-ui-core": "npm:^0.0.22"
     "@types/node": "npm:^24.2.1"
     "@typescript-eslint/eslint-plugin": "npm:^8.39.1"
     "@typescript-eslint/parser": "npm:^8.39.1"
@@ -14013,23 +14034,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"primeng@npm:^19.1.4":
-  version: 19.1.4
-  resolution: "primeng@npm:19.1.4"
+"primeng@npm:^20.4.0":
+  version: 20.4.0
+  resolution: "primeng@npm:20.4.0"
   dependencies:
-    "@primeuix/styled": "npm:^0.3.2"
-    "@primeuix/utils": "npm:^0.3.2"
+    "@primeuix/styled": "npm:^0.7.4"
+    "@primeuix/styles": "npm:^1.2.5"
+    "@primeuix/utils": "npm:^0.6.2"
     tslib: "npm:^2.3.0"
   peerDependencies:
-    "@angular/animations": ^19.0.0
-    "@angular/cdk": ^19.0.0
-    "@angular/common": ^19.0.0
-    "@angular/core": ^19.0.0
-    "@angular/forms": ^19.0.0
-    "@angular/platform-browser": ^19.0.0
-    "@angular/router": ^19.0.0
+    "@angular/animations": ^20.0.4
+    "@angular/cdk": ^20.0.3
+    "@angular/common": ^20.0.4
+    "@angular/core": ^20.0.4
+    "@angular/forms": ^20.0.4
+    "@angular/platform-browser": ^20.0.4
+    "@angular/router": ^20.0.4
     rxjs: ^6.0.0 || ^7.8.1
-  checksum: 10c0/f7affd6d65564b77c7ec26b01b72710a21fafcf45cb0b9d9c5836c1a3711c50bcd68b0c6e9bc48c559b9db8a5918ee83a01622d92b2621102ee009f49034fe77
+  checksum: 10c0/1663928177a772c5f4fe31842733e98aa220f2c42a6fff4550db0c61f5441abbc4fc8780394f59117dbf367242e2b6d5120a8c3efb0a4a368fc405e54765ad37
   languageName: node
   linkType: hard
 

@@ -25,6 +25,7 @@ export class CalendarComponent {
   public readonly size = input<'small' | 'large'>('small');
   public readonly minDate = input<Date | null>(null);
   public readonly maxDate = input<Date | null>(null);
+  public readonly appendTo = input<string | undefined>(undefined);
 
   // Events
   public readonly onSelect = output<any>();

@@ -24,11 +24,6 @@ export class MenubarComponent {
   public readonly styleClass = input<string | undefined>(undefined);
 
   // Behavior properties
-  public readonly autoZIndex = input<boolean>(true);
-  public readonly baseZIndex = input<number>(0);
-  public readonly autoDisplay = input<boolean | undefined>(true);
-  public readonly autoHide = input<boolean | undefined>(undefined);
-  public readonly autoHideDelay = input<number>(100);
   public readonly breakpoint = input<string>('960px');
 
   // Accessibility

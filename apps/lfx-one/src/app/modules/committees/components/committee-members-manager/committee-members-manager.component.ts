@@ -41,9 +41,6 @@ export class CommitteeMembersManagerComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Dialog reference
-  private dialogRef: DynamicDialogRef | undefined;
-
   // Input signals
   public committeeId = input.required<string | null>();
   public memberUpdates = input<MemberPendingChanges>({ toAdd: [], toUpdate: [], toDelete: [] });
@@ -118,7 +115,7 @@ export class CommitteeMembersManagerComponent implements OnInit {
   }
 
   public openAddMemberDialog(): void {
-    this.dialogRef = this.dialogService.open(MemberFormComponent, {
+    const dialogRef = this.dialogService.open(MemberFormComponent, {
       header: 'Add Member',
       width: '700px',
       modal: true,
@@ -128,9 +125,9 @@ export class CommitteeMembersManagerComponent implements OnInit {
         wizardMode: true, // Don't call API, return data instead
         committee: this.committee(),
       },
-    });
+    }) as DynamicDialogRef;
 
-    this.dialogRef.onClose.pipe(take(1)).subscribe((result: CreateCommitteeMemberRequest | undefined) => {
+    dialogRef.onClose.pipe(take(1)).subscribe((result: CreateCommitteeMemberRequest | undefined) => {
       if (result) {
         this.handleAddMemberResult(result);
       }
@@ -138,7 +135,7 @@ export class CommitteeMembersManagerComponent implements OnInit {
   }
 
   public openEditMemberDialog(member: CommitteeMemberWithState): void {
-    this.dialogRef = this.dialogService.open(MemberFormComponent, {
+    const dialogRef = this.dialogService.open(MemberFormComponent, {
       header: 'Edit Member',
       width: '700px',
       modal: true,
@@ -149,9 +146,9 @@ export class CommitteeMembersManagerComponent implements OnInit {
         member: member,
         committee: this.committee(),
       },
-    });
+    }) as DynamicDialogRef;
 
-    this.dialogRef.onClose.pipe(take(1)).subscribe((result: CreateCommitteeMemberRequest | undefined) => {
+    dialogRef.onClose.pipe(take(1)).subscribe((result: CreateCommitteeMemberRequest | undefined) => {
       if (result) {
         this.handleEditMemberResult(member, result);
       }

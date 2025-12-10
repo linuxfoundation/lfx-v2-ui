@@ -67,7 +67,6 @@ export class FileUploadComponent {
   public readonly onSelect = output<any>();
   public readonly onRemove = output<any>();
   public readonly onProgress = output<any>();
-  public readonly onValidationFail = output<any>();
   public readonly onCustomUpload = output<any>();
 
   // Helper methods for template
@@ -124,10 +123,6 @@ export class FileUploadComponent {
 
   protected handleProgress(event: any): void {
     this.onProgress.emit(event);
-  }
-
-  protected handleValidationFail(event: any): void {
-    this.onValidationFail.emit(event);
   }
 
   protected handleCustomUpload(event: any): void {

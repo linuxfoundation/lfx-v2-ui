@@ -31,9 +31,6 @@ export class CommitteeTableComponent {
   private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
 
-  // Class variables
-  private dialogRef: DynamicDialogRef | undefined;
-
   // Inputs
   public committees = input.required<Committee[]>();
   public canManageCommittee = input<boolean>(false);
@@ -52,7 +49,7 @@ export class CommitteeTableComponent {
 
   // Event handlers
   public onAddMember(committee: Committee): void {
-    this.dialogRef = this.dialogService.open(MemberFormComponent, {
+    const dialogRef = this.dialogService.open(MemberFormComponent, {
       header: 'Add Member',
       width: '700px',
       modal: true,
@@ -64,9 +61,9 @@ export class CommitteeTableComponent {
           // Dialog will close itself
         },
       },
-    });
+    }) as DynamicDialogRef;
 
-    this.dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
       if (result) {
         this.refresh.emit();
       }

@@ -110,7 +110,7 @@ export interface TagProps {
  */
 export interface ButtonSeverityOptions {
   /** Button color scheme indicating action type */
-  severity: 'success' | 'info' | 'warn' | 'danger' | 'help' | 'primary' | 'secondary' | 'primary' | null | undefined;
+  severity: 'success' | 'info' | 'warn' | 'danger' | 'help' | 'primary' | 'secondary' | null | undefined;
 }
 
 /**
@@ -270,7 +270,7 @@ export interface TimePickerProps {
  */
 export interface MessageSeverityOptions {
   /** Message severity level indicating urgency or type */
-  severity: 'info' | 'success' | 'warn' | 'error' | 'secondary' | 'primary';
+  severity: 'info' | 'success' | 'warn' | 'error' | 'secondary' | 'contrast';
 }
 
 /**

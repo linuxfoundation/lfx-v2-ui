@@ -43,7 +43,6 @@ export class ButtonComponent {
 
   // Badge properties
   public readonly badge = input<string | undefined>(undefined);
-  public readonly badgeClass = input<string | undefined>(undefined);
   public readonly badgeSeverity = input<ButtonProps['badgeSeverity']>('secondary');
 
   // Accessibility

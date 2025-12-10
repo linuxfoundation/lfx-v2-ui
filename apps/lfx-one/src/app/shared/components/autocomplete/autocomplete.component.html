@@ -23,21 +23,21 @@
     [appendTo]="appendTo()">
     <!-- Empty message template -->
     @if (emptyTemplate) {
-      <ng-template pTemplate="empty">
+      <ng-template #empty>
         <ng-container *ngTemplateOutlet="emptyTemplate"></ng-container>
       </ng-template>
     }
 
     <!-- Item template -->
     @if (itemTemplate; as item) {
-      <ng-template pTemplate="item" let-item>
+      <ng-template #item let-item>
         <ng-container *ngTemplateOutlet="itemTemplate; context: { $implicit: item }"></ng-container>
       </ng-template>
     }
 
     <!-- Footer template -->
     @if (footerTemplate) {
-      <ng-template pTemplate="footer">
+      <ng-template #footer>
         <ng-container *ngTemplateOutlet="footerTemplate"></ng-container>
       </ng-template>
     }

@@ -32,8 +32,6 @@ export class MenuComponent {
   public readonly appendTo = input<any>(undefined);
   public readonly autoZIndex = input<boolean>(true);
   public readonly baseZIndex = input<number>(0);
-  public readonly showTransitionOptions = input<string>('0.12s cubic-bezier(0, 0, 0.2, 1)');
-  public readonly hideTransitionOptions = input<string>('0.12s cubic-bezier(0, 0, 0.2, 1)');
 
   // Accessibility
   public readonly id = input<string | undefined>(undefined);
