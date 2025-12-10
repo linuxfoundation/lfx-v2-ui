@@ -7,6 +7,7 @@ import { RouterOutlet } from '@angular/router';
 import { AuthContext } from '@lfx-one/shared/interfaces';
 import { ToastModule } from 'primeng/toast';
 
+import { DemoBarComponent } from './shared/components/demo-bar/demo-bar.component';
 import { AccountContextService } from './shared/services/account-context.service';
 import { FeatureFlagService } from './shared/services/feature-flag.service';
 import { PersonaService } from './shared/services/persona.service';
@@ -15,7 +16,7 @@ import { UserService } from './shared/services/user.service';
 
 @Component({
   selector: 'lfx-root',
-  imports: [RouterOutlet, CommonModule, ToastModule],
+  imports: [RouterOutlet, CommonModule, ToastModule, DemoBarComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })

@@ -1,0 +1,31 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="demo-bar">
+  <div class="demo-bar-content">
+    <!-- Role Toggle Buttons -->
+    <div class="role-toggle">
+      <span class="demo-label">Select Role:</span>
+      <ng-container [formGroup]="roleForm">
+        <p-selectbutton
+          formControlName="role"
+          [options]="roleOptions"
+          optionLabel="label"
+          optionValue="value"
+          size="small"
+          styleClass="demo-role-toggle"></p-selectbutton>
+      </ng-container>
+    </div>
+
+    <!-- Clear Cache Button -->
+    <button
+      type="button"
+      class="clear-cache-btn"
+      (click)="clearCache()"
+      data-testid="demo-bar-clear-cache">
+      <i class="fa-solid fa-trash-can"></i>
+      <span>Clear Cache</span>
+    </button>
+  </div>
+</div>
+
