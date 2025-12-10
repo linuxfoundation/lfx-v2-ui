@@ -1,6 +1,45 @@
 /* Copyright The Linux Foundation and each contributor to LFX. */
 /* SPDX-License-Identifier: MIT */
 
+// Demo bar wrapper sets a CSS custom property that child components can use
+.demo-bar-wrapper {
+  // Set the demo bar height as a CSS variable for child components to consume
+  --demo-bar-height: 48px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.demo-bar-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// Global styles to offset fixed elements when demo bar is present
+::ng-deep .demo-bar-wrapper {
+  // Offset the fixed sidebar
+  .fixed.top-0 {
+    top: var(--demo-bar-height, 0) !important;
+  }
+
+  // Adjust min-h-screen containers to account for demo bar
+  .min-h-screen {
+    min-height: calc(100vh - var(--demo-bar-height, 0));
+  }
+
+  // Adjust sticky elements
+  .sticky.top-0 {
+    top: var(--demo-bar-height, 0) !important;
+  }
+
+  // Adjust mobile sticky header
+  .sticky.top-0.z-30 {
+    top: var(--demo-bar-height, 0) !important;
+  }
+}
+
 ::ng-deep {
   .p-card {
     .p-card-title {
