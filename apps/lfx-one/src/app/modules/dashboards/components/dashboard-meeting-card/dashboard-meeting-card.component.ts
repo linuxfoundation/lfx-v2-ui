@@ -26,7 +26,6 @@ import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-dashboard-meeting-card',
-  standalone: true,
   imports: [CommonModule, ButtonComponent, TagComponent, TooltipModule, ClipboardModule, FileTypeIconPipe],
   templateUrl: './dashboard-meeting-card.component.html',
 })

@@ -56,7 +56,6 @@ import { MeetingTypeSelectionComponent } from '../components/meeting-type-select
 
 @Component({
   selector: 'lfx-meeting-manage',
-  standalone: true,
   imports: [
     CommonModule,
     StepperModule,

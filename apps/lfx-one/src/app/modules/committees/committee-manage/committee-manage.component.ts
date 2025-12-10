@@ -23,7 +23,6 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
 
 @Component({
   selector: 'lfx-committee-manage',
-  standalone: true,
   imports: [
     CommonModule,
     RouterLink,

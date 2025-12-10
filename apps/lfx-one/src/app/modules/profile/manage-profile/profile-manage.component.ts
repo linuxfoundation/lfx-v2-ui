@@ -22,7 +22,6 @@ import { ProfileNavComponent } from '../components/profile-nav/profile-nav.compo
 
 @Component({
   selector: 'lfx-profile-manage',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,

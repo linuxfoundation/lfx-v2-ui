@@ -7,7 +7,6 @@ import { CardModule } from 'primeng/card';
 
 @Component({
   selector: 'lfx-card',
-  standalone: true,
   imports: [CommonModule, CardModule],
   templateUrl: './card.component.html',
 })

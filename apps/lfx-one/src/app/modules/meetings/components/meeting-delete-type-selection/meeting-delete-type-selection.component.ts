@@ -13,7 +13,6 @@ export interface MeetingDeleteTypeResult {
 
 @Component({
   selector: 'lfx-meeting-delete-type-selection',
-  standalone: true,
   imports: [CommonModule, ButtonComponent],
   templateUrl: './meeting-delete-type-selection.component.html',
 })

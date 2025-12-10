@@ -58,7 +58,6 @@ import { PublicRegistrationModalComponent } from '../../components/public-regist
 
 @Component({
   selector: 'lfx-meeting-card',
-  standalone: true,
   imports: [
     CommonModule,
     ButtonComponent,

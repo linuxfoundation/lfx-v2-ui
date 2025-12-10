@@ -12,7 +12,6 @@ import { Tooltip } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-member-card',
-  standalone: true,
   imports: [CommonModule, AvatarComponent, BadgeComponent, ButtonComponent, MenuComponent, Tooltip],
   templateUrl: './member-card.component.html',
 })

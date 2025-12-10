@@ -11,7 +11,6 @@ import { catchError, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-rsvp-details',
-  standalone: true,
   imports: [CommonModule, ButtonComponent],
   templateUrl: './meeting-rsvp-details.component.html',
 })

@@ -25,7 +25,6 @@ interface CommitteeMemberDisplay extends CommitteeMember {
 
 @Component({
   selector: 'lfx-meeting-committee-modal',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ButtonComponent, MultiSelectComponent, TableComponent, TooltipModule],
   templateUrl: './meeting-committee-modal.component.html',
 })

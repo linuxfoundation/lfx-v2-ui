@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
 import { Component, effect, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
@@ -14,8 +13,7 @@ import { BehaviorSubject, catchError, filter, finalize, map, of, switchMap, take
 
 @Component({
   selector: 'lfx-meeting-registrants-display',
-  standalone: true,
-  imports: [CommonModule, AvatarComponent, TooltipModule],
+  imports: [AvatarComponent, TooltipModule],
   templateUrl: './meeting-registrants-display.component.html',
 })
 export class MeetingRegistrantsDisplayComponent {

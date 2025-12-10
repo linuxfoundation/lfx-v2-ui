@@ -8,7 +8,6 @@ import { MenubarModule } from 'primeng/menubar';
 
 @Component({
   selector: 'lfx-menubar',
-  standalone: true,
   imports: [CommonModule, MenubarModule],
   templateUrl: './menubar.component.html',
 })

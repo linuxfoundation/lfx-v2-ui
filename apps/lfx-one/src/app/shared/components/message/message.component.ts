@@ -8,7 +8,6 @@ import { MessageModule } from 'primeng/message';
 
 @Component({
   selector: 'lfx-message',
-  standalone: true,
   imports: [CommonModule, MessageModule],
   templateUrl: './message.component.html',
 })

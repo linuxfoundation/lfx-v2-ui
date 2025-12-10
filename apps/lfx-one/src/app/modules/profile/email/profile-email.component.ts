@@ -28,7 +28,6 @@ interface EmailOption {
 
 @Component({
   selector: 'lfx-profile-email',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,

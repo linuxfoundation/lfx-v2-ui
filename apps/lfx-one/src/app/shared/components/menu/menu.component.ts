@@ -8,7 +8,6 @@ import { Menu, MenuModule } from 'primeng/menu';
 
 @Component({
   selector: 'lfx-menu',
-  standalone: true,
   imports: [CommonModule, MenuModule],
   templateUrl: './menu.component.html',
 })

@@ -8,7 +8,6 @@ import { FileUploadModule } from 'primeng/fileupload';
 
 @Component({
   selector: 'lfx-file-upload',
-  standalone: true,
   imports: [CommonModule, FileUploadModule],
   templateUrl: './file-upload.component.html',
 })

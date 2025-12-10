@@ -15,7 +15,6 @@ import { catchError, combineLatest, finalize, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-rsvp-button-group',
-  standalone: true,
   imports: [CommonModule],
   providers: [DialogService],
   templateUrl: './rsvp-button-group.component.html',

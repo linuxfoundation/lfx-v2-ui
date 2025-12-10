@@ -11,7 +11,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import type { PendingActionItem } from '@lfx-one/shared/interfaces';
 @Component({
   selector: 'lfx-pending-actions',
-  standalone: true,
   imports: [CommonModule, ButtonComponent, TagComponent, TooltipModule],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',

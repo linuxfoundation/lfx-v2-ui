@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { TagComponent } from '@components/tag/tag.component';
@@ -10,8 +9,7 @@ import { CardModule } from 'primeng/card';
 
 @Component({
   selector: 'lfx-project-card',
-  standalone: true,
-  imports: [CommonModule, RouterModule, CardModule, TagComponent],
+  imports: [RouterModule, CardModule, TagComponent],
   templateUrl: './project-card.component.html',
   styleUrl: './project-card.component.scss',
 })

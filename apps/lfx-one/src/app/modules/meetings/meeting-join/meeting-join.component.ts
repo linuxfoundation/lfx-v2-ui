@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -44,10 +43,8 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
 
 @Component({
   selector: 'lfx-meeting-join',
-  standalone: true,
   imports: [
     ClipboardModule,
-    CommonModule,
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,

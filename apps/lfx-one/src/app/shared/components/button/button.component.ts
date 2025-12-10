@@ -10,7 +10,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-button',
-  standalone: true,
   imports: [CommonModule, ButtonModule, RouterModule, TooltipModule],
   templateUrl: './button.component.html',
 })

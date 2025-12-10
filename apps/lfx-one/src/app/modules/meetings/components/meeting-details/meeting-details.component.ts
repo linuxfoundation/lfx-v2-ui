@@ -27,7 +27,6 @@ import { MeetingRecurrencePatternComponent } from '../meeting-recurrence-pattern
 
 @Component({
   selector: 'lfx-meeting-details',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,

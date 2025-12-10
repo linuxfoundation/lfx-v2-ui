@@ -19,7 +19,6 @@ import { distinctUntilChanged, map, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-sidebar',
-  standalone: true,
   imports: [CommonModule, RouterModule, BadgeComponent, PersonaSelectorComponent, ProjectSelectorComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',

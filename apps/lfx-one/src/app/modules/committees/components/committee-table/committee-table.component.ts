@@ -19,7 +19,6 @@ import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
   selector: 'lfx-committee-table',
-  standalone: true,
   imports: [CommonModule, RouterLink, CardComponent, ButtonComponent, TagComponent, TooltipModule, ConfirmDialogModule, DynamicDialogModule],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-table.component.html',

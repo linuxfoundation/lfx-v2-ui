@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -23,7 +22,6 @@ import { UpcomingCommitteeMeetingComponent } from '../components/upcoming-commit
 @Component({
   selector: 'lfx-committee-view',
   imports: [
-    CommonModule,
     CardComponent,
     MenuComponent,
     ButtonComponent,

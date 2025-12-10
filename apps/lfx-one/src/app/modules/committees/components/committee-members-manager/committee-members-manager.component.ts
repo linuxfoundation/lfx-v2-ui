@@ -30,7 +30,6 @@ import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
   selector: 'lfx-committee-members-manager',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ButtonComponent, InputTextComponent, SelectComponent, ConfirmDialogModule, DynamicDialogModule, TooltipModule],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-members-manager.component.html',

@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommonModule } from '@angular/common';
 import { Component, computed, inject, input, output, signal, WritableSignal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -20,8 +19,7 @@ import { UserFormComponent } from '../user-form/user-form.component';
 
 @Component({
   selector: 'lfx-user-permissions-table',
-  standalone: true,
-  imports: [CommonModule, TableComponent, TooltipModule, CardComponent, ConfirmDialogModule, ButtonComponent, MenuComponent],
+  imports: [TableComponent, TooltipModule, CardComponent, ConfirmDialogModule, ButtonComponent, MenuComponent],
   templateUrl: './user-permissions-table.component.html',
 })
 export class UserPermissionsTableComponent {

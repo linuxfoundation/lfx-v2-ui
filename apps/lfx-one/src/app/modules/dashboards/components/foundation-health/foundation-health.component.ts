@@ -24,7 +24,6 @@ import type {
 
 @Component({
   selector: 'lfx-foundation-health',
-  standalone: true,
   imports: [CommonModule, FilterPillsComponent, MetricCardComponent, DataCopilotComponent],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',

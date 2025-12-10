@@ -7,7 +7,6 @@ import { TableModule } from 'primeng/table';
 
 @Component({
   selector: 'lfx-table',
-  standalone: true,
   imports: [CommonModule, TableModule],
   templateUrl: './table.component.html',
   host: {

@@ -8,7 +8,6 @@ import { CardSelectorOption } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-card-selector',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './card-selector.component.html',
 })

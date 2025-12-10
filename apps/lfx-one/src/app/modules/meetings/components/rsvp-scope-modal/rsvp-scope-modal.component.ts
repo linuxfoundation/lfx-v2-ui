@@ -11,7 +11,6 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'lfx-rsvp-scope-modal',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ButtonComponent, RadioButtonComponent],
   templateUrl: './rsvp-scope-modal.component.html',
 })

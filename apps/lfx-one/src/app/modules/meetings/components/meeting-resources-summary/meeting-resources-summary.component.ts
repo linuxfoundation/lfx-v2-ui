@@ -15,7 +15,6 @@ import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'lfx-meeting-resources-summary',
-  standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule, FileUploadComponent, ButtonComponent, FileSizePipe],
   templateUrl: './meeting-resources-summary.component.html',
 })

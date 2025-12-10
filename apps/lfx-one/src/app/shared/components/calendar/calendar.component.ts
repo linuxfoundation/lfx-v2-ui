@@ -7,7 +7,6 @@ import { DatePickerModule } from 'primeng/datepicker';
 
 @Component({
   selector: 'lfx-calendar',
-  standalone: true,
   imports: [DatePickerModule, ReactiveFormsModule],
   templateUrl: './calendar.component.html',
 })

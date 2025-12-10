@@ -21,7 +21,6 @@ import { ProfileNavComponent } from '../components/profile-nav/profile-nav.compo
 
 @Component({
   selector: 'lfx-profile-password',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
