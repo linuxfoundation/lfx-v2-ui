@@ -201,7 +201,7 @@ req.log.error({ error: error }, 'message'); // Should use logger service
 
 ### Logging Architecture
 
-```
+```text
 server-logger.ts (breaks circular dependency)
   └─ Creates and exports serverLogger (base Pino instance)
       └─ Configuration: levels, serializers, formatters, redaction
@@ -326,7 +326,7 @@ private async fetchFromNats(req: Request, slug: string): Promise<Project> {
 - **License headers are required on all source files** - run `./check-headers.sh` to verify
 - **Pre-commit hooks enforce license headers** - commits will fail without proper headers
 - Always run yarn format from the root of the project to ensure formatting is done after you have made all your changes
-- Always preprend "Generated with [Claude Code](https://claude.ai/code)" if you assisted with the code
+- Always prepend "Generated with [Claude Code](https://claude.ai/code)" if you assisted with the code
 - Do not nest ternary expressions
 - Always run yarn lint before yarn build to validate your linting
 - The JIRA project key for this is LFXV2. All tickets associated to this repo should generally be in there.
