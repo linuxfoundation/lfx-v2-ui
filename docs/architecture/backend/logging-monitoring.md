@@ -32,7 +32,7 @@ logger.success(req, 'fetch_projects', startTime, { count: projects.length });
 
 ### Logging Architecture Layers
 
-```
+```text
 server-logger.ts (NEW - breaks circular dependency)
   └─ Creates and exports serverLogger (base Pino instance)
       └─ Configuration: levels, serializers, formatters, redaction
