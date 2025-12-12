@@ -65,16 +65,11 @@ router.delete('/:uid/attachments/:attachmentId', (req, res, next) => meetingCont
 
 // AI agenda generation endpoint
 router.post('/generate-agenda', async (req: Request, res: Response, next: NextFunction) => {
-  const startTime = Date.now();
-
-  req.log.info(
-    {
-      operation: 'generate_agenda',
-      meeting_type: req.body['meetingType'],
-      has_context: !!req.body['context'],
-    },
-    'Starting AI agenda generation request'
-  );
+  const { logger } = await import('../services/logger.service');
+  const startTime = logger.startOperation(req, 'generate_agenda', {
+    meeting_type: req.body['meetingType'],
+    has_context: !!req.body['context'],
+  });
 
   try {
     const { meetingType, title, projectName, context } = req.body;
@@ -93,30 +88,12 @@ router.post('/generate-agenda', async (req: Request, res: Response, next: NextFu
       context,
     });
 
-    const duration = Date.now() - startTime;
-
-    req.log.info(
-      {
-        operation: 'generate_agenda',
-        duration,
-        estimated_duration: response.estimatedDuration,
-        status_code: 200,
-      },
-      'Successfully generated meeting agenda'
-    );
+    logger.success(req, 'generate_agenda', startTime, {
+      estimated_duration: response.estimatedDuration,
+    });
 
     return res.json(response);
   } catch (error) {
-    const duration = Date.now() - startTime;
-    req.log.error(
-      {
-        err: error,
-        operation: 'generate_agenda',
-        duration,
-        meeting_type: req.body['meetingType'],
-      },
-      'Failed to generate meeting agenda'
-    );
     return next(error);
   }
 });

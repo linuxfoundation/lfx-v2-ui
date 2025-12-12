@@ -17,6 +17,7 @@ import pinoPretty from 'pino-pretty';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
+import { logger } from './services/logger.service';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
@@ -82,6 +83,19 @@ const prettyStream =
 const serverLogger = pino(
   {
     level: process.env['LOG_LEVEL'] || 'info',
+    base: {
+      service: 'lfx-one-ssr',
+      environment: process.env['NODE_ENV'] || 'development',
+      version: process.env['APP_VERSION'] || '1.0.0',
+    },
+    mixin: () => {
+      const traceHeader = process.env['_X_AMZN_TRACE_ID'];
+      if (traceHeader) {
+        const traceId = traceHeader.split(';')[0]?.replace('Root=', '');
+        return { aws_trace_id: traceId };
+      }
+      return {};
+    },
     serializers: {
       err: customErrorSerializer,
       error: customErrorSerializer,
@@ -99,6 +113,10 @@ const serverLogger = pino(
       level: (label) => {
         return { level: label.toUpperCase() };
       },
+      bindings: (bindings) => ({
+        pid: bindings['pid'],
+        hostname: bindings['hostname'],
+      }),
     },
     timestamp: pino.stdTimeFunctions.isoTime,
   },
@@ -143,11 +161,8 @@ const httpLogger = pinoHttp({
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
   },
-  autoLogging: {
-    ignore: (req: Request) => {
-      return req.url === '/health' || req.url === '/api/health' || req.url.startsWith('/.well-known');
-    },
-  },
+  // Disable automatic request/response logging - our LoggerService handles operation logging
+  autoLogging: false,
   redact: {
     paths:
       process.env['NODE_ENV'] !== 'production'
@@ -160,6 +175,10 @@ const httpLogger = pinoHttp({
     level: (label) => {
       return { level: label.toUpperCase() };
     },
+    bindings: (bindings) => ({
+      pid: bindings['pid'],
+      hostname: bindings['hostname'],
+    }),
   },
   timestamp: pino.stdTimeFunctions.isoTime,
 });
@@ -251,13 +270,10 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       }
     } catch (error) {
       // If userinfo fetch fails, fall back to basic user info from token
-      req.log.warn(
-        {
-          err: error,
-          path: req.path,
-        },
-        'Failed to fetch user info, using basic user data'
-      );
+      logger.warning(req, 'ssr_user_info', 'Failed to fetch user info, using basic user data', {
+        err: error,
+        path: req.path,
+      });
 
       res.oidc.logout();
       return;
@@ -288,16 +304,13 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       return next();
     })
     .catch((error) => {
-      req.log.error(
-        {
-          error: error.message,
-          code: error.code,
-          url: req.url,
-          method: req.method,
-          user_agent: req.get('User-Agent'),
-        },
-        'Error rendering Angular application'
-      );
+      logger.error(req, 'ssr_render', 0, error, {
+        error_message: error.message,
+        code: error.code,
+        url: req.url,
+        method: req.method,
+        user_agent: req.get('User-Agent'),
+      });
 
       if (error.code === 'NOT_FOUND') {
         res.status(404).send('Not Found');
