@@ -30,13 +30,14 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
 
   const operation = getOperationFromPath(req.path);
 
+  // Try to get the operation start time if it was tracked, otherwise use current time
+  const startTime = logger.getOperationStartTime(req, operation) || Date.now();
+
   // Handle our structured API errors
   if (isBaseApiError(error)) {
     // Log the error with structured context for CloudWatch
     const logLevel = error.getSeverity();
     const logContext = {
-      operation,
-      status: 'failed',
       error_type: error.code,
       status_code: error.statusCode,
       ...error.getLogContext(),
@@ -47,7 +48,7 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
     };
 
     if (logLevel === 'error') {
-      logger.error(req, operation, Date.now(), error, logContext, { skipIfLogged: true });
+      logger.error(req, operation, startTime, error, logContext, { skipIfLogged: true });
     } else if (logLevel === 'warn') {
       logger.warning(req, operation, `API error: ${error.message}`, { ...logContext, err: error });
     } else {
@@ -63,12 +64,19 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
   }
 
   // Log unhandled errors with CloudWatch-friendly structure
-  logger.error(req, operation, Date.now(), error, {
-    error_type: 'unhandled',
-    path: req.path,
-    method: req.method,
-    user_agent: req.get('User-Agent'),
-  });
+  logger.error(
+    req,
+    operation,
+    startTime,
+    error,
+    {
+      error_type: 'unhandled',
+      path: req.path,
+      method: req.method,
+      user_agent: req.get('User-Agent'),
+    },
+    { skipIfLogged: true }
+  );
 
   // Default error response for unhandled errors
   res.status(500).json({

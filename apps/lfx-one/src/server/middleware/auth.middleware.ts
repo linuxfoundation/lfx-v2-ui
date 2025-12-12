@@ -101,7 +101,11 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
       if (req.oidc.accessToken?.isExpired()) {
         // For optional routes, don't attempt refresh - just skip token extraction
         if (!attemptRefresh) {
-          logger.debug(req, 'token_extraction', 'Token expired but refresh not attempted (optional route)', { path: req.path });
+          logger.success(req, 'token_extraction', startTime, {
+            path: req.path,
+            token_extracted: false,
+            reason: 'skipped_refresh_optional_route',
+          });
           return { success: false, needsLogout: false };
         }
 
@@ -114,9 +118,9 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
             return { success: true, needsLogout: false };
           }
         } catch (refreshError) {
-          logger.warning(req, 'token_refresh', 'Token refresh failed - user needs to re-authenticate', {
-            err: refreshError,
+          logger.error(req, 'token_extraction', startTime, refreshError, {
             path: req.path,
+            failure_reason: 'token_refresh_failed',
           });
           // Token refresh failed, user needs to re-authenticate
           return { success: false, needsLogout: true };
@@ -132,13 +136,18 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
       }
     }
   } catch (error) {
-    logger.warning(req, 'token_extraction', 'Failed to extract bearer token', {
-      err: error,
+    logger.error(req, 'token_extraction', startTime, error, {
       path: req.path,
+      failure_reason: 'extraction_error',
     });
+    return { success: false, needsLogout: false };
   }
 
-  logger.debug(req, 'token_extraction', 'No bearer token extracted', { path: req.path });
+  logger.success(req, 'token_extraction', startTime, {
+    path: req.path,
+    token_extracted: false,
+    reason: 'not_authenticated',
+  });
   return { success: false, needsLogout: false };
 }
 
@@ -389,6 +398,10 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
         hasToken,
       });
     } catch (error) {
+      logger.error(req, 'auth_middleware', startTime, error, {
+        path: req.path,
+        method: req.method,
+      });
       next(error);
     }
   };

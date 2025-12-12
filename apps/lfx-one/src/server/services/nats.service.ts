@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
-import { connect, NatsConnection, Msg, StringCodec, Codec } from 'nats';
+import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
 import { logger } from './logger.service';
 
@@ -34,10 +34,11 @@ export class NatsService {
       timeout: options?.timeout || NATS_CONFIG.REQUEST_TIMEOUT,
     };
 
+    const startTime = Date.now();
+
     try {
       return await connection.request(subject, data, requestOptions);
     } catch (error) {
-      const startTime = Date.now();
       logger.error(undefined, 'nats_request', startTime, error, { subject });
       throw error;
     }

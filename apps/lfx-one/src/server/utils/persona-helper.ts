@@ -51,7 +51,9 @@ export async function fetchUserPersonaAndOrganizations(req: Request): Promise<Us
     // Get username from auth context
     const username = await getUsernameFromAuth(req);
     if (!username) {
-      logger.warning(req, 'fetch_user_persona_and_organizations', 'No username found in auth context for persona determination');
+      logger.success(req, 'fetch_user_persona_and_organizations', startTime, {
+        result: 'no_username_no_persona',
+      });
       return result;
     }
 
@@ -95,6 +97,10 @@ export async function fetchUserPersonaAndOrganizations(req: Request): Promise<Us
 
     // No committee memberships found
     if (matchedPersonas.length === 0) {
+      logger.success(req, 'fetch_user_persona_and_organizations', startTime, {
+        username,
+        result: 'no_committee_memberships',
+      });
       return result;
     }
 
@@ -115,8 +121,8 @@ export async function fetchUserPersonaAndOrganizations(req: Request): Promise<Us
     return result;
   } catch (error) {
     // Log error but don't fail SSR - persona determination is non-critical
-    logger.warning(req, 'fetch_user_persona_and_organizations', 'Failed to determine user persona from committee membership', {
-      err: error,
+    logger.error(req, 'fetch_user_persona_and_organizations', startTime, error, {
+      failure_reason: 'committee_lookup_failed',
     });
     return result;
   }

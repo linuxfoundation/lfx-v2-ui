@@ -28,6 +28,12 @@ export class AccessCheckService {
       return new Map();
     }
 
+    const startTime = logger.startOperation(req, 'check_access_permissions', {
+      request_count: resources.length,
+      resource_types: [...new Set(resources.map((r) => r.resource))],
+      access_types: [...new Set(resources.map((r) => r.access))],
+    });
+
     try {
       // Transform requests to the expected API format
       const apiRequests = resources.map((resource) => `${resource.resource}:${resource.id}#${resource.access}`);
@@ -35,12 +41,6 @@ export class AccessCheckService {
       const requestPayload: AccessCheckApiRequest = {
         requests: apiRequests,
       };
-
-      const startTime = logger.startOperation(req, 'check_access_permissions', {
-        request_count: resources.length,
-        resource_types: [...new Set(resources.map((r) => r.resource))],
-        access_types: [...new Set(resources.map((r) => r.access))],
-      });
 
       // Make the API request
       const response = await this.microserviceProxy.proxyRequest<AccessCheckApiResponse>(
@@ -91,9 +91,9 @@ export class AccessCheckService {
 
       return resultMap;
     } catch (error) {
-      logger.warning(req, 'check_access_permissions', 'Access check failed, defaulting to no access', {
+      logger.error(req, 'check_access_permissions', startTime, error, {
         request_count: resources.length,
-        err: error,
+        fallback_behavior: 'returning no access',
       });
 
       // Return map with all false values as fallback

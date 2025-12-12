@@ -8,7 +8,6 @@ import snowflakeSdk from 'snowflake-sdk';
 
 import { MicroserviceError } from '../errors';
 import { LockManager } from '../utils/lock-manager';
-
 import { logger } from './logger.service';
 
 import type { Bind, Connection, ConnectionOptions, LogLevel, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
@@ -89,15 +88,15 @@ export class SnowflakeService {
     // Execute with lock to prevent duplicate queries
     return this.lockManager.executeLocked(queryHash, async () => {
       const startTime = Date.now();
+      logger.startOperation(undefined, 'snowflake_query', {
+        query_hash: queryHash,
+        sql_preview: sqlText.substring(0, 100),
+        bind_count: binds?.length || 0,
+      });
+
       const pool = await this.ensurePool();
 
       try {
-        logger.startOperation(undefined, 'snowflake_query', {
-          query_hash: queryHash,
-          sql_preview: sqlText.substring(0, 100),
-          bind_count: binds?.length || 0,
-        });
-
         // Execute query with parameterized binds
         const result: any = await new Promise((resolve, reject) => {
           pool.use(async (connection: Connection) => {

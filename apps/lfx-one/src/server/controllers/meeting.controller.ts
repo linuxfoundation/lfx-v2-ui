@@ -6,6 +6,7 @@ import {
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   CreateMeetingRsvpRequest,
+  GenerateAgendaResponse,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -15,6 +16,7 @@ import { ServiceValidationError } from '../errors';
 import { addInvitedStatusToMeeting, addInvitedStatusToMeetings } from '../helpers/meeting.helper';
 import { logger } from '../services/logger.service';
 import { validateUidParameter } from '../helpers/validation.helper';
+import { AiService } from '../services/ai.service';
 import { MeetingService } from '../services/meeting.service';
 
 /**
@@ -22,6 +24,7 @@ import { MeetingService } from '../services/meeting.service';
  */
 export class MeetingController {
   private meetingService: MeetingService = new MeetingService();
+  private aiService: AiService = new AiService();
 
   /**
    * GET /meetings
@@ -1169,6 +1172,49 @@ export class MeetingController {
       });
 
       res.status(200).json(attachments);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /meetings/generate-agenda
+   * Generate meeting agenda using AI
+   */
+  public async generateAgenda(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'generate_agenda', {
+      meeting_type: req.body['meetingType'],
+      has_context: !!req.body['context'],
+    });
+
+    try {
+      const { meetingType, title, projectName, context } = req.body;
+
+      // Validate required fields
+      if (!meetingType || !title || !projectName) {
+        logger.validation(req, 'generate_agenda', ['Missing required fields: meetingType, title, and projectName are required'], {
+          meeting_type: meetingType,
+          has_title: !!title,
+          has_project_name: !!projectName,
+        });
+        res.status(400).json({
+          error: 'Missing required fields: meetingType, title, and projectName are required',
+        });
+        return;
+      }
+
+      const response: GenerateAgendaResponse = await this.aiService.generateMeetingAgenda(req, {
+        meetingType,
+        title,
+        projectName,
+        context,
+      });
+
+      logger.success(req, 'generate_agenda', startTime, {
+        estimated_duration: response.estimatedDuration,
+      });
+
+      res.json(response);
     } catch (error) {
       next(error);
     }

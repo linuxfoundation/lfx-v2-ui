@@ -1,14 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NextFunction, Request, Response, Router } from 'express';
+import { Router } from 'express';
 
 import { MeetingController } from '../controllers/meeting.controller';
-import { AiService } from '../services/ai.service';
 
 const router = Router();
 
-const aiService = new AiService();
 const meetingController = new MeetingController();
 
 // GET /meetings - get all meetings
@@ -64,43 +62,6 @@ router.get('/:uid/attachments/:attachmentId', (req, res, next) => meetingControl
 router.delete('/:uid/attachments/:attachmentId', (req, res, next) => meetingController.deleteMeetingAttachment(req, res, next));
 
 // AI agenda generation endpoint
-router.post('/generate-agenda', async (req: Request, res: Response, next: NextFunction) => {
-  const { logger } = await import('../services/logger.service');
-  const startTime = logger.startOperation(req, 'generate_agenda', {
-    meeting_type: req.body['meetingType'],
-    has_context: !!req.body['context'],
-  });
-
-  try {
-    const { meetingType, title, projectName, context } = req.body;
-
-    // Validate required fields
-    if (!meetingType || !title || !projectName) {
-      logger.validation(req, 'generate_agenda', ['Missing required fields: meetingType, title, and projectName are required'], {
-        meeting_type: meetingType,
-        has_title: !!title,
-        has_project_name: !!projectName,
-      });
-      return res.status(400).json({
-        error: 'Missing required fields: meetingType, title, and projectName are required',
-      });
-    }
-
-    const response = await aiService.generateMeetingAgenda(req, {
-      meetingType,
-      title,
-      projectName,
-      context,
-    });
-
-    logger.success(req, 'generate_agenda', startTime, {
-      estimated_duration: response.estimatedDuration,
-    });
-
-    return res.json(response);
-  } catch (error) {
-    return next(error);
-  }
-});
+router.post('/generate-agenda', (req, res, next) => meetingController.generateAgenda(req, res, next));
 
 export default router;
