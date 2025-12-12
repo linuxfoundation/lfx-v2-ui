@@ -1192,15 +1192,21 @@ export class MeetingController {
 
       // Validate required fields
       if (!meetingType || !title || !projectName) {
-        logger.validation(req, 'generate_agenda', ['Missing required fields: meetingType, title, and projectName are required'], {
-          meeting_type: meetingType,
-          has_title: !!title,
-          has_project_name: !!projectName,
-        });
-        res.status(400).json({
-          error: 'Missing required fields: meetingType, title, and projectName are required',
-        });
-        return;
+        const validationError = ServiceValidationError.fromFieldErrors(
+          {
+            meetingType: !meetingType ? 'Meeting type is required' : [],
+            title: !title ? 'Title is required' : [],
+            projectName: !projectName ? 'Project name is required' : [],
+          },
+          'Agenda generation validation failed',
+          {
+            operation: 'generate_agenda',
+            service: 'meeting_controller',
+            path: req.path,
+          }
+        );
+
+        return next(validationError);
       }
 
       const response: GenerateAgendaResponse = await this.aiService.generateMeetingAgenda(req, {
