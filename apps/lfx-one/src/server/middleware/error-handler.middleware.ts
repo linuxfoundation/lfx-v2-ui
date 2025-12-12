@@ -47,7 +47,7 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
     };
 
     if (logLevel === 'error') {
-      logger.error(req, operation, 0, error, logContext);
+      logger.error(req, operation, Date.now(), error, logContext, { skipIfLogged: true });
     } else if (logLevel === 'warn') {
       logger.warning(req, operation, `API error: ${error.message}`, { ...logContext, err: error });
     } else {
@@ -63,7 +63,7 @@ export function apiErrorHandler(error: Error | BaseApiError, req: Request, res: 
   }
 
   // Log unhandled errors with CloudWatch-friendly structure
-  logger.error(req, operation, 0, error, {
+  logger.error(req, operation, Date.now(), error, {
     error_type: 'unhandled',
     path: req.path,
     method: req.method,

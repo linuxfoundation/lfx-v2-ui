@@ -184,30 +184,20 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
 
   // If user needs logout due to failed token refresh (only for required auth routes now)
   if (needsLogout) {
-    logger.startOperation(
-      req,
-      'auth_token_refresh_failure',
-      {
-        path: req.path,
-        routeType: route.type,
-        method: req.method,
-      },
-      { silent: false }
-    );
+    logger.warning(req, 'auth_token_refresh_failure', 'Token refresh failed - user needs logout', {
+      path: req.path,
+      routeType: route.type,
+      method: req.method,
+    });
 
     // For API routes or non-GET requests, return 401 instead of logout redirect
     // This prevents breaking XHR/Fetch clients that can't handle HTML redirects
     if (route.type === 'api' || req.method !== 'GET') {
-      logger.startOperation(
-        req,
-        'auth_decision_401',
-        {
-          path: req.path,
-          routeType: route.type,
-          method: req.method,
-        },
-        { silent: false }
-      );
+      logger.debug(req, 'auth_decision_401', 'Returning 401 for API route or non-GET request', {
+        path: req.path,
+        routeType: route.type,
+        method: req.method,
+      });
       return {
         action: 'error',
         errorType: 'authentication',
@@ -216,16 +206,11 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
     }
 
     // For SSR GET requests, proceed with logout redirect
-    logger.startOperation(
-      req,
-      'auth_decision_logout',
-      {
-        path: req.path,
-        routeType: route.type,
-        method: req.method,
-      },
-      { silent: false }
-    );
+    logger.debug(req, 'auth_decision_logout', 'Proceeding with logout redirect for SSR GET request', {
+      path: req.path,
+      routeType: route.type,
+      method: req.method,
+    });
     return { action: 'logout' };
   }
 
@@ -234,16 +219,11 @@ function makeAuthDecision(result: AuthMiddlewareResult, req: Request): AuthDecis
     if (!authenticated) {
       // SSR routes - redirect to login
       if (route.type === 'ssr' && req.method === 'GET') {
-        logger.startOperation(
-          req,
-          'auth_decision_redirect_login',
-          {
-            path: req.path,
-            routeType: route.type,
-            method: req.method,
-          },
-          { silent: false }
-        );
+        logger.debug(req, 'auth_decision_redirect_login', 'Redirecting to login for unauthenticated SSR GET request', {
+          path: req.path,
+          routeType: route.type,
+          method: req.method,
+        });
         return {
           action: 'redirect',
           redirectUrl: `/login?returnTo=${encodeURIComponent(req.originalUrl)}`,
@@ -325,15 +305,10 @@ async function executeAuthDecision(decision: AuthDecision, req: Request, res: Re
 
     case 'logout':
       // Log user out due to token refresh failure
-      logger.startOperation(
-        req,
-        'auth_logout_execution',
-        {
-          path: req.path,
-          originalUrl: req.originalUrl,
-        },
-        { silent: false }
-      );
+      logger.debug(req, 'auth_logout_execution', 'Executing logout due to token refresh failure', {
+        path: req.path,
+        originalUrl: req.originalUrl,
+      });
       // Redirect to home page after logout to avoid redirect loops
       res.oidc.logout({ returnTo: '/' });
       break;

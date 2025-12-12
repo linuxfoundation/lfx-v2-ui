@@ -47,7 +47,6 @@ import {
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
-import { serverLogger } from '../server';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { logger } from './logger.service';
@@ -162,7 +161,7 @@ export class ProjectService {
    * First resolves slug to ID via NATS, then fetches project data
    */
   public async getProjectBySlug(req: Request, projectSlug: string): Promise<Project> {
-    const natsResult = await this.getProjectIdBySlug(projectSlug);
+    const natsResult = await this.getProjectIdBySlug(req, projectSlug);
 
     if (!natsResult.exists || !natsResult.uid) {
       throw new ResourceNotFoundError('Project', projectSlug, {
@@ -229,15 +228,10 @@ export class ProjectService {
       // Use manual user info if provided, otherwise fetch from NATS
       let userInfo: { name: string; email: string; username: string; avatar?: string };
       if (manualUserInfo) {
-        logger.startOperation(
-          req,
-          `${operation}_user_project_permissions`,
-          {
-            username: backendIdentifier,
-            info_source: 'manual',
-          },
-          { silent: true }
-        );
+        logger.debug(req, `${operation}_user_project_permissions`, 'Using manual user info', {
+          username: backendIdentifier,
+          info_source: 'manual',
+        });
         userInfo = {
           name: manualUserInfo.name,
           email: manualUserInfo.email,
@@ -520,15 +514,10 @@ export class ProjectService {
       await this.resolveEmailToSub(req, usernameOrEmail);
       // Then get the username for user metadata lookup
       usernameForLookup = await this.resolveEmailToUsername(req, usernameOrEmail);
-      logger.startOperation(
-        req,
-        'get_user_info',
-        {
-          email: originalEmail,
-          resolved_username: usernameForLookup,
-        },
-        { silent: true }
-      );
+      logger.debug(req, 'get_user_info', 'Email resolved to username', {
+        email: originalEmail,
+        resolved_username: usernameForLookup,
+      });
     }
 
     const startTime = logger.startOperation(req, 'get_user_info', { username: usernameForLookup });
@@ -1331,7 +1320,7 @@ export class ProjectService {
    * Get project UID by slug using NATS request-reply pattern
    * @private
    */
-  private async getProjectIdBySlug(slug: string): Promise<ProjectSlugToIdResponse> {
+  private async getProjectIdBySlug(req: Request, slug: string): Promise<ProjectSlugToIdResponse> {
     const codec = this.natsService.getCodec();
 
     try {
@@ -1341,7 +1330,7 @@ export class ProjectService {
 
       // Check if we got a valid project ID
       if (!uid || uid.trim() === '') {
-        serverLogger.info({ slug }, 'Project slug not found via NATS');
+        logger.debug(req, 'get_project_id_by_slug', 'Project slug not found via NATS', { slug });
         return {
           uid: '',
           slug,
@@ -1349,7 +1338,10 @@ export class ProjectService {
         };
       }
 
-      serverLogger.info({ slug, project_id: uid }, 'Successfully resolved project slug to ID');
+      logger.debug(req, 'get_project_id_by_slug', 'Successfully resolved project slug to ID', {
+        slug,
+        project_id: uid,
+      });
 
       return {
         uid: uid.trim(),
@@ -1357,7 +1349,10 @@ export class ProjectService {
         exists: true,
       };
     } catch (error) {
-      serverLogger.error({ err: error, slug }, 'Failed to resolve project slug via NATS');
+      logger.warning(req, 'get_project_id_by_slug', 'Failed to resolve project slug via NATS', {
+        err: error,
+        slug,
+      });
 
       // If it's a timeout or no responder error, treat as not found
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {

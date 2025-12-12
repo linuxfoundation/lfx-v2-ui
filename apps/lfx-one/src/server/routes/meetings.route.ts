@@ -76,12 +76,17 @@ router.post('/generate-agenda', async (req: Request, res: Response, next: NextFu
 
     // Validate required fields
     if (!meetingType || !title || !projectName) {
+      logger.validation(req, 'generate_agenda', ['Missing required fields: meetingType, title, and projectName are required'], {
+        meeting_type: meetingType,
+        has_title: !!title,
+        has_project_name: !!projectName,
+      });
       return res.status(400).json({
         error: 'Missing required fields: meetingType, title, and projectName are required',
       });
     }
 
-    const response = await aiService.generateMeetingAgenda({
+    const response = await aiService.generateMeetingAgenda(req, {
       meetingType,
       title,
       projectName,

@@ -202,7 +202,7 @@ export class CommitteeService {
    * Fetches count of all members for a specific committee
    */
   public async getCommitteeMembersCount(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<number> {
-    logger.startOperation(req, 'get_committee_members_count', {
+    logger.debug(req, 'get_committee_members_count', 'Fetching committee members count', {
       committee_uid: committeeId,
       query,
     });
@@ -253,7 +253,7 @@ export class CommitteeService {
   public async createCommitteeMember(req: Request, committeeId: string, data: CreateCommitteeMemberRequest): Promise<CommitteeMember> {
     const newMember = await this.microserviceProxy.proxyRequest<CommitteeMember>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/members`, 'POST', {}, data);
 
-    logger.startOperation(req, 'create_committee_member', {
+    logger.debug(req, 'create_committee_member', 'Committee member created successfully', {
       committee_uid: committeeId,
       member_uid: newMember.uid,
     });
@@ -291,7 +291,7 @@ export class CommitteeService {
       'update_committee_member'
     );
 
-    logger.startOperation(req, 'update_committee_member', {
+    logger.debug(req, 'update_committee_member', 'Committee member updated successfully', {
       committee_uid: committeeId,
       member_uid: memberId,
     });
@@ -317,7 +317,7 @@ export class CommitteeService {
     // Step 2: Delete member with ETag
     await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/members/${memberId}`, etag, 'delete_committee_member');
 
-    logger.startOperation(req, 'delete_committee_member', {
+    logger.debug(req, 'delete_committee_member', 'Committee member deleted successfully', {
       committee_uid: committeeId,
       member_uid: memberId,
     });
@@ -348,7 +348,7 @@ export class CommitteeService {
 
     const userMemberships = resources.map((resource) => resource.data);
 
-    logger.startOperation(req, 'get_committee_members_by_category', {
+    logger.debug(req, 'get_committee_members_by_category', 'Committee memberships retrieved', {
       username,
       category,
       memberships_count: userMemberships.length,
@@ -372,7 +372,7 @@ export class CommitteeService {
 
     await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/settings`, 'PUT', {}, settingsData);
 
-    logger.startOperation(req, 'update_committee_settings', {
+    logger.debug(req, 'update_committee_settings', 'Committee settings updated successfully', {
       committee_uid: committeeId,
       settings_data: settingsData,
     });

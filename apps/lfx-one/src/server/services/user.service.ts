@@ -27,7 +27,6 @@ import {
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
-import { serverLogger } from '../server';
 import { generateM2MToken } from '../utils/m2m-token.util';
 import { ApiClientService } from './api-client.service';
 import { logger } from './logger.service';
@@ -128,7 +127,7 @@ export class UserService {
       }
 
       // Send the request via NATS
-      const response = await this.sendUserMetadataUpdate(updates);
+      const response = await this.sendUserMetadataUpdate(req, updates);
 
       // Log the result
       if (response.success) {
@@ -238,7 +237,7 @@ export class UserService {
    * Shutdown the service and clean up resources
    */
   public async shutdown(): Promise<void> {
-    serverLogger.info('Shutting down user service');
+    logger.debug(undefined, 'user_service_shutdown', 'Shutting down user service', {});
     await this.natsService.shutdown();
   }
 
@@ -662,11 +661,14 @@ export class UserService {
    * Send user metadata update request via NATS
    * @private
    */
-  private async sendUserMetadataUpdate(request: UserMetadataUpdateRequest): Promise<UserMetadataUpdateResponse> {
+  private async sendUserMetadataUpdate(req: Request, request: UserMetadataUpdateRequest): Promise<UserMetadataUpdateResponse> {
     const codec = this.natsService.getCodec();
+    const startTime = logger.startOperation(req, 'send_user_metadata_update', { username: request.username });
 
     try {
-      serverLogger.info({ username: request.username }, 'Sending user metadata update request via NATS');
+      logger.debug(req, 'send_user_metadata_update', 'Sending user metadata update request via NATS', {
+        username: request.username,
+      });
 
       const requestPayload = JSON.stringify(request);
       const response = await this.natsService.request(NatsSubjects.USER_METADATA_UPDATE, codec.encode(requestPayload), {
@@ -678,34 +680,24 @@ export class UserService {
 
       // Check if the response indicates success
       if (!parsedResponse.success) {
-        serverLogger.error(
-          {
-            username: request.username,
-            error: parsedResponse.error,
-            message: parsedResponse.message,
-          },
-          'User metadata update failed via NATS'
-        );
+        logger.warning(req, 'send_user_metadata_update', 'User metadata update failed via NATS', {
+          username: request.username,
+          error: parsedResponse.error,
+          message: parsedResponse.message,
+        });
         return parsedResponse;
       }
 
-      serverLogger.info(
-        {
-          username: request.username,
-          updated_fields: parsedResponse.updated_fields,
-        },
-        'Successfully updated user metadata via NATS'
-      );
+      logger.success(req, 'send_user_metadata_update', startTime, {
+        username: request.username,
+        updated_fields: parsedResponse.updated_fields,
+      });
 
       return parsedResponse;
     } catch (error) {
-      serverLogger.error(
-        {
-          err: error,
-          username: request.username,
-        },
-        'Failed to update user metadata via NATS'
-      );
+      logger.error(req, 'send_user_metadata_update', startTime, error, {
+        username: request.username,
+      });
 
       // If it's a timeout or no responder error, return appropriate response
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {

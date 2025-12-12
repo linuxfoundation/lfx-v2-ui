@@ -62,16 +62,16 @@ export async function fetchUserPersonaAndOrganizations(req: Request): Promise<Us
 
     // Check each committee category mapping
     for (const [category, persona] of Object.entries(COMMITTEE_CATEGORY_TO_PERSONA)) {
-      logger.startOperation(req, 'check_committee_category', { category });
+      logger.debug(req, 'check_committee_category', 'Checking committee category', { category });
       const memberships = await committeeService.getCommitteeMembersByCategory(req, username, userEmail || '', category);
 
-      logger.startOperation(req, 'found_committee_memberships', {
+      logger.debug(req, 'found_committee_memberships', 'Committee memberships retrieved', {
         category,
         memberships_count: memberships.length,
       });
 
       if (memberships.length > 0) {
-        logger.startOperation(req, 'matched_persona', {
+        logger.debug(req, 'matched_persona', 'Persona matched for user', {
           username,
           category,
           persona,
@@ -86,7 +86,7 @@ export async function fetchUserPersonaAndOrganizations(req: Request): Promise<Us
           }
         }
       } else {
-        logger.startOperation(req, 'no_memberships_found', { category });
+        logger.debug(req, 'no_memberships_found', 'No memberships found for category', { category });
       }
     }
 

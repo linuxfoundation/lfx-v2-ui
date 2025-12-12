@@ -12,13 +12,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
-import pinoPretty from 'pino-pretty';
 
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
-import { logger } from './services/logger.service';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
+import { serverLogger } from './server-logger';
+import { logger } from './services/logger.service';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import meetingsRouter from './routes/meetings.route';
@@ -59,68 +59,6 @@ app.use(
     level: 6, // Balanced compression level (1=fastest, 9=best compression)
     threshold: 1024, // Only compress responses larger than 1KB
   })
-);
-
-/**
- * Base Pino logger instance for server-level operations.
- *
- * Used for:
- * - Server startup/shutdown messages
- * - Direct logging from server code outside request context
- * - Operations that don't have access to req.log
- * - Can be imported by other modules for consistent logging
- */
-// Create pretty stream conditionally for development
-const prettyStream =
-  process.env['NODE_ENV'] !== 'production'
-    ? pinoPretty({
-        colorize: true,
-        translateTime: 'SYS:standard',
-        ignore: 'pid,hostname',
-      })
-    : process.stdout;
-
-const serverLogger = pino(
-  {
-    level: process.env['LOG_LEVEL'] || 'info',
-    base: {
-      service: 'lfx-one-ssr',
-      environment: process.env['NODE_ENV'] || 'development',
-      version: process.env['APP_VERSION'] || '1.0.0',
-    },
-    mixin: () => {
-      const traceHeader = process.env['_X_AMZN_TRACE_ID'];
-      if (traceHeader) {
-        const traceId = traceHeader.split(';')[0]?.replace('Root=', '');
-        return { aws_trace_id: traceId };
-      }
-      return {};
-    },
-    serializers: {
-      err: customErrorSerializer,
-      error: customErrorSerializer,
-      req: pino.stdSerializers.req,
-      res: pino.stdSerializers.res,
-    },
-    redact: {
-      paths:
-        process.env['NODE_ENV'] !== 'production'
-          ? ['req.headers.*', 'res.headers.*', 'access_token', 'refresh_token', 'authorization', 'cookie']
-          : ['access_token', 'refresh_token', 'authorization', 'cookie', 'req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-      remove: true,
-    },
-    formatters: {
-      level: (label) => {
-        return { level: label.toUpperCase() };
-      },
-      bindings: (bindings) => ({
-        pid: bindings['pid'],
-        hostname: bindings['hostname'],
-      }),
-    },
-    timestamp: pino.stdTimeFunctions.isoTime,
-  },
-  prettyStream
 );
 
 app.use(express.json({ limit: '15mb' }));
@@ -252,6 +190,7 @@ app.use('/api/*', apiErrorHandler);
  * Require authentication for all non-API routes.
  */
 app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
+  const ssrStartTime = Date.now(); // Capture start time for duration tracking
   const auth: AuthContext = {
     authenticated: false,
     user: null,
@@ -304,7 +243,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       return next();
     })
     .catch((error) => {
-      logger.error(req, 'ssr_render', 0, error, {
+      logger.error(req, 'ssr_render', ssrStartTime, error, {
         error_message: error.message,
         code: error.code,
         url: req.url,
@@ -341,23 +280,14 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
 export function startServer() {
   const port = process.env['PORT'] || 4000;
   app.listen(port, () => {
-    serverLogger.info(
-      {
-        port,
-        url: `http://localhost:${port}`,
-        node_env: process.env['NODE_ENV'] || 'development',
-        pm2: process.env['PM2'] === 'true',
-      },
-      'Node Express server started'
-    );
+    logger.debug(undefined, 'server_startup', 'Node Express server started', {
+      port,
+      url: `http://localhost:${port}`,
+      node_env: process.env['NODE_ENV'] || 'development',
+      pm2: process.env['PM2'] === 'true',
+    });
   });
 }
-
-/**
- * Export server logger for use in other modules that need logging
- * outside of the HTTP request context (e.g., startup scripts, utilities).
- */
-export { serverLogger };
 
 const metaUrl = import.meta.url;
 const isMain = isMainModule(metaUrl);
