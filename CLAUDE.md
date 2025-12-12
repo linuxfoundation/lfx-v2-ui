@@ -202,14 +202,18 @@ req.log.error({ error: error }, 'message'); // Should use logger service
 ### Logging Architecture
 
 ```
+server-logger.ts (breaks circular dependency)
+  └─ Creates and exports serverLogger (base Pino instance)
+      └─ Configuration: levels, serializers, formatters, redaction
+
 server.ts
-  └─ serverLogger (base Pino instance)
-      ├─ Configuration: levels, serializers, formatters, redaction
-      ├─ httpLogger (pinoHttp middleware)
-      │   └─ Creates req.log for each request
-      └─ Used by logger.service for infrastructure operations
+  ├─ Imports serverLogger from server-logger.ts
+  └─ Creates httpLogger (pinoHttp middleware)
+      └─ Uses serverLogger as base
+      └─ Attaches req.log to each request
 
 logger.service.ts
+  ├─ Imports serverLogger from server-logger.ts
   └─ Singleton logger service
       ├─ Request-scoped: uses req.log when req provided
       ├─ Infrastructure: uses serverLogger when req = undefined
@@ -218,9 +222,9 @@ logger.service.ts
 
 **Direct serverLogger Usage:**
 
-- ❌ **Never** call `serverLogger` directly from services/routes
+- ❌ **Never** call `serverLogger` directly from services/routes/controllers
 - ✅ **Always** use `logger` service methods
-- ℹ️ `serverLogger` only exists in `server.ts` and `logger.service.ts`
+- ℹ️ `serverLogger` only exists in `server-logger.ts` (created), `server.ts` (imported), and `logger.service.ts` (imported)
 
 ### Common Logging Patterns
 
