@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CommitteeMemberVisibility } from '../enums/committee.enum';
+
 /**
  * Committee entity with complete details
  * @description Represents a committee/working group within a project with full metadata
@@ -54,7 +56,7 @@ export interface Committee {
   /** Whether audit logging is enabled (from settings) */
   is_audit_enabled?: boolean;
   /** Member profile visibility setting */
-  member_visibility?: string;
+  member_visibility?: CommitteeMemberVisibility;
   /** Whether to show meeting attendees by default */
   show_meeting_attendees?: boolean;
 }
@@ -93,7 +95,7 @@ export interface CommitteeCreateData {
   /** Whether committee is open for self-joining */
   joinable?: boolean;
   /** Member profile visibility setting */
-  member_visibility?: string;
+  member_visibility?: CommitteeMemberVisibility;
   /** Whether to show meeting attendees by default */
   show_meeting_attendees?: boolean;
 }
@@ -114,7 +116,7 @@ export interface CommitteeSettingsData {
   /** Update audit logging setting */
   is_audit_enabled?: boolean;
   /** Update member profile visibility setting */
-  member_visibility?: string;
+  member_visibility?: CommitteeMemberVisibility;
   /** Update show meeting attendees setting */
   show_meeting_attendees?: boolean;
 }

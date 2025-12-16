@@ -187,7 +187,7 @@ export class MemberFormComponent {
       last_name: new FormControl('', [Validators.required]),
       email: new FormControl('', [Validators.required, Validators.email]),
       job_title: new FormControl(''),
-      linkedin_profile: new FormControl(''),
+      linkedin_profile: new FormControl('', [Validators.pattern(/^https?:\/\/.+\..+/)]),
       organization: new FormControl(''),
       organization_url: new FormControl(''),
       role: new FormControl(''),
