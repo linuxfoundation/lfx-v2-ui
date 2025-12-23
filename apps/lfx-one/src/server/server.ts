@@ -7,7 +7,7 @@ import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResp
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
-import { auth, ConfigParams } from 'express-openid-connect';
+import { attemptSilentLogin, auth, ConfigParams } from 'express-openid-connect';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
@@ -127,7 +127,6 @@ app.use(httpLogger);
 const authConfig: ConfigParams = {
   authRequired: false, // Disable global auth requirement to handle it in selective middleware
   auth0Logout: true,
-  attemptSilentLogin: true,
   baseURL: process.env['PCC_BASE_URL'] || 'http://localhost:4000',
   clientID: process.env['PCC_AUTH0_CLIENT_ID'] || '1234',
   issuerBaseURL: process.env['PCC_AUTH0_ISSUER_BASE_URL'] || 'https://example.com',
@@ -144,6 +143,11 @@ const authConfig: ConfigParams = {
 };
 
 app.use(auth(authConfig));
+
+// Silent login attempt for meeting join pages only
+// If user has SSO session elsewhere, they'll be authenticated automatically
+// If not, they proceed as unauthenticated (route is optional auth)
+app.use('/meetings/', attemptSilentLogin());
 
 app.use('/login', (req: Request, res: Response) => {
   if (req.oidc?.isAuthenticated() && !req.oidc?.accessToken?.isExpired()) {
