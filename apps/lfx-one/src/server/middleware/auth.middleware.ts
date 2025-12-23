@@ -84,22 +84,13 @@ function checkAuthentication(req: Request): boolean {
  * @param req - Express request object
  * @param isOptionalRoute - Whether this is an optional auth route (affects logout behavior on refresh failure)
  */
-async function extractBearerToken(req: Request, attemptRefresh: boolean = true): Promise<TokenExtractionResult> {
+async function extractBearerToken(req: Request, isOptionalRoute: boolean = false): Promise<TokenExtractionResult> {
   const startTime = Date.now();
 
   try {
     if (req.oidc?.isAuthenticated()) {
       // Check if token exists and is expired
       if (req.oidc.accessToken?.isExpired()) {
-        // For optional routes, don't attempt refresh - just skip token extraction
-        if (!attemptRefresh) {
-          logger.debug(req, 'token_extraction', 'Skipping token refresh for optional route', {
-            path: req.path,
-            reason: 'skipped_refresh_optional_route',
-          });
-          return { success: true, needsLogout: false };
-        }
-
         try {
           // Always attempt to refresh the token for better UX
           // Authenticated users should get enhanced features when possible

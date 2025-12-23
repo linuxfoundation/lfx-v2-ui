@@ -116,7 +116,7 @@ export class MeetingCommitteeManagerComponent implements OnInit {
 
     // Subscribe to selected committees changes
     toObservable(this.selectedCommittees)
-      .pipe(tap(console.log), takeUntilDestroyed())
+      .pipe(takeUntilDestroyed())
       .subscribe((committees) => this.initializeFromSelectedCommittees(committees));
   }
 
@@ -228,9 +228,10 @@ export class MeetingCommitteeManagerComponent implements OnInit {
                 members.forEach((member) => {
                   if (!member.email) return;
 
-                  const existingMember = memberMap.get(member.email);
+                  const emailKey = member.email.toLowerCase();
+                  const existingMember = memberMap.get(emailKey);
                   if (!existingMember) {
-                    memberMap.set(member.email, {
+                    memberMap.set(emailKey, {
                       ...member,
                       committeeName,
                       committees: [committeeName],
@@ -264,8 +265,14 @@ export class MeetingCommitteeManagerComponent implements OnInit {
       }
 
       // Filter members by selected voting statuses
+      // Members without voting status info are excluded from filtered results
       return members.filter((member) => {
-        return member.voting?.status && selectedVotingStatuses.includes(member.voting.status);
+        const votingStatus = member.voting?.status;
+        // If member has no voting status, exclude them from filtered results
+        if (!votingStatus) {
+          return false;
+        }
+        return selectedVotingStatuses.includes(votingStatus);
       });
     });
   }

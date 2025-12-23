@@ -17,8 +17,6 @@ import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
-import { serverLogger } from './server-logger';
-import { logger } from './services/logger.service';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import meetingsRouter from './routes/meetings.route';
@@ -29,6 +27,8 @@ import projectsRouter from './routes/projects.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import userRouter from './routes/user.route';
+import { serverLogger } from './server-logger';
+import { logger } from './services/logger.service';
 import { matchOrganizationNamesToAccounts } from './utils/organization-matcher';
 import { fetchUserPersonaAndOrganizations } from './utils/persona-helper';
 
@@ -127,6 +127,7 @@ app.use(httpLogger);
 const authConfig: ConfigParams = {
   authRequired: false, // Disable global auth requirement to handle it in selective middleware
   auth0Logout: true,
+  attemptSilentLogin: true,
   baseURL: process.env['PCC_BASE_URL'] || 'http://localhost:4000',
   clientID: process.env['PCC_AUTH0_CLIENT_ID'] || '1234',
   issuerBaseURL: process.env['PCC_AUTH0_ISSUER_BASE_URL'] || 'https://example.com',

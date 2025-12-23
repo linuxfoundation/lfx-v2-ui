@@ -525,9 +525,11 @@ export class MeetingController {
       // Enrich committee registrant data with committee details and member info
       const enrichedRegistrants = await this.enrichCommitteeRegistrants(req, registrants);
 
-      // Restore original token
+      // Restore original token (delete if it was undefined to avoid leaving M2M token)
       if (originalToken !== undefined) {
         req.bearerToken = originalToken;
+      } else {
+        delete req.bearerToken;
       }
 
       logger.success(req, 'get_my_meeting_registrants', startTime, {
