@@ -6,6 +6,7 @@ import { Component, inject, input, output, signal, WritableSignal } from '@angul
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, COMMITTEE_CATEGORY_SEVERITY, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
@@ -19,7 +20,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
   selector: 'lfx-committee-table',
-  imports: [DatePipe, RouterLink, CardComponent, ButtonComponent, TagComponent, TooltipModule, ConfirmDialogModule, DynamicDialogModule],
+  imports: [DatePipe, RouterLink, CardComponent, ButtonComponent, TableComponent, TagComponent, TooltipModule, ConfirmDialogModule, DynamicDialogModule],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-table.component.html',
   styleUrl: './committee-table.component.scss',

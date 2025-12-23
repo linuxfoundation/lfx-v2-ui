@@ -85,15 +85,7 @@ function checkAuthentication(req: Request): boolean {
  * @param attemptRefresh - Whether to attempt token refresh if expired (default: true)
  */
 async function extractBearerToken(req: Request, attemptRefresh: boolean = true): Promise<TokenExtractionResult> {
-  const startTime = logger.startOperation(req, 'token_extraction', {
-    path: req.path,
-    hasOidc: !!req.oidc,
-    isAuthenticated: req.oidc?.isAuthenticated(),
-    hasAccessToken: !!req.oidc?.accessToken,
-    isTokenExpired: req.oidc?.accessToken?.isExpired(),
-    tokenValue: req.oidc?.accessToken?.access_token ? 'present' : 'missing',
-    attemptRefresh,
-  });
+  const startTime = Date.now();
 
   try {
     if (req.oidc?.isAuthenticated()) {
@@ -101,12 +93,11 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
       if (req.oidc.accessToken?.isExpired()) {
         // For optional routes, don't attempt refresh - just skip token extraction
         if (!attemptRefresh) {
-          logger.success(req, 'token_extraction', startTime, {
+          logger.debug(req, 'token_extraction', 'Skipping token refresh for optional route', {
             path: req.path,
-            token_extracted: false,
             reason: 'skipped_refresh_optional_route',
           });
-          return { success: false, needsLogout: false };
+          return { success: true, needsLogout: false };
         }
 
         try {
@@ -114,7 +105,7 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
           const refreshedToken = await req.oidc.accessToken.refresh();
           if (refreshedToken?.access_token) {
             req.bearerToken = refreshedToken.access_token;
-            logger.success(req, 'token_refresh', startTime, { path: req.path });
+            logger.debug(req, 'token_refresh', 'Token refreshed', { path: req.path });
             return { success: true, needsLogout: false };
           }
         } catch (refreshError) {
@@ -130,7 +121,7 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
         const accessToken = req.oidc.accessToken.access_token;
         if (typeof accessToken === 'string') {
           req.bearerToken = accessToken;
-          logger.success(req, 'token_extraction', startTime, { path: req.path });
+          logger.debug(req, 'token_extraction', 'Token extracted', { path: req.path });
           return { success: true, needsLogout: false };
         }
       }
@@ -143,10 +134,8 @@ async function extractBearerToken(req: Request, attemptRefresh: boolean = true):
     return { success: false, needsLogout: false };
   }
 
-  logger.success(req, 'token_extraction', startTime, {
+  logger.debug(req, 'token_extraction', 'Token extraction failed - not authenticated', {
     path: req.path,
-    token_extracted: false,
-    reason: 'not_authenticated',
   });
   return { success: false, needsLogout: false };
 }
@@ -343,10 +332,7 @@ async function executeAuthDecision(decision: AuthDecision, req: Request, res: Re
  */
 export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const startTime = logger.startOperation(req, 'auth_middleware', {
-      path: req.path,
-      method: req.method,
-    });
+    const startTime = Date.now();
 
     try {
       // 1. Route classification
@@ -391,7 +377,7 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
       // 7. Execute decision
       await executeAuthDecision(decision, req, res, next);
 
-      logger.success(req, 'auth_middleware', startTime, {
+      logger.debug(req, 'auth_middleware', 'Authentication decision made', {
         path: req.path,
         decision: decision.action,
         authenticated,
