@@ -30,7 +30,7 @@ export class PermissionsMatrixComponent {
       description: 'Manage all project resources',
       capabilities: ['Manage project, committees, meetings, mailing lists'],
       badge: {
-        color: 'text-green-800',
+        color: 'text-emerald-800',
         bgColor: 'bg-green-100',
         severity: 'success',
       },

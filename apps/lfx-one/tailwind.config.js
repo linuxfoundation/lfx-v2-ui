@@ -9,6 +9,7 @@ export default {
   content: ['./src/**/*.{html,ts}'],
   safelist: [],
   theme: {
+    colors: lfxColors,
     container: {
       center: true,
       screens: {
@@ -20,7 +21,6 @@ export default {
       },
     },
     extend: {
-      colors: lfxColors,
       boxShadow: {
         md: '0px 1px 2px -1px rgba(0, 0, 0, 0.10), 0px 1px 3px 0px rgba(0, 0, 0, 0.10)',
       },

@@ -84,7 +84,7 @@
                     [ngClass]="{
                       'fa-light fa-file': true,
                       'text-red-600': isPendingDeletion(attachment.uid),
-                      'text-green-600': !isPendingDeletion(attachment.uid),
+                      'text-emerald-600': !isPendingDeletion(attachment.uid),
                     }"></i>
                 </div>
                 <div>
@@ -112,7 +112,7 @@
                   <a
                     [href]="'/api/meetings/' + meetingId() + '/attachments/' + attachment.uid"
                     target="_blank"
-                    class="h-6 w-6 p-0 text-slate-400 hover:text-green-500 flex items-center justify-center"
+                    class="h-6 w-6 p-0 text-slate-400 hover:text-emerald-500 flex items-center justify-center"
                     data-testid="view-attachment-btn"
                     title="View">
                     <i class="fa-light fa-eye w-3 h-3"></i>
@@ -202,10 +202,10 @@
     <!-- Useful Resources Info -->
     <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
       <div class="flex items-start gap-3">
-        <i class="fa-light fa-circle-check w-5 h-5 text-green-600 mt-0.5"></i>
+        <i class="fa-light fa-circle-check w-5 h-5 text-emerald-600 mt-0.5"></i>
         <div>
-          <h5 class="text-sm font-semibold text-green-800 mb-2">Useful resources to include</h5>
-          <ul class="text-sm text-green-700 space-y-1">
+          <h5 class="text-sm font-semibold text-emerald-800 mb-2">Useful resources to include</h5>
+          <ul class="text-sm text-emerald-700 space-y-1">
             <li>• Project repository or documentation links</li>
             <li>• Previous meeting minutes or recordings</li>
             <li>• Relevant GitHub issues or pull requests</li>

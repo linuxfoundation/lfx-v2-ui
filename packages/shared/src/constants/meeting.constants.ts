@@ -104,9 +104,9 @@ export interface MeetingTypeConfig {
   label: string;
   /** Background color class (e.g., bg-purple-100) */
   bgColor: string;
-  /** Text color class - 600 shade (e.g., text-purple-600) */
+  /** Text color class - 600 shade (e.g., text-violet-600) */
   textColor: string;
-  /** Text color class - 500 shade (e.g., text-purple-500) for alternate styling */
+  /** Text color class - 500 shade (e.g., text-violet-500) for alternate styling */
   textColorAlt: string;
   /** Border color class - 500 shade (e.g., border-purple-500) */
   borderColor: string;
@@ -135,8 +135,8 @@ export const MEETING_TYPE_CONFIGS: Record<string, MeetingTypeConfig> = {
   technical: {
     label: 'Technical',
     bgColor: 'bg-purple-100',
-    textColor: 'text-purple-600',
-    textColorAlt: 'text-purple-500',
+    textColor: 'text-violet-600',
+    textColorAlt: 'text-violet-500',
     borderColor: 'border-purple-500',
     borderColorLight: 'border-purple-300',
     icon: 'fa-light fa-code',
@@ -162,8 +162,8 @@ export const MEETING_TYPE_CONFIGS: Record<string, MeetingTypeConfig> = {
   marketing: {
     label: 'Marketing',
     bgColor: 'bg-green-100',
-    textColor: 'text-green-600',
-    textColorAlt: 'text-green-500',
+    textColor: 'text-emerald-600',
+    textColorAlt: 'text-emerald-500',
     borderColor: 'border-green-500',
     borderColorLight: 'border-green-300',
     icon: 'fa-light fa-chart-line-up',
