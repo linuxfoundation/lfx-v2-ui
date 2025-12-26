@@ -156,13 +156,13 @@
       <ng-template #emptymessage>
         @if (membersLoading()) {
           <tr>
-            <td colspan="6" class="text-center py-8">
+            <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
               <i class="fa-light fa-circle-notch fa-spin text-4xl text-gray-400"></i>
             </td>
           </tr>
         } @else {
           <tr>
-            <td colspan="6" class="text-center py-8">
+            <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
               <div class="text-center">
                 <i class="fa-light fa-users text-4xl text-gray-400 mb-4"></i>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No Members Yet</h3>

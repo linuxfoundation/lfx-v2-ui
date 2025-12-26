@@ -36,7 +36,8 @@
           </div>
         </td>
         <td>
-          <lfx-tag [value]="committee.category || 'Other'" [severity]="committee.category || 'Other' | committeeCategorySeverity"></lfx-tag>
+          @let category = committee.category || 'Other';
+          <lfx-tag [value]="category" [severity]="category | committeeCategorySeverity"></lfx-tag>
         </td>
         <td class="min-w-[300px]">
           <div class="max-w-[300px] line-clamp-2 text-xs">{{ committee.description || '-' }}</div>
