@@ -29,11 +29,11 @@
     <div class="flex flex-col gap-6">
       <!-- Header Section -->
       <div class="flex justify-between items-start">
-        <div class="flex flex-col gap-4">
-          <lfx-breadcrumb [model]="breadcrumbItems()"></lfx-breadcrumb>
+        <div class="flex flex-col gap-4" data-testid="committee-view-header">
+          <lfx-breadcrumb [model]="breadcrumbItems()" data-testid="committee-view-breadcrumb"></lfx-breadcrumb>
           <div class="flex flex-col gap-1">
-            <h1>{{ committee()?.name }}</h1>
-            <p class="text-gray-500">{{ committee()?.description }}</p>
+            <h1 data-testid="committee-view-name">{{ committee()?.name }}</h1>
+            <p class="text-gray-500" data-testid="committee-view-description">{{ committee()?.description }}</p>
           </div>
           <div class="flex items-center gap-4 text-sm text-gray-500">
             @if (committee()?.category) {
@@ -53,30 +53,30 @@
       </div>
 
       <!-- Configurations Section -->
-      <lfx-card>
-        <h3 class="text-sm font-medium mb-4">Configurations</h3>
+      <lfx-card data-testid="committee-view-configurations">
+        <h3 class="text-sm font-medium mb-4" data-testid="committee-view-configurations-title">Configurations</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between" data-testid="committee-view-config-public">
             <span class="text-sm">Public</span>
             <lfx-tag [value]="committee()?.public ? 'Enabled' : 'Disabled'" [severity]="committee()?.public ? 'success' : 'danger'"></lfx-tag>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between" data-testid="committee-view-config-voting">
             <span class="text-sm">Voting</span>
             <lfx-tag [value]="committee()?.enable_voting ? 'Enabled' : 'Disabled'" [severity]="committee()?.enable_voting ? 'success' : 'danger'"></lfx-tag>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between" data-testid="committee-view-config-business-email">
             <span class="text-sm">Business Email Required</span>
             <lfx-tag
               [value]="committee()?.business_email_required ? 'Enabled' : 'Disabled'"
               [severity]="committee()?.business_email_required ? 'success' : 'danger'"></lfx-tag>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between" data-testid="committee-view-config-sso-group">
             <span class="text-sm">SSO Group</span>
             <lfx-tag
               [value]="committee()?.sso_group_enabled ? 'Enabled' : 'Disabled'"
               [severity]="committee()?.sso_group_enabled ? 'success' : 'danger'"></lfx-tag>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between" data-testid="committee-view-config-audit">
             <span class="text-sm">Audit</span>
             <lfx-tag
               [value]="committee()?.is_audit_enabled ? 'Enabled' : 'Disabled'"

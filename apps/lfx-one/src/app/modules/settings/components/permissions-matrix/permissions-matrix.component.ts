@@ -31,7 +31,7 @@ export class PermissionsMatrixComponent {
       capabilities: ['Manage project, committees, meetings, mailing lists'],
       badge: {
         color: 'text-emerald-800',
-        bgColor: 'bg-green-100',
+        bgColor: 'bg-emerald-100',
         severity: 'success',
       },
     },
