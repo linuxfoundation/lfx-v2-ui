@@ -9,7 +9,7 @@ import { LinkedGroup } from '@lfx-one/shared/interfaces';
  * @description Takes an array of LinkedGroup objects starting from an offset and joins their names
  * @example
  * <!-- In template -->
- * [pTooltip]="mailingList.linked_groups | remainingGroupsTooltip: maxVisibleGroups"
+ * [pTooltip]="mailingList.committees | remainingGroupsTooltip: maxVisibleGroups"
  */
 @Pipe({
   name: 'remainingGroupsTooltip',

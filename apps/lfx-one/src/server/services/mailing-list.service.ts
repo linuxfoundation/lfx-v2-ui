@@ -14,7 +14,6 @@ import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
 import { AccessCheckService } from './access-check.service';
-import { CommitteeService } from './committee.service';
 import { ETagService } from './etag.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -25,13 +24,11 @@ import { MicroserviceProxyService } from './microservice-proxy.service';
  */
 export class MailingListService {
   private accessCheckService: AccessCheckService;
-  private committeeService: CommitteeService;
   private etagService: ETagService;
   private microserviceProxy: MicroserviceProxyService;
 
   public constructor() {
     this.accessCheckService = new AccessCheckService();
-    this.committeeService = new CommitteeService();
     this.etagService = new ETagService();
     this.microserviceProxy = new MicroserviceProxyService();
   }
@@ -187,9 +184,6 @@ export class MailingListService {
     // Enrich with service data
     mailingLists = await this.enrichWithServices(req, mailingLists);
 
-    // Enrich with committee names
-    mailingLists = await this.enrichWithCommittees(req, mailingLists);
-
     // Add writer access field to all mailing lists
     return await this.accessCheckService.addAccessToResources(req, mailingLists, 'groupsio_mailing_list');
   }
@@ -234,10 +228,7 @@ export class MailingListService {
     }
 
     // Enrich with service data (single item as array for reuse)
-    let enriched = await this.enrichWithServices(req, [resources[0].data]);
-
-    // Enrich with committee names
-    enriched = await this.enrichWithCommittees(req, enriched);
+    const enriched = await this.enrichWithServices(req, [resources[0].data]);
     const mailingList = enriched[0];
 
     // Add writer access field to the mailing list
@@ -317,57 +308,6 @@ export class MailingListService {
   // ============================================
   // Private Enrichment Methods
   // ============================================
-
-  /**
-   * Enriches mailing lists with committee names
-   * @description Fetches committee data for mailing lists with committee_uid
-   */
-  private async enrichWithCommittees(req: Request, mailingLists: GroupsIOMailingList[]): Promise<GroupsIOMailingList[]> {
-    // Get unique committee UIDs from all mailing lists
-    const uniqueCommitteeUids = [...new Set(mailingLists.filter((ml) => ml.committee_uid).map((ml) => ml.committee_uid as string))];
-
-    if (uniqueCommitteeUids.length === 0) {
-      return mailingLists;
-    }
-
-    logger.debug(req, 'enrich_mailing_list_committees', 'Enriching mailing lists with committee data', {
-      unique_committee_count: uniqueCommitteeUids.length,
-      mailing_list_count: mailingLists.length,
-    });
-
-    // Fetch committees in parallel
-    const committeeMap = new Map<string, string | undefined>();
-    await Promise.all(
-      uniqueCommitteeUids.map(async (uid) => {
-        try {
-          const committee = await this.committeeService.getCommitteeById(req, uid);
-          committeeMap.set(uid, committee.name);
-        } catch {
-          logger.warning(req, 'enrich_mailing_list_committees', 'Committee fetch failed; continuing without name', {
-            committee_uid: uid,
-          });
-          committeeMap.set(uid, undefined);
-        }
-      })
-    );
-
-    // Add committees array to each mailing list
-    return mailingLists.map((ml) => {
-      if (!ml.committee_uid) {
-        return ml;
-      }
-
-      return {
-        ...ml,
-        committees: [
-          {
-            uid: ml.committee_uid,
-            name: committeeMap.get(ml.committee_uid),
-          },
-        ],
-      };
-    });
-  }
 
   /**
    * Enriches mailing lists with service details

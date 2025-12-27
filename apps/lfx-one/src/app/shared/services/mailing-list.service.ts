@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
-import { Observable } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { GroupsIOMailingList, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import { map, Observable } from 'rxjs';
 
 /**
  * Service for managing mailing list data
@@ -14,8 +14,6 @@ import { Observable } from 'rxjs';
   providedIn: 'root',
 })
 export class MailingListService {
-  public mailingList: WritableSignal<GroupsIOMailingList | null> = signal(null);
-
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/mailing-lists';
 
@@ -58,6 +56,6 @@ export class MailingListService {
         params = params.set(key, value);
       });
     }
-    return this.http.get<number>(`${this.baseUrl}/count`, { params });
+    return this.http.get<QueryServiceCountResponse>(`${this.baseUrl}/count`, { params }).pipe(map((response) => response.count));
   }
 }

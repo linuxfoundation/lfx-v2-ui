@@ -9,7 +9,7 @@ import { LinkedGroup } from '@lfx-one/shared/interfaces';
  * @description Takes an array of LinkedGroup objects and returns a typed slice
  * @example
  * <!-- In template -->
- * @for (group of mailingList.linked_groups | sliceLinkedGroups: maxVisibleGroups; track group.uid)
+ * @for (group of mailingList.committees | sliceLinkedGroups: maxVisibleGroups; track group.uid)
  */
 @Pipe({
   name: 'sliceLinkedGroups',

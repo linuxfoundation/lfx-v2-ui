@@ -18,14 +18,16 @@ export interface LinkedGroup {
 }
 
 /**
- * Committee reference for mailing list responses
- * @description Readonly computed field populated during API response enrichment
+ * Committee reference for mailing lists
+ * @description Represents a committee linked to a mailing list with membership filters
  */
 export interface MailingListCommittee {
   /** Committee UID */
   uid: string;
   /** Committee display name */
   name?: string;
+  /** Committee member filters: Voting Rep, Alternate Voting Rep, Observer, Emeritus, None */
+  filters?: CommitteeMemberVotingStatus[];
 }
 
 /**
@@ -80,12 +82,6 @@ export interface GroupsIOMailingList {
   source: string;
   /** Mailing list type (announcement, discussion_moderated, discussion_open) */
   type: MailingListType;
-  /** Associated committee UID (optional) */
-  committee_uid?: string;
-  /** Associated committee name (optional) */
-  committee_name?: string;
-  /** Committee member filters: Voting Rep, Alternate Voting Rep, Observer, Emeritus, None */
-  committee_filters?: CommitteeMemberVotingStatus[];
   /** Description of the mailing list purpose (11-500 chars) */
   description: string;
   /** Display title for the mailing list (5-100 chars) */
@@ -112,9 +108,9 @@ export interface GroupsIOMailingList {
   created_at: string;
   /** Last update timestamp */
   updated_at: string;
-  /** Linked committees with names (readonly, enriched from CommitteeService) */
+  /** Linked committees with names and membership filters */
   committees?: MailingListCommittee[];
-  /** Parent service details (readonly, enriched from service lookup) */
+  /** Parent service details (enriched from service lookup) */
   service?: GroupsIOService;
 }
 
@@ -135,10 +131,8 @@ export interface CreateMailingListRequest {
   title: string;
   /** Parent service UID (required) */
   service_uid: string;
-  /** Associated committee UID */
-  committee_uid?: string;
-  /** Committee member filters for membership */
-  committee_filters?: CommitteeMemberVotingStatus[];
+  /** Linked committees with membership filters */
+  committees?: MailingListCommittee[];
   /** Email subject prefix (optional) */
   subject_tag?: string;
   /** Users who can edit */
