@@ -11,12 +11,13 @@ import { MAILING_LIST_TOTAL_STEPS } from '@lfx-one/shared/constants';
 import { MailingListAudienceAccess, MailingListType } from '@lfx-one/shared/enums';
 import { CreateGroupsIOServiceRequest, CreateMailingListRequest, GroupsIOMailingList, GroupsIOService, MailingListCommittee } from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
+import { announcementVisibilityValidator } from '@lfx-one/shared/validators';
 import { MailingListService } from '@services/mailing-list.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
 import { StepperModule } from 'primeng/stepper';
-import { catchError, filter, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, filter, Observable, of, switchMap, tap, throwError } from 'rxjs';
 
 import { MailingListBasicInfoComponent } from '../components/mailing-list-basic-info/mailing-list-basic-info.component';
 import { MailingListSettingsComponent } from '../components/mailing-list-settings/mailing-list-settings.component';
@@ -53,7 +54,7 @@ export class MailingListManageComponent {
 
   // Parent service tracking for shared service creation
   public readonly parentService = signal<GroupsIOService | null>(null);
-  public readonly needsSharedServiceCreation = computed(() => this.parentService() !== null && this.availableServices().length > 0);
+  public readonly needsSharedServiceCreation = computed(() => this.parentService() !== null && this.availableServices().length === 0);
 
   // Prefix calculation for shared services
   public readonly servicePrefix = computed(() => {
@@ -160,20 +161,23 @@ export class MailingListManageComponent {
   }
 
   private createFormGroup(): FormGroup {
-    return new FormGroup({
-      // Step 1: Basic Information
-      group_name: new FormControl('', [Validators.required, Validators.minLength(3), Validators.maxLength(34), Validators.pattern(/^[a-zA-Z0-9_-]+$/)]),
-      description: new FormControl('', [Validators.required, Validators.minLength(11), Validators.maxLength(500)]),
+    return new FormGroup(
+      {
+        // Step 1: Basic Information
+        group_name: new FormControl('', [Validators.required, Validators.minLength(3), Validators.maxLength(34), Validators.pattern(/^[a-zA-Z0-9_-]+$/)]),
+        description: new FormControl('', [Validators.required, Validators.minLength(11), Validators.maxLength(500)]),
 
-      // Step 2: Settings
-      audience_access: new FormControl<MailingListAudienceAccess>(MailingListAudienceAccess.PUBLIC, [Validators.required]),
-      type: new FormControl<MailingListType>(MailingListType.DISCUSSION_OPEN, [Validators.required]),
-      allow_attachments: new FormControl<boolean>(true),
-      public: new FormControl<boolean>(true, [Validators.required]),
+        // Step 2: Settings
+        audience_access: new FormControl<MailingListAudienceAccess>(MailingListAudienceAccess.PUBLIC, [Validators.required]),
+        type: new FormControl<MailingListType>(MailingListType.DISCUSSION_OPEN, [Validators.required]),
+        allow_attachments: new FormControl<boolean>(true),
+        public: new FormControl<boolean>(true, [Validators.required]),
 
-      // Step 3: People & Groups
-      committees: new FormControl<MailingListCommittee[]>([]),
-    });
+        // Step 3: People & Groups
+        committees: new FormControl<MailingListCommittee[]>([]),
+      },
+      { validators: announcementVisibilityValidator() }
+    );
   }
 
   private initializeMailingList() {
@@ -248,11 +252,9 @@ export class MailingListManageComponent {
       }
       case 2: {
         const fieldsValid = !!(form.get('audience_access')?.valid && form.get('type')?.valid && form.get('public')?.valid);
-        // Cross-field validation: Announcement type must have public visibility
-        const typeValue = form.get('type')?.value;
-        const publicValue = form.get('public')?.value;
-        const visibilityValid = !(typeValue === MailingListType.ANNOUNCEMENT && publicValue === false);
-        return fieldsValid && visibilityValid;
+        // Check form-level validation errors (e.g., announcement visibility constraint)
+        const formLevelValid = !form.hasError('announcementRequiresPublicVisibility');
+        return fieldsValid && formLevelValid;
       }
       case 3:
         return true; // Optional step
@@ -343,7 +345,7 @@ export class MailingListManageComponent {
     const project = this.project();
 
     if (!parent || !project) {
-      throw new Error('Parent service or project not available');
+      return throwError(() => new Error('Parent service or project not available'));
     }
 
     const serviceData: CreateGroupsIOServiceRequest = {

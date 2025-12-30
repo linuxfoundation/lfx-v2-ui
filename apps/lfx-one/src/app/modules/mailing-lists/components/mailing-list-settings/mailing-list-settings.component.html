@@ -20,7 +20,7 @@
         title="Audience & Access"
         description="Controls who can discover and join this list."
         testId="settings-audience-access">
-        <div class="space-y-3">
+        <div class="flex flex-col gap-3">
           <!-- Public -->
           <div>
             <label class="flex items-center gap-3 cursor-pointer">
@@ -73,7 +73,7 @@
         title="Posting Permission"
         description="Choose how conversations happen on this mailing list."
         testId="settings-posting-permission">
-        <div class="space-y-4">
+        <div class="flex flex-col gap-4">
           <!-- Announcement -->
           <div>
             <label class="flex items-center gap-3 cursor-pointer">
@@ -132,7 +132,7 @@
         title="Visibility"
         description="Defines who can read past discussions."
         testId="settings-visibility">
-        <div class="space-y-3">
+        <div class="flex flex-col gap-3">
           <!-- Public -->
           <label class="flex items-center gap-3 cursor-pointer">
             <p-radioButton name="visibility" formControlName="public" [value]="true" inputId="visibility-public"></p-radioButton>
