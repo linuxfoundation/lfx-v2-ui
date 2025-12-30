@@ -118,6 +118,11 @@
   --p-breadcrumb-background: transparent;
   --p-breadcrumb-padding: 0;
 
+  /* Card component styling */
+  --p-card-shadow: none;
+
+  --p-stepper-background: #fff;
+
   .p-button-icon-only::after {
     display: none;
   }

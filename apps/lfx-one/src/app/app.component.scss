@@ -3,6 +3,8 @@
 
 ::ng-deep {
   .p-card {
+    @apply border border-gray-200 hover:border-blue-500 transition-colors;
+
     .p-card-title {
       @apply font-display;
     }
@@ -28,7 +30,7 @@
 
           a,
           button,
-          i {
+          i:not([class*='text-']) {
             @apply text-sm;
           }
 
