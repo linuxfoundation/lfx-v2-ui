@@ -4,18 +4,7 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 import { MailingListType } from '../enums/mailing-list.enum';
-
-/**
- * Strips HTML tags from a string and returns plain text
- * @param html - HTML string to strip
- * @returns Plain text without HTML tags
- */
-function stripHtml(html: string): string {
-  if (!html) return '';
-  // Remove HTML tags and decode HTML entities
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return doc.body.textContent?.trim() || '';
-}
+import { stripHtml } from '../utils/html-utils';
 
 /**
  * Validator to ensure announcement mailing lists have public visibility

@@ -54,7 +54,9 @@ export class MailingListManageComponent {
 
   // Parent service tracking for shared service creation
   public readonly parentService = signal<GroupsIOService | null>(null);
-  public readonly needsSharedServiceCreation = computed(() => this.parentService() !== null || this.availableServices().length === 0);
+  public readonly needsSharedServiceCreation = computed(
+    () => this.parentService() !== null && this.availableServices().filter((service) => service.type === 'shared').length === 0
+  );
 
   // Prefix calculation for shared services
   public readonly servicePrefix = computed(() => {
@@ -264,10 +266,10 @@ export class MailingListManageComponent {
     }
   }
 
-  private prepareMailingListData(service: GroupsIOService): CreateMailingListRequest {
+  private prepareMailingListData(service: GroupsIOService | null): CreateMailingListRequest {
     const formValue = this.form().value;
     const prefix = this.servicePrefix() || this.cleanSlug(this.project()?.slug || '');
-    const groupName = service.type === 'primary' ? formValue.group_name : `${prefix}-${formValue.group_name}`;
+    const groupName = service?.type === 'primary' ? formValue.group_name : `${prefix}-${formValue.group_name}`;
 
     return {
       group_name: groupName,
@@ -275,7 +277,7 @@ export class MailingListManageComponent {
       type: formValue.type,
       audience_access: formValue.audience_access,
       description: formValue.description || '',
-      service_uid: service.uid ?? '',
+      service_uid: service?.uid ?? '',
       committees: formValue.committees?.length > 0 ? formValue.committees : undefined,
       title: formValue.group_name,
     };

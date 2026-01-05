@@ -71,7 +71,7 @@ export class MailingListBasicInfoComponent {
 
     // For shared services, include hyphen in the count
     if (this.isSharedService() && prefixValue) {
-      const prefixWithHyphenLength = prefixValue.length + 1; // +1 for the hyphen
+      const prefixWithHyphenLength = prefixValue.length;
       return `Name cannot exceed ${maxLength} characters (prefix "${prefixValue}" uses ${prefixWithHyphenLength} of 34 allowed)`;
     }
 
