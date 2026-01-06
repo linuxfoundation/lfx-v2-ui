@@ -25,7 +25,6 @@
       @if (upcomingMeetings() || pastMeetings()) {
         <lfx-meetings-top-bar
           [meetingTypeOptions]="meetingTypeOptions()"
-          [timeFilterValue]="timeFilter()"
           (meetingTypeChange)="onMeetingTypeChange($event)"
           (searchQueryChange)="searchQuery.set($event)"
           (timeFilterChange)="onTimeFilterChange($event)"

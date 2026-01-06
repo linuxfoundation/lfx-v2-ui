@@ -1,13 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Directive, ElementRef, signal, AfterViewInit, input } from '@angular/core';
+import { afterNextRender, DestroyRef, Directive, ElementRef, inject, input, signal } from '@angular/core';
 
 @Directive({
   selector: '[lfxScrollShadow]',
   standalone: true,
 })
-export class ScrollShadowDirective implements AfterViewInit {
+export class ScrollShadowDirective {
   // Horizontal scroll shadows
   public readonly showLeftShadow = signal(false);
   public readonly showRightShadow = signal(false);
@@ -18,12 +18,19 @@ export class ScrollShadowDirective implements AfterViewInit {
 
   public readonly scrollDistance = input(300);
 
-  public constructor(private el: ElementRef<HTMLElement>) {}
+  private readonly el = inject(ElementRef<HTMLElement>);
+  private readonly destroyRef = inject(DestroyRef);
 
-  public ngAfterViewInit(): void {
-    const container = this.el.nativeElement;
-    container.addEventListener('scroll', () => this.updateScrollShadows());
-    this.updateScrollShadows();
+  public constructor() {
+    afterNextRender(() => {
+      const container = this.el.nativeElement;
+      container.addEventListener('scroll', this.scrollHandler);
+      setTimeout(() => this.updateScrollShadows(), 0);
+
+      this.destroyRef.onDestroy(() => {
+        container.removeEventListener('scroll', this.scrollHandler);
+      });
+    });
   }
 
   public scrollLeft(): void {
@@ -35,6 +42,8 @@ export class ScrollShadowDirective implements AfterViewInit {
     const container = this.el.nativeElement;
     container.scrollBy({ left: this.scrollDistance(), behavior: 'smooth' });
   }
+
+  private scrollHandler = (): void => this.updateScrollShadows();
 
   private updateScrollShadows(): void {
     const container = this.el.nativeElement;
