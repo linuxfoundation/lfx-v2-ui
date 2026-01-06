@@ -23,7 +23,7 @@ import { StripHtmlPipe } from '@pipes/strip-html.pipe';
 import { MailingListService } from '@services/mailing-list.service';
 import { MenuItem, MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, of, switchMap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
 import { MailingListSubscribersComponent } from '../components/mailing-list-subscribers/mailing-list-subscribers.component';
 
@@ -136,20 +136,21 @@ export class MailingListViewComponent {
         switchMap(([params]) => {
           const mailingListId = params?.get('id');
           if (!mailingListId) {
+            this.loading.set(false);
             this.error.set(true);
             return of(null);
           }
 
           return this.mailingListService.getMailingList(mailingListId).pipe(
-            catchError(() => {
-              console.error('Failed to load mailing list');
+            catchError((error) => {
+              console.error('Failed to load mailing list', error);
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Failed to load mailing list',
               });
               this.router.navigate(['/', 'mailing-lists']);
-              return throwError(() => new Error('Failed to load mailing list'));
+              return of(null);
             }),
             switchMap((mailingList) => {
               this.loading.set(false);
