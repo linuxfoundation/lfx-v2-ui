@@ -7,7 +7,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardSelectorComponent } from '@components/card-selector/card-selector.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MAILING_LIST_MEMBER_LABEL } from '@lfx-one/shared/constants';
-import { MailingListMemberDeliveryMode, MailingListMemberModStatus } from '@lfx-one/shared/enums';
+import { MailingListMemberDeliveryMode, MailingListMemberModStatus, MailingListMemberType } from '@lfx-one/shared/enums';
 import { CardSelectorOption, MailingListMember } from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { MailingListService } from '@services/mailing-list.service';
@@ -156,13 +156,14 @@ export class ManageMemberModalComponent {
           },
         });
       } else {
-        // Create new member
+        // Create new member - explicitly set member_type to DIRECT since this is manual addition
         const createData = {
           email: formValue.email,
           first_name: formValue.first_name || null,
           last_name: formValue.last_name || null,
           job_title: formValue.job_title || null,
           organization: formValue.organization || null,
+          member_type: MailingListMemberType.DIRECT,
           delivery_mode: formValue.delivery_mode,
           mod_status: formValue.mod_status,
         };

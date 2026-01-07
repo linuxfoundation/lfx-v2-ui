@@ -25,8 +25,8 @@ export const MAILING_LIST_LABEL = {
  * @readonly
  * @example
  * // Use in templates to display the label
- * <h1>{{MAILING_LIST_MEMBER_LABEL.plural}}</h1> // Displays "Members"
- * <span>Add {{MAILING_LIST_MEMBER_LABEL.singular}}</span> // Displays "Add Member"
+ * <h1>{{MAILING_LIST_MEMBER_LABEL.plural}}</h1> // Displays "Subscribers"
+ * <span>Add {{MAILING_LIST_MEMBER_LABEL.singular}}</span> // Displays "Add Subscriber"
  */
 export const MAILING_LIST_MEMBER_LABEL = {
   singular: 'Subscriber',

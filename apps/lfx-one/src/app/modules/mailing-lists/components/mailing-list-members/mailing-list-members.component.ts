@@ -85,19 +85,6 @@ export class MailingListMembersComponent {
     { label: 'Moderator', value: MailingListMemberModStatus.MODERATOR },
   ];
 
-  // Labels for display (used by options)
-  protected readonly deliveryModeLabels: Record<string, string> = {
-    [MailingListMemberDeliveryMode.NORMAL]: 'Individual',
-    [MailingListMemberDeliveryMode.DIGEST]: 'Digest',
-    [MailingListMemberDeliveryMode.NONE]: 'None',
-  };
-
-  protected readonly modStatusLabels: Record<string, string> = {
-    [MailingListMemberModStatus.NONE]: 'Member',
-    [MailingListMemberModStatus.MODERATOR]: 'Moderator',
-    [MailingListMemberModStatus.OWNER]: 'Owner',
-  };
-
   public constructor() {
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
