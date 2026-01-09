@@ -11,8 +11,9 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { COMBINED_VOTE_STATUS_LABELS, MY_ACTIVITY_FILTER_LABELS, PollStatus, VoteResponseStatus } from '@lfx-one/shared';
+import { COMBINED_VOTE_STATUS_LABELS, MY_ACTIVITY_FILTER_LABELS } from '@lfx-one/shared';
 import { UserVote } from '@lfx-one/shared/interfaces';
+import { CombinedVoteStatus, getCombinedVoteStatus } from '@lfx-one/shared/utils';
 import { CanVotePipe } from '@pipes/can-vote.pipe';
 import { CombinedVoteStatusLabelPipe } from '@pipes/combined-vote-status-label.pipe';
 import { CombinedVoteStatusSeverityPipe } from '@pipes/combined-vote-status-severity.pipe';
@@ -21,8 +22,6 @@ import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { VoteActionTextPipe } from '@pipes/vote-action-text.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 import { debounceTime, distinctUntilChanged, startWith } from 'rxjs';
-
-type CombinedVoteStatus = 'open' | 'submitted' | 'closed';
 
 @Component({
   selector: 'lfx-votes-table',
@@ -86,7 +85,7 @@ export class VotesTableComponent {
     const statusCounts = new Map<CombinedVoteStatus, number>();
 
     votesData.forEach((vote) => {
-      const combinedStatus = this.getCombinedStatus(vote);
+      const combinedStatus = getCombinedVoteStatus(vote);
       statusCounts.set(combinedStatus, (statusCounts.get(combinedStatus) || 0) + 1);
     });
 
@@ -144,7 +143,7 @@ export class VotesTableComponent {
 
     const status = this.statusFilter();
     if (status) {
-      filtered = filtered.filter((vote) => this.getCombinedStatus(vote) === status);
+      filtered = filtered.filter((vote) => getCombinedVoteStatus(vote) === status);
     }
 
     const committee = this.committeeFilter();
@@ -159,8 +158,8 @@ export class VotesTableComponent {
     const statusPriority: Record<CombinedVoteStatus, number> = { open: 1, submitted: 2, closed: 3 };
 
     return [...votes].sort((a, b) => {
-      const statusA = this.getCombinedStatus(a);
-      const statusB = this.getCombinedStatus(b);
+      const statusA = getCombinedVoteStatus(a);
+      const statusB = getCombinedVoteStatus(b);
 
       if (statusA !== statusB) {
         return statusPriority[statusA] - statusPriority[statusB];
@@ -170,17 +169,5 @@ export class VotesTableComponent {
       const dateB = new Date(b.end_time).getTime();
       return dateA - dateB;
     });
-  }
-
-  private getCombinedStatus(vote: UserVote): CombinedVoteStatus {
-    if (vote.poll_status === PollStatus.ENDED) {
-      return 'closed';
-    }
-
-    if (vote.poll_status === PollStatus.ACTIVE) {
-      return vote.vote_status === VoteResponseStatus.RESPONDED ? 'submitted' : 'open';
-    }
-
-    return 'closed';
   }
 }

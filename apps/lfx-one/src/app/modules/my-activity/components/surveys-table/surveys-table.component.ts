@@ -11,8 +11,9 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { COMBINED_SURVEY_STATUS_LABELS, MY_ACTIVITY_FILTER_LABELS, SurveyResponseStatus, SurveyStatus } from '@lfx-one/shared';
+import { COMBINED_SURVEY_STATUS_LABELS, MY_ACTIVITY_FILTER_LABELS } from '@lfx-one/shared';
 import { UserSurvey } from '@lfx-one/shared/interfaces';
+import { CombinedSurveyStatus, getCombinedSurveyStatus } from '@lfx-one/shared/utils';
 import { CanTakeSurveyPipe } from '@pipes/can-take-survey.pipe';
 import { CombinedSurveyStatusLabelPipe } from '@pipes/combined-survey-status-label.pipe';
 import { CombinedSurveyStatusSeverityPipe } from '@pipes/combined-survey-status-severity.pipe';
@@ -21,8 +22,6 @@ import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { SurveyActionTextPipe } from '@pipes/survey-action-text.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 import { debounceTime, distinctUntilChanged, startWith } from 'rxjs';
-
-type CombinedSurveyStatus = 'open' | 'submitted' | 'closed';
 
 @Component({
   selector: 'lfx-surveys-table',
@@ -86,7 +85,7 @@ export class SurveysTableComponent {
     const statusCounts = new Map<CombinedSurveyStatus, number>();
 
     surveysData.forEach((survey) => {
-      const combinedStatus = this.getCombinedStatus(survey);
+      const combinedStatus = getCombinedSurveyStatus(survey);
       statusCounts.set(combinedStatus, (statusCounts.get(combinedStatus) || 0) + 1);
     });
 
@@ -145,7 +144,7 @@ export class SurveysTableComponent {
 
     const status = this.statusFilter();
     if (status) {
-      filtered = filtered.filter((survey) => this.getCombinedStatus(survey) === status);
+      filtered = filtered.filter((survey) => getCombinedSurveyStatus(survey) === status);
     }
 
     const committee = this.committeeFilter();
@@ -160,8 +159,8 @@ export class SurveysTableComponent {
     const statusPriority: Record<CombinedSurveyStatus, number> = { open: 1, submitted: 2, closed: 3 };
 
     return [...surveys].sort((a, b) => {
-      const statusA = this.getCombinedStatus(a);
-      const statusB = this.getCombinedStatus(b);
+      const statusA = getCombinedSurveyStatus(a);
+      const statusB = getCombinedSurveyStatus(b);
 
       if (statusA !== statusB) {
         return statusPriority[statusA] - statusPriority[statusB];
@@ -171,17 +170,5 @@ export class SurveysTableComponent {
       const dateB = new Date(b.survey_cutoff_date).getTime();
       return dateA - dateB;
     });
-  }
-
-  private getCombinedStatus(survey: UserSurvey): CombinedSurveyStatus {
-    if (survey.survey_status === SurveyStatus.CLOSED) {
-      return 'closed';
-    }
-
-    if (survey.survey_status === SurveyStatus.OPEN) {
-      return survey.response_status === SurveyResponseStatus.RESPONDED ? 'submitted' : 'open';
-    }
-
-    return 'closed';
   }
 }

@@ -2,29 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { COMBINED_VOTE_STATUS_LABELS, PollStatus, VoteResponseStatus } from '@lfx-one/shared';
+import { COMBINED_VOTE_STATUS_LABELS } from '@lfx-one/shared';
 import { UserVote } from '@lfx-one/shared/interfaces';
-
-type CombinedVoteStatus = 'open' | 'submitted' | 'closed';
+import { getCombinedVoteStatus } from '@lfx-one/shared/utils';
 
 @Pipe({
   name: 'combinedVoteStatusLabel',
 })
 export class CombinedVoteStatusLabelPipe implements PipeTransform {
   public transform(vote: UserVote): string {
-    const status = this.getCombinedStatus(vote);
+    const status = getCombinedVoteStatus(vote);
     return COMBINED_VOTE_STATUS_LABELS[status];
-  }
-
-  private getCombinedStatus(vote: UserVote): CombinedVoteStatus {
-    if (vote.poll_status === PollStatus.ENDED) {
-      return 'closed';
-    }
-
-    if (vote.poll_status === PollStatus.ACTIVE) {
-      return vote.vote_status === VoteResponseStatus.RESPONDED ? 'submitted' : 'open';
-    }
-
-    return 'closed';
   }
 }
