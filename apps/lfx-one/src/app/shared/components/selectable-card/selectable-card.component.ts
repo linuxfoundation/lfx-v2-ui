@@ -5,7 +5,7 @@ import { NgClass } from '@angular/common';
 import { Component, computed, input, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { map, of, startWith, switchMap } from 'rxjs';
+import { of, startWith, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-selectable-card',
@@ -13,50 +13,21 @@ import { map, of, startWith, switchMap } from 'rxjs';
   templateUrl: './selectable-card.component.html',
 })
 export class SelectableCardComponent {
-  /** The form group containing the control */
+  // === Inputs ===
   public readonly form = input.required<FormGroup>();
-
-  /** The control name within the form */
   public readonly control = input.required<string>();
-
-  /** The value to set when selected (for radio-style behavior) */
   public readonly value = input<string>();
-
-  /** Label text to display in the card */
   public readonly label = input.required<string>();
-
-  /** Toggle mode - when true, clicking toggles a boolean control (checkbox-style) */
   public readonly toggle = input<boolean>(false);
-
-  /** Custom style class for the card */
   public readonly styleClass = input<string>('');
-
-  /** Test ID for the card */
   public readonly testId = input<string>('');
 
-  /** Signal tracking the form control value reactively */
+  // === Computed Signals ===
   private readonly controlValue: Signal<unknown> = this.initControlValue();
+  protected readonly isSelected: Signal<boolean> = this.initIsSelected();
+  protected readonly isDisabled: Signal<boolean> = this.initIsDisabled();
 
-  /** Whether the card is currently selected */
-  protected readonly isSelected = computed(() => {
-    const targetValue = this.value();
-    const isToggle = this.toggle();
-    const currentValue = this.controlValue();
-
-    if (isToggle) {
-      return currentValue === true;
-    }
-    return currentValue === targetValue;
-  });
-
-  /** Whether the card is disabled */
-  protected readonly isDisabled = computed(() => {
-    const formGroup = this.form();
-    const controlName = this.control();
-    return formGroup.get(controlName)?.disabled ?? false;
-  });
-
-  /** Handle card click - sets or toggles the form control value */
+  // === Protected Methods ===
   protected onCardClick(): void {
     if (this.isDisabled()) return;
 
@@ -75,7 +46,6 @@ export class SelectableCardComponent {
     }
   }
 
-  /** Handle keyboard accessibility */
   protected onKeydown(event: KeyboardEvent): void {
     if (!this.isDisabled() && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
@@ -83,7 +53,7 @@ export class SelectableCardComponent {
     }
   }
 
-  /** Initialize control value signal reactively from form control */
+  // === Private Initializers ===
   private initControlValue(): Signal<unknown> {
     const formControl$ = toObservable(computed(() => this.form().get(this.control())));
 
@@ -93,13 +63,31 @@ export class SelectableCardComponent {
           if (!formControl) {
             return of(null);
           }
-          return formControl.valueChanges.pipe(
-            startWith(formControl.value),
-            map((value) => value)
-          );
+          return formControl.valueChanges.pipe(startWith(formControl.value));
         })
       ),
       { initialValue: null }
     );
+  }
+
+  private initIsSelected(): Signal<boolean> {
+    return computed(() => {
+      const targetValue = this.value();
+      const isToggle = this.toggle();
+      const currentValue = this.controlValue();
+
+      if (isToggle) {
+        return currentValue === true;
+      }
+      return currentValue === targetValue;
+    });
+  }
+
+  private initIsDisabled(): Signal<boolean> {
+    return computed(() => {
+      const formGroup = this.form();
+      const controlName = this.control();
+      return formGroup.get(controlName)?.disabled ?? false;
+    });
   }
 }

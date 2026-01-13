@@ -5,7 +5,6 @@
   [(visible)]="visible"
   position="right"
   [modal]="true"
-  [dismissable]="true"
   [showCloseIcon]="false"
   styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full vote-details-drawer"
   data-testid="vote-details-drawer">
@@ -42,7 +41,7 @@
             data-testid="vote-details-drawer-status"></lfx-tag>
 
           <!-- Due Date Info -->
-          @if (voteData.poll_status === 'ended') {
+          @if (voteData.poll_status === PollStatus.ENDED) {
             <div class="flex flex-col">
               <span class="text-sm text-slate-600"> Voting closed {{ voteData.end_time | date: 'MMM d, y' }} </span>
             </div>
@@ -62,7 +61,7 @@
     </ng-template>
 
     <!-- Content Section -->
-    <div class="flex flex-col gap-6 p6" data-testid="vote-details-drawer-content">
+    <div class="flex flex-col gap-6" data-testid="vote-details-drawer-content">
       <!-- Warning for open votes -->
       @if (showWarningMessage()) {
         <lfx-message severity="warn" data-testid="vote-details-warning">
@@ -175,15 +174,21 @@
             }
           </div>
         }
+
+        <p-confirmdialog></p-confirmdialog>
       </div>
 
       <!-- Your Vote Section (for submitted/closed votes) -->
-      @if (hasUserVoted() && voteData.vote_creation_time && userVoteChoiceText()) {
+      @if (hasUserVoted() && voteData.vote_creation_time) {
         <div class="bg-slate-50 border border-slate-200 rounded-lg p-4" data-testid="vote-details-your-vote">
           <h3 class="text-sm font-semibold text-slate-700 mb-2">Your Vote</h3>
-          <p class="text-sm text-slate-600">
-            You voted <span class="font-semibold text-slate-900">{{ userVoteChoiceText() }}</span> on {{ voteData.vote_creation_time | date: 'MMM d, y' }}
-          </p>
+          @if (userVoteChoiceText()) {
+            <p class="text-sm text-slate-600">
+              You voted <span class="font-semibold text-slate-900">{{ userVoteChoiceText() }}</span> on {{ voteData.vote_creation_time | date: 'MMM d, y' }}
+            </p>
+          } @else {
+            <p class="text-sm text-slate-600">You submitted your vote on {{ voteData.vote_creation_time | date: 'MMM d, y' }}</p>
+          }
         </div>
       }
     </div>
@@ -211,52 +216,3 @@
     }
   }
 </p-drawer>
-
-<!-- Confirmation Modal -->
-@if (showConfirmModal) {
-  <div class="fixed inset-0 bg-black/40 z-[60]" (click)="onCancelConfirm()" data-testid="vote-confirm-modal-backdrop"></div>
-  <div
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl z-[70] w-[90%] max-w-md p-6 flex flex-col gap-4"
-    data-testid="vote-confirm-modal">
-    <div class="flex items-start gap-3">
-      <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl mt-1"></i>
-      <div class="flex-1">
-        <h3 class="text-lg font-semibold text-slate-900 mb-2">Confirm Vote Submission</h3>
-        <p class="text-sm text-slate-600">You cannot change your vote after submission. Are you sure you want to continue?</p>
-      </div>
-    </div>
-    <div class="flex gap-3 pt-2">
-      <lfx-button
-        label="Cancel"
-        severity="secondary"
-        [outlined]="true"
-        styleClass="flex-1"
-        (onClick)="onCancelConfirm()"
-        data-testid="vote-confirm-cancel"></lfx-button>
-      <lfx-button label="Yes, Submit" severity="primary" styleClass="flex-1" (onClick)="onConfirmSubmit()" data-testid="vote-confirm-submit"></lfx-button>
-    </div>
-  </div>
-}
-
-<!-- Success Modal -->
-@if (showSuccessModal) {
-  <div class="fixed inset-0 bg-black/40 z-[60]" (click)="onCloseSuccess()" data-testid="vote-success-modal-backdrop"></div>
-  <div
-    class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl z-[70] w-[90%] max-w-md p-6 flex flex-col gap-4"
-    data-testid="vote-success-modal">
-    <div class="text-center">
-      <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i class="fa-solid fa-check text-green-600 text-xl"></i>
-      </div>
-      <h3 class="text-lg font-semibold text-slate-900 mb-3">Your Vote Has Been Submitted</h3>
-      @if (vote(); as voteData) {
-        <p class="text-sm text-slate-600 mb-2">You successfully submitted your vote on "{{ voteData.poll_name }}".</p>
-      }
-      <p class="text-sm text-slate-600 mb-2">Your vote is final and cannot be changed.</p>
-      <p class="text-sm text-slate-600">Results will be available after voting closes.</p>
-    </div>
-    <div class="flex justify-center">
-      <lfx-button label="Done" severity="primary" styleClass="w-full" (onClick)="onCloseSuccess()" data-testid="vote-success-done"></lfx-button>
-    </div>
-  </div>
-}

@@ -28,7 +28,7 @@ import { IsDueWithinMonthPipe } from '@pipes/is-due-within-month.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { VoteActionTextPipe } from '@pipes/vote-action-text.pipe';
 import { TooltipModule } from 'primeng/tooltip';
-import { debounceTime, distinctUntilChanged, startWith } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
 
 import { VoteDetailsDrawerComponent } from '../vote-details-drawer/vote-details-drawer.component';
 
@@ -55,40 +55,33 @@ import { VoteDetailsDrawerComponent } from '../vote-details-drawer/vote-details-
   templateUrl: './votes-table.component.html',
 })
 export class VotesTableComponent {
-  public votes = input.required<UserVote[]>();
+  // === Inputs ===
+  public readonly votes = input.required<UserVote[]>();
 
-  // Internal votes signal for managing state (allows updates after submission)
-  protected readonly internalVotes = signal<UserVote[]>([]);
+  // === Forms ===
+  public searchForm = new FormGroup({
+    search: new FormControl<string>(''),
+    status: new FormControl<CombinedVoteStatus | null>(null),
+    committee: new FormControl<string | null>(null),
+  });
 
-  // Drawer state
+  // === Writable Signals ===
   protected readonly drawerVisible = signal<boolean>(false);
   protected readonly selectedVote = signal<VoteDetails | null>(null);
-
-  public searchForm: FormGroup;
-  private readonly searchTerm: Signal<string>;
   private readonly statusFilter = signal<CombinedVoteStatus | null>(null);
   private readonly committeeFilter = signal<string | null>(null);
+  // Track local modifications by poll_id (optimistic updates until parent syncs)
+  private readonly localModifications = signal<Map<string, Partial<UserVote>>>(new Map());
 
-  protected readonly statusOptions: Signal<{ label: string; value: CombinedVoteStatus | null }[]>;
-  protected readonly committeeOptions: Signal<{ label: string; value: string | null }[]>;
-  protected readonly filteredVotes: Signal<UserVote[]>;
+  // === Computed Signals ===
+  private readonly searchTerm: Signal<string> = this.initSearchTerm();
+  protected readonly statusOptions: Signal<{ label: string; value: CombinedVoteStatus | null }[]> = this.initStatusOptions();
+  protected readonly committeeOptions: Signal<{ label: string; value: string | null }[]> = this.initCommitteeOptions();
+  protected readonly filteredVotes: Signal<UserVote[]> = this.initFilteredVotes();
+  // Merge input votes with local modifications
+  private readonly mergedVotes: Signal<UserVote[]> = this.initMergedVotes();
 
-  public constructor() {
-    this.searchForm = new FormGroup({
-      search: new FormControl<string>(''),
-      status: new FormControl<CombinedVoteStatus | null>(null),
-      committee: new FormControl<string | null>(null),
-    });
-
-    this.searchTerm = toSignal(this.searchForm.get('search')!.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), {
-      initialValue: '',
-    });
-
-    this.statusOptions = computed(() => this.initializeStatusOptions());
-    this.committeeOptions = computed(() => this.initializeCommitteeOptions());
-    this.filteredVotes = computed(() => this.filterVotes());
-  }
-
+  // === Protected Methods ===
   protected onStatusChange(value: CombinedVoteStatus | null): void {
     this.statusFilter.set(value);
   }
@@ -108,26 +101,132 @@ export class VotesTableComponent {
   }
 
   protected onVoteSubmitted(result: { pollId: string; answers: PollAnswer[] }): void {
-    // Update the vote in the list to show as submitted
-    const currentVotes = this.getVotesSource();
-    const updatedVotes = currentVotes.map((v) => {
-      if (v.poll_id === result.pollId) {
-        return {
-          ...v,
-          vote_status: VoteResponseStatus.RESPONDED,
-          vote_creation_time: new Date().toISOString(),
-        };
-      }
-      return v;
+    // Store local modification - will be merged with input votes
+    const modifications = new Map(this.localModifications());
+    modifications.set(result.pollId, {
+      vote_status: VoteResponseStatus.RESPONDED,
+      vote_creation_time: new Date().toISOString(),
     });
-    this.internalVotes.set(updatedVotes);
+    this.localModifications.set(modifications);
     this.drawerVisible.set(false);
   }
 
+  // === Private Initializers ===
+  private initSearchTerm(): Signal<string> {
+    return toSignal(
+      this.searchForm.get('search')!.valueChanges.pipe(
+        startWith(''),
+        debounceTime(300),
+        distinctUntilChanged(),
+        map((value) => value ?? '')
+      ),
+      { initialValue: '' }
+    );
+  }
+
+  private initStatusOptions(): Signal<{ label: string; value: CombinedVoteStatus | null }[]> {
+    return computed(() => {
+      const votesData = this.getVotesSource();
+      const statusCounts = new Map<CombinedVoteStatus, number>();
+
+      votesData.forEach((vote) => {
+        const combinedStatus = getCombinedVoteStatus(vote);
+        statusCounts.set(combinedStatus, (statusCounts.get(combinedStatus) || 0) + 1);
+      });
+
+      const options: { label: string; value: CombinedVoteStatus | null }[] = [{ label: MY_ACTIVITY_FILTER_LABELS.allStatus, value: null }];
+
+      const statusOrder: CombinedVoteStatus[] = ['open', 'submitted', 'closed'];
+      statusOrder.forEach((status) => {
+        const count = statusCounts.get(status) || 0;
+        if (count > 0) {
+          options.push({
+            label: `${COMBINED_VOTE_STATUS_LABELS[status]} (${count})`,
+            value: status,
+          });
+        }
+      });
+
+      return options;
+    });
+  }
+
+  private initCommitteeOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const votesData = this.getVotesSource();
+      const committeeCounts = new Map<string, number>();
+
+      votesData.forEach((vote) => {
+        vote.committees.forEach((committee) => {
+          const name = committee.name || committee.uid;
+          committeeCounts.set(name, (committeeCounts.get(name) || 0) + 1);
+        });
+      });
+
+      const uniqueCommittees = Array.from(committeeCounts.keys()).sort((a, b) => a.localeCompare(b));
+
+      const options: { label: string; value: string | null }[] = [{ label: MY_ACTIVITY_FILTER_LABELS.allCommittees, value: null }];
+
+      uniqueCommittees.forEach((committee) => {
+        const count = committeeCounts.get(committee) || 0;
+        options.push({
+          label: `${committee} (${count})`,
+          value: committee,
+        });
+      });
+
+      return options;
+    });
+  }
+
+  private initFilteredVotes(): Signal<UserVote[]> {
+    return computed(() => {
+      let filtered = this.getVotesSource();
+
+      const searchTerm = this.searchTerm()?.toLowerCase() || '';
+      if (searchTerm) {
+        filtered = filtered.filter(
+          (vote) => vote.poll_name.toLowerCase().includes(searchTerm) || vote.committees.some((c) => (c.name || c.uid).toLowerCase().includes(searchTerm))
+        );
+      }
+
+      const status = this.statusFilter();
+      if (status) {
+        filtered = filtered.filter((vote) => getCombinedVoteStatus(vote) === status);
+      }
+
+      const committee = this.committeeFilter();
+      if (committee) {
+        filtered = filtered.filter((vote) => vote.committees.some((c) => (c.name || c.uid) === committee));
+      }
+
+      return this.sortVotes(filtered);
+    });
+  }
+
+  private initMergedVotes(): Signal<UserVote[]> {
+    return computed(() => {
+      const inputVotes = this.votes();
+      const modifications = this.localModifications();
+
+      if (modifications.size === 0) {
+        return inputVotes;
+      }
+
+      // Apply local modifications to input votes
+      return inputVotes.map((vote) => {
+        const mod = modifications.get(vote.poll_id);
+        if (mod) {
+          return { ...vote, ...mod };
+        }
+        return vote;
+      });
+    });
+  }
+
+  // === Private Helpers ===
   private getVotesSource(): UserVote[] {
-    // Use internal votes if we have them (after a submission), otherwise use input
-    const internal = this.internalVotes();
-    return internal.length > 0 ? internal : this.votes();
+    return this.mergedVotes();
   }
 
   private getMockVoteDetails(vote: UserVote): VoteDetails {
@@ -141,23 +240,20 @@ export class VotesTableComponent {
       num_response_received: vote.poll_status === PollStatus.ENDED ? 20 : 12,
     };
 
-    // Add user's answers if they have voted
     if (vote.vote_status === VoteResponseStatus.RESPONDED && details.poll_questions.length > 0) {
       details.poll_answers = details.poll_questions.map((q) => ({
         prompt: q.prompt,
         question_id: q.question_id,
         type: q.type,
-        user_choice: [q.choices[0]], // Mock: user selected first option
+        user_choice: [q.choices[0]],
         ranked_user_choice: [],
       }));
     }
 
-    // Add vote results for closed votes
     if (vote.poll_status === PollStatus.ENDED && details.poll_questions.length > 0) {
       const choices = details.poll_questions[0].choices;
       details.generic_choice_votes = {};
       choices.forEach((choice, index) => {
-        // Mock vote distribution
         const voteCount = this.getMockVoteCount(index);
         details.generic_choice_votes![choice.choice_id] = voteCount;
       });
@@ -170,80 +266,6 @@ export class VotesTableComponent {
     if (index === 0) return 15;
     if (index === 1) return 3;
     return 2;
-  }
-
-  private initializeStatusOptions(): { label: string; value: CombinedVoteStatus | null }[] {
-    const votesData = this.getVotesSource();
-    const statusCounts = new Map<CombinedVoteStatus, number>();
-
-    votesData.forEach((vote) => {
-      const combinedStatus = getCombinedVoteStatus(vote);
-      statusCounts.set(combinedStatus, (statusCounts.get(combinedStatus) || 0) + 1);
-    });
-
-    const options: { label: string; value: CombinedVoteStatus | null }[] = [{ label: MY_ACTIVITY_FILTER_LABELS.allStatus, value: null }];
-
-    const statusOrder: CombinedVoteStatus[] = ['open', 'submitted', 'closed'];
-    statusOrder.forEach((status) => {
-      const count = statusCounts.get(status) || 0;
-      if (count > 0) {
-        options.push({
-          label: `${COMBINED_VOTE_STATUS_LABELS[status]} (${count})`,
-          value: status,
-        });
-      }
-    });
-
-    return options;
-  }
-
-  private initializeCommitteeOptions(): { label: string; value: string | null }[] {
-    const votesData = this.getVotesSource();
-    const committeeCounts = new Map<string, number>();
-
-    votesData.forEach((vote) => {
-      vote.committees.forEach((committee) => {
-        const name = committee.name || committee.uid;
-        committeeCounts.set(name, (committeeCounts.get(name) || 0) + 1);
-      });
-    });
-
-    const uniqueCommittees = Array.from(committeeCounts.keys()).sort((a, b) => a.localeCompare(b));
-
-    const options: { label: string; value: string | null }[] = [{ label: MY_ACTIVITY_FILTER_LABELS.allCommittees, value: null }];
-
-    uniqueCommittees.forEach((committee) => {
-      const count = committeeCounts.get(committee) || 0;
-      options.push({
-        label: `${committee} (${count})`,
-        value: committee,
-      });
-    });
-
-    return options;
-  }
-
-  private filterVotes(): UserVote[] {
-    let filtered = this.getVotesSource();
-
-    const searchTerm = this.searchTerm()?.toLowerCase() || '';
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (vote) => vote.poll_name.toLowerCase().includes(searchTerm) || vote.committees.some((c) => (c.name || c.uid).toLowerCase().includes(searchTerm))
-      );
-    }
-
-    const status = this.statusFilter();
-    if (status) {
-      filtered = filtered.filter((vote) => getCombinedVoteStatus(vote) === status);
-    }
-
-    const committee = this.committeeFilter();
-    if (committee) {
-      filtered = filtered.filter((vote) => vote.committees.some((c) => (c.name || c.uid) === committee));
-    }
-
-    return this.sortVotes(filtered);
   }
 
   private sortVotes(votes: UserVote[]): UserVote[] {
