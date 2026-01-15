@@ -25,10 +25,10 @@ export class MeetingPlatformFeaturesComponent implements OnInit {
   public readonly artifactVisibilityOptions = ARTIFACT_VISIBILITY_OPTIONS;
 
   // Features for the two-column layout
-  // Left: Generate Transcripts (recording_enabled is handled separately with nested settings)
-  // Right: YouTube Auto-upload, AI Meeting Summary (handled separately with nested settings), Show in Public Calendar
-  public readonly leftColumnFeatures = MEETING_FEATURES.filter((f) => f.key === 'transcript_enabled');
+  public readonly recordingFeature = MEETING_FEATURES.find((f) => f.key === 'recording_enabled')!;
+  public readonly transcriptFeature = MEETING_FEATURES.find((f) => f.key === 'transcript_enabled')!;
   public readonly youtubeFeature = MEETING_FEATURES.find((f) => f.key === 'youtube_upload_enabled')!;
+  public readonly aiSummaryFeature = MEETING_FEATURES.find((f) => f.key === 'zoom_ai_enabled')!;
   public readonly calendarFeature = MEETING_FEATURES.find((f) => f.key === 'visibility')!;
 
   // Transform platforms into dropdown options (only available platforms)

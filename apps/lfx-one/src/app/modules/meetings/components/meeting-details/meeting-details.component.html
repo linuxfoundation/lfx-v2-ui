@@ -34,7 +34,7 @@
       <!-- Agenda (Required) -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label for="meeting-agenda" class="text-neutral-950"> Agenda <span class="text-red-500">*</span> </label>
+          <label for="meeting-agenda" class="block text-neutral-950"> Agenda <span class="text-red-500">*</span> </label>
           @if (!showAiHelper() && !showTemplateSelector()) {
             <div class="flex items-center gap-3">
               <button
@@ -150,7 +150,6 @@
           appendTo="body"
           id="start-date"
           placeholder="Select date"
-          [showIcon]="true"
           [minDate]="minDate()"
           class="w-full"
           styleClass="w-full"
@@ -265,21 +264,7 @@
       }
 
       <!-- Recurring Meeting Toggle -->
-      <div class="border border-gray-200 rounded-lg p-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center flex-shrink-0">
-              <i class="fa-light fa-repeat text-violet-600 text-lg"></i>
-            </div>
-            <div class="flex-1">
-              <p class="text-neutral-950 mb-1">Recurring Meeting</p>
-              <p class="text-sm text-gray-600">This meeting repeats on a schedule</p>
-            </div>
-          </div>
-          <lfx-toggle [form]="form()" control="isRecurring" data-testid="meeting-details-recurring-toggle"></lfx-toggle>
-        </div>
-
-        <!-- Recurrence Options (only show when isRecurring is true) -->
+      <lfx-feature-toggle [feature]="recurringFeature" [form]="form()">
         @if (form().get('isRecurring')?.value) {
           <div class="mt-4 pt-4 border-t border-gray-200">
             <label for="recurrence" class="block text-neutral-950 mb-2">Cadence <span class="text-red-500">*</span></label>
@@ -300,23 +285,7 @@
             </div>
           </div>
         }
-      </div>
-
-      <!-- Show Meeting Attendees Toggle -->
-      <div class="border border-gray-200 rounded-lg p-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
-              <i class="fa-light fa-users text-orange-600 text-lg"></i>
-            </div>
-            <div class="flex-1">
-              <p class="text-neutral-950 mb-1">Show Meeting Members on the Meeting Details Page</p>
-              <p class="text-sm text-gray-600">Allow members to see who was invited and who will be attending.</p>
-            </div>
-          </div>
-          <lfx-toggle [form]="form()" control="show_meeting_attendees" data-testid="meeting-details-show-attendees-toggle"></lfx-toggle>
-        </div>
-      </div>
+      </lfx-feature-toggle>
     </div>
   </div>
 </div>

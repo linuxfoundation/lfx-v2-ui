@@ -99,7 +99,7 @@
                 label="Update Meeting"
                 icon="fa-light fa-check"
                 [loading]="submitting()"
-                [disabled]="submitting()"
+                [disabled]="!canProceed() || submitting()"
                 severity="info"
                 (onClick)="onSubmitAll()"
                 data-testid="meeting-manage-update-btn">

@@ -20,7 +20,6 @@ export class CalendarComponent {
   public readonly placeholder = input<string>('');
   public readonly disabled = input<boolean>(false);
   public readonly required = input<boolean>(false);
-  public readonly showIcon = input<boolean>(false);
   public readonly showButtonBar = input<boolean>(false);
   public readonly dateFormat = input<string>('mm/dd/yy');
   public readonly size = input<'small' | 'large'>('small');
