@@ -36,6 +36,7 @@ export class TimePickerComponent implements OnInit, OnDestroy {
   public readonly required = input<TimePickerProps['required']>(false);
   public readonly size = input<TimePickerProps['size']>('small');
   public readonly width = input<string>('w-32');
+  public readonly styleClass = input<string>('w-full');
 
   // ViewChild for popover control
   public timePopover = viewChild<Popover>('timePopover');

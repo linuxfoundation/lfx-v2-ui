@@ -7,13 +7,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
-import { FeatureToggleComponent } from '@components/feature-toggle/feature-toggle.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { TimePickerComponent } from '@components/time-picker/time-picker.component';
+import { ToggleComponent } from '@components/toggle/toggle.component';
 import { GenerateAgendaRequest, MeetingTemplate } from '@lfx-one/shared';
-import { MEETING_DURATION_OPTIONS, RECURRING_MEETING_FEATURE, TIMEZONES } from '@lfx-one/shared/constants';
+import { MEETING_DURATION_OPTIONS, TIMEZONES } from '@lfx-one/shared/constants';
 import { getWeekOfMonth } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -31,11 +31,11 @@ import { MeetingRecurrencePatternComponent } from '../meeting-recurrence-pattern
     ReactiveFormsModule,
     ButtonComponent,
     CalendarComponent,
-    FeatureToggleComponent,
     InputTextComponent,
     SelectComponent,
     TextareaComponent,
     TimePickerComponent,
+    ToggleComponent,
     TooltipModule,
     AgendaTemplateSelectorComponent,
     MeetingRecurrencePatternComponent,
@@ -78,9 +78,6 @@ export class MeetingDetailsComponent implements OnInit {
     label: `${tz.label} (${tz.offset})`,
     value: tz.value,
   }));
-
-  // Recurring meeting feature from shared constants
-  public readonly recurringFeature = RECURRING_MEETING_FEATURE;
 
   // Minimum date (yesterday)
   public readonly minDate = computed(() => {

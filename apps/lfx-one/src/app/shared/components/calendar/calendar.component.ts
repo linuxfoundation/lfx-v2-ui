@@ -9,6 +9,7 @@ import { DatePickerModule } from 'primeng/datepicker';
   selector: 'lfx-calendar',
   imports: [DatePickerModule, ReactiveFormsModule],
   templateUrl: './calendar.component.html',
+  styleUrls: ['./calendar.component.scss'],
 })
 export class CalendarComponent {
   public form = input.required<FormGroup>();
@@ -26,6 +27,7 @@ export class CalendarComponent {
   public readonly minDate = input<Date | null>(null);
   public readonly maxDate = input<Date | null>(null);
   public readonly appendTo = input<string | undefined>(undefined);
+  public readonly styleClass = input<string>('w-full');
 
   // Events
   public readonly onSelect = output<any>();

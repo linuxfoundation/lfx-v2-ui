@@ -29,6 +29,7 @@ export class OrganizationSearchComponent {
   public panelStyleClass = input<string>();
   public dataTestId = input<string>('organization-search');
   public disabled = input<boolean>(false);
+  public size = input<'small' | 'large'>('small');
 
   public readonly onOrganizationSelect = output<OrganizationSuggestion>();
 
