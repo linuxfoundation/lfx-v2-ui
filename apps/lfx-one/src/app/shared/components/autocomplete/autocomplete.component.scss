@@ -1,7 +1,46 @@
 /* Copyright The Linux Foundation and each contributor to LFX. */
 /* SPDX-License-Identifier: MIT */
 
-::ng-deep {
+:host ::ng-deep {
+  // Dropdown mode styling - match calendar input style
+  .p-autocomplete {
+    position: relative;
+
+    // Hide the default dropdown button completely
+    .p-autocomplete-dropdown {
+      display: none;
+    }
+
+    // Add custom dropdown caret using ::after (same as calendar)
+    &::after {
+      content: '\f078'; // Font Awesome chevron-down icon
+      font-family: 'Font Awesome 6 Pro';
+      font-weight: 300; // fa-light
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af; // gray-400
+      pointer-events: none;
+      font-size: 0.875rem;
+    }
+
+    .p-autocomplete-input {
+      padding-right: 2.5rem; // Make room for the icon
+      border-radius: 0.375rem; // Ensure both sides have rounded corners (rounded-md)
+    }
+  }
+
+  // Clear button styling
+  .p-autocomplete-clear-icon {
+    right: 2.25rem; // Position before the dropdown icon
+    color: #9ca3af; // gray-400
+
+    &:hover {
+      color: #6b7280; // gray-500
+    }
+  }
+
   .p-autocomplete-list-container {
     .p-autocomplete-list {
       .p-autocomplete-option {

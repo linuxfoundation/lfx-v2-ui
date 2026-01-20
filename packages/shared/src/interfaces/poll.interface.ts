@@ -248,3 +248,18 @@ export interface IndividualVote extends SESEmailTracking {
   /** Current status of this individual vote */
   vote_status: IndividualVoteStatus;
 }
+
+/**
+ * Form data structure for a question in the vote creation/edit form
+ * @description Used for template iteration with properly typed form controls
+ */
+export interface QuestionFormData {
+  /** The FormGroup for this question */
+  group: import('@angular/forms').FormGroup;
+  /** The question text control */
+  questionControl: import('@angular/forms').AbstractControl;
+  /** The response type control */
+  responseTypeControl: import('@angular/forms').AbstractControl;
+  /** Array of option controls */
+  optionsControls: import('@angular/forms').AbstractControl[];
+}

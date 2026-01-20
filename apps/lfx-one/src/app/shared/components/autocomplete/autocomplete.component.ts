@@ -37,6 +37,8 @@ export class AutocompleteComponent {
   public dropdown = input<boolean>(false);
   public dropdownMode = input<'blank' | 'current'>('blank');
   public dataKey = input<string>();
+  public showClear = input<boolean>(false);
+  public forceSelection = input<boolean>(false);
 
   public readonly completeMethod = output<AutoCompleteCompleteEvent>();
   public readonly onSelect = output<AutoCompleteSelectEvent>();
