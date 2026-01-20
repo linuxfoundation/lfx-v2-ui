@@ -50,25 +50,25 @@
     data-testid="votes-table">
     <ng-template #header>
       <tr>
-        <th class="w-[25%]">{{ voteLabel.singular }} Name</th>
-        <th class="w-[18%]">Group</th>
-        <th class="w-[10%]">Status</th>
+        <th class="w-[28%]">{{ voteLabel.singular }} Name</th>
+        <th class="w-[20%]">Group</th>
+        <th class="w-[12%]">Status</th>
         <th class="w-[12%]">Responses</th>
-        <th class="w-[15%]">Due</th>
-        <th class="w-[12%]"></th>
+        <th class="w-[14%]">Due</th>
+        <th class="w-[14%]"></th>
       </tr>
     </ng-template>
 
     <ng-template #body let-vote>
       <tr [attr.data-testid]="'votes-row-' + vote.uid" class="hover:bg-slate-50">
         <td>
-          <a
-            href="javascript:void(0)"
-            class="text-blue-600 hover:text-blue-700 hover:underline font-medium text-xs"
+          <button
+            type="button"
+            class="text-blue-600 hover:text-blue-700 hover:underline font-medium text-xs text-left bg-transparent border-none cursor-pointer p-0"
             (click)="onManageVote(vote.uid)"
             [attr.data-testid]="'votes-name-' + vote.uid">
             {{ vote.name }}
-          </a>
+          </button>
         </td>
 
         <td>

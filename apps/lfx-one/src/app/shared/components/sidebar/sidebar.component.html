@@ -122,7 +122,9 @@
           <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small"></lfx-badge>
         }
       </div>
-      <i class="fa-light fa-arrow-up-right-from-square text-gray-400 text-xs"></i>
+      @if (item.external !== false) {
+        <i class="fa-light fa-arrow-up-right-from-square text-gray-400 text-xs"></i>
+      }
     </a>
   }
 

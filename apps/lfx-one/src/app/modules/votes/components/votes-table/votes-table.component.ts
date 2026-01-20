@@ -119,7 +119,9 @@ export class VotesTableComponent {
       const statusOrder: PollStatus[] = [PollStatus.ACTIVE, PollStatus.DISABLED, PollStatus.ENDED];
       statusOrder.forEach((status) => {
         const count = statusCounts.get(status) || 0;
-        if (count > 0 || status !== PollStatus.DISABLED || this.hasPMOAccess()) {
+        // Show status if it has items, OR if it's DISABLED and user has PMO access
+        const shouldShowStatus = count > 0 || (status === PollStatus.DISABLED && this.hasPMOAccess());
+        if (shouldShowStatus) {
           options.push({
             label: `${POLL_STATUS_LABELS[status]} (${count})`,
             value: status,

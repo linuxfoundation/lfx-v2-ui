@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
-import { IndividualVoteStatus, PollStatus, VoteResponseStatus } from '../enums/poll.enum';
+import { IndividualVoteStatus, PollStatus, PollType, VoteResponseStatus } from '../enums/poll.enum';
 import { IndividualVote, UserVote, Vote, VoteDetails } from '../interfaces/poll.interface';
 
 /**
@@ -45,8 +45,10 @@ function mapToCommitteeMemberVotingStatus(value: string): CommitteeMemberVotingS
 
 /**
  * Map string array to CommitteeMemberVotingStatus array
- * @description Converts query service voting status strings to enum array
- * @param values - The voting status strings from query service
+ * @description Converts query service voting status strings to enum array.
+ * @remarks Function name uses 'Filers' to match the backend field name 'committee_filers',
+ * which represents eligible voting statuses despite the naming convention.
+ * @param values - The voting status strings from query service (from Vote.committee_filers)
  * @returns Array of valid CommitteeMemberVotingStatus values
  */
 export function mapCommitteeFilersToVotingStatuses(values: string[]): CommitteeMemberVotingStatus[] {
@@ -117,7 +119,9 @@ export function toVoteDetails(vote: Vote, individualVote: IndividualVote): VoteD
 
 /**
  * Type guard for Vote entity
- * @description Checks if an object is a Vote entity from query service
+ * @description Checks if an object is a Vote entity from query service.
+ * Performs minimal structural validation for quick checks. For production use,
+ * consider additional validation of enum values against PollStatus and PollType.
  * @param obj - The object to check
  * @returns True if the object is a Vote
  */
@@ -128,19 +132,31 @@ export function isVote(obj: unknown): obj is Vote {
 
   const vote = obj as Record<string, unknown>;
 
-  return (
+  // Basic structural validation
+  const hasRequiredFields =
     typeof vote['uid'] === 'string' &&
     typeof vote['poll_id'] === 'string' &&
     typeof vote['name'] === 'string' &&
     typeof vote['status'] === 'string' &&
     typeof vote['poll_type'] === 'string' &&
-    Array.isArray(vote['poll_questions'])
-  );
+    Array.isArray(vote['poll_questions']);
+
+  if (!hasRequiredFields) {
+    return false;
+  }
+
+  // Validate enum values
+  const validStatuses = Object.values(PollStatus) as string[];
+  const validPollTypes = Object.values(PollType) as string[];
+
+  return validStatuses.includes(vote['status'] as string) && validPollTypes.includes(vote['poll_type'] as string);
 }
 
 /**
  * Type guard for IndividualVote entity
- * @description Checks if an object is an IndividualVote entity from query service
+ * @description Checks if an object is an IndividualVote entity from query service.
+ * Performs minimal structural validation for quick checks. For production use,
+ * consider additional validation of enum values against IndividualVoteStatus.
  * @param obj - The object to check
  * @returns True if the object is an IndividualVote
  */
@@ -151,10 +167,19 @@ export function isIndividualVote(obj: unknown): obj is IndividualVote {
 
   const individualVote = obj as Record<string, unknown>;
 
-  return (
+  // Basic structural validation
+  const hasRequiredFields =
     typeof individualVote['vote_id'] === 'string' &&
     typeof individualVote['poll_id'] === 'string' &&
     typeof individualVote['user_id'] === 'string' &&
-    typeof individualVote['vote_status'] === 'string'
-  );
+    typeof individualVote['vote_status'] === 'string';
+
+  if (!hasRequiredFields) {
+    return false;
+  }
+
+  // Validate enum values
+  const validStatuses = Object.values(IndividualVoteStatus) as string[];
+
+  return validStatuses.includes(individualVote['vote_status'] as string);
 }

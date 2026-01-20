@@ -397,6 +397,8 @@ export interface SidebarMenuItem {
   target?: string;
   /** Rel for external links */
   rel?: string;
+  /** Whether the link is external (shows external link icon). Defaults to true for items with url property. */
+  external?: boolean;
   /** Badge content for notifications */
   badge?: string | number;
   /** Badge severity for styling */
