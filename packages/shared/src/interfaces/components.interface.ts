@@ -387,8 +387,8 @@ export interface MessageProps {
 export interface SidebarMenuItem {
   /** Display label for menu item */
   label: string;
-  /** Icon class or name */
-  icon: string;
+  /** Icon class or name (optional for section headers) */
+  icon?: string;
   /** Router link path */
   routerLink?: string;
   /** External URL */
@@ -409,6 +409,10 @@ export interface SidebarMenuItem {
   items?: SidebarMenuItem[];
   /** Test ID for e2e testing (computed from label if not provided) */
   testId?: string;
+  /** Whether this item is a collapsible section header */
+  isSection?: boolean;
+  /** Default expanded state for sections (defaults to true) */
+  expanded?: boolean;
 }
 
 /**
