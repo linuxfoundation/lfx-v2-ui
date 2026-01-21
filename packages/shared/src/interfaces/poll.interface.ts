@@ -258,3 +258,18 @@ export interface QuestionFormData {
   /** Array of option controls */
   optionsControls: import('@angular/forms').AbstractControl[];
 }
+
+/**
+ * Processed question data for the vote review step
+ * @description Used for displaying question summary in the review step
+ */
+export interface VoteReviewQuestion {
+  /** One-based question index for display */
+  index: number;
+  /** Question text */
+  question: string;
+  /** Response type (single or multiple) */
+  responseType: 'single' | 'multiple';
+  /** Array of non-empty option texts */
+  options: string[];
+}

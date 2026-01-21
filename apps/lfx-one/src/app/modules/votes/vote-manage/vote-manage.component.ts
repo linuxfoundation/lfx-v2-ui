@@ -18,10 +18,11 @@ import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 import { VoteBasicsComponent } from '../components/vote-basics/vote-basics.component';
 import { VoteQuestionComponent } from '../components/vote-question/vote-question.component';
+import { VoteReviewComponent } from '../components/vote-review/vote-review.component';
 
 @Component({
   selector: 'lfx-vote-manage',
-  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, StepperModule, VoteBasicsComponent, VoteQuestionComponent],
+  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, StepperModule, VoteBasicsComponent, VoteQuestionComponent, VoteReviewComponent],
   templateUrl: './vote-manage.component.html',
   styleUrl: './vote-manage.component.scss',
 })

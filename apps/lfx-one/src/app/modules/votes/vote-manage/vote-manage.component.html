@@ -96,17 +96,7 @@
 
           <p-step-panel [value]="3" data-testid="vote-manage-panel-3">
             <ng-template #content>
-              <!-- Step 3: Review & Confirm - To be implemented -->
-              <div class="flex flex-col gap-6">
-                <div>
-                  <h2 class="text-lg font-semibold text-gray-900 mb-1">Review & Confirm</h2>
-                  <p class="text-sm text-gray-500">Please review your vote details before creating</p>
-                </div>
-
-                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p class="text-gray-500 text-sm">Step 3 content will be implemented in the next phase.</p>
-                </div>
-              </div>
+              <lfx-vote-review [form]="form()" [isEditMode]="isEditMode()" (editStep)="goToStep($event)"> </lfx-vote-review>
             </ng-template>
           </p-step-panel>
         </div>
