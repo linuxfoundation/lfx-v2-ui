@@ -78,13 +78,13 @@
         <!-- Step Content -->
         <div class="p-6 md:p-8 min-h-[680px]">
           <p-step-panel [value]="1" data-testid="vote-manage-panel-1">
-            <ng-template #content let-activateCallback="activateCallback">
+            <ng-template #content>
               <lfx-vote-basics [form]="form()" [formValue]="formValue" [isEditMode]="isEditMode()"> </lfx-vote-basics>
             </ng-template>
           </p-step-panel>
 
           <p-step-panel [value]="2" data-testid="vote-manage-panel-2">
-            <ng-template #content let-activateCallback="activateCallback">
+            <ng-template #content>
               <lfx-vote-question
                 [form]="form()"
                 [formValue]="formValue"
@@ -95,7 +95,7 @@
           </p-step-panel>
 
           <p-step-panel [value]="3" data-testid="vote-manage-panel-3">
-            <ng-template #content let-activateCallback="activateCallback">
+            <ng-template #content>
               <!-- Step 3: Review & Confirm - To be implemented -->
               <div class="flex flex-col gap-6">
                 <div>

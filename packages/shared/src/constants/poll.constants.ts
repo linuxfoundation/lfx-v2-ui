@@ -220,7 +220,7 @@ export const VOTE_FORM_STEPS = {
 /**
  * Eligible participant options for vote creation
  * @description Defines who within the selected group is eligible to vote
- * Maps to the committee_filers field in the Vote interface
+ * Maps to the committee_filters field in the Vote interface
  * Values align with CommitteeMemberVotingStatus enum snake_case values
  */
 export const VOTE_ELIGIBLE_PARTICIPANTS = [

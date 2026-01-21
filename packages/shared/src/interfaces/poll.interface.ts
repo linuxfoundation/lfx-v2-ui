@@ -157,13 +157,8 @@ export interface Vote {
   uid: string;
   /** Alias for uid - poll identifier */
   poll_id: string;
-  /**
-   * Eligible voting roles/statuses for this poll
-   * @remarks Field name is 'committee_filers' as defined in the backend query service API.
-   * Despite the naming suggesting 'filers' (people who file), this actually represents
-   * filter criteria for eligible voting statuses (e.g., 'voting_rep', 'alternate').
-   */
-  committee_filers: string[];
+  /** Eligible voting roles/statuses for this poll */
+  committee_filters: string[];
   /** V1 committee ID */
   committee_id: string;
   /** V2 committee UID */

@@ -9,10 +9,12 @@ import { ButtonComponent } from '@components/button/button.component';
 import { COMMITTEE_LABEL, VOTE_LABEL, VOTE_TOTAL_STEPS } from '@lfx-one/shared/constants';
 import { PollStatus, PollType } from '@lfx-one/shared/enums';
 import { CommitteeReference, Vote } from '@lfx-one/shared/interfaces';
+import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
+import { trimmedMinLength, trimmedRequired, validCommitteeReference } from '@lfx-one/shared/validators';
 import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
 import { StepperModule } from 'primeng/stepper';
-import { of, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 import { VoteBasicsComponent } from '../components/vote-basics/vote-basics.component';
 import { VoteQuestionComponent } from '../components/vote-question/vote-question.component';
@@ -82,9 +84,12 @@ export class VoteManageComponent {
       if (this.isEditMode()) {
         // In edit mode, allow navigation to any step via query params
         this.router.navigate([], { queryParams: { step } });
-      } else if (step <= this.currentStep()) {
-        // In create mode, only allow going back to previous steps
-        this.internalStep.set(step);
+      } else {
+        // In create mode, allow backwards navigation freely
+        // For forward navigation, validate that we can navigate to that step
+        if (step <= this.currentStep() || this.canNavigateToStep(step)) {
+          this.internalStep.set(step);
+        }
       }
     }
   }
@@ -104,7 +109,7 @@ export class VoteManageComponent {
 
   public onSubmit(): void {
     if (this.form().invalid) {
-      this.markFormControlsAsTouched();
+      this.markAllFormControlsAsTouched();
       return;
     }
 
@@ -129,25 +134,30 @@ export class VoteManageComponent {
 
   /**
    * Create a new question FormGroup with default values
+   * Uses trimmedRequired and trimmedMinLength validators to ensure whitespace-only values are rejected
    */
   public createQuestionFormGroup(): FormGroup {
     return new FormGroup({
-      question: new FormControl('', [Validators.required, Validators.minLength(10)]),
+      question: new FormControl('', [trimmedRequired(), trimmedMinLength(10)]),
       response_type: new FormControl<'single' | 'multiple'>('single', [Validators.required]),
-      options: new FormArray(
-        [new FormControl('', [Validators.required, Validators.minLength(1)]), new FormControl('', [Validators.required, Validators.minLength(1)])],
-        [Validators.minLength(2)]
-      ),
+      options: new FormArray([this.createOptionControl(), this.createOptionControl()], [Validators.minLength(2)]),
     });
+  }
+
+  /**
+   * Create a new option FormControl with trimmed validation
+   */
+  public createOptionControl(): FormControl<string> {
+    return new FormControl('', { validators: [trimmedRequired()], nonNullable: true });
   }
 
   // Private initializer functions
   private createFormGroup(): FormGroup {
     return new FormGroup({
       // Step 1: Vote Basics
-      title: new FormControl('', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]),
+      title: new FormControl('', [trimmedRequired(), trimmedMinLength(3), Validators.maxLength(200)]),
       description: new FormControl(''),
-      committee: new FormControl<CommitteeReference | null>(null, [Validators.required]),
+      committee: new FormControl<CommitteeReference | null>(null, [Validators.required, validCommitteeReference()]),
       eligible_participants: new FormControl('', [Validators.required]),
       close_date: new FormControl<Date | null>(null, [Validators.required]),
 
@@ -209,23 +219,29 @@ export class VoteManageComponent {
   }
 
   private initCurrentStep(): Signal<number> {
+    // Derive mode directly from route params to avoid race condition with initVote()
+    // We check for 'id' param presence to determine mode, rather than relying on mode signal
     return toSignal(
-      this.route.queryParamMap.pipe(
-        switchMap((params) => {
-          // In edit mode, use query parameters
-          if (this.isEditMode()) {
-            const stepParam = params.get('step');
+      combineLatest([this.route.paramMap, this.route.queryParamMap, toObservable(this.internalStep)]).pipe(
+        map(([params, queryParams, internalStep]) => {
+          // Determine mode directly from route params (presence of 'id' means edit mode)
+          const isEditMode = !!params.get('id');
+
+          if (isEditMode) {
+            // In edit mode, use query parameters for step navigation
+            const stepParam = queryParams.get('step');
             if (stepParam) {
               const step = parseInt(stepParam, 10);
               if (step >= 1 && step <= this.totalSteps) {
-                return of(step);
+                return step;
               }
             }
-            return of(1);
+            return 1;
           }
           // In create mode, use internal step signal
-          return toObservable(this.internalStep);
-        })
+          return internalStep;
+        }),
+        distinctUntilChanged()
       ),
       { initialValue: 1 }
     );
@@ -251,10 +267,15 @@ export class VoteManageComponent {
 
     switch (step) {
       case 1: {
+        // Use form validators for all Step 1 fields
+        // Validators: title (trimmedRequired, trimmedMinLength(3), maxLength(200))
+        //             committee (required, validCommitteeReference)
+        //             eligible_participants (required)
+        //             close_date (required)
         const titleValid = !!form.get('title')?.valid;
-        const committeeValid = !!form.get('committee')?.value;
-        const eligibleParticipantsValid = !!form.get('eligible_participants')?.value;
-        const closeDateValid = !!form.get('close_date')?.value;
+        const committeeValid = !!form.get('committee')?.valid;
+        const eligibleParticipantsValid = !!form.get('eligible_participants')?.valid;
+        const closeDateValid = !!form.get('close_date')?.valid;
         return titleValid && committeeValid && eligibleParticipantsValid && closeDateValid;
       }
       case 2: {
@@ -262,13 +283,17 @@ export class VoteManageComponent {
         if (questionsArray.length === 0) {
           return false;
         }
-        // Validate each question
+        // Use form validators for all Step 2 fields
+        // Question validators: trimmedRequired, trimmedMinLength(10)
+        // Response type validators: required
+        // Options validators: trimmedRequired (via createOptionControl)
         return questionsArray.controls.every((questionGroup) => {
           const qg = questionGroup as FormGroup;
           const questionValid = !!qg.get('question')?.valid;
           const responseTypeValid = !!qg.get('response_type')?.valid;
           const optionsArray = qg.get('options') as FormArray;
-          const optionsValid = optionsArray.length >= 2 && optionsArray.controls.every((c) => c.value && c.value.trim().length > 0);
+          // Check minimum 2 options and all options are valid via their validators
+          const optionsValid = optionsArray.length >= 2 && optionsArray.controls.every((c) => c.valid);
           return questionValid && responseTypeValid && optionsValid;
         });
       }
@@ -279,12 +304,8 @@ export class VoteManageComponent {
     }
   }
 
-  private markFormControlsAsTouched(): void {
-    Object.keys(this.form().controls).forEach((key) => {
-      const control = this.form().get(key);
-      control?.markAsTouched();
-      control?.markAsDirty();
-    });
+  private markAllFormControlsAsTouched(): void {
+    markFormControlsAsTouched(this.form());
   }
 
   private getMockVote(voteId: string): Vote {
@@ -293,7 +314,7 @@ export class VoteManageComponent {
       poll_id: voteId,
       name: 'Mock Vote',
       description: 'This is a mock vote for testing',
-      committee_filers: ['voting_rep'],
+      committee_filters: ['voting_rep'],
       committee_id: 'comm-001',
       committee_uid: 'comm-001',
       committee_name: 'Technical Steering Committee',

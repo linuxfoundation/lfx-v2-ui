@@ -2,13 +2,27 @@
 /* SPDX-License-Identifier: MIT */
 
 :host ::ng-deep {
-  // Dropdown mode styling - match calendar input style
+  // Base autocomplete styling
   .p-autocomplete {
     position: relative;
 
-    // Hide the default dropdown button completely
+    .p-autocomplete-input {
+      @apply rounded-md;
+    }
+  }
+
+  // Dropdown mode styling - only applied when dropdown-mode class is present
+  .p-autocomplete.dropdown-mode {
+    // Style the dropdown button to be transparent and overlay the custom caret
+    // Preserves click interactivity for cases where completeOnFocus is false
     .p-autocomplete-dropdown {
-      display: none;
+      @apply absolute right-0 top-0 bottom-0 w-10 bg-transparent border-0 text-transparent;
+
+      // Remove any button styling
+      &:hover,
+      &:focus {
+        @apply bg-transparent border-0;
+      }
     }
 
     // Add custom dropdown caret using ::after (same as calendar)
@@ -16,28 +30,25 @@
       content: '\f078'; // Font Awesome chevron-down icon
       font-family: 'Font Awesome 6 Pro';
       font-weight: 300; // fa-light
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af; // gray-400
-      pointer-events: none;
-      font-size: 0.875rem;
+      @apply absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm;
     }
 
     .p-autocomplete-input {
-      padding-right: 2.5rem; // Make room for the icon
-      border-radius: 0.375rem; // Ensure both sides have rounded corners (rounded-md)
+      @apply pr-10; // Make room for the dropdown icon
+    }
+
+    // Clear button positioning when in dropdown mode (before the dropdown icon)
+    &.has-clear .p-autocomplete-clear-icon {
+      @apply right-9;
     }
   }
 
-  // Clear button styling
+  // Clear button base styling (applies to all modes)
   .p-autocomplete-clear-icon {
-    right: 2.25rem; // Position before the dropdown icon
-    color: #9ca3af; // gray-400
+    @apply text-gray-400;
 
     &:hover {
-      color: #6b7280; // gray-500
+      @apply text-gray-500;
     }
   }
 
