@@ -41,10 +41,10 @@
                 styleClass="w-full"
                 [dataTest]="'vote-question-textarea-' + qIdx">
               </lfx-textarea>
-              @if (questionData.questionControl.touched && questionData.questionControl.errors?.['required']) {
+              @if (questionData.questionControl.touched && questionData.questionControl.errors?.['trimmedRequired']) {
                 <p class="text-red-500 text-xs">Question is required.</p>
               }
-              @if (questionData.questionControl.touched && questionData.questionControl.errors?.['minlength']) {
+              @if (questionData.questionControl.touched && questionData.questionControl.errors?.['trimmedMinLength']) {
                 <p class="text-red-500 text-xs">Question must be at least 10 characters.</p>
               }
             </div>

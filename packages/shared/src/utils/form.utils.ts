@@ -29,11 +29,11 @@ function markAllAsDirtyRecursive(control: AbstractControl): void {
  * Recursively handles nested FormGroups and FormArrays.
  *
  * @param form - The FormGroup to mark
- * @param markDirty - Whether to also mark controls as dirty (default: true)
  * @param onlySelf - Whether to only update the form itself (not ancestors)
  * @param emitEvent - Whether to emit value/status change events
+ * @param markDirty - Whether to also mark controls as dirty (default: true)
  */
-export function markFormControlsAsTouched(form: FormGroup, markDirty: boolean = true, onlySelf: boolean = false, emitEvent: boolean = false): void {
+export function markFormControlsAsTouched(form: FormGroup, onlySelf: boolean = false, emitEvent: boolean = false, markDirty: boolean = true): void {
   form.markAllAsTouched();
 
   if (markDirty) {

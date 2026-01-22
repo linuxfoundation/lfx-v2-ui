@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, Signal } from '@angular/core';
-import { AbstractControl, FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { trimmedRequired } from '@lfx-one/shared/validators';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
@@ -52,7 +53,7 @@ export class VoteQuestionComponent {
    */
   public addOption(questionIndex: number): void {
     const optionsArray = this.questionsArray().at(questionIndex).get('options') as FormArray<FormControl<string>>;
-    optionsArray.push(new FormControl('', [Validators.required, Validators.minLength(1)]) as FormControl<string>);
+    optionsArray.push(new FormControl('', { validators: [trimmedRequired()], nonNullable: true }) as FormControl<string>);
   }
 
   /**
