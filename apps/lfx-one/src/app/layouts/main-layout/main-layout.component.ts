@@ -125,21 +125,18 @@ export class MainLayoutComponent {
       rel: 'noopener noreferrer',
     });
 
-    // Governance section - filter items based on persona
-    let governanceItems = [...this.governanceSectionItems];
-
-    // Hide Groups (Committees) for board-member persona
+    // For board members, add governance items directly to main menu
+    // For other personas, wrap them in a collapsible Governance section
     if (isBoardMember) {
-      governanceItems = governanceItems.filter((item) => item.label !== COMMITTEE_LABEL.plural);
+      items.push(...this.governanceSectionItems);
+    } else {
+      items.push({
+        label: 'Governance',
+        isSection: true,
+        expanded: true,
+        items: this.governanceSectionItems,
+      });
     }
-
-    // Add Governance section with filtered items
-    items.push({
-      label: 'Governance',
-      isSection: true,
-      expanded: true,
-      items: governanceItems,
-    });
 
     return items;
   });
