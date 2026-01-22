@@ -116,20 +116,29 @@ export class MainLayoutComponent {
       });
     }
 
-    // Add Insights URL
-    items.push({
-      label: 'Insights',
-      icon: 'fa-light fa-chart-column',
-      url: 'https://insights.linuxfoundation.org/',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    });
-
     // For board members, add governance items directly to main menu
     // For other personas, wrap them in a collapsible Governance section
     if (isBoardMember) {
       items.push(...this.governanceSectionItems);
+
+      // Add Insights URL
+      items.push({
+        label: 'Insights',
+        icon: 'fa-light fa-chart-column',
+        url: 'https://insights.linuxfoundation.org/',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      });
     } else {
+      // Add Insights URL
+      items.push({
+        label: 'Insights',
+        icon: 'fa-light fa-chart-column',
+        url: 'https://insights.linuxfoundation.org/',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      });
+
       items.push({
         label: 'Governance',
         isSection: true,
