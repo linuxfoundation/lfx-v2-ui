@@ -36,7 +36,6 @@ module.exports = defineConfig([
     languageOptions: {
       parserOptions: {
         project: './tsconfig.app.json',
-        createDefaultProgram: true,
       },
     },
     rules: {
