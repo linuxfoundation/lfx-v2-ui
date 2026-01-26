@@ -140,7 +140,7 @@ module.exports = defineConfig([
           default: ['decorated-field', 'field', 'public-constructor', 'public-method', 'protected-method', 'private-method'],
         },
       ],
-      'no-empty-function': 'warn',
+      'no-empty-function': 'off',
       '@typescript-eslint/no-empty-function': 'warn',
       '@angular-eslint/no-empty-lifecycle-method': 'off',
       '@angular-eslint/no-output-native': 'off',
