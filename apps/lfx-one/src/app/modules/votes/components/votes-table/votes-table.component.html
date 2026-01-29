@@ -62,8 +62,8 @@
       </tr>
     </ng-template>
 
-    <ng-template #body let-vote>
-      <tr [attr.data-testid]="'votes-row-' + vote.vote_uid">
+    <ng-template #body let-vote let-rowIndex="rowIndex">
+      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'votes-row-' + vote.vote_uid">
         <td>
           <button
             type="button"

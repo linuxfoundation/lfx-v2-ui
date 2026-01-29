@@ -82,8 +82,8 @@
     </ng-template>
 
     <!-- Body Template -->
-    <ng-template #body let-mailingList>
-      <tr [attr.data-testid]="'mailing-list-row-' + mailingList.uid">
+    <ng-template #body let-mailingList let-rowIndex="rowIndex">
+      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'mailing-list-row-' + mailingList.uid">
         @if (isMaintainer()) {
           <!-- Maintainer View Row -->
           <!-- Name Column -->

@@ -68,8 +68,8 @@
         }
       </tr>
     </ng-template>
-    <ng-template #body let-committee>
-      <tr [attr.data-testid]="'committee-row-' + committee.uid">
+    <ng-template #body let-committee let-rowIndex="rowIndex">
+      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'committee-row-' + committee.uid">
         <td>
           <div class="flex items-center gap-2">
             @if (isBoardMember()) {

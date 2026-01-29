@@ -177,19 +177,25 @@ export class TableComponent {
       return;
     }
 
-    // Get the row index from the DOM
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const rowIndex = rows.indexOf(row);
-
-    if (rowIndex >= 0 && rowIndex < this.value().length) {
-      const rowData = this.value()[rowIndex];
-      this.onRowSelect.emit({
-        originalEvent: event,
-        data: rowData,
-        type: 'row',
-        index: rowIndex,
-      });
+    // Get the row index from the data-row-index attribute (stable identifier)
+    // Consumers must add [attr.data-row-index]="rowIndex" to their tr elements
+    const rowIndexAttr = row.getAttribute('data-row-index');
+    if (rowIndexAttr === null) {
+      return;
     }
+
+    const rowIndex = parseInt(rowIndexAttr, 10);
+    if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= this.value().length) {
+      return;
+    }
+
+    const rowData = this.value()[rowIndex];
+    this.onRowSelect.emit({
+      originalEvent: event,
+      data: rowData,
+      type: 'row',
+      index: rowIndex,
+    });
   }
 
   // Event handlers
