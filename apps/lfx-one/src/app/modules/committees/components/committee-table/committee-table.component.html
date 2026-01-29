@@ -52,6 +52,8 @@
     [rowsPerPageOptions]="[10, 25, 50]"
     sortField="name"
     [sortOrder]="1"
+    selectionMode="single"
+    (onRowSelect)="onRowSelect($event)"
     data-testid="committee-dashboard-table">
     <ng-template #header>
       <tr>

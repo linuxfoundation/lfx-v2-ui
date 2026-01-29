@@ -52,6 +52,8 @@
     [rowsPerPageOptions]="[10, 25, 50]"
     sortField="title"
     [sortOrder]="1"
+    selectionMode="single"
+    (onRowSelect)="onRowSelect($event)"
     data-testid="mailing-list-dashboard-table">
     <!-- Header Template - Conditional based on isMaintainer -->
     <ng-template #header>

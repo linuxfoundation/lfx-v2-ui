@@ -47,6 +47,8 @@
     [rows]="10"
     [rowsPerPageOptions]="[10, 25, 50]"
     [customSort]="true"
+    selectionMode="single"
+    (onRowSelect)="onRowSelect($event)"
     data-testid="my-activity-votes-table">
     <ng-template #header>
       <tr>
@@ -61,9 +63,9 @@
     <ng-template #body let-vote>
       <tr [attr.data-testid]="'my-activity-vote-row-' + vote.poll_id">
         <td>
-          <a href="#" class="text-blue-600 hover:text-blue-700 hover:underline font-medium" [attr.data-testid]="'my-activity-vote-name-' + vote.poll_id">
+          <span class="text-blue-600 font-medium" [attr.data-testid]="'my-activity-vote-name-' + vote.poll_id">
             {{ vote.poll_name }}
-          </a>
+          </span>
         </td>
 
         <td>
