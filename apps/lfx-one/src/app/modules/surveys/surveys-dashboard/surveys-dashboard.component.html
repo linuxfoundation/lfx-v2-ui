@@ -41,8 +41,12 @@
       [hasPMOAccess]="hasPMOAccess()"
       [loading]="loading()"
       (viewResults)="onViewResults($event)"
+      (rowClick)="onRowClick($event)"
       (refresh)="refreshSurveys()"
       data-testid="surveys-table-container">
     </lfx-surveys-table>
   }
 </div>
+
+<!-- Survey Results Drawer -->
+<lfx-survey-results-drawer [(visible)]="resultsDrawerVisible" [survey]="selectedSurvey()" data-testid="survey-results-drawer"> </lfx-survey-results-drawer>

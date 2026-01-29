@@ -60,6 +60,8 @@
     [rowsPerPageOptions]="[10, 25, 50]"
     [customSort]="true"
     [loading]="loading()"
+    selectionMode="single"
+    (onRowSelect)="onRowSelect($event)"
     data-testid="surveys-table">
     <ng-template #header>
       <tr>
@@ -73,8 +75,8 @@
       </tr>
     </ng-template>
 
-    <ng-template #body let-survey>
-      <tr [attr.data-testid]="'surveys-row-' + survey.id" class="hover:bg-slate-50">
+    <ng-template #body let-survey let-rowIndex="rowIndex">
+      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + survey.id" class="hover:bg-slate-50">
         <td>
           <button
             type="button"
@@ -126,51 +128,33 @@
         <td>
           <div class="flex items-center justify-end gap-1">
             @if (hasPMOAccess() && survey.survey_status === SurveyStatus.DRAFT) {
+              <lfx-button label="Edit" severity="primary" size="small" [text]="true" [attr.data-testid]="'surveys-edit-' + survey.id"> </lfx-button>
               <lfx-button
-                icon="fa-light fa-pencil"
-                severity="secondary"
+                label="Delete"
+                severity="danger"
                 size="small"
                 [text]="true"
-                styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                [attr.data-testid]="'surveys-edit-' + survey.id"
-                pTooltip="Edit"
-                tooltipPosition="top">
-              </lfx-button>
-              <lfx-button
-                icon="fa-light fa-trash-can"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 (onClick)="onDeleteSurvey(survey)"
                 [disabled]="isDeleting()"
-                [attr.data-testid]="'surveys-delete-' + survey.id"
-                pTooltip="Delete"
-                tooltipPosition="top">
+                [attr.data-testid]="'surveys-delete-' + survey.id">
               </lfx-button>
             } @else if (survey.survey_status === SurveyStatus.SENT || survey.survey_status === SurveyStatus.OPEN) {
               <lfx-button
-                icon="fa-light fa-chart-bar"
-                severity="secondary"
+                label="Results"
+                severity="primary"
                 size="small"
                 [text]="true"
-                styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 (onClick)="onViewResults(survey.id)"
-                [attr.data-testid]="'surveys-results-' + survey.id"
-                pTooltip="View Results"
-                tooltipPosition="top">
+                [attr.data-testid]="'surveys-results-' + survey.id">
               </lfx-button>
             } @else if (survey.survey_status === SurveyStatus.CLOSED) {
               <lfx-button
-                icon="fa-light fa-chart-bar"
-                severity="secondary"
+                label="Results"
+                severity="primary"
                 size="small"
                 [text]="true"
-                styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 (onClick)="onViewResults(survey.id)"
-                [attr.data-testid]="'surveys-results-' + survey.id"
-                pTooltip="View Results"
-                tooltipPosition="top">
+                [attr.data-testid]="'surveys-results-' + survey.id">
               </lfx-button>
             }
           </div>

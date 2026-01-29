@@ -57,6 +57,7 @@ export class SurveysTableComponent {
   // === Outputs ===
   public readonly viewResults = output<string>();
   public readonly refresh = output<void>();
+  public readonly rowClick = output<Survey>();
 
   // === Writable Signals ===
   protected readonly isDeleting = signal(false);
@@ -92,6 +93,10 @@ export class SurveysTableComponent {
 
   protected onTypeChange(value: string | null): void {
     this.typeFilter.set(value);
+  }
+
+  protected onRowSelect(event: { data: Survey }): void {
+    this.rowClick.emit(event.data);
   }
 
   protected onViewResults(surveyId: string): void {

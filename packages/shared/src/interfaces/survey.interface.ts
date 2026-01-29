@@ -88,3 +88,63 @@ export interface Survey {
   /** Name of the creator */
   creator_name: string;
 }
+
+/**
+ * NPS breakdown data
+ * @description Breakdown of NPS responses into promoters, passives, and detractors
+ */
+export interface NpsBreakdown {
+  /** Number of promoters (score 9-10) */
+  promoters: number;
+  /** Number of passives (score 7-8) */
+  passives: number;
+  /** Number of detractors (score 0-6) */
+  detractors: number;
+  /** Number of non-responses */
+  nonResponses: number;
+}
+
+/**
+ * Survey comment from a participant
+ * @description Represents an individual comment submitted with a survey response
+ */
+export interface SurveyComment {
+  /** Unique comment identifier */
+  id: string;
+  /** Comment text content */
+  comment: string;
+  /** Timestamp when comment was submitted */
+  submitted_at: string;
+}
+
+/**
+ * Survey participation statistics
+ * @description Statistics about survey participation and response rates
+ */
+export interface SurveyParticipationStats {
+  /** Total number of eligible participants */
+  eligibleParticipants: number;
+  /** Total number of responses received */
+  totalResponses: number;
+  /** Participation rate as a percentage (0-100) */
+  participationRate: number;
+}
+
+/**
+ * Detailed survey results for the results drawer
+ * @description Extended survey data including NPS results and comments for display in results drawer
+ */
+export interface SurveyResultsDetail extends Survey {
+  /** NPS score (-100 to +100) - only for NPS surveys */
+  nps_score?: number;
+  /** NPS response breakdown - only for NPS surveys */
+  nps_breakdown?: NpsBreakdown;
+  /** Additional comments from participants */
+  additional_comments?: SurveyComment[];
+}
+
+/**
+ * NPS Gauge size options
+ * @description Available size presets for the NPS gauge component
+ */
+export type NpsGaugeSize = 'small' | 'medium' | 'large';
