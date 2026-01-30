@@ -27,6 +27,8 @@ export const SURVEY_STATUS_LABELS = {
   [SurveyStatus.OPEN]: 'Open',
   [SurveyStatus.CLOSED]: 'Closed',
   [SurveyStatus.SCHEDULED]: 'Scheduled',
+  [SurveyStatus.DRAFT]: 'Draft',
+  [SurveyStatus.SENT]: 'Open',
 } as const;
 
 /**
@@ -37,6 +39,8 @@ export const SURVEY_STATUS_SEVERITY: Record<SurveyStatus, TagSeverity> = {
   [SurveyStatus.OPEN]: 'info',
   [SurveyStatus.CLOSED]: 'secondary',
   [SurveyStatus.SCHEDULED]: 'warn',
+  [SurveyStatus.DRAFT]: 'warn',
+  [SurveyStatus.SENT]: 'info',
 } as const;
 
 /**
@@ -75,4 +79,13 @@ export const COMBINED_SURVEY_STATUS_SEVERITY: Record<string, TagSeverity> = {
   open: 'info',
   submitted: 'success',
   closed: 'secondary',
+} as const;
+
+/**
+ * Survey type display labels
+ * @description Human-readable labels for survey types based on is_nps_survey flag
+ */
+export const SURVEY_TYPE_LABELS = {
+  nps: 'NPS Survey',
+  standard: 'Standard Survey',
 } as const;
