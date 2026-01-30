@@ -59,6 +59,18 @@ export class SurveysDashboardComponent {
     this.refresh$.next();
   }
 
+  protected onDuplicateSurvey(surveyId: string): void {
+    // TODO: Implement survey duplication when API is available
+    console.warn('Survey duplication not yet implemented for:', surveyId);
+    this.resultsDrawerVisible.set(false);
+  }
+
+  protected onCloseSurvey(surveyId: string): void {
+    // TODO: Implement survey close when API is available
+    console.warn('Survey close not yet implemented for:', surveyId);
+    this.resultsDrawerVisible.set(false);
+  }
+
   // === Private Initializers ===
   private initProject(): Signal<ProjectContext | null> {
     return computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());

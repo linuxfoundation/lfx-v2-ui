@@ -49,4 +49,11 @@
 </div>
 
 <!-- Survey Results Drawer -->
-<lfx-survey-results-drawer [(visible)]="resultsDrawerVisible" [survey]="selectedSurvey()" data-testid="survey-results-drawer"> </lfx-survey-results-drawer>
+<lfx-survey-results-drawer
+  [(visible)]="resultsDrawerVisible"
+  [survey]="selectedSurvey()"
+  [hasPMOAccess]="hasPMOAccess()"
+  (duplicate)="onDuplicateSurvey($event)"
+  (closeSurvey)="onCloseSurvey($event)"
+  data-testid="survey-results-drawer">
+</lfx-survey-results-drawer>
