@@ -59,10 +59,11 @@ export class SurveyEmailDraftComponent {
    * Open email preview dialog
    */
   public openPreview(): void {
-    const formValues = this.formValue()();
-    const data: SurveyEmailPreviewData = {
-      subject: (formValues['emailSubject'] as string) || '',
-      body: (formValues['emailBody'] as string) || '',
+    // Double invocation is intentional: formValue is an input.required<Signal<Record<string, unknown>>>()
+    // First () unwraps the InputSignal to get the Signal, second () invokes that Signal to get the value
+    const emailPreviewData: SurveyEmailPreviewData = {
+      subject: this.form().get('emailSubject')?.value as string,
+      body: this.form().get('emailBody')?.value as string,
     };
 
     this.dialogService.open(SurveyEmailPreviewDialogComponent, {
@@ -71,7 +72,7 @@ export class SurveyEmailDraftComponent {
       modal: true,
       closable: true,
       dismissableMask: true,
-      data,
+      data: emailPreviewData,
     });
   }
 }

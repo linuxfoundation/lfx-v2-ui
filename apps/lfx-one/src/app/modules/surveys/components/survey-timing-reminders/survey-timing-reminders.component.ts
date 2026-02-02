@@ -29,6 +29,7 @@ export class SurveyTimingRemindersComponent {
   // Computed signals for conditional rendering
   public readonly distributionMethod: Signal<SurveyDistributionMethod> = this.initDistributionMethod();
   public readonly reminderType: Signal<SurveyReminderType> = this.initReminderType();
+  public readonly scheduledDate: Signal<Date | null> = this.initScheduledDate();
   public readonly isScheduled: Signal<boolean> = computed(() => this.distributionMethod() === 'scheduled');
   public readonly isAutomatic: Signal<boolean> = computed(() => this.reminderType() === 'automatic');
 
@@ -102,10 +103,31 @@ export class SurveyTimingRemindersComponent {
     );
   }
 
+  private initScheduledDate(): Signal<Date | null> {
+    const formControl$ = toObservable(computed(() => this.form().get('scheduledDate')));
+
+    return toSignal(
+      formControl$.pipe(
+        switchMap((formControl) => {
+          if (!formControl) {
+            return of(null);
+          }
+          return formControl.valueChanges.pipe(
+            startWith(formControl.value),
+            map((value) => (value as Date | null) || null)
+          );
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
   private initMinCutoffDate(): Signal<Date> {
+    // Uses scheduledDate signal (not form control value directly) to establish proper
+    // signal dependency. This ensures minCutoffDate re-evaluates when scheduledDate changes.
     return computed(() => {
       if (this.isScheduled()) {
-        const scheduledDate = this.form().get('scheduledDate')?.value as Date | null;
+        const scheduledDate = this.scheduledDate();
         if (scheduledDate) {
           return scheduledDate;
         }

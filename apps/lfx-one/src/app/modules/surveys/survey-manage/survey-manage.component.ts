@@ -119,7 +119,9 @@ export class SurveyManageComponent {
   }
 
   public onSubmit(): void {
-    if (this.form().invalid) {
+    // Validate all steps - form().invalid only checks fields with defined validators,
+    // but some fields like scheduledDate have conditional requirements enforced in isStepValid
+    if (this.form().invalid || !this.areAllStepsValid()) {
       this.markAllFormControlsAsTouched();
       return;
     }
@@ -143,6 +145,21 @@ export class SurveyManageComponent {
 
   public isCurrentStepValid(): boolean {
     return this.isStepValid(this.currentStep());
+  }
+
+  /**
+   * Validates all steps before submission
+   * This is necessary because form().invalid only checks fields with defined validators,
+   * but conditional requirements (like scheduledDate when distributionMethod is 'scheduled')
+   * are enforced in isStepValid and would otherwise be bypassed during submission
+   */
+  private areAllStepsValid(): boolean {
+    for (let step = 1; step <= this.totalSteps; step++) {
+      if (!this.isStepValid(step)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Private methods
