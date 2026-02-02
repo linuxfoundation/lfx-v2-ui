@@ -148,3 +148,119 @@ export interface SurveyResultsDetail extends Survey {
  * @description Available size presets for the NPS gauge component
  */
 export type NpsGaugeSize = 'small' | 'medium' | 'large';
+
+// ============================================================================
+// Survey Manage Form Interfaces
+// ============================================================================
+
+/**
+ * Survey manage mode
+ * @description Determines if we're creating or editing a survey
+ */
+export type SurveyManageMode = 'create' | 'edit';
+
+/**
+ * Survey type for survey creation
+ * @description Determines the type of survey being created
+ */
+export type SurveyType = 'nps' | 'standard';
+
+/**
+ * Survey reminder frequency
+ * @description How often to send reminder emails
+ */
+export type SurveyReminderFrequency = 'none' | 'once' | 'weekly' | 'daily';
+
+/**
+ * Survey distribution method
+ * @description When the survey should be distributed
+ */
+export type SurveyDistributionMethod = 'immediate' | 'scheduled';
+
+/**
+ * Survey reminder type
+ * @description How reminders should be sent
+ */
+export type SurveyReminderType = 'automatic' | 'manual';
+
+/**
+ * Survey form data structure
+ * @description Represents the form data for creating/editing a survey
+ */
+export interface SurveyFormData {
+  // Step 1: Audience & Type
+  /** Title of the survey */
+  title: string;
+  /** Selected committees/groups */
+  committees: CommitteeReference[];
+  /** Target audience filter (who receives the survey) */
+  audience: string;
+  /** Selected survey template */
+  surveyTemplate: string;
+
+  // Step 2: Timing & Reminders
+  /** Distribution method (immediate or scheduled) */
+  distributionMethod: SurveyDistributionMethod;
+  /** Scheduled date (only when distributionMethod is 'scheduled') */
+  scheduledDate: Date | null;
+  /** Survey cutoff/close date */
+  cutoffDate: Date | null;
+  /** Reminder type (automatic or manual) */
+  reminderType: SurveyReminderType;
+  /** Reminder frequency setting (only when reminderType is 'automatic') */
+  reminderFrequency: SurveyReminderFrequency;
+
+  // Step 3: Email Draft
+  /** Email subject line */
+  emailSubject: string;
+  /** Email body content */
+  emailBody: string;
+}
+
+/**
+ * Survey review form values
+ * @description Raw form values extracted for the review step display
+ */
+export interface SurveyReviewFormValue {
+  /** Selected survey template */
+  surveyTemplate: string;
+  /** Selected committees/groups */
+  committees: CommitteeReference[];
+  /** Distribution method (immediate or scheduled) */
+  distributionMethod: SurveyDistributionMethod;
+  /** Scheduled date (only when distributionMethod is 'scheduled') */
+  scheduledDate: Date | null;
+  /** Survey cutoff/close date */
+  cutoffDate: Date | null;
+  /** Reminder type (automatic or manual) */
+  reminderType: SurveyReminderType;
+  /** Reminder frequency value as string */
+  reminderFrequency: string;
+  /** Email subject line */
+  emailSubject: string;
+  /** Email body content */
+  emailBody: string;
+}
+
+/**
+ * Survey review data for display
+ * @description Formatted data for the review step
+ */
+export interface SurveyReviewData {
+  /** Display title */
+  title: string;
+  /** Committee/group name */
+  committeeName: string;
+  /** Audience description */
+  audienceLabel: string;
+  /** Survey type label */
+  surveyTypeLabel: string;
+  /** Formatted close date */
+  closeDateFormatted: string;
+  /** Reminder frequency label */
+  reminderLabel: string;
+  /** Email subject */
+  emailSubject: string;
+  /** Email body preview */
+  emailBodyPreview: string;
+}
