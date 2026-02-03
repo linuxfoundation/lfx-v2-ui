@@ -7,7 +7,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SURVEY_AUTO_REMINDER_FREQUENCY_OPTIONS, SURVEY_EMAIL_PREVIEW_SAMPLE_DATA, SURVEY_TEMPLATE_OPTIONS } from '@lfx-one/shared/constants';
 import { CommitteeReference, SurveyDistributionMethod, SurveyReminderType, SurveyReviewFormValue } from '@lfx-one/shared/interfaces';
-import { map, startWith } from 'rxjs';
+import { map, startWith, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-survey-review',
@@ -63,21 +63,18 @@ export class SurveyReviewComponent {
   private initReviewData(): Signal<SurveyReviewFormValue> {
     return toSignal(
       toObservable(computed(() => this.form())).pipe(
-        map((form) => form.valueChanges.pipe(startWith(form.value))),
-        map(() => {
-          const form = this.form();
-          return {
-            surveyTemplate: form.get('surveyTemplate')?.value || '',
-            committees: (form.get('committees')?.value as CommitteeReference[]) || [],
-            distributionMethod: (form.get('distributionMethod')?.value as SurveyDistributionMethod) || 'immediate',
-            scheduledDate: form.get('scheduledDate')?.value || null,
-            cutoffDate: form.get('cutoffDate')?.value || null,
-            reminderType: (form.get('reminderType')?.value as SurveyReminderType) || 'automatic',
-            reminderFrequency: form.get('reminderFrequency')?.value || '7',
-            emailSubject: form.get('emailSubject')?.value || '',
-            emailBody: form.get('emailBody')?.value || '',
-          };
-        })
+        switchMap((form) => form.valueChanges.pipe(startWith(form.value))),
+        map((formValue) => ({
+          surveyTemplate: formValue.surveyTemplate || '',
+          committees: (formValue.committees as CommitteeReference[]) || [],
+          distributionMethod: (formValue.distributionMethod as SurveyDistributionMethod) || 'immediate',
+          scheduledDate: formValue.scheduledDate || null,
+          cutoffDate: formValue.cutoffDate || null,
+          reminderType: (formValue.reminderType as SurveyReminderType) || 'automatic',
+          reminderFrequency: formValue.reminderFrequency || '7',
+          emailSubject: formValue.emailSubject || '',
+          emailBody: formValue.emailBody || '',
+        }))
       ),
       {
         initialValue: {

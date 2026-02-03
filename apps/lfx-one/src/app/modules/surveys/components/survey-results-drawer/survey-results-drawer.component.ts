@@ -58,6 +58,7 @@ export class SurveyResultsDrawerComponent {
 
   // === Protected Methods ===
   protected onClose(): void {
+    this.showAdminMenu.set(false);
     this.visible.set(false);
   }
 
