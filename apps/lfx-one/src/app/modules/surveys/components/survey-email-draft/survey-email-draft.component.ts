@@ -73,6 +73,7 @@ export class SurveyEmailDraftComponent {
       closable: true,
       dismissableMask: true,
       data: emailPreviewData,
+      draggable: false,
     });
   }
 }

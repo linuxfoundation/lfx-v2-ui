@@ -70,6 +70,7 @@ export class SurveyManageComponent {
   public readonly isFirstStep: Signal<boolean> = this.initIsFirstStep();
   public readonly isLastStep: Signal<boolean> = this.initIsLastStep();
   public currentStep: Signal<number> = this.initCurrentStep();
+  public readonly submitButtonLabel: Signal<string> = this.initSubmitButtonLabel();
 
   public nextStep(): void {
     const next = this.currentStep() + 1;
@@ -292,6 +293,17 @@ Thank you,
 
   private initIsLastStep(): Signal<boolean> {
     return computed(() => this.currentStep() === this.totalSteps);
+  }
+
+  private initSubmitButtonLabel(): Signal<string> {
+    return computed(() => {
+      if (this.isEditMode()) {
+        return 'Save Changes';
+      }
+      const formValue = this.formValue();
+      const distributionMethod = formValue['distributionMethod'] as SurveyDistributionMethod;
+      return distributionMethod === 'scheduled' ? `Schedule ${this.surveyLabel.singular}` : `Send ${this.surveyLabel.singular}`;
+    });
   }
 
   private initCurrentStep(): Signal<number> {

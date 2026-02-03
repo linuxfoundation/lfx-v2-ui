@@ -23,13 +23,13 @@
     [value]="currentStep()"
     (valueChange)="goToStep($event)"
     [linear]="!isEditMode()"
-    styleClass="survey-manage-stepper mb-6"
+    class="survey-manage-stepper mb-6"
     data-testid="survey-manage-stepper">
     <p-step-list>
-      <p-step [value]="1" data-testid="survey-manage-step-1"></p-step>
-      <p-step [value]="2" data-testid="survey-manage-step-2"></p-step>
-      <p-step [value]="3" data-testid="survey-manage-step-3"></p-step>
-      <p-step [value]="4" data-testid="survey-manage-step-4"></p-step>
+      <p-step [value]="1" data-testid="survey-manage-step-1">Audience & Type</p-step>
+      <p-step [value]="2" data-testid="survey-manage-step-2">Timing & Reminders</p-step>
+      <p-step [value]="3" data-testid="survey-manage-step-3">Email Draft</p-step>
+      <p-step [value]="4" data-testid="survey-manage-step-4">Review & Confirm</p-step>
     </p-step-list>
 
     <p-step-panels>
@@ -56,13 +56,8 @@
             </lfx-button>
 
             @if (isLastStep()) {
-              <!-- Send Survey Button -->
-              <lfx-button
-                [label]="isEditMode() ? 'Save Changes' : 'Send ' + surveyLabel.singular"
-                [loading]="submitting()"
-                severity="info"
-                (onClick)="onSubmit()"
-                data-testid="survey-manage-submit-btn">
+              <!-- Submit Survey Button -->
+              <lfx-button [label]="submitButtonLabel()" [loading]="submitting()" severity="info" (onClick)="onSubmit()" data-testid="survey-manage-submit-btn">
               </lfx-button>
             } @else {
               <!-- Next Button -->

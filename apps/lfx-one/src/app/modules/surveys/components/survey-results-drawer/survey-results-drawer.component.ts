@@ -6,6 +6,7 @@ import { Component, computed, effect, input, model, output, signal, Signal } fro
 import { NpsGaugeComponent } from '@components/nps-gauge/nps-gauge.component';
 import { SurveyStatus } from '@lfx-one/shared';
 import { NpsBreakdown, SurveyParticipationStats, SurveyResultsDetail } from '@lfx-one/shared/interfaces';
+import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { SurveyStatusLabelPipe } from '@pipes/survey-status-label.pipe';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -41,7 +42,6 @@ export class SurveyResultsDrawerComponent {
   protected readonly groupName: Signal<string> = this.initGroupName();
   protected readonly hasComments: Signal<boolean> = this.initHasComments();
   protected readonly commentsCount: Signal<number> = this.initCommentsCount();
-  protected readonly surveyStatus: Signal<SurveyStatus> = this.initSurveyStatus();
 
   // === Constructor ===
   public constructor() {
@@ -94,7 +94,9 @@ export class SurveyResultsDrawerComponent {
   private initIsSurveyClosed(): Signal<boolean> {
     return computed(() => {
       const s = this.survey();
-      return s?.survey_status === SurveyStatus.CLOSED;
+      if (!s) return false;
+      const displayStatus = getSurveyDisplayStatus(s);
+      return displayStatus === SurveyStatus.CLOSED;
     });
   }
 
@@ -186,13 +188,6 @@ export class SurveyResultsDrawerComponent {
     return computed(() => {
       const s = this.survey();
       return s?.additional_comments?.length ?? 0;
-    });
-  }
-
-  private initSurveyStatus(): Signal<SurveyStatus> {
-    return computed(() => {
-      const s = this.survey();
-      return (s?.survey_status as SurveyStatus) ?? SurveyStatus.DRAFT;
     });
   }
 }
