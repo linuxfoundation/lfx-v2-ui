@@ -47,8 +47,10 @@ export class MyMeetingsComponent {
       for (const meeting of this.allMeetings()) {
         // Process occurrences if they exist - find the FIRST active occurrence for today
         if (meeting.occurrences && meeting.occurrences.length > 0) {
-          // Get only active (non-cancelled) occurrences
-          const activeOccurrences = getActiveOccurrences(meeting.occurrences);
+          // Get only active (non-cancelled) occurrences, sorted by start_time for stable selection
+          const activeOccurrences = getActiveOccurrences(meeting.occurrences).sort(
+            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+          );
 
           // Find the first occurrence that's happening today and hasn't ended
           const todayOccurrence = activeOccurrences.find((occurrence) => {
@@ -107,8 +109,10 @@ export class MyMeetingsComponent {
       for (const meeting of this.allMeetings()) {
         // Process occurrences if they exist - find the FIRST active occurrence after today
         if (meeting.occurrences && meeting.occurrences.length > 0) {
-          // Get only active (non-cancelled) occurrences
-          const activeOccurrences = getActiveOccurrences(meeting.occurrences);
+          // Get only active (non-cancelled) occurrences, sorted by start_time for stable selection
+          const activeOccurrences = getActiveOccurrences(meeting.occurrences).sort(
+            (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+          );
 
           // Find the first occurrence that's after today
           const upcomingOccurrence = activeOccurrences.find((occurrence) => {

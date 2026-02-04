@@ -6,18 +6,18 @@ import { CreatePollQuestion, CreateVoteRequest, QuestionFormValue, VoteFormValue
 /**
  * Maps UI eligibility value to API committee_filters
  * @param eligibility - The eligibility value from the form (e.g., 'voting_rep', 'voting_rep,alternate_voting_rep', 'all')
- * @returns Array of committee filter strings for the API
+ * @returns Array of committee filter strings for the API (snake_case format)
  */
 export function mapEligibilityToFilters(eligibility: string): string[] {
   switch (eligibility) {
     case 'voting_rep':
-      return ['Voting Rep'];
+      return ['voting_rep'];
     case 'voting_rep,alternate_voting_rep':
-      return ['Voting Rep', 'Alternate Voting Rep'];
+      return ['voting_rep', 'alternate_voting_rep'];
     case 'all':
-      return ['Voting Rep', 'Alternate Voting Rep', 'Observer', 'Emeritus'];
+      return ['voting_rep', 'alternate_voting_rep', 'observer', 'emeritus'];
     default:
-      return ['Voting Rep'];
+      return ['voting_rep'];
   }
 }
 

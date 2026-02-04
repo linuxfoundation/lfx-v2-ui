@@ -132,9 +132,23 @@ export class UserController {
         return;
       }
 
-      // Extract optional limit parameter
+      // Extract and validate optional limit parameter
       const limitParam = req.query['limit'] as string | undefined;
-      const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+      let limit: number | undefined;
+      if (limitParam !== undefined) {
+        const parsedLimit = parseInt(limitParam, 10);
+        if (isNaN(parsedLimit) || parsedLimit <= 0) {
+          const validationError = ServiceValidationError.forField('limit', 'limit must be a positive integer', {
+            operation: 'get_user_meetings',
+            service: 'user_controller',
+            path: req.path,
+          });
+
+          next(validationError);
+          return;
+        }
+        limit = parsedLimit;
+      }
 
       // Get user's meetings from service
       const query = { tags_all: `project_uid:${projectUid}` };
