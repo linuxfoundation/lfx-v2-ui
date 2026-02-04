@@ -97,10 +97,12 @@ export class UserController {
    * Returns meetings the user is registered for or has access to, filtered by project
    * TODO: DEMO - Revisit this after the demo as this is not an efficient way of getting current users meetings
    * @query projectUid - Required project UID to filter meetings
+   * @query limit - Optional limit on number of meetings to return
    */
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_meetings', {
       project_uid: req.query['projectUid'],
+      limit: req.query['limit'],
     });
 
     try {
@@ -130,13 +132,18 @@ export class UserController {
         return;
       }
 
+      // Extract optional limit parameter
+      const limitParam = req.query['limit'] as string | undefined;
+      const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+
       // Get user's meetings from service
       const query = { tags_all: `project_uid:${projectUid}` };
-      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid, query);
+      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid, query, limit);
 
       logger.success(req, 'get_user_meetings', startTime, {
         project_uid: projectUid,
         meeting_count: meetings.length,
+        limit,
       });
 
       res.json(meetings);
