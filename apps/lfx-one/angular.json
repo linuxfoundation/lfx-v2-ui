@@ -62,7 +62,18 @@
               "safe-buffer",
               "lodash.isempty"
             ],
-            "externalDependencies": ["snowflake-sdk"]
+            "externalDependencies": [
+              "snowflake-sdk",
+              "express",
+              "@opentelemetry/api",
+              "@opentelemetry/sdk-node",
+              "@opentelemetry/exporter-trace-otlp-proto",
+              "@opentelemetry/instrumentation-http",
+              "@opentelemetry/instrumentation-express",
+              "@opentelemetry/instrumentation-undici",
+              "@opentelemetry/resources",
+              "@opentelemetry/semantic-conventions"
+            ]
           },
           "configurations": {
             "production": {

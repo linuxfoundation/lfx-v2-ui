@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import { SNOWFLAKE_CONFIG } from '@lfx-one/shared/constants';
 import { SnowflakeLockStrategy } from '@lfx-one/shared/enums';
 import { LockStats, SnowflakePoolStats, SnowflakeQueryOptions, SnowflakeQueryResult } from '@lfx-one/shared/interfaces';
@@ -9,6 +10,8 @@ import snowflakeSdk from 'snowflake-sdk';
 import { MicroserviceError } from '../errors';
 import { LockManager } from '../utils/lock-manager';
 import { logger } from './logger.service';
+
+const tracer = trace.getTracer('lfx-one-ssr');
 
 import type { Bind, Connection, ConnectionOptions, LogLevel, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
 const { createPool } = snowflakeSdk;
@@ -85,68 +88,96 @@ export class SnowflakeService {
     // Generate query hash for deduplication
     const queryHash = this.lockManager.hashQuery(sqlText, binds);
 
+    const sqlOp = sqlText.trim().split(/\s+/)[0]?.toUpperCase() || 'QUERY';
+
     // Execute with lock to prevent duplicate queries
-    return this.lockManager.executeLocked(queryHash, async () => {
-      const startTime = Date.now();
-      logger.startOperation(undefined, 'snowflake_query', {
-        query_hash: queryHash,
-        sql_preview: sqlText.substring(0, 100),
-        bind_count: binds?.length || 0,
-      });
-
-      const pool = await this.ensurePool();
-
-      try {
-        // Execute query with parameterized binds
-        const result: any = await new Promise((resolve, reject) => {
-          pool.use(async (connection: Connection) => {
-            connection.execute({
-              sqlText,
-              binds: binds as any[],
-              fetchAsString: options?.fetchAsString,
-              complete: (err: SnowflakeError | undefined, stmt: RowStatement, rows: any[] | undefined) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve({
-                    rows,
-                    metadata: stmt.getColumns(),
-                    statementHandle: stmt.getQueryId(),
-                  });
-                }
-              },
-            });
-          });
-        });
-
-        const poolStats = this.getPoolStats();
-
-        logger.success(undefined, 'snowflake_query', startTime, {
-          query_hash: queryHash,
-          row_count: result.rows.length,
-          pool_active: poolStats.activeConnections,
-          pool_idle: poolStats.idleConnections,
-        });
-
-        return result as SnowflakeQueryResult<T>;
-      } catch (error) {
-        logger.error(undefined, 'snowflake_query', startTime, error instanceof Error ? error : new Error(String(error)), {
-          query_hash: queryHash,
-          sql_preview: sqlText.substring(0, 100),
-        });
-
-        // Wrap Snowflake SDK errors in MicroserviceError for proper error handling
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new MicroserviceError(`Snowflake query execution failed: ${errorMessage}`, 500, 'SNOWFLAKE_QUERY_ERROR', {
-          operation: 'snowflake_query_execution',
-          service: 'snowflake',
-          errorBody: {
-            query_hash: queryHash,
-            duration_ms: Date.now() - startTime,
+    return this.lockManager.executeLocked(queryHash, () => {
+      return tracer.startActiveSpan(
+        `Snowflake ${sqlOp}`,
+        {
+          kind: SpanKind.CLIENT,
+          attributes: {
+            'db.system.name': 'snowflake',
+            'db.operation.name': sqlOp,
+            'db.query.summary': sqlText.substring(0, 100),
+            'db.namespace': process.env['SNOWFLAKE_DATABASE'] || '',
+            'server.address': process.env['SNOWFLAKE_ACCOUNT'] || '',
           },
-          originalError: error instanceof Error ? error : undefined,
-        });
-      }
+        },
+        async (span) => {
+          const startTime = Date.now();
+          logger.startOperation(undefined, 'snowflake_query', {
+            query_hash: queryHash,
+            sql_preview: sqlText.substring(0, 100),
+            bind_count: binds?.length || 0,
+          });
+
+          const pool = await this.ensurePool();
+
+          try {
+            // Execute query with parameterized binds
+            const result: any = await new Promise((resolve, reject) => {
+              pool.use(async (connection: Connection) => {
+                connection.execute({
+                  sqlText,
+                  binds: binds as any[],
+                  fetchAsString: options?.fetchAsString,
+                  complete: (err: SnowflakeError | undefined, stmt: RowStatement, rows: any[] | undefined) => {
+                    if (err) {
+                      reject(err);
+                    } else {
+                      resolve({
+                        rows,
+                        metadata: stmt.getColumns(),
+                        statementHandle: stmt.getQueryId(),
+                      });
+                    }
+                  },
+                });
+              });
+            });
+
+            const poolStats = this.getPoolStats();
+
+            span.setStatus({ code: SpanStatusCode.OK });
+            span.setAttribute('db.response.returned_rows', result.rows.length);
+
+            logger.success(undefined, 'snowflake_query', startTime, {
+              query_hash: queryHash,
+              row_count: result.rows.length,
+              pool_active: poolStats.activeConnections,
+              pool_idle: poolStats.idleConnections,
+            });
+
+            return result as SnowflakeQueryResult<T>;
+          } catch (error) {
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            span.recordException(error instanceof Error ? error : new Error(String(error)));
+
+            logger.error(undefined, 'snowflake_query', startTime, error instanceof Error ? error : new Error(String(error)), {
+              query_hash: queryHash,
+              sql_preview: sqlText.substring(0, 100),
+            });
+
+            // Wrap Snowflake SDK errors in MicroserviceError for proper error handling
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new MicroserviceError(`Snowflake query execution failed: ${errorMessage}`, 500, 'SNOWFLAKE_QUERY_ERROR', {
+              operation: 'snowflake_query_execution',
+              service: 'snowflake',
+              errorBody: {
+                query_hash: queryHash,
+                duration_ms: Date.now() - startTime,
+              },
+              originalError: error instanceof Error ? error : undefined,
+            });
+          } finally {
+            span.end();
+          }
+        }
+      );
     });
   }
 

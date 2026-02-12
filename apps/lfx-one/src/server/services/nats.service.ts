@@ -1,10 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
 import { logger } from './logger.service';
+
+const tracer = trace.getTracer('lfx-one-ssr');
 
 /**
  * Generic NATS service for managing connections and request-reply operations
@@ -34,14 +37,38 @@ export class NatsService {
       timeout: options?.timeout || NATS_CONFIG.REQUEST_TIMEOUT,
     };
 
-    const startTime = Date.now();
-
-    try {
-      return await connection.request(subject, data, requestOptions);
-    } catch (error) {
-      logger.error(undefined, 'nats_request', startTime, error, { subject });
-      throw error;
-    }
+    return tracer.startActiveSpan(
+      `NATS request ${subject}`,
+      {
+        kind: SpanKind.CLIENT,
+        attributes: {
+          'messaging.system': 'nats',
+          'messaging.operation.type': 'send',
+          'messaging.destination.name': subject,
+          'network.protocol.name': 'nats',
+          'server.address': process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL,
+        },
+      },
+      async (span) => {
+        const startTime = Date.now();
+        try {
+          const response = await connection.request(subject, data, requestOptions);
+          span.setStatus({ code: SpanStatusCode.OK });
+          span.setAttribute('messaging.message.body.size', response.data.length);
+          return response;
+        } catch (error) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          span.recordException(error instanceof Error ? error : new Error(String(error)));
+          logger.error(undefined, 'nats_request', startTime, error, { subject });
+          throw error;
+        } finally {
+          span.end();
+        }
+      }
+    );
   }
 
   /**

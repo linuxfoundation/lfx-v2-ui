@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { trace } from '@opentelemetry/api';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
@@ -35,12 +36,22 @@ export const serverLogger = pino(
       version: process.env['APP_VERSION'] || '1.0.0',
     },
     mixin: () => {
+      const mixinData: Record<string, unknown> = {};
+
       const traceHeader = process.env['_X_AMZN_TRACE_ID'];
       if (traceHeader) {
-        const traceId = traceHeader.split(';')[0]?.replace('Root=', '');
-        return { aws_trace_id: traceId };
+        mixinData['aws_trace_id'] = traceHeader.split(';')[0]?.replace('Root=', '');
       }
-      return {};
+
+      const activeSpan = trace.getActiveSpan();
+      if (activeSpan) {
+        const spanContext = activeSpan.spanContext();
+        mixinData['trace_id'] = spanContext.traceId;
+        mixinData['span_id'] = spanContext.spanId;
+        mixinData['trace_flags'] = spanContext.traceFlags;
+      }
+
+      return mixinData;
     },
     serializers: {
       err: customErrorSerializer,
