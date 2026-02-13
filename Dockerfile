@@ -6,6 +6,7 @@ FROM node:22-alpine AS builder
 
 # Set build environment
 ARG BUILD_ENV=production
+ARG APP_VERSION=development
 
 # Enable Corepack for Yarn
 RUN corepack enable
@@ -31,6 +32,9 @@ RUN yarn workspace @lfx-one/shared build:${BUILD_ENV}
 # Note: Client IDs (LaunchDarkly, DataDog RUM) are now injected at runtime
 # via environment variables (LD_CLIENT_ID, DD_RUM_CLIENT_ID, DD_RUM_APPLICATION_ID)
 RUN yarn workspace lfx-one-ui build:${BUILD_ENV}
+
+# Pass APP_VERSION to runtime for OTEL service version
+ENV APP_VERSION=${APP_VERSION}
 
 # Expose port 4000
 EXPOSE 4000

@@ -2,21 +2,31 @@
 // SPDX-License-Identifier: MIT
 
 import otelApi from '@opentelemetry/api';
-import otelExporter from '@opentelemetry/exporter-trace-otlp-proto';
+import otelCore from '@opentelemetry/core';
+import otelExporterGrpc from '@opentelemetry/exporter-trace-otlp-grpc';
+import otelExporterProto from '@opentelemetry/exporter-trace-otlp-proto';
 import otelExpress from '@opentelemetry/instrumentation-express';
 import otelHttp from '@opentelemetry/instrumentation-http';
 import otelUndici from '@opentelemetry/instrumentation-undici';
+import otelB3 from '@opentelemetry/propagator-b3';
+import otelJaeger from '@opentelemetry/propagator-jaeger';
 import otelResources from '@opentelemetry/resources';
 import otelSdk from '@opentelemetry/sdk-node';
+import otelTraceBase from '@opentelemetry/sdk-trace-base';
 import otelSemconv from '@opentelemetry/semantic-conventions';
 
 const { diag, DiagConsoleLogger, DiagLogLevel } = otelApi;
-const { OTLPTraceExporter } = otelExporter;
+const { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } = otelCore;
+const { OTLPTraceExporter: OTLPTraceExporterGrpc } = otelExporterGrpc;
+const { OTLPTraceExporter: OTLPTraceExporterProto } = otelExporterProto;
 const { ExpressInstrumentation } = otelExpress;
 const { HttpInstrumentation } = otelHttp;
 const { UndiciInstrumentation } = otelUndici;
+const { B3Propagator, B3InjectEncoding } = otelB3;
+const { JaegerPropagator } = otelJaeger;
 const { resourceFromAttributes } = otelResources;
 const { NodeSDK } = otelSdk;
+const { TraceIdRatioBasedSampler, ParentBasedSampler } = otelTraceBase;
 const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = otelSemconv;
 
 const otlpEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
@@ -28,19 +38,55 @@ if (!otlpEndpoint) {
     diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
   }
 
+  const serviceName = process.env['OTEL_SERVICE_NAME'] || 'lfx-v2-ui';
+  const serviceVersion = process.env['APP_VERSION'] || 'development';
+
   const resource = resourceFromAttributes({
-    [ATTR_SERVICE_NAME]: process.env['OTEL_SERVICE_NAME'] || 'lfx-one-ssr',
-    [ATTR_SERVICE_VERSION]: process.env['APP_VERSION'] || '1.0.0',
+    [ATTR_SERVICE_NAME]: serviceName,
+    [ATTR_SERVICE_VERSION]: serviceVersion,
     'deployment.environment': process.env['NODE_ENV'] || 'development',
   });
 
-  const traceExporter = new OTLPTraceExporter({
-    url: `${otlpEndpoint}/v1/traces`,
+  // Exporter protocol: grpc or http/protobuf (default)
+  const protocol = process.env['OTEL_EXPORTER_OTLP_PROTOCOL'] || 'http/protobuf';
+  let traceExporter;
+  if (protocol === 'grpc') {
+    traceExporter = new OTLPTraceExporterGrpc({ url: otlpEndpoint });
+  } else {
+    traceExporter = new OTLPTraceExporterProto({ url: `${otlpEndpoint}/v1/traces` });
+  }
+
+  // Trace sampling ratio (0.0 to 1.0, default 1.0 = sample everything)
+  const traceRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
+  const sampler = new ParentBasedSampler({
+    root: new TraceIdRatioBasedSampler(traceRatio),
   });
+
+  // Propagators: comma-separated list (default: tracecontext,baggage)
+  const propagatorNames = (process.env['OTEL_PROPAGATORS'] || 'tracecontext,baggage').split(',').map((p) => p.trim());
+  const propagatorMap = {
+    tracecontext: () => new W3CTraceContextPropagator(),
+    baggage: () => new W3CBaggagePropagator(),
+    b3: () => new B3Propagator(),
+    b3multi: () => new B3Propagator({ injectEncoding: B3InjectEncoding.MULTI_HEADER }),
+    jaeger: () => new JaegerPropagator(),
+  };
+  const propagators = propagatorNames
+    .filter((name) => {
+      if (!propagatorMap[name]) {
+        console.warn(`[otel] Unknown propagator: ${name}, skipping`);
+        return false;
+      }
+      return true;
+    })
+    .map((name) => propagatorMap[name]());
+  const textMapPropagator = new CompositePropagator({ propagators });
 
   const sdk = new NodeSDK({
     resource,
     traceExporter,
+    sampler,
+    textMapPropagator,
     instrumentations: [
       new HttpInstrumentation({
         ignoreIncomingRequestHook: (req) => {
@@ -59,7 +105,7 @@ if (!otlpEndpoint) {
   });
 
   sdk.start();
-  console.log(`[otel] Tracing enabled, exporting to ${otlpEndpoint}`);
+  console.log(`[otel] Tracing enabled: service=${serviceName} version=${serviceVersion} protocol=${protocol} ratio=${traceRatio} propagators=${propagatorNames.join(',')}`);
 
   const shutdown = async () => {
     try {
