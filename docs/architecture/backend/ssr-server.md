@@ -186,6 +186,42 @@ This strategy eliminates the need for separate server configurations across envi
 - ✅ **Benefits**: High performance, structured queries, security redaction
 - ⚠️ **Learning Curve**: Requires JSON log analysis tools for development debugging
 
+## 📡 OpenTelemetry Tracing
+
+### Overview
+
+The server supports distributed tracing via OpenTelemetry. Tracing is **opt-in** — it is only enabled when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The instrumentation is loaded before the application via Node.js `--import` flag in `otel.mjs`.
+
+### Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | *(unset — tracing disabled)* | OTLP collector endpoint (e.g., `http://localhost:4318`) |
+| `OTEL_SERVICE_NAME` | `lfx-v2-ui` | Service name reported in traces |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | Export protocol: `http/protobuf` or `grpc` |
+| `OTEL_TRACES_SAMPLER_ARG` | `1.0` | Sampling ratio (0.0–1.0) |
+| `OTEL_PROPAGATORS` | `tracecontext,baggage` | Context propagators: `tracecontext`, `baggage`, `b3`, `b3multi`, `jaeger` |
+| `OTEL_LOG_LEVEL` | *(unset)* | Set to `debug` for OTEL diagnostic output |
+| `APP_VERSION` | `development` | Reported as `service.version` in traces |
+
+### Instrumentations
+
+- **HTTP** — traces incoming requests (excludes `/health`, `/api/health`, `/.well-known`)
+- **Express** — traces Express route and middleware execution
+- **Undici** — traces outgoing `fetch()` requests with header propagation
+
+### Architecture
+
+```text
+Node.js startup
+  └─ --import ./otel.mjs          # Loaded before application code
+      ├─ Checks OTEL_EXPORTER_OTLP_ENDPOINT
+      ├─ Configures exporter, sampler, propagators
+      ├─ Registers HTTP, Express, Undici instrumentations
+      └─ Starts NodeSDK
+          └─ server.ts (application code loads with tracing active)
+```
+
 ## 📁 Modular Architecture
 
 ### Server Organization Strategy
