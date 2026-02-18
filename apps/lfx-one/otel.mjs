@@ -35,8 +35,21 @@ const otlpEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
 if (!otlpEndpoint) {
   console.log('[otel] OTEL_EXPORTER_OTLP_ENDPOINT not set, tracing disabled');
 } else {
-  if (process.env['OTEL_LOG_LEVEL'] === 'debug') {
-    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
+  const logLevel = (process.env['OTEL_LOG_LEVEL'] || 'info').toLowerCase();
+  const diagLevelMap = {
+    none: DiagLogLevel.NONE,
+    error: DiagLogLevel.ERROR,
+    warn: DiagLogLevel.WARN,
+    info: DiagLogLevel.INFO,
+    debug: DiagLogLevel.DEBUG,
+    verbose: DiagLogLevel.VERBOSE,
+    all: DiagLogLevel.ALL,
+  };
+  if (diagLevelMap[logLevel] !== undefined) {
+    diag.setLogger(new DiagConsoleLogger(), diagLevelMap[logLevel]);
+  } else {
+    console.warn(`[otel] Unknown OTEL_LOG_LEVEL: ${logLevel}, defaulting to info`);
+    diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
   }
 
   const serviceName = process.env['OTEL_SERVICE_NAME'] || 'lfx-v2-ui';
@@ -61,11 +74,11 @@ if (!otlpEndpoint) {
   const rawRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
   const traceRatio = Number.isFinite(rawRatio) ? Math.min(1.0, Math.max(0.0, rawRatio)) : 1.0;
 
-  // OTEL_TRACES_SAMPLER selects the sampler strategy (default: parentbased_traceidratio)
-  const samplerName = (process.env['OTEL_TRACES_SAMPLER'] || 'parentbased_traceidratio').toLowerCase();
+  // OTEL_TRACES_SAMPLER selects the sampler strategy (default: parentbased_always_on)
+  const samplerName = (process.env['OTEL_TRACES_SAMPLER'] || 'parentbased_always_on').toLowerCase();
   const knownSamplers = ['always_on', 'always_off', 'traceidratio', 'parentbased_always_on', 'parentbased_always_off', 'parentbased_traceidratio'];
   if (!knownSamplers.includes(samplerName)) {
-    console.warn(`[otel] Unknown sampler: ${samplerName}, falling back to parentbased_traceidratio`);
+    console.warn(`[otel] Unknown sampler: ${samplerName}, falling back to parentbased_always_on`);
   }
   let sampler;
   switch (samplerName) {
@@ -85,8 +98,10 @@ if (!otlpEndpoint) {
       sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(0.0) });
       break;
     case 'parentbased_traceidratio':
-    default:
       sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(traceRatio) });
+      break;
+    default:
+      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(1.0) });
       break;
   }
 

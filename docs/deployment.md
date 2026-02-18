@@ -243,10 +243,10 @@ AI_API_KEY=your-ai-api-key
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 OTEL_SERVICE_NAME=lfx-v2-ui
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf          # "http/protobuf" (default) or "grpc"
-OTEL_TRACES_SAMPLER=parentbased_traceidratio         # Sampler: always_on, always_off, traceidratio, parentbased_*
+OTEL_TRACES_SAMPLER=parentbased_always_on             # Sampler: always_on, always_off, traceidratio, parentbased_*
 OTEL_TRACES_SAMPLER_ARG=1.0                         # Sampling ratio 0.0-1.0, clamped (default: 1.0)
 OTEL_PROPAGATORS=tracecontext,baggage               # Comma-separated: tracecontext,baggage,b3,b3multi,jaeger
-OTEL_LOG_LEVEL=info                                 # Set to "debug" for OTEL diagnostic logging
+OTEL_LOG_LEVEL=info                                 # Log level: none, error, warn, info, debug, verbose, all
 
 # Runtime Client IDs (injected at container startup, not build time)
 # See docs/runtime-configuration.md for architecture details
