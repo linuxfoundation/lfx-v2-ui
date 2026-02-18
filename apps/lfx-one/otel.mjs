@@ -14,6 +14,7 @@ import otelResources from '@opentelemetry/resources';
 import otelSdk from '@opentelemetry/sdk-node';
 import otelTraceBase from '@opentelemetry/sdk-trace-base';
 import otelSemconv from '@opentelemetry/semantic-conventions';
+import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating';
 
 const { diag, DiagConsoleLogger, DiagLogLevel } = otelApi;
 const { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } = otelCore;
@@ -44,7 +45,7 @@ if (!otlpEndpoint) {
   const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: serviceName,
     [ATTR_SERVICE_VERSION]: serviceVersion,
-    'deployment.environment': process.env['NODE_ENV'] || 'development',
+    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: process.env['NODE_ENV'] || 'development',
   });
 
   // Exporter protocol: grpc or http/protobuf (default)
@@ -62,6 +63,10 @@ if (!otlpEndpoint) {
 
   // OTEL_TRACES_SAMPLER selects the sampler strategy (default: parentbased_traceidratio)
   const samplerName = (process.env['OTEL_TRACES_SAMPLER'] || 'parentbased_traceidratio').toLowerCase();
+  const knownSamplers = ['always_on', 'always_off', 'traceidratio', 'parentbased_always_on', 'parentbased_always_off', 'parentbased_traceidratio'];
+  if (!knownSamplers.includes(samplerName)) {
+    console.warn(`[otel] Unknown sampler: ${samplerName}, falling back to parentbased_traceidratio`);
+  }
   let sampler;
   switch (samplerName) {
     case 'always_on':
@@ -128,7 +133,14 @@ if (!otlpEndpoint) {
   });
 
   sdk.start();
-  console.log(`[otel] Tracing enabled: service=${serviceName} version=${serviceVersion} protocol=${protocol} sampler=${samplerName} ratio=${traceRatio} propagators=${propagatorNames.join(',')}`);
+  console.log('[otel] Tracing enabled:', JSON.stringify({
+    service: serviceName,
+    version: serviceVersion,
+    protocol,
+    sampler: samplerName,
+    ratio: traceRatio,
+    propagators: propagatorNames,
+  }));
 
   const shutdown = async () => {
     try {

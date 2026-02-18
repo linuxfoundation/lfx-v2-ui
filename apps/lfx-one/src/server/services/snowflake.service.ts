@@ -19,10 +19,10 @@ import { MicroserviceError } from '../errors';
 import { LockManager } from '../utils/lock-manager';
 import { logger } from './logger.service';
 
-const tracer = trace.getTracer('lfx-one-ssr');
-
 import type { Bind, Connection, ConnectionOptions, LogLevel, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
 const { createPool } = snowflakeSdk;
+
+const tracer = trace.getTracer('lfx-one-ssr');
 
 /**
  * Service for executing read-only queries against Snowflake DBT

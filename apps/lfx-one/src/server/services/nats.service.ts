@@ -8,7 +8,7 @@ import {
   ATTR_MESSAGING_OPERATION_TYPE,
   ATTR_MESSAGING_SYSTEM,
 } from '@opentelemetry/semantic-conventions/incubating';
-import { ATTR_NETWORK_PROTOCOL_NAME, ATTR_SERVER_ADDRESS } from '@opentelemetry/semantic-conventions';
+import { ATTR_NETWORK_PROTOCOL_NAME, ATTR_SERVER_ADDRESS, ATTR_SERVER_PORT } from '@opentelemetry/semantic-conventions';
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
@@ -44,6 +44,9 @@ export class NatsService {
       timeout: options?.timeout || NATS_CONFIG.REQUEST_TIMEOUT,
     };
 
+    const natsUrl = process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL;
+    const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
+
     return tracer.startActiveSpan(
       `NATS request ${subject}`,
       {
@@ -53,15 +56,20 @@ export class NatsService {
           [ATTR_MESSAGING_OPERATION_TYPE]: 'send',
           [ATTR_MESSAGING_DESTINATION_NAME]: subject,
           [ATTR_NETWORK_PROTOCOL_NAME]: 'nats',
-          [ATTR_SERVER_ADDRESS]: process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL,
+          [ATTR_SERVER_ADDRESS]: parsedUrl.hostname,
+          [ATTR_SERVER_PORT]: parseInt(parsedUrl.port, 10) || 4222,
         },
       },
       async (span) => {
-        const startTime = Date.now();
+        const startTime = logger.startOperation(undefined, 'nats_request', { subject });
         try {
           const response = await connection.request(subject, data, requestOptions);
           span.setStatus({ code: SpanStatusCode.OK });
           span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, response.data.length);
+          logger.success(undefined, 'nats_request', startTime, {
+            subject,
+            response_size: response.data.length,
+          });
           return response;
         } catch (error) {
           span.setStatus({

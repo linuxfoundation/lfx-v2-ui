@@ -33,7 +33,7 @@ RUN yarn workspace @lfx-one/shared build:${BUILD_ENV}
 # via environment variables (LD_CLIENT_ID, DD_RUM_CLIENT_ID, DD_RUM_APPLICATION_ID)
 RUN yarn workspace lfx-one-ui build:${BUILD_ENV}
 
-# Pass APP_VERSION to runtime for OTEL service version
+# Stamp APP_VERSION at build time for OTEL service version
 ENV APP_VERSION=${APP_VERSION}
 
 # Expose port 4000
