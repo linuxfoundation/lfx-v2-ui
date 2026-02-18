@@ -57,10 +57,33 @@ if (!otlpEndpoint) {
   }
 
   // Trace sampling ratio (0.0 to 1.0, default 1.0 = sample everything)
-  const traceRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
-  const sampler = new ParentBasedSampler({
-    root: new TraceIdRatioBasedSampler(traceRatio),
-  });
+  const rawRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
+  const traceRatio = Number.isFinite(rawRatio) ? Math.min(1.0, Math.max(0.0, rawRatio)) : 1.0;
+
+  // OTEL_TRACES_SAMPLER selects the sampler strategy (default: parentbased_traceidratio)
+  const samplerName = (process.env['OTEL_TRACES_SAMPLER'] || 'parentbased_traceidratio').toLowerCase();
+  let sampler;
+  switch (samplerName) {
+    case 'always_on':
+      sampler = new TraceIdRatioBasedSampler(1.0);
+      break;
+    case 'always_off':
+      sampler = new TraceIdRatioBasedSampler(0.0);
+      break;
+    case 'traceidratio':
+      sampler = new TraceIdRatioBasedSampler(traceRatio);
+      break;
+    case 'parentbased_always_on':
+      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(1.0) });
+      break;
+    case 'parentbased_always_off':
+      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(0.0) });
+      break;
+    case 'parentbased_traceidratio':
+    default:
+      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(traceRatio) });
+      break;
+  }
 
   // Propagators: comma-separated list (default: tracecontext,baggage)
   const propagatorNames = (process.env['OTEL_PROPAGATORS'] || 'tracecontext,baggage').split(',').map((p) => p.trim());
@@ -105,7 +128,7 @@ if (!otlpEndpoint) {
   });
 
   sdk.start();
-  console.log(`[otel] Tracing enabled: service=${serviceName} version=${serviceVersion} protocol=${protocol} ratio=${traceRatio} propagators=${propagatorNames.join(',')}`);
+  console.log(`[otel] Tracing enabled: service=${serviceName} version=${serviceVersion} protocol=${protocol} sampler=${samplerName} ratio=${traceRatio} propagators=${propagatorNames.join(',')}`);
 
   const shutdown = async () => {
     try {

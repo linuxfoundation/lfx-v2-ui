@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import {
+  ATTR_MESSAGING_DESTINATION_NAME,
+  ATTR_MESSAGING_MESSAGE_BODY_SIZE,
+  ATTR_MESSAGING_OPERATION_TYPE,
+  ATTR_MESSAGING_SYSTEM,
+} from '@opentelemetry/semantic-conventions/incubating';
+import { ATTR_NETWORK_PROTOCOL_NAME, ATTR_SERVER_ADDRESS } from '@opentelemetry/semantic-conventions';
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
@@ -42,11 +49,11 @@ export class NatsService {
       {
         kind: SpanKind.CLIENT,
         attributes: {
-          'messaging.system': 'nats',
-          'messaging.operation.type': 'send',
-          'messaging.destination.name': subject,
-          'network.protocol.name': 'nats',
-          'server.address': process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL,
+          [ATTR_MESSAGING_SYSTEM]: 'nats',
+          [ATTR_MESSAGING_OPERATION_TYPE]: 'send',
+          [ATTR_MESSAGING_DESTINATION_NAME]: subject,
+          [ATTR_NETWORK_PROTOCOL_NAME]: 'nats',
+          [ATTR_SERVER_ADDRESS]: process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL,
         },
       },
       async (span) => {
@@ -54,7 +61,7 @@ export class NatsService {
         try {
           const response = await connection.request(subject, data, requestOptions);
           span.setStatus({ code: SpanStatusCode.OK });
-          span.setAttribute('messaging.message.body.size', response.data.length);
+          span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, response.data.length);
           return response;
         } catch (error) {
           span.setStatus({

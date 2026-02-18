@@ -2,6 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import {
+  ATTR_DB_NAMESPACE,
+  ATTR_DB_OPERATION_NAME,
+  ATTR_DB_QUERY_SUMMARY,
+  ATTR_DB_SYSTEM_NAME,
+  ATTR_SERVER_ADDRESS,
+} from '@opentelemetry/semantic-conventions';
+import { ATTR_DB_RESPONSE_RETURNED_ROWS } from '@opentelemetry/semantic-conventions/incubating';
 import { SNOWFLAKE_CONFIG } from '@lfx-one/shared/constants';
 import { SnowflakeLockStrategy } from '@lfx-one/shared/enums';
 import { LockStats, SnowflakePoolStats, SnowflakeQueryOptions, SnowflakeQueryResult } from '@lfx-one/shared/interfaces';
@@ -97,16 +105,15 @@ export class SnowflakeService {
         {
           kind: SpanKind.CLIENT,
           attributes: {
-            'db.system.name': 'snowflake',
-            'db.operation.name': sqlOp,
-            'db.query.summary': sqlText.substring(0, 100),
-            'db.namespace': process.env['SNOWFLAKE_DATABASE'] || '',
-            'server.address': process.env['SNOWFLAKE_ACCOUNT'] || '',
+            [ATTR_DB_SYSTEM_NAME]: 'snowflake',
+            [ATTR_DB_OPERATION_NAME]: sqlOp,
+            [ATTR_DB_QUERY_SUMMARY]: sqlText.substring(0, 100),
+            [ATTR_DB_NAMESPACE]: process.env['SNOWFLAKE_DATABASE'] || '',
+            [ATTR_SERVER_ADDRESS]: process.env['SNOWFLAKE_ACCOUNT'] || '',
           },
         },
         async (span) => {
-          const startTime = Date.now();
-          logger.startOperation(undefined, 'snowflake_query', {
+          const startTime = logger.startOperation(undefined, 'snowflake_query', {
             query_hash: queryHash,
             sql_preview: sqlText.substring(0, 100),
             bind_count: binds?.length || 0,
@@ -139,12 +146,14 @@ export class SnowflakeService {
 
             const poolStats = this.getPoolStats();
 
+            const rowCount = result.rows?.length ?? 0;
+
             span.setStatus({ code: SpanStatusCode.OK });
-            span.setAttribute('db.response.returned_rows', result.rows.length);
+            span.setAttribute(ATTR_DB_RESPONSE_RETURNED_ROWS, rowCount);
 
             logger.success(undefined, 'snowflake_query', startTime, {
               query_hash: queryHash,
-              row_count: result.rows.length,
+              row_count: rowCount,
               pool_active: poolStats.activeConnections,
               pool_idle: poolStats.idleConnections,
             });
