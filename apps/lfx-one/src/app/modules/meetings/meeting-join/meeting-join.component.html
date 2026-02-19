@@ -31,12 +31,13 @@
               }
 
               <!-- View Guests Button (for invited users) -->
-              @if (authenticated() && meeting().invited && meeting().show_meeting_attendees) {
+              @if (authenticated() && meeting().invited) {
                 <lfx-button
                   label="Show Members"
                   icon="fa-light fa-users"
                   [outlined]="true"
                   severity="primary"
+                  [disabled]="!meeting().show_meeting_attendees"
                   (onClick)="onRegistrantsToggle()"
                   styleClass="py-[0.15rem] text-xs"
                   data-testid="view-members-button">

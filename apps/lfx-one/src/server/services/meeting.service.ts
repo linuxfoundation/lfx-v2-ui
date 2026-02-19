@@ -168,7 +168,7 @@ export class MeetingService {
         meeting_id: meetingUid,
       });
       // Add writer access field to the meeting
-      return await this.accessCheckService.addAccessToResource(req, meeting, 'meeting', 'organizer');
+      return await this.accessCheckService.addAccessToResource(req, meeting, meetingType, 'organizer');
     }
 
     logger.debug(req, 'get_meeting_by_id', 'Completed meeting fetch', {

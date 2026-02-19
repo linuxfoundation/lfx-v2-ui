@@ -414,7 +414,7 @@ export class MeetingController {
       }
 
       // All ITX meetings are treated as having show_meeting_attendees enabled
-      const showMeetingAttendees = true;
+      const showMeetingAttendees = meeting.show_meeting_attendees ?? false;
 
       logger.debug(req, 'get_my_meeting_registrants', 'Meeting found, checking show_meeting_attendees', {
         meeting_id: uid,

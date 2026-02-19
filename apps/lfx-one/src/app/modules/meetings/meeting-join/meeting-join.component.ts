@@ -161,6 +161,16 @@ export class MeetingJoinComponent {
   }
 
   public onRegistrantsToggle(): void {
+    const meeting = this.meeting();
+    if (!meeting.show_meeting_attendees) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Show Members is not enabled',
+        detail: 'Please contact the meeting organizer to enable show members',
+      });
+      return;
+    }
+
     this.showRegistrants.set(!this.showRegistrants());
   }
 
