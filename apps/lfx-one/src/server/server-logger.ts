@@ -5,7 +5,7 @@ import { trace } from '@opentelemetry/api';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
-const SERVICE_NAME = 'lfx-one-ssr';
+const SERVICE_NAME = process.env['OTEL_SERVICE_NAME'] || 'lfx-v2-ui';
 
 export const tracer = trace.getTracer(SERVICE_NAME);
 
