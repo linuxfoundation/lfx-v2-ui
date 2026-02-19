@@ -64,19 +64,7 @@
             ],
             "externalDependencies": [
               "snowflake-sdk",
-              "express",
               "@opentelemetry/api",
-              "@opentelemetry/core",
-              "@opentelemetry/sdk-node",
-              "@opentelemetry/sdk-trace-base",
-              "@opentelemetry/exporter-trace-otlp-grpc",
-              "@opentelemetry/exporter-trace-otlp-proto",
-              "@opentelemetry/instrumentation-http",
-              "@opentelemetry/instrumentation-express",
-              "@opentelemetry/instrumentation-undici",
-              "@opentelemetry/propagator-b3",
-              "@opentelemetry/propagator-jaeger",
-              "@opentelemetry/resources",
               "@opentelemetry/semantic-conventions"
             ]
           },
