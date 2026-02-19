@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import {
   ATTR_MESSAGING_DESTINATION_NAME,
   ATTR_MESSAGING_MESSAGE_BODY_SIZE,
@@ -12,9 +12,8 @@ import { ATTR_NETWORK_PROTOCOL_NAME, ATTR_SERVER_ADDRESS, ATTR_SERVER_PORT } fro
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
+import { tracer } from '../server-logger';
 import { logger } from './logger.service';
-
-const tracer = trace.getTracer('lfx-one-ssr');
 
 /**
  * Generic NATS service for managing connections and request-reply operations
@@ -23,6 +22,15 @@ const tracer = trace.getTracer('lfx-one-ssr');
 export class NatsService {
   private connection: NatsConnection | null = null;
   private connectionPromise: Promise<NatsConnection> | null = null;
+  private natsHostname: string;
+  private natsPort: number;
+
+  public constructor() {
+    const natsUrl = process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL;
+    const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
+    this.natsHostname = parsedUrl.hostname;
+    this.natsPort = parseInt(parsedUrl.port, 10) || 4222;
+  }
 
   /**
    * Get the string codec for encoding/decoding messages
@@ -44,9 +52,6 @@ export class NatsService {
       timeout: options?.timeout || NATS_CONFIG.REQUEST_TIMEOUT,
     };
 
-    const natsUrl = process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL;
-    const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
-
     return tracer.startActiveSpan(
       `NATS request ${subject}`,
       {
@@ -56,19 +61,21 @@ export class NatsService {
           [ATTR_MESSAGING_OPERATION_TYPE]: 'send',
           [ATTR_MESSAGING_DESTINATION_NAME]: subject,
           [ATTR_NETWORK_PROTOCOL_NAME]: 'nats',
-          [ATTR_SERVER_ADDRESS]: parsedUrl.hostname,
-          [ATTR_SERVER_PORT]: parseInt(parsedUrl.port, 10) || 4222,
+          [ATTR_SERVER_ADDRESS]: this.natsHostname,
+          [ATTR_SERVER_PORT]: this.natsPort,
         },
       },
       async (span) => {
-        const startTime = logger.startOperation(undefined, 'nats_request', { subject });
+        const startTime = Date.now();
+        logger.debug(undefined, 'nats_request', 'Sending NATS request', { subject });
         try {
           const response = await connection.request(subject, data, requestOptions);
           span.setStatus({ code: SpanStatusCode.OK });
           span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, response.data.length);
-          logger.success(undefined, 'nats_request', startTime, {
+          logger.debug(undefined, 'nats_request', 'NATS request completed', {
             subject,
             response_size: response.data.length,
+            duration_ms: Date.now() - startTime,
           });
           return response;
         } catch (error) {

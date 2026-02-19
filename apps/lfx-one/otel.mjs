@@ -27,7 +27,7 @@ const { B3Propagator, B3InjectEncoding } = otelB3;
 const { JaegerPropagator } = otelJaeger;
 const { resourceFromAttributes } = otelResources;
 const { NodeSDK } = otelSdk;
-const { TraceIdRatioBasedSampler, ParentBasedSampler } = otelTraceBase;
+const { AlwaysOnSampler, AlwaysOffSampler, TraceIdRatioBasedSampler, ParentBasedSampler } = otelTraceBase;
 const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = otelSemconv;
 
 const otlpEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
@@ -83,25 +83,25 @@ if (!otlpEndpoint) {
   let sampler;
   switch (samplerName) {
     case 'always_on':
-      sampler = new TraceIdRatioBasedSampler(1.0);
+      sampler = new AlwaysOnSampler();
       break;
     case 'always_off':
-      sampler = new TraceIdRatioBasedSampler(0.0);
+      sampler = new AlwaysOffSampler();
       break;
     case 'traceidratio':
       sampler = new TraceIdRatioBasedSampler(traceRatio);
       break;
     case 'parentbased_always_on':
-      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(1.0) });
+      sampler = new ParentBasedSampler({ root: new AlwaysOnSampler() });
       break;
     case 'parentbased_always_off':
-      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(0.0) });
+      sampler = new ParentBasedSampler({ root: new AlwaysOffSampler() });
       break;
     case 'parentbased_traceidratio':
       sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(traceRatio) });
       break;
     default:
-      sampler = new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(1.0) });
+      sampler = new ParentBasedSampler({ root: new AlwaysOnSampler() });
       break;
   }
 

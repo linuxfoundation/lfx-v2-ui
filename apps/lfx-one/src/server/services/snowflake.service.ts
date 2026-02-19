@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import {
   ATTR_DB_NAMESPACE,
   ATTR_DB_OPERATION_NAME,
@@ -16,13 +16,12 @@ import { LockStats, SnowflakePoolStats, SnowflakeQueryOptions, SnowflakeQueryRes
 import snowflakeSdk from 'snowflake-sdk';
 
 import { MicroserviceError } from '../errors';
+import { tracer } from '../server-logger';
 import { LockManager } from '../utils/lock-manager';
 import { logger } from './logger.service';
 
 import type { Bind, Connection, ConnectionOptions, LogLevel, Pool, PoolOptions, RowStatement, SnowflakeError } from 'snowflake-sdk';
 const { createPool } = snowflakeSdk;
-
-const tracer = trace.getTracer('lfx-one-ssr');
 
 /**
  * Service for executing read-only queries against Snowflake DBT
@@ -97,6 +96,8 @@ export class SnowflakeService {
     const queryHash = this.lockManager.hashQuery(sqlText, binds);
 
     const sqlOp = sqlText.trim().split(/\s+/)[0]?.toUpperCase() || 'QUERY';
+    // Strip string literals from SQL for span attributes to avoid PII leaks
+    const sanitizedSql = sqlText.replace(/'[^']*'/g, '?').substring(0, 100);
 
     // Execute with lock to prevent duplicate queries
     return this.lockManager.executeLocked(queryHash, () => {
@@ -107,7 +108,7 @@ export class SnowflakeService {
           attributes: {
             [ATTR_DB_SYSTEM_NAME]: 'snowflake',
             [ATTR_DB_OPERATION_NAME]: sqlOp,
-            [ATTR_DB_QUERY_SUMMARY]: sqlText.substring(0, 100),
+            [ATTR_DB_QUERY_SUMMARY]: sanitizedSql,
             [ATTR_DB_NAMESPACE]: process.env['SNOWFLAKE_DATABASE'] || '',
             [ATTR_SERVER_ADDRESS]: process.env['SNOWFLAKE_ACCOUNT'] || '',
           },

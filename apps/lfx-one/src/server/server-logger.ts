@@ -5,6 +5,10 @@ import { trace } from '@opentelemetry/api';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
+const SERVICE_NAME = 'lfx-one-ssr';
+
+export const tracer = trace.getTracer(SERVICE_NAME);
+
 import { customErrorSerializer } from './helpers/error-serializer';
 
 /**
@@ -31,7 +35,7 @@ export const serverLogger = pino(
   {
     level: process.env['LOG_LEVEL'] || 'info',
     base: {
-      service: 'lfx-one-ssr',
+      service: SERVICE_NAME,
       environment: process.env['NODE_ENV'] || 'development',
       version: process.env['APP_VERSION'] || '1.0.0',
     },
