@@ -465,7 +465,7 @@ export class MeetingService {
 
     const params = {
       type: 'v1_past_meeting_participant',
-      tags: `past_meeting_id:${pastMeetingUid}`,
+      tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
     };
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
