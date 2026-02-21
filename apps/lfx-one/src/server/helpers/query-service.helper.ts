@@ -7,7 +7,6 @@ import { logger } from '../services/logger.service';
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 100;
-
 /**
  * Checks if an error is a retryable server error (5xx).
  */
@@ -52,7 +51,7 @@ async function fetchWithRetry<T>(fn: () => Promise<T>, context: Record<string, a
  * Accepts a callback that performs the actual proxy request, keeping this helper
  * decoupled from any specific service or proxy implementation.
  *
- * @param fetchPage - Callback that fetches a single page, receiving an optional page_token
+ * @param fetchPage - Callback that fetches a single page given an optional page_token
  * @returns All resource data items accumulated across all pages
  *
  * @example

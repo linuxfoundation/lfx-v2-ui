@@ -80,6 +80,7 @@ export class ProjectService {
     const params = {
       ...query,
       type: 'project',
+      page_size: 100,
     };
 
     const resources = await fetchAllQueryResources<Project>((pageToken) =>

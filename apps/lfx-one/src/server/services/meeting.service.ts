@@ -312,9 +312,10 @@ export class MeetingService {
    * @param includeRsvp - If true, includes RSVP status for each registrant
    */
   public async getMeetingRegistrants(req: Request, meetingUid: string, includeRsvp: boolean = false): Promise<MeetingRegistrant[]> {
-    const params: Record<string, string> = {
+    const params: Record<string, any> = {
       type: 'v1_meeting_registrant',
       tags: `meeting_id:${meetingUid}`,
+      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants', 'Fetching meeting registrants', { meeting_id: meetingUid, params });
@@ -358,6 +359,7 @@ export class MeetingService {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`email:${email}`, `meeting_id:${meetingUid}`],
+      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants_by_email', 'Fetching meeting registrants by email params', { meeting_id: meetingUid, email, params });
@@ -471,6 +473,7 @@ export class MeetingService {
     const params = {
       type: 'v1_past_meeting_participant',
       tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
+      page_size: 100,
     };
 
     return fetchAllQueryResources<PastMeetingParticipant>((pageToken) =>
@@ -697,6 +700,7 @@ export class MeetingService {
       const params = {
         tags: `meeting_id:${meetingUid}`,
         type: 'v1_meeting_rsvp',
+        page_size: 100,
       };
 
       return await fetchAllQueryResources<MeetingRsvp>((pageToken) =>
