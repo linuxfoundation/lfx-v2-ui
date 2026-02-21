@@ -320,7 +320,7 @@ export class MeetingService {
 
     logger.debug(req, 'get_meeting_registrants', 'Fetching meeting registrants', { meeting_id: meetingUid, params });
 
-    let registrants = await fetchAllQueryResources<MeetingRegistrant>((pageToken) =>
+    let registrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),
@@ -366,7 +366,7 @@ export class MeetingService {
 
     const headers = m2mToken ? { Authorization: `Bearer ${m2mToken}` } : undefined;
 
-    return fetchAllQueryResources<MeetingRegistrant>((pageToken) =>
+    return fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
         req,
         'LFX_V2_SERVICE',
@@ -476,7 +476,7 @@ export class MeetingService {
       page_size: 100,
     };
 
-    return fetchAllQueryResources<PastMeetingParticipant>((pageToken) =>
+    return fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),
@@ -703,7 +703,7 @@ export class MeetingService {
         page_size: 100,
       };
 
-      return await fetchAllQueryResources<MeetingRsvp>((pageToken) =>
+      return await fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
         this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           ...params,
           ...(pageToken && { page_token: pageToken }),

@@ -83,7 +83,7 @@ export class ProjectService {
       page_size: 100,
     };
 
-    const resources = await fetchAllQueryResources<Project>((pageToken) =>
+    const resources = await fetchAllQueryResources<Project>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<Project>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),

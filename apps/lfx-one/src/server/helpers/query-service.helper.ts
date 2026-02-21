@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { Request } from 'express';
 
 import { logger } from '../services/logger.service';
 
@@ -21,14 +22,14 @@ function isRetryableError(error: unknown): boolean {
 /**
  * Executes a fetch callback with retry logic for 5xx errors.
  */
-async function fetchWithRetry<T>(fn: () => Promise<T>, context: Record<string, any>): Promise<T> {
+async function fetchWithRetry<T>(req: Request, fn: () => Promise<T>, context: Record<string, any>): Promise<T> {
   for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
     try {
       return await fn();
     } catch (error) {
       if (isRetryableError(error) && attempt <= MAX_RETRIES) {
         const statusCode = (error as any).statusCode ?? (error as any).status;
-        logger.warning(undefined, 'fetch_all_query_resources', `Retrying after ${statusCode} error (attempt ${attempt}/${MAX_RETRIES})`, {
+        logger.warning(req, 'fetch_all_query_resources', `Retrying after ${statusCode} error (attempt ${attempt}/${MAX_RETRIES})`, {
           ...context,
           attempt,
           status_code: statusCode,
@@ -51,36 +52,37 @@ async function fetchWithRetry<T>(fn: () => Promise<T>, context: Record<string, a
  * Accepts a callback that performs the actual proxy request, keeping this helper
  * decoupled from any specific service or proxy implementation.
  *
+ * @param req - Express request object for log correlation
  * @param fetchPage - Callback that fetches a single page given an optional page_token
  * @returns All resource data items accumulated across all pages
  *
  * @example
- * const registrants = await fetchAllQueryResources<MeetingRegistrant>((pageToken) =>
+ * const registrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
  *   this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
  *     req, 'LFX_V2_SERVICE', '/query/resources', 'GET',
  *     { ...params, ...(pageToken && { page_token: pageToken }) }
  *   )
  * );
  */
-export async function fetchAllQueryResources<T>(fetchPage: (pageToken?: string) => Promise<QueryServiceResponse<T>>): Promise<T[]> {
+export async function fetchAllQueryResources<T>(req: Request, fetchPage: (pageToken?: string) => Promise<QueryServiceResponse<T>>): Promise<T[]> {
   const results: T[] = [];
 
-  let response = await fetchWithRetry(() => fetchPage(), { page: 1 });
+  let response = await fetchWithRetry(req, () => fetchPage(), { page: 1 });
   results.push(...response.resources.map((resource) => resource.data));
 
   let page = 1;
   while (response.page_token) {
     page++;
-    logger.debug(undefined, 'fetch_all_query_resources', 'Fetching next page', {
+    logger.debug(req, 'fetch_all_query_resources', 'Fetching next page', {
       page,
       accumulated_count: results.length,
     });
-    response = await fetchWithRetry(() => fetchPage(response.page_token), { page });
+    response = await fetchWithRetry(req, () => fetchPage(response.page_token), { page });
     results.push(...response.resources.map((resource) => resource.data));
   }
 
   if (page > 1) {
-    logger.debug(undefined, 'fetch_all_query_resources', 'Pagination complete', {
+    logger.debug(req, 'fetch_all_query_resources', 'Pagination complete', {
       total_pages: page,
       total_results: results.length,
     });
