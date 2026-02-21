@@ -24,6 +24,7 @@ import { transformV1SummaryToV2 } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
 import { AccessCheckService } from './access-check.service';
@@ -318,15 +319,12 @@ export class MeetingService {
 
     logger.debug(req, 'get_meeting_registrants', 'Fetching meeting registrants', { meeting_id: meetingUid, params });
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
-      req,
-      'LFX_V2_SERVICE',
-      `/query/resources`,
-      'GET',
-      params
+    let registrants = await fetchAllQueryResources<MeetingRegistrant>((pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    let registrants = resources.map((resource) => resource.data);
 
     // If include_rsvp is true, fetch RSVP data and attach to registrants
     if (includeRsvp) {
@@ -355,13 +353,8 @@ export class MeetingService {
   /**
    * Fetches all registrants for a meeting by email
    */
-  public async getMeetingRegistrantsByEmail(
-    req: Request,
-    meetingUid: string,
-    email: string,
-    m2mToken?: string
-  ): Promise<QueryServiceResponse<MeetingRegistrant[]>> {
-    const params = {
+  public async getMeetingRegistrantsByEmail(req: Request, meetingUid: string, email: string, m2mToken?: string): Promise<MeetingRegistrant[]> {
+    const params: Record<string, any> = {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`email:${email}`, `meeting_id:${meetingUid}`],
@@ -371,17 +364,17 @@ export class MeetingService {
 
     const headers = m2mToken ? { Authorization: `Bearer ${m2mToken}` } : undefined;
 
-    const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant[]>>(
-      req,
-      'LFX_V2_SERVICE',
-      `/query/resources`,
-      'GET',
-      params,
-      undefined,
-      headers
+    return fetchAllQueryResources<MeetingRegistrant>((pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { ...params, ...(pageToken && { page_token: pageToken }) },
+        undefined,
+        headers
+      )
     );
-
-    return response;
   }
 
   /**
@@ -480,15 +473,12 @@ export class MeetingService {
       tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    return fetchAllQueryResources<PastMeetingParticipant>((pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    return resources.map((resource) => resource.data);
   }
 
   /**
@@ -709,15 +699,12 @@ export class MeetingService {
         type: 'v1_meeting_rsvp',
       };
 
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(
-        req,
-        'LFX_V2_SERVICE',
-        '/query/resources',
-        'GET',
-        params
+      return await fetchAllQueryResources<MeetingRsvp>((pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          ...params,
+          ...(pageToken && { page_token: pageToken }),
+        })
       );
-
-      return resources.map((resource) => resource.data);
     } catch (error) {
       logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch meeting RSVPs, returning empty array', {
         meeting_id: meetingUid,
