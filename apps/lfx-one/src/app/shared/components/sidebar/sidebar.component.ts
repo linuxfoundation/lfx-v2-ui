@@ -35,7 +35,6 @@ export class SidebarComponent {
   public readonly mobile = input<boolean>(false);
 
   // Load all available projects
-  // Skip during SSR — the call won't complete before SSR sends the HTML,
   // so TransferState never captures it and client makes a duplicate call anyway.
   // shareReplay(1) in ProjectService deduplicates within the client runtime.
   protected readonly projects: Signal<Project[]> = this.initProjects();

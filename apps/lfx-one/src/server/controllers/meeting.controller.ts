@@ -49,7 +49,7 @@ export class MeetingController {
           if (!m.organizer) {
             return null;
           }
-          return this.meetingService.getMeetingRegistrants(req, m.id);
+          return this.meetingService.getMeetingRegistrants(req, m.id).catch(() => null);
         })
       );
       const meetingsNeedingInviteCheck: number[] = [];
@@ -62,7 +62,7 @@ export class MeetingController {
           committeeCount = registrants.filter((r) => r.type === 'committee').length;
           individualCount = registrants.length - committeeCount;
           invited = userEmail ? registrants.some((r) => r.email?.toLowerCase() === userEmail) : false;
-        } else {
+        } else if (m.organizer) {
           meetingsNeedingInviteCheck.push(i);
         }
         return { ...m, individual_registrants_count: individualCount, committee_members_count: committeeCount, invited };
@@ -71,8 +71,7 @@ export class MeetingController {
         const m2mToken = await generateM2MToken(req);
         await Promise.all(
           meetingsNeedingInviteCheck.map(async (idx) => {
-            const invited = await isUserInvitedToMeeting(req, result[idx].id, userEmail, m2mToken);
-            result[idx].invited = invited;
+            result[idx].invited = await isUserInvitedToMeeting(req, result[idx].id, userEmail, m2mToken).catch(() => false);
           })
         );
       }
