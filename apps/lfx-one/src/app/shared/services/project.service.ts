@@ -34,13 +34,13 @@ export class ProjectService {
     if (!this.projectCache.has(cacheKey)) {
       const project$ = this.http.get<Project>(`/api/projects/${slug}`).pipe(
         catchError(() => of(null)),
+        shareReplay(1),
         tap((project) => {
           if (current) {
             this.project$.next(project);
             this.project.set(project);
           }
-        }),
-        shareReplay(1)
+        })
       );
       this.projectCache.set(cacheKey, project$);
     }
