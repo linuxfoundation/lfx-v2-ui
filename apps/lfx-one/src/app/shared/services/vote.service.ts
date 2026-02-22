@@ -4,7 +4,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { CreateVoteRequest, PaginatedResponse, QueryServiceCountResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
-import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, take, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -16,8 +16,7 @@ export class VoteService {
 
   public getVotes(params?: HttpParams): Observable<PaginatedResponse<Vote>> {
     return this.http.get<PaginatedResponse<Vote>>('/api/votes', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load votes:', error);
+      catchError(() => {
         return of({ data: [] as Vote[], page_token: undefined });
       })
     );
@@ -81,10 +80,7 @@ export class VoteService {
     }
 
     return this.http.get<QueryServiceCountResponse>('/api/votes/count', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load votes count:', error);
-        return of({ count: 0 });
-      }),
+      catchError(() => of({ count: 0 })),
       map((response) => response.count)
     );
   }
@@ -94,61 +90,26 @@ export class VoteService {
   }
 
   public getVote(voteUid: string): Observable<Vote> {
-    return this.http.get<Vote>(`/api/votes/${voteUid}`).pipe(
-      catchError((error) => {
-        console.error(`Failed to load vote ${voteUid}:`, error);
-        return throwError(() => error);
-      }),
-      tap((vote) => this.vote.set(vote))
-    );
+    return this.http.get<Vote>(`/api/votes/${voteUid}`).pipe(tap((vote) => this.vote.set(vote)));
   }
 
   public createVote(voteData: CreateVoteRequest): Observable<Vote> {
-    return this.http.post<Vote>('/api/votes', voteData).pipe(
-      take(1),
-      catchError((error) => {
-        console.error('Failed to create vote:', error);
-        return throwError(() => error);
-      })
-    );
+    return this.http.post<Vote>('/api/votes', voteData).pipe(take(1));
   }
 
   public updateVote(voteUid: string, voteData: UpdateVoteRequest): Observable<Vote> {
-    return this.http.put<Vote>(`/api/votes/${voteUid}`, voteData).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to update vote ${voteUid}:`, error);
-        return throwError(() => error);
-      })
-    );
+    return this.http.put<Vote>(`/api/votes/${voteUid}`, voteData).pipe(take(1));
   }
 
   public deleteVote(voteUid: string): Observable<void> {
-    return this.http.delete<void>(`/api/votes/${voteUid}`).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to delete vote ${voteUid}:`, error);
-        return throwError(() => error);
-      })
-    );
+    return this.http.delete<void>(`/api/votes/${voteUid}`).pipe(take(1));
   }
 
   public getVoteResults(voteUid: string): Observable<VoteResultsResponse> {
-    return this.http.get<VoteResultsResponse>(`/api/votes/${voteUid}/results`).pipe(
-      catchError((error) => {
-        console.error(`Failed to load vote results ${voteUid}:`, error);
-        return throwError(() => error);
-      })
-    );
+    return this.http.get<VoteResultsResponse>(`/api/votes/${voteUid}/results`);
   }
 
   public enableVote(voteUid: string): Observable<Vote> {
-    return this.http.put<Vote>(`/api/votes/${voteUid}/enable`, {}).pipe(
-      take(1),
-      catchError((error) => {
-        console.error(`Failed to enable vote ${voteUid}:`, error);
-        return throwError(() => error);
-      })
-    );
+    return this.http.put<Vote>(`/api/votes/${voteUid}/enable`, {}).pipe(take(1));
   }
 }

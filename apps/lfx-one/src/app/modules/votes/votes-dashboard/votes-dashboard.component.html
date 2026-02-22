@@ -44,6 +44,7 @@
       [rowsPerPage]="rowsPerPage()"
       [first]="currentFirst()"
       [lazy]="true"
+      [groupOptions]="groupOptions()"
       (viewVote)="onViewVote($event)"
       (viewResults)="onViewResults($event)"
       (refresh)="refreshVotes()"

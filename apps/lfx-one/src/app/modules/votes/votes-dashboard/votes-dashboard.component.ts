@@ -8,7 +8,8 @@ import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
-import { PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
+import { Committee, PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
+import { CommitteeService } from '@services/committee.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { VoteService } from '@services/vote.service';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
@@ -25,6 +26,7 @@ import { VotesTableComponent } from '../components/votes-table/votes-table.compo
 export class VotesDashboardComponent {
   // === Services ===
   private readonly voteService = inject(VoteService);
+  private readonly committeeService = inject(CommitteeService);
   private readonly projectContextService = inject(ProjectContextService);
 
   // === Constants ===
@@ -32,8 +34,10 @@ export class VotesDashboardComponent {
   protected readonly voteLabelPlural = VOTE_LABEL.plural;
 
   // === Subjects ===
+  // refresh$ triggers count re-fetch (manual refresh, project change)
   protected readonly refresh$ = new BehaviorSubject<void>(undefined);
-  private readonly paginate$ = new BehaviorSubject<{ first: number; rows: number }>({ first: 0, rows: 10 });
+  // fetch$ triggers votes list re-fetch (pagination, manual refresh)
+  private readonly fetch$ = new BehaviorSubject<void>(undefined);
 
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
@@ -54,6 +58,7 @@ export class VotesDashboardComponent {
   // === Computed Signals ===
   protected readonly project: Signal<ProjectContext | null> = this.initProject();
   protected readonly searchQuery: Signal<string> = this.initSearchQuery();
+  protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly votes: Signal<Vote[]> = this.initVotes();
   protected readonly selectedListVote: Signal<Vote | null> = this.initSelectedListVote();
   protected readonly totalCount: Signal<number> = this.initTotalCount();
@@ -72,7 +77,7 @@ export class VotesDashboardComponent {
     this.loading.set(true);
     this.pageTokens = [];
     this.currentFirst.set(0);
-    this.paginate$.next({ first: 0, rows: this.rowsPerPage() });
+    this.fetch$.next();
     this.refresh$.next();
   }
 
@@ -81,25 +86,18 @@ export class VotesDashboardComponent {
       this.pageTokens = [];
       this.rowsPerPage.set(event.rows);
       this.currentFirst.set(0);
-      this.paginate$.next({ first: 0, rows: event.rows });
-      this.refresh$.next();
+      this.fetch$.next();
       return;
     }
 
     this.currentFirst.set(event.first);
-    this.paginate$.next({ first: event.first, rows: event.rows });
+    this.fetch$.next();
   }
 
   protected onFiltersChange(state: VoteFilterState): void {
-    this.filters.set(state);
-    this.resetPagination();
-  }
-
-  // === Private Helpers ===
-  private resetPagination(): void {
     this.pageTokens = [];
     this.currentFirst.set(0);
-    this.paginate$.next({ first: 0, rows: this.rowsPerPage() });
+    this.filters.set(state);
   }
 
   private buildFilters(): string[] {
@@ -121,6 +119,30 @@ export class VotesDashboardComponent {
 
   private initSearchQuery(): Signal<string> {
     return computed(() => this.filters().search);
+  }
+
+  private initGroupOptions(): Signal<{ label: string; value: string | null }[]> {
+    const project$ = toObservable(this.project);
+
+    return toSignal(
+      project$.pipe(
+        switchMap((project) => {
+          if (!project?.uid) {
+            return of([]);
+          }
+          return this.committeeService.getCommitteesByProject(project.uid).pipe(catchError(() => of([])));
+        }),
+        map((committees: Committee[]) => {
+          const options: { label: string; value: string | null }[] = [{ label: 'All Groups', value: null }];
+          const sorted = [...committees].sort((a, b) => a.name.localeCompare(b.name));
+          for (const committee of sorted) {
+            options.push({ label: committee.name, value: committee.name });
+          }
+          return options;
+        })
+      ),
+      { initialValue: [{ label: 'All Groups', value: null }] }
+    );
   }
 
   private initTotalCount(): Signal<number> {
@@ -150,22 +172,22 @@ export class VotesDashboardComponent {
     const filters$ = toObservable(this.filters);
 
     return toSignal(
-      combineLatest([project$, this.paginate$, filters$, this.refresh$]).pipe(
+      combineLatest([project$, filters$, this.fetch$]).pipe(
         tap(() => this.loading.set(true)),
-        switchMap(([project, pagination]) => {
+        switchMap(([project]) => {
           if (!project?.uid) {
             this.loading.set(false);
             return of([]);
           }
 
-          this.loading.set(true);
-
-          const pageIndex = pagination.first / pagination.rows;
+          const rows = this.rowsPerPage();
+          const first = this.currentFirst();
+          const pageIndex = first / rows;
           const pageToken = pageIndex > 0 ? this.pageTokens[pageIndex - 1] : undefined;
 
           if (pageIndex > 0 && !pageToken) {
             this.currentFirst.set(0);
-            this.paginate$.next({ first: 0, rows: pagination.rows });
+            this.loading.set(false);
             return of([]);
           }
 
@@ -173,7 +195,7 @@ export class VotesDashboardComponent {
           const queryFilters = this.buildFilters();
 
           return this.voteService
-            .getVotesByProjectPaginated(project.uid, pagination.rows, pageToken, searchName || undefined, queryFilters.length ? queryFilters : undefined)
+            .getVotesByProjectPaginated(project.uid, rows, pageToken, searchName || undefined, queryFilters.length ? queryFilters : undefined)
             .pipe(
               tap((response: PaginatedResponse<Vote>) => {
                 if (response.page_token) {
@@ -182,8 +204,7 @@ export class VotesDashboardComponent {
                 this.loading.set(false);
               }),
               map((response: PaginatedResponse<Vote>) => response.data),
-              catchError((error) => {
-                console.error('Failed to load votes:', error);
+              catchError(() => {
                 this.loading.set(false);
                 return of([]);
               })

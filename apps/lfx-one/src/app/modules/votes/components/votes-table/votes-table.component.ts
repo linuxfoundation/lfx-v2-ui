@@ -63,6 +63,7 @@ export class VotesTableComponent implements OnInit {
   public readonly rowsPerPage = input<number>(10);
   public readonly first = input<number>(0);
   public readonly lazy = input<boolean>(false);
+  public readonly groupOptions = input<{ label: string; value: string | null }[]>([{ label: 'All Groups', value: null }]);
 
   // === Outputs ===
   public readonly viewVote = output<string>();
@@ -83,7 +84,6 @@ export class VotesTableComponent implements OnInit {
 
   // === Computed Signals ===
   protected readonly statusOptions: Signal<{ label: string; value: PollStatus | null }[]> = this.initStatusOptions();
-  protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
 
   // === Lifecycle ===
   public ngOnInit(): void {
@@ -174,28 +174,6 @@ export class VotesTableComponent implements OnInit {
             value: status,
           });
         }
-      }
-
-      return options;
-    });
-  }
-
-  private initGroupOptions(): Signal<{ label: string; value: string | null }[]> {
-    return computed(() => {
-      const votesData = this.votes();
-      const uniqueGroups = new Set<string>();
-
-      for (const vote of votesData) {
-        if (vote.committee_name) {
-          uniqueGroups.add(vote.committee_name);
-        }
-      }
-
-      const sortedGroups = Array.from(uniqueGroups).sort((a, b) => a.localeCompare(b));
-      const options: { label: string; value: string | null }[] = [{ label: 'All Groups', value: null }];
-
-      for (const group of sortedGroups) {
-        options.push({ label: group, value: group });
       }
 
       return options;
