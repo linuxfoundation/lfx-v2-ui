@@ -3,8 +3,8 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { CreateVoteRequest, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, take, tap, throwError } from 'rxjs';
+import { CreateVoteRequest, PaginatedResponse, QueryServiceCountResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -14,31 +14,83 @@ export class VoteService {
 
   private readonly http = inject(HttpClient);
 
-  public getVotes(params?: HttpParams): Observable<Vote[]> {
-    return this.http.get<Vote[]>('/api/votes', { params }).pipe(
+  public getVotes(params?: HttpParams): Observable<PaginatedResponse<Vote>> {
+    return this.http.get<PaginatedResponse<Vote>>('/api/votes', { params }).pipe(
       catchError((error) => {
         console.error('Failed to load votes:', error);
-        return of([]);
+        return of({ data: [] as Vote[], page_token: undefined });
       })
     );
   }
 
-  public getVotesByProject(projectUid: string, limit?: number, orderBy?: string): Observable<Vote[]> {
+  public getVotesByProject(projectUid: string, pageSize?: number, orderBy?: string): Observable<Vote[]> {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
 
-    if (limit) {
-      params = params.set('limit', limit.toString());
+    if (pageSize) {
+      params = params.set('page_size', pageSize.toString());
     }
 
     if (orderBy) {
       params = params.set('order', orderBy);
     }
 
+    return this.getVotes(params).pipe(map((response) => response.data));
+  }
+
+  public getVotesByProjectPaginated(
+    projectUid: string,
+    pageSize?: number,
+    pageToken?: string,
+    searchName?: string,
+    filters?: string[]
+  ): Observable<PaginatedResponse<Vote>> {
+    let params = new HttpParams().set('parent', `project:${projectUid}`);
+
+    if (pageSize) {
+      params = params.set('page_size', pageSize.toString());
+    }
+
+    if (pageToken) {
+      params = params.set('page_token', pageToken);
+    }
+
+    if (searchName) {
+      params = params.set('name', searchName);
+    }
+
+    if (filters?.length) {
+      for (const filter of filters) {
+        params = params.append('filters', filter);
+      }
+    }
+
     return this.getVotes(params);
   }
 
-  public getRecentVotesByProject(projectUid: string, limit: number = 3): Observable<Vote[]> {
-    return this.getVotesByProject(projectUid, limit, 'updated_at.desc');
+  public getVotesCountByProject(projectUid: string, searchName?: string, filters?: string[]): Observable<number> {
+    let params = new HttpParams().set('parent', `project:${projectUid}`);
+
+    if (searchName) {
+      params = params.set('name', searchName);
+    }
+
+    if (filters?.length) {
+      for (const filter of filters) {
+        params = params.append('filters', filter);
+      }
+    }
+
+    return this.http.get<QueryServiceCountResponse>('/api/votes/count', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load votes count:', error);
+        return of({ count: 0 });
+      }),
+      map((response) => response.count)
+    );
+  }
+
+  public getRecentVotesByProject(projectUid: string, pageSize: number = 3): Observable<Vote[]> {
+    return this.getVotesByProject(projectUid, pageSize, 'updated_at.desc');
   }
 
   public getVote(voteUid: string): Observable<Vote> {

@@ -8,10 +8,10 @@ import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
-import { ProjectContext, Vote } from '@lfx-one/shared/interfaces';
+import { PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { ProjectContextService } from '@services/project-context.service';
 import { VoteService } from '@services/vote.service';
-import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 
 import { VoteResultsDrawerComponent } from '../components/vote-results-drawer/vote-results-drawer.component';
 import { VotesTableComponent } from '../components/votes-table/votes-table.component';
@@ -31,19 +31,32 @@ export class VotesDashboardComponent {
   protected readonly voteLabel = VOTE_LABEL.singular;
   protected readonly voteLabelPlural = VOTE_LABEL.plural;
 
-  // === Refresh Subject ===
+  // === Subjects ===
   protected readonly refresh$ = new BehaviorSubject<void>(undefined);
+  private readonly paginate$ = new BehaviorSubject<{ first: number; rows: number }>({ first: 0, rows: 10 });
 
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
   protected readonly hasPMOAccess = signal<boolean>(true);
   protected readonly resultsDrawerVisible = signal<boolean>(false);
   protected readonly selectedVoteId = signal<string | null>(null);
+  protected readonly rowsPerPage = signal<number>(10);
+  protected readonly currentFirst = signal<number>(0);
+  protected readonly totalRecords = signal<number>(0);
+
+  // === Filter State ===
+  protected readonly filters = signal<VoteFilterState>({ search: '', status: null, group: null });
+
+  // === Page Tokens ===
+  // Sequential token array: index 0 = token for page 2, index 1 = token for page 3, etc.
+  private pageTokens: string[] = [];
 
   // === Computed Signals ===
   protected readonly project: Signal<ProjectContext | null> = this.initProject();
+  protected readonly searchQuery: Signal<string> = this.initSearchQuery();
   protected readonly votes: Signal<Vote[]> = this.initVotes();
   protected readonly selectedListVote: Signal<Vote | null> = this.initSelectedListVote();
+  protected readonly totalCount: Signal<number> = this.initTotalCount();
 
   protected onViewVote(voteId: string): void {
     this.selectedVoteId.set(voteId);
@@ -57,7 +70,48 @@ export class VotesDashboardComponent {
 
   protected refreshVotes(): void {
     this.loading.set(true);
+    this.pageTokens = [];
+    this.currentFirst.set(0);
+    this.paginate$.next({ first: 0, rows: this.rowsPerPage() });
     this.refresh$.next();
+  }
+
+  protected onPageChange(event: { first: number; rows: number }): void {
+    if (event.rows !== this.rowsPerPage()) {
+      this.pageTokens = [];
+      this.rowsPerPage.set(event.rows);
+      this.currentFirst.set(0);
+      this.paginate$.next({ first: 0, rows: event.rows });
+      this.refresh$.next();
+      return;
+    }
+
+    this.currentFirst.set(event.first);
+    this.paginate$.next({ first: event.first, rows: event.rows });
+  }
+
+  protected onFiltersChange(state: VoteFilterState): void {
+    this.filters.set(state);
+    this.resetPagination();
+  }
+
+  // === Private Helpers ===
+  private resetPagination(): void {
+    this.pageTokens = [];
+    this.currentFirst.set(0);
+    this.paginate$.next({ first: 0, rows: this.rowsPerPage() });
+  }
+
+  private buildFilters(): string[] {
+    const queryFilters: string[] = [];
+    const { status, group } = this.filters();
+    if (status) {
+      queryFilters.push(`status:${status}`);
+    }
+    if (group) {
+      queryFilters.push(`committee_name:${group}`);
+    }
+    return queryFilters;
   }
 
   // === Private Initializers ===
@@ -65,25 +119,75 @@ export class VotesDashboardComponent {
     return computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
   }
 
-  private initVotes(): Signal<Vote[]> {
+  private initSearchQuery(): Signal<string> {
+    return computed(() => this.filters().search);
+  }
+
+  private initTotalCount(): Signal<number> {
     const project$ = toObservable(this.project);
+    const filters$ = toObservable(this.filters);
 
     return toSignal(
-      combineLatest([project$, this.refresh$]).pipe(
+      combineLatest([project$, filters$, this.refresh$]).pipe(
         switchMap(([project]) => {
+          if (!project?.uid) {
+            return of(0);
+          }
+          const searchName = this.searchQuery();
+          const queryFilters = this.buildFilters();
+          return this.voteService.getVotesCountByProject(project.uid, searchName || undefined, queryFilters.length ? queryFilters : undefined).pipe(
+            tap((count) => this.totalRecords.set(count)),
+            catchError(() => of(0))
+          );
+        })
+      ),
+      { initialValue: 0 }
+    );
+  }
+
+  private initVotes(): Signal<Vote[]> {
+    const project$ = toObservable(this.project);
+    const filters$ = toObservable(this.filters);
+
+    return toSignal(
+      combineLatest([project$, this.paginate$, filters$, this.refresh$]).pipe(
+        tap(() => this.loading.set(true)),
+        switchMap(([project, pagination]) => {
           if (!project?.uid) {
             this.loading.set(false);
             return of([]);
           }
 
           this.loading.set(true);
-          return this.voteService.getVotesByProject(project.uid, 100).pipe(
-            catchError((error) => {
-              console.error('Failed to load votes:', error);
-              return of([]);
-            }),
-            finalize(() => this.loading.set(false))
-          );
+
+          const pageIndex = pagination.first / pagination.rows;
+          const pageToken = pageIndex > 0 ? this.pageTokens[pageIndex - 1] : undefined;
+
+          if (pageIndex > 0 && !pageToken) {
+            this.currentFirst.set(0);
+            this.paginate$.next({ first: 0, rows: pagination.rows });
+            return of([]);
+          }
+
+          const searchName = this.searchQuery();
+          const queryFilters = this.buildFilters();
+
+          return this.voteService
+            .getVotesByProjectPaginated(project.uid, pagination.rows, pageToken, searchName || undefined, queryFilters.length ? queryFilters : undefined)
+            .pipe(
+              tap((response: PaginatedResponse<Vote>) => {
+                if (response.page_token) {
+                  this.pageTokens[pageIndex] = response.page_token;
+                }
+                this.loading.set(false);
+              }),
+              map((response: PaginatedResponse<Vote>) => response.data),
+              catchError((error) => {
+                console.error('Failed to load votes:', error);
+                this.loading.set(false);
+                return of([]);
+              })
+            );
         })
       ),
       { initialValue: [] }
