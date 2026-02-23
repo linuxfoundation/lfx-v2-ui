@@ -58,10 +58,17 @@ export class PublicMeetingController {
         });
       }
 
-      // Fetch the project
-      const project = await this.projectService.getProjectById(req, meeting.project_uid, false);
+      // Fetch project and invited status in parallel (both depend only on meeting data)
+      const isAuthenticated = req.oidc?.isAuthenticated();
+      const [project, meetingWithInvited] = await Promise.all([
+        this.projectService.getProjectById(req, meeting.project_uid, false),
+        isAuthenticated
+          ? addInvitedStatusToMeeting(req, meeting, (req.oidc.user?.['email'] as string) || '', m2mToken)
+          : Promise.resolve(Object.assign(meeting, { invited: false })),
+      ]);
+      meeting = meetingWithInvited;
+
       if (!project) {
-        // Throw a resource not found error (error handler will log)
         throw new ResourceNotFoundError('Project', meeting.project_uid, {
           operation: 'get_public_meeting_by_id',
           service: 'public_meeting_controller',
@@ -69,18 +76,48 @@ export class PublicMeetingController {
         });
       }
 
-      // Fetch the registrants
-      const registrants = await this.meetingService.getMeetingRegistrants(req, meeting.id);
-      const committeeMembers = registrants.filter((r) => r.type === 'committee').length ?? 0;
-      meeting.individual_registrants_count = (registrants?.length ?? 0) - (committeeMembers ?? 0);
-      meeting.committee_members_count = committeeMembers ?? 0;
+      // Check organizer status for authenticated users (needed for all meeting types)
+      if (isAuthenticated) {
+        // Temporarily restore user's original token for the access check
+        if (originalToken !== undefined) {
+          req.bearerToken = originalToken;
+        }
 
-      // Check if authenticated user is invited to the meeting
-      if (req.oidc?.isAuthenticated()) {
-        const userEmail = (req.oidc.user?.['email'] as string) || '';
-        meeting = await addInvitedStatusToMeeting(req, meeting, userEmail, m2mToken);
+        try {
+          meeting = await this.accessCheckService.addAccessToResource(req, meeting, 'v1_meeting', 'organizer');
+        } catch (error) {
+          // If organizer check fails, log but continue with organizer = false
+          logger.warning(req, 'get_public_meeting_by_id', 'Failed to check organizer status, continuing with organizer = false', {
+            err: error,
+            meeting_id: id,
+          });
+          meeting.organizer = false;
+        }
+
+        // Restore M2M token for subsequent operations (e.g., fetching public join URL)
+        req.bearerToken = m2mToken;
       } else {
-        meeting.invited = false;
+        meeting.organizer = false;
+      }
+
+      // Fetch registrant counts for organizers, otherwise default to 0
+      if (meeting.organizer) {
+        try {
+          const registrants = await this.meetingService.getMeetingRegistrants(req, id);
+          const committeeMembers = registrants.filter((r) => r.type === 'committee').length;
+          meeting.individual_registrants_count = registrants.length - committeeMembers;
+          meeting.committee_members_count = committeeMembers;
+        } catch (error) {
+          logger.warning(req, 'get_public_meeting_by_id', 'Failed to fetch registrant counts for organizer', {
+            meeting_id: id,
+            err: error,
+          });
+          meeting.individual_registrants_count = 0;
+          meeting.committee_members_count = 0;
+        }
+      } else {
+        meeting.individual_registrants_count = 0;
+        meeting.committee_members_count = 0;
       }
 
       // Log the success
@@ -111,28 +148,6 @@ export class PublicMeetingController {
         return;
       }
 
-      // Check if user is authenticated and add organizer field
-      if (req.oidc?.isAuthenticated()) {
-        // Restore user's original token before organizer check
-        if (originalToken !== undefined) {
-          req.bearerToken = originalToken;
-        }
-
-        try {
-          meeting = await this.accessCheckService.addAccessToResource(req, meeting, 'meeting', 'organizer');
-        } catch (error) {
-          // If organizer check fails, log but continue with organizer = false
-          logger.warning(req, 'get_public_meeting_by_id', 'Failed to check organizer status, continuing with organizer = false', {
-            err: error,
-            meeting_id: id,
-          });
-          meeting.organizer = false;
-        }
-      } else {
-        // User is not authenticated, set organizer to false
-        meeting.organizer = false;
-      }
-
       // Send the meeting and project data to the client
       res.json({ meeting, project: { name: project.name, slug: project.slug, logo_url: project.logo_url } });
     } catch (error) {
@@ -145,13 +160,13 @@ export class PublicMeetingController {
     const { id } = req.params;
     const { password } = req.query;
     const email: string = req.body.email ?? req.oidc.user?.['email'] ?? '';
-    const startTime = logger.startOperation(req, 'post_meeting_join_url', {
+    const startTime = logger.startOperation(req, 'post_meeting_link', {
       meeting_id: id,
     });
 
     try {
       // Check if the meeting UID is provided
-      if (!this.validateMeetingId(id, 'post_meeting_join_url', req, next, startTime)) {
+      if (!this.validateMeetingId(id, 'post_meeting_link', req, next, startTime)) {
         return;
       }
 
@@ -159,14 +174,14 @@ export class PublicMeetingController {
 
       if (!meeting) {
         throw new ResourceNotFoundError('Meeting', id, {
-          operation: 'post_meeting_join_url',
+          operation: 'post_meeting_link',
           service: 'public_meeting_controller',
           path: `/itx/meetings/${id}`,
         });
       }
 
       // Check if the user has passed in a password, if so, check if it's correct
-      if (!this.validateMeetingPassword(password as string, meeting.password as string, 'post_meeting_join_url', req, next)) {
+      if (!this.validateMeetingPassword(password as string, meeting.password as string, 'post_meeting_link', req, next)) {
         return;
       }
 
@@ -175,7 +190,7 @@ export class PublicMeetingController {
         const earlyJoinMinutes = meeting?.early_join_time_minutes ?? 10;
 
         const validationError = ServiceValidationError.forField('timing', `You can join the meeting up to ${earlyJoinMinutes} minutes before the start time`, {
-          operation: 'post_meeting_join_url',
+          operation: 'post_meeting_link',
           service: 'public_meeting_controller',
           path: req.path,
         });
@@ -192,15 +207,16 @@ export class PublicMeetingController {
 
       // Return public_link if available from ITX data, otherwise fetch from API
       if (meeting.public_link) {
-        res.json({ join_url: meeting.public_link });
+        res.json({ link: meeting.public_link });
         return;
       }
 
-      const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id);
+      const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id, email);
 
       // Log the success
-      logger.success(req, 'post_meeting_join_url', startTime, {
+      logger.success(req, 'post_meeting_link', startTime, {
         meeting_id: id,
+        email: email,
         project_uid: meeting.project_uid,
         title: meeting.title,
       });
@@ -381,20 +397,20 @@ export class PublicMeetingController {
    * Handles join URL logic for public meetings
    */
   private async handleJoinUrlForPublicMeeting(req: Request, meeting: any, id: string): Promise<void> {
-    const startTime = logger.startOperation(req, 'handle_join_url_for_public_meeting', {
+    const startTime = logger.startOperation(req, 'handle_link_for_public_meeting', {
       meeting_id: id,
     });
 
     try {
       const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id);
-      meeting.public_link = joinUrlData.join_url;
+      meeting.public_link = joinUrlData.link;
 
-      logger.success(req, 'handle_join_url_for_public_meeting', startTime, {
+      logger.success(req, 'handle_link_for_public_meeting', startTime, {
         meeting_id: id,
-        has_join_url: !!joinUrlData.join_url,
+        has_link: !!joinUrlData.link,
       });
     } catch (error) {
-      logger.warning(req, 'handle_join_url_for_public_meeting', 'Failed to fetch join URL, continuing without it', {
+      logger.warning(req, 'handle_link_for_public_meeting', 'Failed to fetch join URL, continuing without it', {
         meeting_id: id,
         has_token: !!req.bearerToken,
         err: error,
@@ -428,7 +444,7 @@ export class PublicMeetingController {
     if (!email) {
       // Create a validation error (error handler will log)
       const validationError = ServiceValidationError.forField('email', 'Email is required', {
-        operation: 'post_meeting_join_url',
+        operation: 'post_meeting_link',
         service: 'public_meeting_controller',
         path: req.path,
       });
@@ -439,9 +455,9 @@ export class PublicMeetingController {
 
     // Query the meeting registrants filtered by the user's email to validate if the user was invited to the meeting
     const registrants = await this.meetingService.getMeetingRegistrantsByEmail(req, id, email);
-    if (registrants.resources.length === 0) {
+    if (registrants.length === 0) {
       const authError = new AuthorizationError('The email address is not registered for this restricted meeting', {
-        operation: 'post_meeting_join_url',
+        operation: 'post_meeting_link',
         service: 'public_meeting_controller',
         path: `/itx/meetings/${id}`,
       });
@@ -451,7 +467,7 @@ export class PublicMeetingController {
     logger.success(req, 'restricted_meeting_check', helperStartTime, {
       meeting_id: id,
       email,
-      registrant_count: registrants.resources.length,
+      registrant_count: registrants.length,
     });
   }
 }

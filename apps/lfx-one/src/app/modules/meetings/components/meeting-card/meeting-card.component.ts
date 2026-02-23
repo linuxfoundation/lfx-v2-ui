@@ -137,8 +137,7 @@ export class MeetingCardComponent implements OnInit {
   );
   // Computed signal to check if user can toggle between RSVP Details and RSVP Button Group
   // True when user is both an organizer AND invited to the meeting (for non-past meetings)
-  // RSVP is currently disabled (Coming Soon) - will be enabled when ITX backend supports it
-  public readonly canToggleRsvpView: Signal<boolean> = computed(() => false);
+  public readonly canToggleRsvpView: Signal<boolean> = computed(() => !!this.meeting().organizer && this.isInvited() && !this.pastMeeting());
 
   public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
   public readonly meetingDescription: Signal<string> = this.initMeetingDescription();
@@ -176,11 +175,11 @@ export class MeetingCardComponent implements OnInit {
 
     const joinUrl$ = combineLatest([meeting$, occurrence$, user$, authenticated$, pastMeeting$]).pipe(
       switchMap(([meeting, occurrence, user, authenticated, isPastMeeting]) => {
-        if (!meeting.id || isPastMeeting || !canJoinMeeting(meeting, occurrence)) {
+        if (!meeting.id || isPastMeeting || !canJoinMeeting(meeting, occurrence) || (meeting.restricted && !meeting.invited)) {
           return of(null);
         }
 
-        // Use public_link directly if available (e.g. for legacy meetings with join_url from query service)
+        // Use public_link directly if available (e.g. for legacy meetings with link from query service)
         if (meeting.public_link) {
           return of(meeting.public_link);
         }
@@ -188,7 +187,7 @@ export class MeetingCardComponent implements OnInit {
         // Otherwise fetch join URL from API for authenticated users
         if (authenticated && user?.email) {
           return this.meetingService.getPublicMeetingJoinUrl(meeting.id, meeting.password, { email: user.email }).pipe(
-            map((res) => buildJoinUrlWithParams(res.join_url, user)),
+            map((res) => buildJoinUrlWithParams(res.link, user)),
             catchError(() => of(null))
           );
         }
@@ -200,7 +199,8 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public ngOnInit(): void {
-    this.attachments = this.initAttachments();
+    // TODO: Resources section is "Coming Soon" — skip attachment fetches until enabled
+    // this.attachments = this.initAttachments();
     if (this.pastMeeting()) {
       this.initRecording();
       this.initSummary();
@@ -646,7 +646,15 @@ export class MeetingCardComponent implements OnInit {
       if (this.pastMeeting()) {
         return false;
       }
-      return canJoinMeeting(this.meeting(), this.occurrence());
+
+      const meeting = this.meeting();
+
+      // Restricted meetings require the user to be invited
+      if (meeting.restricted && !meeting.invited) {
+        return false;
+      }
+
+      return canJoinMeeting(meeting, this.occurrence());
     });
   }
 

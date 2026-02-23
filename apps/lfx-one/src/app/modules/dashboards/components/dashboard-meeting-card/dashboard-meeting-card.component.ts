@@ -79,7 +79,7 @@ export class DashboardMeetingCardComponent {
           return of(null);
         }
 
-        // Use public_link directly if available (e.g. for legacy meetings with join_url from query service)
+        // Use public_link directly if available (e.g. for legacy meetings with link from query service)
         if (meeting.public_link) {
           return of(meeting.public_link);
         }
@@ -87,7 +87,7 @@ export class DashboardMeetingCardComponent {
         // Otherwise fetch join URL from API for authenticated users
         if (authenticated && user?.email) {
           return this.meetingService.getPublicMeetingJoinUrl(meeting.id, meeting.password, { email: user.email }).pipe(
-            map((res) => buildJoinUrlWithParams(res.join_url, user)),
+            map((res) => buildJoinUrlWithParams(res.link, user)),
             catchError(() => of(null))
           );
         }
@@ -221,7 +221,14 @@ export class DashboardMeetingCardComponent {
 
   private initCanJoinMeeting(): Signal<boolean> {
     return computed(() => {
-      return canJoinMeeting(this.meeting(), this.occurrence());
+      const meeting = this.meeting();
+
+      // Restricted meetings require the user to be invited
+      if (meeting.restricted && !meeting.invited) {
+        return false;
+      }
+
+      return canJoinMeeting(meeting, this.occurrence());
     });
   }
 

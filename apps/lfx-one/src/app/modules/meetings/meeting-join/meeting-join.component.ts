@@ -113,6 +113,8 @@ export class MeetingJoinComponent {
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
+  public canToggleRsvpView: Signal<boolean>;
+  public showMyRsvp: WritableSignal<boolean> = signal<boolean>(false);
 
   // Form value signals for reactivity
   public formValues: Signal<{ name: string; email: string; organization: string }>;
@@ -133,6 +135,7 @@ export class MeetingJoinComponent {
     // Initialize invited/registration signals
     this.isInvited = this.initializeIsInvited();
     this.canRegisterForMeeting = this.initializeCanRegisterForMeeting();
+    this.canToggleRsvpView = this.initializeCanToggleRsvpView();
 
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
@@ -162,7 +165,7 @@ export class MeetingJoinComponent {
 
   public onRegistrantsToggle(): void {
     const meeting = this.meeting();
-    if (!meeting.show_meeting_attendees) {
+    if (!meeting.organizer && !meeting.invited) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Show Members is not enabled',
@@ -181,6 +184,10 @@ export class MeetingJoinComponent {
   public onEmailErrorClick(): void {
     this.joinUrlError.set(null);
     this.showGuestForm.set(true);
+  }
+
+  public onRsvpViewToggle(): void {
+    this.showMyRsvp.set(!this.showMyRsvp());
   }
 
   public registerForMeeting(): void {
@@ -450,14 +457,14 @@ export class MeetingJoinComponent {
     return this.meetingService.getPublicMeetingJoinUrl(meeting.id, meeting.password, { email }).pipe(
       map((res) => {
         this.isLoadingJoinUrl.set(false);
-        if (res.join_url) {
+        if (res.link) {
           // For authenticated users, use the user object
           // For guests, pass name and organization from form
           if (this.authenticated()) {
-            return buildJoinUrlWithParams(res.join_url, this.user());
+            return buildJoinUrlWithParams(res.link, this.user());
           }
 
-          return buildJoinUrlWithParams(res.join_url, null, {
+          return buildJoinUrlWithParams(res.link, null, {
             name: this.joinForm.get('name')?.value,
             organization: this.joinForm.get('organization')?.value,
           });
@@ -472,24 +479,9 @@ export class MeetingJoinComponent {
     );
   }
 
+  // TODO: Re-implement attachments with a public endpoint
   private initializeAttachments(): Signal<MeetingAttachment[]> {
-    // Convert meeting signal to observable to react to changes
-    return toSignal(
-      toObservable(this.meeting).pipe(
-        switchMap((meeting) => {
-          if (meeting?.id) {
-            return this.meetingService.getMeetingAttachments(meeting.id).pipe(
-              catchError((error) => {
-                console.error(`Failed to load attachments for meeting ${meeting.id}:`, error);
-                return of([]);
-              })
-            );
-          }
-          return of([]);
-        })
-      ),
-      { initialValue: [] }
-    );
+    return signal<MeetingAttachment[]>([]);
   }
 
   private initializeAlertMessage(): Signal<string> {
@@ -534,6 +526,10 @@ export class MeetingJoinComponent {
       const meeting = this.meeting();
       return !this.isInvited() && !meeting?.restricted && meeting?.visibility === 'public';
     });
+  }
+
+  private initializeCanToggleRsvpView(): Signal<boolean> {
+    return computed(() => !!this.meeting()?.organizer && this.isInvited());
   }
 
   private initializeEmailError(): Signal<boolean> {
