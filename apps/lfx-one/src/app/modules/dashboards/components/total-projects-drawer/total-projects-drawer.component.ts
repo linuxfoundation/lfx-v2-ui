@@ -24,6 +24,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
+import { LifecycleStage } from '@lfx-one/shared/interfaces';
 import type {
   FoundationProjectsDetailResponse,
   FoundationProjectsLifecycleDistributionResponse,
@@ -77,15 +78,14 @@ export class TotalProjectsDrawerComponent {
 
   // === Inputs ===
   public readonly data = input<FoundationTotalProjectsResponse>(DEFAULT_FOUNDATION_TOTAL_PROJECTS);
-  public readonly loading = input<boolean>(false);
+
+  // === Enum exposure for template ===
+  protected readonly LifecycleStage = LifecycleStage;
 
   // === WritableSignals ===
   protected readonly primaryView = signal<'chart' | 'table'>('chart');
   protected readonly primaryPage = signal(1);
   protected readonly drawerLoading = signal(false);
-
-  // === Computed Signals ===
-  protected readonly foundationName: Signal<string> = computed(() => this.projectContextService.selectedFoundation()?.name ?? '');
   protected readonly hasData: Signal<boolean> = computed(() => this.data().monthlyData.length > 0);
   protected readonly primarySearch: Signal<string> = this.initPrimarySearch();
   private readonly drawerData = this.initDrawerData();
@@ -136,6 +136,12 @@ export class TotalProjectsDrawerComponent {
     datasets: { line: { tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4 } },
   };
 
+  private readonly lifecycleColorMap: Record<string, string> = {
+    [LifecycleStage.Sandbox]: lfxColors.violet[500],
+    [LifecycleStage.Incubating]: lfxColors.blue[500],
+    [LifecycleStage.Graduated]: lfxColors.emerald[500],
+  };
+
   protected readonly barChartSectionOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -155,14 +161,14 @@ export class TotalProjectsDrawerComponent {
       x: {
         display: true,
         grid: { display: false },
-        border: { display: true, color: '#94a3b8', width: 1 },
-        ticks: { color: '#64748b', font: { size: 12 }, padding: 4 },
+        border: { display: true, color: lfxColors.gray[400], width: 1 },
+        ticks: { color: lfxColors.gray[500], font: { size: 12 }, padding: 4 },
       },
       y: {
         display: true,
-        grid: { color: '#e5e7eb' },
-        border: { display: true, color: '#94a3b8', width: 1 },
-        ticks: { color: '#64748b', font: { size: 12 }, padding: 4 },
+        grid: { color: lfxColors.gray[200] },
+        border: { display: true, color: lfxColors.gray[400], width: 1 },
+        ticks: { color: lfxColors.gray[500], font: { size: 12 }, padding: 4 },
       },
     },
     datasets: { bar: { barPercentage: 0.7, categoryPercentage: 0.8 } },
@@ -283,13 +289,12 @@ export class TotalProjectsDrawerComponent {
   private initLifecycleChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
       const distribution = this.lifecycleDistributionData().distribution;
-      const colorMap: Record<string, string> = { Sandbox: '#8b5cf6', Incubating: '#0094FF', Graduated: '#10b981' };
       return {
         labels: distribution.map((d) => d.stage),
         datasets: [
           {
             data: distribution.map((d) => d.count),
-            backgroundColor: distribution.map((d) => colorMap[d.stage] ?? '#94a3b8'),
+            backgroundColor: distribution.map((d) => this.lifecycleColorMap[d.stage] ?? lfxColors.gray[400]),
             borderRadius: 4,
             borderSkipped: false,
           },

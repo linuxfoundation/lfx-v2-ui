@@ -17,6 +17,7 @@ import {
   FoundationProjectsDetailRow,
   FoundationProjectsLifecycleDistributionResponse,
   FoundationProjectsLifecycleDistributionRow,
+  LifecycleStage,
   FoundationSoftwareValueResponse,
   FoundationTotalProjectsMonthlyRow,
   FoundationTopProjectBySoftwareValueRow,
@@ -1085,27 +1086,29 @@ export class ProjectService {
     try {
       const result = await this.snowflakeService.execute<FoundationProjectsDetailRow>(query, [foundationSlug]);
 
-      const projects = result.rows.map((row, i) => ({
-        id: i + 1,
-        projectName: row.PROJECT_NAME,
-        projectSlug: row.PROJECT_SLUG,
-        lifecycleStage: row.LIFECYCLE_STAGE,
-        activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
-        commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
-        maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
-        stars: row.STARS_YTD_COUNT ?? 0,
-        lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
-      }));
+      const projects = result.rows
+        .filter((row): row is typeof row & { LIFECYCLE_STAGE: string } => row.LIFECYCLE_STAGE != null)
+        .map((row) => ({
+          id: row.PROJECT_SLUG,
+          projectName: row.PROJECT_NAME,
+          projectSlug: row.PROJECT_SLUG,
+          lifecycleStage: row.LIFECYCLE_STAGE as LifecycleStage,
+          activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
+          commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
+          maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
+          stars: row.STARS_YTD_COUNT ?? 0,
+          lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
+        }));
 
       logger.debug(undefined, 'get_foundation_projects_detail', 'Fetched project detail rows', { count: projects.length });
 
       return { projects, totalCount: projects.length };
     } catch (error) {
-      logger.warning(undefined, 'get_foundation_projects_detail', 'Failed to fetch project detail rows, returning empty', {
+      logger.warning(undefined, 'get_foundation_projects_detail', 'Failed to fetch project detail rows', {
         foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
-      return { projects: [], totalCount: 0 };
+      throw error;
     }
   }
 
@@ -1143,11 +1146,11 @@ export class ProjectService {
           .map((row) => ({ stage: row.LIFECYCLE_STAGE, count: row.PROJECT_COUNT })),
       };
     } catch (error) {
-      logger.warning(undefined, 'get_foundation_projects_lifecycle_distribution', 'Failed to fetch lifecycle distribution, returning empty', {
+      logger.warning(undefined, 'get_foundation_projects_lifecycle_distribution', 'Failed to fetch lifecycle distribution', {
         foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
-      return { distribution: [] };
+      throw error;
     }
   }
 
@@ -1415,10 +1418,4 @@ export class ProjectService {
       throw error;
     }
   }
-
-  /**
-   * Get project detail rows for a foundation from PLATINUM.FOUNDATION_TOTAL_PROJECTS_DETAIL
-   * Returns one row per project with contributor, commit, maintainer, and star counts.
-   * @param foundationSlug - Foundation slug to filter by (e.g., 'cncf', 'tlf')
-   */
 }

@@ -76,7 +76,7 @@ export interface DashboardMetricCard {
   customContentType?: CustomContentType;
 
   /** Identifies which drill-down drawer to open when this card is clicked */
-  drawerType?: string;
+  drawerType?: DashboardDrawerType;
 
   // ============================================
   // Status & Metadata
@@ -176,15 +176,24 @@ export interface TopProjectByValue {
 // Total Projects Drawer
 // ============================================
 
+/** Identifies which drill-down drawer to open from a metric card */
+export enum DashboardDrawerType {
+  TotalProjects = 'total-projects',
+}
+
 /** Lifecycle stage of a foundation project */
-export type LifecycleStage = 'Graduated' | 'Incubating' | 'Sandbox';
+export enum LifecycleStage {
+  Graduated = 'Graduated',
+  Incubating = 'Incubating',
+  Sandbox = 'Sandbox',
+}
 
 /**
  * Project row for the total projects drill-down table
  * @description Represents a single project with key health and activity metrics
  */
 export interface ProjectTableRow {
-  id: number;
+  id: string;
   projectName: string;
   projectSlug: string;
   lifecycleStage: LifecycleStage;

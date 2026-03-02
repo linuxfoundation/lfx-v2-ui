@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { ProjectItem } from './components.interface';
-import type { LifecycleStage, ProjectTableRow } from './dashboard-metric.interface';
+import type { ProjectTableRow } from './dashboard-metric.interface';
 
 /**
  * Active Weeks Streak row from Snowflake ACTIVE_WEEKS_STREAK table
@@ -2027,7 +2027,7 @@ export interface FoundationProjectsDetailRow {
   PROJECT_SLUG: string;
   PROJECT_SOURCE_ID: string;
   PROJECT_ID: string;
-  LIFECYCLE_STAGE: LifecycleStage;
+  LIFECYCLE_STAGE: string | null;
   PROJECT_START_DATE: string | null;
   COMMITS_90D_COUNT: number;
   CONTRIBUTORS_90D_COUNT: number;

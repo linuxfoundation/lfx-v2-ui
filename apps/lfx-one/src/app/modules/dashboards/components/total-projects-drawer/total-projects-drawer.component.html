@@ -77,7 +77,11 @@
 
       <!-- Chart View -->
       @if (primaryView() === 'chart') {
-        @if (hasData()) {
+        @if (drawerLoading()) {
+          <div class="flex items-center justify-center py-12" data-testid="total-projects-drawer-chart-loading">
+            <i class="fa-light fa-spinner-third fa-spin text-2xl text-gray-400"></i>
+          </div>
+        } @else if (hasData()) {
           <div class="h-[200px]" data-testid="total-projects-drawer-chart">
             <lfx-chart type="line" [data]="primaryChartData()" [options]="primaryChartOptions" height="100%"></lfx-chart>
           </div>
@@ -130,9 +134,9 @@
                         <span
                           class="inline-flex px-2 py-1 rounded-full text-xs"
                           [ngClass]="{
-                            'bg-purple-100 text-purple-800': project.lifecycleStage === 'Graduated',
-                            'bg-blue-100 text-blue-800': project.lifecycleStage === 'Incubating',
-                            'bg-slate-100 text-slate-800': project.lifecycleStage === 'Sandbox',
+                            'bg-green-100 text-green-800': project.lifecycleStage === LifecycleStage.Graduated,
+                            'bg-blue-100 text-blue-800': project.lifecycleStage === LifecycleStage.Incubating,
+                            'bg-purple-100 text-purple-800': project.lifecycleStage === LifecycleStage.Sandbox,
                           }">
                           {{ project.lifecycleStage }}
                         </span>

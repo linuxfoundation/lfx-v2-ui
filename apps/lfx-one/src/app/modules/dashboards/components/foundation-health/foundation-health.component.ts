@@ -15,6 +15,7 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 
+import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
 import type {
   CompanyBusFactor,
   DashboardMetricCard,
@@ -87,13 +88,14 @@ export class FoundationHealthComponent {
   public readonly metricCards = this.initializeMetricCards();
   public readonly healthScoreDistribution = this.initializeHealthScoreDistribution();
 
-  public readonly activeDrawer = signal<string | null>(null);
+  public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
+  protected readonly DashboardDrawerType = DashboardDrawerType;
 
   public handleFilterChange(filter: string): void {
     this.selectedFilter.set(filter);
   }
 
-  public handleCardClick(drawerType: string): void {
+  public handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
   }
 

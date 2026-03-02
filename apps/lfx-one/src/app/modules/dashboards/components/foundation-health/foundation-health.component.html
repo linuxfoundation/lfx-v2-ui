@@ -208,7 +208,6 @@
 
 <!-- Drill-Down Drawers -->
 <lfx-total-projects-drawer
-  [visible]="activeDrawer() === 'total-projects'"
+  [visible]="activeDrawer() === DashboardDrawerType.TotalProjects"
   (visibleChange)="handleDrawerClose()"
-  [data]="totalProjectsData()"
-  [loading]="totalProjectsLoading()"></lfx-total-projects-drawer>
+  [data]="totalProjectsData()"></lfx-total-projects-drawer>
