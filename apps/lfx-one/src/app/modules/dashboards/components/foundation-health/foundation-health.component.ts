@@ -13,6 +13,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
+import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 
 import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
@@ -27,7 +28,7 @@ import type {
 
 @Component({
   selector: 'lfx-foundation-health',
-  imports: [FilterPillsComponent, MetricCardComponent, DataCopilotComponent, ScrollShadowDirective, TotalProjectsDrawerComponent],
+  imports: [FilterPillsComponent, MetricCardComponent, DataCopilotComponent, ScrollShadowDirective, TotalProjectsDrawerComponent, TotalMembersDrawerComponent],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
 })
@@ -54,7 +55,7 @@ export class FoundationHealthComponent {
 
   // Data signals - each fetches its own data independently
   protected readonly totalProjectsData = this.initializeTotalProjectsData();
-  private readonly totalMembersData = this.initializeTotalMembersData();
+  protected readonly totalMembersData = this.initializeTotalMembersData();
   private readonly softwareValueData = this.initializeSoftwareValueData();
   private readonly companyBusFactorData = this.initializeCompanyBusFactorData();
   private readonly maintainersData = this.initializeMaintainersData();

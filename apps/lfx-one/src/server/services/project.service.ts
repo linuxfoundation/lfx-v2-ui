@@ -917,6 +917,7 @@ export class ProjectService {
           COUNT(DISTINCT ACCOUNT_ID) AS MONTHLY_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.MEMBER_DASHBOARD_MEMBERSHIP_TIER
         WHERE PROJECT_SLUG = ?
+          AND DATE_TRUNC('MONTH', START_DATE) >= DATE_TRUNC('MONTH', DATEADD('month', -11, CURRENT_DATE()))
         GROUP BY PROJECT_ID, PROJECT_NAME, PROJECT_SLUG, DATE_TRUNC('MONTH', START_DATE)
       )
       SELECT
@@ -935,7 +936,7 @@ export class ProjectService {
     const monthlyData = result.rows.map((row) => row.MEMBER_COUNT);
     const monthlyLabels = result.rows.map((row) => {
       const date = new Date(row.MONTH_START);
-      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      return date.toLocaleDateString('en-US', { month: 'short' });
     });
 
     // Total members is the last cumulative count

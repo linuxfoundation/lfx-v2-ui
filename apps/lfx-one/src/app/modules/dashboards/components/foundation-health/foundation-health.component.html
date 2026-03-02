@@ -211,3 +211,8 @@
   [visible]="activeDrawer() === DashboardDrawerType.TotalProjects"
   (visibleChange)="handleDrawerClose()"
   [data]="totalProjectsData()"></lfx-total-projects-drawer>
+
+<lfx-total-members-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.TotalMembers"
+  (visibleChange)="handleDrawerClose()"
+  [data]="totalMembersData()"></lfx-total-members-drawer>
