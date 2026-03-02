@@ -13,6 +13,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
+import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
 import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 
@@ -28,7 +29,15 @@ import type {
 
 @Component({
   selector: 'lfx-foundation-health',
-  imports: [FilterPillsComponent, MetricCardComponent, DataCopilotComponent, ScrollShadowDirective, TotalProjectsDrawerComponent, TotalMembersDrawerComponent],
+  imports: [
+    FilterPillsComponent,
+    MetricCardComponent,
+    DataCopilotComponent,
+    ScrollShadowDirective,
+    TotalProjectsDrawerComponent,
+    TotalMembersDrawerComponent,
+    ActiveContributorsDrawerComponent,
+  ],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
 })
@@ -60,7 +69,7 @@ export class FoundationHealthComponent {
   private readonly companyBusFactorData = this.initializeCompanyBusFactorData();
   private readonly maintainersData = this.initializeMaintainersData();
   private readonly healthScoresData = this.initializeHealthScoresData();
-  private readonly activeContributorsData = this.initializeActiveContributorsData();
+  protected readonly activeContributorsData = this.initializeActiveContributorsData();
   private readonly eventsData = this.initializeEventsData();
 
   public readonly selectedFilter = signal<string>('all');

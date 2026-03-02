@@ -751,6 +751,47 @@ export interface FoundationTotalProjectsResponse {
  * Contains cumulative monthly trend data for member organizations
  * Optimized response with aggregated member counts over time
  */
+/**
+ * Row from FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY aggregated by month
+ */
+export interface FoundationActiveContributorsMonthlyRow {
+  MONTH_START: string;
+  MONTHLY_AVG_CONTRIBUTORS: number;
+}
+
+/**
+ * API response for foundation active contributors monthly trend
+ */
+export interface FoundationActiveContributorsMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+}
+
+/**
+ * Single percentile band row from FOUNDATION_CONTRIBUTORS_DISTRIBUTION
+ */
+export interface FoundationContributorsDistributionRow {
+  PERCENTILE_BAND: string;
+  CONTRIBUTOR_COUNT: number;
+  CONTRIBUTION_SHARE_PERCENTAGE: number;
+}
+
+/**
+ * Single percentile band entry in the distribution response
+ */
+export interface ContributorsDistributionBand {
+  band: string;
+  contributionSharePercentage: number;
+  contributorCount: number;
+}
+
+/**
+ * API response for foundation contributor distribution by percentile band
+ */
+export interface FoundationContributorsDistributionResponse {
+  distribution: ContributorsDistributionBand[];
+}
+
 export interface FoundationTotalMembersResponse {
   /**
    * Total number of distinct member organizations (latest cumulative count)
@@ -1188,14 +1229,14 @@ export interface FoundationUniqueContributorsDailyRow {
   DAILY_UNIQUE_CONTRIBUTORS: number;
 
   /**
-   * Average contributors (calculated aggregate)
+   * Average contributors per day over the last 12 months (constant across all rows for a foundation)
    */
-  AVG_CONTRIBUTORS: number;
+  AVG_CONTRIBUTORS_LAST_12_MONTHS: number;
 
   /**
-   * Total days with data
+   * Total days with contributor activity in the last 12 months period
    */
-  TOTAL_DAYS: number;
+  TOTAL_DAYS_LAST_12_MONTHS: number;
 }
 
 /**
@@ -1229,14 +1270,14 @@ export interface ProjectUniqueContributorsDailyRow {
   DAILY_UNIQUE_CONTRIBUTORS: number;
 
   /**
-   * Average contributors (calculated aggregate)
+   * Average contributors per day over the last 12 months (constant across all rows for a project)
    */
-  AVG_CONTRIBUTORS: number;
+  AVG_CONTRIBUTORS_LAST_12_MONTHS: number;
 
   /**
-   * Total days with data
+   * Total days with contributor activity in the last 12 months period
    */
-  TOTAL_DAYS: number;
+  TOTAL_DAYS_LAST_12_MONTHS: number;
 }
 
 /**

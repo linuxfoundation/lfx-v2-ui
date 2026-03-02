@@ -7,8 +7,10 @@ import {
   ActiveWeeksStreakResponse,
   CertifiedEmployeesResponse,
   CodeCommitsDailyResponse,
+  FoundationActiveContributorsMonthlyResponse,
   FoundationCompanyBusFactorResponse,
   FoundationContributorsMentoredResponse,
+  FoundationContributorsDistributionResponse,
   FoundationHealthScoreDistributionResponse,
   FoundationMaintainersResponse,
   FoundationSoftwareValueResponse,
@@ -275,6 +277,36 @@ export class AnalyticsService {
       .pipe(
         catchError((error) => {
           console.error('Failed to fetch foundation projects lifecycle distribution:', error);
+          return of({ distribution: [] });
+        })
+      );
+  }
+
+  /**
+   * Get monthly average active contributors for a foundation (last 12 months)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationActiveContributorsMonthly(foundationSlug: string): Observable<FoundationActiveContributorsMonthlyResponse> {
+    return this.http
+      .get<FoundationActiveContributorsMonthlyResponse>('/api/analytics/foundation-active-contributors-monthly', { params: { foundationSlug } })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch foundation active contributors monthly:', error);
+          return of({ monthlyData: [], monthlyLabels: [] });
+        })
+      );
+  }
+
+  /**
+   * Get contributor distribution by percentile band for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationContributorsDistribution(foundationSlug: string): Observable<FoundationContributorsDistributionResponse> {
+    return this.http
+      .get<FoundationContributorsDistributionResponse>('/api/analytics/foundation-contributors-distribution', { params: { foundationSlug } })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch foundation contributors distribution:', error);
           return of({ distribution: [] });
         })
       );

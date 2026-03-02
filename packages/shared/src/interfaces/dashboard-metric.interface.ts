@@ -180,6 +180,7 @@ export interface TopProjectByValue {
 export enum DashboardDrawerType {
   TotalProjects = 'total-projects',
   TotalMembers = 'total-members',
+  ActiveContributors = 'active-contributors',
 }
 
 /** Lifecycle stage of a foundation project */

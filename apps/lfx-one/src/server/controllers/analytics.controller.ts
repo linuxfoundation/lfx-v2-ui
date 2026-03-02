@@ -695,6 +695,68 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/foundation-active-contributors-monthly
+   * Get monthly average active contributors for a foundation (last 12 months)
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationActiveContributorsMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_active_contributors_monthly');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_active_contributors_monthly',
+        });
+      }
+
+      const response = await this.projectService.getFoundationActiveContributorsMonthly(foundationSlug);
+
+      logger.success(req, 'get_foundation_active_contributors_monthly', startTime, {
+        foundation_slug: foundationSlug,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_active_contributors_monthly', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/foundation-contributors-distribution
+   * Get contributor distribution by percentile band for a foundation
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationContributorsDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_contributors_distribution');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_contributors_distribution',
+        });
+      }
+
+      const response = await this.projectService.getFoundationContributorsDistribution(foundationSlug);
+
+      logger.success(req, 'get_foundation_contributors_distribution', startTime, {
+        foundation_slug: foundationSlug,
+        band_count: response.distribution.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_contributors_distribution', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/analytics/foundation-software-value
    * Get foundation software value and top projects from Snowflake
    * Query params: foundationSlug (required)

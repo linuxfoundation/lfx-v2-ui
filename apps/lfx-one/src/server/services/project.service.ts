@@ -23,6 +23,10 @@ import {
   FoundationTopProjectBySoftwareValueRow,
   FoundationTotalMembersResponse,
   FoundationTotalProjectsResponse,
+  FoundationActiveContributorsMonthlyRow,
+  FoundationActiveContributorsMonthlyResponse,
+  FoundationContributorsDistributionResponse,
+  FoundationContributorsDistributionRow,
   FoundationUniqueContributorsDailyRow,
   HealthEventsMonthlyResponse,
   HealthMetricsAggregatedRow,
@@ -950,6 +954,70 @@ export class ProjectService {
   }
 
   /**
+   * Get monthly average active contributors for a foundation (last 12 months)
+   * Aggregates FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY by month
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Monthly contributor counts with short month labels
+   */
+  public async getFoundationActiveContributorsMonthly(foundationSlug: string): Promise<FoundationActiveContributorsMonthlyResponse> {
+    const query = `
+      SELECT
+        DATE_TRUNC('MONTH', ACTIVITY_DATE) AS MONTH_START,
+        ROUND(AVG(DAILY_UNIQUE_CONTRIBUTORS)) AS MONTHLY_AVG_CONTRIBUTORS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY
+      WHERE FOUNDATION_SLUG = ?
+        AND ACTIVITY_DATE >= DATE_TRUNC('MONTH', DATEADD('month', -11, CURRENT_DATE()))
+      GROUP BY DATE_TRUNC('MONTH', ACTIVITY_DATE)
+      ORDER BY MONTH_START ASC
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationActiveContributorsMonthlyRow>(query, [foundationSlug]);
+
+    const monthlyData = result.rows.map((row) => row.MONTHLY_AVG_CONTRIBUTORS);
+    const monthlyLabels = result.rows.map((row) => {
+      const date = new Date(row.MONTH_START);
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    });
+
+    return { monthlyData, monthlyLabels };
+  }
+
+  /**
+   * Get contributor distribution by percentile band for a foundation
+   * Queries FOUNDATION_CONTRIBUTORS_DISTRIBUTION for last_12_months time range
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Distribution of contribution share across Top 10%, Next 40%, Bottom 50%
+   */
+  public async getFoundationContributorsDistribution(foundationSlug: string): Promise<FoundationContributorsDistributionResponse> {
+    const query = `
+      SELECT
+        PERCENTILE_BAND,
+        CONTRIBUTOR_COUNT,
+        CONTRIBUTION_SHARE_PERCENTAGE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_CONTRIBUTORS_DISTRIBUTION
+      WHERE FOUNDATION_SLUG = ?
+        AND TIME_RANGE = 'last_12_months'
+      ORDER BY
+        CASE PERCENTILE_BAND
+          WHEN 'Top 10%' THEN 1
+          WHEN 'Next 40%' THEN 2
+          WHEN 'Bottom 50%' THEN 3
+          ELSE 4
+        END
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationContributorsDistributionRow>(query, [foundationSlug]);
+
+    const distribution = result.rows.map((row) => ({
+      band: row.PERCENTILE_BAND,
+      contributionSharePercentage: row.CONTRIBUTION_SHARE_PERCENTAGE,
+      contributorCount: row.CONTRIBUTOR_COUNT,
+    }));
+
+    return { distribution };
+  }
+
+  /**
    * Get foundation software value and top projects from Snowflake
    * Queries FOUNDATION_TOP_PROJECTS_BY_SOFTWARE_VALUE table
    * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
@@ -1240,8 +1308,8 @@ export class ProjectService {
         FOUNDATION_SLUG,
         ACTIVITY_DATE,
         DAILY_UNIQUE_CONTRIBUTORS,
-        AVG_CONTRIBUTORS,
-        TOTAL_DAYS
+        AVG_CONTRIBUTORS_LAST_12_MONTHS,
+        TOTAL_DAYS_LAST_12_MONTHS
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY
       WHERE FOUNDATION_SLUG = ?
       ORDER BY ACTIVITY_DATE DESC
@@ -1253,8 +1321,8 @@ export class ProjectService {
         PROJECT_SLUG,
         ACTIVITY_DATE,
         DAILY_UNIQUE_CONTRIBUTORS,
-        AVG_CONTRIBUTORS,
-        TOTAL_DAYS
+        AVG_CONTRIBUTORS_LAST_12_MONTHS,
+        TOTAL_DAYS_LAST_12_MONTHS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PROJECT_UNIQUE_CONTRIBUTORS_DAILY
       WHERE PROJECT_SLUG = ?
       ORDER BY ACTIVITY_DATE DESC
@@ -1266,7 +1334,7 @@ export class ProjectService {
         : await this.snowflakeService.execute<ProjectUniqueContributorsDailyRow>(query, [slug]);
 
     // Get average contributors from first row (same across all rows from SQL calculation)
-    const avgContributors = result.rows.length > 0 ? Math.round(result.rows[0].AVG_CONTRIBUTORS) : 0;
+    const avgContributors = result.rows.length > 0 ? Math.round(result.rows[0].AVG_CONTRIBUTORS_LAST_12_MONTHS) : 0;
 
     return {
       data: result.rows,

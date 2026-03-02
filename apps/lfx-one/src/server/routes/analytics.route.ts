@@ -51,6 +51,12 @@ router.get('/foundation-total-projects', (req, res, next) => analyticsController
 // Foundation total members endpoint
 router.get('/foundation-total-members', (req, res, next) => analyticsController.getFoundationTotalMembers(req, res, next));
 
+// Foundation active contributors monthly endpoint (active contributors drill-down)
+router.get('/foundation-active-contributors-monthly', (req, res, next) => analyticsController.getFoundationActiveContributorsMonthly(req, res, next));
+
+// Foundation contributors distribution endpoint (active contributors drill-down)
+router.get('/foundation-contributors-distribution', (req, res, next) => analyticsController.getFoundationContributorsDistribution(req, res, next));
+
 // Foundation software value endpoint
 router.get('/foundation-software-value', (req, res, next) => analyticsController.getFoundationSoftwareValue(req, res, next));
 

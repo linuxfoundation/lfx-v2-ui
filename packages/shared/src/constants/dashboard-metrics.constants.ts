@@ -55,6 +55,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-active-contributors',
+    drawerType: DashboardDrawerType.ActiveContributors,
   },
   {
     title: 'Maintainers',
