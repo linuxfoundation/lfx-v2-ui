@@ -12,6 +12,10 @@ import {
   FoundationHealthScoreDistributionResponse,
   FoundationHealthScoreDistributionRow,
   FoundationMaintainersDailyRow,
+  FoundationMaintainersDistributionResponse,
+  FoundationMaintainersDistributionRow,
+  FoundationMaintainersMonthlyResponse,
+  FoundationMaintainersMonthlyRow,
   FoundationMaintainersResponse,
   FoundationProjectsDetailResponse,
   FoundationProjectsDetailRow,
@@ -1088,6 +1092,65 @@ export class ProjectService {
       trendData,
       trendLabels,
     };
+  }
+
+  /**
+   * Get monthly maintainer counts for a foundation (last 12 months, all repos aggregated)
+   * Queries FOUNDATION_MAINTAINERS_REPOSITORY_MONTHLY table
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Monthly maintainer counts with short month labels
+   */
+  public async getFoundationMaintainersMonthly(foundationSlug: string): Promise<FoundationMaintainersMonthlyResponse> {
+    const query = `
+      SELECT
+        METRIC_MONTH,
+        ACTIVE_MAINTAINERS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_REPOSITORY_MONTHLY
+      WHERE FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+        AND METRIC_MONTH >= DATE_TRUNC('MONTH', DATEADD('month', -11, CURRENT_DATE()))
+      ORDER BY METRIC_MONTH ASC
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationMaintainersMonthlyRow>(query, [foundationSlug]);
+
+    const monthlyData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
+    const monthlyLabels = result.rows.map((row) => {
+      const date = new Date(row.METRIC_MONTH);
+      return date.toLocaleDateString('en-US', { month: 'short' });
+    });
+
+    return { monthlyData, monthlyLabels };
+  }
+
+  /**
+   * Get maintainer contribution distribution by percentile band for a foundation
+   * Queries FOUNDATION_MAINTAINERS_DISTRIBUTION table (all_repos, last_12_months)
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Distribution of contribution share across Top 10%, Next 40%, Bottom 50%
+   */
+  public async getFoundationMaintainersDistribution(foundationSlug: string): Promise<FoundationMaintainersDistributionResponse> {
+    const query = `
+      SELECT
+        PERCENTILE_BAND,
+        MAINTAINER_COUNT,
+        CONTRIBUTION_SHARE_PCT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_DISTRIBUTION
+      WHERE FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+        AND TIME_RANGE_NAME = 'last_12_months'
+      ORDER BY CASE PERCENTILE_BAND WHEN 'Top 10%' THEN 1 WHEN 'Next 40%' THEN 2 WHEN 'Bottom 50%' THEN 3 ELSE 4 END
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationMaintainersDistributionRow>(query, [foundationSlug]);
+
+    const distribution = result.rows.map((row) => ({
+      band: row.PERCENTILE_BAND,
+      contributionSharePct: row.CONTRIBUTION_SHARE_PCT,
+      maintainerCount: row.MAINTAINER_COUNT,
+    }));
+
+    return { distribution };
   }
 
   /**

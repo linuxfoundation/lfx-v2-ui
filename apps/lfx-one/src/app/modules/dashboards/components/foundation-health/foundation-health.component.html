@@ -221,3 +221,8 @@
   [visible]="activeDrawer() === DashboardDrawerType.ActiveContributors"
   (visibleChange)="handleDrawerClose()"
   [data]="activeContributorsData()"></lfx-active-contributors-drawer>
+
+<lfx-maintainers-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.Maintainers"
+  (visibleChange)="handleDrawerClose()"
+  [data]="maintainersData()"></lfx-maintainers-drawer>

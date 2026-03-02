@@ -821,6 +821,68 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/foundation-maintainers-monthly
+   * Get monthly maintainer counts for a foundation (last 12 months, all repos)
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationMaintainersMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_maintainers_monthly');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_maintainers_monthly',
+        });
+      }
+
+      const response = await this.projectService.getFoundationMaintainersMonthly(foundationSlug);
+
+      logger.success(req, 'get_foundation_maintainers_monthly', startTime, {
+        foundation_slug: foundationSlug,
+        month_count: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_maintainers_monthly', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/foundation-maintainers-distribution
+   * Get maintainer contribution distribution by percentile band for a foundation
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationMaintainersDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_maintainers_distribution');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_maintainers_distribution',
+        });
+      }
+
+      const response = await this.projectService.getFoundationMaintainersDistribution(foundationSlug);
+
+      logger.success(req, 'get_foundation_maintainers_distribution', startTime, {
+        foundation_slug: foundationSlug,
+        band_count: response.distribution.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_maintainers_distribution', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/analytics/foundation-health-score-distribution
    * Get foundation health score distribution from Snowflake
    * Query params: foundationSlug (required)

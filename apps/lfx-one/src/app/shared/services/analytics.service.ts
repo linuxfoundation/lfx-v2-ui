@@ -12,6 +12,8 @@ import {
   FoundationContributorsMentoredResponse,
   FoundationContributorsDistributionResponse,
   FoundationHealthScoreDistributionResponse,
+  FoundationMaintainersDistributionResponse,
+  FoundationMaintainersMonthlyResponse,
   FoundationMaintainersResponse,
   FoundationSoftwareValueResponse,
   FoundationTotalMembersResponse,
@@ -374,6 +376,32 @@ export class AnalyticsService {
           trendData: [],
           trendLabels: [],
         });
+      })
+    );
+  }
+
+  /**
+   * Get monthly maintainer counts for a foundation (last 12 months, all repos aggregated)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationMaintainersMonthly(foundationSlug: string): Observable<FoundationMaintainersMonthlyResponse> {
+    return this.http.get<FoundationMaintainersMonthlyResponse>('/api/analytics/foundation-maintainers-monthly', { params: { foundationSlug } }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch foundation maintainers monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [] });
+      })
+    );
+  }
+
+  /**
+   * Get maintainer contribution distribution by percentile band for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationMaintainersDistribution(foundationSlug: string): Observable<FoundationMaintainersDistributionResponse> {
+    return this.http.get<FoundationMaintainersDistributionResponse>('/api/analytics/foundation-maintainers-distribution', { params: { foundationSlug } }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch foundation maintainers distribution:', error);
+        return of({ distribution: [] });
       })
     );
   }

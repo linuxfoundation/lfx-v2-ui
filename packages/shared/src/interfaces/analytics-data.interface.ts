@@ -956,6 +956,88 @@ export interface FoundationMaintainersResponse {
 }
 
 /**
+ * Foundation maintainers repository monthly row from Snowflake
+ * Raw response from FOUNDATION_MAINTAINERS_REPOSITORY_MONTHLY table (all_repos scope)
+ */
+export interface FoundationMaintainersMonthlyRow {
+  /**
+   * Month for which maintainer count is calculated (first day of month)
+   */
+  METRIC_MONTH: string;
+
+  /**
+   * Count of distinct maintainers active during this month
+   */
+  ACTIVE_MAINTAINERS: number;
+}
+
+/**
+ * Processed monthly maintainers response for the trend chart
+ */
+export interface FoundationMaintainersMonthlyResponse {
+  /**
+   * Monthly active maintainer counts for chart Y-axis
+   */
+  monthlyData: number[];
+
+  /**
+   * Short month labels for chart X-axis (e.g. 'Jan', 'Feb')
+   */
+  monthlyLabels: string[];
+}
+
+/**
+ * Foundation maintainers distribution row from Snowflake
+ * Raw response from FOUNDATION_MAINTAINERS_DISTRIBUTION table (all_repos scope, last_12_months)
+ */
+export interface FoundationMaintainersDistributionRow {
+  /**
+   * Percentile band: 'Top 10%', 'Next 40%', or 'Bottom 50%'
+   */
+  PERCENTILE_BAND: string;
+
+  /**
+   * Number of distinct maintainers in this band
+   */
+  MAINTAINER_COUNT: number;
+
+  /**
+   * Percentage of total contributions made by this band
+   */
+  CONTRIBUTION_SHARE_PCT: number;
+}
+
+/**
+ * Processed distribution band for the maintainers distribution chart
+ */
+export interface MaintainersDistributionBand {
+  /**
+   * Band label: 'Top 10%', 'Next 40%', or 'Bottom 50%'
+   */
+  band: string;
+
+  /**
+   * Contribution share percentage for chart Y-axis
+   */
+  contributionSharePct: number;
+
+  /**
+   * Maintainer count shown in tooltip
+   */
+  maintainerCount: number;
+}
+
+/**
+ * Processed distribution response for the maintainers distribution chart
+ */
+export interface FoundationMaintainersDistributionResponse {
+  /**
+   * Ordered array of distribution bands
+   */
+  distribution: MaintainersDistributionBand[];
+}
+
+/**
  * Foundation health score distribution row from Snowflake
  * Raw response from FOUNDATION_HEALTH_SCORE_DISTRIBUTION table
  */

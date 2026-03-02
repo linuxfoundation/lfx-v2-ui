@@ -63,6 +63,12 @@ router.get('/foundation-software-value', (req, res, next) => analyticsController
 // Foundation maintainers endpoint
 router.get('/foundation-maintainers', (req, res, next) => analyticsController.getFoundationMaintainers(req, res, next));
 
+// Foundation maintainers monthly endpoint (maintainers drill-down trend chart)
+router.get('/foundation-maintainers-monthly', (req, res, next) => analyticsController.getFoundationMaintainersMonthly(req, res, next));
+
+// Foundation maintainers distribution endpoint (maintainers drill-down bar chart)
+router.get('/foundation-maintainers-distribution', (req, res, next) => analyticsController.getFoundationMaintainersDistribution(req, res, next));
+
 // Foundation projects detail endpoint (total projects drill-down table)
 router.get('/foundation-projects-detail', (req, res, next) => analyticsController.getFoundationProjectsDetail(req, res, next));
 
