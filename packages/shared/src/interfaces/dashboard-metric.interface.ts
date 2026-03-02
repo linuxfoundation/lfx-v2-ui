@@ -75,6 +75,9 @@ export interface DashboardMetricCard {
   /** Custom content type for specialized cards */
   customContentType?: CustomContentType;
 
+  /** Identifies which drill-down drawer to open when this card is clicked */
+  drawerType?: string;
+
   // ============================================
   // Status & Metadata
   // ============================================
@@ -167,4 +170,27 @@ export interface TopProjectByValue {
   name: string;
   /** Estimated software value in millions of dollars */
   value: number;
+}
+
+// ============================================
+// Total Projects Drawer
+// ============================================
+
+/** Lifecycle stage of a foundation project */
+export type LifecycleStage = 'Graduated' | 'Incubating' | 'Sandbox';
+
+/**
+ * Project row for the total projects drill-down table
+ * @description Represents a single project with key health and activity metrics
+ */
+export interface ProjectTableRow {
+  id: number;
+  projectName: string;
+  projectSlug: string;
+  lifecycleStage: LifecycleStage;
+  activeContributors: number;
+  commitsLast90Days: number;
+  maintainers: number;
+  stars: number;
+  lastUpdated: string | null;
 }

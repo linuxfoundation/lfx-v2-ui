@@ -22,6 +22,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-total-projects',
+    drawerType: 'total-projects',
   },
   {
     title: 'Total Members',
