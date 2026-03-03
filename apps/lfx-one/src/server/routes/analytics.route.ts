@@ -108,4 +108,13 @@ router.get('/org-contributors-monthly', (req, res, next) => analyticsController.
 // Org active contributors project distribution endpoint (org involvement drawer)
 router.get('/org-contributors-project-distribution', (req, res, next) => analyticsController.getOrgContributorsProjectDistribution(req, res, next));
 
+// Org maintainers monthly trend endpoint (org maintainers drawer)
+router.get('/org-maintainers-monthly', (req, res, next) => analyticsController.getOrgMaintainersMonthly(req, res, next));
+
+// Org maintainers distribution endpoint (org maintainers drawer)
+router.get('/org-maintainers-distribution', (req, res, next) => analyticsController.getOrgMaintainersDistribution(req, res, next));
+
+// Org maintainers key members endpoint (org maintainers drawer)
+router.get('/org-maintainers-key-members', (req, res, next) => analyticsController.getOrgMaintainersKeyMembers(req, res, next));
+
 export default router;

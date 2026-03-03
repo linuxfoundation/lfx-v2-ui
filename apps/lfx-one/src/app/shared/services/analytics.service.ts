@@ -28,6 +28,9 @@ import {
   MembershipTierResponse,
   OrgContributorsMonthlyResponse,
   OrgContributorsProjectDistributionResponse,
+  OrgMaintainersDistributionResponse,
+  OrgMaintainersKeyMembersResponse,
+  OrgMaintainersMonthlyResponse,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
   OrganizationMaintainersResponse,
@@ -704,6 +707,54 @@ export class AnalyticsService {
       catchError((error) => {
         console.error('Failed to fetch org contributors project distribution:', error);
         return of({ projects: [] });
+      })
+    );
+  }
+
+  /**
+   * Get monthly active maintainer trend for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org maintainers monthly response
+   */
+  public getOrgMaintainersMonthly(accountId: string, foundationSlug: string): Observable<OrgMaintainersMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgMaintainersMonthlyResponse>('/api/analytics/org-maintainers-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org maintainers monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalMaintainers: 0 });
+      })
+    );
+  }
+
+  /**
+   * Get top 5 project maintainer distribution for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org maintainers distribution response
+   */
+  public getOrgMaintainersDistribution(accountId: string, foundationSlug: string): Observable<OrgMaintainersDistributionResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgMaintainersDistributionResponse>('/api/analytics/org-maintainers-distribution', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org maintainers distribution:', error);
+        return of({ projects: [] });
+      })
+    );
+  }
+
+  /**
+   * Get key maintainer members for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org maintainers key members response
+   */
+  public getOrgMaintainersKeyMembers(accountId: string, foundationSlug: string): Observable<OrgMaintainersKeyMembersResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgMaintainersKeyMembersResponse>('/api/analytics/org-maintainers-key-members', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org maintainers key members:', error);
+        return of({ members: [] });
       })
     );
   }

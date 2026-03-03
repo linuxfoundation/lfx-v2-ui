@@ -12,6 +12,13 @@ import {
   OrgContributorsMonthlyRow,
   OrgContributorsProjectDistributionResponse,
   OrgContributorsProjectDistributionRow,
+  OrgMaintainersDistributionResponse,
+  OrgMaintainersDistributionRow,
+  OrgMaintainersKeyMember,
+  OrgMaintainersKeyMemberRow,
+  OrgMaintainersKeyMembersResponse,
+  OrgMaintainersMonthlyResponse,
+  OrgMaintainersMonthlyRow,
   OrganizationContributorsMonthlyRow,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
@@ -484,5 +491,135 @@ export class OrganizationService {
         contributorPercentage: row.CONTRIBUTOR_SHARE_PERCENTAGE || 0,
       })),
     };
+  }
+
+  /**
+   * Get monthly active maintainer trend for an organization within a foundation
+   * Queries FOUNDATION_MAINTAINERS_ORG_REPOSITORY_MONTHLY
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Monthly maintainer counts with labels for the trend line chart
+   */
+  public async getOrgMaintainersMonthly(accountId: string, foundationSlug: string): Promise<OrgMaintainersMonthlyResponse> {
+    const query = `
+      SELECT
+        FOUNDATION_SLUG,
+        ACCOUNT_ID,
+        REPOSITORY_SCOPE,
+        METRIC_MONTH,
+        ACTIVE_MAINTAINERS,
+        ACTIVE_PROJECTS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_REPOSITORY_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+      ORDER BY METRIC_MONTH ASC
+    `;
+
+    const result = await this.snowflakeService.execute<OrgMaintainersMonthlyRow>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org maintainers monthly data', accountId, {
+        operation: 'get_org_maintainers_monthly',
+      });
+    }
+
+    const monthlyData = result.rows.map((row) => row.ACTIVE_MAINTAINERS || 0);
+    const monthlyLabels = result.rows.map((row) => {
+      const date = new Date(row.METRIC_MONTH);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+    const totalMaintainers = Math.max(...monthlyData);
+
+    return { monthlyData, monthlyLabels, totalMaintainers };
+  }
+
+  /**
+   * Get top 5 project maintainer distribution for an organization within a foundation
+   * Queries FOUNDATION_MAINTAINERS_ORG_DISTRIBUTION
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Top 5 projects with maintainer counts for the bar chart
+   */
+  public async getOrgMaintainersDistribution(accountId: string, foundationSlug: string): Promise<OrgMaintainersDistributionResponse> {
+    const query = `
+      SELECT
+        FOUNDATION_SLUG,
+        ACCOUNT_ID,
+        REPOSITORY_SCOPE,
+        TIME_RANGE,
+        PROJECT_ID,
+        PROJECT_NAME,
+        PROJECT_RANK,
+        MAINTAINER_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_DISTRIBUTION
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+        AND TIME_RANGE = 'last_12_months'
+      ORDER BY PROJECT_RANK ASC
+    `;
+
+    const result = await this.snowflakeService.execute<OrgMaintainersDistributionRow>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org maintainers distribution', accountId, {
+        operation: 'get_org_maintainers_distribution',
+      });
+    }
+
+    return {
+      projects: result.rows.map((row) => ({
+        projectId: row.PROJECT_ID,
+        projectName: row.PROJECT_NAME,
+        maintainerCount: row.MAINTAINER_COUNT || 0,
+      })),
+    };
+  }
+
+  /**
+   * Get key maintainer members for an organization within a foundation
+   * Queries FOUNDATION_MAINTAINERS_ORG_KEY_MEMBERS
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Key maintainer members with project details
+   */
+  public async getOrgMaintainersKeyMembers(accountId: string, foundationSlug: string): Promise<OrgMaintainersKeyMembersResponse> {
+    const query = `
+      SELECT
+        FOUNDATION_SLUG,
+        ACCOUNT_ID,
+        REPOSITORY_SCOPE,
+        TIME_RANGE,
+        MEMBER_ID,
+        USER_ID,
+        USER_FULL_NAME,
+        USER_TITLE,
+        USER_PHOTO_URL,
+        PROJECT_LIST,
+        PROJECT_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_KEY_MEMBERS
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+        AND TIME_RANGE = 'last_12_months'
+      ORDER BY PROJECT_COUNT DESC, USER_FULL_NAME ASC
+    `;
+
+    const result = await this.snowflakeService.execute<OrgMaintainersKeyMemberRow>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org maintainers key members', accountId, {
+        operation: 'get_org_maintainers_key_members',
+      });
+    }
+
+    const members: OrgMaintainersKeyMember[] = result.rows.map((row) => ({
+      userId: row.USER_ID,
+      fullName: row.USER_FULL_NAME,
+      title: row.USER_TITLE ?? null,
+      photoUrl: row.USER_PHOTO_URL,
+      projectList: row.PROJECT_LIST,
+      projectCount: row.PROJECT_COUNT || 0,
+    }));
+
+    return { members };
   }
 }

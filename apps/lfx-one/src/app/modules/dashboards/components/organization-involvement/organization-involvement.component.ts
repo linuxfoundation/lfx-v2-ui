@@ -16,6 +16,7 @@ import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directiv
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 
 import { OrgActiveContributorsDrawerComponent } from '../org-active-contributors-drawer/org-active-contributors-drawer.component';
+import { OrgMaintainersDrawerComponent } from '../org-maintainers-drawer/org-maintainers-drawer.component';
 
 import type {
   CertifiedEmployeesResponse,
@@ -30,7 +31,14 @@ import type { ChartOptions, ChartType } from 'chart.js';
 
 @Component({
   selector: 'lfx-organization-involvement',
-  imports: [FilterPillsComponent, MetricCardComponent, DataCopilotComponent, ScrollShadowDirective, OrgActiveContributorsDrawerComponent],
+  imports: [
+    FilterPillsComponent,
+    MetricCardComponent,
+    DataCopilotComponent,
+    ScrollShadowDirective,
+    OrgActiveContributorsDrawerComponent,
+    OrgMaintainersDrawerComponent,
+  ],
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',
 })
@@ -452,7 +460,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       loading: this.contributorsLoading(),
       value: data.contributors.toString(),
-      subtitle: 'Contributors from our organization',
+      subtitle: 'Employees actively contributing to projects',
       chartOptions: this.createBarChartOptions('Active contributors'),
       chartData:
         data.monthlyData.length > 0
@@ -478,7 +486,7 @@ export class OrganizationInvolvementComponent {
       ...metric,
       loading: this.maintainersLoading(),
       value: data.maintainers.toString(),
-      subtitle: `Across ${data.projects} ${projectLabel}`,
+      subtitle: `Employees stewarding foundation ${projectLabel}`,
       chartOptions: this.createBarChartOptions('Maintainers'),
       chartData:
         data.monthlyData.length > 0

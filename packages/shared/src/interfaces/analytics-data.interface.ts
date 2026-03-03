@@ -2427,3 +2427,100 @@ export interface OrgContributorsProjectDistributionItem {
 export interface OrgContributorsProjectDistributionResponse {
   projects: OrgContributorsProjectDistributionItem[];
 }
+
+// ============================================
+// Org Maintainers Drawer
+// ============================================
+
+/**
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_REPOSITORY_MONTHLY
+ * Contains monthly active maintainer counts for an organization within a foundation
+ */
+export interface OrgMaintainersMonthlyRow {
+  FOUNDATION_SLUG: string;
+  ACCOUNT_ID: string;
+  REPOSITORY_SCOPE: string;
+  METRIC_MONTH: Date | string;
+  ACTIVE_MAINTAINERS: number;
+  ACTIVE_PROJECTS: number;
+}
+
+/**
+ * API response for org maintainers monthly trend endpoint
+ * Powers the line chart in the Org Maintainers drawer
+ */
+export interface OrgMaintainersMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalMaintainers: number;
+}
+
+/**
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_DISTRIBUTION
+ * Contains per-project maintainer distribution for an organization within a foundation
+ */
+export interface OrgMaintainersDistributionRow {
+  FOUNDATION_SLUG: string;
+  ACCOUNT_ID: string;
+  REPOSITORY_SCOPE: string;
+  TIME_RANGE: string;
+  PROJECT_ID: string;
+  PROJECT_NAME: string;
+  PROJECT_RANK: number;
+  MAINTAINER_COUNT: number;
+}
+
+/**
+ * Single project entry in the org maintainers distribution response
+ */
+export interface OrgMaintainersDistributionItem {
+  projectId: string;
+  projectName: string;
+  maintainerCount: number;
+}
+
+/**
+ * API response for org maintainers distribution endpoint
+ * Powers the bar chart in the Org Maintainers drawer (top 5 projects)
+ */
+export interface OrgMaintainersDistributionResponse {
+  projects: OrgMaintainersDistributionItem[];
+}
+
+/**
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_MAINTAINERS_ORG_KEY_MEMBERS
+ * Contains key maintainer members for an organization within a foundation
+ */
+export interface OrgMaintainersKeyMemberRow {
+  FOUNDATION_SLUG: string;
+  ACCOUNT_ID: string;
+  REPOSITORY_SCOPE: string;
+  TIME_RANGE: string;
+  MEMBER_ID: string;
+  USER_ID: string;
+  USER_FULL_NAME: string;
+  USER_TITLE: string | null;
+  USER_PHOTO_URL: string;
+  PROJECT_LIST: string;
+  PROJECT_COUNT: number;
+}
+
+/**
+ * Single key maintainer member entry
+ */
+export interface OrgMaintainersKeyMember {
+  userId: string;
+  fullName: string;
+  title: string | null;
+  photoUrl: string;
+  projectList: string;
+  projectCount: number;
+}
+
+/**
+ * API response for org maintainers key members endpoint
+ * Powers the key members list in the Org Maintainers drawer
+ */
+export interface OrgMaintainersKeyMembersResponse {
+  members: OrgMaintainersKeyMember[];
+}

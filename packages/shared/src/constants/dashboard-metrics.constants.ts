@@ -118,6 +118,7 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
     chartType: 'bar',
     testId: 'org-involvement-card-maintainers',
     chartData: EMPTY_CHART_DATA,
+    drawerType: DashboardDrawerType.OrgMaintainers,
   },
   {
     title: 'Event Attendees',
