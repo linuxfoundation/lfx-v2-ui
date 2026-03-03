@@ -878,6 +878,47 @@ export interface FoundationSoftwareValueResponse {
 }
 
 /**
+ * Foundation value concentration row from Snowflake FOUNDATION_VALUE_CONCENTRATION table
+ * Contains total software value and concentration metrics across project buckets
+ */
+export interface FoundationValueConcentrationRow {
+  FOUNDATION_ID: string;
+  FOUNDATION_SLUG: string;
+  TOTAL_VALUE: number;
+  TOTAL_PROJECTS_COUNT: number;
+  LAST_METRIC_DATE: string;
+  TOP_1_VALUE: number;
+  TOP_3_VALUE: number;
+  TOP_5_VALUE: number;
+  ALL_OTHER_VALUE: number;
+  TOP_1_PROJECTS_COUNT: number;
+  TOP_3_PROJECTS_COUNT: number;
+  TOP_5_PROJECTS_COUNT: number;
+  ALL_OTHER_PROJECTS_COUNT: number;
+  TOP_1_PERCENTAGE: number;
+  TOP_3_PERCENTAGE: number;
+  TOP_5_PERCENTAGE: number;
+  ALL_OTHER_PERCENTAGE: number;
+}
+
+/**
+ * API response for foundation value concentration query
+ * All value fields are in millions of dollars
+ */
+export interface FoundationValueConcentrationResponse {
+  totalValue: number;
+  top1Value: number;
+  top3Value: number;
+  top5Value: number;
+  allOtherValue: number;
+  totalProjectsCount: number;
+  top1Percentage: number;
+  top3Percentage: number;
+  top5Percentage: number;
+  allOtherPercentage: number;
+}
+
+/**
  * Foundation maintainers daily row from Snowflake
  * Raw response from FOUNDATION_MAINTAINERS_YEARLY table (despite name, contains daily data)
  */

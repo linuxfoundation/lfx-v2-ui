@@ -789,6 +789,38 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/foundation-value-concentration
+   * Get foundation value concentration data from Snowflake
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationValueConcentration(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_value_concentration');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_value_concentration',
+        });
+      }
+
+      const response = await this.projectService.getFoundationValueConcentration(foundationSlug);
+
+      logger.success(req, 'get_foundation_value_concentration', startTime, {
+        foundation_slug: foundationSlug,
+        total_value_millions: response.totalValue,
+        total_projects: response.totalProjectsCount,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_value_concentration', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/analytics/foundation-maintainers
    * Get foundation maintainers data from Snowflake
    * Query params: foundationSlug (required)

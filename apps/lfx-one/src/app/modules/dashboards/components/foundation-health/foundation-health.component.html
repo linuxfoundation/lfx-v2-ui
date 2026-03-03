@@ -207,6 +207,11 @@
 </section>
 
 <!-- Drill-Down Drawers -->
+<lfx-total-value-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.TotalValueOfProjects"
+  (visibleChange)="handleDrawerClose()"
+  [summaryData]="softwareValueData()"></lfx-total-value-drawer>
+
 <lfx-total-projects-drawer
   [visible]="activeDrawer() === DashboardDrawerType.TotalProjects"
   (visibleChange)="handleDrawerClose()"

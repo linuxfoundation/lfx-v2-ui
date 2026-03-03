@@ -18,6 +18,14 @@ import type { DashboardMetricCard } from '../interfaces';
  */
 export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
   {
+    title: 'Total Value of Projects',
+    icon: 'fa-light fa-chart-column',
+    chartType: 'line',
+    category: 'projects',
+    testId: 'foundation-health-card-total-value',
+    drawerType: DashboardDrawerType.TotalValueOfProjects,
+  },
+  {
     title: 'Total Projects',
     icon: 'fa-light fa-chart-bar',
     chartType: 'line',
@@ -32,14 +40,6 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     category: 'projects',
     testId: 'foundation-health-card-total-members',
     drawerType: DashboardDrawerType.TotalMembers,
-  },
-  {
-    title: 'Software Value',
-    icon: 'fa-light fa-chart-bar',
-    chartType: 'line',
-    category: 'projects',
-    testId: 'foundation-health-card-software-value',
-    customContentType: 'top-projects',
   },
   {
     title: 'Organization Dependency',

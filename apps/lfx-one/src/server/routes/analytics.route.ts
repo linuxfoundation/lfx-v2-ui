@@ -60,6 +60,9 @@ router.get('/foundation-contributors-distribution', (req, res, next) => analytic
 // Foundation software value endpoint
 router.get('/foundation-software-value', (req, res, next) => analyticsController.getFoundationSoftwareValue(req, res, next));
 
+// Foundation value concentration endpoint
+router.get('/foundation-value-concentration', (req, res, next) => analyticsController.getFoundationValueConcentration(req, res, next));
+
 // Foundation maintainers endpoint
 router.get('/foundation-maintainers', (req, res, next) => analyticsController.getFoundationMaintainers(req, res, next));
 

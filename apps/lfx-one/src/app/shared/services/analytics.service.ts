@@ -18,6 +18,7 @@ import {
   FoundationMaintainersMonthlyResponse,
   FoundationMaintainersResponse,
   FoundationSoftwareValueResponse,
+  FoundationValueConcentrationResponse,
   FoundationTotalMembersResponse,
   FoundationProjectsDetailResponse,
   FoundationProjectsLifecycleDistributionResponse,
@@ -349,6 +350,31 @@ export class AnalyticsService {
         return of({
           totalValue: 0,
           topProjects: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get foundation value concentration data from Snowflake
+   * @param foundationSlug - Required foundation slug to filter by
+   * @returns Observable of foundation value concentration response
+   */
+  public getFoundationValueConcentration(foundationSlug: string): Observable<FoundationValueConcentrationResponse> {
+    return this.http.get<FoundationValueConcentrationResponse>('/api/analytics/foundation-value-concentration', { params: { foundationSlug } }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch foundation value concentration:', error);
+        return of({
+          totalValue: 0,
+          top1Value: 0,
+          top3Value: 0,
+          top5Value: 0,
+          allOtherValue: 0,
+          totalProjectsCount: 0,
+          top1Percentage: 0,
+          top3Percentage: 0,
+          top5Percentage: 0,
+          allOtherPercentage: 0,
         });
       })
     );
