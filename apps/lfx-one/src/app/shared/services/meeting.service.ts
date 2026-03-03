@@ -316,38 +316,10 @@ export class MeetingService {
     );
   }
 
-  // ─── Past Meeting Attachment Methods ──────────────────────────────────────
-
-  public createPastMeetingAttachment(pastMeetingId: string, attachmentData: CreateMeetingAttachmentRequest): Observable<PastMeetingAttachment> {
-    return this.http.post<PastMeetingAttachment>(`/api/past-meetings/${pastMeetingId}/attachments`, attachmentData).pipe(take(1));
-  }
-
-  public updatePastMeetingAttachment(pastMeetingId: string, attachmentId: string, updateData: UpdateMeetingAttachmentRequest): Observable<void> {
-    return this.http.put<void>(`/api/past-meetings/${pastMeetingId}/attachments/${attachmentId}`, updateData).pipe(take(1));
-  }
-
-  public deletePastMeetingAttachment(pastMeetingId: string, attachmentId: string): Observable<void> {
-    return this.http.delete<void>(`/api/past-meetings/${pastMeetingId}/attachments/${attachmentId}`).pipe(take(1));
-  }
-
-  public presignPastMeetingAttachment(pastMeetingId: string, presignData: PresignAttachmentRequest): Observable<PresignAttachmentResponse> {
-    return this.http.post<PresignAttachmentResponse>(`/api/past-meetings/${pastMeetingId}/attachments/presign`, presignData).pipe(take(1));
-  }
+  // ─── Past Meeting Attachment Methods (read-only — no upload UX yet) ───────
 
   public getPastMeetingAttachmentDownloadUrl(pastMeetingId: string, attachmentId: string): Observable<AttachmentDownloadUrlResponse> {
     return this.http.get<AttachmentDownloadUrlResponse>(`/api/past-meetings/${pastMeetingId}/attachments/${attachmentId}/download`).pipe(take(1));
-  }
-
-  /**
-   * Full 3-step file upload flow for past meetings:
-   * 1. Presign (creates pending attachment record + returns S3 URL)
-   * 2. PUT file directly to S3
-   * 3. Returns the presign response (uid can be used to re-fetch the list)
-   */
-  public uploadPastMeetingFile(pastMeetingId: string, file: File, presignData: PresignAttachmentRequest): Observable<PresignAttachmentResponse> {
-    return this.presignPastMeetingAttachment(pastMeetingId, presignData).pipe(
-      switchMap((presignResponse) => this.uploadFileToS3(presignResponse.file_url, file).pipe(map(() => presignResponse)))
-    );
   }
 
   public generateAgenda(request: GenerateAgendaRequest): Observable<GenerateAgendaResponse> {

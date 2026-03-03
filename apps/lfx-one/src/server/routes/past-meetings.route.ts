@@ -23,19 +23,11 @@ router.get('/:uid/summary', (req, res, next) => pastMeetingController.getPastMee
 // Update past meeting summary
 router.put('/:uid/summary/:summaryUid', (req, res, next) => pastMeetingController.updatePastMeetingSummary(req, res, next));
 
-// Past meeting attachment routes
+// Past meeting attachment routes (read-only — no upload UX yet)
 router.get('/:uid/attachments', (req, res, next) => pastMeetingController.getPastMeetingAttachments(req, res, next));
-
-router.post('/:uid/attachments', (req, res, next) => pastMeetingController.createPastMeetingAttachment(req, res, next));
-
-router.post('/:uid/attachments/presign', (req, res, next) => pastMeetingController.presignPastMeetingAttachment(req, res, next));
 
 router.get('/:uid/attachments/:attachmentId', (req, res, next) => pastMeetingController.getPastMeetingAttachment(req, res, next));
 
 router.get('/:uid/attachments/:attachmentId/download', (req, res, next) => pastMeetingController.getPastMeetingAttachmentDownloadUrl(req, res, next));
-
-router.put('/:uid/attachments/:attachmentId', (req, res, next) => pastMeetingController.updatePastMeetingAttachment(req, res, next));
-
-router.delete('/:uid/attachments/:attachmentId', (req, res, next) => pastMeetingController.deletePastMeetingAttachment(req, res, next));
 
 export default router;
