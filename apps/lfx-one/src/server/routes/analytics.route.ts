@@ -69,6 +69,12 @@ router.get('/foundation-maintainers-monthly', (req, res, next) => analyticsContr
 // Foundation maintainers distribution endpoint (maintainers drill-down bar chart)
 router.get('/foundation-maintainers-distribution', (req, res, next) => analyticsController.getFoundationMaintainersDistribution(req, res, next));
 
+// Foundation events quarterly endpoint (events drill-down trend chart)
+router.get('/foundation-events-quarterly', (req, res, next) => analyticsController.getFoundationEventsQuarterly(req, res, next));
+
+// Foundation events attendance distribution endpoint (events drill-down bar chart)
+router.get('/foundation-events-attendance-distribution', (req, res, next) => analyticsController.getFoundationEventsAttendanceDistribution(req, res, next));
+
 // Foundation projects detail endpoint (total projects drill-down table)
 router.get('/foundation-projects-detail', (req, res, next) => analyticsController.getFoundationProjectsDetail(req, res, next));
 

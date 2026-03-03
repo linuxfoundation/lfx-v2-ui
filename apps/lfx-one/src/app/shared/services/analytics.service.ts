@@ -12,6 +12,8 @@ import {
   FoundationContributorsMentoredResponse,
   FoundationContributorsDistributionResponse,
   FoundationHealthScoreDistributionResponse,
+  FoundationEventsAttendanceDistributionResponse,
+  FoundationEventsQuarterlyResponse,
   FoundationMaintainersDistributionResponse,
   FoundationMaintainersMonthlyResponse,
   FoundationMaintainersResponse,
@@ -404,6 +406,36 @@ export class AnalyticsService {
         return of({ distribution: [] });
       })
     );
+  }
+
+  /**
+   * Get quarterly event counts for a foundation (last 8 quarters)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationEventsQuarterly(foundationSlug: string): Observable<FoundationEventsQuarterlyResponse> {
+    return this.http.get<FoundationEventsQuarterlyResponse>('/api/analytics/foundation-events-quarterly', { params: { foundationSlug } }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch foundation events quarterly:', error);
+        return of({ quarterlyData: [], quarterlyLabels: [] });
+      })
+    );
+  }
+
+  /**
+   * Get event distribution by attendance size bucket for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationEventsAttendanceDistribution(foundationSlug: string): Observable<FoundationEventsAttendanceDistributionResponse> {
+    return this.http
+      .get<FoundationEventsAttendanceDistributionResponse>('/api/analytics/foundation-events-attendance-distribution', {
+        params: { foundationSlug },
+      })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch foundation events attendance distribution:', error);
+          return of({ distribution: [] });
+        })
+      );
   }
 
   /**

@@ -33,3 +33,4 @@ export * from './total-projects-drawer.constants';
 export * from './total-members-drawer.constants';
 export * from './active-contributors-drawer.constants';
 export * from './maintainers-drawer.constants';
+export * from './events-drawer.constants';

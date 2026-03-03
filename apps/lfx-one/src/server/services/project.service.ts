@@ -11,6 +11,10 @@ import {
   FoundationHealthEventsMonthlyRow,
   FoundationHealthScoreDistributionResponse,
   FoundationHealthScoreDistributionRow,
+  FoundationEventsAttendanceDistributionResponse,
+  FoundationEventsAttendanceDistributionRow,
+  FoundationEventsQuarterlyResponse,
+  FoundationEventsQuarterlyRow,
   FoundationMaintainersDailyRow,
   FoundationMaintainersDistributionResponse,
   FoundationMaintainersDistributionRow,
@@ -1148,6 +1152,67 @@ export class ProjectService {
       band: row.PERCENTILE_BAND,
       contributionSharePct: row.CONTRIBUTION_SHARE_PCT,
       maintainerCount: row.MAINTAINER_COUNT,
+    }));
+
+    return { distribution };
+  }
+
+  /**
+   * Get quarterly event counts for a foundation (last 8 quarters)
+   * Queries FOUNDATION_HEALTH_EVENTS_QUARTERLY table
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Quarterly event counts with quarter labels
+   */
+  public async getFoundationEventsQuarterly(foundationSlug: string): Promise<FoundationEventsQuarterlyResponse> {
+    const query = `
+      SELECT
+        QUARTER_START_DATE,
+        EVENT_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_HEALTH_EVENTS_QUARTERLY
+      WHERE FOUNDATION_SLUG = ?
+        AND QUARTER_START_DATE >= DATEADD('quarter', -7, DATE_TRUNC('QUARTER', CURRENT_DATE()))
+      ORDER BY QUARTER_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationEventsQuarterlyRow>(query, [foundationSlug]);
+
+    const quarterlyData = result.rows.map((row) => row.EVENT_COUNT);
+    const quarterlyLabels = result.rows.map((row) => {
+      const date = new Date(row.QUARTER_START_DATE);
+      const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
+      const year = date.getUTCFullYear().toString().slice(-2);
+      return `Q${quarter} '${year}`;
+    });
+
+    return { quarterlyData, quarterlyLabels };
+  }
+
+  /**
+   * Get event distribution by attendance size bucket for a foundation (last 12 months)
+   * Queries FOUNDATION_HEALTH_EVENTS_ATTENDANCE_DISTRIBUTION table
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Distribution of events across Large, Medium, Small attendance buckets
+   */
+  public async getFoundationEventsAttendanceDistribution(foundationSlug: string): Promise<FoundationEventsAttendanceDistributionResponse> {
+    const query = `
+      SELECT
+        ATTENDANCE_SIZE_BUCKET,
+        EVENT_COUNT_LAST_12_MONTHS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_HEALTH_EVENTS_ATTENDANCE_DISTRIBUTION
+      WHERE FOUNDATION_SLUG = ?
+      ORDER BY CASE ATTENDANCE_SIZE_BUCKET
+        WHEN 'Large'  THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'Small'  THEN 3
+        ELSE 4
+      END
+    `;
+
+    const result = await this.snowflakeService.execute<FoundationEventsAttendanceDistributionRow>(query, [foundationSlug]);
+
+    const distribution = result.rows.map((row) => ({
+      bucket: row.ATTENDANCE_SIZE_BUCKET,
+      eventCount: row.EVENT_COUNT_LAST_12_MONTHS,
     }));
 
     return { distribution };

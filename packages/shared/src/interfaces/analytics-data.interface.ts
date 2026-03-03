@@ -1477,6 +1477,78 @@ export interface HealthEventsMonthlyResponse {
 }
 
 /**
+ * Foundation health events quarterly row from Snowflake
+ * Raw response from FOUNDATION_HEALTH_EVENTS_QUARTERLY table
+ */
+export interface FoundationEventsQuarterlyRow {
+  /**
+   * First day of the quarter
+   */
+  QUARTER_START_DATE: string;
+
+  /**
+   * Count of events in the quarter
+   */
+  EVENT_COUNT: number;
+}
+
+/**
+ * Processed quarterly events response for the trend bar chart
+ */
+export interface FoundationEventsQuarterlyResponse {
+  /**
+   * Event counts per quarter for chart Y-axis
+   */
+  quarterlyData: number[];
+
+  /**
+   * Quarter labels for chart X-axis (e.g. "Q1 '25")
+   */
+  quarterlyLabels: string[];
+}
+
+/**
+ * Foundation health events attendance distribution row from Snowflake
+ * Raw response from FOUNDATION_HEALTH_EVENTS_ATTENDANCE_DISTRIBUTION table
+ */
+export interface FoundationEventsAttendanceDistributionRow {
+  /**
+   * Attendance size bucket: 'Large', 'Medium', or 'Small'
+   */
+  ATTENDANCE_SIZE_BUCKET: string;
+
+  /**
+   * Count of events in this bucket over the last 12 months
+   */
+  EVENT_COUNT_LAST_12_MONTHS: number;
+}
+
+/**
+ * Processed attendance bucket for the distribution bar chart
+ */
+export interface EventsAttendanceBucket {
+  /**
+   * Bucket key as stored in Snowflake: 'Large', 'Medium', or 'Small'
+   */
+  bucket: string;
+
+  /**
+   * Event count for chart Y-axis and tooltip
+   */
+  eventCount: number;
+}
+
+/**
+ * Processed attendance distribution response
+ */
+export interface FoundationEventsAttendanceDistributionResponse {
+  /**
+   * Ordered array of attendance buckets (Large → Medium → Small)
+   */
+  distribution: EventsAttendanceBucket[];
+}
+
+/**
  * Certified Employees Monthly row from Snowflake
  * Raw response with Snowflake naming conventions (ALL_CAPS)
  * Contains monthly certification metrics for board member dashboard charts

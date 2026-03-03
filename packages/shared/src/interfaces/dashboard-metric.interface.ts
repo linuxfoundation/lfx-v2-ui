@@ -182,6 +182,7 @@ export enum DashboardDrawerType {
   TotalMembers = 'total-members',
   ActiveContributors = 'active-contributors',
   Maintainers = 'maintainers',
+  Events = 'events',
 }
 
 /** Lifecycle stage of a foundation project */

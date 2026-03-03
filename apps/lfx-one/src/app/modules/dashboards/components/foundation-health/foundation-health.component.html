@@ -226,3 +226,5 @@
   [visible]="activeDrawer() === DashboardDrawerType.Maintainers"
   (visibleChange)="handleDrawerClose()"
   [data]="maintainersData()"></lfx-maintainers-drawer>
+
+<lfx-events-drawer [visible]="activeDrawer() === DashboardDrawerType.Events" (visibleChange)="handleDrawerClose()" [data]="eventsData()"></lfx-events-drawer>

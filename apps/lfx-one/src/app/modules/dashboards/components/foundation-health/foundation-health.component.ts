@@ -14,6 +14,7 @@ import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directiv
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
+import { EventsDrawerComponent } from '../events-drawer/events-drawer.component';
 import { MaintainersDrawerComponent } from '../maintainers-drawer/maintainers-drawer.component';
 import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
@@ -39,6 +40,7 @@ import type {
     TotalMembersDrawerComponent,
     ActiveContributorsDrawerComponent,
     MaintainersDrawerComponent,
+    EventsDrawerComponent,
   ],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
@@ -72,7 +74,7 @@ export class FoundationHealthComponent {
   protected readonly maintainersData = this.initializeMaintainersData();
   private readonly healthScoresData = this.initializeHealthScoresData();
   protected readonly activeContributorsData = this.initializeActiveContributorsData();
-  private readonly eventsData = this.initializeEventsData();
+  protected readonly eventsData = this.initializeEventsData();
 
   public readonly selectedFilter = signal<string>('all');
 

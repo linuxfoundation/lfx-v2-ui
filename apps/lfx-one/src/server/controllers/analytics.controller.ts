@@ -883,6 +883,68 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/foundation-events-quarterly
+   * Get quarterly event counts for a foundation (last 8 quarters)
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationEventsQuarterly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_events_quarterly');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_events_quarterly',
+        });
+      }
+
+      const response = await this.projectService.getFoundationEventsQuarterly(foundationSlug);
+
+      logger.success(req, 'get_foundation_events_quarterly', startTime, {
+        foundation_slug: foundationSlug,
+        quarter_count: response.quarterlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_events_quarterly', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/foundation-events-attendance-distribution
+   * Get event distribution by attendance size bucket for a foundation
+   * Query params: foundationSlug (required)
+   */
+  public async getFoundationEventsAttendanceDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_foundation_events_attendance_distribution');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_events_attendance_distribution',
+        });
+      }
+
+      const response = await this.projectService.getFoundationEventsAttendanceDistribution(foundationSlug);
+
+      logger.success(req, 'get_foundation_events_attendance_distribution', startTime, {
+        foundation_slug: foundationSlug,
+        bucket_count: response.distribution.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_foundation_events_attendance_distribution', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/analytics/foundation-health-score-distribution
    * Get foundation health score distribution from Snowflake
    * Query params: foundationSlug (required)

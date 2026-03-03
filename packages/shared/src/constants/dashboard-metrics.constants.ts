@@ -73,6 +73,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     testId: 'foundation-health-card-events',
     customContentType: 'bar-chart',
     chartColor: lfxColors.blue[500],
+    drawerType: DashboardDrawerType.Events,
   },
   {
     title: 'Project Health Scores',
