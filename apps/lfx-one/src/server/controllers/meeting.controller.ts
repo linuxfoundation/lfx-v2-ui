@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import {
+  AttachmentCategory,
   BatchRegistrantOperationResponse,
   Committee,
   CommitteeMember,
@@ -1087,11 +1088,12 @@ export class MeetingController {
         return;
       }
 
-      if (!attachmentData.type || !attachmentData.name) {
+      if (!attachmentData.type || !attachmentData.category || !attachmentData.name) {
         return next(
           ServiceValidationError.fromFieldErrors(
             {
               type: !attachmentData.type ? 'Type is required' : [],
+              category: !attachmentData.category ? 'Category is required' : [],
               name: !attachmentData.name ? 'Name is required' : [],
             },
             'Attachment data validation failed',
@@ -1144,6 +1146,20 @@ export class MeetingController {
             service: 'meeting_controller',
             path: req.path,
           })
+        );
+      }
+
+      if (!updateData.type || !updateData.category || !updateData.name) {
+        return next(
+          ServiceValidationError.fromFieldErrors(
+            {
+              type: !updateData.type ? 'Type is required' : [],
+              category: !updateData.category ? 'Category is required' : [],
+              name: !updateData.name ? 'Name is required' : [],
+            },
+            'Attachment update validation failed',
+            { operation: 'update_meeting_attachment', service: 'meeting_controller', path: req.path }
+          )
         );
       }
 
@@ -1346,6 +1362,75 @@ export class MeetingController {
 
       res.status(201).json(result);
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /meetings/:uid/attachments/upload
+   * Receives a raw binary file body, presigns via meeting service, then uploads
+   * directly from the server to S3. Avoids browser-side CORS requirements.
+   * Metadata passed as query params: name, file_size, file_type, category?, description?
+   */
+  public async uploadMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+    const { name, file_size, file_type, category, description } = req.query as Record<string, string>;
+
+    const startTime = logger.startOperation(req, 'upload_meeting_attachment', {
+      meeting_id: uid,
+      file_name: name,
+      file_size,
+      file_type,
+    });
+
+    try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'upload_meeting_attachment',
+          service: 'meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      if (!name || !file_size || !file_type) {
+        return next(
+          ServiceValidationError.fromFieldErrors(
+            {
+              name: !name ? 'File name is required' : [],
+              file_size: !file_size ? 'File size is required' : [],
+              file_type: !file_type ? 'File type is required' : [],
+            },
+            'Upload request validation failed',
+            { operation: 'upload_meeting_attachment', service: 'meeting_controller', path: req.path }
+          )
+        );
+      }
+
+      const fileBuffer = req.body as Buffer;
+      const fileSizeNum = parseInt(file_size, 10);
+
+      const presignData: PresignAttachmentRequest = {
+        name,
+        file_size: fileSizeNum,
+        file_type,
+        ...(category && { category: category as AttachmentCategory }),
+        ...(description && { description }),
+      };
+
+      const result = await this.meetingService.uploadMeetingAttachment(req, uid, fileBuffer, presignData);
+
+      logger.success(req, 'upload_meeting_attachment', startTime, {
+        meeting_id: uid,
+        attachment_uid: result.uid,
+        file_name: name,
+        file_size: fileSizeNum,
+      });
+
+      res.status(201).json(result);
+    } catch (error) {
+      logger.error(req, 'upload_meeting_attachment', startTime, error, { meeting_id: uid, file_name: name });
       next(error);
     }
   }

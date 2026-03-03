@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpBackend, HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { LINKEDIN_PROFILE_PATTERN } from '@lfx-one/shared/constants';
@@ -37,7 +37,7 @@ import {
   UrlMetadata,
   UrlMetadataResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -46,8 +46,6 @@ export class MeetingService {
   public meeting: WritableSignal<Meeting | null> = signal(null);
 
   private readonly http = inject(HttpClient);
-  // Bypass interceptors for direct S3 presigned URL uploads (no auth headers)
-  private readonly s3Http = new HttpClient(inject(HttpBackend));
 
   public getMeetings(params?: HttpParams): Observable<PaginatedResponse<Meeting>> {
     return this.http.get<PaginatedResponse<Meeting>>('/api/meetings', { params }).pipe(
@@ -299,21 +297,28 @@ export class MeetingService {
    * Uses a separate HttpClient instance that bypasses interceptors
    * to avoid sending auth headers to S3.
    */
-  public uploadFileToS3(presignedUrl: string, file: File): Observable<void> {
-    const headers = new HttpHeaders({ 'Content-Type': file.type });
-    return this.s3Http.put<void>(presignedUrl, file, { headers }).pipe(take(1));
-  }
-
   /**
-   * Full 3-step file upload flow:
-   * 1. Presign (creates pending attachment record + returns S3 URL)
-   * 2. PUT file directly to S3
-   * 3. Returns the presign response (uid can be used to re-fetch the list)
+   * Uploads a file to a meeting via the server, which handles presigning and
+   * the S3 PUT internally. Avoids browser-side CORS requirements on S3.
+   * File metadata is passed as query params; the raw binary is the request body.
    */
   public uploadMeetingFile(meetingId: string, file: File, presignData: PresignAttachmentRequest): Observable<PresignAttachmentResponse> {
-    return this.presignMeetingAttachment(meetingId, presignData).pipe(
-      switchMap((presignResponse) => this.uploadFileToS3(presignResponse.file_url, file).pipe(map(() => presignResponse)))
-    );
+    let params = new HttpParams().set('name', presignData.name).set('file_size', presignData.file_size.toString()).set('file_type', presignData.file_type);
+
+    if (presignData.category) {
+      params = params.set('category', presignData.category);
+    }
+
+    if (presignData.description) {
+      params = params.set('description', presignData.description);
+    }
+
+    return this.http
+      .post<PresignAttachmentResponse>(`/api/meetings/${meetingId}/attachments/upload`, file, {
+        headers: new HttpHeaders({ 'Content-Type': file.type || 'application/octet-stream' }),
+        params,
+      })
+      .pipe(take(1));
   }
 
   // ─── Past Meeting Attachment Methods (read-only — no upload UX yet) ───────

@@ -1058,7 +1058,7 @@ export class MeetingManageComponent {
 
     return from(linksToSave).pipe(
       mergeMap((link: ImportantLinkFormValue) =>
-        this.meetingService.createMeetingAttachment(meetingId, { type: 'link', name: link.title, link: link.url }).pipe(
+        this.meetingService.createMeetingAttachment(meetingId, { type: 'link', category: 'Other', name: link.title, link: link.url }).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { linkName: link.title, error } }))
         )

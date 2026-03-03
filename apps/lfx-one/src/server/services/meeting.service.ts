@@ -858,6 +858,50 @@ export class MeetingService {
   }
 
   /**
+   * Presigns a meeting file attachment then uploads the binary directly to S3.
+   * Consolidates the two-step presign+upload flow into a single server-side call,
+   * avoiding browser CORS restrictions on S3.
+   */
+  public async uploadMeetingAttachment(
+    req: Request,
+    meetingUid: string,
+    fileBuffer: Buffer,
+    presignData: PresignAttachmentRequest
+  ): Promise<PresignAttachmentResponse> {
+    logger.debug(req, 'upload_meeting_attachment', 'Presigning attachment', { meeting_id: meetingUid, file_name: presignData.name });
+
+    const presignResponse = await this.presignMeetingAttachment(req, meetingUid, presignData);
+
+    logger.debug(req, 'upload_meeting_attachment', 'Uploading file to S3', {
+      meeting_id: meetingUid,
+      attachment_uid: presignResponse.uid,
+      file_size: presignData.file_size,
+    });
+
+    const s3Response = await fetch(presignResponse.file_url, {
+      method: 'PUT',
+      body: new Uint8Array(fileBuffer),
+      headers: {
+        'Content-Type': presignData.file_type,
+        'Content-Length': String(presignData.file_size),
+      },
+    });
+
+    if (!s3Response.ok) {
+      const errorText = await s3Response.text().catch(() => '');
+      throw new Error(`S3 upload failed with status ${s3Response.status}: ${errorText}`);
+    }
+
+    logger.info(req, 'upload_meeting_attachment', 'File uploaded to S3 successfully', {
+      meeting_id: meetingUid,
+      attachment_uid: presignResponse.uid,
+      file_name: presignData.name,
+    });
+
+    return presignResponse;
+  }
+
+  /**
    * Gets a presigned download URL for a meeting attachment
    */
   public async getMeetingAttachmentDownloadUrl(req: Request, meetingUid: string, attachmentUid: string): Promise<AttachmentDownloadUrlResponse> {

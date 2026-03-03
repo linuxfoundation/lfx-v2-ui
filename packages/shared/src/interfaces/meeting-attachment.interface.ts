@@ -45,7 +45,7 @@ export interface MeetingAttachment {
   file_size?: number;
   /** Storage URL for the file (only for type='file') */
   file_url?: string;
-  /** Upload status: 'pending' | 'uploading' | 'completed' | 'failed' (only for type='file') */
+  /** Upload status: 'ongoing' | 'completed' | 'failed' (only for type='file') */
   file_upload_status?: string;
   /** MIME type of the file (only for type='file') */
   file_content_type?: string;
@@ -86,7 +86,7 @@ export interface PastMeetingAttachment {
   file_size?: number;
   /** Storage URL for the file (only for type='file') */
   file_url?: string;
-  /** Upload status: 'pending' | 'uploading' | 'completed' | 'failed' (only for type='file') */
+  /** Upload status: 'ongoing' | 'completed' | 'failed' (only for type='file') */
   file_upload_status?: string;
   /** MIME type of the file (only for type='file') */
   file_content_type?: string;
@@ -106,8 +106,8 @@ export interface PastMeetingAttachment {
 export interface CreateLinkAttachmentRequest {
   /** Must be 'link' */
   type: 'link';
-  /** Category of the attachment */
-  category?: AttachmentCategory;
+  /** Category of the attachment — required by the meeting service */
+  category: AttachmentCategory;
   /** Name/title of the attachment */
   name: string;
   /** Optional description */
@@ -123,8 +123,8 @@ export interface CreateLinkAttachmentRequest {
 export interface CreateFileAttachmentRequest {
   /** Must be 'file' */
   type: 'file';
-  /** Category of the attachment */
-  category?: AttachmentCategory;
+  /** Category of the attachment — required by the meeting service */
+  category: AttachmentCategory;
   /** Name/title of the attachment */
   name: string;
   /** Optional description */
@@ -137,19 +137,20 @@ export interface CreateFileAttachmentRequest {
 export type CreateMeetingAttachmentRequest = CreateLinkAttachmentRequest | CreateFileAttachmentRequest;
 
 /**
- * Request body for updating an existing attachment
- * All fields are optional — only include what you want to change
+ * Request body for updating an existing attachment.
+ * The meeting service performs a full replacement — type, category, and name
+ * must always be provided.
  */
 export interface UpdateMeetingAttachmentRequest {
-  /** Updated attachment type */
-  type?: 'file' | 'link';
-  /** Updated category */
-  category?: AttachmentCategory;
-  /** Updated name/title */
-  name?: string;
-  /** Updated description */
+  /** Attachment type — required */
+  type: 'file' | 'link';
+  /** Attachment category — required */
+  category: AttachmentCategory;
+  /** Attachment name/title — required */
+  name: string;
+  /** Optional description */
   description?: string;
-  /** Updated external URL (for link type) */
+  /** External URL (for link type) */
   link?: string;
 }
 
@@ -190,7 +191,7 @@ export interface PresignAttachmentResponse {
   file_name: string;
   /** File size in bytes */
   file_size: number;
-  /** Upload status (will be 'pending') */
+  /** Upload status (will be 'ongoing' until S3 event confirms the upload) */
   file_upload_status: string;
   /** MIME type */
   file_content_type?: string;

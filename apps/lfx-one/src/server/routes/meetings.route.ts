@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Router } from 'express';
+import express, { Router } from 'express';
 
 import { MeetingController } from '../controllers/meeting.controller';
 
@@ -57,6 +57,11 @@ router.get('/:uid/rsvp/me', (req, res, next) => meetingController.getMeetingRsvp
 router.get('/:uid/attachments', (req, res, next) => meetingController.getMeetingAttachments(req, res, next));
 
 router.post('/:uid/attachments', (req, res, next) => meetingController.createMeetingAttachment(req, res, next));
+
+// Upload a file attachment: presigns internally then streams directly to S3 (server-side upload)
+router.post('/:uid/attachments/upload', express.raw({ type: '*/*', limit: '500mb' }), (req, res, next) =>
+  meetingController.uploadMeetingAttachment(req, res, next)
+);
 
 router.post('/:uid/attachments/presign', (req, res, next) => meetingController.presignMeetingAttachment(req, res, next));
 
