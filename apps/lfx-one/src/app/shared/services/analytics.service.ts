@@ -293,12 +293,7 @@ export class AnalyticsService {
   public getFoundationActiveContributorsMonthly(foundationSlug: string): Observable<FoundationActiveContributorsMonthlyResponse> {
     return this.http
       .get<FoundationActiveContributorsMonthlyResponse>('/api/analytics/foundation-active-contributors-monthly', { params: { foundationSlug } })
-      .pipe(
-        catchError((error) => {
-          console.error('Failed to fetch foundation active contributors monthly:', error);
-          return of({ monthlyData: [], monthlyLabels: [] });
-        })
-      );
+      .pipe(catchError(() => of({ monthlyData: [], monthlyLabels: [] })));
   }
 
   /**
@@ -308,12 +303,7 @@ export class AnalyticsService {
   public getFoundationContributorsDistribution(foundationSlug: string): Observable<FoundationContributorsDistributionResponse> {
     return this.http
       .get<FoundationContributorsDistributionResponse>('/api/analytics/foundation-contributors-distribution', { params: { foundationSlug } })
-      .pipe(
-        catchError((error) => {
-          console.error('Failed to fetch foundation contributors distribution:', error);
-          return of({ distribution: [] });
-        })
-      );
+      .pipe(catchError(() => of({ distribution: [] })));
   }
 
   public getFoundationTotalProjects(foundationSlug: string): Observable<FoundationTotalProjectsResponse> {
@@ -387,12 +377,9 @@ export class AnalyticsService {
    * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
   public getFoundationMaintainersMonthly(foundationSlug: string): Observable<FoundationMaintainersMonthlyResponse> {
-    return this.http.get<FoundationMaintainersMonthlyResponse>('/api/analytics/foundation-maintainers-monthly', { params: { foundationSlug } }).pipe(
-      catchError((error) => {
-        console.error('Failed to fetch foundation maintainers monthly:', error);
-        return of({ monthlyData: [], monthlyLabels: [] });
-      })
-    );
+    return this.http
+      .get<FoundationMaintainersMonthlyResponse>('/api/analytics/foundation-maintainers-monthly', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ monthlyData: [], monthlyLabels: [] })));
   }
 
   /**
@@ -400,12 +387,9 @@ export class AnalyticsService {
    * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
   public getFoundationMaintainersDistribution(foundationSlug: string): Observable<FoundationMaintainersDistributionResponse> {
-    return this.http.get<FoundationMaintainersDistributionResponse>('/api/analytics/foundation-maintainers-distribution', { params: { foundationSlug } }).pipe(
-      catchError((error) => {
-        console.error('Failed to fetch foundation maintainers distribution:', error);
-        return of({ distribution: [] });
-      })
-    );
+    return this.http
+      .get<FoundationMaintainersDistributionResponse>('/api/analytics/foundation-maintainers-distribution', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ distribution: [] })));
   }
 
   /**
@@ -413,12 +397,9 @@ export class AnalyticsService {
    * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
   public getFoundationEventsQuarterly(foundationSlug: string): Observable<FoundationEventsQuarterlyResponse> {
-    return this.http.get<FoundationEventsQuarterlyResponse>('/api/analytics/foundation-events-quarterly', { params: { foundationSlug } }).pipe(
-      catchError((error) => {
-        console.error('Failed to fetch foundation events quarterly:', error);
-        return of({ quarterlyData: [], quarterlyLabels: [] });
-      })
-    );
+    return this.http
+      .get<FoundationEventsQuarterlyResponse>('/api/analytics/foundation-events-quarterly', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ quarterlyData: [], quarterlyLabels: [] })));
   }
 
   /**
@@ -427,15 +408,8 @@ export class AnalyticsService {
    */
   public getFoundationEventsAttendanceDistribution(foundationSlug: string): Observable<FoundationEventsAttendanceDistributionResponse> {
     return this.http
-      .get<FoundationEventsAttendanceDistributionResponse>('/api/analytics/foundation-events-attendance-distribution', {
-        params: { foundationSlug },
-      })
-      .pipe(
-        catchError((error) => {
-          console.error('Failed to fetch foundation events attendance distribution:', error);
-          return of({ distribution: [] });
-        })
-      );
+      .get<FoundationEventsAttendanceDistributionResponse>('/api/analytics/foundation-events-attendance-distribution', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ distribution: [] })));
   }
 
   /**

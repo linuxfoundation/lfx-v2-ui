@@ -35,33 +35,6 @@ export class MaintainersDrawerComponent {
   // === Static Options ===
   protected readonly timeRangeOptions = [{ label: 'Last 12 months', value: 'last-12-months' }];
 
-  // === Forms ===
-  protected readonly headerForm: FormGroup = this.fb.group({
-    timeRange: [{ value: 'last-12-months', disabled: true }],
-  });
-
-  // === Model Signals (two-way binding) ===
-  public readonly visible = model<boolean>(false);
-
-  // === Inputs ===
-  public readonly data = input<FoundationMaintainersResponse>({ avgMaintainers: 0, trendData: [], trendLabels: [] });
-
-  // === WritableSignals ===
-  protected readonly drawerLoading = signal(false);
-
-  // === Computed Signals ===
-  protected readonly metricValue: Signal<string> = computed(() => this.data().avgMaintainers.toLocaleString());
-  protected readonly hasData: Signal<boolean> = computed(() => this.data().avgMaintainers > 0);
-
-  private readonly drawerData = this.initDrawerData();
-  protected readonly monthlyTrendData: Signal<FoundationMaintainersMonthlyResponse> = computed(() => this.drawerData().monthly);
-  protected readonly distributionData: Signal<FoundationMaintainersDistributionResponse> = computed(() => this.drawerData().distribution);
-  protected readonly hasTrendData: Signal<boolean> = computed(() => this.monthlyTrendData().monthlyData.length > 0);
-  protected readonly hasDistributionData: Signal<boolean> = computed(() => this.distributionData().distribution.length > 0);
-
-  protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
-  protected readonly distributionChartData: Signal<ChartData<'bar'>> = this.initDistributionChartData();
-
   protected readonly trendChartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -138,6 +111,33 @@ export class MaintainersDrawerComponent {
     },
     datasets: { bar: { barPercentage: 0.6, categoryPercentage: 0.7 } },
   };
+
+  // === Forms ===
+  protected readonly headerForm: FormGroup = this.fb.group({
+    timeRange: [{ value: 'last-12-months', disabled: true }],
+  });
+
+  // === Inputs ===
+  public readonly data = input<FoundationMaintainersResponse>({ avgMaintainers: 0, trendData: [], trendLabels: [] });
+
+  // === Model Signals (two-way binding) ===
+  public readonly visible = model<boolean>(false);
+
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
+
+  // === Computed Signals ===
+  protected readonly metricValue: Signal<string> = computed(() => this.data().avgMaintainers.toLocaleString());
+  protected readonly hasData: Signal<boolean> = computed(() => this.data().avgMaintainers > 0);
+
+  private readonly drawerData = this.initDrawerData();
+  protected readonly monthlyTrendData: Signal<FoundationMaintainersMonthlyResponse> = computed(() => this.drawerData().monthly);
+  protected readonly distributionData: Signal<FoundationMaintainersDistributionResponse> = computed(() => this.drawerData().distribution);
+  protected readonly hasTrendData: Signal<boolean> = computed(() => this.monthlyTrendData().monthlyData.length > 0);
+  protected readonly hasDistributionData: Signal<boolean> = computed(() => this.distributionData().distribution.length > 0);
+
+  protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
+  protected readonly distributionChartData: Signal<ChartData<'bar'>> = this.initDistributionChartData();
 
   // === Protected Methods ===
   protected onClose(): void {

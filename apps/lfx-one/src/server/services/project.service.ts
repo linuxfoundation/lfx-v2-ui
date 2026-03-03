@@ -968,6 +968,8 @@ export class ProjectService {
    * @returns Monthly contributor counts with short month labels
    */
   public async getFoundationActiveContributorsMonthly(foundationSlug: string): Promise<FoundationActiveContributorsMonthlyResponse> {
+    logger.debug(undefined, 'get_foundation_active_contributors_monthly', 'Fetching monthly active contributors', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         DATE_TRUNC('MONTH', ACTIVITY_DATE) AS MONTH_START,
@@ -980,6 +982,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationActiveContributorsMonthlyRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_active_contributors_monthly', 'Fetched monthly active contributors', { row_count: result.rows.length });
 
     const monthlyData = result.rows.map((row) => row.MONTHLY_AVG_CONTRIBUTORS);
     const monthlyLabels = result.rows.map((row) => {
@@ -997,6 +1001,8 @@ export class ProjectService {
    * @returns Distribution of contribution share across Top 10%, Next 40%, Bottom 50%
    */
   public async getFoundationContributorsDistribution(foundationSlug: string): Promise<FoundationContributorsDistributionResponse> {
+    logger.debug(undefined, 'get_foundation_contributors_distribution', 'Fetching contributors distribution', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         PERCENTILE_BAND,
@@ -1015,6 +1021,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationContributorsDistributionRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_contributors_distribution', 'Fetched contributors distribution', { row_count: result.rows.length });
 
     const distribution = result.rows.map((row) => ({
       band: row.PERCENTILE_BAND,
@@ -1105,6 +1113,8 @@ export class ProjectService {
    * @returns Monthly maintainer counts with short month labels
    */
   public async getFoundationMaintainersMonthly(foundationSlug: string): Promise<FoundationMaintainersMonthlyResponse> {
+    logger.debug(undefined, 'get_foundation_maintainers_monthly', 'Fetching monthly maintainers', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         METRIC_MONTH,
@@ -1117,6 +1127,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationMaintainersMonthlyRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_maintainers_monthly', 'Fetched monthly maintainers', { row_count: result.rows.length });
 
     const monthlyData = result.rows.map((row) => row.ACTIVE_MAINTAINERS);
     const monthlyLabels = result.rows.map((row) => {
@@ -1134,6 +1146,8 @@ export class ProjectService {
    * @returns Distribution of contribution share across Top 10%, Next 40%, Bottom 50%
    */
   public async getFoundationMaintainersDistribution(foundationSlug: string): Promise<FoundationMaintainersDistributionResponse> {
+    logger.debug(undefined, 'get_foundation_maintainers_distribution', 'Fetching maintainers distribution', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         PERCENTILE_BAND,
@@ -1147,6 +1161,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationMaintainersDistributionRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_maintainers_distribution', 'Fetched maintainers distribution', { row_count: result.rows.length });
 
     const distribution = result.rows.map((row) => ({
       band: row.PERCENTILE_BAND,
@@ -1164,6 +1180,8 @@ export class ProjectService {
    * @returns Quarterly event counts with quarter labels
    */
   public async getFoundationEventsQuarterly(foundationSlug: string): Promise<FoundationEventsQuarterlyResponse> {
+    logger.debug(undefined, 'get_foundation_events_quarterly', 'Fetching quarterly events', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         QUARTER_START_DATE,
@@ -1175,6 +1193,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationEventsQuarterlyRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_events_quarterly', 'Fetched quarterly events', { row_count: result.rows.length });
 
     const quarterlyData = result.rows.map((row) => row.EVENT_COUNT);
     const quarterlyLabels = result.rows.map((row) => {
@@ -1194,6 +1214,8 @@ export class ProjectService {
    * @returns Distribution of events across Large, Medium, Small attendance buckets
    */
   public async getFoundationEventsAttendanceDistribution(foundationSlug: string): Promise<FoundationEventsAttendanceDistributionResponse> {
+    logger.debug(undefined, 'get_foundation_events_attendance_distribution', 'Fetching events attendance distribution', { foundation_slug: foundationSlug });
+
     const query = `
       SELECT
         ATTENDANCE_SIZE_BUCKET,
@@ -1209,6 +1231,8 @@ export class ProjectService {
     `;
 
     const result = await this.snowflakeService.execute<FoundationEventsAttendanceDistributionRow>(query, [foundationSlug]);
+
+    logger.debug(undefined, 'get_foundation_events_attendance_distribution', 'Fetched events attendance distribution', { row_count: result.rows.length });
 
     const distribution = result.rows.map((row) => ({
       bucket: row.ATTENDANCE_SIZE_BUCKET,

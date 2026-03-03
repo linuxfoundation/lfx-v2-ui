@@ -16,27 +16,14 @@ import type { FoundationHealthScoreDistributionResponse } from '@lfx-one/shared/
   templateUrl: './project-health-scores-drawer.component.html',
 })
 export class ProjectHealthScoresDrawerComponent {
-  // === Model Signals (two-way binding) ===
-  public readonly visible = model<boolean>(false);
-
-  // === Inputs ===
-  public readonly data = input<FoundationHealthScoreDistributionResponse>({
-    excellent: 0,
-    healthy: 0,
-    stable: 0,
-    unsteady: 0,
-    critical: 0,
-  });
-
-  // === Computed Signals ===
-  protected readonly totalProjects: Signal<number> = computed(() => {
-    const d = this.data();
-    return d.excellent + d.healthy + d.stable + d.unsteady + d.critical;
-  });
-
-  protected readonly hasData: Signal<boolean> = computed(() => this.totalProjects() > 0);
-
-  protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
+  // === Static Options ===
+  protected readonly legendColors = {
+    critical: lfxColors.red[500],
+    unsteady: lfxColors.amber[400],
+    stable: lfxColors.violet[500],
+    healthy: lfxColors.blue[500],
+    excellent: lfxColors.emerald[500],
+  };
 
   protected readonly chartOptions: ChartOptions<'bar'> = {
     responsive: true,
@@ -74,6 +61,28 @@ export class ProjectHealthScoresDrawerComponent {
     },
     datasets: { bar: { barPercentage: 0.55, categoryPercentage: 0.7, borderRadius: 4 } },
   };
+
+  // === Inputs ===
+  public readonly data = input<FoundationHealthScoreDistributionResponse>({
+    excellent: 0,
+    healthy: 0,
+    stable: 0,
+    unsteady: 0,
+    critical: 0,
+  });
+
+  // === Model Signals (two-way binding) ===
+  public readonly visible = model<boolean>(false);
+
+  // === Computed Signals ===
+  protected readonly totalProjects: Signal<number> = computed(() => {
+    const d = this.data();
+    return d.excellent + d.healthy + d.stable + d.unsteady + d.critical;
+  });
+
+  protected readonly hasData: Signal<boolean> = computed(() => this.totalProjects() > 0);
+
+  protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
 
   // === Protected Methods ===
   protected onClose(): void {

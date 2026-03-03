@@ -34,33 +34,6 @@ export class EventsDrawerComponent {
   // === Static Options ===
   protected readonly timeRangeOptions = [{ label: 'Last 12 months', value: 'last-12-months' }];
 
-  // === Forms ===
-  protected readonly headerForm: FormGroup = this.fb.group({
-    timeRange: [{ value: 'last-12-months', disabled: true }],
-  });
-
-  // === Model Signals (two-way binding) ===
-  public readonly visible = model<boolean>(false);
-
-  // === Inputs ===
-  public readonly data = input<HealthEventsMonthlyResponse>({ data: [], totalEvents: 0, totalMonths: 0 });
-
-  // === WritableSignals ===
-  protected readonly drawerLoading = signal(false);
-
-  // === Computed Signals ===
-  protected readonly metricValue: Signal<string> = computed(() => this.data().totalEvents.toLocaleString());
-  protected readonly hasData: Signal<boolean> = computed(() => this.data().totalEvents > 0);
-
-  private readonly drawerData = this.initDrawerData();
-  protected readonly quarterlyData: Signal<FoundationEventsQuarterlyResponse> = computed(() => this.drawerData().quarterly);
-  protected readonly attendanceData: Signal<FoundationEventsAttendanceDistributionResponse> = computed(() => this.drawerData().attendance);
-  protected readonly hasQuarterlyData: Signal<boolean> = computed(() => this.quarterlyData().quarterlyData.length > 0);
-  protected readonly hasAttendanceData: Signal<boolean> = computed(() => this.attendanceData().distribution.length > 0);
-
-  protected readonly quarterlyChartData: Signal<ChartData<'bar'>> = this.initQuarterlyChartData();
-  protected readonly attendanceChartData: Signal<ChartData<'bar'>> = this.initAttendanceChartData();
-
   protected readonly quarterlyChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -142,6 +115,33 @@ export class EventsDrawerComponent {
     },
     datasets: { bar: { barPercentage: 0.6, categoryPercentage: 0.7, borderRadius: 3 } },
   };
+
+  // === Forms ===
+  protected readonly headerForm: FormGroup = this.fb.group({
+    timeRange: [{ value: 'last-12-months', disabled: true }],
+  });
+
+  // === Inputs ===
+  public readonly data = input<HealthEventsMonthlyResponse>({ data: [], totalEvents: 0, totalMonths: 0 });
+
+  // === Model Signals (two-way binding) ===
+  public readonly visible = model<boolean>(false);
+
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
+
+  // === Computed Signals ===
+  protected readonly metricValue: Signal<string> = computed(() => this.data().totalEvents.toLocaleString());
+  protected readonly hasData: Signal<boolean> = computed(() => this.data().totalEvents > 0);
+
+  private readonly drawerData = this.initDrawerData();
+  protected readonly quarterlyData: Signal<FoundationEventsQuarterlyResponse> = computed(() => this.drawerData().quarterly);
+  protected readonly attendanceData: Signal<FoundationEventsAttendanceDistributionResponse> = computed(() => this.drawerData().attendance);
+  protected readonly hasQuarterlyData: Signal<boolean> = computed(() => this.quarterlyData().quarterlyData.length > 0);
+  protected readonly hasAttendanceData: Signal<boolean> = computed(() => this.attendanceData().distribution.length > 0);
+
+  protected readonly quarterlyChartData: Signal<ChartData<'bar'>> = this.initQuarterlyChartData();
+  protected readonly attendanceChartData: Signal<ChartData<'bar'>> = this.initAttendanceChartData();
 
   // === Protected Methods ===
   protected onClose(): void {
