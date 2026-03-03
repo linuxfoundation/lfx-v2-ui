@@ -98,7 +98,13 @@ export class ProjectHealthScoresDrawerComponent {
         datasets: [
           {
             data: [d.critical, d.unsteady, d.stable, d.healthy, d.excellent],
-            backgroundColor: [lfxColors.red[500], lfxColors.amber[400], lfxColors.violet[500], lfxColors.blue[500], lfxColors.emerald[500]],
+            backgroundColor: [
+              this.legendColors.critical,
+              this.legendColors.unsteady,
+              this.legendColors.stable,
+              this.legendColors.healthy,
+              this.legendColors.excellent,
+            ],
             borderRadius: 4,
             borderSkipped: false,
           },

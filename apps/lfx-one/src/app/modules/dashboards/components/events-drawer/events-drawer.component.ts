@@ -203,9 +203,9 @@ export class EventsDrawerComponent {
         Small: 'Small (<200)',
       };
       const bucketColors: Record<string, string> = {
-        Large: '#94a3b8',
-        Medium: '#4ade80',
-        Small: '#a855f7',
+        Large: lfxColors.gray[400],
+        Medium: lfxColors.emerald[400],
+        Small: lfxColors.violet[500],
       };
       return {
         labels: distribution.map((d) => bucketLabels[d.bucket] ?? d.bucket),

@@ -747,11 +747,6 @@ export interface FoundationTotalProjectsResponse {
 }
 
 /**
- * API response for foundation total members query
- * Contains cumulative monthly trend data for member organizations
- * Optimized response with aggregated member counts over time
- */
-/**
  * Row from FOUNDATION_UNIQUE_CONTRIBUTORS_DAILY aggregated by month
  */
 export interface FoundationActiveContributorsMonthlyRow {
@@ -792,6 +787,11 @@ export interface FoundationContributorsDistributionResponse {
   distribution: ContributorsDistributionBand[];
 }
 
+/**
+ * API response for foundation total members query
+ * Contains cumulative monthly trend data for member organizations
+ * Optimized response with aggregated member counts over time
+ */
 export interface FoundationTotalMembersResponse {
   /**
    * Total number of distinct member organizations (latest cumulative count)

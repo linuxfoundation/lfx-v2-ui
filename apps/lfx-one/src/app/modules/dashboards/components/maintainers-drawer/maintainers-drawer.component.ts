@@ -106,7 +106,7 @@ export class MaintainersDrawerComponent {
         title: { display: true, text: 'Contribution Share', color: lfxColors.gray[500], font: { size: 11 } },
         grid: { color: lfxColors.gray[200], lineWidth: 1 },
         border: { display: true, color: lfxColors.gray[400], width: 1, dash: [3, 3] },
-        ticks: { color: lfxColors.gray[500], font: { size: 12 }, padding: 4, callback: (v) => `${v}` },
+        ticks: { color: lfxColors.gray[500], font: { size: 12 }, padding: 4, callback: (v) => `${v}%` },
       },
     },
     datasets: { bar: { barPercentage: 0.6, categoryPercentage: 0.7 } },
