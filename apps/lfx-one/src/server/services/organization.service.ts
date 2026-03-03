@@ -8,6 +8,10 @@ import {
   FoundationCompanyBusFactorRow,
   MembershipTierResponse,
   MembershipTierRow,
+  OrgContributorsMonthlyResponse,
+  OrgContributorsMonthlyRow,
+  OrgContributorsProjectDistributionResponse,
+  OrgContributorsProjectDistributionRow,
   OrganizationContributorsMonthlyRow,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
@@ -393,6 +397,92 @@ export class OrganizationService {
       topCompaniesPercentage: row.BUS_FACTOR_CONTRIBUTION_PCT,
       otherCompaniesCount: row.OTHER_COMPANIES_COUNT,
       otherCompaniesPercentage: row.OTHER_COMPANIES_PCT,
+    };
+  }
+
+  /**
+   * Get monthly unique contributor trend for an organization within a foundation
+   * Queries FOUNDATION_UNIQUE_CONTRIBUTORS_ORG_REPO_MONTHLY for the last 12 months
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Monthly contributor counts with labels for the trend line chart
+   */
+  public async getOrgContributorsMonthly(accountId: string, foundationSlug: string): Promise<OrgContributorsMonthlyResponse> {
+    const query = `
+      SELECT
+        ACCOUNT_ID,
+        FOUNDATION_ID,
+        FOUNDATION_NAME,
+        FOUNDATION_SLUG,
+        TIME_RANGE,
+        REPOSITORY_SCOPE,
+        MONTH_START_DATE,
+        UNIQUE_CONTRIBUTORS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_UNIQUE_CONTRIBUTORS_ORG_REPO_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+        AND TIME_RANGE = 'last_12_months'
+        AND REPOSITORY_SCOPE = 'all_repos'
+      ORDER BY MONTH_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<OrgContributorsMonthlyRow>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org contributors monthly data', accountId, {
+        operation: 'get_org_contributors_monthly',
+      });
+    }
+
+    const monthlyData = result.rows.map((row) => row.UNIQUE_CONTRIBUTORS || 0);
+    const monthlyLabels = result.rows.map((row) => {
+      const date = new Date(row.MONTH_START_DATE);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+    const totalContributors = Math.max(...monthlyData);
+
+    return { monthlyData, monthlyLabels, totalContributors };
+  }
+
+  /**
+   * Get top 5 project contributor distribution for an organization within a foundation
+   * Queries FOUNDATION_CONTRIBUTORS_ORG_PROJECT_DISTRIBUTION
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Top 5 projects with contributor counts for the bar chart
+   */
+  public async getOrgContributorsProjectDistribution(accountId: string, foundationSlug: string): Promise<OrgContributorsProjectDistributionResponse> {
+    const query = `
+      SELECT
+        ACCOUNT_ID,
+        FOUNDATION_SLUG,
+        PROJECT_ID,
+        PROJECT_NAME,
+        PROJECT_RANK,
+        UNIQUE_CONTRIBUTORS,
+        TOTAL_ORG_CONTRIBUTORS,
+        CONTRIBUTOR_SHARE_PERCENTAGE
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_CONTRIBUTORS_ORG_PROJECT_DISTRIBUTION
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+        AND REPOSITORY_SCOPE = 'all_repos'
+        AND TIME_RANGE = 'last_12_months'
+      ORDER BY PROJECT_RANK ASC
+    `;
+
+    const result = await this.snowflakeService.execute<OrgContributorsProjectDistributionRow>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org contributors project distribution', accountId, {
+        operation: 'get_org_contributors_project_distribution',
+      });
+    }
+
+    return {
+      projects: result.rows.map((row) => ({
+        projectId: row.PROJECT_ID,
+        projectName: row.PROJECT_NAME,
+        contributorCount: row.UNIQUE_CONTRIBUTORS || 0,
+        contributorPercentage: row.CONTRIBUTOR_SHARE_PERCENTAGE || 0,
+      })),
     };
   }
 }

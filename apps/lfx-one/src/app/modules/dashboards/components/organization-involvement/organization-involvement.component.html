@@ -55,26 +55,20 @@
             <div
               class="p-4 bg-white hover:border-blue-500 hover:border hover:border-solid rounded-lg border border-gray-200 transition-colors flex-shrink-0 w-80"
               [attr.data-testid]="metric.testId">
-              <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-4">
+                <!-- Header -->
                 <div class="flex items-center gap-1">
                   <i [class]="metric.icon + ' text-gray-500'" class="w-4 h-4"></i>
                   <h5 class="text-sm font-medium">{{ metric.title }}</h5>
                 </div>
 
-                <!-- Membership Info -->
-                <div class="flex flex-col gap-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-500">Tier</span>
-                    <lfx-tag [value]="metric.tier || 'N/A'" severity="secondary"></lfx-tag>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-500">Member Since</span>
-                    <span class="text-sm font-medium">{{ metric.tierSince }}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-500">Renewal Date</span>
-                    <span class="text-sm font-medium">{{ metric.nextDue }}</span>
-                  </div>
+                <!-- Tier badge + info -->
+                <div class="flex flex-col items-center gap-2">
+                  <span class="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">
+                    {{ metric.tier || 'N/A' }}
+                  </span>
+                  <p class="text-sm font-semibold text-gray-900 text-center">Board seat derived from membership</p>
+                  <p class="text-sm text-gray-400 text-center">{{ metric.subtitle }}</p>
                 </div>
               </div>
             </div>
@@ -89,7 +83,9 @@
               [chartOptions]="metric.chartOptions"
               [value]="metric.value"
               [subtitle]="metric.subtitle"
-              [loading]="metric.loading"></lfx-metric-card>
+              [loading]="metric.loading"
+              [clickable]="!!metric.drawerType"
+              (cardClick)="metric.drawerType && handleCardClick(metric.drawerType)"></lfx-metric-card>
           }
         }
       </div>
@@ -112,3 +108,8 @@
     </div>
   }
 </section>
+
+<!-- Drill-Down Drawers -->
+<lfx-org-active-contributors-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.OrgActiveContributors"
+  (visibleChange)="handleDrawerClose()"></lfx-org-active-contributors-drawer>

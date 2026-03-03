@@ -2365,3 +2365,65 @@ export interface FoundationProjectsLifecycleDistributionRow {
 export interface FoundationProjectsLifecycleDistributionResponse {
   distribution: { stage: string; count: number }[];
 }
+
+// ============================================
+// Org Active Contributors Drawer
+// ============================================
+
+/**
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_UNIQUE_CONTRIBUTORS_ORG_REPO_MONTHLY
+ * Contains monthly unique contributor counts for an organization within a foundation
+ */
+export interface OrgContributorsMonthlyRow {
+  ACCOUNT_ID: string;
+  FOUNDATION_ID: string;
+  FOUNDATION_NAME: string;
+  FOUNDATION_SLUG: string;
+  TIME_RANGE: string;
+  REPOSITORY_SCOPE: string;
+  MONTH_START_DATE: Date | string;
+  UNIQUE_CONTRIBUTORS: number;
+}
+
+/**
+ * API response for org contributors monthly trend endpoint
+ * Powers the line chart in the Org Active Contributors drawer
+ */
+export interface OrgContributorsMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalContributors: number;
+}
+
+/**
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_CONTRIBUTORS_ORG_PROJECT_DISTRIBUTION
+ * Contains per-project contributor distribution for an organization within a foundation
+ */
+export interface OrgContributorsProjectDistributionRow {
+  ACCOUNT_ID: string;
+  FOUNDATION_SLUG: string;
+  PROJECT_ID: string;
+  PROJECT_NAME: string;
+  PROJECT_RANK: number;
+  UNIQUE_CONTRIBUTORS: number;
+  TOTAL_ORG_CONTRIBUTORS: number;
+  CONTRIBUTOR_SHARE_PERCENTAGE: number;
+}
+
+/**
+ * Single project entry in the org contributors project distribution response
+ */
+export interface OrgContributorsProjectDistributionItem {
+  projectId: string;
+  projectName: string;
+  contributorCount: number;
+  contributorPercentage: number;
+}
+
+/**
+ * API response for org contributors project distribution endpoint
+ * Powers the bar chart in the Org Active Contributors drawer (top 5 projects)
+ */
+export interface OrgContributorsProjectDistributionResponse {
+  projects: OrgContributorsProjectDistributionItem[];
+}

@@ -6,14 +6,16 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
-import { TagComponent } from '@components/tag/tag.component';
-import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
+import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
+
+import { OrgActiveContributorsDrawerComponent } from '../org-active-contributors-drawer/org-active-contributors-drawer.component';
 
 import type {
   CertifiedEmployeesResponse,
@@ -28,12 +30,14 @@ import type { ChartOptions, ChartType } from 'chart.js';
 
 @Component({
   selector: 'lfx-organization-involvement',
-  imports: [FilterPillsComponent, MetricCardComponent, TagComponent, DataCopilotComponent, ScrollShadowDirective],
+  imports: [FilterPillsComponent, MetricCardComponent, DataCopilotComponent, ScrollShadowDirective, OrgActiveContributorsDrawerComponent],
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',
 })
 export class OrganizationInvolvementComponent {
   @ViewChild(ScrollShadowDirective) public scrollShadowDirective!: ScrollShadowDirective;
+
+  protected readonly DashboardDrawerType = DashboardDrawerType;
 
   private readonly analyticsService = inject(AnalyticsService);
   private readonly accountContextService = inject(AccountContextService);
@@ -64,6 +68,7 @@ export class OrganizationInvolvementComponent {
       this.eventsLoading()
   );
   public readonly selectedFilter = signal<string>('all');
+  public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
   public readonly filterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
@@ -86,6 +91,14 @@ export class OrganizationInvolvementComponent {
 
   public handleFilterChange(filter: string): void {
     this.selectedFilter.set(filter);
+  }
+
+  public handleCardClick(drawerType: DashboardDrawerType): void {
+    this.activeDrawer.set(drawerType);
+  }
+
+  public handleDrawerClose(): void {
+    this.activeDrawer.set(null);
   }
 
   private getMetricConfig(title: string): DashboardMetricCard {
@@ -490,27 +503,31 @@ export class OrganizationInvolvementComponent {
       return {
         ...metric,
         loading: this.membershipTierLoading(),
-        value: 'No Membership',
-        subtitle: 'Not a member',
         tier: '',
-        tierSince: '',
-        nextDue: '',
+        subtitle: 'No active membership',
       };
     }
 
-    const startDate = new Date(data.startDate);
     const endDate = new Date(data.endDate);
-    const tierSince = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const nextDue = endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const now = new Date();
+    const monthsUntilRenewal = (endDate.getFullYear() - now.getFullYear()) * 12 + (endDate.getMonth() - now.getMonth());
+
+    let renewalText: string;
+    if (monthsUntilRenewal <= 3) {
+      renewalText = 'Renewal horizon within 3 months';
+    } else if (monthsUntilRenewal <= 6) {
+      renewalText = 'Renewal horizon within 6 months';
+    } else if (monthsUntilRenewal <= 12) {
+      renewalText = 'Renewal horizon within 12 months';
+    } else {
+      renewalText = `Renewal due ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    }
 
     return {
       ...metric,
       loading: this.membershipTierLoading(),
-      value: data.membershipTier,
-      subtitle: `Active membership`,
       tier: data.membershipTier,
-      tierSince,
-      nextDue,
+      subtitle: `${data.membershipStatus} · ${renewalText}`,
     };
   }
 

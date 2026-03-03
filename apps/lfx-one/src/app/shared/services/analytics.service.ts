@@ -26,6 +26,8 @@ import {
   HealthEventsMonthlyResponse,
   HealthMetricsDailyResponse,
   MembershipTierResponse,
+  OrgContributorsMonthlyResponse,
+  OrgContributorsProjectDistributionResponse,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
   OrganizationMaintainersResponse,
@@ -672,5 +674,37 @@ export class AnalyticsService {
           });
         })
       );
+  }
+
+  /**
+   * Get monthly unique contributor trend for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org contributors monthly response
+   */
+  public getOrgContributorsMonthly(accountId: string, foundationSlug: string): Observable<OrgContributorsMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgContributorsMonthlyResponse>('/api/analytics/org-contributors-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org contributors monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalContributors: 0 });
+      })
+    );
+  }
+
+  /**
+   * Get top 5 project contributor distribution for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org contributors project distribution response
+   */
+  public getOrgContributorsProjectDistribution(accountId: string, foundationSlug: string): Observable<OrgContributorsProjectDistributionResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgContributorsProjectDistributionResponse>('/api/analytics/org-contributors-project-distribution', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org contributors project distribution:', error);
+        return of({ projects: [] });
+      })
+    );
   }
 }

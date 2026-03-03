@@ -102,4 +102,10 @@ router.get('/health-events-monthly', (req, res, next) => analyticsController.get
 // Code commits daily endpoint
 router.get('/code-commits-daily', (req, res, next) => analyticsController.getCodeCommitsDaily(req, res, next));
 
+// Org active contributors monthly trend endpoint (org involvement drawer)
+router.get('/org-contributors-monthly', (req, res, next) => analyticsController.getOrgContributorsMonthly(req, res, next));
+
+// Org active contributors project distribution endpoint (org involvement drawer)
+router.get('/org-contributors-project-distribution', (req, res, next) => analyticsController.getOrgContributorsProjectDistribution(req, res, next));
+
 export default router;

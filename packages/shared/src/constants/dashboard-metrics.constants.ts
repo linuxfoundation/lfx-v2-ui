@@ -110,6 +110,7 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
     chartType: 'bar',
     testId: 'org-involvement-card-active-contributors',
     chartData: EMPTY_CHART_DATA,
+    drawerType: DashboardDrawerType.OrgActiveContributors,
   },
   {
     title: 'Maintainers',
