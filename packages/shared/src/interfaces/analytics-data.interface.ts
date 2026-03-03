@@ -2040,6 +2040,49 @@ export interface FoundationCompanyBusFactorResponse {
 }
 
 /**
+ * Raw Snowflake row from PROJECT_COMPANY_BUS_FACTOR table
+ * Used in the Organization Dependency drawer (per-project breakdown)
+ */
+export interface ProjectOrgDependencyRow {
+  PROJECT_ID: string;
+  PROJECT_SLUG: string;
+  PROJECT_NAME: string;
+  /** Minimum # of orgs accounting for >50% of contributions */
+  BUS_FACTOR_COMPANY_COUNT: number;
+  /** Actual % of contributions from those orgs */
+  BUS_FACTOR_CONTRIBUTION_PCT: number;
+  /** Total distinct orgs that have contributed */
+  TOTAL_COMPANIES: number;
+  /** Total contributions from all orgs */
+  TOTAL_CONTRIBUTIONS: number;
+  /** Calculated: TOTAL_COMPANIES - BUS_FACTOR_COMPANY_COUNT */
+  OTHER_COMPANIES_COUNT: number;
+}
+
+/**
+ * Processed per-project item for the Organization Dependency drawer
+ */
+export interface ProjectOrgDependencyItem {
+  projectId: string;
+  projectSlug: string;
+  projectName: string;
+  busFactorOrgCount: number;
+  busFactorContributionPct: number;
+  totalOrgs: number;
+  totalContributions: number;
+  otherOrgsCount: number;
+}
+
+/**
+ * API response for the foundation org dependency projects endpoint
+ * Powers the per-project table in the Organization Dependency drawer
+ */
+export interface FoundationOrgDependencyProjectsResponse {
+  projects: ProjectOrgDependencyItem[];
+  totalCount: number;
+}
+
+/**
  * Foundation Code Commits Daily row from Snowflake
  * Raw response from FOUNDATION_CODE_COMMITS table
  * Contains daily code commit metrics for maintainer dashboard charts

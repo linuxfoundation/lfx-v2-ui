@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { DashboardDrawerType } from '../interfaces';
-import type { DashboardMetricCard } from '../interfaces';
 import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
 
+import type { DashboardMetricCard } from '../interfaces';
 // ============================================
 // Foundation Health Metrics
 // ============================================
@@ -42,12 +42,13 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     customContentType: 'top-projects',
   },
   {
-    title: 'Company Bus Factor',
+    title: 'Organization Dependency',
     icon: 'fa-light fa-shield',
     chartType: 'line',
     category: 'contributors',
-    testId: 'foundation-health-card-company-bus-factor',
+    testId: 'foundation-health-card-org-dependency',
     customContentType: 'bus-factor',
+    drawerType: DashboardDrawerType.OrganizationDependency,
   },
   {
     title: 'Active Contributors',

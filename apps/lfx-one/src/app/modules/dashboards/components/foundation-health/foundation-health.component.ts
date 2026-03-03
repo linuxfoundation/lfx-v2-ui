@@ -7,6 +7,7 @@ import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-c
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_FOUNDATION_HEALTH_METRICS } from '@lfx-one/shared/constants';
+import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -16,11 +17,11 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
 import { EventsDrawerComponent } from '../events-drawer/events-drawer.component';
 import { MaintainersDrawerComponent } from '../maintainers-drawer/maintainers-drawer.component';
+import { OrgDependencyDrawerComponent } from '../org-dependency-drawer/org-dependency-drawer.component';
 import { ProjectHealthScoresDrawerComponent } from '../project-health-scores-drawer/project-health-scores-drawer.component';
 import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 
-import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
 import type {
   CompanyBusFactor,
   DashboardMetricCard,
@@ -43,6 +44,7 @@ import type {
     MaintainersDrawerComponent,
     EventsDrawerComponent,
     ProjectHealthScoresDrawerComponent,
+    OrgDependencyDrawerComponent,
   ],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
@@ -72,7 +74,7 @@ export class FoundationHealthComponent {
   protected readonly totalProjectsData = this.initializeTotalProjectsData();
   protected readonly totalMembersData = this.initializeTotalMembersData();
   private readonly softwareValueData = this.initializeSoftwareValueData();
-  private readonly companyBusFactorData = this.initializeCompanyBusFactorData();
+  protected readonly companyBusFactorData = this.initializeCompanyBusFactorData();
   protected readonly maintainersData = this.initializeMaintainersData();
   protected readonly healthScoresData = this.initializeHealthScoresData();
   protected readonly activeContributorsData = this.initializeActiveContributorsData();
@@ -132,7 +134,7 @@ export class FoundationHealthComponent {
   }
 
   private initializeCompanyBusFactorCard() {
-    return computed(() => this.transformCompanyBusFactor(this.getMetricConfig('Company Bus Factor')));
+    return computed(() => this.transformCompanyBusFactor(this.getMetricConfig('Organization Dependency')));
   }
 
   private initializeActiveContributorsCard() {
@@ -320,7 +322,7 @@ export class FoundationHealthComponent {
       ...metric,
       loading: this.companyBusFactorLoading(),
       value: data.topCompaniesCount.toString(),
-      subtitle: 'Companies account for >50% code contributions',
+      subtitle: 'Contribution concentration across organizations',
       busFactor,
     };
   }

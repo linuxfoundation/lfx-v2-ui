@@ -184,6 +184,7 @@ export enum DashboardDrawerType {
   Maintainers = 'maintainers',
   Events = 'events',
   ProjectHealthScores = 'project-health-scores',
+  OrganizationDependency = 'organization-dependency',
 }
 
 /** Lifecycle stage of a foundation project */
