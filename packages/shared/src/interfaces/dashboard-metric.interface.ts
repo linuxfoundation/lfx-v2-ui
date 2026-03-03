@@ -183,6 +183,7 @@ export enum DashboardDrawerType {
   ActiveContributors = 'active-contributors',
   Maintainers = 'maintainers',
   Events = 'events',
+  ProjectHealthScores = 'project-health-scores',
 }
 
 /** Lifecycle stage of a foundation project */

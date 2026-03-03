@@ -16,6 +16,7 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
 import { EventsDrawerComponent } from '../events-drawer/events-drawer.component';
 import { MaintainersDrawerComponent } from '../maintainers-drawer/maintainers-drawer.component';
+import { ProjectHealthScoresDrawerComponent } from '../project-health-scores-drawer/project-health-scores-drawer.component';
 import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 
@@ -41,6 +42,7 @@ import type {
     ActiveContributorsDrawerComponent,
     MaintainersDrawerComponent,
     EventsDrawerComponent,
+    ProjectHealthScoresDrawerComponent,
   ],
   templateUrl: './foundation-health.component.html',
   styleUrl: './foundation-health.component.scss',
@@ -72,7 +74,7 @@ export class FoundationHealthComponent {
   private readonly softwareValueData = this.initializeSoftwareValueData();
   private readonly companyBusFactorData = this.initializeCompanyBusFactorData();
   protected readonly maintainersData = this.initializeMaintainersData();
-  private readonly healthScoresData = this.initializeHealthScoresData();
+  protected readonly healthScoresData = this.initializeHealthScoresData();
   protected readonly activeContributorsData = this.initializeActiveContributorsData();
   protected readonly eventsData = this.initializeEventsData();
 

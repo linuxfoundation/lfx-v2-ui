@@ -82,6 +82,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     category: 'projects',
     testId: 'foundation-health-card-project-health-scores',
     customContentType: 'health-scores',
+    drawerType: DashboardDrawerType.ProjectHealthScores,
   },
 ];
 
