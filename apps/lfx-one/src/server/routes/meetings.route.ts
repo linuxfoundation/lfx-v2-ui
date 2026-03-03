@@ -54,13 +54,17 @@ router.get('/:uid/rsvp', (req, res, next) => meetingController.getMeetingRsvps(r
 router.get('/:uid/rsvp/me', (req, res, next) => meetingController.getMeetingRsvpByUsername(req, res, next));
 
 // Meeting attachment routes
-router.post('/:uid/attachments', (req, res, next) => meetingController.createMeetingAttachment(req, res, next));
-
 router.get('/:uid/attachments', (req, res, next) => meetingController.getMeetingAttachments(req, res, next));
 
-router.get('/:uid/attachments/:attachmentId/metadata', (req, res, next) => meetingController.getMeetingAttachmentMetadata(req, res, next));
+router.post('/:uid/attachments', (req, res, next) => meetingController.createMeetingAttachment(req, res, next));
+
+router.post('/:uid/attachments/presign', (req, res, next) => meetingController.presignMeetingAttachment(req, res, next));
 
 router.get('/:uid/attachments/:attachmentId', (req, res, next) => meetingController.getMeetingAttachment(req, res, next));
+
+router.get('/:uid/attachments/:attachmentId/download', (req, res, next) => meetingController.getMeetingAttachmentDownloadUrl(req, res, next));
+
+router.put('/:uid/attachments/:attachmentId', (req, res, next) => meetingController.updateMeetingAttachment(req, res, next));
 
 router.delete('/:uid/attachments/:attachmentId', (req, res, next) => meetingController.deleteMeetingAttachment(req, res, next));
 

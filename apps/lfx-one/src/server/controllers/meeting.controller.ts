@@ -5,12 +5,15 @@ import {
   BatchRegistrantOperationResponse,
   Committee,
   CommitteeMember,
+  CreateMeetingAttachmentRequest,
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   CreateMeetingRsvpRequest,
   GenerateAgendaResponse,
   Meeting,
   MeetingRegistrant,
+  PresignAttachmentRequest,
+  UpdateMeetingAttachmentRequest,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -1027,11 +1030,45 @@ export class MeetingController {
   }
 
   /**
+   * GET /meetings/:uid/attachments
+   */
+  public async getMeetingAttachments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid } = req.params;
+
+    const startTime = logger.startOperation(req, 'get_meeting_attachments', {
+      meeting_id: uid,
+    });
+
+    try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_meeting_attachments',
+          service: 'meeting_controller',
+          logStartTime: startTime,
+        })
+      ) {
+        return;
+      }
+
+      const attachments = await this.meetingService.getMeetingAttachments(req, uid);
+
+      logger.success(req, 'get_meeting_attachments', startTime, {
+        meeting_id: uid,
+        attachment_count: attachments.length,
+      });
+
+      res.status(200).json(attachments);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /meetings/:uid/attachments
    */
   public async createMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
-    const attachmentData = req.body;
+    const attachmentData: CreateMeetingAttachmentRequest = req.body;
 
     const startTime = logger.startOperation(req, 'create_meeting_attachment', {
       meeting_id: uid,
@@ -1040,7 +1077,6 @@ export class MeetingController {
     });
 
     try {
-      // Validate meeting UID
       if (
         !validateUidParameter(uid, req, next, {
           operation: 'create_meeting_attachment',
@@ -1051,50 +1087,25 @@ export class MeetingController {
         return;
       }
 
-      // Validate attachment data
       if (!attachmentData.type || !attachmentData.name) {
-        const validationError = ServiceValidationError.fromFieldErrors(
-          {
-            type: !attachmentData.type ? 'Type is required' : [],
-            name: !attachmentData.name ? 'Name is required' : [],
-          },
-          'Attachment data validation failed',
-          {
-            operation: 'create_meeting_attachment',
-            service: 'meeting_controller',
-            path: req.path,
-          }
+        return next(
+          ServiceValidationError.fromFieldErrors(
+            {
+              type: !attachmentData.type ? 'Type is required' : [],
+              name: !attachmentData.name ? 'Name is required' : [],
+            },
+            'Attachment data validation failed',
+            { operation: 'create_meeting_attachment', service: 'meeting_controller', path: req.path }
+          )
         );
-
-        return next(validationError);
       }
 
-      // Create FormData for multipart/form-data request
-      const formDataClass = (await import('form-data')).default;
-      const formData = new formDataClass();
-      formData.append('type', attachmentData.type);
-      formData.append('name', attachmentData.name);
-
-      // If file data is provided, include it (base64 encoded file from client)
-      if (attachmentData.file) {
-        const buffer = Buffer.from(attachmentData.file, 'base64');
-        formData.append('file', buffer, {
-          filename: attachmentData.name,
-          contentType: attachmentData.file_content_type || 'application/octet-stream',
-        });
-      }
-
-      // If link is provided instead of file, include it
-      if (attachmentData.link) {
-        formData.append('link', attachmentData.link);
-      }
-
-      // Create attachment via LFX V2 API
-      const attachment = await this.meetingService.createMeetingAttachment(req, uid, formData);
+      const attachment = await this.meetingService.createMeetingAttachment(req, uid, attachmentData);
 
       logger.success(req, 'create_meeting_attachment', startTime, {
         attachment_uid: attachment.uid,
         meeting_id: uid,
+        type: attachment.type,
       });
 
       res.status(201).json(attachment);
@@ -1104,25 +1115,21 @@ export class MeetingController {
   }
 
   /**
-   * GET /meetings/:uid/attachments/:attachmentId
-   * Query params:
-   * - download: 'true' to force download (attachment), omit or 'false' to view inline
+   * PUT /meetings/:uid/attachments/:attachmentId
    */
-  public async getMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async updateMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid, attachmentId } = req.params;
-    const { download } = req.query;
+    const updateData: UpdateMeetingAttachmentRequest = req.body;
 
-    const startTime = logger.startOperation(req, 'get_meeting_attachment', {
+    const startTime = logger.startOperation(req, 'update_meeting_attachment', {
       meeting_id: uid,
       attachment_id: attachmentId,
-      download_mode: download === 'true' ? 'download' : 'inline',
     });
 
     try {
-      // Validate meeting UID
       if (
         !validateUidParameter(uid, req, next, {
-          operation: 'get_meeting_attachment',
+          operation: 'update_meeting_attachment',
           service: 'meeting_controller',
           logStartTime: startTime,
         })
@@ -1130,56 +1137,24 @@ export class MeetingController {
         return;
       }
 
-      // Validate attachment ID
       if (!attachmentId) {
-        const validationError = ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
-          operation: 'get_meeting_attachment',
-          service: 'meeting_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+        return next(
+          ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
+            operation: 'update_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
       }
 
-      // Get attachment file data via LFX V2 API (downloads file)
-      // The LFX V2 API returns the file with proper Content-Type and Content-Disposition headers
-      const attachmentData = await this.meetingService.getMeetingAttachment(req, uid, attachmentId);
+      await this.meetingService.updateMeetingAttachment(req, uid, attachmentId, updateData);
 
-      // Get metadata to set proper filename (fetch in parallel with file data, but don't fail if metadata fails)
-      let filename = 'download';
-      let contentType = 'application/octet-stream';
-
-      try {
-        const metadata = await this.meetingService.getMeetingAttachmentMetadata(req, uid, attachmentId);
-        filename = metadata.name || filename;
-        contentType = metadata.mime_type || metadata.content_type || contentType;
-      } catch (metadataError) {
-        logger.warning(req, 'get_meeting_attachment_metadata', 'Failed to fetch metadata, using defaults', {
-          meeting_id: uid,
-          attachment_id: attachmentId,
-          err: metadataError,
-        });
-      }
-
-      logger.success(req, 'get_meeting_attachment', startTime, {
+      logger.success(req, 'update_meeting_attachment', startTime, {
         meeting_id: uid,
         attachment_id: attachmentId,
-        status_code: 200,
       });
 
-      // Set proper headers for file delivery
-      res.setHeader('Content-Type', contentType);
-
-      // Use RFC 5987 encoding for Content-Disposition filename
-      // This properly handles spaces, special characters, and Unicode
-      const encodedFilename = encodeURIComponent(filename);
-      const disposition = download === 'true' ? 'attachment' : 'inline';
-      res.setHeader('Content-Disposition', `${disposition}; filename*=UTF-8''${encodedFilename}`);
-
-      res.setHeader('Content-Length', attachmentData.length.toString());
-
-      // Send the buffer directly
-      res.status(200).send(attachmentData);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
@@ -1197,7 +1172,6 @@ export class MeetingController {
     });
 
     try {
-      // Validate meeting UID
       if (
         !validateUidParameter(uid, req, next, {
           operation: 'delete_meeting_attachment',
@@ -1208,24 +1182,21 @@ export class MeetingController {
         return;
       }
 
-      // Validate attachment ID
       if (!attachmentId) {
-        const validationError = ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
-          operation: 'delete_meeting_attachment',
-          service: 'meeting_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+        return next(
+          ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
+            operation: 'delete_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
       }
 
-      // Delete attachment via LFX V2 API
       await this.meetingService.deleteMeetingAttachment(req, uid, attachmentId);
 
       logger.success(req, 'delete_meeting_attachment', startTime, {
         meeting_id: uid,
         attachment_id: attachmentId,
-        status_code: 204,
       });
 
       res.status(204).send();
@@ -1234,19 +1205,22 @@ export class MeetingController {
     }
   }
 
-  public async getMeetingAttachmentMetadata(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * GET /meetings/:uid/attachments/:attachmentId
+   * Returns attachment metadata
+   */
+  public async getMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid, attachmentId } = req.params;
 
-    const startTime = logger.startOperation(req, 'get_meeting_attachment_metadata', {
+    const startTime = logger.startOperation(req, 'get_meeting_attachment', {
       meeting_id: uid,
       attachment_id: attachmentId,
     });
 
     try {
-      // Validate meeting UID
       if (
         !validateUidParameter(uid, req, next, {
-          operation: 'get_meeting_attachment_metadata',
+          operation: 'get_meeting_attachment',
           service: 'meeting_controller',
           logStartTime: startTime,
         })
@@ -1254,47 +1228,45 @@ export class MeetingController {
         return;
       }
 
-      // Validate attachment ID
       if (!attachmentId) {
-        const validationError = ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
-          operation: 'get_meeting_attachment_metadata',
-          service: 'meeting_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+        return next(
+          ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
+            operation: 'get_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
       }
 
-      // Get attachment metadata via LFX V2 API
-      const metadata = await this.meetingService.getMeetingAttachmentMetadata(req, uid, attachmentId);
+      const attachment = await this.meetingService.getMeetingAttachmentInfo(req, uid, attachmentId);
 
-      logger.success(req, 'get_meeting_attachment_metadata', startTime, {
+      logger.success(req, 'get_meeting_attachment', startTime, {
         meeting_id: uid,
         attachment_id: attachmentId,
-        status_code: 200,
       });
 
-      res.status(200).json(metadata);
+      res.status(200).json(attachment);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * GET /meetings/:uid/attachments
+   * GET /meetings/:uid/attachments/:attachmentId/download
+   * Returns a presigned download URL for the attachment
    */
-  public async getMeetingAttachments(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const { uid } = req.params;
+  public async getMeetingAttachmentDownloadUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid, attachmentId } = req.params;
 
-    const startTime = logger.startOperation(req, 'get_meeting_attachments', {
+    const startTime = logger.startOperation(req, 'get_meeting_attachment_download_url', {
       meeting_id: uid,
+      attachment_id: attachmentId,
     });
 
     try {
-      // Validate meeting UID
       if (
         !validateUidParameter(uid, req, next, {
-          operation: 'get_meeting_attachments',
+          operation: 'get_meeting_attachment_download_url',
           service: 'meeting_controller',
           logStartTime: startTime,
         })
@@ -1302,36 +1274,47 @@ export class MeetingController {
         return;
       }
 
-      // Get attachments via Query Service
-      const attachments = await this.meetingService.getMeetingAttachments(req, uid);
+      if (!attachmentId) {
+        return next(
+          ServiceValidationError.forField('attachmentId', 'Attachment ID is required', {
+            operation: 'get_meeting_attachment_download_url',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
+      }
 
-      logger.success(req, 'get_meeting_attachments', startTime, {
+      const result = await this.meetingService.getMeetingAttachmentDownloadUrl(req, uid, attachmentId);
+
+      logger.success(req, 'get_meeting_attachment_download_url', startTime, {
         meeting_id: uid,
-        attachment_count: attachments.length,
-        status_code: 200,
+        attachment_id: attachmentId,
       });
 
-      res.status(200).json(attachments);
+      res.status(200).json(result);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * GET /meetings/past/:uid/attachments
+   * POST /meetings/:uid/attachments/presign
+   * Generates a presigned S3 URL for file upload
    */
-  public async getPastMeetingAttachments(req: Request, res: Response, next: NextFunction): Promise<void> {
+  public async presignMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { uid } = req.params;
+    const presignData: PresignAttachmentRequest = req.body;
 
-    const startTime = logger.startOperation(req, 'get_past_meeting_attachments', {
-      past_meeting_id: uid,
+    const startTime = logger.startOperation(req, 'presign_meeting_attachment', {
+      meeting_id: uid,
+      file_name: presignData.name,
+      file_size: presignData.file_size,
     });
 
     try {
-      // Validate past meeting UID
       if (
         !validateUidParameter(uid, req, next, {
-          operation: 'get_past_meeting_attachments',
+          operation: 'presign_meeting_attachment',
           service: 'meeting_controller',
           logStartTime: startTime,
         })
@@ -1339,16 +1322,29 @@ export class MeetingController {
         return;
       }
 
-      // Get attachments via Query Service
-      const attachments = await this.meetingService.getPastMeetingAttachments(req, uid);
+      if (!presignData.name || !presignData.file_size || !presignData.file_type) {
+        return next(
+          ServiceValidationError.fromFieldErrors(
+            {
+              name: !presignData.name ? 'File name is required' : [],
+              file_size: !presignData.file_size ? 'File size is required' : [],
+              file_type: !presignData.file_type ? 'File type is required' : [],
+            },
+            'Presign request validation failed',
+            { operation: 'presign_meeting_attachment', service: 'meeting_controller', path: req.path }
+          )
+        );
+      }
 
-      logger.success(req, 'get_past_meeting_attachments', startTime, {
-        past_meeting_id: uid,
-        attachment_count: attachments.length,
-        status_code: 200,
+      const result = await this.meetingService.presignMeetingAttachment(req, uid, presignData);
+
+      logger.success(req, 'presign_meeting_attachment', startTime, {
+        meeting_id: uid,
+        attachment_uid: result.uid,
+        file_name: presignData.name,
       });
 
-      res.status(200).json(attachments);
+      res.status(201).json(result);
     } catch (error) {
       next(error);
     }

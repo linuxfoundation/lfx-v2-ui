@@ -202,8 +202,7 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public ngOnInit(): void {
-    // TODO: Resources section is "Coming Soon" — skip attachment fetches until enabled
-    // this.attachments = this.initAttachments();
+    this.attachments = this.initAttachments();
     if (this.pastMeeting()) {
       this.initRecording();
       this.initSummary();

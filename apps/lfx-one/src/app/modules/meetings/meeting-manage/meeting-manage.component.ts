@@ -999,7 +999,7 @@ export class MeetingManageComponent {
 
     return from(attachmentIdsToDelete).pipe(
       mergeMap((attachmentId) =>
-        this.meetingService.deleteAttachment(meetingId, attachmentId).pipe(
+        this.meetingService.deleteMeetingAttachment(meetingId, attachmentId).pipe(
           switchMap(() => of({ success: attachmentId, failure: null })),
           catchError(() => of({ success: null, failure: attachmentId }))
         )
@@ -1025,10 +1025,16 @@ export class MeetingManageComponent {
 
     return from(attachmentsToSave).pipe(
       mergeMap((attachment) =>
-        this.meetingService.createFileAttachment(meetingId, attachment.file).pipe(
-          switchMap((result) => of({ success: result, failure: null })),
-          catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
-        )
+        this.meetingService
+          .uploadMeetingFile(meetingId, attachment.file, {
+            name: attachment.fileName,
+            file_size: attachment.fileSize,
+            file_type: attachment.mimeType,
+          })
+          .pipe(
+            switchMap((result) => of({ success: result as MeetingAttachment, failure: null })),
+            catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
+          )
       ),
       toArray(),
       switchMap((results) => {
@@ -1052,7 +1058,7 @@ export class MeetingManageComponent {
 
     return from(linksToSave).pipe(
       mergeMap((link: ImportantLinkFormValue) =>
-        this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
+        this.meetingService.createMeetingAttachment(meetingId, { type: 'link', name: link.title, link: link.url }).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { linkName: link.title, error } }))
         )
