@@ -12,7 +12,7 @@ import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, of, skip, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type {
@@ -149,6 +149,7 @@ export class MaintainersDrawerComponent {
     const defaultValue = { monthly: DEFAULT_FOUNDATION_MAINTAINERS_MONTHLY, distribution: DEFAULT_FOUNDATION_MAINTAINERS_DISTRIBUTION };
     return toSignal(
       toObservable(this.visible).pipe(
+        skip(1),
         switchMap((isVisible) => {
           if (!isVisible) {
             this.drawerLoading.set(false);

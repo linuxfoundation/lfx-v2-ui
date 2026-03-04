@@ -11,7 +11,7 @@ import { DEFAULT_FOUNDATION_EVENTS_ATTENDANCE_DISTRIBUTION, DEFAULT_FOUNDATION_E
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, of, skip, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type {
@@ -153,6 +153,7 @@ export class EventsDrawerComponent {
     const defaultValue = { quarterly: DEFAULT_FOUNDATION_EVENTS_QUARTERLY, attendance: DEFAULT_FOUNDATION_EVENTS_ATTENDANCE_DISTRIBUTION };
     return toSignal(
       toObservable(this.visible).pipe(
+        skip(1),
         switchMap((isVisible) => {
           if (!isVisible) {
             this.drawerLoading.set(false);

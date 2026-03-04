@@ -1,8 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Generated with [Claude Code](https://claude.ai/code)
-
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -12,7 +10,7 @@ import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, of, skip, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { OrgEventAttendeesMonthlyResponse } from '@lfx-one/shared/interfaces';
@@ -87,6 +85,7 @@ export class OrgEventAttendeesDrawerComponent {
   private initMonthlyData(): Signal<OrgEventAttendeesMonthlyResponse> {
     return toSignal(
       toObservable(this.visible).pipe(
+        skip(1),
         switchMap((isVisible) => {
           if (!isVisible) {
             this.drawerLoading.set(false);

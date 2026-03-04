@@ -11,7 +11,7 @@ import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, of, skip, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { OrgContributorsMonthlyResponse, OrgContributorsProjectDistributionResponse } from '@lfx-one/shared/interfaces';
@@ -130,6 +130,7 @@ export class OrgActiveContributorsDrawerComponent {
     const defaultValue = { monthly: DEFAULT_MONTHLY, distribution: DEFAULT_DISTRIBUTION };
     return toSignal(
       toObservable(this.visible).pipe(
+        skip(1),
         switchMap((isVisible) => {
           if (!isVisible) {
             this.drawerLoading.set(false);
