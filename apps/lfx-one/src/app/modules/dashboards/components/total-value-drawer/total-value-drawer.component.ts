@@ -59,7 +59,6 @@ export class TotalValueDrawerComponent {
       x: {
         display: true,
         min: 0,
-        max: 80,
         grid: {
           color: lfxColors.gray[200],
           lineWidth: 1,

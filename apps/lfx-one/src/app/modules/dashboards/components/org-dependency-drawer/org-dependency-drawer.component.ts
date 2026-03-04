@@ -53,7 +53,6 @@ export class OrgDependencyDrawerComponent {
       x: {
         display: true,
         min: 0,
-        max: 60,
         grid: {
           color: lfxColors.gray[200],
           lineWidth: 1,
@@ -62,7 +61,7 @@ export class OrgDependencyDrawerComponent {
         ticks: {
           color: lfxColors.gray[500],
           font: { size: 12 },
-          stepSize: 15,
+          callback: (value) => `${value}%`,
         },
         title: {
           display: true,

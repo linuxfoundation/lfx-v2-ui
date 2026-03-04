@@ -8,7 +8,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { hexToRgba, wrapLabel } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -180,7 +180,7 @@ export class OrgTrainingEnrollmentsDrawerComponent {
     return computed(() => {
       const { projects } = this.distributionData();
       return {
-        labels: projects.map((p) => this.wrapLabel(p.projectBucket, 14)),
+        labels: projects.map((p) => wrapLabel(p.projectBucket, 14)),
         datasets: [
           {
             data: projects.map((p) => p.enrollmentCount),
@@ -189,24 +189,5 @@ export class OrgTrainingEnrollmentsDrawerComponent {
         ],
       };
     });
-  }
-
-  private wrapLabel(text: string, maxWidth: number): string[] {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let current = '';
-
-    for (const word of words) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (candidate.length > maxWidth && current) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = candidate;
-      }
-    }
-
-    if (current) lines.push(current);
-    return lines;
   }
 }

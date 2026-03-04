@@ -84,7 +84,7 @@ export class OrganizationInvolvementComponent {
       this.eventsLoading()
   );
   public readonly selectedFilter = signal<string>('all');
-  public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
+  protected readonly activeDrawer = signal<DashboardDrawerType | null>(null);
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
   public readonly filterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
@@ -109,11 +109,11 @@ export class OrganizationInvolvementComponent {
     this.selectedFilter.set(filter);
   }
 
-  public handleCardClick(drawerType: DashboardDrawerType): void {
+  protected handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
   }
 
-  public handleDrawerClose(): void {
+  protected handleDrawerClose(): void {
     this.activeDrawer.set(null);
   }
 
