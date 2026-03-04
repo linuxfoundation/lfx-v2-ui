@@ -56,6 +56,7 @@ export class CommitteeTableComponent {
   public committees = input.required<Committee[]>();
   public canManageCommittee = input<boolean>(false);
   public committeeLabel = input<string>(COMMITTEE_LABEL.singular);
+  public committeeLabelPlural = input<string>(COMMITTEE_LABEL.plural);
   public searchForm = input.required<FormGroup>();
   public categoryOptions = input.required<{ label: string; value: string | null }[]>();
   public votingStatusOptions = input.required<{ label: string; value: string | null }[]>();
