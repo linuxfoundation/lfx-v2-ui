@@ -22,7 +22,7 @@ import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, filter, forkJoin, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap, tap } from 'rxjs';
 
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 import { LifecycleStage } from '@lfx-one/shared/interfaces';
@@ -200,9 +200,12 @@ export class TotalProjectsDrawerComponent {
     const defaultValue = { projects: DEFAULT_FOUNDATION_PROJECTS_DETAIL, lifecycle: DEFAULT_FOUNDATION_PROJECTS_LIFECYCLE };
     return toSignal(
       toObservable(this.visible).pipe(
-        filter(Boolean),
-        tap(() => this.drawerLoading.set(true)),
-        switchMap(() => {
+        switchMap((isVisible) => {
+          if (!isVisible) {
+            this.drawerLoading.set(false);
+            return of(defaultValue);
+          }
+          this.drawerLoading.set(true);
           const slug = this.projectContextService.selectedFoundation()?.slug ?? '';
           if (!slug) {
             this.drawerLoading.set(false);
