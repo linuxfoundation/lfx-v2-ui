@@ -8,7 +8,7 @@ import { FilterOption, FilterPillsComponent } from '@components/filter-pills/fil
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
 import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { hexToRgba, parseLocalDateString } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -525,9 +525,9 @@ export class OrganizationInvolvementComponent {
       };
     }
 
-    const tierSince = data.startDate ? new Date(data.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
+    const tierSince = data.startDate ? parseLocalDateString(data.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
 
-    const nextDue = data.endDate ? new Date(data.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    const nextDue = data.endDate ? parseLocalDateString(data.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
     return {
       ...metric,
