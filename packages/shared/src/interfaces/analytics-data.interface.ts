@@ -2539,3 +2539,18 @@ export interface OrgEventAttendeesMonthlyResponse {
   monthlyLabels: string[];
   totalAttendees: number;
 }
+
+// ============================================
+// Org Event Speakers Monthly
+// ============================================
+
+/**
+ * API response for org event speakers monthly trend endpoint
+ * Powers the bar chart in the Org Event Speakers drawer
+ * Uses per-month SPEAKER_COUNT from FOUNDATION_EVENT_ATTENDANCE_ORG_MONTHLY
+ */
+export interface OrgEventSpeakersMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalSpeakers: number;
+}

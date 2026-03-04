@@ -13,6 +13,7 @@ import {
   OrgContributorsProjectDistributionResponse,
   OrgContributorsProjectDistributionRow,
   OrgEventAttendeesMonthlyResponse,
+  OrgEventSpeakersMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersDistributionRow,
   OrgMaintainersKeyMember,
@@ -657,6 +658,42 @@ export class OrganizationService {
       monthlyData: result.rows.map((row) => row.ATTENDED_COUNT || 0),
       monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
       totalAttendees: result.rows[0].TOTAL_ATTENDED || 0,
+    };
+  }
+
+  /**
+   * Get monthly per-event-speaker counts for an organization within a foundation
+   * Queries FOUNDATION_EVENT_ATTENDANCE_ORG_MONTHLY using SPEAKER_COUNT (not cumulative)
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Per-month speaker counts with labels for the bar chart
+   */
+  public async getOrgEventSpeakersMonthly(accountId: string, foundationSlug: string): Promise<OrgEventSpeakersMonthlyResponse> {
+    const query = `
+      SELECT
+        TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
+        SPEAKER_COUNT,
+        TOTAL_SPEAKERS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_EVENT_ATTENDANCE_ORG_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+      ORDER BY MONTH_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{ MONTH_LABEL: string; SPEAKER_COUNT: number; TOTAL_SPEAKERS: number }>(query, [
+      accountId,
+      foundationSlug,
+    ]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org event speakers monthly data', accountId, {
+        operation: 'get_org_event_speakers_monthly',
+      });
+    }
+
+    return {
+      monthlyData: result.rows.map((row) => row.SPEAKER_COUNT || 0),
+      monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
+      totalSpeakers: result.rows[0].TOTAL_SPEAKERS || 0,
     };
   }
 }

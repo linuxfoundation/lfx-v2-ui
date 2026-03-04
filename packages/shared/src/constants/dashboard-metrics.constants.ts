@@ -134,6 +134,7 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     testId: 'org-involvement-card-event-speakers',
     chartData: EMPTY_CHART_DATA,
+    drawerType: DashboardDrawerType.OrgEventSpeakers,
   },
   {
     title: 'Certified Employees',

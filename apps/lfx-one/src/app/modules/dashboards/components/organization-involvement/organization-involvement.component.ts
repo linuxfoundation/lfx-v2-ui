@@ -17,6 +17,7 @@ import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 
 import { OrgActiveContributorsDrawerComponent } from '../org-active-contributors-drawer/org-active-contributors-drawer.component';
 import { OrgEventAttendeesDrawerComponent } from '../org-event-attendees-drawer/org-event-attendees-drawer.component';
+import { OrgEventSpeakersDrawerComponent } from '../org-event-speakers-drawer/org-event-speakers-drawer.component';
 import { OrgMaintainersDrawerComponent } from '../org-maintainers-drawer/org-maintainers-drawer.component';
 
 import type {
@@ -39,6 +40,7 @@ import type { ChartOptions, ChartType } from 'chart.js';
     ScrollShadowDirective,
     OrgActiveContributorsDrawerComponent,
     OrgEventAttendeesDrawerComponent,
+    OrgEventSpeakersDrawerComponent,
     OrgMaintainersDrawerComponent,
   ],
   templateUrl: './organization-involvement.component.html',

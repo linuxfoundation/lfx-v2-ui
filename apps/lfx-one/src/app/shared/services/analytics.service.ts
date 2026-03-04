@@ -29,6 +29,7 @@ import {
   OrgContributorsMonthlyResponse,
   OrgContributorsProjectDistributionResponse,
   OrgEventAttendeesMonthlyResponse,
+  OrgEventSpeakersMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersKeyMembersResponse,
   OrgMaintainersMonthlyResponse,
@@ -772,6 +773,16 @@ export class AnalyticsService {
       catchError((error) => {
         console.error('Failed to fetch org event attendees monthly:', error);
         return of({ monthlyData: [], monthlyLabels: [], totalAttendees: 0 });
+      })
+    );
+  }
+
+  public getOrgEventSpeakersMonthly(accountId: string, foundationSlug: string): Observable<OrgEventSpeakersMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgEventSpeakersMonthlyResponse>('/api/analytics/org-event-speakers-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org event speakers monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalSpeakers: 0 });
       })
     );
   }

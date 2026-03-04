@@ -120,4 +120,7 @@ router.get('/org-maintainers-key-members', (req, res, next) => analyticsControll
 // Org event attendees monthly endpoint (org event attendees drawer)
 router.get('/org-event-attendees-monthly', (req, res, next) => analyticsController.getOrgEventAttendeesMonthly(req, res, next));
 
+// Org event speakers monthly endpoint (org event speakers drawer)
+router.get('/org-event-speakers-monthly', (req, res, next) => analyticsController.getOrgEventSpeakersMonthly(req, res, next));
+
 export default router;
