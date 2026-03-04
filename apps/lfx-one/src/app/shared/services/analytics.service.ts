@@ -30,6 +30,8 @@ import {
   OrgContributorsProjectDistributionResponse,
   OrgEventAttendeesMonthlyResponse,
   OrgEventSpeakersMonthlyResponse,
+  OrgCertifiedEmployeesDistributionResponse,
+  OrgCertifiedEmployeesMonthlyResponse,
   OrgTrainingEnrollmentsDistributionResponse,
   OrgTrainingEnrollmentsMonthlyResponse,
   OrgMaintainersDistributionResponse,
@@ -785,6 +787,26 @@ export class AnalyticsService {
       catchError((error) => {
         console.error('Failed to fetch org event speakers monthly:', error);
         return of({ monthlyData: [], monthlyLabels: [], totalSpeakers: 0 });
+      })
+    );
+  }
+
+  public getOrgCertifiedEmployeesMonthly(accountId: string, foundationSlug: string): Observable<OrgCertifiedEmployeesMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgCertifiedEmployeesMonthlyResponse>('/api/analytics/org-certified-employees-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org certified employees monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalCertifiedEmployees: 0 });
+      })
+    );
+  }
+
+  public getOrgCertifiedEmployeesDistribution(accountId: string, foundationSlug: string): Observable<OrgCertifiedEmployeesDistributionResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgCertifiedEmployeesDistributionResponse>('/api/analytics/org-certified-employees-distribution', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org certified employees distribution:', error);
+        return of({ programs: [] });
       })
     );
   }

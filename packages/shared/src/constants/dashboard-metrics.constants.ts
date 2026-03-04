@@ -142,6 +142,7 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     testId: 'org-involvement-card-certified-employees',
     chartData: EMPTY_CHART_DATA,
+    drawerType: DashboardDrawerType.OrgCertifiedEmployees,
   },
   {
     title: 'Training Enrollments',

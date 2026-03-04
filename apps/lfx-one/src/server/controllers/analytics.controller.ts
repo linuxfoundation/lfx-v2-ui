@@ -1589,4 +1589,83 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/org-certified-employees-monthly
+   * Get monthly cumulative certified employee counts for an organization within a foundation
+   * Query params: accountId (required), foundationSlug (required)
+   */
+  public async getOrgCertifiedEmployeesMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_certified_employees_monthly');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_certified_employees_monthly',
+        });
+      }
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_certified_employees_monthly',
+        });
+      }
+
+      const response = await this.organizationService.getOrgCertifiedEmployeesMonthly(accountId, foundationSlug);
+
+      logger.success(req, 'get_org_certified_employees_monthly', startTime, {
+        account_id: accountId,
+        foundation_slug: foundationSlug,
+        monthly_data_points: response.monthlyData.length,
+        total_certified_employees: response.totalCertifiedEmployees,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_org_certified_employees_monthly', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-certified-employees-distribution
+   * Get certified employees distribution by certification program for an organization
+   * Query params: accountId (required), foundationSlug (required)
+   */
+  public async getOrgCertifiedEmployeesDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_certified_employees_distribution');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_certified_employees_distribution',
+        });
+      }
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_certified_employees_distribution',
+        });
+      }
+
+      const response = await this.organizationService.getOrgCertifiedEmployeesDistribution(accountId, foundationSlug);
+
+      logger.success(req, 'get_org_certified_employees_distribution', startTime, {
+        account_id: accountId,
+        foundation_slug: foundationSlug,
+        program_count: response.programs.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_org_certified_employees_distribution', startTime, error);
+      next(error);
+    }
+  }
 }

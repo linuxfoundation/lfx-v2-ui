@@ -191,6 +191,7 @@ export enum DashboardDrawerType {
   OrgEventAttendees = 'org-event-attendees',
   OrgEventSpeakers = 'org-event-speakers',
   OrgTrainingEnrollments = 'org-training-enrollments',
+  OrgCertifiedEmployees = 'org-certified-employees',
 }
 
 /** Lifecycle stage of a foundation project */

@@ -2586,3 +2586,35 @@ export interface OrgTrainingEnrollmentsDistributionItem {
 export interface OrgTrainingEnrollmentsDistributionResponse {
   projects: OrgTrainingEnrollmentsDistributionItem[];
 }
+
+// ============================================
+// Org Certified Employees
+// ============================================
+
+/**
+ * API response for org certified employees monthly trend endpoint
+ * Powers the line chart in the Org Certified Employees drawer
+ * Uses cumulative MONTHLY_CERTIFIED_EMPLOYEES from FOUNDATION_CERTIFIED_EMPLOYEES_ORG_MONTHLY
+ */
+export interface OrgCertifiedEmployeesMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalCertifiedEmployees: number;
+}
+
+/**
+ * A single certification program entry in the certified employees distribution
+ */
+export interface OrgCertifiedEmployeesDistributionItem {
+  certificationBucket: string;
+  certifiedEmployeeCount: number;
+}
+
+/**
+ * API response for org certified employees distribution endpoint
+ * Powers the bar chart in the Org Certified Employees drawer
+ * Uses CERTIFICATION_BUCKET and CERTIFIED_EMPLOYEE_COUNT from FOUNDATION_CERTIFIED_EMPLOYEES_ORG_DISTRIBUTION
+ */
+export interface OrgCertifiedEmployeesDistributionResponse {
+  programs: OrgCertifiedEmployeesDistributionItem[];
+}

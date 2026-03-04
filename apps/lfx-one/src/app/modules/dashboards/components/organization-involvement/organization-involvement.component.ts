@@ -16,6 +16,7 @@ import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directiv
 import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 
 import { OrgActiveContributorsDrawerComponent } from '../org-active-contributors-drawer/org-active-contributors-drawer.component';
+import { OrgCertifiedEmployeesDrawerComponent } from '../org-certified-employees-drawer/org-certified-employees-drawer.component';
 import { OrgEventAttendeesDrawerComponent } from '../org-event-attendees-drawer/org-event-attendees-drawer.component';
 import { OrgEventSpeakersDrawerComponent } from '../org-event-speakers-drawer/org-event-speakers-drawer.component';
 import { OrgMaintainersDrawerComponent } from '../org-maintainers-drawer/org-maintainers-drawer.component';
@@ -40,6 +41,7 @@ import type { ChartOptions, ChartType } from 'chart.js';
     DataCopilotComponent,
     ScrollShadowDirective,
     OrgActiveContributorsDrawerComponent,
+    OrgCertifiedEmployeesDrawerComponent,
     OrgEventAttendeesDrawerComponent,
     OrgEventSpeakersDrawerComponent,
     OrgMaintainersDrawerComponent,

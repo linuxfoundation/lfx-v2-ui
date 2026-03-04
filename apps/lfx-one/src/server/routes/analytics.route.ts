@@ -127,4 +127,8 @@ router.get('/org-event-speakers-monthly', (req, res, next) => analyticsControlle
 router.get('/org-training-enrollments-monthly', (req, res, next) => analyticsController.getOrgTrainingEnrollmentsMonthly(req, res, next));
 router.get('/org-training-enrollments-distribution', (req, res, next) => analyticsController.getOrgTrainingEnrollmentsDistribution(req, res, next));
 
+// Org certified employees endpoints (org certified employees drawer)
+router.get('/org-certified-employees-monthly', (req, res, next) => analyticsController.getOrgCertifiedEmployeesMonthly(req, res, next));
+router.get('/org-certified-employees-distribution', (req, res, next) => analyticsController.getOrgCertifiedEmployeesDistribution(req, res, next));
+
 export default router;

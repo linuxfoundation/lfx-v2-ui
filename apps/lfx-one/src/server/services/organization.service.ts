@@ -14,6 +14,9 @@ import {
   OrgContributorsProjectDistributionRow,
   OrgEventAttendeesMonthlyResponse,
   OrgEventSpeakersMonthlyResponse,
+  OrgCertifiedEmployeesDistributionItem,
+  OrgCertifiedEmployeesDistributionResponse,
+  OrgCertifiedEmployeesMonthlyResponse,
   OrgTrainingEnrollmentsDistributionItem,
   OrgTrainingEnrollmentsDistributionResponse,
   OrgTrainingEnrollmentsMonthlyResponse,
@@ -763,5 +766,81 @@ export class OrganizationService {
     }));
 
     return { projects };
+  }
+
+  /**
+   * Get monthly cumulative certified employee counts for an organization within a foundation
+   * Queries FOUNDATION_CERTIFIED_EMPLOYEES_ORG_MONTHLY using cumulative window function
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Cumulative per-month certified employee counts with labels for the trend line chart
+   */
+  public async getOrgCertifiedEmployeesMonthly(accountId: string, foundationSlug: string): Promise<OrgCertifiedEmployeesMonthlyResponse> {
+    const query = `
+      SELECT
+        TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
+        MONTHLY_CERTIFIED_EMPLOYEES,
+        SUM(MONTHLY_CERTIFIED_EMPLOYEES) OVER (
+          ORDER BY MONTH_START_DATE ASC
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS CUMULATIVE_CERTIFIED_EMPLOYEES,
+        TOTAL_CERTIFIED_EMPLOYEES
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_CERTIFIED_EMPLOYEES_ORG_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+      ORDER BY MONTH_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{
+      MONTH_LABEL: string;
+      CUMULATIVE_CERTIFIED_EMPLOYEES: number;
+      TOTAL_CERTIFIED_EMPLOYEES: number;
+    }>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org certified employees monthly data', accountId, {
+        operation: 'get_org_certified_employees_monthly',
+      });
+    }
+
+    const lastRow = result.rows[result.rows.length - 1];
+
+    return {
+      monthlyData: result.rows.map((row) => row.CUMULATIVE_CERTIFIED_EMPLOYEES || 0),
+      monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
+      totalCertifiedEmployees: lastRow.TOTAL_CERTIFIED_EMPLOYEES || 0,
+    };
+  }
+
+  /**
+   * Get certified employees distribution by certification program for an organization
+   * Queries FOUNDATION_CERTIFIED_EMPLOYEES_ORG_DISTRIBUTION (last_12_months)
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Certification programs with employee counts ordered by rank
+   */
+  public async getOrgCertifiedEmployeesDistribution(accountId: string, foundationSlug: string): Promise<OrgCertifiedEmployeesDistributionResponse> {
+    const query = `
+      SELECT
+        CERTIFICATION_BUCKET,
+        CERTIFIED_EMPLOYEE_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_CERTIFIED_EMPLOYEES_ORG_DISTRIBUTION
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ? AND TIME_RANGE = 'last_12_months'
+      ORDER BY CERTIFICATION_RANK ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{ CERTIFICATION_BUCKET: string; CERTIFIED_EMPLOYEE_COUNT: number }>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org certified employees distribution data', accountId, {
+        operation: 'get_org_certified_employees_distribution',
+      });
+    }
+
+    const programs: OrgCertifiedEmployeesDistributionItem[] = result.rows.map((row) => ({
+      certificationBucket: row.CERTIFICATION_BUCKET,
+      certifiedEmployeeCount: row.CERTIFIED_EMPLOYEE_COUNT || 0,
+    }));
+
+    return { programs };
   }
 }
