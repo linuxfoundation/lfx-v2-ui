@@ -520,30 +520,21 @@ export class OrganizationInvolvementComponent {
         ...metric,
         loading: this.membershipTierLoading(),
         tier: '',
-        subtitle: 'No active membership',
+        tierSince: '',
+        nextDue: '',
       };
     }
 
-    const endDate = new Date(data.endDate);
-    const now = new Date();
-    const monthsUntilRenewal = (endDate.getFullYear() - now.getFullYear()) * 12 + (endDate.getMonth() - now.getMonth());
+    const tierSince = data.startDate ? new Date(data.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '';
 
-    let renewalText: string;
-    if (monthsUntilRenewal <= 3) {
-      renewalText = 'Renewal horizon within 3 months';
-    } else if (monthsUntilRenewal <= 6) {
-      renewalText = 'Renewal horizon within 6 months';
-    } else if (monthsUntilRenewal <= 12) {
-      renewalText = 'Renewal horizon within 12 months';
-    } else {
-      renewalText = `Renewal due ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-    }
+    const nextDue = data.endDate ? new Date(data.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
     return {
       ...metric,
       loading: this.membershipTierLoading(),
       tier: data.membershipTier,
-      subtitle: `${data.membershipStatus} · ${renewalText}`,
+      tierSince,
+      nextDue,
     };
   }
 
