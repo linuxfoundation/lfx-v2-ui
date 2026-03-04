@@ -103,7 +103,7 @@ export class OrgDependencyDrawerComponent {
             data: [topCompaniesPercentage, otherCompaniesPercentage],
             backgroundColor: [lfxColors.blue[500], lfxColors.gray[300]],
             borderRadius: 4,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

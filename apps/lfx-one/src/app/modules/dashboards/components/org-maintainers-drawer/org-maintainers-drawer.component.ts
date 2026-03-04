@@ -110,7 +110,7 @@ export class OrgMaintainersDrawerComponent {
         beginAtZero: true,
       },
     },
-    datasets: { bar: { barPercentage: 0.6, categoryPercentage: 0.7, borderRadius: 4, borderSkipped: false } },
+    datasets: { bar: { barPercentage: 0.6, categoryPercentage: 0.7, borderRadius: 4, borderSkipped: 'start' } },
   };
 
   // === Computed Signals ===

@@ -28,6 +28,7 @@ import {
   MembershipTierResponse,
   OrgContributorsMonthlyResponse,
   OrgContributorsProjectDistributionResponse,
+  OrgEventAttendeesMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersKeyMembersResponse,
   OrgMaintainersMonthlyResponse,
@@ -755,6 +756,22 @@ export class AnalyticsService {
       catchError((error) => {
         console.error('Failed to fetch org maintainers key members:', error);
         return of({ members: [] });
+      })
+    );
+  }
+
+  /**
+   * Get monthly per-event-attendee counts for an organization within a foundation
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of org event attendees monthly response
+   */
+  public getOrgEventAttendeesMonthly(accountId: string, foundationSlug: string): Observable<OrgEventAttendeesMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgEventAttendeesMonthlyResponse>('/api/analytics/org-event-attendees-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org event attendees monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalAttendees: 0 });
       })
     );
   }

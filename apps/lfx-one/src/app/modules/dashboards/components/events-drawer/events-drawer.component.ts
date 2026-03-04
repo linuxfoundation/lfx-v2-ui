@@ -187,7 +187,7 @@ export class EventsDrawerComponent {
             data: quarterlyData,
             backgroundColor: lfxColors.blue[400],
             borderRadius: 3,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };
@@ -214,7 +214,7 @@ export class EventsDrawerComponent {
             data: distribution.map((d) => d.eventCount),
             backgroundColor: distribution.map((d) => bucketColors[d.bucket] ?? lfxColors.gray[400]),
             borderRadius: 3,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

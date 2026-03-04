@@ -114,6 +114,10 @@
   [visible]="activeDrawer() === DashboardDrawerType.OrgActiveContributors"
   (visibleChange)="handleDrawerClose()"></lfx-org-active-contributors-drawer>
 
+<lfx-org-event-attendees-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.OrgEventAttendees"
+  (visibleChange)="handleDrawerClose()"></lfx-org-event-attendees-drawer>
+
 <lfx-org-maintainers-drawer
   [visible]="activeDrawer() === DashboardDrawerType.OrgMaintainers"
   (visibleChange)="handleDrawerClose()"></lfx-org-maintainers-drawer>

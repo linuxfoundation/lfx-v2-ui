@@ -205,7 +205,7 @@ export class ActiveContributorsDrawerComponent {
             data: distribution.map((d) => d.contributionSharePercentage),
             backgroundColor: distribution.map((d) => bandColors[d.band] ?? lfxColors.gray[400]),
             borderRadius: 4,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

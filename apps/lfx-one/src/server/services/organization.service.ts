@@ -12,6 +12,7 @@ import {
   OrgContributorsMonthlyRow,
   OrgContributorsProjectDistributionResponse,
   OrgContributorsProjectDistributionRow,
+  OrgEventAttendeesMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersDistributionRow,
   OrgMaintainersKeyMember,
@@ -621,5 +622,41 @@ export class OrganizationService {
     }));
 
     return { members };
+  }
+
+  /**
+   * Get monthly per-event-attendee counts for an organization within a foundation
+   * Queries FOUNDATION_EVENT_ATTENDANCE_ORG_MONTHLY using ATTENDED_COUNT (not cumulative)
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Per-month attendee counts with labels for the bar chart
+   */
+  public async getOrgEventAttendeesMonthly(accountId: string, foundationSlug: string): Promise<OrgEventAttendeesMonthlyResponse> {
+    const query = `
+      SELECT
+        TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
+        ATTENDED_COUNT,
+        TOTAL_ATTENDED
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_EVENT_ATTENDANCE_ORG_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+      ORDER BY MONTH_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{ MONTH_LABEL: string; ATTENDED_COUNT: number; TOTAL_ATTENDED: number }>(query, [
+      accountId,
+      foundationSlug,
+    ]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org event attendees monthly data', accountId, {
+        operation: 'get_org_event_attendees_monthly',
+      });
+    }
+
+    return {
+      monthlyData: result.rows.map((row) => row.ATTENDED_COUNT || 0),
+      monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
+      totalAttendees: result.rows[0].TOTAL_ATTENDED || 0,
+    };
   }
 }

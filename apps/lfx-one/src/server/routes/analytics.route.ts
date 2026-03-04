@@ -117,4 +117,7 @@ router.get('/org-maintainers-distribution', (req, res, next) => analyticsControl
 // Org maintainers key members endpoint (org maintainers drawer)
 router.get('/org-maintainers-key-members', (req, res, next) => analyticsController.getOrgMaintainersKeyMembers(req, res, next));
 
+// Org event attendees monthly endpoint (org event attendees drawer)
+router.get('/org-event-attendees-monthly', (req, res, next) => analyticsController.getOrgEventAttendeesMonthly(req, res, next));
+
 export default router;

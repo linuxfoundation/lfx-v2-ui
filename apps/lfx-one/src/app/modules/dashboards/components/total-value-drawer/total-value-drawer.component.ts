@@ -103,7 +103,7 @@ export class TotalValueDrawerComponent {
             data: [top1Percentage, top3Percentage, top5Percentage, allOtherPercentage],
             backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[300], lfxColors.gray[300]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

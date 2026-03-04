@@ -298,7 +298,7 @@ export class TotalProjectsDrawerComponent {
             data: distribution.map((d) => d.count),
             backgroundColor: distribution.map((d) => this.lifecycleColorMap[d.stage] ?? lfxColors.gray[400]),
             borderRadius: 4,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

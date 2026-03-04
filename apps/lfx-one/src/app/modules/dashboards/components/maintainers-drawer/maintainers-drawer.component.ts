@@ -205,7 +205,7 @@ export class MaintainersDrawerComponent {
             data: distribution.map((d) => d.contributionSharePct),
             backgroundColor: distribution.map((d) => bandColors[d.band] ?? lfxColors.gray[400]),
             borderRadius: 4,
-            borderSkipped: false,
+            borderSkipped: 'start',
           },
         ],
       };

@@ -2524,3 +2524,18 @@ export interface OrgMaintainersKeyMember {
 export interface OrgMaintainersKeyMembersResponse {
   members: OrgMaintainersKeyMember[];
 }
+
+// ============================================
+// Org Event Attendees Drawer
+// ============================================
+
+/**
+ * API response for org event attendees monthly trend endpoint
+ * Powers the bar chart in the Org Event Attendees drawer
+ * Uses per-month ATTENDED_COUNT (not cumulative)
+ */
+export interface OrgEventAttendeesMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalAttendees: number;
+}
