@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DashboardDrawerType } from '../interfaces';
 import type { DashboardMetricCard } from '../interfaces';
 import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
@@ -22,6 +23,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-total-projects',
+    drawerType: DashboardDrawerType.TotalProjects,
   },
   {
     title: 'Total Members',
@@ -29,6 +31,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'projects',
     testId: 'foundation-health-card-total-members',
+    drawerType: DashboardDrawerType.TotalMembers,
   },
   {
     title: 'Software Value',
@@ -52,6 +55,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-active-contributors',
+    drawerType: DashboardDrawerType.ActiveContributors,
   },
   {
     title: 'Maintainers',
@@ -59,6 +63,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     chartType: 'line',
     category: 'contributors',
     testId: 'foundation-health-card-maintainers',
+    drawerType: DashboardDrawerType.Maintainers,
   },
   {
     title: 'Events',
@@ -68,6 +73,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     testId: 'foundation-health-card-events',
     customContentType: 'bar-chart',
     chartColor: lfxColors.blue[500],
+    drawerType: DashboardDrawerType.Events,
   },
   {
     title: 'Project Health Scores',
@@ -76,6 +82,7 @@ export const PRIMARY_FOUNDATION_HEALTH_METRICS: DashboardMetricCard[] = [
     category: 'projects',
     testId: 'foundation-health-card-project-health-scores',
     customContentType: 'health-scores',
+    drawerType: DashboardDrawerType.ProjectHealthScores,
   },
 ];
 

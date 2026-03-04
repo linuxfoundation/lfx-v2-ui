@@ -7,12 +7,20 @@ import {
   ActiveWeeksStreakResponse,
   CertifiedEmployeesResponse,
   CodeCommitsDailyResponse,
+  FoundationActiveContributorsMonthlyResponse,
   FoundationCompanyBusFactorResponse,
   FoundationContributorsMentoredResponse,
+  FoundationContributorsDistributionResponse,
   FoundationHealthScoreDistributionResponse,
+  FoundationEventsAttendanceDistributionResponse,
+  FoundationEventsQuarterlyResponse,
+  FoundationMaintainersDistributionResponse,
+  FoundationMaintainersMonthlyResponse,
   FoundationMaintainersResponse,
   FoundationSoftwareValueResponse,
   FoundationTotalMembersResponse,
+  FoundationProjectsDetailResponse,
+  FoundationProjectsLifecycleDistributionResponse,
   FoundationTotalProjectsResponse,
   HealthEventsMonthlyResponse,
   HealthMetricsDailyResponse,
@@ -251,10 +259,53 @@ export class AnalyticsService {
   }
 
   /**
-   * Get total projects count for a foundation from Snowflake
-   * @param foundationSlug - Required foundation slug to filter projects (e.g., 'tlf', 'cncf')
-   * @returns Observable of foundation total projects response with cumulative monthly data
+   * Get per-project detail rows for the total projects drill-down drawer
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
+  public getFoundationProjectsDetail(foundationSlug: string): Observable<FoundationProjectsDetailResponse> {
+    return this.http.get<FoundationProjectsDetailResponse>('/api/analytics/foundation-projects-detail', { params: { foundationSlug } }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch foundation projects detail:', error);
+        return of({ projects: [], totalCount: 0 });
+      })
+    );
+  }
+
+  /**
+   * Get lifecycle stage distribution for the total projects drill-down drawer
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationProjectsLifecycleDistribution(foundationSlug: string): Observable<FoundationProjectsLifecycleDistributionResponse> {
+    return this.http
+      .get<FoundationProjectsLifecycleDistributionResponse>('/api/analytics/foundation-projects-lifecycle-distribution', { params: { foundationSlug } })
+      .pipe(
+        catchError((error) => {
+          console.error('Failed to fetch foundation projects lifecycle distribution:', error);
+          return of({ distribution: [] });
+        })
+      );
+  }
+
+  /**
+   * Get monthly average active contributors for a foundation (last 12 months)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationActiveContributorsMonthly(foundationSlug: string): Observable<FoundationActiveContributorsMonthlyResponse> {
+    return this.http
+      .get<FoundationActiveContributorsMonthlyResponse>('/api/analytics/foundation-active-contributors-monthly', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ monthlyData: [], monthlyLabels: [] })));
+  }
+
+  /**
+   * Get contributor distribution by percentile band for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationContributorsDistribution(foundationSlug: string): Observable<FoundationContributorsDistributionResponse> {
+    return this.http
+      .get<FoundationContributorsDistributionResponse>('/api/analytics/foundation-contributors-distribution', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ distribution: [] })));
+  }
+
   public getFoundationTotalProjects(foundationSlug: string): Observable<FoundationTotalProjectsResponse> {
     return this.http.get<FoundationTotalProjectsResponse>('/api/analytics/foundation-total-projects', { params: { foundationSlug } }).pipe(
       catchError((error) => {
@@ -319,6 +370,46 @@ export class AnalyticsService {
         });
       })
     );
+  }
+
+  /**
+   * Get monthly maintainer counts for a foundation (last 12 months, all repos aggregated)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationMaintainersMonthly(foundationSlug: string): Observable<FoundationMaintainersMonthlyResponse> {
+    return this.http
+      .get<FoundationMaintainersMonthlyResponse>('/api/analytics/foundation-maintainers-monthly', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ monthlyData: [], monthlyLabels: [] })));
+  }
+
+  /**
+   * Get maintainer contribution distribution by percentile band for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationMaintainersDistribution(foundationSlug: string): Observable<FoundationMaintainersDistributionResponse> {
+    return this.http
+      .get<FoundationMaintainersDistributionResponse>('/api/analytics/foundation-maintainers-distribution', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ distribution: [] })));
+  }
+
+  /**
+   * Get quarterly event counts for a foundation (last 8 quarters)
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationEventsQuarterly(foundationSlug: string): Observable<FoundationEventsQuarterlyResponse> {
+    return this.http
+      .get<FoundationEventsQuarterlyResponse>('/api/analytics/foundation-events-quarterly', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ quarterlyData: [], quarterlyLabels: [] })));
+  }
+
+  /**
+   * Get event distribution by attendance size bucket for a foundation
+   * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
+   */
+  public getFoundationEventsAttendanceDistribution(foundationSlug: string): Observable<FoundationEventsAttendanceDistributionResponse> {
+    return this.http
+      .get<FoundationEventsAttendanceDistributionResponse>('/api/analytics/foundation-events-attendance-distribution', { params: { foundationSlug } })
+      .pipe(catchError(() => of({ distribution: [] })));
   }
 
   /**
