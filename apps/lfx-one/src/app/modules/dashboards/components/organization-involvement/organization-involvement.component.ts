@@ -53,11 +53,11 @@ import type { ChartOptions, ChartType } from 'chart.js';
 export class OrganizationInvolvementComponent {
   @ViewChild(ScrollShadowDirective) public scrollShadowDirective!: ScrollShadowDirective;
 
-  protected readonly DashboardDrawerType = DashboardDrawerType;
-
   private readonly analyticsService = inject(AnalyticsService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly projectContextService = inject(ProjectContextService);
+
+  protected readonly DashboardDrawerType = DashboardDrawerType;
 
   private readonly maintainersLoading = signal(true);
   private readonly contributorsLoading = signal(true);

@@ -41,6 +41,7 @@ import {
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
+import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { SnowflakeService } from './snowflake.service';
 
@@ -423,6 +424,8 @@ export class OrganizationService {
    * @returns Monthly contributor counts with labels for the trend line chart
    */
   public async getOrgContributorsMonthly(accountId: string, foundationSlug: string): Promise<OrgContributorsMonthlyResponse> {
+    logger.debug(undefined, 'get_org_contributors_monthly', 'Fetching org contributors monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         ACCOUNT_ID,
@@ -453,7 +456,7 @@ export class OrganizationService {
       const date = new Date(row.MONTH_START_DATE);
       return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     });
-    const totalContributors = Math.max(...monthlyData);
+    const totalContributors = monthlyData[monthlyData.length - 1] ?? 0;
 
     return { monthlyData, monthlyLabels, totalContributors };
   }
@@ -466,6 +469,8 @@ export class OrganizationService {
    * @returns Top 5 projects with contributor counts for the bar chart
    */
   public async getOrgContributorsProjectDistribution(accountId: string, foundationSlug: string): Promise<OrgContributorsProjectDistributionResponse> {
+    logger.debug(undefined, 'get_org_contributors_project_distribution', 'Fetching org contributors project distribution', { accountId, foundationSlug });
+
     const query = `
       SELECT
         ACCOUNT_ID,
@@ -481,6 +486,7 @@ export class OrganizationService {
         AND REPOSITORY_SCOPE = 'all_repos'
         AND TIME_RANGE = 'last_12_months'
       ORDER BY PROJECT_RANK ASC
+      LIMIT 5
     `;
 
     const result = await this.snowflakeService.execute<OrgContributorsProjectDistributionRow>(query, [accountId, foundationSlug]);
@@ -509,6 +515,8 @@ export class OrganizationService {
    * @returns Monthly maintainer counts with labels for the trend line chart
    */
   public async getOrgMaintainersMonthly(accountId: string, foundationSlug: string): Promise<OrgMaintainersMonthlyResponse> {
+    logger.debug(undefined, 'get_org_maintainers_monthly', 'Fetching org maintainers monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         FOUNDATION_SLUG,
@@ -536,7 +544,7 @@ export class OrganizationService {
       const date = new Date(row.METRIC_MONTH);
       return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     });
-    const totalMaintainers = Math.max(...monthlyData);
+    const totalMaintainers = monthlyData[monthlyData.length - 1] ?? 0;
 
     return { monthlyData, monthlyLabels, totalMaintainers };
   }
@@ -549,6 +557,8 @@ export class OrganizationService {
    * @returns Top 5 projects with maintainer counts for the bar chart
    */
   public async getOrgMaintainersDistribution(accountId: string, foundationSlug: string): Promise<OrgMaintainersDistributionResponse> {
+    logger.debug(undefined, 'get_org_maintainers_distribution', 'Fetching org maintainers distribution', { accountId, foundationSlug });
+
     const query = `
       SELECT
         FOUNDATION_SLUG,
@@ -564,6 +574,7 @@ export class OrganizationService {
         AND REPOSITORY_SCOPE = 'all_repos'
         AND TIME_RANGE = 'last_12_months'
       ORDER BY PROJECT_RANK ASC
+      LIMIT 5
     `;
 
     const result = await this.snowflakeService.execute<OrgMaintainersDistributionRow>(query, [accountId, foundationSlug]);
@@ -591,6 +602,8 @@ export class OrganizationService {
    * @returns Key maintainer members with project details
    */
   public async getOrgMaintainersKeyMembers(accountId: string, foundationSlug: string): Promise<OrgMaintainersKeyMembersResponse> {
+    logger.debug(undefined, 'get_org_maintainers_key_members', 'Fetching org maintainers key members', { accountId, foundationSlug });
+
     const query = `
       SELECT
         FOUNDATION_SLUG,
@@ -639,6 +652,8 @@ export class OrganizationService {
    * @returns Per-month attendee counts with labels for the bar chart
    */
   public async getOrgEventAttendeesMonthly(accountId: string, foundationSlug: string): Promise<OrgEventAttendeesMonthlyResponse> {
+    logger.debug(undefined, 'get_org_event_attendees_monthly', 'Fetching org event attendees monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
@@ -675,6 +690,8 @@ export class OrganizationService {
    * @returns Per-month speaker counts with labels for the bar chart
    */
   public async getOrgEventSpeakersMonthly(accountId: string, foundationSlug: string): Promise<OrgEventSpeakersMonthlyResponse> {
+    logger.debug(undefined, 'get_org_event_speakers_monthly', 'Fetching org event speakers monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
@@ -711,6 +728,8 @@ export class OrganizationService {
    * @returns Per-month enrollment counts with labels for the trend line chart
    */
   public async getOrgTrainingEnrollmentsMonthly(accountId: string, foundationSlug: string): Promise<OrgTrainingEnrollmentsMonthlyResponse> {
+    logger.debug(undefined, 'get_org_training_enrollments_monthly', 'Fetching org training enrollments monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
@@ -743,6 +762,8 @@ export class OrganizationService {
    * @returns Project buckets with enrollment counts ordered by project rank
    */
   public async getOrgTrainingEnrollmentsDistribution(accountId: string, foundationSlug: string): Promise<OrgTrainingEnrollmentsDistributionResponse> {
+    logger.debug(undefined, 'get_org_training_enrollments_distribution', 'Fetching org training enrollments distribution', { accountId, foundationSlug });
+
     const query = `
       SELECT
         PROJECT_BUCKET,
@@ -776,6 +797,8 @@ export class OrganizationService {
    * @returns Cumulative per-month certified employee counts with labels for the trend line chart
    */
   public async getOrgCertifiedEmployeesMonthly(accountId: string, foundationSlug: string): Promise<OrgCertifiedEmployeesMonthlyResponse> {
+    logger.debug(undefined, 'get_org_certified_employees_monthly', 'Fetching org certified employees monthly', { accountId, foundationSlug });
+
     const query = `
       SELECT
         TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
@@ -819,6 +842,8 @@ export class OrganizationService {
    * @returns Certification programs with employee counts ordered by rank
    */
   public async getOrgCertifiedEmployeesDistribution(accountId: string, foundationSlug: string): Promise<OrgCertifiedEmployeesDistributionResponse> {
+    logger.debug(undefined, 'get_org_certified_employees_distribution', 'Fetching org certified employees distribution', { accountId, foundationSlug });
+
     const query = `
       SELECT
         CERTIFICATION_BUCKET,

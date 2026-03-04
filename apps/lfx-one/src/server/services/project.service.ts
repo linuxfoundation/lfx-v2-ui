@@ -1087,6 +1087,8 @@ export class ProjectService {
    * @returns Value concentration response with total value and per-bucket breakdowns in millions
    */
   public async getFoundationValueConcentration(foundationSlug: string): Promise<FoundationValueConcentrationResponse> {
+    logger.debug(undefined, 'get_foundation_value_concentration', 'Fetching foundation value concentration', { foundationSlug });
+
     const query = `
       SELECT
         FOUNDATION_ID,
@@ -1108,6 +1110,8 @@ export class ProjectService {
         ALL_OTHER_PERCENTAGE
       FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_VALUE_CONCENTRATION
       WHERE FOUNDATION_SLUG = ?
+      ORDER BY LAST_METRIC_DATE DESC
+      LIMIT 1
     `;
 
     const result = await this.snowflakeService.execute<FoundationValueConcentrationRow>(query, [foundationSlug]);
