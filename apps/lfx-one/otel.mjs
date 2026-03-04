@@ -58,7 +58,7 @@ if (!otlpEndpoint) {
   const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: serviceName,
     [ATTR_SERVICE_VERSION]: serviceVersion,
-    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: process.env['NODE_ENV'] || 'development',
+    [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: process.env['NODE_ENV'] === 'dev' ? 'development' : (process.env['NODE_ENV'] || 'development'),
   });
 
   // Exporter protocol: grpc or http/protobuf (default)
