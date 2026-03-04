@@ -19,6 +19,7 @@ import { OrgActiveContributorsDrawerComponent } from '../org-active-contributors
 import { OrgEventAttendeesDrawerComponent } from '../org-event-attendees-drawer/org-event-attendees-drawer.component';
 import { OrgEventSpeakersDrawerComponent } from '../org-event-speakers-drawer/org-event-speakers-drawer.component';
 import { OrgMaintainersDrawerComponent } from '../org-maintainers-drawer/org-maintainers-drawer.component';
+import { OrgTrainingEnrollmentsDrawerComponent } from '../org-training-enrollments-drawer/org-training-enrollments-drawer.component';
 
 import type {
   CertifiedEmployeesResponse,
@@ -42,6 +43,7 @@ import type { ChartOptions, ChartType } from 'chart.js';
     OrgEventAttendeesDrawerComponent,
     OrgEventSpeakersDrawerComponent,
     OrgMaintainersDrawerComponent,
+    OrgTrainingEnrollmentsDrawerComponent,
   ],
   templateUrl: './organization-involvement.component.html',
   styleUrl: './organization-involvement.component.scss',

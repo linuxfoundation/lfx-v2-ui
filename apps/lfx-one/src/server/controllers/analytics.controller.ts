@@ -1510,4 +1510,83 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/org-training-enrollments-monthly
+   * Get monthly training enrollment counts for an organization within a foundation
+   * Query params: accountId (required), foundationSlug (required)
+   */
+  public async getOrgTrainingEnrollmentsMonthly(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_training_enrollments_monthly');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_training_enrollments_monthly',
+        });
+      }
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_training_enrollments_monthly',
+        });
+      }
+
+      const response = await this.organizationService.getOrgTrainingEnrollmentsMonthly(accountId, foundationSlug);
+
+      logger.success(req, 'get_org_training_enrollments_monthly', startTime, {
+        account_id: accountId,
+        foundation_slug: foundationSlug,
+        monthly_data_points: response.monthlyData.length,
+        total_enrollments: response.totalEnrollments,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_org_training_enrollments_monthly', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/org-training-enrollments-distribution
+   * Get training enrollment distribution by project bucket for an organization within a foundation
+   * Query params: accountId (required), foundationSlug (required)
+   */
+  public async getOrgTrainingEnrollmentsDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_org_training_enrollments_distribution');
+
+    try {
+      const accountId = req.query['accountId'] as string | undefined;
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!accountId) {
+        throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
+          operation: 'get_org_training_enrollments_distribution',
+        });
+      }
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_training_enrollments_distribution',
+        });
+      }
+
+      const response = await this.organizationService.getOrgTrainingEnrollmentsDistribution(accountId, foundationSlug);
+
+      logger.success(req, 'get_org_training_enrollments_distribution', startTime, {
+        account_id: accountId,
+        foundation_slug: foundationSlug,
+        project_count: response.projects.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_org_training_enrollments_distribution', startTime, error);
+      next(error);
+    }
+  }
 }

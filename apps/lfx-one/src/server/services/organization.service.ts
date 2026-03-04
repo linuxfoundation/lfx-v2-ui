@@ -14,6 +14,9 @@ import {
   OrgContributorsProjectDistributionRow,
   OrgEventAttendeesMonthlyResponse,
   OrgEventSpeakersMonthlyResponse,
+  OrgTrainingEnrollmentsDistributionItem,
+  OrgTrainingEnrollmentsDistributionResponse,
+  OrgTrainingEnrollmentsMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersDistributionRow,
   OrgMaintainersKeyMember,
@@ -695,5 +698,70 @@ export class OrganizationService {
       monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
       totalSpeakers: result.rows[0].TOTAL_SPEAKERS || 0,
     };
+  }
+
+  /**
+   * Get monthly training enrollment counts for an organization within a foundation
+   * Queries FOUNDATION_TRAINING_ENROLLMENTS_ORG_MONTHLY
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Per-month enrollment counts with labels for the trend line chart
+   */
+  public async getOrgTrainingEnrollmentsMonthly(accountId: string, foundationSlug: string): Promise<OrgTrainingEnrollmentsMonthlyResponse> {
+    const query = `
+      SELECT
+        TO_CHAR(MONTH_START_DATE, 'Mon YYYY') AS MONTH_LABEL,
+        MONTHLY_ENROLLMENT_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TRAINING_ENROLLMENTS_ORG_MONTHLY
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ?
+      ORDER BY MONTH_START_DATE ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{ MONTH_LABEL: string; MONTHLY_ENROLLMENT_COUNT: number }>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org training enrollments monthly data', accountId, {
+        operation: 'get_org_training_enrollments_monthly',
+      });
+    }
+
+    return {
+      monthlyData: result.rows.map((row) => row.MONTHLY_ENROLLMENT_COUNT || 0),
+      monthlyLabels: result.rows.map((row) => row.MONTH_LABEL),
+      totalEnrollments: result.rows.reduce((sum, row) => sum + (row.MONTHLY_ENROLLMENT_COUNT || 0), 0),
+    };
+  }
+
+  /**
+   * Get training enrollment distribution by project bucket for an organization within a foundation
+   * Queries FOUNDATION_TRAINING_ENROLLMENTS_ORG_DISTRIBUTION (last_12_months)
+   * @param accountId - Organization account ID
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Project buckets with enrollment counts ordered by project rank
+   */
+  public async getOrgTrainingEnrollmentsDistribution(accountId: string, foundationSlug: string): Promise<OrgTrainingEnrollmentsDistributionResponse> {
+    const query = `
+      SELECT
+        PROJECT_BUCKET,
+        ENROLLMENT_COUNT
+      FROM ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TRAINING_ENROLLMENTS_ORG_DISTRIBUTION
+      WHERE ACCOUNT_ID = ? AND FOUNDATION_SLUG = ? AND TIME_RANGE = 'last_12_months'
+      ORDER BY PROJECT_RANK ASC
+    `;
+
+    const result = await this.snowflakeService.execute<{ PROJECT_BUCKET: string; ENROLLMENT_COUNT: number }>(query, [accountId, foundationSlug]);
+
+    if (result.rows.length === 0) {
+      throw new ResourceNotFoundError('Org training enrollments distribution data', accountId, {
+        operation: 'get_org_training_enrollments_distribution',
+      });
+    }
+
+    const projects: OrgTrainingEnrollmentsDistributionItem[] = result.rows.map((row) => ({
+      projectBucket: row.PROJECT_BUCKET,
+      enrollmentCount: row.ENROLLMENT_COUNT || 0,
+    }));
+
+    return { projects };
   }
 }

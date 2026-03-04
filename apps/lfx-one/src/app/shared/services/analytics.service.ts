@@ -30,6 +30,8 @@ import {
   OrgContributorsProjectDistributionResponse,
   OrgEventAttendeesMonthlyResponse,
   OrgEventSpeakersMonthlyResponse,
+  OrgTrainingEnrollmentsDistributionResponse,
+  OrgTrainingEnrollmentsMonthlyResponse,
   OrgMaintainersDistributionResponse,
   OrgMaintainersKeyMembersResponse,
   OrgMaintainersMonthlyResponse,
@@ -783,6 +785,26 @@ export class AnalyticsService {
       catchError((error) => {
         console.error('Failed to fetch org event speakers monthly:', error);
         return of({ monthlyData: [], monthlyLabels: [], totalSpeakers: 0 });
+      })
+    );
+  }
+
+  public getOrgTrainingEnrollmentsMonthly(accountId: string, foundationSlug: string): Observable<OrgTrainingEnrollmentsMonthlyResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgTrainingEnrollmentsMonthlyResponse>('/api/analytics/org-training-enrollments-monthly', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org training enrollments monthly:', error);
+        return of({ monthlyData: [], monthlyLabels: [], totalEnrollments: 0 });
+      })
+    );
+  }
+
+  public getOrgTrainingEnrollmentsDistribution(accountId: string, foundationSlug: string): Observable<OrgTrainingEnrollmentsDistributionResponse> {
+    const params = { accountId, foundationSlug };
+    return this.http.get<OrgTrainingEnrollmentsDistributionResponse>('/api/analytics/org-training-enrollments-distribution', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch org training enrollments distribution:', error);
+        return of({ projects: [] });
       })
     );
   }

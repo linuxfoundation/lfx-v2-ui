@@ -2554,3 +2554,35 @@ export interface OrgEventSpeakersMonthlyResponse {
   monthlyLabels: string[];
   totalSpeakers: number;
 }
+
+// ============================================
+// Org Training Enrollments
+// ============================================
+
+/**
+ * API response for org training enrollments monthly trend endpoint
+ * Powers the line chart in the Org Training Enrollments drawer
+ * Uses MONTHLY_ENROLLMENT_COUNT from FOUNDATION_TRAINING_ENROLLMENTS_ORG_MONTHLY
+ */
+export interface OrgTrainingEnrollmentsMonthlyResponse {
+  monthlyData: number[];
+  monthlyLabels: string[];
+  totalEnrollments: number;
+}
+
+/**
+ * A single project bucket entry in the training enrollments distribution
+ */
+export interface OrgTrainingEnrollmentsDistributionItem {
+  projectBucket: string;
+  enrollmentCount: number;
+}
+
+/**
+ * API response for org training enrollments distribution endpoint
+ * Powers the bar chart in the Org Training Enrollments drawer
+ * Uses PROJECT_BUCKET and ENROLLMENT_COUNT from FOUNDATION_TRAINING_ENROLLMENTS_ORG_DISTRIBUTION
+ */
+export interface OrgTrainingEnrollmentsDistributionResponse {
+  projects: OrgTrainingEnrollmentsDistributionItem[];
+}
