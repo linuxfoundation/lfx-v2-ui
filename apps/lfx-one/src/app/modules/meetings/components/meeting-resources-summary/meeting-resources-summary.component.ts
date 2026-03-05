@@ -105,11 +105,14 @@ export class MeetingResourcesSummaryComponent implements OnInit {
   }
 
   public addLink(): void {
-    if (this.newLinkTitle() && this.newLinkUrl()) {
+    const title = this.newLinkTitle().trim();
+    const url = this.newLinkUrl().trim();
+
+    if (title && url) {
       const linkFormGroup = new FormGroup({
         id: new FormControl(crypto.randomUUID()),
-        title: new FormControl(this.newLinkTitle()),
-        url: new FormControl(this.newLinkUrl()),
+        title: new FormControl(title),
+        url: new FormControl(url),
         uid: new FormControl(null),
       });
 

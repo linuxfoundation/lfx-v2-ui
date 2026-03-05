@@ -1088,12 +1088,11 @@ export class MeetingController {
         return;
       }
 
-      if (!attachmentData.type || !attachmentData.category || !attachmentData.name) {
+      if (!attachmentData.type || !attachmentData.name) {
         return next(
           ServiceValidationError.fromFieldErrors(
             {
               type: !attachmentData.type ? 'Type is required' : [],
-              category: !attachmentData.category ? 'Category is required' : [],
               name: !attachmentData.name ? 'Name is required' : [],
             },
             'Attachment data validation failed',
@@ -1352,6 +1351,16 @@ export class MeetingController {
         );
       }
 
+      if (typeof presignData.file_size !== 'number' || isNaN(presignData.file_size) || presignData.file_size <= 0) {
+        return next(
+          ServiceValidationError.forField('file_size', 'File size must be a positive number', {
+            operation: 'presign_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
+      }
+
       const result = await this.meetingService.presignMeetingAttachment(req, uid, presignData);
 
       logger.success(req, 'presign_meeting_attachment', startTime, {
@@ -1410,6 +1419,26 @@ export class MeetingController {
 
       const fileBuffer = req.body as Buffer;
       const fileSizeNum = parseInt(file_size, 10);
+
+      if (isNaN(fileSizeNum) || fileSizeNum <= 0) {
+        return next(
+          ServiceValidationError.forField('file_size', 'File size must be a positive number', {
+            operation: 'upload_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
+      }
+
+      if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+        return next(
+          ServiceValidationError.forField('body', 'Request body must contain file data', {
+            operation: 'upload_meeting_attachment',
+            service: 'meeting_controller',
+            path: req.path,
+          })
+        );
+      }
 
       const presignData: PresignAttachmentRequest = {
         name,

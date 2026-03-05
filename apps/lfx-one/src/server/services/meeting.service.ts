@@ -885,6 +885,7 @@ export class MeetingService {
         'Content-Type': presignData.file_type,
         'Content-Length': String(presignData.file_size),
       },
+      signal: AbortSignal.timeout(5 * 60 * 1000),
     });
 
     if (!s3Response.ok) {

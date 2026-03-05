@@ -106,8 +106,8 @@ export interface PastMeetingAttachment {
 export interface CreateLinkAttachmentRequest {
   /** Must be 'link' */
   type: 'link';
-  /** Category of the attachment — required by the meeting service */
-  category: AttachmentCategory;
+  /** Category of the attachment — defaults to 'Other' if omitted */
+  category?: AttachmentCategory;
   /** Name/title of the attachment */
   name: string;
   /** Optional description */
