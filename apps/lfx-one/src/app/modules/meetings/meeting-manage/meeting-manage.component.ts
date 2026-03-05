@@ -27,6 +27,7 @@ import {
   MeetingAttachment,
   MeetingRegistrant,
   PendingAttachment,
+  PresignAttachmentResponse,
   RegistrantPendingChanges,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -313,7 +314,7 @@ export class MeetingManageComponent {
           registrants: { type: string; success: number; failed: number }[];
           attachments: {
             deletions: { successes: number; failures: string[] };
-            uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+            uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
             links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
           } | null;
         }) => {
@@ -560,7 +561,7 @@ export class MeetingManageComponent {
 
   private handleAttachmentOperationsResults(result: {
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   }): void {
     const totalDeleteSuccesses = result.deletions.successes;
@@ -956,7 +957,7 @@ export class MeetingManageComponent {
 
   private processAttachmentOperations(meetingId: string): Observable<{
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   } | null> {
     const hasPendingDeletions = this.pendingAttachmentDeletions().length > 0;
@@ -1014,7 +1015,7 @@ export class MeetingManageComponent {
     );
   }
 
-  private savePendingAttachments(meetingId: string): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
+  private savePendingAttachments(meetingId: string): Observable<{ successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] }> {
     const attachmentsToSave = this.pendingAttachments.filter(
       (attachment) => !attachment.uploading && !attachment.uploadError && !attachment.uploaded && attachment.file
     );
@@ -1032,7 +1033,7 @@ export class MeetingManageComponent {
             file_type: attachment.mimeType,
           })
           .pipe(
-            switchMap((result) => of({ success: result as MeetingAttachment, failure: null })),
+            switchMap((result) => of({ success: result, failure: null })),
             catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
           )
       ),

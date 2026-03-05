@@ -31,6 +31,7 @@ import {
   MeetingCancelOccurrenceResult,
   MeetingOccurrence,
   PastMeeting,
+  PastMeetingAttachment,
   PastMeetingRecording,
   PastMeetingSummary,
   TagSeverity,
@@ -50,7 +51,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, map, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { CancelOccurrenceConfirmationComponent } from '../../components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
 import { MeetingRsvpDetailsComponent } from '../../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -101,7 +102,7 @@ export class MeetingCardComponent implements OnInit {
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
-  public attachments: Signal<MeetingAttachment[]> = signal([]);
+  public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
 
   // Computed values for template
   public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
@@ -461,9 +462,14 @@ export class MeetingCardComponent implements OnInit {
       .subscribe();
   }
 
-  private initAttachments(): Signal<MeetingAttachment[]> {
+  private initAttachments(): Signal<(MeetingAttachment | PastMeetingAttachment)[]> {
     return runInInjectionContext(this.injector, () => {
-      return toSignal(this.meetingService.getMeetingAttachments(this.meetingInput().id).pipe(catchError(() => of([]))), {
+      const id = this.meetingInput().id;
+      const attachments$: Observable<(MeetingAttachment | PastMeetingAttachment)[]> = this.pastMeeting()
+        ? this.meetingService.getPastMeetingAttachments(id)
+        : this.meetingService.getMeetingAttachments(id);
+
+      return toSignal(attachments$.pipe(catchError(() => of([] as (MeetingAttachment | PastMeetingAttachment)[]))), {
         initialValue: [],
       });
     });

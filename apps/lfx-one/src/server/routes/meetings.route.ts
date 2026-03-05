@@ -59,7 +59,7 @@ router.get('/:uid/attachments', (req, res, next) => meetingController.getMeeting
 router.post('/:uid/attachments', (req, res, next) => meetingController.createMeetingAttachment(req, res, next));
 
 // Upload a file attachment: presigns internally then streams directly to S3 (server-side upload)
-router.post('/:uid/attachments/upload', express.raw({ type: '*/*', limit: '500mb' }), (req, res, next) =>
+router.post('/:uid/attachments/upload', express.raw({ type: '*/*', limit: '100mb' }), (req, res, next) =>
   meetingController.uploadMeetingAttachment(req, res, next)
 );
 

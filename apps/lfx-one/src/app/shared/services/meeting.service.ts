@@ -293,11 +293,6 @@ export class MeetingService {
   }
 
   /**
-   * Uploads a file directly to S3 using a presigned URL.
-   * Uses a separate HttpClient instance that bypasses interceptors
-   * to avoid sending auth headers to S3.
-   */
-  /**
    * Uploads a file to a meeting via the server, which handles presigning and
    * the S3 PUT internally. Avoids browser-side CORS requirements on S3.
    * File metadata is passed as query params; the raw binary is the request body.

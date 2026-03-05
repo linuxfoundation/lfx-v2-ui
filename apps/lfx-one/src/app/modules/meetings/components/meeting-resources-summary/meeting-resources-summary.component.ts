@@ -33,12 +33,12 @@ export class MeetingResourcesSummaryComponent implements OnInit {
   public readonly deleteLinkAttachment = output<string>();
   public readonly acceptString = generateAcceptString();
 
-  // 5. Simple WritableSignals
+  // 3. Simple WritableSignals
   public pendingAttachments = signal<PendingAttachment[]>([]);
   public newLinkTitle = signal('');
   public newLinkUrl = signal('');
 
-  // 6. Complex computed/toSignal
+  // 4. Complex computed/toSignal
   public readonly importantLinksFormArray = computed(() => this.form().get('important_links') as FormArray);
   public readonly pendingDeletionSet = computed(() => new Set(this.pendingAttachmentDeletions()));
   public readonly formattedDateTime = computed(() => this.formatDateTime());
