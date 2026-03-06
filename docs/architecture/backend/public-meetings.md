@@ -115,14 +115,13 @@ The public meetings feature requires:
 
 ### Middleware Integration
 
-The protected routes middleware allows public meeting routes to bypass authentication:
+The auth middleware allows public meeting routes to bypass user authentication:
 
-**Location**: `apps/lfx-one/src/server/middleware/protected-routes.middleware.ts`
+**Location**: `apps/lfx-one/src/server/middleware/auth.middleware.ts`
 
-- Uses an explicit allowlist for prefixes: `/public/api/meetings` (API) and SPA route `/meetings/:id`
+- Uses `DEFAULT_ROUTE_CONFIG` with an explicit allowlist for public prefixes: `/public/api/meetings` (API) and SPA route `/meetings/:id`
 - Bypasses only user–session auth for those allowlisted routes; server-to-server (M2M) calls still require auth
 - Applies standard authentication to all other routes (avoid loose regexes like `/meeting.*`)
-- Add unit tests verifying that only those exact prefixes bypass auth and that all similar prefixes remain protected
 
 ## 📊 Data Flow
 

@@ -1,5 +1,9 @@
 # End-to-End Testing Architecture
 
+> **Status: Planned — Not Yet Implemented**
+>
+> The E2E testing architecture described below represents the planned testing strategy. The test framework (Playwright) is configured but test files have not been implemented yet. The patterns and architecture below serve as the blueprint for when E2E tests are written.
+
 ## 🏗 Overview
 
 Our E2E testing strategy employs a **dual architecture approach** combining content-based and structural tests to ensure comprehensive, maintainable, and reliable test coverage across the LFX One application.
