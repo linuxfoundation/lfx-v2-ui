@@ -1,0 +1,52 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-5 p-2">
+  <!-- Info -->
+  <p class="text-sm text-gray-600">
+    Invite colleagues to join <strong>{{ committee?.display_name || committee?.name }}</strong>. They will receive an email with a one-click link to accept.
+  </p>
+
+  <!-- Email addresses -->
+  <div class="flex flex-col gap-1">
+    <label for="invite-emails" class="text-sm font-semibold text-gray-900">Email addresses</label>
+    <textarea
+      id="invite-emails"
+      formControlName="emails"
+      rows="3"
+      class="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+      placeholder="Enter email addresses separated by commas or new lines&#10;e.g. alice@example.com, bob@example.com"
+      data-testid="invite-emails-input">
+    </textarea>
+    @if (form.get('emails')?.touched && form.get('emails')?.hasError('required')) {
+      <span class="text-xs text-red-500">At least one email address is required</span>
+    }
+  </div>
+
+  <!-- Optional message -->
+  <div class="flex flex-col gap-1">
+    <label for="invite-message" class="text-sm font-semibold text-gray-900">Personal message <span class="text-gray-400 font-normal">(optional)</span></label>
+    <textarea
+      id="invite-message"
+      formControlName="message"
+      rows="2"
+      class="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+      placeholder="Add a personal note to the invite email..."
+      data-testid="invite-message-input">
+    </textarea>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex justify-end gap-3 pt-2">
+    <lfx-button label="Cancel" severity="secondary" size="small" (onClick)="onCancel()" data-testid="invite-cancel-btn"></lfx-button>
+    <lfx-button
+      label="Send Invites"
+      icon="fa-light fa-paper-plane"
+      size="small"
+      type="submit"
+      [loading]="submitting()"
+      [disabled]="submitting()"
+      data-testid="invite-send-btn">
+    </lfx-button>
+  </div>
+</form>

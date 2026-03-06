@@ -3,14 +3,14 @@
 
 import { NgClass } from '@angular/common';
 import { Component, input, output } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ButtonProps } from '@lfx-one/shared/interfaces';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-button',
-  imports: [NgClass, ButtonModule, RouterModule, TooltipModule],
+  imports: [NgClass, ButtonModule, RouterLink, TooltipModule],
   templateUrl: './button.component.html',
   styleUrl: './button.component.scss',
 })

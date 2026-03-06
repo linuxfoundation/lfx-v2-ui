@@ -3,6 +3,7 @@
 
 export const environment = {
   production: true,
+  useMockData: false,
   urls: {
     home: 'https://app.lfx.dev',
     support: 'https://jira.linuxfoundation.org/plugins/servlet/desk',

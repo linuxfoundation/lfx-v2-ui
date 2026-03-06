@@ -55,6 +55,7 @@ export class CommitteeTableComponent {
   // Inputs
   public committees = input.required<Committee[]>();
   public canManageCommittee = input<boolean>(false);
+  public myCommitteeUids = input<Set<string>>(new Set());
   public committeeLabel = input<string>(COMMITTEE_LABEL.singular);
   public committeeLabelPlural = input<string>(COMMITTEE_LABEL.plural);
   public searchForm = input.required<FormGroup>();
@@ -68,6 +69,8 @@ export class CommitteeTableComponent {
   // Outputs
   public readonly refresh = output<void>();
   public readonly rowClick = output<Committee>();
+  public readonly joinClick = output<Committee>();
+  public readonly inviteClick = output<Committee>();
 
   // Event handlers
   public onAddMember(committee: Committee): void {

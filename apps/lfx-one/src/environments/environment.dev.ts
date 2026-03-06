@@ -3,6 +3,7 @@
 
 export const environment = {
   production: false,
+  useMockData: false, // Dev CI builds use real API
   urls: {
     home: 'https://app.dev.lfx.dev',
     support: 'https://jira.linuxfoundation.org/plugins/servlet/desk',

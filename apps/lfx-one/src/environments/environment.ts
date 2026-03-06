@@ -3,6 +3,7 @@
 
 export const environment = {
   production: false,
+  useMockData: false, // Set to true to use client-side mock data, false to hit real BFF/API
   urls: {
     home: 'http://localhost:4200',
     support: 'https://jira.linuxfoundation.org/plugins/servlet/desk',
