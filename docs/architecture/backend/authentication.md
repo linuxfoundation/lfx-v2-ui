@@ -151,7 +151,7 @@ The application implements a sophisticated authentication system with multiple l
 The unified auth middleware (`apps/lfx-one/src/server/middleware/auth.middleware.ts`) implements selective authentication logic using a `DEFAULT_ROUTE_CONFIG` array for fine-grained route-based authentication decisions:
 
 - **Route Analysis**: Examines incoming requests against route config to determine authentication requirements
-- **Public Route Bypass**: Allows specific routes (e.g., `/meeting`, `/public/api`) to skip authentication
+- **Public Route Bypass**: Allows specific routes (e.g., `/meetings/`, `/public/api`) to use optional authentication
 - **Conditional Redirects**: GET requests redirect to login, API requests return 401
 - **Token Refresh**: Automatically handles expired tokens
 - **Error Handling**: Provides structured authentication errors

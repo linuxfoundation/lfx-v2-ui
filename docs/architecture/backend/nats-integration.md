@@ -212,7 +212,7 @@ public async shutdown(): Promise<void> {
       await this.connection.drain(); // Graceful shutdown
       logger.info(undefined, 'nats_shutdown', 'NATS connection closed successfully');
     } catch (error) {
-      logger.error(undefined, 'nats_shutdown', startTime, error);
+      logger.error(undefined, 'nats_shutdown', 0, error);
     }
   }
   this.connection = null;

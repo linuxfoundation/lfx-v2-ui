@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 🚀 Development Patterns
 
-- [Angular 20 Development Patterns](#angular-19-development-patterns) - Zoneless change detection, signals, components
+- [Angular Patterns](docs/architecture/frontend/angular-patterns.md) - Zoneless change detection, signals, components
 - [Component Organization Pattern](#component-organization-pattern) - Standardized component structure
 - [Feature Modules](#feature-modules) - 9 application feature modules
 - [Shared Package (@lfx-one/shared)](#shared-package-lfx-oneshared) - Types, interfaces, constants

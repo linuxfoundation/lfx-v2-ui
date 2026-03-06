@@ -128,7 +128,7 @@ The auth middleware allows public meeting routes to bypass user authentication:
 ### Public Meeting Request
 
 1. **User Access**: User navigates to `/meetings/:id`
-2. **Route Analysis**: Protected routes middleware allows access
+2. **Route Analysis**: Auth middleware allows access with optional authentication
 3. **Component Load**: Angular loads meeting component
 4. **API Call**: Component requests meeting data from `/public/api/meetings/:id`
 5. **M2M Auth**: Server generates M2M token for backend calls

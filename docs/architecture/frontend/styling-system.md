@@ -149,8 +149,10 @@ export default {
       colors: lfxColors,
       fontSize: lfxFontSizes,
       fontFamily: {
-        sans: ['Inter', 'Open Sans', 'sans-serif'],
+        sans: ['Open Sans', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
         display: ['Roboto Slab', 'serif'],
+        serif: ['Roboto Slab', 'serif'],
       },
     },
   },
