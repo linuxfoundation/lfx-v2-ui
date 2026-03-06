@@ -34,25 +34,25 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-testid="dashboard-stats-bar">
           <lfx-card>
             <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-gray-900">{{ totalCommittees() }}</p>
+              <p class="text-2xl font-semibold text-gray-900">{{ totalCommittees() | number }}</p>
               <p class="text-xs text-gray-500 mt-1">Total {{ committeeLabelPlural }}</p>
             </div>
           </lfx-card>
           <lfx-card>
             <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-gray-900">{{ publicCommittees() }}</p>
+              <p class="text-2xl font-semibold text-gray-900">{{ publicCommittees() | number }}</p>
               <p class="text-xs text-gray-500 mt-1">Public</p>
             </div>
           </lfx-card>
           <lfx-card>
             <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-emerald-600">{{ activeVoting() }}</p>
+              <p class="text-2xl font-semibold text-emerald-600">{{ activeVoting() | number }}</p>
               <p class="text-xs text-gray-500 mt-1">Active Voting</p>
             </div>
           </lfx-card>
           <lfx-card>
             <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-gray-900">{{ totalMembers() }}</p>
+              <p class="text-2xl font-semibold text-gray-900">{{ totalMembers() | number }}</p>
               <p class="text-xs text-gray-500 mt-1">Total Members</p>
             </div>
           </lfx-card>
@@ -211,8 +211,6 @@
           [committees]="filteredCommittees()"
           [canManageCommittee]="canCreateGroup()"
           [myCommitteeUids]="myCommitteeUids()"
-          [committeeLabel]="committeeLabel"
-          [committeeLabelPlural]="committeeLabelPlural"
           [searchForm]="searchForm"
           [categoryOptions]="categories()"
           [votingStatusOptions]="votingStatusOptions()"
