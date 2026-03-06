@@ -6,10 +6,12 @@
   <lfx-card>
     <div class="flex justify-between gap-4 mb-8">
       <h3 class="text-lg font-medium text-gray-900">{{ committeeLabel.singular }} Members</h3>
-      <!-- Add Member Button -->
-      @if (canManageMembers()) {
-        <lfx-button label="Add Member" icon="fa-light fa-user-plus" size="small" severity="secondary" (onClick)="openAddMemberDialog()"> </lfx-button>
-      }
+      <!-- Member Actions -->
+      <div class="flex gap-2">
+        @if (canInviteMembers()) {
+          <lfx-button label="Invite" icon="fa-light fa-paper-plane" size="small" severity="primary" (onClick)="openInviteMemberDialog()" data-testid="invite-member-btn"> </lfx-button>
+        }
+      </div>
     </div>
 
     <!-- Search and Filter Controls -->
@@ -157,15 +159,39 @@
         @if (membersLoading()) {
           <tr>
             <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
-              <i class="fa-light fa-circle-notch fa-spin text-4xl text-gray-400"></i>
+              <!-- Loading skeleton rows -->
+              <div class="flex flex-col gap-3 animate-pulse px-4">
+                @for (_ of [1, 2, 3]; track _) {
+                  <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 rounded-full bg-gray-200"></div>
+                    <div class="h-4 bg-gray-200 rounded w-32"></div>
+                    <div class="h-4 bg-gray-200 rounded w-40"></div>
+                    <div class="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                }
+              </div>
             </td>
           </tr>
         } @else {
           <tr>
             <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
               <div class="text-center">
-                <i class="fa-light fa-eyes text-3xl text-gray-400 mb-2"></i>
-                <p class="text-sm text-gray-500">No members found</p>
+                @if (groupBehavioralClass() === 'governing-board' || groupBehavioralClass() === 'oversight-committee') {
+                  <i class="fa-light fa-user-crown text-3xl text-gray-300 mb-2"></i>
+                  <p class="text-sm font-medium text-gray-600">No Board Members Found</p>
+                  <p class="text-xs text-gray-400 mt-1">Board members with voting rights will appear here once added.</p>
+                } @else {
+                  <i class="fa-light fa-users-gear text-3xl text-gray-300 mb-2"></i>
+                  <p class="text-sm font-medium text-gray-600">No Contributors Yet</p>
+                  <p class="text-xs text-gray-400 mt-1">Contributors will appear here as they join this working group.</p>
+                }
+                @if (canManageMembers()) {
+                  <div class="mt-3">
+                    <button class="text-xs text-blue-600 hover:text-blue-700 font-medium" (click)="openAddMemberDialog()">
+                      <i class="fa-light fa-user-plus mr-1"></i>Add the first member
+                    </button>
+                  </div>
+                }
               </div>
             </td>
           </tr>
