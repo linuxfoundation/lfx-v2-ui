@@ -8,12 +8,17 @@ import {
   CommitteeSettingsData,
   CommitteeUpdateData,
   CreateCommitteeMemberRequest,
+  GroupMailingList,
+  PublicCommittee,
+  PublicCommitteeLinks,
+  PublicCommitteeMeeting,
+  PublicCommitteeMember,
   QueryServiceCountResponse,
+  QueryServiceItem,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
+import { RecurrenceType } from '@lfx-one/shared/enums';
 import { Request } from 'express';
-
-import { fetchAllQueryResources } from '../helpers/query-service.helper';
 
 import { ResourceNotFoundError } from '../errors';
 import { logger } from '../services/logger.service';
@@ -79,6 +84,82 @@ export class CommitteeService {
   }
 
   /**
+   * Fetches committees the current user is a member of, enriched with their role.
+   * TODO: Replace mock data with real implementation using getCommitteeMembersByCategory
+   * once the backend supports user-filtered committee queries.
+   */
+  public async getMyCommittees(req: Request): Promise<(Committee & { myRole: string; myMemberUid?: string })[]> {
+    // TODO: Real implementation would:
+    // 1. Get current user identity from req.oidc
+    // 2. Query committee_member resources filtered by user email/username
+    // 3. For each membership, fetch the committee and attach the role
+    // For now, return mock data for development
+    const isDev = process.env['ENV'] === 'development' || process.env['NODE_ENV'] === 'development';
+
+    if (isDev) {
+      logger.debug(req, 'get_my_committees', 'Serving mock my-committees data (no backend endpoint yet)');
+
+      // Fetch real committees first, then simulate user membership on a subset
+      try {
+        const allCommittees = await this.getCommittees(req, {});
+        const mockRoles = ['Chair', 'Member', 'Observer', 'Vice Chair', 'Lead'];
+
+        // Simulate the user being a member of up to 3 committees
+        const myCommittees = allCommittees.slice(0, Math.min(3, allCommittees.length)).map((committee, index) => ({
+          ...committee,
+          myRole: mockRoles[index] || 'Member',
+          myMemberUid: `mock-member-${index}`,
+        }));
+
+        return myCommittees;
+      } catch {
+        logger.warning(req, 'get_my_committees', 'Failed to fetch committees for mock data, returning empty');
+        return [];
+      }
+    }
+
+    // Production: not yet implemented
+    return [];
+  }
+
+  /**
+   * Fetches public-safe committee data for a given project UID.
+   * Used by unauthenticated consumers (e.g., foundation websites).
+   * Strips private fields (emails, internal IDs, settings).
+   */
+  public async getPublicCommitteesByProject(req: Request, projectUid: string): Promise<PublicCommittee[]> {
+    const params = {
+      type: 'committee',
+      tags: `project_uid:${projectUid}`,
+    };
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+
+    const committees = resources.map((resource) => resource.data).filter((c) => c.public);
+
+    logger.debug(req, 'get_public_committees_by_project', 'Fetched committees for project', {
+      project_uid: projectUid,
+      total: resources.length,
+      public_count: committees.length,
+    });
+
+    // Enrich each committee with members, mailing list, and meeting data in parallel
+    const publicCommittees = await Promise.all(
+      committees.map(async (committee) => {
+        const [members, mailingList, meeting] = await Promise.all([
+          this.getCommitteeMembersSafe(req, committee.uid),
+          this.getCommitteeMailingList(req, committee.uid),
+          this.getCommitteeMeetingSafe(req, committee.uid),
+        ]);
+
+        return this.toPublicCommittee(committee, members, mailingList, meeting);
+      })
+    );
+
+    return publicCommittees;
+  }
+
+  /**
    * Fetches a single committee by ID.
    * Falls back to the query service if the direct endpoint returns 404.
    */
@@ -91,16 +172,18 @@ export class CommitteeService {
       logger.debug(req, 'get_committee_by_id', 'Direct endpoint failed, trying query service fallback', { committee_uid: committeeId });
     }
 
-    // Fallback: search all committees via query service (paginated) and find by UID
+    // Fallback: search all committees via query service and find by UID
     if (!committee) {
       try {
-        const allCommittees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
-          this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-            type: 'committee',
-            ...(pageToken && { page_token: pageToken }),
-          })
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          { type: 'committee' }
         );
-        committee = allCommittees.find((c) => c.uid === committeeId) || null;
+        const match = resources?.find((r) => r.data?.uid === committeeId || r.id === committeeId);
+        committee = match?.data || null;
         if (committee) {
           logger.debug(req, 'get_committee_by_id', 'Resolved committee via query service fallback', { committee_uid: committeeId });
         }
@@ -117,11 +200,13 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee settings and merge
-    const settings = await this.getCommitteeSettings(req, committeeId);
-    const committeeWithSettings = {
+    // Fetch committee settings and mailing list in parallel
+    const [settings, fetchedMailingList] = await Promise.all([this.getCommitteeSettings(req, committeeId), this.getCommitteeMailingList(req, committeeId)]);
+
+    const committeeWithSettings: Committee = {
       ...committee,
       ...settings,
+      ...(fetchedMailingList && { mailing_list: fetchedMailingList }),
     };
 
     // Add writer access field to the committee
@@ -433,5 +518,175 @@ export class CommitteeService {
       committee_uid: committeeId,
       settings_data: settingsData,
     });
+  }
+
+  /**
+   * Fetches the mailing list for a committee.
+   * Returns null if not found or on error.
+   */
+  private async getCommitteeMailingList(req: Request, committeeId: string): Promise<GroupMailingList | null> {
+    try {
+      const mailingList = await this.microserviceProxy.proxyRequest<GroupMailingList>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/mailing-list`, 'GET');
+      return mailingList || null;
+    } catch {
+      logger.debug(req, 'get_committee_mailing_list', 'Failed to fetch mailing list, returning null', {
+        committee_uid: committeeId,
+      });
+      return null;
+    }
+  }
+
+  // ── Public Endpoint Helpers ───────────────────────────────────────────────
+
+  /**
+   * Fetches committee members with error handling — returns empty array on failure.
+   */
+  private async getCommitteeMembersSafe(req: Request, committeeId: string): Promise<CommitteeMember[]> {
+    try {
+      return await this.getCommitteeMembers(req, committeeId);
+    } catch {
+      logger.debug(req, 'get_committee_members_safe', 'Failed to fetch members, returning empty', {
+        committee_uid: committeeId,
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Fetches the next upcoming public meeting for a committee.
+   * Returns null if no meeting is found or on error.
+   */
+  private async getCommitteeMeetingSafe(req: Request, committeeId: string): Promise<PublicCommitteeMeeting | null> {
+    try {
+      const params = {
+        type: 'v1_meeting',
+        tags: `committee_uid:${committeeId}`,
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+
+      if (!resources || resources.length === 0) {
+        return null;
+      }
+
+      // Find the first meeting with recurrence or the next upcoming meeting
+      const meeting = resources[0].data;
+
+      const result: PublicCommitteeMeeting = {
+        time: meeting.start_time,
+        timezone: meeting.timezone,
+        duration: meeting.duration,
+      };
+
+      if (meeting.recurrence) {
+        result.recurrence = this.formatRecurrence(meeting.recurrence);
+      }
+
+      // Only include join link for public, non-restricted meetings
+      if (meeting.visibility === 'public' && !meeting.restricted && meeting.public_link) {
+        result.video_link = meeting.public_link;
+      }
+
+      return result;
+    } catch {
+      logger.debug(req, 'get_committee_meeting_safe', 'Failed to fetch meeting, returning null', {
+        committee_uid: committeeId,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Converts a MeetingRecurrence to a human-readable string.
+   */
+  private formatRecurrence(recurrence: { type: RecurrenceType; repeat_interval: number; weekly_days?: string }): string {
+    const dayNames = ['', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const interval = recurrence.repeat_interval;
+
+    switch (recurrence.type) {
+      case RecurrenceType.DAILY:
+        return interval === 1 ? 'Daily' : `Every ${interval} days`;
+      case RecurrenceType.WEEKLY: {
+        const prefix = interval === 1 ? 'Every' : `Every ${interval} weeks on`;
+        if (recurrence.weekly_days) {
+          const days = recurrence.weekly_days
+            .split(',')
+            .map((d) => dayNames[parseInt(d, 10)] || d)
+            .join(', ');
+          return `${prefix} ${days}`;
+        }
+        return `${prefix} week`;
+      }
+      case RecurrenceType.MONTHLY:
+        return interval === 1 ? 'Monthly' : `Every ${interval} months`;
+      default:
+        return 'Recurring';
+    }
+  }
+
+  /**
+   * Maps internal Committee + members data to public-safe PublicCommittee DTO.
+   * Strips emails, internal IDs, settings, and other private fields.
+   */
+  private toPublicCommittee(
+    committee: Committee,
+    members: CommitteeMember[],
+    mailingList: GroupMailingList | null,
+    meeting: PublicCommitteeMeeting | null
+  ): PublicCommittee {
+    const chairRoles = new Set(['Chair', 'Co-Chair', 'Vice Chair']);
+
+    const toPublicMember = (m: CommitteeMember): PublicCommitteeMember => ({
+      name: [m.first_name, m.last_name].filter(Boolean).join(' '),
+      organization: m.organization?.name,
+      role: m.role?.name,
+    });
+
+    // Also include leadership from the committee entity itself (chair/co_chair fields)
+    const chairs: PublicCommitteeMember[] = [];
+    if (committee.chair) {
+      chairs.push({
+        name: [committee.chair.first_name, committee.chair.last_name].filter(Boolean).join(' '),
+        organization: committee.chair.organization,
+        role: 'Chair',
+      });
+    }
+    if (committee.co_chair) {
+      chairs.push({
+        name: [committee.co_chair.first_name, committee.co_chair.last_name].filter(Boolean).join(' '),
+        organization: committee.co_chair.organization,
+        role: 'Co-Chair',
+      });
+    }
+
+    // Add chairs from member list that aren't already included via leadership fields
+    const chairNames = new Set(chairs.map((c) => c.name));
+    const memberChairs = members.filter((m) => m.role?.name && chairRoles.has(m.role.name)).map(toPublicMember);
+    for (const mc of memberChairs) {
+      if (!chairNames.has(mc.name)) {
+        chairs.push(mc);
+        chairNames.add(mc.name);
+      }
+    }
+
+    const nonChairMembers = members.filter((m) => !m.role?.name || !chairRoles.has(m.role.name)).map(toPublicMember);
+
+    const externalLinks: PublicCommitteeLinks = {
+      ...(committee.website && { website: committee.website }),
+      ...(mailingList?.url && { mailing_list_url: mailingList.url }),
+      ...(committee.chat_channel?.url && { chat_channel_url: committee.chat_channel.url }),
+    };
+
+    return {
+      uid: committee.uid,
+      name: committee.display_name || committee.name,
+      ...(committee.description && { description: committee.description }),
+      category: committee.category,
+      chairs,
+      members: nonChairMembers,
+      total_members: committee.total_members || members.length,
+      ...(meeting && { meeting_schedule: meeting }),
+      external_links: externalLinks,
+    };
   }
 }
