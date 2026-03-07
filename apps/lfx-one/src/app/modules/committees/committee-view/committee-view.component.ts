@@ -81,8 +81,8 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
   styleUrl: './committee-view.component.scss',
 })
 export class CommitteeViewComponent {
-  /** @internal Force Vite transform invalidation — safe to remove later */
-  private static readonly _V = 4;
+  @ViewChild(CommitteeMembersComponent)
+  private committeeMembersComponent?: CommitteeMembersComponent;
 
   // ── Injections ────────────────────────────────────────────────────────────
   private readonly route = inject(ActivatedRoute);
@@ -92,9 +92,6 @@ export class CommitteeViewComponent {
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
   private readonly projectService = inject(ProjectService);
-
-  @ViewChild(CommitteeMembersComponent)
-  private committeeMembersComponent?: CommitteeMembersComponent;
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public members: WritableSignal<CommitteeMember[]>;
@@ -258,12 +255,11 @@ export class CommitteeViewComponent {
 
     // Dashboard stats
     this.totalMembers = computed(() => this.members().length);
-    this.activeVoters = computed(() =>
-      this.members().filter(
-        (m) =>
-          m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP ||
-          m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP,
-      ).length,
+    this.activeVoters = computed(
+      () =>
+        this.members().filter(
+          (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
+        ).length
     );
     this.uniqueOrganizations = computed(() => {
       const orgs = this.members()
@@ -529,24 +525,22 @@ export class CommitteeViewComponent {
 
     // ── special-interest-group: discussions, events ──
     if (cls === 'special-interest-group') {
-      forkJoin([
-        this.committeeService.getCommitteeDiscussions(committeeId),
-        this.committeeService.getCommitteeEvents(committeeId),
-      ]).subscribe(([discussions, events]) => {
-        this.discussionThreads.set(discussions);
-        this.upcomingEvents.set(events);
-      });
+      forkJoin([this.committeeService.getCommitteeDiscussions(committeeId), this.committeeService.getCommitteeEvents(committeeId)]).subscribe(
+        ([discussions, events]) => {
+          this.discussionThreads.set(discussions);
+          this.upcomingEvents.set(events);
+        }
+      );
     }
 
     // ── ambassador-program: campaigns, engagement ──
     if (cls === 'ambassador-program') {
-      forkJoin([
-        this.committeeService.getCommitteeCampaigns(committeeId),
-        this.committeeService.getCommitteeEngagement(committeeId),
-      ]).subscribe(([campaigns, engagement]) => {
-        this.outreachCampaigns.set(campaigns);
-        this.engagementMetrics.set(engagement);
-      });
+      forkJoin([this.committeeService.getCommitteeCampaigns(committeeId), this.committeeService.getCommitteeEngagement(committeeId)]).subscribe(
+        ([campaigns, engagement]) => {
+          this.outreachCampaigns.set(campaigns);
+          this.engagementMetrics.set(engagement);
+        }
+      );
     }
 
     // ── other: no type-specific cards (just meetings, docs, members) ──

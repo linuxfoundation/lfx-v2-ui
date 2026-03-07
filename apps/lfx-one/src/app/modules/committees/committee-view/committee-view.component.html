@@ -464,7 +464,8 @@
               </div>
               <div class="flex flex-col gap-0.5">
                 @for (thread of discussionThreads(); track thread.uid) {
-                  <div class="flex items-start gap-3 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 rounded-lg px-2 -mx-2 cursor-pointer transition-colors">
+                  <div
+                    class="flex items-start gap-3 py-3 border-b border-gray-50 last:border-b-0 hover:bg-gray-50 rounded-lg px-2 -mx-2 cursor-pointer transition-colors">
                     <div class="w-8 h-8 rounded-full bg-violet-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <i class="fa-light fa-message text-sm text-violet-600"></i>
                     </div>
@@ -535,7 +536,9 @@
                       <p class="text-sm font-medium text-gray-800">{{ campaign.title }}</p>
                       <div class="flex items-center gap-3 mt-0.5">
                         @if (campaign.status === 'active') {
-                          <span class="text-xs text-gray-500">{{ campaign.reach | number }} reached · {{ campaign.conversions }} conversions ({{ campaign.conversionRate }}%)</span>
+                          <span class="text-xs text-gray-500"
+                            >{{ campaign.reach | number }} reached · {{ campaign.conversions }} conversions ({{ campaign.conversionRate }}%)</span
+                          >
                         } @else {
                           <span class="text-xs text-gray-400 italic">Upcoming</span>
                         }
@@ -626,13 +629,13 @@
                       [attr.data-testid]="'committee-doc-' + doc.uid">
                       <!-- File icon -->
                       <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <i [class]="((doc.mime_type ?? '') | fileTypeIcon) + ' text-sm text-gray-500'"></i>
+                        <i [class]="(doc.mime_type ?? '' | fileTypeIcon) + ' text-sm text-gray-500'"></i>
                       </div>
                       <!-- File info -->
                       <div class="min-w-0 flex-1">
                         <p class="text-sm font-medium text-gray-800 truncate group-hover:text-primary" [pTooltip]="doc.name">{{ doc.name }}</p>
                         <p class="text-xs text-gray-400">
-                          {{ (doc.file_size ?? 0) | fileSize }} · Uploaded by {{ doc.uploaded_by }} · {{ doc.updated_at | date: 'MMM d, y' }}
+                          {{ doc.file_size ?? 0 | fileSize }} · Uploaded by {{ doc.uploaded_by }} · {{ doc.updated_at | date: 'MMM d, y' }}
                         </p>
                       </div>
                       <!-- Download action -->
@@ -668,9 +671,7 @@
 
           <!-- ─── Join Request Review (Phase 3) ─── -->
           @if (committee()?.uid) {
-            <lfx-application-review
-              [committee]="committee()"
-              (memberAdded)="refreshMembers()"></lfx-application-review>
+            <lfx-application-review [committee]="committee()" (memberAdded)="refreshMembers()"></lfx-application-review>
           }
 
           <!-- ─── Members ─── -->
@@ -780,171 +781,172 @@
           </lfx-card>
 
           <!-- Collaboration Card (Mailing List & Chat Channel) — always shown -->
-            <lfx-card data-testid="committee-view-collaboration">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
-                @if (isMaintainer() && !editingCollaboration()) {
-                  <lfx-button
-                    icon="fa-light fa-pen-to-square"
-                    size="small"
-                    [text]="true"
-                    severity="secondary"
-                    styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
-                    pTooltip="Edit Collaboration Channels"
-                    tooltipPosition="top"
-                    (onClick)="startEditCollaboration()">
-                  </lfx-button>
-                }
-              </div>
+          <lfx-card data-testid="committee-view-collaboration">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-medium"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
+              @if (isMaintainer() && !editingCollaboration()) {
+                <lfx-button
+                  icon="fa-light fa-pen-to-square"
+                  size="small"
+                  [text]="true"
+                  severity="secondary"
+                  styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
+                  pTooltip="Edit Collaboration Channels"
+                  tooltipPosition="top"
+                  (onClick)="startEditCollaboration()">
+                </lfx-button>
+              }
+            </div>
 
-              <!-- ── EDIT MODE ── -->
-              @if (editingCollaboration()) {
-                <div class="flex flex-col gap-4">
-                  <!-- Mailing List Fields -->
+            <!-- ── EDIT MODE ── -->
+            @if (editingCollaboration()) {
+              <div class="flex flex-col gap-4">
+                <!-- Mailing List Fields -->
+                <div>
+                  <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
+                  <div class="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="List name (e.g. gold-voting-class)"
+                      [ngModel]="collabEdit().mailingListName"
+                      (ngModelChange)="updateCollabField('mailingListName', $event)" />
+                    <input
+                      type="url"
+                      class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="URL (e.g. https://lists.aaif.dev/g/...)"
+                      [ngModel]="collabEdit().mailingListUrl"
+                      (ngModelChange)="updateCollabField('mailingListUrl', $event)" />
+                  </div>
+                </div>
+
+                <!-- Chat Channel Fields -->
+                <div>
+                  <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
+                  <div class="flex flex-col gap-2">
+                    <select
+                      class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      [ngModel]="collabEdit().chatChannelPlatform"
+                      (ngModelChange)="updateCollabField('chatChannelPlatform', $event)">
+                      <option value="slack">Slack</option>
+                      <option value="discord">Discord</option>
+                    </select>
+                    <input
+                      type="text"
+                      class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Channel name (e.g. #gold-voting-class)"
+                      [ngModel]="collabEdit().chatChannelName"
+                      (ngModelChange)="updateCollabField('chatChannelName', $event)" />
+                    <input
+                      type="url"
+                      class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="URL (e.g. https://aaif.slack.com/archives/...)"
+                      [ngModel]="collabEdit().chatChannelUrl"
+                      (ngModelChange)="updateCollabField('chatChannelUrl', $event)" />
+                  </div>
+                </div>
+
+                <!-- Save / Cancel -->
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <lfx-button label="Cancel" size="small" [text]="true" severity="secondary" (onClick)="cancelEditCollaboration()"> </lfx-button>
+                  <lfx-button label="Save" size="small" severity="primary" [loading]="collabSaving()" (onClick)="saveCollaboration()"> </lfx-button>
+                </div>
+              </div>
+            } @else {
+              <!-- ── VIEW MODE ── -->
+              <div class="flex flex-col gap-4">
+                <!-- Mailing List — always visible; grayed out when not yet available from API -->
+                @if (committee()?.mailing_list; as mailingList) {
+                  <!-- Mailing list available — active state -->
                   <div>
                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
-                    <div class="flex flex-col gap-2">
-                      <input type="text" class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="List name (e.g. gold-voting-class)"
-                        [ngModel]="collabEdit().mailingListName"
-                        (ngModelChange)="updateCollabField('mailingListName', $event)" />
-                      <input type="url" class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="URL (e.g. https://lists.aaif.dev/g/...)"
-                        [ngModel]="collabEdit().mailingListUrl"
-                        (ngModelChange)="updateCollabField('mailingListUrl', $event)" />
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
+                      </div>
+                      <div class="min-w-0">
+                        @if (mailingList.url) {
+                          <a
+                            [href]="mailingList.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                            {{ mailingList.name }}
+                            <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                          </a>
+                        } @else {
+                          <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
+                        }
+                        @if (mailingList.subscriber_count) {
+                          <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
+                        }
+                      </div>
                     </div>
                   </div>
+                } @else {
+                  <!-- Mailing list not yet available from API — grayed-out placeholder -->
+                  <div class="opacity-40">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-light fa-envelope text-gray-400 text-sm"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-400 truncate">Not yet available</p>
+                        <p class="text-xs text-gray-400">No mailing list connected</p>
+                      </div>
+                    </div>
+                  </div>
+                }
 
-                  <!-- Chat Channel Fields -->
+                <!-- Chat Channel — always visible; grayed out when not yet available from API -->
+                @if (committee()?.chat_channel; as chatChannel) {
+                  <!-- Chat channel available — active state -->
                   <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">{{ chatChannel.platform === 'slack' ? 'Slack' : 'Discord' }} Channel</p>
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                        [ngClass]="chatChannel.platform === 'slack' ? 'bg-purple-50' : 'bg-indigo-50'">
+                        <i
+                          class="text-sm"
+                          [ngClass]="chatChannel.platform === 'slack' ? 'fa-brands fa-slack text-purple-600' : 'fa-brands fa-discord text-indigo-600'"></i>
+                      </div>
+                      <div class="min-w-0">
+                        @if (chatChannel.url) {
+                          <a
+                            [href]="chatChannel.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                            {{ chatChannel.name }}
+                            <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                          </a>
+                        } @else {
+                          <p class="text-sm font-medium text-gray-900 truncate">{{ chatChannel.name }}</p>
+                        }
+                        <p class="text-xs text-gray-500 capitalize">{{ chatChannel.platform }}</p>
+                      </div>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Chat channel not yet available from API — grayed-out placeholder -->
+                  <div class="opacity-40">
                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
-                    <div class="flex flex-col gap-2">
-                      <select class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        [ngModel]="collabEdit().chatChannelPlatform"
-                        (ngModelChange)="updateCollabField('chatChannelPlatform', $event)">
-                        <option value="slack">Slack</option>
-                        <option value="discord">Discord</option>
-                      </select>
-                      <input type="text" class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Channel name (e.g. #gold-voting-class)"
-                        [ngModel]="collabEdit().chatChannelName"
-                        (ngModelChange)="updateCollabField('chatChannelName', $event)" />
-                      <input type="url" class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="URL (e.g. https://aaif.slack.com/archives/...)"
-                        [ngModel]="collabEdit().chatChannelUrl"
-                        (ngModelChange)="updateCollabField('chatChannelUrl', $event)" />
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-light fa-comment text-gray-400 text-sm"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-400 truncate">Not yet available</p>
+                        <p class="text-xs text-gray-400">No chat channel connected</p>
+                      </div>
                     </div>
                   </div>
-
-                  <!-- Save / Cancel -->
-                  <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-                    <lfx-button
-                      label="Cancel"
-                      size="small"
-                      [text]="true"
-                      severity="secondary"
-                      (onClick)="cancelEditCollaboration()">
-                    </lfx-button>
-                    <lfx-button
-                      label="Save"
-                      size="small"
-                      severity="primary"
-                      [loading]="collabSaving()"
-                      (onClick)="saveCollaboration()">
-                    </lfx-button>
-                  </div>
-                </div>
-              } @else {
-                <!-- ── VIEW MODE ── -->
-                <div class="flex flex-col gap-4">
-                  <!-- Mailing List — always visible; grayed out when not yet available from API -->
-                  @if (committee()?.mailing_list; as mailingList) {
-                    <!-- Mailing list available — active state -->
-                    <div>
-                      <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                          <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
-                        </div>
-                        <div class="min-w-0">
-                          @if (mailingList.url) {
-                            <a [href]="mailingList.url" target="_blank" rel="noopener noreferrer"
-                              class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                              {{ mailingList.name }}
-                              <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                            </a>
-                          } @else {
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
-                          }
-                          @if (mailingList.subscriber_count) {
-                            <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  } @else {
-                    <!-- Mailing list not yet available from API — grayed-out placeholder -->
-                    <div class="opacity-40">
-                      <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <i class="fa-light fa-envelope text-gray-400 text-sm"></i>
-                        </div>
-                        <div class="min-w-0">
-                          <p class="text-sm font-medium text-gray-400 truncate">Not yet available</p>
-                          <p class="text-xs text-gray-400">No mailing list connected</p>
-                        </div>
-                      </div>
-                    </div>
-                  }
-
-                  <!-- Chat Channel — always visible; grayed out when not yet available from API -->
-                  @if (committee()?.chat_channel; as chatChannel) {
-                    <!-- Chat channel available — active state -->
-                    <div>
-                      <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">
-                        {{ chatChannel.platform === 'slack' ? 'Slack' : 'Discord' }} Channel
-                      </p>
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                          [ngClass]="chatChannel.platform === 'slack' ? 'bg-purple-50' : 'bg-indigo-50'">
-                          <i class="text-sm"
-                            [ngClass]="chatChannel.platform === 'slack'
-                              ? 'fa-brands fa-slack text-purple-600'
-                              : 'fa-brands fa-discord text-indigo-600'"></i>
-                        </div>
-                        <div class="min-w-0">
-                          @if (chatChannel.url) {
-                            <a [href]="chatChannel.url" target="_blank" rel="noopener noreferrer"
-                              class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                              {{ chatChannel.name }}
-                              <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                            </a>
-                          } @else {
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ chatChannel.name }}</p>
-                          }
-                          <p class="text-xs text-gray-500 capitalize">{{ chatChannel.platform }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  } @else {
-                    <!-- Chat channel not yet available from API — grayed-out placeholder -->
-                    <div class="opacity-40">
-                      <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
-                      <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                          <i class="fa-light fa-comment text-gray-400 text-sm"></i>
-                        </div>
-                        <div class="min-w-0">
-                          <p class="text-sm font-medium text-gray-400 truncate">Not yet available</p>
-                          <p class="text-xs text-gray-400">No chat channel connected</p>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-            </lfx-card>
+                }
+              </div>
+            }
+          </lfx-card>
 
           <!-- Configurations Card — admin only (maintainer persona or writer access) -->
           @if (canManageConfigurations()) {

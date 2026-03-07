@@ -213,10 +213,7 @@ export class CommitteeService {
     }
 
     // Fetch committee settings and mailing list in parallel
-    const [settings, mailingList] = await Promise.all([
-      this.getCommitteeSettings(req, committeeId),
-      this.getCommitteeMailingList(req, committeeId),
-    ]);
+    const [settings, mailingList] = await Promise.all([this.getCommitteeSettings(req, committeeId), this.getCommitteeMailingList(req, committeeId)]);
 
     const committeeWithSettings: Committee = {
       ...committee,
