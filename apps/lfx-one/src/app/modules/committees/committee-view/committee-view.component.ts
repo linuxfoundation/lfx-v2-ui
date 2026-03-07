@@ -1,25 +1,45 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { Committee, CommitteeMember, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { Committee, CommitteeMember, getCommitteeCategorySeverity, Meeting, TagSeverity } from '@lfx-one/shared';
+import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
+import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { BehaviorSubject, catchError, combineLatest, of, switchMap, throwError } from 'rxjs';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { TooltipModule } from 'primeng/tooltip';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap, throwError } from 'rxjs';
 
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, CommitteeMembersComponent, ConfirmDialogModule],
+  imports: [
+    DatePipe,
+    RouterLink,
+    BreadcrumbComponent,
+    CardComponent,
+    ButtonComponent,
+    TagComponent,
+    CommitteeMembersComponent,
+    ConfirmDialogModule,
+    Tabs,
+    Tab,
+    TabList,
+    TabPanel,
+    TabPanels,
+    TooltipModule,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -27,38 +47,42 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
 
-  public committee: Signal<Committee | null>;
-  public members: WritableSignal<CommitteeMember[]>;
-  public membersLoading: WritableSignal<boolean>;
-  public loading: WritableSignal<boolean>;
-  public error: WritableSignal<boolean>;
-  public formattedCreatedDate: Signal<string>;
-  public formattedUpdatedDate: Signal<string>;
-  public refresh: BehaviorSubject<void>;
-  public categorySeverity: Signal<TagSeverity>;
-  public breadcrumbItems: Signal<MenuItem[]>;
-  public isBoardMember: Signal<boolean>;
+  // State signals
+  public error = signal<boolean>(false);
+  public loading = signal<boolean>(true);
+  public members = signal<CommitteeMember[]>([]);
+  public membersLoading = signal<boolean>(true);
+  public upcomingMeetingsLoading = signal<boolean>(true);
+  public refresh = new BehaviorSubject<void>(undefined);
 
-  public constructor() {
-    this.error = signal<boolean>(false);
-    this.refresh = new BehaviorSubject<void>(undefined);
-    this.members = signal<CommitteeMember[]>([]);
-    this.membersLoading = signal<boolean>(true);
-    this.loading = signal<boolean>(true);
-    this.committee = this.initializeCommittee();
-    this.formattedCreatedDate = this.initializeFormattedCreatedDate();
-    this.formattedUpdatedDate = this.initializeFormattedUpdatedDate();
-    this.categorySeverity = computed(() => {
-      const category = this.committee()?.category;
-      return getCommitteeCategorySeverity(category || '');
-    });
-    this.breadcrumbItems = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
-    this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
-  }
+  // Computed / Read-only signals
+  public committee: Signal<Committee | null> = this.initializeCommittee();
+  public formattedCreatedDate: Signal<string> = this.initializeFormattedCreatedDate();
+  public formattedUpdatedDate: Signal<string> = this.initializeFormattedUpdatedDate();
+  public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
 
+  public categorySeverity: Signal<TagSeverity> = computed(() => {
+    return getCommitteeCategorySeverity(this.committee()?.category || '');
+  });
+
+  public breadcrumbItems: Signal<MenuItem[]> = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
+
+  public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
+
+  public totalMembers: Signal<number> = computed(() => this.committee()?.total_members || 0);
+
+  public activeVoters: Signal<number> = computed(() => {
+    if (!this.committee()?.enable_voting) return 0;
+    return this.members().filter(
+      (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
+    ).length;
+  });
+
+  // Public methods
   public goBack(): void {
     this.router.navigate(['/', 'groups']);
   }
@@ -67,6 +91,7 @@ export class CommitteeViewComponent {
     this.refresh.next();
   }
 
+  // Private initializer functions
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
       combineLatest([this.route.paramMap, this.refresh]).pipe(
@@ -120,8 +145,6 @@ export class CommitteeViewComponent {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     });
   }
@@ -135,9 +158,27 @@ export class CommitteeViewComponent {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     });
+  }
+
+  private initializeUpcomingMeetings(): Signal<Meeting[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        switchMap((committee) => {
+          if (!committee?.project_uid) {
+            this.upcomingMeetingsLoading.set(false);
+            return of([]);
+          }
+          this.upcomingMeetingsLoading.set(true);
+          return this.meetingService.getUpcomingMeetingsByProject(committee.project_uid, 10).pipe(
+            map((meetings) => meetings.filter((m) => m.committees?.some((c) => c.uid === committee.uid))),
+            catchError(() => of([])),
+            finalize(() => this.upcomingMeetingsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }
