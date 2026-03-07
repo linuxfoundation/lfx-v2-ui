@@ -19,7 +19,7 @@
         <i class="fa-light fa-exclamation-triangle text-3xl text-red-500 mb-4"></i>
         <h2 class="mb-2">Group Not Found</h2>
         <p class="text-gray-600 mb-4">The group you're looking for doesn't exist or has been removed.</p>
-        <lfx-button label="Back to Groups" styleClass="p-button-outlined" (onClick)="goBack()"> </lfx-button>
+        <lfx-button label="Back to Groups" styleClass="p-button-outlined" (onClick)="goBack()"></lfx-button>
       </div>
     </div>
   }
@@ -33,15 +33,23 @@
           <lfx-breadcrumb [model]="breadcrumbItems()" data-testid="committee-view-breadcrumb"></lfx-breadcrumb>
           <div class="flex flex-col gap-1">
             <h1 data-testid="committee-view-name">{{ committee()?.name }}</h1>
-            <p class="text-gray-500" data-testid="committee-view-description">{{ committee()?.description }}</p>
-          </div>
-          <div class="flex items-center gap-4 text-sm text-gray-500">
-            @if (committee()?.category) {
-              <lfx-tag [value]="committee()!.category" [severity]="categorySeverity()"></lfx-tag>
+            @if (committee()?.description) {
+              <p class="text-gray-500" data-testid="committee-view-description">{{ committee()?.description }}</p>
             }
-            <span class="text-gray-600">Created {{ formattedCreatedDate() }}</span>
+          </div>
+          <div class="flex items-center gap-3 text-sm">
+            @if (committee()?.category) {
+              <lfx-tag [value]="committee()!.category" [severity]="categorySeverity()" data-testid="committee-view-category"></lfx-tag>
+            }
+            @if (committee()?.enable_voting) {
+              <lfx-tag value="Voting Enabled" severity="success" data-testid="committee-view-voting-badge"></lfx-tag>
+            }
+            @if (!committee()?.public) {
+              <lfx-tag value="Private" severity="warn" data-testid="committee-view-private-badge"></lfx-tag>
+            }
+            <span class="text-gray-500">Created {{ formattedCreatedDate() }}</span>
             @if (committee()?.updated_at) {
-              <span class="text-gray-600">Last updated {{ formattedUpdatedDate() }}</span>
+              <span class="text-gray-500">Updated {{ formattedUpdatedDate() }}</span>
             }
           </div>
         </div>
@@ -49,52 +57,148 @@
         <!-- Action Menu -->
         @if (!isBoardMember()) {
           <div class="flex items-center gap-3">
-            <lfx-button icon="fa-light fa-file-lines" label="Edit Group" size="small" [routerLink]="['/groups', committee()?.uid || '', 'edit']"> </lfx-button>
+            <lfx-button
+              icon="fa-light fa-pencil"
+              label="Edit Group"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              [routerLink]="['/groups', committee()?.uid || '', 'edit']"
+              data-testid="committee-view-edit-btn">
+            </lfx-button>
           </div>
         }
       </div>
 
-      <!-- Configurations Section -->
-      <lfx-card data-testid="committee-view-configurations">
-        <h3 class="text-sm font-medium mb-4" data-testid="committee-view-configurations-title">Configurations</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3">
-          <div class="flex items-center justify-between" data-testid="committee-view-config-public">
-            <span class="text-sm">Public</span>
-            <lfx-tag [value]="committee()?.public ? 'Enabled' : 'Disabled'" [severity]="committee()?.public ? 'success' : 'danger'"></lfx-tag>
+      <!-- Stats Row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
+        <lfx-card>
+          <div class="text-center py-2">
+            <p class="text-2xl font-semibold text-gray-900">{{ totalMembers() }}</p>
+            <p class="text-xs text-gray-500 mt-1">Total Members</p>
           </div>
-          <div class="flex items-center justify-between" data-testid="committee-view-config-voting">
-            <span class="text-sm">Voting</span>
-            <lfx-tag [value]="committee()?.enable_voting ? 'Enabled' : 'Disabled'" [severity]="committee()?.enable_voting ? 'success' : 'danger'"></lfx-tag>
+        </lfx-card>
+        @if (committee()?.enable_voting) {
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-emerald-600">{{ activeVoters() }}</p>
+              <p class="text-xs text-gray-500 mt-1">Active Voters</p>
+            </div>
+          </lfx-card>
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-gray-900">{{ committee()?.total_voting_reps || 0 }}</p>
+              <p class="text-xs text-gray-500 mt-1">Voting Reps</p>
+            </div>
+          </lfx-card>
+        }
+        <lfx-card>
+          <div class="text-center py-2">
+            <p class="text-2xl font-semibold text-gray-900">{{ upcomingMeetings().length }}</p>
+            <p class="text-xs text-gray-500 mt-1">Upcoming Meetings</p>
           </div>
-          <div class="flex items-center justify-between" data-testid="committee-view-config-business-email">
-            <span class="text-sm">Business Email Required</span>
-            <lfx-tag
-              [value]="committee()?.business_email_required ? 'Enabled' : 'Disabled'"
-              [severity]="committee()?.business_email_required ? 'success' : 'danger'"></lfx-tag>
-          </div>
-          <div class="flex items-center justify-between" data-testid="committee-view-config-sso-group">
-            <span class="text-sm">SSO Group</span>
-            <lfx-tag
-              [value]="committee()?.sso_group_enabled ? 'Enabled' : 'Disabled'"
-              [severity]="committee()?.sso_group_enabled ? 'success' : 'danger'"></lfx-tag>
-          </div>
-          <div class="flex items-center justify-between" data-testid="committee-view-config-audit">
-            <span class="text-sm">Audit</span>
-            <lfx-tag
-              [value]="committee()?.is_audit_enabled ? 'Enabled' : 'Disabled'"
-              [severity]="committee()?.is_audit_enabled ? 'success' : 'danger'"></lfx-tag>
-          </div>
-        </div>
-      </lfx-card>
+        </lfx-card>
+      </div>
 
-      <!-- Members Section -->
-      @if (committee()?.uid) {
-        <lfx-committee-members
-          [committee]="committee()"
-          [members]="members()"
-          [membersLoading]="membersLoading()"
-          (refresh)="refreshMembers()"></lfx-committee-members>
-      }
+      <!-- Tabs -->
+      <p-tabs value="0">
+        <p-tabList>
+          <p-tab value="0" data-testid="committee-view-tab-overview">Overview</p-tab>
+          <p-tab value="1" data-testid="committee-view-tab-members">Members</p-tab>
+        </p-tabList>
+        <p-tabPanels>
+          <!-- Overview Tab -->
+          <p-tabPanel value="0">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+              <!-- Left Column: Upcoming Meetings -->
+              <div class="lg:col-span-2 flex flex-col gap-6">
+                <lfx-card data-testid="committee-view-meetings">
+                  <h3 class="text-sm font-medium mb-4">Upcoming Meetings</h3>
+                  @if (upcomingMeetingsLoading()) {
+                    <div class="flex flex-col gap-3">
+                      @for (item of [0, 1, 2]; track item) {
+                        <div class="animate-pulse">
+                          <div class="h-5 bg-gray-200 rounded mb-2 w-3/4"></div>
+                          <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                        </div>
+                      }
+                    </div>
+                  } @else if (upcomingMeetings().length === 0) {
+                    <div class="text-center py-8">
+                      <i class="fa-light fa-calendar text-2xl text-gray-300 mb-2"></i>
+                      <p class="text-sm text-gray-500">No upcoming meetings scheduled</p>
+                    </div>
+                  } @else {
+                    <div class="flex flex-col gap-0">
+                      @for (meeting of upcomingMeetings(); track meeting.id) {
+                        <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0" [attr.data-testid]="'committee-meeting-' + meeting.id">
+                          <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
+                            <i class="fa-light fa-video"></i>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ meeting.title }}</p>
+                            <p class="text-xs text-gray-500">{{ meeting.start_time | date: 'MMM d, y · h:mm a' }} · {{ meeting.duration }} min</p>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </lfx-card>
+              </div>
+
+              <!-- Right Column: Sidebar -->
+              <div class="flex flex-col gap-6">
+                <!-- Configurations -->
+                <lfx-card data-testid="committee-view-configurations">
+                  <h3 class="text-sm font-medium mb-4">Configurations</h3>
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">Public</span>
+                      <lfx-tag [value]="committee()?.public ? 'Enabled' : 'Disabled'" [severity]="committee()?.public ? 'success' : 'danger'"> </lfx-tag>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">Voting</span>
+                      <lfx-tag [value]="committee()?.enable_voting ? 'Enabled' : 'Disabled'" [severity]="committee()?.enable_voting ? 'success' : 'danger'">
+                      </lfx-tag>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">Business Email</span>
+                      <lfx-tag
+                        [value]="committee()?.business_email_required ? 'Required' : 'Not Required'"
+                        [severity]="committee()?.business_email_required ? 'info' : 'secondary'">
+                      </lfx-tag>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">SSO Group</span>
+                      <lfx-tag
+                        [value]="committee()?.sso_group_enabled ? 'Enabled' : 'Disabled'"
+                        [severity]="committee()?.sso_group_enabled ? 'success' : 'danger'">
+                      </lfx-tag>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-gray-600">Audit</span>
+                      <lfx-tag
+                        [value]="committee()?.is_audit_enabled ? 'Enabled' : 'Disabled'"
+                        [severity]="committee()?.is_audit_enabled ? 'success' : 'danger'">
+                      </lfx-tag>
+                    </div>
+                  </div>
+                </lfx-card>
+              </div>
+            </div>
+          </p-tabPanel>
+
+          <!-- Members Tab -->
+          <p-tabPanel value="1">
+            <div class="mt-4">
+              @if (committee()?.uid) {
+                <lfx-committee-members [committee]="committee()" [members]="members()" [membersLoading]="membersLoading()" (refresh)="refreshMembers()">
+                </lfx-committee-members>
+              }
+            </div>
+          </p-tabPanel>
+        </p-tabPanels>
+      </p-tabs>
     </div>
   }
 
