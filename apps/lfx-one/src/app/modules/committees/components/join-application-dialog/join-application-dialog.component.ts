@@ -4,6 +4,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee, GroupJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -11,7 +12,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'lfx-join-application-dialog',
-  imports: [ReactiveFormsModule, ButtonComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, TextareaComponent],
   templateUrl: './join-application-dialog.component.html',
 })
 export class JoinApplicationDialogComponent {

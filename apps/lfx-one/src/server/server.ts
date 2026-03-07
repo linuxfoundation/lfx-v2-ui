@@ -26,7 +26,9 @@ import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
+import publicProjectsRouter from './routes/public-projects.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
 import urlMetadataRouter from './routes/url-metadata.route';
@@ -147,49 +149,10 @@ const authConfig: ConfigParams = {
   },
 };
 
-// TODO: TEMPORARY - Skip OIDC middleware when using placeholder credentials for local dev
-// The express-openid-connect auth() middleware tries to fetch /.well-known/openid-configuration
-// on startup and will crash if the issuer URL is unreachable. This bypass allows local preview.
-// Revert when real Auth0 credentials are configured in .env
-const isLocalDevBypass = process.env['PCC_AUTH0_CLIENT_ID'] === 'local-dev-placeholder' || process.env['PCC_AUTH0_CLIENT_ID'] === '1234';
-
-if (isLocalDevBypass) {
-  const devToken = process.env['DEV_BEARER_TOKEN'] || null;
-  if (devToken) {
-    logger.info(undefined, 'auth_bypass', 'Auth0 OIDC middleware SKIPPED - using DEV_BEARER_TOKEN from .env for API calls.', {});
-  } else {
-    logger.info(
-      undefined,
-      'auth_bypass',
-      'Auth0 OIDC middleware SKIPPED - no DEV_BEARER_TOKEN set, API calls will return 401. Add DEV_BEARER_TOKEN to .env for real data.',
-      {}
-    );
-  }
-  // Add a middleware that injects the dev bearer token for API proxying
-  app.use((req: Request, _res: Response, next: NextFunction) => {
-    (req as any).oidc = {
-      isAuthenticated: () => !!devToken,
-      user: devToken ? { name: 'Local Dev User', email: 'dev@localhost' } : null,
-      accessToken: devToken ? { access_token: devToken, isExpired: () => false } : null,
-    };
-    (req as any).bearerToken = devToken;
-    next();
-  });
-} else {
-  app.use(auth(authConfig));
-
-  // Silent login attempt for meeting join pages only
-  // If user has SSO session elsewhere, they'll be authenticated automatically
-  // If not, they proceed as unauthenticated (route is optional auth)
-  app.use('/meetings/', attemptSilentLogin());
-}
+app.use(auth(authConfig));
+app.use('/meetings/', attemptSilentLogin());
 
 app.use('/login', (req: Request, res: Response) => {
-  // TODO: TEMPORARY - In local dev bypass mode, redirect to home since there's no OIDC provider
-  if (isLocalDevBypass) {
-    res.redirect('/');
-    return;
-  }
   if (req.oidc?.isAuthenticated() && !req.oidc?.accessToken?.isExpired()) {
     const returnTo = req.query['returnTo'] as string;
     const validatedReturnTo = validateAndSanitizeUrl(returnTo, [process.env['PCC_BASE_URL'] as string]);
@@ -218,10 +181,14 @@ wrapWithMockFallback(app);
 
 // Mount API routes after authentication middleware
 // DEV-ONLY: Add mock data fallback when upstream API is unreachable
-wrapWithMockFallback(app);
+if (process.env['NODE_ENV'] !== 'production') {
+  wrapWithMockFallback(app);
+}
 
 // Public API routes
+app.use('/public/api/committees', publicCommitteesRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
+app.use('/public/api/projects', publicProjectsRouter);
 
 // Protected API routes
 app.use('/api/projects', projectsRouter);

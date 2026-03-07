@@ -4,7 +4,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee, CreateGroupInviteRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -12,7 +12,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'lfx-invite-member-dialog',
-  imports: [ReactiveFormsModule, ButtonComponent, InputTextComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, TextareaComponent],
   templateUrl: './invite-member-dialog.component.html',
 })
 export class InviteMemberDialogComponent {
