@@ -1,12 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, computed, signal, effect } from '@angular/core';
+import { Component, inject, computed, signal, effect, Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, finalize, of } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -20,7 +21,6 @@ import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
   imports: [DecimalPipe, RouterLink, FormsModule, CardComponent, TagComponent, ButtonComponent],
   templateUrl: './public-directory.component.html',
   styleUrl: './public-directory.component.scss',
-  host: { ngSkipHydration: 'true' },
 })
 export class PublicDirectoryComponent {
   private readonly http = inject(HttpClient);
@@ -30,8 +30,11 @@ export class PublicDirectoryComponent {
   public readonly committeeLabel = COMMITTEE_LABEL.singular;
   public readonly committeeLabelPlural = COMMITTEE_LABEL.plural;
 
-  // Data signals
-  public committees = toSignal(this.http.get<Committee[]>('/public/api/committees'), { initialValue: [] });
+  // Loading state signal — follows meetings module pattern
+  public loading = signal(true);
+
+  // Data signals — initialValue prevents hydration mismatch
+  public committees: Signal<Committee[]> = this.initializeCommittees();
   public searchTerm = signal('');
   public selectedCategory = signal('');
   public selectedFoundation = signal('');
@@ -145,5 +148,16 @@ export class PublicDirectoryComponent {
       category: this.selectedCategory() || null,
     };
     this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'replace' });
+  }
+
+  // Private initializer — follows meetings module pattern
+  private initializeCommittees(): Signal<Committee[]> {
+    return toSignal(
+      this.http.get<Committee[]>('/public/api/committees').pipe(
+        catchError(() => of([] as Committee[])),
+        finalize(() => this.loading.set(false))
+      ),
+      { initialValue: [] as Committee[] }
+    );
   }
 }
