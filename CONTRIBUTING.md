@@ -220,6 +220,10 @@ footer
 - `refactor`: Code refactoring
 - `test`: Adding or updating tests
 - `chore`: Maintenance tasks
+- `ci`: CI/CD configuration changes
+- `perf`: Performance improvements
+- `build`: Build system or dependency changes
+- `revert`: Reverting previous changes
 
 ### Examples
 

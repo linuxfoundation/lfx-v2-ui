@@ -404,6 +404,22 @@ export class CommitteeViewComponent {
     });
   }
 
+  protected getDeliverableTagValue(status: string): string {
+    const map: Record<string, string> = {
+      completed: 'Done',
+      'in-progress': 'In Progress',
+    };
+    return map[status] ?? 'Not Started';
+  }
+
+  protected getDeliverableTagSeverity(status: string): TagSeverity {
+    const map: Record<string, TagSeverity> = {
+      completed: 'success',
+      'in-progress': 'info',
+    };
+    return map[status] ?? 'secondary';
+  }
+
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
       combineLatest([this.route.paramMap, this.refresh]).pipe(

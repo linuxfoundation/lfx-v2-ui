@@ -450,9 +450,7 @@
                                 <h4 class="text-sm font-medium text-gray-900">{{ item.title }}</h4>
                                 <p class="text-xs text-gray-500 mt-0.5">Owner: {{ item.owner }} · Due {{ item.dueDate | date: 'MMM d, y' }}</p>
                               </div>
-                              <lfx-tag
-                                [value]="item.status === 'completed' ? 'Done' : item.status === 'in-progress' ? 'In Progress' : 'Not Started'"
-                                [severity]="item.status === 'completed' ? 'success' : item.status === 'in-progress' ? 'info' : 'secondary'"></lfx-tag>
+                              <lfx-tag [value]="getDeliverableTagValue(item.status)" [severity]="getDeliverableTagSeverity(item.status)"></lfx-tag>
                             </div>
                             <!-- Progress bar -->
                             <div class="flex items-center gap-2">

@@ -290,6 +290,16 @@ export class CommitteeDashboardComponent {
     });
   }
 
+  protected getRoleBadgeClass(role: string | undefined): string {
+    const classMap: Record<string, string> = {
+      Chair: 'bg-blue-100 text-blue-800',
+      'Vice Chair': 'bg-indigo-100 text-indigo-800',
+      Member: 'bg-green-100 text-green-800',
+      Lead: 'bg-purple-100 text-purple-800',
+    };
+    return classMap[role || ''] || 'bg-gray-100 text-gray-600';
+  }
+
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     return toSignal(
       this.refresh.pipe(

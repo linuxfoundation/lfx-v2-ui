@@ -548,7 +548,7 @@ export function getGroupBehavioralClass(category: string | undefined): GroupBeha
   }
 
   // Special interest group (includes marketing outreach)
-  if (lower.includes('special interest') || lower.includes('sig') || lower.includes('technical mailing') || lower.includes('marketing')) {
+  if (lower.includes('special interest') || /\bsig\b/.test(lower) || lower.includes('technical mailing') || lower.includes('marketing')) {
     return 'special-interest-group';
   }
 

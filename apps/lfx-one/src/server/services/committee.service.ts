@@ -134,7 +134,8 @@ export class CommitteeService {
       }
     }
 
-    // Production: not yet implemented
+    // Production: not yet implemented — backend endpoint pending
+    logger.warning(req, 'get_my_committees', 'getMyCommittees is not yet implemented for production; returning empty array');
     return [];
   }
 
@@ -954,15 +955,15 @@ export class CommitteeService {
       case RecurrenceType.DAILY:
         return interval === 1 ? 'Daily' : `Every ${interval} days`;
       case RecurrenceType.WEEKLY: {
-        const prefix = interval === 1 ? 'Every' : `Every ${interval} weeks on`;
+        const base = interval === 1 ? 'Every week' : `Every ${interval} weeks`;
         if (recurrence.weekly_days) {
           const days = recurrence.weekly_days
             .split(',')
             .map((d) => dayNames[parseInt(d, 10)] || d)
             .join(', ');
-          return `${prefix} ${days}`;
+          return `${base} on ${days}`;
         }
-        return `${prefix} week`;
+        return base;
       }
       case RecurrenceType.MONTHLY:
         return interval === 1 ? 'Monthly' : `Every ${interval} months`;
