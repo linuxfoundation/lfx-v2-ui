@@ -1,10 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { Component, computed, inject, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { Component, computed, inject, signal, Signal, viewChild, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -21,92 +21,145 @@ import {
   CommitteeEngagementMetrics,
   CommitteeEvent,
   CommitteeMember,
-  CommitteeMemberVotingStatus,
   CommitteeOutreachCampaign,
   CommitteeResolution,
   CommitteeVote,
   getCommitteeCategorySeverity,
-  getGroupBehavioralClass,
-  GroupBehavioralClass,
-  isAmbassadorProgram,
-  isCollaborationClass,
-  isGovernanceClass,
-  isGoverningBoard,
-  isOtherClass,
-  isOversightCommittee,
-  isSpecialInterestGroup,
-  isWorkingGroup,
   TagSeverity,
 } from '@lfx-one/shared';
+import {
+  getGroupBehavioralClass,
+  GroupBehavioralClass,
+  isGovernanceClass,
+  isCollaborationClass,
+  isGoverningBoard,
+  isOversightCommittee,
+  isWorkingGroup,
+  isSpecialInterestGroup,
+  isAmbassadorProgram,
+  isOtherClass,
+} from '@lfx-one/shared/constants';
+import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
+import { Meeting } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
+import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
-import { FileSizePipe } from '@pipes/file-size.pipe';
-import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
+import { ProjectService } from '@services/project.service';
+import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap } from 'rxjs';
 
-import { DashboardMeetingCardComponent } from '../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
+import { FileSizePipe } from '@pipes/file-size.pipe';
+import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
-import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
+import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 
 @Component({
   selector: 'lfx-committee-view',
   imports: [
-    DatePipe,
-    DecimalPipe,
-    NgClass,
-    FormsModule,
     BreadcrumbComponent,
     CardComponent,
     ButtonComponent,
     TagComponent,
     ApplicationReviewComponent,
     CommitteeMembersComponent,
-    CommitteeMeetingsComponent,
     DashboardMeetingCardComponent,
+    NgClass,
+    FormsModule,
     ConfirmDialogModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
     TooltipModule,
-    RouterLink,
+    DatePipe,
+    DecimalPipe,
     FileSizePipe,
     FileTypeIconPipe,
+    RouterLink,
   ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
 export class CommitteeViewComponent {
+  /** @internal Force Vite transform invalidation — safe to remove later */
+  private static readonly _V = 4;
+
+  // ── Injections ────────────────────────────────────────────────────────────
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
+  private readonly projectService = inject(ProjectService);
 
-  public committee: Signal<Committee | null>;
+  @ViewChild(CommitteeMembersComponent)
+  private committeeMembersComponent?: CommitteeMembersComponent;
+
+  // ── Writable Signals ──────────────────────────────────────────────────────
   public members: WritableSignal<CommitteeMember[]>;
   public membersLoading: WritableSignal<boolean>;
   public loading: WritableSignal<boolean>;
   public error: WritableSignal<boolean>;
+  public refresh: BehaviorSubject<void>;
+
+  // Governance-specific mock data
+  public openVotes: WritableSignal<CommitteeVote[]>;
+  public budgetSummary: WritableSignal<CommitteeBudgetSummary | null>;
+  public recentResolutions: WritableSignal<CommitteeResolution[]>;
+
+  // Collaboration-specific mock data
+  public recentActivity: WritableSignal<CommitteeActivity[]>;
+  public topContributors: WritableSignal<CommitteeContributor[]>;
+
+  // Working-group specific: deliverables/milestones
+  public deliverables: WritableSignal<CommitteeDeliverable[]>;
+
+  // Special-interest-group specific: discussions, events
+  public discussionThreads: WritableSignal<CommitteeDiscussionThread[]>;
+  public upcomingEvents: WritableSignal<CommitteeEvent[]>;
+
+  // Ambassador-program specific: campaigns, engagement
+  public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]>;
+  public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null>;
+
+  // Meeting and document writables
+  public committeeMeetings: WritableSignal<Meeting[]>;
+  public documents: WritableSignal<CommitteeDocument[]>;
+
+  // Collaboration inline-edit state
+  public editingCollaboration = signal<boolean>(false);
+  public collabSaving = signal<boolean>(false);
+  public collabEdit = signal<{
+    mailingListName: string;
+    mailingListUrl: string;
+    chatChannelName: string;
+    chatChannelUrl: string;
+    chatChannelPlatform: 'slack' | 'discord';
+  }>({
+    mailingListName: '',
+    mailingListUrl: '',
+    chatChannelName: '',
+    chatChannelUrl: '',
+    chatChannelPlatform: 'slack',
+  });
+
+  // ── Computed / Read-only Signals ──────────────────────────────────────────
+  public committee: Signal<Committee | null>;
   public formattedCreatedDate: Signal<string>;
   public formattedUpdatedDate: Signal<string>;
-  public refresh: BehaviorSubject<void>;
   public categorySeverity: Signal<TagSeverity>;
   public breadcrumbItems: Signal<MenuItem[]>;
   public isBoardMember: Signal<boolean>;
   public isMaintainer: Signal<boolean>;
   public canManageConfigurations: Signal<boolean>;
+  public committeeLabel = COMMITTEE_LABEL;
 
-  // Group-type behavioral classification signals
+  // Group-type behavioral class signals (6-type taxonomy v2.0)
   public behavioralClass: Signal<GroupBehavioralClass>;
   public isGovernanceClass: Signal<boolean>;
   public isCollaborationClass: Signal<boolean>;
+  // Per-type signals for granular dashboard rendering
   public isGoverningBoard: Signal<boolean>;
   public isOversightCommittee: Signal<boolean>;
   public isWorkingGroup: Signal<boolean>;
@@ -114,66 +167,71 @@ export class CommitteeViewComponent {
   public isAmbassadorProgram: Signal<boolean>;
   public isOtherClass: Signal<boolean>;
 
-  // Dashboard stats
+  // Dashboard stat signals
   public totalMembers: Signal<number>;
   public activeVoters: Signal<number>;
   public uniqueOrganizations: Signal<string[]>;
   public orgCount: Signal<number>;
   public roleBreakdown: Signal<{ name: string; count: number }[]>;
 
-  // Chair/Co-Chair leadership
-  public chair: Signal<any>;
-  public coChair: Signal<any>;
+  // Chair/Co-Chair leadership signals
+  public chair: Signal<Committee['chair']>;
+  public coChair: Signal<Committee['co_chair']>;
   public hasChair: Signal<boolean>;
   public hasCoChair: Signal<boolean>;
   public chairElectedDate: Signal<string>;
   public coChairElectedDate: Signal<string>;
 
-  // Document signals
-  public documents = signal<CommitteeDocument[]>([]);
+  // Meeting computed signals
+  public upcomingMeetings: Signal<Meeting[]>;
+
+  // Document computed signals
   public documentFiles: Signal<CommitteeDocument[]>;
   public documentLinks: Signal<CommitteeDocument[]>;
 
-  // Meeting signals
-  public committeeMeetings = signal<any[]>([]);
-  public upcomingMeetings: Signal<any[]>;
-
-  // Per-type data signals (loaded from API)
-  public openVotes = signal<CommitteeVote[]>([]);
-  public recentResolutions = signal<CommitteeResolution[]>([]);
-  public budgetSummary = signal<CommitteeBudgetSummary | null>(null);
-  public recentActivity = signal<CommitteeActivity[]>([]);
-  public topContributors = signal<CommitteeContributor[]>([]);
-  public deliverables = signal<CommitteeDeliverable[]>([]);
-  public discussionThreads = signal<CommitteeDiscussionThread[]>([]);
-  public upcomingEvents = signal<CommitteeEvent[]>([]);
-  public outreachCampaigns = signal<CommitteeOutreachCampaign[]>([]);
-  public engagementMetrics = signal<CommitteeEngagementMetrics | null>(null);
-
-  // Collaboration editing signals
-  public editingCollaboration = signal(false);
-  public collabSaving = signal(false);
-  public collabEdit = signal<{
-    mailingListName: string;
-    mailingListUrl: string;
-    chatChannelPlatform: string;
-    chatChannelName: string;
-    chatChannelUrl: string;
-  }>({ mailingListName: '', mailingListUrl: '', chatChannelPlatform: 'slack', chatChannelName: '', chatChannelUrl: '' });
-
-  // ViewChild for CommitteeMembersComponent
-  public committeeMembersComponent = viewChild(CommitteeMembersComponent);
-
-  // Tab state
-  public activeTab = signal<string | number | undefined>(0);
-
   public constructor() {
+    // ── 1. Initialize ALL writable signals FIRST ──────────────────────
+    // This must happen before initializeCommittee() because the mock data
+    // interceptor returns synchronous responses (via `of()`), which causes
+    // the switchMap callback to fire immediately during toSignal() construction.
+    // If signals like committeeMeetings or documents aren't initialized yet,
+    // calling .set() on them throws: TypeError: Cannot read properties of undefined (reading 'set')
     this.error = signal<boolean>(false);
     this.refresh = new BehaviorSubject<void>(undefined);
     this.members = signal<CommitteeMember[]>([]);
     this.membersLoading = signal<boolean>(true);
     this.loading = signal<boolean>(true);
+
+    // Governance-specific data
+    this.openVotes = signal<CommitteeVote[]>([]);
+    this.budgetSummary = signal<CommitteeBudgetSummary | null>(null);
+    this.recentResolutions = signal<CommitteeResolution[]>([]);
+
+    // Collaboration-specific data
+    this.recentActivity = signal<CommitteeActivity[]>([]);
+    this.topContributors = signal<CommitteeContributor[]>([]);
+
+    // Working-group specific
+    this.deliverables = signal<CommitteeDeliverable[]>([]);
+
+    // Special-interest-group specific
+    this.discussionThreads = signal<CommitteeDiscussionThread[]>([]);
+    this.upcomingEvents = signal<CommitteeEvent[]>([]);
+
+    // Ambassador-program specific
+    this.outreachCampaigns = signal<CommitteeOutreachCampaign[]>([]);
+    this.engagementMetrics = signal<CommitteeEngagementMetrics | null>(null);
+
+    // Document signals
+    this.documents = signal<CommitteeDocument[]>([]);
+
+    // Meeting signals
+    this.committeeMeetings = signal<Meeting[]>([]);
+
+    // ── 2. Now safe to call initializeCommittee() which subscribes via toSignal() ──
     this.committee = this.initializeCommittee();
+
+    // ── 3. Computed signals (depend on committee/members signals above) ──
     this.formattedCreatedDate = this.initializeFormattedCreatedDate();
     this.formattedUpdatedDate = this.initializeFormattedUpdatedDate();
     this.categorySeverity = computed(() => {
@@ -200,11 +258,12 @@ export class CommitteeViewComponent {
 
     // Dashboard stats
     this.totalMembers = computed(() => this.members().length);
-    this.activeVoters = computed(
-      () =>
-        this.members().filter(
-          (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
-        ).length
+    this.activeVoters = computed(() =>
+      this.members().filter(
+        (m) =>
+          m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP ||
+          m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP,
+      ).length,
     );
     this.uniqueOrganizations = computed(() => {
       const orgs = this.members()
@@ -252,14 +311,14 @@ export class CommitteeViewComponent {
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
       return meetings
-        .filter((m: any) => m.start_time && new Date(m.start_time).getTime() > now && m.committees?.some((c: any) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() > now && m.committees?.some((c) => c.uid === committeeId))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
         .slice(0, 3);
     });
   }
 
   public openAddMemberDialog(): void {
-    this.committeeMembersComponent()?.openAddMemberDialog();
+    this.committeeMembersComponent?.openAddMemberDialog();
   }
 
   public getMembersCountByOrg(org: string): number {
@@ -287,14 +346,15 @@ export class CommitteeViewComponent {
     this.refresh.next();
   }
 
+  // ── Collaboration inline-edit methods ──────────────────────────────
   public startEditCollaboration(): void {
-    const committee = this.committee();
+    const c = this.committee();
     this.collabEdit.set({
-      mailingListName: committee?.mailing_list?.name || '',
-      mailingListUrl: committee?.mailing_list?.url || '',
-      chatChannelPlatform: committee?.chat_channel?.platform || 'slack',
-      chatChannelName: committee?.chat_channel?.name || '',
-      chatChannelUrl: committee?.chat_channel?.url || '',
+      mailingListName: c?.mailing_list?.name || '',
+      mailingListUrl: c?.mailing_list?.url || '',
+      chatChannelName: c?.chat_channel?.name || '',
+      chatChannelUrl: c?.chat_channel?.url || '',
+      chatChannelPlatform: c?.chat_channel?.platform || 'slack',
     });
     this.editingCollaboration.set(true);
   }
@@ -303,17 +363,40 @@ export class CommitteeViewComponent {
     this.editingCollaboration.set(false);
   }
 
-  public saveCollaboration(): void {
-    this.collabSaving.set(true);
-    // TODO: Implement actual save via API
-    setTimeout(() => {
-      this.collabSaving.set(false);
-      this.editingCollaboration.set(false);
-    }, 500);
-  }
-
+  /** Update a single field in the collabEdit signal (Angular templates don't support spread) */
   public updateCollabField(field: string, value: string): void {
     this.collabEdit.update((current) => ({ ...current, [field]: value }));
+  }
+
+  public saveCollaboration(): void {
+    const committeeId = this.committee()?.uid;
+    if (!committeeId) return;
+
+    this.collabSaving.set(true);
+    const edit = this.collabEdit();
+
+    const payload: Partial<Committee> = {
+      mailing_list: edit.mailingListName
+        ? { name: edit.mailingListName, url: edit.mailingListUrl || undefined, subscriber_count: this.committee()?.mailing_list?.subscriber_count }
+        : undefined,
+      chat_channel: edit.chatChannelName
+        ? { platform: edit.chatChannelPlatform, name: edit.chatChannelName, url: edit.chatChannelUrl || undefined }
+        : undefined,
+    };
+
+    this.committeeService.updateCommittee(committeeId, payload).subscribe({
+      next: () => {
+        this.collabSaving.set(false);
+        this.editingCollaboration.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Collaboration channels updated' });
+        this.refresh.next(); // re-fetch committee to reflect changes
+      },
+      error: (err) => {
+        this.collabSaving.set(false);
+        console.error('Failed to update collaboration channels:', err);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update collaboration channels' });
+      },
+    });
   }
 
   private initializeCommittee(): Signal<Committee | null> {
@@ -329,28 +412,45 @@ export class CommitteeViewComponent {
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
               console.error('Failed to load committee');
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to load committee',
-              });
-              this.router.navigate(['/', 'groups']);
-              return throwError(() => new Error('Failed to load committee'));
+              this.error.set(true);
+              this.loading.set(false);
+              return of(null);
             })
           );
 
-          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
+          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(
+            catchError(() => {
+              console.error('Failed to load committee members');
+              return of([]);
+            })
+          );
 
-          const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(catchError(() => of([])));
+          // Fetch meetings for this project (filter by committee happens in computed signal)
+          const projectUid = this.projectService.project()?.uid || 'a09410d0-3455-11ea-978f-2e728ce88125';
+          const meetingsQuery = this.meetingService.getMeetingsByProject(projectUid).pipe(
+            catchError(() => {
+              console.error('Failed to load meetings');
+              return of([]);
+            })
+          );
 
-          return combineLatest([committeeQuery, membersQuery, documentsQuery]).pipe(
-            switchMap(([committee, members, documents]) => {
-              this.members.set(members);
-              this.documents.set(documents);
+          // Fetch documents for this committee
+          const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(
+            catchError(() => {
+              console.error('Failed to load documents');
+              return of([]);
+            })
+          );
+
+          return combineLatest([committeeQuery, membersQuery, meetingsQuery, documentsQuery]).pipe(
+            switchMap(([committee, members, meetings, documents]) => {
+              this.members.set(Array.isArray(members) ? members : []);
+              this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
+              this.documents.set(Array.isArray(documents) ? documents : []);
               this.loading.set(false);
               this.membersLoading.set(false);
 
-              // Load type-specific data from APIs
+              // Load group-type-specific data from APIs
               if (committee) {
                 this.loadGroupTypeData(committeeId, committee);
               }
@@ -379,9 +479,14 @@ export class CommitteeViewComponent {
     });
   }
 
+  /**
+   * Loads group-type-specific data from real API endpoints.
+   * Uses forkJoin to fetch data in parallel per behavioral class.
+   */
   private loadGroupTypeData(committeeId: string, committee: Committee): void {
     const cls = getGroupBehavioralClass(committee.category);
 
+    // ── governing-board: votes, budget, resolutions ──
     if (cls === 'governing-board') {
       forkJoin([
         this.committeeService.getCommitteeVotes(committeeId),
@@ -394,6 +499,7 @@ export class CommitteeViewComponent {
       });
     }
 
+    // ── oversight-committee: votes + resolutions (no budget), activity + contributors ──
     if (cls === 'oversight-committee') {
       forkJoin([
         this.committeeService.getCommitteeVotes(committeeId),
@@ -408,6 +514,7 @@ export class CommitteeViewComponent {
       });
     }
 
+    // ── working-group: activity, contributors, deliverables ──
     if (cls === 'working-group') {
       forkJoin([
         this.committeeService.getCommitteeActivity(committeeId),
@@ -420,23 +527,29 @@ export class CommitteeViewComponent {
       });
     }
 
+    // ── special-interest-group: discussions, events ──
     if (cls === 'special-interest-group') {
-      forkJoin([this.committeeService.getCommitteeDiscussions(committeeId), this.committeeService.getCommitteeEvents(committeeId)]).subscribe(
-        ([discussions, events]) => {
-          this.discussionThreads.set(discussions);
-          this.upcomingEvents.set(events);
-        }
-      );
+      forkJoin([
+        this.committeeService.getCommitteeDiscussions(committeeId),
+        this.committeeService.getCommitteeEvents(committeeId),
+      ]).subscribe(([discussions, events]) => {
+        this.discussionThreads.set(discussions);
+        this.upcomingEvents.set(events);
+      });
     }
 
+    // ── ambassador-program: campaigns, engagement ──
     if (cls === 'ambassador-program') {
-      forkJoin([this.committeeService.getCommitteeCampaigns(committeeId), this.committeeService.getCommitteeEngagement(committeeId)]).subscribe(
-        ([campaigns, engagement]) => {
-          this.outreachCampaigns.set(campaigns);
-          this.engagementMetrics.set(engagement);
-        }
-      );
+      forkJoin([
+        this.committeeService.getCommitteeCampaigns(committeeId),
+        this.committeeService.getCommitteeEngagement(committeeId),
+      ]).subscribe(([campaigns, engagement]) => {
+        this.outreachCampaigns.set(campaigns);
+        this.engagementMetrics.set(engagement);
+      });
     }
+
+    // ── other: no type-specific cards (just meetings, docs, members) ──
   }
 
   private initializeFormattedUpdatedDate(): Signal<string> {

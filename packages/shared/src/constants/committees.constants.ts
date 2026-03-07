@@ -399,13 +399,8 @@ export const COMMITTEE_SETTINGS_FEATURES = [
     description: `Track and log all ${COMMITTEE_LABEL.singular.toLowerCase()} activity for compliance`,
     color: lfxColors.emerald[500],
   },
-  {
-    key: 'joinable',
-    icon: 'fa-light fa-users',
-    title: 'Joinable',
-    description: `Allow users to join the ${COMMITTEE_LABEL.singular.toLowerCase()} without invitation`,
-    color: lfxColors.amber[500],
-  },
+  // NOTE: The legacy 'joinable' boolean toggle has been replaced by the
+  // join_mode dropdown in the settings UI.  See JOIN_MODE_OPTIONS below.
   {
     key: 'public',
     icon: 'fa-light fa-eye',
@@ -466,7 +461,13 @@ export const JOIN_MODE_OPTIONS = [
  * - ambassador-program:     Outreach, evangelism, referral campaigns, ambassador engagement
  * - other:                  Catch-all for uncategorized groups; minimal generic dashboard
  */
-export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | 'working-group' | 'special-interest-group' | 'ambassador-program' | 'other';
+export type GroupBehavioralClass =
+  | 'governing-board'
+  | 'oversight-committee'
+  | 'working-group'
+  | 'special-interest-group'
+  | 'ambassador-program'
+  | 'other';
 
 /**
  * Maps PCC committee categories (20 raw types) to the 6 behavioral classes.

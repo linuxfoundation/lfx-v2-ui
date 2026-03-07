@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeCreateData,
+  CommitteeUpdateData,
+  CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupJoinApplicationRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -23,7 +29,15 @@ export class CommitteeController {
     });
 
     try {
-      const committees = await this.committeeService.getCommittees(req, req.query);
+      let committees = await this.committeeService.getCommittees(req, req.query);
+
+      // Non-admin users only see public groups + private groups they belong to
+      const hasWriterAccess = committees.some((c) => c.writer === true);
+      if (!hasWriterAccess) {
+        const myCommittees = await this.committeeService.getMyCommittees(req);
+        const myUids = new Set(myCommittees.map((c) => c.uid));
+        committees = committees.filter((c) => c.public || myUids.has(c.uid));
+      }
 
       logger.success(req, 'get_committees', startTime, {
         committee_count: committees.length,
@@ -51,6 +65,26 @@ export class CommitteeController {
       });
 
       res.json({ count });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/my
+   * Returns committees the current user is a member of, with their role in each.
+   */
+  public async getMyCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_committees', {});
+
+    try {
+      const myCommittees = await this.committeeService.getMyCommittees(req);
+
+      logger.success(req, 'get_my_committees', startTime, {
+        committee_count: myCommittees.length,
+      });
+
+      res.json(myCommittees);
     } catch (error) {
       next(error);
     }
@@ -626,6 +660,216 @@ export class CommitteeController {
       const documents = await this.committeeService.getCommitteeDocuments(req, id);
       logger.success(req, 'get_committee_documents', startTime, { committee_id: id, count: documents.length });
       res.json(documents);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Invite Endpoints ─────────────────────────────────────────────────────
+
+  /**
+   * POST /committees/:id/invites
+   * Send invite(s) to join the committee.
+   */
+  public async createInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'create_invites', { committee_id: id });
+
+    try {
+      const payload: CreateGroupInviteRequest = req.body;
+      const invites = await this.committeeService.createInvites(req, id, payload);
+
+      logger.success(req, 'create_invites', startTime, {
+        committee_id: id,
+        invite_count: invites.length,
+      });
+
+      res.status(201).json(invites);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/invites
+   */
+  public async getInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_invites', { committee_id: id });
+
+    try {
+      const invites = await this.committeeService.getInvites(req, id);
+
+      logger.success(req, 'get_invites', startTime, {
+        committee_id: id,
+        invite_count: invites.length,
+      });
+
+      res.json(invites);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/invites/:inviteId/accept
+   */
+  public async acceptInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, inviteId } = req.params;
+    const startTime = logger.startOperation(req, 'accept_invite', { committee_id: id, invite_id: inviteId });
+
+    try {
+      const invite = await this.committeeService.acceptInvite(req, id, inviteId);
+
+      logger.success(req, 'accept_invite', startTime, { committee_id: id, invite_id: inviteId });
+      res.json(invite);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/invites/:inviteId/decline
+   */
+  public async declineInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, inviteId } = req.params;
+    const startTime = logger.startOperation(req, 'decline_invite', { committee_id: id, invite_id: inviteId });
+
+    try {
+      const invite = await this.committeeService.declineInvite(req, id, inviteId);
+
+      logger.success(req, 'decline_invite', startTime, { committee_id: id, invite_id: inviteId });
+      res.json(invite);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /committees/:id/invites/:inviteId
+   * Revoke (cancel) a pending invite.
+   */
+  public async revokeInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, inviteId } = req.params;
+    const startTime = logger.startOperation(req, 'revoke_invite', { committee_id: id, invite_id: inviteId });
+
+    try {
+      await this.committeeService.revokeInvite(req, id, inviteId);
+
+      logger.success(req, 'revoke_invite', startTime, { committee_id: id, invite_id: inviteId });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Join / Leave Endpoints ───────────────────────────────────────────────
+
+  /**
+   * POST /committees/:id/join
+   * Self-join an open committee.
+   */
+  public async joinCommittee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'join_committee', { committee_id: id });
+
+    try {
+      const member = await this.committeeService.joinCommittee(req, id);
+
+      logger.success(req, 'join_committee', startTime, { committee_id: id });
+      res.status(201).json(member);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/leave
+   */
+  public async leaveCommittee(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'leave_committee', { committee_id: id });
+
+    try {
+      await this.committeeService.leaveCommittee(req, id);
+
+      logger.success(req, 'leave_committee', startTime, { committee_id: id });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Application Endpoints (join_mode = 'apply') ──────────────────────────
+
+  /**
+   * POST /committees/:id/applications
+   */
+  public async applyToJoin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'apply_to_join', { committee_id: id });
+
+    try {
+      const payload: GroupJoinApplicationRequest = req.body;
+      const application = await this.committeeService.applyToJoin(req, id, payload);
+
+      logger.success(req, 'apply_to_join', startTime, { committee_id: id });
+      res.status(201).json(application);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/applications
+   */
+  public async getApplications(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_applications', { committee_id: id });
+
+    try {
+      const applications = await this.committeeService.getApplications(req, id);
+
+      logger.success(req, 'get_applications', startTime, {
+        committee_id: id,
+        application_count: applications.length,
+      });
+
+      res.json(applications);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications/:applicationId/approve
+   */
+  public async approveApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, applicationId } = req.params;
+    const startTime = logger.startOperation(req, 'approve_application', { committee_id: id, application_id: applicationId });
+
+    try {
+      const application = await this.committeeService.approveApplication(req, id, applicationId);
+
+      logger.success(req, 'approve_application', startTime, { committee_id: id, application_id: applicationId });
+      res.json(application);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications/:applicationId/reject
+   */
+  public async rejectApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, applicationId } = req.params;
+    const startTime = logger.startOperation(req, 'reject_application', { committee_id: id, application_id: applicationId });
+
+    try {
+      const application = await this.committeeService.rejectApplication(req, id, applicationId);
+
+      logger.success(req, 'reject_application', startTime, { committee_id: id, application_id: applicationId });
+      res.json(application);
     } catch (error) {
       next(error);
     }

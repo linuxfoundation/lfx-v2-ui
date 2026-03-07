@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, ContentChild, input, output, TemplateRef } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { BreadcrumbItemClickEvent, BreadcrumbModule } from 'primeng/breadcrumb';
 
 @Component({
   selector: 'lfx-breadcrumb',
-  imports: [RouterModule, BreadcrumbModule],
+  imports: [RouterLink, BreadcrumbModule],
   templateUrl: './breadcrumb.component.html',
   styleUrl: './breadcrumb.component.scss',
 })

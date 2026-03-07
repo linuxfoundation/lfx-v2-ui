@@ -19,7 +19,13 @@ import {
   CommitteeUpdateData,
   CommitteeVote,
   CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupInvite,
+  GroupJoinApplication,
+  GroupJoinApplicationRequest,
   GroupMailingList,
+  GroupsIOMailingList,
+  GroupsIOService,
   PublicCommittee,
   PublicCommitteeLinks,
   PublicCommitteeMeeting,
@@ -202,17 +208,21 @@ export class CommitteeService {
       throw new ResourceNotFoundError('Committee', committeeId, {
         operation: 'get_committee_by_id',
         service: 'committee_service',
-        path: `/committees/${committeeId}`,
+        path: `/query/resources?type=committee`,
       });
     }
 
     // Fetch committee settings and mailing list in parallel
-    const [settings, fetchedMailingList] = await Promise.all([this.getCommitteeSettings(req, committeeId), this.getCommitteeMailingList(req, committeeId)]);
+    const [settings, mailingList] = await Promise.all([
+      this.getCommitteeSettings(req, committeeId),
+      this.getCommitteeMailingList(req, committeeId),
+    ]);
 
     const committeeWithSettings: Committee = {
       ...committee,
       ...settings,
-      ...(fetchedMailingList && { mailing_list: fetchedMailingList }),
+      // Only attach mailing_list if found (null means no list associated)
+      ...(mailingList !== null && { mailing_list: mailingList }),
     };
 
     // Add writer access field to the committee
@@ -668,6 +678,159 @@ export class CommitteeService {
     }
   }
 
+  // ── Invite & Join Methods ──────────────────────────────────────────────────
+  // These proxy to ITX endpoints. The ITX invite/join APIs are currently being
+  // built — these stubs call the expected paths so the frontend flow compiles
+  // end-to-end and can be tested once ITX ships.
+
+  /** Send invite(s) for a committee */
+  public async createInvites(req: Request, committeeId: string, payload: CreateGroupInviteRequest): Promise<GroupInvite[]> {
+    return this.microserviceProxy.proxyRequest<GroupInvite[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'POST', {}, payload);
+  }
+
+  /** List pending invites */
+  public async getInvites(req: Request, committeeId: string): Promise<GroupInvite[]> {
+    return this.microserviceProxy.proxyRequest<GroupInvite[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
+  }
+
+  /** Accept an invite */
+  public async acceptInvite(req: Request, committeeId: string, inviteId: string): Promise<GroupInvite> {
+    return this.microserviceProxy.proxyRequest<GroupInvite>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/accept`, 'POST');
+  }
+
+  /** Decline an invite */
+  public async declineInvite(req: Request, committeeId: string, inviteId: string): Promise<GroupInvite> {
+    return this.microserviceProxy.proxyRequest<GroupInvite>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/decline`, 'POST');
+  }
+
+  /** Revoke (cancel) a pending invite */
+  public async revokeInvite(req: Request, committeeId: string, inviteId: string): Promise<void> {
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}`, 'DELETE');
+  }
+
+  /** Self-join an open committee */
+  public async joinCommittee(req: Request, committeeId: string): Promise<CommitteeMember> {
+    return this.microserviceProxy.proxyRequest<CommitteeMember>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/join`, 'POST');
+  }
+
+  /** Leave a committee */
+  public async leaveCommittee(req: Request, committeeId: string): Promise<void> {
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/leave`, 'POST');
+  }
+
+  /** Apply to join (join_mode = 'apply') */
+  public async applyToJoin(req: Request, committeeId: string, payload: GroupJoinApplicationRequest): Promise<GroupJoinApplication> {
+    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, payload);
+  }
+
+  /** List pending applications */
+  public async getApplications(req: Request, committeeId: string): Promise<GroupJoinApplication[]> {
+    return this.microserviceProxy.proxyRequest<GroupJoinApplication[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
+  }
+
+  /** Approve a join application */
+  public async approveApplication(req: Request, committeeId: string, applicationId: string): Promise<GroupJoinApplication> {
+    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/applications/${applicationId}/approve`,
+      'POST'
+    );
+  }
+
+  /** Reject a join application */
+  public async rejectApplication(req: Request, committeeId: string, applicationId: string): Promise<GroupJoinApplication> {
+    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/applications/${applicationId}/reject`,
+      'POST'
+    );
+  }
+
+  /**
+   * Fetches the mailing list associated with a committee via reverse-lookup.
+   * The LFX V2 API stores the relationship on the mailing list side (mailing list has
+   * a `committees` array). We reverse-lookup by querying mailing lists tagged with
+   * `committee_uid:${committeeId}` and return the first match as a lightweight
+   * `GroupMailingList` summary (name, url, subscriber_count).
+   *
+   * @returns Lightweight mailing list summary, or null if no list is associated / on error
+   */
+  private async getCommitteeMailingList(req: Request, committeeId: string): Promise<GroupMailingList | null> {
+    try {
+      const params = {
+        type: 'groupsio_mailing_list',
+        tags: `committee_uid:${committeeId}`,
+      };
+
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        params
+      );
+
+      if (!resources || resources.length === 0) {
+        logger.debug(req, 'get_committee_mailing_list', 'No mailing list found for committee', {
+          committee_uid: committeeId,
+        });
+        return null;
+      }
+
+      const ml = resources[0].data;
+
+      // Attempt to construct the archive URL from the parent service's domain.
+      // The Groups.io URL pattern is: https://<domain>/g/<group_name>
+      let url: string | undefined;
+      if (ml.service_uid) {
+        try {
+          const serviceParams = {
+            type: 'groupsio_service',
+            tags: `service_uid:${ml.service_uid}`,
+          };
+
+          const { resources: serviceResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOService>>(
+            req,
+            'LFX_V2_SERVICE',
+            '/query/resources',
+            'GET',
+            serviceParams
+          );
+
+          if (serviceResources && serviceResources.length > 0) {
+            const service = serviceResources[0].data;
+            url = `https://${service.domain}/g/${ml.group_name}`;
+          }
+        } catch {
+          // URL enrichment is best-effort — continue without it
+          logger.debug(req, 'get_committee_mailing_list', 'Service fetch failed; mailing list URL will be omitted', {
+            committee_uid: committeeId,
+            service_uid: ml.service_uid,
+          });
+        }
+      }
+
+      logger.debug(req, 'get_committee_mailing_list', 'Mailing list found for committee', {
+        committee_uid: committeeId,
+        mailing_list_uid: ml.uid,
+        group_name: ml.group_name,
+      });
+
+      return {
+        name: ml.group_name,
+        url,
+        subscriber_count: ml.subscriber_count,
+      };
+    } catch {
+      logger.debug(req, 'get_committee_mailing_list', 'Failed to fetch mailing list for committee; returning null', {
+        committee_uid: committeeId,
+      });
+      return null;
+    }
+  }
+
   /**
    * Fetches committee settings by ID
    * @returns Committee settings or empty object if not found/error
@@ -719,22 +882,6 @@ export class CommitteeService {
       committee_uid: committeeId,
       settings_data: settingsData,
     });
-  }
-
-  /**
-   * Fetches the mailing list for a committee.
-   * Returns null if not found or on error.
-   */
-  private async getCommitteeMailingList(req: Request, committeeId: string): Promise<GroupMailingList | null> {
-    try {
-      const mailingList = await this.microserviceProxy.proxyRequest<GroupMailingList>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/mailing-list`, 'GET');
-      return mailingList || null;
-    } catch {
-      logger.debug(req, 'get_committee_mailing_list', 'Failed to fetch mailing list, returning null', {
-        committee_uid: committeeId,
-      });
-      return null;
-    }
   }
 
   // ── Public Endpoint Helpers ───────────────────────────────────────────────

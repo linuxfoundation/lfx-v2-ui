@@ -5,6 +5,7 @@ import { NgClass } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input, OnInit, output, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -34,6 +35,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
   imports: [
     NgClass,
     ReactiveFormsModule,
+    AvatarComponent,
     ButtonComponent,
     CardComponent,
     InputTextComponent,
