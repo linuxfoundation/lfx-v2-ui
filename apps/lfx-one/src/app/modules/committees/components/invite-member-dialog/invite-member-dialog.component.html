@@ -4,20 +4,22 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-5 p-2">
   <!-- Info -->
   <p class="text-sm text-gray-600">
-    Invite colleagues to join <strong>{{ committee?.display_name || committee?.name }}</strong>. They will receive an email with a one-click link to accept.
+    Invite colleagues to join <strong>{{ committee?.display_name || committee?.name }}</strong
+    >. They will receive an email with a one-click link to accept.
   </p>
 
   <!-- Email addresses -->
   <div class="flex flex-col gap-1">
     <label for="invite-emails" class="text-sm font-semibold text-gray-900">Email addresses</label>
-    <textarea
+    <lfx-textarea
+      [form]="form"
+      control="emails"
+      [rows]="3"
+      placeholder="Enter email addresses separated by commas or new lines"
       id="invite-emails"
-      formControlName="emails"
-      rows="3"
-      class="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
-      placeholder="Enter email addresses separated by commas or new lines&#10;e.g. alice@example.com, bob@example.com"
-      data-testid="invite-emails-input">
-    </textarea>
+      styleClass="w-full"
+      dataTest="invite-emails-input">
+    </lfx-textarea>
     @if (form.get('emails')?.touched && form.get('emails')?.hasError('required')) {
       <span class="text-xs text-red-500">At least one email address is required</span>
     }
@@ -26,14 +28,15 @@
   <!-- Optional message -->
   <div class="flex flex-col gap-1">
     <label for="invite-message" class="text-sm font-semibold text-gray-900">Personal message <span class="text-gray-400 font-normal">(optional)</span></label>
-    <textarea
-      id="invite-message"
-      formControlName="message"
-      rows="2"
-      class="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+    <lfx-textarea
+      [form]="form"
+      control="message"
+      [rows]="2"
       placeholder="Add a personal note to the invite email..."
-      data-testid="invite-message-input">
-    </textarea>
+      id="invite-message"
+      styleClass="w-full"
+      dataTest="invite-message-input">
+    </lfx-textarea>
   </div>
 
   <!-- Actions -->

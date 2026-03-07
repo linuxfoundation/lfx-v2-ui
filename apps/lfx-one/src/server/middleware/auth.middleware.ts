@@ -13,8 +13,6 @@ import { logger } from '../services/logger.service';
  * Default route configuration for the application
  * Ordered by specificity - more specific patterns should come first
  */
-// TODO: TEMPORARY - Auth bypassed for local development preview
-// Revert this block when Auth0 credentials are available
 const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Health check - completely public
   { pattern: '/health', type: 'api', auth: 'public' },
@@ -25,11 +23,11 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Public meeting join - no authentication required
   { pattern: '/meetings/', type: 'ssr', auth: 'optional' },
 
-  // TEMPORARILY set to optional for local dev (was: auth: 'required', tokenRequired: true)
-  { pattern: '/api', type: 'api', auth: 'optional', tokenRequired: false },
+  // Protected API routes - require authentication and bearer token
+  { pattern: '/api', type: 'api', auth: 'required', tokenRequired: true },
 
-  // TEMPORARILY set to optional for local dev (was: auth: 'required')
-  { pattern: '/', type: 'ssr', auth: 'optional' },
+  // All other routes - require authentication
+  { pattern: '/', type: 'ssr', auth: 'required' },
 ];
 
 /**

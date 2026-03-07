@@ -14,26 +14,24 @@
   <!-- Info note -->
   <div class="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
     <i class="fa-light fa-circle-info text-blue-600 mt-0.5"></i>
-    <p class="text-sm text-blue-800">
-      This group requires admin approval. Your request will be reviewed by a group maintainer.
-    </p>
+    <p class="text-sm text-blue-800">This group requires admin approval. Your request will be reviewed by a group maintainer.</p>
   </div>
 
   <!-- Application form -->
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
     <!-- Reason field -->
     <div class="flex flex-col gap-1.5">
-      <label for="reason" class="text-sm font-medium text-gray-700">
-        Why do you want to join this group? <span class="text-red-500">*</span>
-      </label>
-      <textarea
-        id="reason"
-        formControlName="reason"
-        rows="4"
-        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+      <label for="reason" class="text-sm font-medium text-gray-700"> Why do you want to join this group? <span class="text-red-500">*</span> </label>
+      <lfx-textarea
+        [form]="form"
+        control="reason"
+        [rows]="4"
         placeholder="Describe your interest, relevant experience, or how you plan to contribute..."
-        maxlength="500">
-      </textarea>
+        id="reason"
+        [maxlength]="500"
+        styleClass="w-full resize-none"
+        dataTest="join-reason-input">
+      </lfx-textarea>
       <div class="flex justify-between">
         @if (form.controls.reason.touched && form.controls.reason.errors) {
           <span class="text-xs text-red-500">
@@ -53,7 +51,8 @@
     <!-- Actions -->
     <div class="flex justify-end gap-2 pt-2 border-t border-gray-200">
       <lfx-button label="Cancel" severity="secondary" size="small" [outlined]="true" (onClick)="onCancel()"> </lfx-button>
-      <lfx-button label="Submit Request" icon="fa-light fa-paper-plane" size="small" type="submit" [loading]="submitting()" [disabled]="submitting()"> </lfx-button>
+      <lfx-button label="Submit Request" icon="fa-light fa-paper-plane" size="small" type="submit" [loading]="submitting()" [disabled]="submitting()">
+      </lfx-button>
     </div>
   </form>
 </div>
