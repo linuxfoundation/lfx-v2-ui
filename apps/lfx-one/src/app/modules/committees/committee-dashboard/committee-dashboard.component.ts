@@ -49,8 +49,8 @@ export class CommitteeDashboardComponent {
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading: WritableSignal<boolean>;
   public myCommitteesLoading: WritableSignal<boolean>;
-  public categoryFilter: WritableSignal<string | null>;
-  public votingStatusFilter: WritableSignal<string | null>;
+  public categoryFilter: Signal<string | null>;
+  public votingStatusFilter: Signal<string | null>;
   public refresh: BehaviorSubject<void>;
 
   // ── Forms ─────────────────────────────────────────────────────────────────
@@ -133,9 +133,9 @@ export class CommitteeDashboardComponent {
 
     // Initialize search form
     this.searchForm = this.initializeSearchForm();
-    this.categoryFilter = signal<string | null>(null);
-    this.votingStatusFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
+    this.categoryFilter = this.initializeCategoryFilter();
+    this.votingStatusFilter = this.initializeVotingStatusFilter();
 
     // Initialize filters
     this.categories = this.initializeCategories();
@@ -147,18 +147,6 @@ export class CommitteeDashboardComponent {
     this.publicCommittees = computed(() => this.committees().filter((c) => c.public).length);
     this.activeVoting = computed(() => this.committees().filter((c) => c.enable_voting).length);
     this.totalMembers = computed(() => this.committees().reduce((sum, c) => sum + (c.total_members || 0), 0));
-  }
-
-  public onCategoryChange(value: string | null): void {
-    this.categoryFilter.set(value);
-  }
-
-  public onVotingStatusChange(value: string | null): void {
-    this.votingStatusFilter.set(value);
-  }
-
-  public onSearch(): void {
-    // Trigger search through form control value changes
   }
 
   public openCreateDialog(): void {
@@ -328,6 +316,14 @@ export class CommitteeDashboardComponent {
 
   private initializeSearchTerm(): Signal<string> {
     return toSignal(this.searchForm.get('search')!.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), { initialValue: '' });
+  }
+
+  private initializeCategoryFilter(): Signal<string | null> {
+    return toSignal(this.searchForm.get('category')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
+  }
+
+  private initializeVotingStatusFilter(): Signal<string | null> {
+    return toSignal(this.searchForm.get('votingStatus')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
   }
 
   private initializeCommittees(): Signal<Committee[]> {
