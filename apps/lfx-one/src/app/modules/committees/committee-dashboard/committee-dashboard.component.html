@@ -115,28 +115,37 @@
                     }
                     <!-- Channels: always visible; grayed out when not yet available from API -->
                     @if (committee.mailing_list?.url) {
-                      <a [href]="committee.mailing_list!.url" target="_blank" rel="noopener"
+                      <a
+                        [href]="committee.mailing_list!.url"
+                        target="_blank"
+                        rel="noopener"
                         class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
-                        pTooltip="Mailing list" tooltipPosition="top"
+                        pTooltip="Mailing list"
+                        tooltipPosition="top"
                         (click)="$event.stopPropagation()">
                         <i class="fa-light fa-envelope w-3.5 h-3.5"></i>
                       </a>
                     } @else {
-                      <span class="flex items-center gap-1 text-gray-300 cursor-default"
-                        pTooltip="Mailing list not yet available" tooltipPosition="top">
+                      <span class="flex items-center gap-1 text-gray-300 cursor-default" pTooltip="Mailing list not yet available" tooltipPosition="top">
                         <i class="fa-light fa-envelope w-3.5 h-3.5"></i>
                       </span>
                     }
                     @if (committee.chat_channel?.url) {
-                      <a [href]="committee.chat_channel!.url" target="_blank" rel="noopener"
+                      <a
+                        [href]="committee.chat_channel!.url"
+                        target="_blank"
+                        rel="noopener"
                         class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
-                        [pTooltip]="committee.chat_channel!.platform === 'slack' ? 'Slack' : 'Discord'" tooltipPosition="top"
+                        [pTooltip]="committee.chat_channel!.platform === 'slack' ? 'Slack' : 'Discord'"
+                        tooltipPosition="top"
                         (click)="$event.stopPropagation()">
-                        <i class="fa-brands w-3.5 h-3.5" [class.fa-slack]="committee.chat_channel!.platform === 'slack'" [class.fa-discord]="committee.chat_channel!.platform === 'discord'"></i>
+                        <i
+                          class="fa-brands w-3.5 h-3.5"
+                          [class.fa-slack]="committee.chat_channel!.platform === 'slack'"
+                          [class.fa-discord]="committee.chat_channel!.platform === 'discord'"></i>
                       </a>
                     } @else {
-                      <span class="flex items-center gap-1 text-gray-300 cursor-default"
-                        pTooltip="Chat channel not yet available" tooltipPosition="top">
+                      <span class="flex items-center gap-1 text-gray-300 cursor-default" pTooltip="Chat channel not yet available" tooltipPosition="top">
                         <i class="fa-light fa-comment w-3.5 h-3.5"></i>
                       </span>
                     }

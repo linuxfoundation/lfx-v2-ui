@@ -461,13 +461,7 @@ export const JOIN_MODE_OPTIONS = [
  * - ambassador-program:     Outreach, evangelism, referral campaigns, ambassador engagement
  * - other:                  Catch-all for uncategorized groups; minimal generic dashboard
  */
-export type GroupBehavioralClass =
-  | 'governing-board'
-  | 'oversight-committee'
-  | 'working-group'
-  | 'special-interest-group'
-  | 'ambassador-program'
-  | 'other';
+export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | 'working-group' | 'special-interest-group' | 'ambassador-program' | 'other';
 
 /**
  * Maps PCC committee categories (20 raw types) to the 6 behavioral classes.
