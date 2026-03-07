@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, model, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -99,8 +99,8 @@ export class CommitteeViewComponent {
   private readonly personaService = inject(PersonaService);
   private readonly projectService = inject(ProjectService);
 
-  // ── Model Signals ───────────────────────────────────────────────────────
-  public activeTab = model<string | number | undefined>(0);
+  // ── Tab State ───────────────────────────────────────────────────────────
+  public activeTab = signal<string>('overview');
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public members: WritableSignal<CommitteeMember[]>;
