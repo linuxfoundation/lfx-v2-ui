@@ -174,3 +174,148 @@ export interface CommitteeSettingsData {
   /** Update show meeting attendees setting */
   show_meeting_attendees?: boolean;
 }
+
+// ── Committee Dashboard Data Types ─────────────────────────────────────
+
+/** Vote status */
+export type CommitteeVoteStatus = 'open' | 'closed' | 'cancelled';
+
+/** An open or recent vote associated with a committee */
+export interface CommitteeVote {
+  uid: string;
+  title: string;
+  status: CommitteeVoteStatus;
+  deadline: string;
+  votesFor: number;
+  votesAgainst: number;
+  votesAbstain: number;
+  totalEligible: number;
+  created_by: string;
+}
+
+/** A single budget category line item */
+export interface CommitteeBudgetCategory {
+  name: string;
+  allocated: number;
+  spent: number;
+}
+
+/** Budget summary for a governing board's fiscal year */
+export interface CommitteeBudgetSummary {
+  fiscal_year: string;
+  total_budget: number;
+  spent: number;
+  committed: number;
+  remaining: number;
+  categories: CommitteeBudgetCategory[];
+}
+
+/** A passed/failed resolution from a governing or oversight committee */
+export interface CommitteeResolution {
+  uid: string;
+  title: string;
+  date: string;
+  result: string;
+  votesFor: number;
+  votesAgainst: number;
+}
+
+/** Activity type for collaboration-class groups */
+export type CommitteeActivityType = 'pr_merged' | 'issue_opened' | 'release' | 'discussion' | 'comment' | 'review';
+
+/** A recent activity event shown in working-group / oversight-committee dashboards */
+export interface CommitteeActivity {
+  uid: string;
+  type: CommitteeActivityType;
+  title: string;
+  author: string;
+  repo: string;
+  timestamp: string;
+  icon: string;
+  color: string;
+}
+
+/** A top contributor shown in working-group / oversight-committee dashboards */
+export interface CommitteeContributor {
+  name: string;
+  commits: number;
+  prs: number;
+  reviews: number;
+  org: string;
+}
+
+/** Status of a working-group deliverable */
+export type CommitteeDeliverableStatus = 'not-started' | 'in-progress' | 'completed' | 'blocked';
+
+/** A deliverable / milestone tracked by a working group */
+export interface CommitteeDeliverable {
+  uid: string;
+  title: string;
+  status: CommitteeDeliverableStatus;
+  progress: number;
+  owner: string;
+  dueDate: string;
+}
+
+/** A discussion thread in a special-interest-group dashboard */
+export interface CommitteeDiscussionThread {
+  uid: string;
+  title: string;
+  author: string;
+  replies: number;
+  lastActivity: string;
+  tags: string[];
+}
+
+/** Format of a committee-hosted event */
+export type CommitteeEventType = 'Webinar' | 'In-Person' | 'Virtual' | 'Hybrid';
+
+/** An upcoming event shown in a special-interest-group dashboard */
+export interface CommitteeEvent {
+  uid: string;
+  title: string;
+  type: CommitteeEventType;
+  date: string;
+  speaker: string;
+  attendees: number;
+}
+
+/** Status of an ambassador outreach campaign */
+export type CommitteeCampaignStatus = 'active' | 'upcoming' | 'ended' | 'paused';
+
+/** An outreach campaign shown in an ambassador-program dashboard */
+export interface CommitteeOutreachCampaign {
+  uid: string;
+  title: string;
+  status: CommitteeCampaignStatus;
+  reach: number;
+  conversions: number;
+  conversionRate: number;
+  icon: string;
+  color: string;
+}
+
+/** Aggregate engagement metrics for an ambassador-program dashboard */
+export interface CommitteeEngagementMetrics {
+  totalReach: number;
+  newMembers30d: number;
+  eventAttendance: number;
+  newsletterOpenRate: number;
+  socialImpressions: number;
+  ambassadorCount: number;
+}
+
+/** Type of a committee document entry */
+export type CommitteeDocumentType = 'file' | 'link';
+
+/** A document or resource link associated with a committee */
+export interface CommitteeDocument {
+  uid: string;
+  type: CommitteeDocumentType;
+  name: string;
+  url?: string;
+  mime_type?: string;
+  file_size?: number;
+  updated_at?: string;
+  uploaded_by?: string;
+}

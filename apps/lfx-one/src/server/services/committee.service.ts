@@ -3,10 +3,21 @@
 
 import {
   Committee,
+  CommitteeActivity,
+  CommitteeBudgetSummary,
+  CommitteeContributor,
   CommitteeCreateData,
+  CommitteeDeliverable,
+  CommitteeDiscussionThread,
+  CommitteeDocument,
+  CommitteeEngagementMetrics,
+  CommitteeEvent,
   CommitteeMember,
+  CommitteeOutreachCampaign,
+  CommitteeResolution,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CommitteeVote,
   CreateCommitteeMemberRequest,
   GroupMailingList,
   PublicCommittee,
@@ -14,7 +25,6 @@ import {
   PublicCommitteeMeeting,
   PublicCommitteeMember,
   QueryServiceCountResponse,
-  QueryServiceItem,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
 import { RecurrenceType } from '@lfx-one/shared/enums';
@@ -175,13 +185,9 @@ export class CommitteeService {
     // Fallback: search all committees via query service and find by UID
     if (!committee) {
       try {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          { type: 'committee' }
-        );
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'committee',
+        });
         const match = resources?.find((r) => r.data?.uid === committeeId || r.id === committeeId);
         committee = match?.data || null;
         if (committee) {
@@ -465,6 +471,201 @@ export class CommitteeService {
     });
 
     return userMemberships;
+  }
+
+  // ── Dashboard Sub-Resource Methods ──────────────────────────────────────
+
+  /** Fetches open votes for a committee */
+  public async getCommitteeVotes(req: Request, committeeId: string): Promise<CommitteeVote[]> {
+    logger.debug(req, 'get_committee_votes', 'Fetching votes', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'vote',
+        tags: `committee_uid:${committeeId}`,
+        status: 'open',
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_votes', 'Failed to fetch votes, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches resolutions for a committee */
+  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<CommitteeResolution[]> {
+    logger.debug(req, 'get_committee_resolutions', 'Fetching resolutions', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeResolution>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'resolution', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_resolutions', 'Failed to fetch resolutions, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches recent activity for a committee */
+  public async getCommitteeActivity(req: Request, committeeId: string): Promise<CommitteeActivity[]> {
+    logger.debug(req, 'get_committee_activity', 'Fetching activity', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeActivity>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'committee_activity', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_activity', 'Failed to fetch activity, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches top contributors for a committee */
+  public async getCommitteeContributors(req: Request, committeeId: string): Promise<CommitteeContributor[]> {
+    logger.debug(req, 'get_committee_contributors', 'Fetching contributors', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeContributor>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'committee_contributor', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_contributors', 'Failed to fetch contributors, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches deliverables for a committee */
+  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<CommitteeDeliverable[]> {
+    logger.debug(req, 'get_committee_deliverables', 'Fetching deliverables', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDeliverable>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'deliverable', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_deliverables', 'Failed to fetch deliverables, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches discussion threads for a committee */
+  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<CommitteeDiscussionThread[]> {
+    logger.debug(req, 'get_committee_discussions', 'Fetching discussions', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDiscussionThread>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'discussion_thread', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_discussions', 'Failed to fetch discussions, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches upcoming events for a committee */
+  public async getCommitteeEvents(req: Request, committeeId: string): Promise<CommitteeEvent[]> {
+    logger.debug(req, 'get_committee_events', 'Fetching events', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeEvent>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_event',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_events', 'Failed to fetch events, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches outreach campaigns for a committee */
+  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<CommitteeOutreachCampaign[]> {
+    logger.debug(req, 'get_committee_campaigns', 'Fetching campaigns', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeOutreachCampaign>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'outreach_campaign', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_campaigns', 'Failed to fetch campaigns, returning empty', { committee_uid: committeeId });
+      return [];
+    }
+  }
+
+  /** Fetches engagement metrics for a committee */
+  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<CommitteeEngagementMetrics | null> {
+    logger.debug(req, 'get_committee_engagement', 'Fetching engagement metrics', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeEngagementMetrics>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'engagement_metrics', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.length > 0 ? resources[0].data : null;
+    } catch {
+      logger.warning(req, 'get_committee_engagement', 'Failed to fetch engagement, returning null', { committee_uid: committeeId });
+      return null;
+    }
+  }
+
+  /** Fetches budget summary for a committee */
+  public async getCommitteeBudget(req: Request, committeeId: string): Promise<CommitteeBudgetSummary | null> {
+    logger.debug(req, 'get_committee_budget', 'Fetching budget', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeBudgetSummary>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'budget_summary', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.length > 0 ? resources[0].data : null;
+    } catch {
+      logger.warning(req, 'get_committee_budget', 'Failed to fetch budget, returning null', { committee_uid: committeeId });
+      return null;
+    }
+  }
+
+  /** Fetches documents for a committee */
+  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
+    logger.debug(req, 'get_committee_documents', 'Fetching documents', { committee_uid: committeeId });
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDocument>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { type: 'committee_document', tags: `committee_uid:${committeeId}` }
+      );
+      return resources.map((r) => r.data);
+    } catch {
+      logger.warning(req, 'get_committee_documents', 'Failed to fetch documents, returning empty', { committee_uid: committeeId });
+      return [];
+    }
   }
 
   /**

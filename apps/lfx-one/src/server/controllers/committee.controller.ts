@@ -463,4 +463,171 @@ export class CommitteeController {
       next(error);
     }
   }
+
+  // ── Dashboard Sub-Resource Endpoints ─────────────────────────────────────
+
+  /**
+   * GET /committees/:id/votes
+   */
+  public async getCommitteeVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_votes', { committee_id: id });
+    try {
+      const votes = await this.committeeService.getCommitteeVotes(req, id);
+      logger.success(req, 'get_committee_votes', startTime, { committee_id: id, count: votes.length });
+      res.json(votes);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/resolutions
+   */
+  public async getCommitteeResolutions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_resolutions', { committee_id: id });
+    try {
+      const resolutions = await this.committeeService.getCommitteeResolutions(req, id);
+      logger.success(req, 'get_committee_resolutions', startTime, { committee_id: id, count: resolutions.length });
+      res.json(resolutions);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/activity
+   */
+  public async getCommitteeActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_activity', { committee_id: id });
+    try {
+      const activity = await this.committeeService.getCommitteeActivity(req, id);
+      logger.success(req, 'get_committee_activity', startTime, { committee_id: id, count: activity.length });
+      res.json(activity);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/contributors
+   */
+  public async getCommitteeContributors(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_contributors', { committee_id: id });
+    try {
+      const contributors = await this.committeeService.getCommitteeContributors(req, id);
+      logger.success(req, 'get_committee_contributors', startTime, { committee_id: id, count: contributors.length });
+      res.json(contributors);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/deliverables
+   */
+  public async getCommitteeDeliverables(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_deliverables', { committee_id: id });
+    try {
+      const deliverables = await this.committeeService.getCommitteeDeliverables(req, id);
+      logger.success(req, 'get_committee_deliverables', startTime, { committee_id: id, count: deliverables.length });
+      res.json(deliverables);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/discussions
+   */
+  public async getCommitteeDiscussions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_discussions', { committee_id: id });
+    try {
+      const discussions = await this.committeeService.getCommitteeDiscussions(req, id);
+      logger.success(req, 'get_committee_discussions', startTime, { committee_id: id, count: discussions.length });
+      res.json(discussions);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/events
+   */
+  public async getCommitteeEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_events', { committee_id: id });
+    try {
+      const events = await this.committeeService.getCommitteeEvents(req, id);
+      logger.success(req, 'get_committee_events', startTime, { committee_id: id, count: events.length });
+      res.json(events);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/campaigns
+   */
+  public async getCommitteeCampaigns(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_campaigns', { committee_id: id });
+    try {
+      const campaigns = await this.committeeService.getCommitteeCampaigns(req, id);
+      logger.success(req, 'get_committee_campaigns', startTime, { committee_id: id, count: campaigns.length });
+      res.json(campaigns);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/engagement
+   */
+  public async getCommitteeEngagement(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_engagement', { committee_id: id });
+    try {
+      const metrics = await this.committeeService.getCommitteeEngagement(req, id);
+      logger.success(req, 'get_committee_engagement', startTime, { committee_id: id });
+      res.json(metrics);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/budget
+   */
+  public async getCommitteeBudget(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_budget', { committee_id: id });
+    try {
+      const budget = await this.committeeService.getCommitteeBudget(req, id);
+      logger.success(req, 'get_committee_budget', startTime, { committee_id: id });
+      res.json(budget);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/documents
+   */
+  public async getCommitteeDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_documents', { committee_id: id });
+    try {
+      const documents = await this.committeeService.getCommitteeDocuments(req, id);
+      logger.success(req, 'get_committee_documents', startTime, { committee_id: id, count: documents.length });
+      res.json(documents);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
