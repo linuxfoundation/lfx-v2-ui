@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -49,6 +49,7 @@ import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap } from 'rxjs';
 
 import { FileSizePipe } from '@pipes/file-size.pipe';
@@ -67,6 +68,11 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
     ApplicationReviewComponent,
     CommitteeMembersComponent,
     DashboardMeetingCardComponent,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
     NgClass,
     FormsModule,
     ConfirmDialogModule,
@@ -92,6 +98,9 @@ export class CommitteeViewComponent {
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
   private readonly projectService = inject(ProjectService);
+
+  // ── Model Signals ───────────────────────────────────────────────────────
+  public activeTab = model<string | number | undefined>(0);
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public members: WritableSignal<CommitteeMember[]>;
