@@ -9,14 +9,7 @@
       <!-- Member Actions -->
       <div class="flex gap-2">
         @if (canInviteMembers()) {
-          <lfx-button
-            label="Invite"
-            icon="fa-light fa-paper-plane"
-            size="small"
-            severity="primary"
-            (onClick)="openInviteMemberDialog()"
-            data-testid="invite-member-btn">
-          </lfx-button>
+          <lfx-button label="Invite" icon="fa-light fa-paper-plane" size="small" severity="primary" (onClick)="openInviteMemberDialog()" data-testid="invite-member-btn"> </lfx-button>
         }
       </div>
     </div>

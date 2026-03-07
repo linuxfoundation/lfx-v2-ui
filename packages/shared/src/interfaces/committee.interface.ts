@@ -215,8 +215,6 @@ export interface Committee {
   project_uid: string;
   /** Associated project name (populated from project data) */
   project_name?: string;
-  /** Associated foundation name (populated from project data) */
-  foundation_name?: string;
   /** Calendar visibility settings */
   calendar?: {
     /** Whether committee calendar is public */

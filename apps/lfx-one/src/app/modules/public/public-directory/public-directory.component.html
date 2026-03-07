@@ -148,7 +148,7 @@
       @if (filteredCommittees().length > 0) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (committee of filteredCommittees(); track committee.uid) {
-            <a [routerLink]="['/public/groups', committee.uid]" class="block no-underline group h-full">
+            <a [routerLink]="['/public/groups', committee.uid]" class="block no-underline group">
               <div class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col">
                 <!-- Card Body -->
                 <div class="p-6 flex-1 flex flex-col">
