@@ -1121,6 +1121,12 @@ export function wrapWithMockFallback(app: Express): void {
     res.json(MOCK_COMMITTEES);
   });
 
+  // Always serve mock data for /public/api/committees in dev (real API has no mailing list resources)
+  app.get('/public/api/committees', (_req: Request, res: Response) => {
+    console.info('[DEV MOCK] Serving mock public committees with mailing list data');
+    res.json(MOCK_COMMITTEES.filter((c: any) => c.public));
+  });
+
   // Fallback for GET /api/meetings
   app.get('/api/meetings', async (req: Request, res: Response, next: NextFunction) => {
     const reachable = await isUpstreamReachable();
