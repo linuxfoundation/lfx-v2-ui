@@ -60,6 +60,8 @@ export interface Committee {
   project_uid: string;
   /** Associated project name (populated from project data) */
   project_name?: string;
+  /** Foundation name this committee belongs to (populated from project hierarchy) */
+  foundation_name?: string;
   /** Calendar visibility settings */
   calendar?: {
     /** Whether committee calendar is public */
@@ -73,6 +75,44 @@ export interface Committee {
   member_visibility?: CommitteeMemberVisibility;
   /** Whether to show meeting attendees by default */
   show_meeting_attendees?: boolean;
+  /** Whether users can join the committee directly */
+  joinable?: boolean;
+  /** Committee mailing list information */
+  mailing_list?: GroupMailingList;
+  /** Committee chat channel information (Slack/Discord) */
+  chat_channel?: GroupChatChannel;
+  /** Committee chair leadership */
+  chair?: CommitteeLeader;
+  /** Committee co-chair leadership */
+  co_chair?: CommitteeLeader;
+}
+
+/**
+ * Mailing list associated with a committee
+ */
+export interface GroupMailingList {
+  name: string;
+  url?: string;
+  subscriber_count?: number;
+}
+
+/**
+ * Chat channel associated with a committee (Slack/Discord)
+ */
+export interface GroupChatChannel {
+  platform: 'slack' | 'discord';
+  name: string;
+  url?: string;
+}
+
+/**
+ * Committee leadership position (Chair/Co-Chair)
+ */
+export interface CommitteeLeader {
+  first_name?: string;
+  last_name?: string;
+  organization?: string;
+  elected_date?: string;
 }
 
 /**

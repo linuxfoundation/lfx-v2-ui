@@ -14,6 +14,8 @@ Thank you for your interest in contributing to LFX One! This document provides g
 - [Architecture Guidelines](#architecture-guidelines)
 - [Commit Messages](#commit-messages)
 - [Pull Request Process](#pull-request-process)
+  - [PR Size Guidelines](#pr-size-guidelines)
+  - [Branch Naming](#branch-naming)
 - [Testing](#testing)
 
 ## Code of Conduct
@@ -262,16 +264,56 @@ This adds a `Signed-off-by` line to your commit message.
 4. **License Headers**: Verify all new files have proper license headers
 5. **Clear Description**: Provide a clear description of changes in the PR
 6. **Link Issues**: Reference any related issues
-7. **Deploy Preview**: (Optional) Deploy and preview the feature or
+7. **JIRA Tracking**: Every PR must be associated with a JIRA ticket (project key: LFXV2)
+8. **Deploy Preview**: (Optional) Deploy and preview the feature or
    change in a hosted environment
 
 ### PR Title Format
 
-Use the same conventional commit format for PR titles:
+Use the same conventional commit format for PR titles (all lowercase, no JIRA ticket in the title):
 
 ```text
 feat(component): add new table component
+fix(auth): resolve token refresh on expired session
 ```
+
+### PR Size Guidelines
+
+Keep pull requests small and reviewable. Target a maximum of **~300 lines of net change** (insertions minus deletions). Smaller PRs lead to faster reviews, fewer bugs, and easier reverts.
+
+**What counts toward the limit**: Application code changes (components, services, routes, templates, styles, tests). **What doesn't count**: Auto-generated files, lock files, and large deletions of deprecated code (though these should still be separate PRs).
+
+**When a feature touches multiple layers** (e.g., server + component + cleanup), use stacked PRs to keep each one focused:
+
+| PR   | Scope                 | Example                                      |
+| ---- | --------------------- | -------------------------------------------- |
+| PR 1 | Server/infrastructure | Auth middleware, route config, API endpoints |
+| PR 2 | Component UI          | Templates, styles, component logic           |
+| PR 3 | Cleanup/deletion      | Remove deprecated code, delete dead files    |
+| PR 4 | Tests                 | E2E tests, unit tests for the new feature    |
+
+Use GitHub's base branch feature to stack them: PR 2 targets PR 1's branch, PR 3 targets PR 2's branch, etc. Each PR is independently reviewable and revertable.
+
+**Red flags that a PR is too large**:
+
+- More than 10 files changed
+- More than 500 lines of net change
+- Mixing unrelated concerns (feature + refactor + cleanup)
+- Reviewer needs more than 30 minutes to understand the changes
+
+### Branch Naming
+
+Branches must follow the pattern `type/LFXV2-{ticket}`:
+
+```text
+feat/LFXV2-123
+fix/LFXV2-456
+docs/LFXV2-789
+chore/LFXV2-101
+ci/LFXV2-202
+```
+
+The type prefix must match one of the valid commit types (`feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`, `build`, `revert`).
 
 ## Testing
 

@@ -4,7 +4,7 @@
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
@@ -14,13 +14,14 @@ import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
+import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
 
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
 
 @Component({
   selector: 'lfx-committee-dashboard',
-  imports: [ButtonComponent, CardComponent, CommitteeTableComponent],
+  imports: [ButtonComponent, CardComponent, CommitteeTableComponent, RouterLink, TooltipModule],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',
 })
@@ -57,6 +58,10 @@ export class CommitteeDashboardComponent {
   public foundationCreateCommitteeFlag: Signal<boolean>;
   public canCreateGroup: Signal<boolean>;
 
+  // My committees (user's own groups)
+  public myCommittees: WritableSignal<(Committee & { myRole?: string })[]>;
+  public myCommitteesLoading: WritableSignal<boolean>;
+
   // Statistics calculations
   public totalCommittees: Signal<number>;
   public publicCommittees: Signal<number>;
@@ -84,6 +89,8 @@ export class CommitteeDashboardComponent {
 
     // Initialize state
     this.committeesLoading = signal<boolean>(true);
+    this.myCommittees = signal<(Committee & { myRole?: string })[]>([]);
+    this.myCommitteesLoading = signal<boolean>(false);
     this.refresh = new BehaviorSubject<void>(undefined);
 
     // Initialize data
@@ -140,6 +147,15 @@ export class CommitteeDashboardComponent {
 
   public onCommitteeClick(committee: Committee): void {
     this.router.navigate(['/groups', committee.uid]);
+  }
+
+  public leaveGroup(committee: Committee): void {
+    // TODO: Implement leave group API call
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Leave Group',
+      detail: `Leave group "${committee.name}" — not yet implemented`,
+    });
   }
 
   private initializeSearchForm(): FormGroup {
