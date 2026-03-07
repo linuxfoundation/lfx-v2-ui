@@ -26,9 +26,158 @@
             </lfx-button>
           }
         </div>
-        <p class="mt-2 text-gray-500" data-testid="dashboard-hero-description">Organize people and governance for your project.</p>
+        <p class="mt-2 text-gray-500" data-testid="dashboard-hero-description">Manage groups, committees, and governance for your project.</p>
       </div>
+
+      <!-- Statistics Bar -->
+      @if (committees().length > 0) {
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-testid="dashboard-stats-bar">
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-gray-900">{{ totalCommittees() | number }}</p>
+              <p class="text-xs text-gray-500 mt-1">Total {{ committeeLabelPlural }}</p>
+            </div>
+          </lfx-card>
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-gray-900">{{ publicCommittees() | number }}</p>
+              <p class="text-xs text-gray-500 mt-1">Public</p>
+            </div>
+          </lfx-card>
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-emerald-600">{{ activeVoting() | number }}</p>
+              <p class="text-xs text-gray-500 mt-1">Active Voting</p>
+            </div>
+          </lfx-card>
+          <lfx-card>
+            <div class="text-center py-2">
+              <p class="text-2xl font-semibold text-gray-900">{{ totalMembers() | number }}</p>
+              <p class="text-xs text-gray-500 mt-1">Total Members</p>
+            </div>
+          </lfx-card>
+        </div>
+      }
     </div>
+
+    <!-- My Groups Section -->
+    @if (myCommittees().length > 0) {
+      <div class="mb-8">
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabelPlural }}</h2>
+          <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ myCommittees().length }}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @for (committee of myCommittees(); track committee.uid) {
+            <a [routerLink]="['/groups', committee.uid]" class="block no-underline">
+              <lfx-card styleClass="hover:shadow-md transition-shadow cursor-pointer h-full">
+                <div class="flex flex-col h-full">
+                  <!-- Header: Name + Role Badge -->
+                  <div class="flex items-start justify-between gap-2 mb-3">
+                    <div class="min-w-0 flex-1">
+                      <h3 class="text-sm font-semibold text-gray-900 truncate">{{ committee.display_name || committee.name }}</h3>
+                      <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs text-gray-500">{{ committee.category }}</span>
+                        @if (!committee.public) {
+                          <i class="fa-light fa-lock w-3 h-3 text-gray-400"></i>
+                        }
+                      </div>
+                    </div>
+                    <!-- Role Badge -->
+                    <span
+                      class="inline-flex items-center text-xs font-medium rounded-full px-2.5 py-1 flex-shrink-0"
+                      [class]="
+                        committee.myRole === 'Chair'
+                          ? 'bg-blue-100 text-blue-800'
+                          : committee.myRole === 'Vice Chair'
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : committee.myRole === 'Member'
+                              ? 'bg-green-100 text-green-800'
+                              : committee.myRole === 'Lead'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-gray-100 text-gray-600'
+                      ">
+                      {{ committee.myRole }}
+                    </span>
+                  </div>
+
+                  <!-- Meta Row: Members + Voting + Leave -->
+                  <div class="flex items-center gap-4 mt-auto pt-3 border-t border-gray-100">
+                    <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <i class="fa-light fa-users w-3.5 h-3.5"></i>
+                      <span>{{ committee.total_members || 0 }} members</span>
+                    </div>
+                    @if (committee.enable_voting) {
+                      <div class="flex items-center gap-1.5 text-xs text-emerald-600">
+                        <i class="fa-light fa-check-to-slot w-3.5 h-3.5"></i>
+                        <span>Voting</span>
+                      </div>
+                    }
+                    <!-- Channels: always visible; grayed out when not yet available from API -->
+                    @if (committee.mailing_list?.url) {
+                      <a [href]="committee.mailing_list!.url" target="_blank" rel="noopener"
+                        class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
+                        pTooltip="Mailing list" tooltipPosition="top"
+                        (click)="$event.stopPropagation()">
+                        <i class="fa-light fa-envelope w-3.5 h-3.5"></i>
+                      </a>
+                    } @else {
+                      <span class="flex items-center gap-1 text-gray-300 cursor-default"
+                        pTooltip="Mailing list not yet available" tooltipPosition="top">
+                        <i class="fa-light fa-envelope w-3.5 h-3.5"></i>
+                      </span>
+                    }
+                    @if (committee.chat_channel?.url) {
+                      <a [href]="committee.chat_channel!.url" target="_blank" rel="noopener"
+                        class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
+                        [pTooltip]="committee.chat_channel!.platform === 'slack' ? 'Slack' : 'Discord'" tooltipPosition="top"
+                        (click)="$event.stopPropagation()">
+                        <i class="fa-brands w-3.5 h-3.5" [class.fa-slack]="committee.chat_channel!.platform === 'slack'" [class.fa-discord]="committee.chat_channel!.platform === 'discord'"></i>
+                      </a>
+                    } @else {
+                      <span class="flex items-center gap-1 text-gray-300 cursor-default"
+                        pTooltip="Chat channel not yet available" tooltipPosition="top">
+                        <i class="fa-light fa-comment w-3.5 h-3.5"></i>
+                      </span>
+                    }
+                    <div class="ml-auto">
+                      <lfx-button
+                        label="Leave"
+                        icon="fa-light fa-right-from-bracket"
+                        severity="secondary"
+                        size="small"
+                        [text]="true"
+                        styleClass="text-xs text-gray-500 hover:text-red-600"
+                        (onClick)="leaveGroup(committee); $event.stopPropagation(); $event.preventDefault()"
+                        [attr.data-testid]="'my-group-leave-' + committee.uid">
+                      </lfx-button>
+                    </div>
+                  </div>
+                </div>
+              </lfx-card>
+            </a>
+          }
+        </div>
+      </div>
+    } @else if (myCommitteesLoading()) {
+      <div class="mb-8">
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabelPlural }}</h2>
+        </div>
+        <div class="flex items-center gap-2 text-gray-400 text-sm py-4">
+          <i class="fa-light fa-spinner-third fa-spin"></i>
+          <span>Loading your groups...</span>
+        </div>
+      </div>
+    }
+
+    <!-- All Groups Section -->
+    @if (myCommittees().length > 0) {
+      <div class="flex items-center gap-2 mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">All {{ committeeLabelPlural }}</h2>
+        <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ totalCommittees() }}</span>
+      </div>
+    }
 
     <!-- Content Area - Table or Cards -->
     <div class="min-h-[400px]">
@@ -61,14 +210,19 @@
         <lfx-committee-table
           [committees]="filteredCommittees()"
           [canManageCommittee]="canCreateGroup()"
-          [committeeLabel]="committeeLabel"
+          [myCommitteeUids]="myCommitteeUids()"
           [searchForm]="searchForm"
           [categoryOptions]="categories()"
           [votingStatusOptions]="votingStatusOptions()"
           (refresh)="refreshCommittees()"
-          (rowClick)="onCommitteeClick($event)">
+          (rowClick)="onCommitteeClick($event)"
+          (joinClick)="joinGroup($event)"
+          (inviteClick)="inviteToGroup($event)">
         </lfx-committee-table>
       }
     </div>
   }
 </div>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog></p-confirmDialog>

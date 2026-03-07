@@ -4,7 +4,7 @@
 import { NgClass } from '@angular/common';
 import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { environment } from '@environments/environment';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL, MY_ACTIVITY_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
@@ -12,17 +12,17 @@ import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
-import { DrawerModule } from 'primeng/drawer';
 import { filter } from 'rxjs';
 
 import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, DevToolbarComponent],
+  imports: [NgClass, RouterLink, RouterOutlet, SidebarComponent, DevToolbarComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  host: { ngSkipHydration: 'true' },
 })
 export class MainLayoutComponent {
   private readonly router = inject(Router);

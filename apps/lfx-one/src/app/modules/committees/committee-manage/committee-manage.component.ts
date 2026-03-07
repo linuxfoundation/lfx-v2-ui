@@ -378,7 +378,8 @@ export class CommitteeManageComponent {
       sso_group_enabled: committee.sso_group_enabled,
       sso_group_name: committee.sso_group_name,
       website: committee.website,
-      joinable: false,
+      joinable: false, // legacy
+      join_mode: committee.join_mode || 'closed',
       member_visibility: committee.member_visibility || 'hidden',
       show_meeting_attendees: committee.show_meeting_attendees || false,
     });
@@ -403,7 +404,8 @@ export class CommitteeManageComponent {
       public: new FormControl(false),
       sso_group_enabled: new FormControl(false),
       sso_group_name: new FormControl(''),
-      joinable: new FormControl(false),
+      joinable: new FormControl(false), // @deprecated — kept for backward-compat with ITX
+      join_mode: new FormControl('closed'),
       member_visibility: new FormControl('hidden'),
       show_meeting_attendees: new FormControl(false),
     });
@@ -420,6 +422,11 @@ export class CommitteeManageComponent {
         cleaned[key] = value;
       }
     });
+
+    // Sync legacy `joinable` boolean from the new `join_mode` value
+    // so ITX keeps receiving the field it expects.
+    const joinMode = cleaned['join_mode'] as string | null;
+    cleaned['joinable'] = joinMode === 'open';
 
     return cleaned;
   }
