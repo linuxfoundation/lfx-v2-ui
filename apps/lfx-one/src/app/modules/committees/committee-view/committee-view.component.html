@@ -129,17 +129,17 @@
       <!-- ─── TABS ─── -->
       <p-tabs [(value)]="activeTab" scrollable data-testid="committee-view-tabs">
         <p-tablist>
-          <p-tab [value]="0"><i class="fa-light fa-gauge mr-2"></i>Overview</p-tab>
-          <p-tab [value]="1"><i class="fa-light fa-users mr-2"></i>Members</p-tab>
-          <p-tab [value]="2"><i class="fa-light fa-calendar mr-2"></i>Meetings</p-tab>
-          <p-tab [value]="3"><i class="fa-light fa-folder-open mr-2"></i>Documents</p-tab>
+          <p-tab value="overview"><i class="fa-light fa-gauge mr-2"></i>Overview</p-tab>
+          <p-tab value="members"><i class="fa-light fa-users mr-2"></i>Members</p-tab>
+          <p-tab value="meetings"><i class="fa-light fa-calendar mr-2"></i>Meetings</p-tab>
+          <p-tab value="documents"><i class="fa-light fa-folder-open mr-2"></i>Documents</p-tab>
         </p-tablist>
 
         <p-tabpanels>
           <!-- ════════════════════════════════════════════════════════════════ -->
           <!-- OVERVIEW TAB                                                    -->
           <!-- ════════════════════════════════════════════════════════════════ -->
-          <p-tabpanel [value]="0">
+          <p-tabpanel value="overview">
             <div class="flex flex-col gap-6 pt-4">
               <!-- ─── Dashboard Stats Row ─── -->
               <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
@@ -949,7 +949,7 @@
           <!-- ════════════════════════════════════════════════════════════════ -->
           <!-- MEMBERS TAB                                                     -->
           <!-- ════════════════════════════════════════════════════════════════ -->
-          <p-tabpanel [value]="1">
+          <p-tabpanel value="members">
             <div class="flex flex-col gap-6 pt-4">
               <!-- ─── Join Request Review (Phase 3) ─── -->
               @if (committee()?.uid) {
@@ -971,7 +971,7 @@
           <!-- ════════════════════════════════════════════════════════════════ -->
           <!-- MEETINGS TAB                                                    -->
           <!-- ════════════════════════════════════════════════════════════════ -->
-          <p-tabpanel [value]="2">
+          <p-tabpanel value="meetings">
             <div class="flex flex-col gap-6 pt-4">
               @if (upcomingMeetings().length > 0) {
                 <lfx-card data-testid="committee-view-meetings">
@@ -1004,7 +1004,7 @@
           <!-- ════════════════════════════════════════════════════════════════ -->
           <!-- DOCUMENTS TAB                                                   -->
           <!-- ════════════════════════════════════════════════════════════════ -->
-          <p-tabpanel [value]="3">
+          <p-tabpanel value="documents">
             <div class="flex flex-col gap-6 pt-4">
               @if (documents().length > 0) {
                 <lfx-card data-testid="committee-view-documents">
