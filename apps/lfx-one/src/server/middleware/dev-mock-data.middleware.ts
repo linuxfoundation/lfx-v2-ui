@@ -1121,17 +1121,6 @@ export function wrapWithMockFallback(app: Express): void {
     res.json(MOCK_COMMITTEES);
   });
 
-  // Fallback for GET /public/api/committees (no auth required)
-  app.get('/public/api/committees', async (_req: Request, res: Response, next: NextFunction) => {
-    const reachable = await isUpstreamReachable();
-    if (reachable) {
-      return next();
-    }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock public committees');
-    const publicCommittees = MOCK_COMMITTEES.filter((c: any) => c.public !== false);
-    res.json(publicCommittees);
-  });
-
   // Fallback for GET /api/meetings
   app.get('/api/meetings', async (req: Request, res: Response, next: NextFunction) => {
     const reachable = await isUpstreamReachable();
@@ -1184,12 +1173,10 @@ export function wrapWithMockFallback(app: Express): void {
     console.log('[DEV MOCK] Upstream unreachable → serving mock my-committees');
     const myCommitteeUids = ['mock-committee-010', 'mock-committee-007', 'mock-committee-005'];
     const roles = ['Member', 'Member', 'Member'];
-    const myCommittees = myCommitteeUids
-      .map((uid, i) => {
-        const committee = MOCK_COMMITTEES.find((c: any) => c.uid === uid);
-        return committee ? { ...committee, myRole: roles[i], myMemberUid: `my-mem-${i + 1}` } : null;
-      })
-      .filter(Boolean);
+    const myCommittees = myCommitteeUids.map((uid, i) => {
+      const committee = MOCK_COMMITTEES.find((c: any) => c.uid === uid);
+      return committee ? { ...committee, myRole: roles[i], myMemberUid: `my-mem-${i + 1}` } : null;
+    }).filter(Boolean);
     res.json(myCommittees);
   });
 

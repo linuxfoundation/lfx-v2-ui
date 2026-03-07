@@ -49,9 +49,8 @@ import { ProjectService } from '@services/project.service';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 import { FileSizePipe } from '@pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
@@ -72,11 +71,6 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
     NgClass,
     FormsModule,
     ConfirmDialogModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
     TooltipModule,
     DatePipe,
     DecimalPipe,
@@ -89,7 +83,7 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
 })
 export class CommitteeViewComponent {
   /** @internal Force Vite transform invalidation — safe to remove later */
-  private static readonly version = 5;
+  private static readonly _V = 4;
 
   // ── Injections ────────────────────────────────────────────────────────────
   private readonly http = inject(HttpClient);
@@ -134,9 +128,6 @@ export class CommitteeViewComponent {
   // Meeting and document writables
   public committeeMeetings: WritableSignal<Meeting[]>;
   public documents: WritableSignal<CommitteeDocument[]>;
-
-  // Tab state
-  public activeTab = signal<number>(0);
 
   // Collaboration inline-edit state
   public editingCollaboration = signal<boolean>(false);
@@ -269,11 +260,12 @@ export class CommitteeViewComponent {
 
     // Dashboard stats
     this.totalMembers = computed(() => this.members().length);
-    this.activeVoters = computed(
-      () =>
-        this.members().filter(
-          (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
-        ).length
+    this.activeVoters = computed(() =>
+      this.members().filter(
+        (m) =>
+          m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP ||
+          m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP,
+      ).length,
     );
     this.uniqueOrganizations = computed(() => {
       const orgs = this.members()
@@ -524,11 +516,6 @@ export class CommitteeViewComponent {
     }
 
     // ── other: no type-specific cards (just meetings, docs, members) ──
-
-    // ── Documents: populate mock data if API returned empty ──
-    if (this.documents().length === 0) {
-      this.populateDocumentsData(cls);
-    }
   }
 
   // ── Mock data generators (per-type) ──────────────────────────────────────
@@ -585,44 +572,28 @@ export class CommitteeViewComponent {
   private populateCollaborationData(): void {
     this.recentActivity.set([
       {
-        uid: 'act-001',
-        type: 'pr_merged',
-        title: 'feat: Add OIDC token exchange support',
-        author: 'Anna Kowalski',
-        repo: 'security-toolkit',
+        uid: 'act-001', type: 'pr_merged', title: 'feat: Add OIDC token exchange support',
+        author: 'Anna Kowalski', repo: 'security-toolkit',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        icon: 'fa-light fa-code-pull-request',
-        color: 'text-emerald-600',
+        icon: 'fa-light fa-code-pull-request', color: 'text-emerald-600',
       },
       {
-        uid: 'act-002',
-        type: 'issue_opened',
-        title: 'CVE-2026-1234: Buffer overflow in parser module',
-        author: 'Marcus Johnson',
-        repo: 'security-toolkit',
+        uid: 'act-002', type: 'issue_opened', title: 'CVE-2026-1234: Buffer overflow in parser module',
+        author: 'Marcus Johnson', repo: 'security-toolkit',
         timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-        icon: 'fa-light fa-circle-exclamation',
-        color: 'text-red-500',
+        icon: 'fa-light fa-circle-exclamation', color: 'text-red-500',
       },
       {
-        uid: 'act-003',
-        type: 'release',
-        title: 'v3.2.1 — Security patch release',
-        author: 'Yuki Tanaka',
-        repo: 'security-toolkit',
+        uid: 'act-003', type: 'release', title: 'v3.2.1 — Security patch release',
+        author: 'Yuki Tanaka', repo: 'security-toolkit',
         timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        icon: 'fa-light fa-tag',
-        color: 'text-blue-600',
+        icon: 'fa-light fa-tag', color: 'text-blue-600',
       },
       {
-        uid: 'act-004',
-        type: 'discussion',
-        title: 'RFC: Adopt SLSA v1.0 build provenance',
-        author: 'Omar Hassan',
-        repo: 'security-specs',
+        uid: 'act-004', type: 'discussion', title: 'RFC: Adopt SLSA v1.0 build provenance',
+        author: 'Omar Hassan', repo: 'security-specs',
         timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-        icon: 'fa-light fa-comments',
-        color: 'text-violet-600',
+        icon: 'fa-light fa-comments', color: 'text-violet-600',
       },
     ]);
 
@@ -637,36 +608,20 @@ export class CommitteeViewComponent {
   private populateDeliverablesData(): void {
     this.deliverables.set([
       {
-        uid: 'del-001',
-        title: 'SLSA v1.0 Build Provenance Spec',
-        status: 'in-progress',
-        progress: 72,
-        owner: 'Anna Kowalski',
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        uid: 'del-001', title: 'SLSA v1.0 Build Provenance Spec', status: 'in-progress',
+        progress: 72, owner: 'Anna Kowalski', dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       },
       {
-        uid: 'del-002',
-        title: 'Vulnerability Disclosure Policy v3',
-        status: 'in-progress',
-        progress: 45,
-        owner: 'Marcus Johnson',
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        uid: 'del-002', title: 'Vulnerability Disclosure Policy v3', status: 'in-progress',
+        progress: 45, owner: 'Marcus Johnson', dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       },
       {
-        uid: 'del-003',
-        title: 'Security Audit Playbook',
-        status: 'completed',
-        progress: 100,
-        owner: 'Yuki Tanaka',
-        dueDate: '2026-02-28',
+        uid: 'del-003', title: 'Security Audit Playbook', status: 'completed',
+        progress: 100, owner: 'Yuki Tanaka', dueDate: '2026-02-28',
       },
       {
-        uid: 'del-004',
-        title: 'SBOM Generation Tooling Integration',
-        status: 'not-started',
-        progress: 0,
-        owner: 'Omar Hassan',
-        dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        uid: 'del-004', title: 'SBOM Generation Tooling Integration', status: 'not-started',
+        progress: 0, owner: 'Omar Hassan', dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ]);
   }
@@ -674,27 +629,18 @@ export class CommitteeViewComponent {
   private populateDiscussionData(): void {
     this.discussionThreads.set([
       {
-        uid: 'disc-001',
-        title: 'Best practices for SBOM adoption in enterprise',
-        author: 'Lena Schmidt',
-        replies: 23,
-        lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        uid: 'disc-001', title: 'Best practices for SBOM adoption in enterprise',
+        author: 'Lena Schmidt', replies: 23, lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
         tags: ['sbom', 'enterprise'],
       },
       {
-        uid: 'disc-002',
-        title: 'Proposal: Monthly lightning talks from member orgs',
-        author: 'Raj Patel',
-        replies: 15,
-        lastActivity: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+        uid: 'disc-002', title: 'Proposal: Monthly lightning talks from member orgs',
+        author: 'Raj Patel', replies: 15, lastActivity: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
         tags: ['community', 'events'],
       },
       {
-        uid: 'disc-003',
-        title: 'How are you handling AI-generated code in security audits?',
-        author: 'Maria Garcia',
-        replies: 41,
-        lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        uid: 'disc-003', title: 'How are you handling AI-generated code in security audits?',
+        author: 'Maria Garcia', replies: 41, lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         tags: ['ai', 'audit'],
       },
     ]);
@@ -703,28 +649,19 @@ export class CommitteeViewComponent {
   private populateEventsData(): void {
     this.upcomingEvents.set([
       {
-        uid: 'evt-001',
-        title: 'Supply Chain Security Deep Dive',
-        type: 'Webinar',
+        uid: 'evt-001', title: 'Supply Chain Security Deep Dive', type: 'Webinar',
         date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        speaker: 'Dr. Sarah Kim',
-        attendees: 128,
+        speaker: 'Dr. Sarah Kim', attendees: 128,
       },
       {
-        uid: 'evt-002',
-        title: 'Open Source Security Summit — Bay Area',
-        type: 'In-Person',
+        uid: 'evt-002', title: 'Open Source Security Summit — Bay Area', type: 'In-Person',
         date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
-        speaker: 'Multiple speakers',
-        attendees: 340,
+        speaker: 'Multiple speakers', attendees: 340,
       },
       {
-        uid: 'evt-003',
-        title: 'SIG Office Hours: Q&A with Maintainers',
-        type: 'Virtual',
+        uid: 'evt-003', title: 'SIG Office Hours: Q&A with Maintainers', type: 'Virtual',
         date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        speaker: 'SIG Leads',
-        attendees: 45,
+        speaker: 'SIG Leads', attendees: 45,
       },
     ]);
   }
@@ -732,34 +669,19 @@ export class CommitteeViewComponent {
   private populateCampaignData(): void {
     this.outreachCampaigns.set([
       {
-        uid: 'camp-001',
-        title: 'New Member Onboarding Q1 2026',
-        status: 'active',
-        reach: 1240,
-        conversions: 89,
-        conversionRate: 7.2,
-        icon: 'fa-light fa-user-plus',
-        color: 'text-blue-600',
+        uid: 'camp-001', title: 'New Member Onboarding Q1 2026', status: 'active',
+        reach: 1240, conversions: 89, conversionRate: 7.2,
+        icon: 'fa-light fa-user-plus', color: 'text-blue-600',
       },
       {
-        uid: 'camp-002',
-        title: 'KubeCon Europe 2026 Booth',
-        status: 'upcoming',
-        reach: 0,
-        conversions: 0,
-        conversionRate: 0,
-        icon: 'fa-light fa-booth-curtain',
-        color: 'text-violet-600',
+        uid: 'camp-002', title: 'KubeCon Europe 2026 Booth', status: 'upcoming',
+        reach: 0, conversions: 0, conversionRate: 0,
+        icon: 'fa-light fa-booth-curtain', color: 'text-violet-600',
       },
       {
-        uid: 'camp-003',
-        title: 'Ambassador Referral Program',
-        status: 'active',
-        reach: 560,
-        conversions: 34,
-        conversionRate: 6.1,
-        icon: 'fa-light fa-bullhorn',
-        color: 'text-emerald-600',
+        uid: 'camp-003', title: 'Ambassador Referral Program', status: 'active',
+        reach: 560, conversions: 34, conversionRate: 6.1,
+        icon: 'fa-light fa-bullhorn', color: 'text-emerald-600',
       },
     ]);
   }
@@ -773,159 +695,6 @@ export class CommitteeViewComponent {
       socialImpressions: 15_200,
       ambassadorCount: 24,
     });
-  }
-
-  private populateDocumentsData(cls: GroupBehavioralClass): void {
-    const now = new Date();
-    const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
-
-    const commonDocs: CommitteeDocument[] = [
-      {
-        uid: 'doc-001',
-        type: 'file',
-        name: 'Group Charter v2.1.pdf',
-        mime_type: 'application/pdf',
-        file_size: 245_760,
-        updated_at: daysAgo(5),
-        uploaded_by: 'Sarah Chen',
-      },
-      {
-        uid: 'doc-002',
-        type: 'file',
-        name: 'Meeting Minutes — Feb 2026.docx',
-        mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        file_size: 89_200,
-        updated_at: daysAgo(12),
-        uploaded_by: 'James Rodriguez',
-      },
-      {
-        uid: 'doc-003',
-        type: 'file',
-        name: 'Member Onboarding Guide.pdf',
-        mime_type: 'application/pdf',
-        file_size: 1_420_000,
-        updated_at: daysAgo(30),
-        uploaded_by: 'Anna Kowalski',
-      },
-    ];
-
-    const commonLinks: CommitteeDocument[] = [
-      {
-        uid: 'link-001',
-        type: 'link',
-        name: 'Shared Google Drive',
-        url: 'https://drive.google.com/drive/folders/example',
-        updated_at: daysAgo(2),
-        uploaded_by: 'Sarah Chen',
-      },
-      {
-        uid: 'link-002',
-        type: 'link',
-        name: 'GitHub Repository',
-        url: 'https://github.com/example-org/project-repo',
-        updated_at: daysAgo(1),
-        uploaded_by: 'Marcus Johnson',
-      },
-    ];
-
-    // Add type-specific documents
-    const typeDocs: CommitteeDocument[] = [];
-
-    if (cls === 'governing-board') {
-      typeDocs.push(
-        {
-          uid: 'doc-gov-001',
-          type: 'file',
-          name: 'FY2026 Budget Proposal.xlsx',
-          mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          file_size: 312_000,
-          updated_at: daysAgo(3),
-          uploaded_by: 'Finance Team',
-        },
-        {
-          uid: 'doc-gov-002',
-          type: 'file',
-          name: 'Board Resolution — CLA v2.0.pdf',
-          mime_type: 'application/pdf',
-          file_size: 56_800,
-          updated_at: daysAgo(18),
-          uploaded_by: 'Sarah Chen',
-        },
-      );
-    }
-
-    if (cls === 'working-group' || cls === 'oversight-committee') {
-      typeDocs.push(
-        {
-          uid: 'doc-wg-001',
-          type: 'file',
-          name: 'Technical Specification Draft.md',
-          mime_type: 'text/markdown',
-          file_size: 24_500,
-          updated_at: daysAgo(1),
-          uploaded_by: 'Yuki Tanaka',
-        },
-        {
-          uid: 'doc-wg-002',
-          type: 'file',
-          name: 'Architecture Decision Record — ADR-042.pdf',
-          mime_type: 'application/pdf',
-          file_size: 178_000,
-          updated_at: daysAgo(7),
-          uploaded_by: 'Omar Hassan',
-        },
-      );
-      commonLinks.push({
-        uid: 'link-wg-001',
-        type: 'link',
-        name: 'Project Wiki',
-        url: 'https://wiki.example.org/working-group',
-        updated_at: daysAgo(3),
-        uploaded_by: 'Anna Kowalski',
-      });
-    }
-
-    if (cls === 'special-interest-group') {
-      typeDocs.push({
-        uid: 'doc-sig-001',
-        type: 'file',
-        name: 'SIG Best Practices Handbook.pdf',
-        mime_type: 'application/pdf',
-        file_size: 890_000,
-        updated_at: daysAgo(14),
-        uploaded_by: 'Lena Schmidt',
-      });
-      commonLinks.push({
-        uid: 'link-sig-001',
-        type: 'link',
-        name: 'Discussion Forum',
-        url: 'https://discuss.example.org/sig-security',
-        updated_at: daysAgo(1),
-        uploaded_by: 'Raj Patel',
-      });
-    }
-
-    if (cls === 'ambassador-program') {
-      typeDocs.push({
-        uid: 'doc-amb-001',
-        type: 'file',
-        name: 'Ambassador Brand Kit.zip',
-        mime_type: 'application/zip',
-        file_size: 5_400_000,
-        updated_at: daysAgo(10),
-        uploaded_by: 'Marketing Team',
-      });
-      commonLinks.push({
-        uid: 'link-amb-001',
-        type: 'link',
-        name: 'Ambassador Portal',
-        url: 'https://ambassadors.example.org',
-        updated_at: daysAgo(2),
-        uploaded_by: 'Program Manager',
-      });
-    }
-
-    this.documents.set([...commonDocs, ...typeDocs, ...commonLinks]);
   }
 
   private initializeFormattedUpdatedDate(): Signal<string> {
