@@ -209,7 +209,7 @@ export class CommitteeDashboardComponent {
         });
         break;
 
-      case 'apply':
+      case 'apply': {
         // Open application dialog
         const dialogRef = this.dialogService.open(JoinApplicationDialogComponent, {
           header: 'Request to Join',
@@ -225,6 +225,7 @@ export class CommitteeDashboardComponent {
           }
         });
         break;
+      }
 
       case 'invite-only':
         this.messageService.add({

@@ -1099,7 +1099,7 @@ export function wrapWithMockFallback(app: Express): void {
     return;
   }
 
-  console.log('[DEV MOCK] Mock data fallback enabled — will serve mock data when upstream API is unreachable');
+  console.info('[DEV MOCK] Mock data fallback enabled — will serve mock data when upstream API is unreachable');
 
   // Fallback for GET /api/projects
   app.get('/api/projects', async (_req: Request, res: Response, next: NextFunction) => {
@@ -1107,7 +1107,7 @@ export function wrapWithMockFallback(app: Express): void {
     if (reachable) {
       return next(); // Let the real route handle it
     }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock projects');
+    console.info('[DEV MOCK] Upstream unreachable → serving mock projects');
     res.json(MOCK_PROJECTS);
   });
 
@@ -1117,7 +1117,7 @@ export function wrapWithMockFallback(app: Express): void {
     if (reachable) {
       return next(); // Let the real route handle it
     }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock committees');
+    console.info('[DEV MOCK] Upstream unreachable → serving mock committees');
     res.json(MOCK_COMMITTEES);
   });
 
@@ -1127,7 +1127,7 @@ export function wrapWithMockFallback(app: Express): void {
     if (reachable) {
       return next();
     }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock meetings');
+    console.info('[DEV MOCK] Upstream unreachable → serving mock meetings');
     // Filter by project_uid tag if provided (matches MeetingService.getMeetingsByProject)
     const tags = req.query['tags'] as string | undefined;
     let filtered = MOCK_MEETINGS;
@@ -1159,7 +1159,7 @@ export function wrapWithMockFallback(app: Express): void {
     if (reachable) {
       return next();
     }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock committees count');
+    console.info('[DEV MOCK] Upstream unreachable → serving mock committees count');
     res.json({ count: MOCK_COMMITTEES.length });
   });
 
@@ -1170,13 +1170,15 @@ export function wrapWithMockFallback(app: Express): void {
     if (reachable) {
       return next();
     }
-    console.log('[DEV MOCK] Upstream unreachable → serving mock my-committees');
+    console.info('[DEV MOCK] Upstream unreachable → serving mock my-committees');
     const myCommitteeUids = ['mock-committee-010', 'mock-committee-007', 'mock-committee-005'];
     const roles = ['Member', 'Member', 'Member'];
-    const myCommittees = myCommitteeUids.map((uid, i) => {
-      const committee = MOCK_COMMITTEES.find((c: any) => c.uid === uid);
-      return committee ? { ...committee, myRole: roles[i], myMemberUid: `my-mem-${i + 1}` } : null;
-    }).filter(Boolean);
+    const myCommittees = myCommitteeUids
+      .map((uid, i) => {
+        const committee = MOCK_COMMITTEES.find((c: any) => c.uid === uid);
+        return committee ? { ...committee, myRole: roles[i], myMemberUid: `my-mem-${i + 1}` } : null;
+      })
+      .filter(Boolean);
     res.json(myCommittees);
   });
 
@@ -1187,7 +1189,7 @@ export function wrapWithMockFallback(app: Express): void {
 
     // If we have mock members for this committee, always serve them
     if (MOCK_MEMBERS_BY_COMMITTEE[committeeId]) {
-      console.log(`[DEV MOCK] Serving mock members for committee ${committeeId}`);
+      console.info(`[DEV MOCK] Serving mock members for committee ${committeeId}`);
       res.json(MOCK_MEMBERS_BY_COMMITTEE[committeeId]);
       return;
     }
@@ -1199,7 +1201,7 @@ export function wrapWithMockFallback(app: Express): void {
       }
     }
     const members = DEFAULT_MOCK_MEMBERS;
-    console.log(`[DEV MOCK] Upstream unreachable → serving default mock members for ${committeeId}`);
+    console.info(`[DEV MOCK] Upstream unreachable → serving default mock members for ${committeeId}`);
     res.json(members);
   });
 
@@ -1214,7 +1216,7 @@ export function wrapWithMockFallback(app: Express): void {
       }
     }
     const documents = MOCK_DOCUMENTS_BY_COMMITTEE[committeeId] || [];
-    console.log(`[DEV MOCK] Upstream unreachable → serving mock documents for ${committeeId}`);
+    console.info(`[DEV MOCK] Upstream unreachable → serving mock documents for ${committeeId}`);
     res.json(documents);
   });
 
@@ -1244,7 +1246,7 @@ export function wrapWithMockFallback(app: Express): void {
       chair: (committee as any).chair || null,
       co_chair: (committee as any).co_chair || null,
     };
-    console.log(`[DEV MOCK] Upstream unreachable → serving mock committee detail for ${committeeId}`);
+    console.info(`[DEV MOCK] Upstream unreachable → serving mock committee detail for ${committeeId}`);
     res.json(detail);
   });
 
@@ -1266,13 +1268,13 @@ export function wrapWithMockFallback(app: Express): void {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
-    console.log(`[DEV MOCK] Serving mock member ${memberId} for committee ${committeeId}`);
+    console.info(`[DEV MOCK] Serving mock member ${memberId} for committee ${committeeId}`);
     res.json(member);
   });
 
   // Mock handler for POST /api/committees/:id/members (create member)
   // Always use mock — real API doesn't support member write operations yet
-  app.post('/api/committees/:id/members', async (req: Request, res: Response, _next: NextFunction) => {
+  app.post('/api/committees/:id/members', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const memberData = req.body;
 
@@ -1308,13 +1310,13 @@ export function wrapWithMockFallback(app: Express): void {
       (committee as any).total_members = MOCK_MEMBERS_BY_COMMITTEE[committeeId].length;
     }
 
-    console.log(`[DEV MOCK] Created member ${newUid} (${memberData.email}) in committee ${committeeId}`);
+    console.info(`[DEV MOCK] Created member ${newUid} (${memberData.email}) in committee ${committeeId}`);
     res.status(201).json(newMember);
   });
 
   // Mock handler for PUT /api/committees/:id/members/:memberId (update member)
   // Always use mock — real API doesn't support member write operations yet
-  app.put('/api/committees/:id/members/:memberId', async (req: Request, res: Response, _next: NextFunction) => {
+  app.put('/api/committees/:id/members/:memberId', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const memberId = req.params['memberId'];
     const updateData = req.body;
@@ -1342,13 +1344,13 @@ export function wrapWithMockFallback(app: Express): void {
 
     members[memberIndex] = updatedMember;
 
-    console.log(`[DEV MOCK] Updated member ${memberId} in committee ${committeeId}`);
+    console.info(`[DEV MOCK] Updated member ${memberId} in committee ${committeeId}`);
     res.json(updatedMember);
   });
 
   // Mock handler for DELETE /api/committees/:id/members/:memberId (delete member)
   // Always use mock — real API doesn't support member write operations yet
-  app.delete('/api/committees/:id/members/:memberId', async (req: Request, res: Response, _next: NextFunction) => {
+  app.delete('/api/committees/:id/members/:memberId', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const memberId = req.params['memberId'];
 
@@ -1373,7 +1375,7 @@ export function wrapWithMockFallback(app: Express): void {
       (committee as any).total_members = Math.max(0, members.length);
     }
 
-    console.log(`[DEV MOCK] Deleted member ${memberId} (${deletedMember.email}) from committee ${committeeId}`);
+    console.info(`[DEV MOCK] Deleted member ${memberId} (${deletedMember.email}) from committee ${committeeId}`);
     res.status(204).send();
   });
 
@@ -1382,7 +1384,7 @@ export function wrapWithMockFallback(app: Express): void {
   const MOCK_INVITES_BY_COMMITTEE: Record<string, any[]> = {};
 
   // POST /api/committees/:id/invites — Create invites
-  app.post('/api/committees/:id/invites', async (req: Request, res: Response, _next: NextFunction) => {
+  app.post('/api/committees/:id/invites', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const { emails, message, suggested_role } = req.body || {};
 
@@ -1411,7 +1413,7 @@ export function wrapWithMockFallback(app: Express): void {
     }));
 
     MOCK_INVITES_BY_COMMITTEE[committeeId].push(...newInvites);
-    console.log(`[DEV MOCK] Created ${newInvites.length} invite(s) for committee ${committeeId}`);
+    console.info(`[DEV MOCK] Created ${newInvites.length} invite(s) for committee ${committeeId}`);
     res.status(201).json(newInvites);
   });
 
@@ -1426,7 +1428,7 @@ export function wrapWithMockFallback(app: Express): void {
   });
 
   // POST /api/committees/:id/invites/:inviteId/accept
-  app.post('/api/committees/:id/invites/:inviteId/accept', async (req: Request, res: Response, _next: NextFunction) => {
+  app.post('/api/committees/:id/invites/:inviteId/accept', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const inviteId = req.params['inviteId'];
     const invites = MOCK_INVITES_BY_COMMITTEE[committeeId] || [];
@@ -1437,12 +1439,12 @@ export function wrapWithMockFallback(app: Express): void {
     }
     invite.status = 'accepted';
     invite.responded_at = new Date().toISOString();
-    console.log(`[DEV MOCK] Invite ${inviteId} accepted`);
+    console.info(`[DEV MOCK] Invite ${inviteId} accepted`);
     res.json(invite);
   });
 
   // POST /api/committees/:id/invites/:inviteId/decline
-  app.post('/api/committees/:id/invites/:inviteId/decline', async (req: Request, res: Response, _next: NextFunction) => {
+  app.post('/api/committees/:id/invites/:inviteId/decline', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const inviteId = req.params['inviteId'];
     const invites = MOCK_INVITES_BY_COMMITTEE[committeeId] || [];
@@ -1453,12 +1455,12 @@ export function wrapWithMockFallback(app: Express): void {
     }
     invite.status = 'declined';
     invite.responded_at = new Date().toISOString();
-    console.log(`[DEV MOCK] Invite ${inviteId} declined`);
+    console.info(`[DEV MOCK] Invite ${inviteId} declined`);
     res.json(invite);
   });
 
   // DELETE /api/committees/:id/invites/:inviteId — Revoke invite
-  app.delete('/api/committees/:id/invites/:inviteId', async (req: Request, res: Response, _next: NextFunction) => {
+  app.delete('/api/committees/:id/invites/:inviteId', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const inviteId = req.params['inviteId'];
     const invites = MOCK_INVITES_BY_COMMITTEE[committeeId] || [];
@@ -1468,24 +1470,24 @@ export function wrapWithMockFallback(app: Express): void {
       return;
     }
     invites.splice(idx, 1);
-    console.log(`[DEV MOCK] Invite ${inviteId} revoked`);
+    console.info(`[DEV MOCK] Invite ${inviteId} revoked`);
     res.status(204).send();
   });
 
   // POST /api/committees/:id/join — Self-join
-  app.post('/api/committees/:id/join', async (_req: Request, res: Response, _next: NextFunction) => {
-    console.log('[DEV MOCK] Self-join endpoint called');
+  app.post('/api/committees/:id/join', async (_req: Request, res: Response) => {
+    console.info('[DEV MOCK] Self-join endpoint called');
     res.json({ message: 'Successfully joined the group' });
   });
 
   // POST /api/committees/:id/leave — Leave
-  app.post('/api/committees/:id/leave', async (_req: Request, res: Response, _next: NextFunction) => {
-    console.log('[DEV MOCK] Leave endpoint called');
+  app.post('/api/committees/:id/leave', async (_req: Request, res: Response) => {
+    console.info('[DEV MOCK] Leave endpoint called');
     res.json({ message: 'Successfully left the group' });
   });
 
   // POST /api/committees/:id/applications — Apply to join
-  app.post('/api/committees/:id/applications', async (req: Request, res: Response, _next: NextFunction) => {
+  app.post('/api/committees/:id/applications', async (req: Request, res: Response) => {
     const committeeId = req.params['id'];
     const application = {
       uid: `app-${Date.now()}`,
@@ -1497,7 +1499,7 @@ export function wrapWithMockFallback(app: Express): void {
       reason: req.body?.reason || '',
       created_at: new Date().toISOString(),
     };
-    console.log(`[DEV MOCK] Application created for committee ${committeeId}`);
+    console.info(`[DEV MOCK] Application created for committee ${committeeId}`);
     res.status(201).json(application);
   });
 
@@ -1511,14 +1513,14 @@ export function wrapWithMockFallback(app: Express): void {
   });
 
   // POST /api/committees/:id/applications/:applicationId/approve
-  app.post('/api/committees/:id/applications/:applicationId/approve', async (req: Request, res: Response, _next: NextFunction) => {
-    console.log(`[DEV MOCK] Application ${req.params['applicationId']} approved`);
+  app.post('/api/committees/:id/applications/:applicationId/approve', async (req: Request, res: Response) => {
+    console.info(`[DEV MOCK] Application ${req.params['applicationId']} approved`);
     res.json({ status: 'approved' });
   });
 
   // POST /api/committees/:id/applications/:applicationId/reject
-  app.post('/api/committees/:id/applications/:applicationId/reject', async (req: Request, res: Response, _next: NextFunction) => {
-    console.log(`[DEV MOCK] Application ${req.params['applicationId']} rejected`);
+  app.post('/api/committees/:id/applications/:applicationId/reject', async (req: Request, res: Response) => {
+    console.info(`[DEV MOCK] Application ${req.params['applicationId']} rejected`);
     res.json({ status: 'rejected' });
   });
 }

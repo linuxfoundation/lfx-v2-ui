@@ -17,7 +17,7 @@ import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
 import { InviteMemberDialogComponent } from '../invite-member-dialog/invite-member-dialog.component';
