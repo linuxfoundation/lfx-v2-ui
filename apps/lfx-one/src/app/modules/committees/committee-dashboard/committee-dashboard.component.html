@@ -87,7 +87,7 @@
                     <span
                       class="inline-flex items-center text-xs font-medium rounded-full px-2.5 py-1 flex-shrink-0"
                       [class]="getRoleBadgeClass(committee.myRole)">
-                      {{ committee.myRole }}
+                      {{ committee.myRole || 'Member' }}
                     </span>
                   </div>
 

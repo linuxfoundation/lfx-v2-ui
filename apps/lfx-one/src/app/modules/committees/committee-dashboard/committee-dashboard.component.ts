@@ -9,7 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CreateCommitteeMemberRequest, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
+import { Committee, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -93,15 +93,12 @@ export class CommitteeDashboardComponent {
     this.isFoundationContext = computed(() => !this.projectContextService.selectedProject() && !!this.projectContextService.selectedFoundation());
     this.foundationCreateCommitteeFlag = this.featureFlagService.getBooleanFlag('foundation-create-committee', false);
     this.canCreateGroup = computed(() => {
-      // Board members cannot manage committees
       if (this.isBoardMember()) {
         return false;
       }
       const isMaintainerAndNotFoundation = this.isMaintainer() && !this.isFoundationContext();
       const hasFeatureFlag = this.foundationCreateCommitteeFlag();
-      // TODO: TEMPORARY - Allow create in local dev even at foundation level
-      const isLocalDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      return isMaintainerAndNotFoundation || hasFeatureFlag || (isLocalDev && this.isMaintainer());
+      return isMaintainerAndNotFoundation || hasFeatureFlag;
     });
 
     // Initialize state
@@ -178,7 +175,7 @@ export class CommitteeDashboardComponent {
     switch (joinMode) {
       case 'open':
         // Direct join — backend resolves current user from auth context
-        this.committeeService.createCommitteeMember(committee.uid, { email: '' } as CreateCommitteeMemberRequest).subscribe({
+        this.committeeService.createCommitteeMember(committee.uid, {}).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',

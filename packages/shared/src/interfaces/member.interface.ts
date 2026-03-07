@@ -70,8 +70,8 @@ export interface CommitteeMember {
  * @description Input payload for adding members to committees
  */
 export interface CreateCommitteeMemberRequest {
-  /** Member's email address (required) */
-  email: string;
+  /** Member's email address */
+  email?: string;
   /** Member's username/handle */
   username?: string | null;
   /** Member's first name */
