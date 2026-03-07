@@ -4,7 +4,7 @@
 import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, ElementRef, inject, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { MenubarComponent } from '@components/menubar/menubar.component';
 import { CombinedProfile, Project } from '@lfx-one/shared/interfaces';
@@ -20,7 +20,7 @@ import { MenuComponent } from '../menu/menu.component';
 
 @Component({
   selector: 'lfx-header',
-  imports: [ReactiveFormsModule, MenubarComponent, RippleModule, RouterModule, AvatarComponent, MenuComponent],
+  imports: [ReactiveFormsModule, MenubarComponent, RippleModule, RouterLink, AvatarComponent, MenuComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

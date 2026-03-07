@@ -11,15 +11,16 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { MenuComponent } from '@components/menu/menu.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
-import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
+import { COMMITTEE_LABEL, GroupBehavioralClass } from '@lfx-one/shared/constants';
 import { Committee, CommitteeMember } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
+import { InviteMemberDialogComponent } from '../invite-member-dialog/invite-member-dialog.component';
 import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
@@ -52,6 +53,7 @@ export class CommitteeMembersComponent implements OnInit {
   public committee = input.required<Committee | null>();
   public members = input.required<CommitteeMember[]>();
   public membersLoading = input<boolean>(true);
+  public groupBehavioralClass = input<GroupBehavioralClass>('other');
 
   public readonly refresh = output<void>();
 
@@ -61,7 +63,9 @@ export class CommitteeMembersComponent implements OnInit {
   public memberActionMenuItems: MenuItem[] = [];
   public committeeLabel = COMMITTEE_LABEL;
   public isBoardMember: Signal<boolean>;
+  public isMaintainer: Signal<boolean>;
   public canManageMembers: Signal<boolean>;
+  public canInviteMembers: Signal<boolean>;
 
   // Filter-related variables
   public filterForm: FormGroup;
@@ -80,7 +84,13 @@ export class CommitteeMembersComponent implements OnInit {
     this.isDeleting = signal<boolean>(false);
     // Initialize permission signals
     this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
-    this.canManageMembers = computed(() => !this.isBoardMember() && !!this.committee()?.writer);
+    this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
+    this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
+    // Invite is available to any persona (Maintainer OR Board Member) when join_mode allows it
+    this.canInviteMembers = computed(() => {
+      const joinMode = this.committee()?.join_mode;
+      return joinMode === 'invite-only' || joinMode === 'open';
+    });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
     this.searchTerm = this.initializeSearchTerm();
@@ -109,6 +119,7 @@ export class CommitteeMembersComponent implements OnInit {
       width: '700px',
       modal: true,
       closable: true,
+      duplicate: true,
       data: {
         isEditing: false,
         committee: this.committee(),
@@ -116,9 +127,28 @@ export class CommitteeMembersComponent implements OnInit {
           // Dialog will close itself
         },
       },
-    }) as DynamicDialogRef;
+    });
 
-    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refreshMembers();
+      }
+    });
+  }
+
+  public openInviteMemberDialog(): void {
+    const dialogRef = this.dialogService.open(InviteMemberDialogComponent, {
+      header: 'Invite Members',
+      width: '550px',
+      modal: true,
+      closable: true,
+      duplicate: true,
+      data: {
+        committee: this.committee(),
+      },
+    });
+
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
       if (result) {
         this.refreshMembers();
       }
@@ -133,6 +163,7 @@ export class CommitteeMembersComponent implements OnInit {
         width: '700px',
         modal: true,
         closable: true,
+        duplicate: true,
         data: {
           isEditing: true,
           memberId: member.uid,
@@ -142,9 +173,9 @@ export class CommitteeMembersComponent implements OnInit {
             // Dialog will close itself
           },
         },
-      }) as DynamicDialogRef;
+      });
 
-      dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
         if (result) {
           this.refreshMembers();
         }

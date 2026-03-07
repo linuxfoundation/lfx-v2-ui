@@ -16,6 +16,7 @@ import pinoHttp from 'pino-http';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
+import { wrapWithMockFallback } from './middleware/dev-mock-data.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
@@ -25,7 +26,10 @@ import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import publicCommitteesRouter from './routes/public-committees.route';
+import publicMailingListsRouter from './routes/public-mailing-lists.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
+import publicProjectsRouter from './routes/public-projects.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
 import urlMetadataRouter from './routes/url-metadata.route';
@@ -147,10 +151,6 @@ const authConfig: ConfigParams = {
 };
 
 app.use(auth(authConfig));
-
-// Silent login attempt for meeting join pages only
-// If user has SSO session elsewhere, they'll be authenticated automatically
-// If not, they proceed as unauthenticated (route is optional auth)
 app.use('/meetings/', attemptSilentLogin());
 
 app.use('/login', (req: Request, res: Response) => {
@@ -176,9 +176,21 @@ app.use('/login', (req: Request, res: Response) => {
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
 
+// Register dev mock data fallback (must be BEFORE real routes)
+// The function itself checks isDev and no-ops in production
+wrapWithMockFallback(app);
+
 // Mount API routes after authentication middleware
+// DEV-ONLY: Add mock data fallback when upstream API is unreachable
+if (process.env['NODE_ENV'] !== 'production') {
+  wrapWithMockFallback(app);
+}
+
 // Public API routes
+app.use('/public/api/committees', publicCommitteesRouter);
+app.use('/public/api/mailing-lists', publicMailingListsRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
+app.use('/public/api/projects', publicProjectsRouter);
 
 // Protected API routes
 app.use('/api/projects', projectsRouter);
@@ -197,6 +209,7 @@ app.use('/api/url-metadata', urlMetadataRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+app.use('/public/api/*', apiErrorHandler);
 
 /**
  * Handle all other requests by rendering the Angular application.

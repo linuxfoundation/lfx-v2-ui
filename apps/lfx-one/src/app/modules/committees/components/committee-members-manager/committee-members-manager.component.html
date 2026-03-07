@@ -88,9 +88,13 @@
             <!-- Member Info -->
             <div class="flex items-center gap-4">
               <!-- Avatar -->
-              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                {{ (member.first_name.charAt(0) || '') + (member.last_name.charAt(0) || '') || member.email.charAt(0).toUpperCase() || 'M' }}
-              </div>
+              <lfx-avatar
+                [label]="member.first_name || member.email || 'M'"
+                size="normal"
+                shape="circle"
+                styleClass="bg-blue-50 border border-gray-200"
+                [ariaLabel]="(member.first_name || member.email || 'Member') + ' avatar'">
+              </lfx-avatar>
               <!-- Details -->
               <div>
                 <div class="font-medium text-gray-900">

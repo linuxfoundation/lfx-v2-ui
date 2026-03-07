@@ -153,7 +153,7 @@ export class ProjectService {
    * Fetches a single project by slug using NATS for slug resolution
    * First resolves slug to ID via NATS, then fetches project data
    */
-  public async getProjectBySlug(req: Request, projectSlug: string): Promise<Project> {
+  public async getProjectBySlug(req: Request, projectSlug: string, access: boolean = true): Promise<Project> {
     const natsResult = await this.getProjectIdBySlug(req, projectSlug);
 
     if (!natsResult.exists || !natsResult.uid) {
@@ -165,7 +165,7 @@ export class ProjectService {
     }
 
     // Now fetch the project using the resolved ID
-    return this.getProjectById(req, natsResult.uid);
+    return this.getProjectById(req, natsResult.uid, access);
   }
 
   public async getProjectSettings(req: Request, uid: string): Promise<ProjectSettings> {

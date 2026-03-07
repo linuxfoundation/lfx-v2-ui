@@ -1,0 +1,86 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (submitted()) {
+  <div class="flex items-center gap-2 text-sm text-emerald-700 py-2" data-testid="subscribe-success">
+    <i class="fa-light fa-circle-check"></i>
+    <span>{{ successMessage() }}</span>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" data-testid="subscribe-form">
+    @if (compact()) {
+      <!-- Compact mode: inline email + join button -->
+      <div class="flex items-start gap-2">
+        <div class="flex-1 flex flex-col">
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="Enter your email to subscribe"
+            data-testid="subscribe-email-input"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+          @if (form.controls.email.touched && form.controls.email.errors) {
+            <span class="text-xs text-red-500 mt-1" data-testid="subscribe-email-error">Please enter a valid email address</span>
+          }
+        </div>
+        <lfx-button
+          label="Join"
+          type="submit"
+          size="small"
+          [loading]="loading()"
+          [disabled]="loading()"
+          icon="fa-light fa-envelope"
+          data-testid="subscribe-submit-btn">
+        </lfx-button>
+      </div>
+    } @else {
+      <!-- Full mode: name fields + email + subscribe button -->
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <label for="subscribe-email" class="text-sm font-medium text-gray-700">Email *</label>
+          <input
+            id="subscribe-email"
+            type="email"
+            formControlName="email"
+            placeholder="your@email.com"
+            data-testid="subscribe-email-input"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+          @if (form.controls.email.touched && form.controls.email.errors) {
+            <span class="text-xs text-red-500" data-testid="subscribe-email-error">Please enter a valid email address</span>
+          }
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label for="subscribe-first-name" class="text-sm font-medium text-gray-700">First Name</label>
+            <input
+              id="subscribe-first-name"
+              type="text"
+              formControlName="first_name"
+              placeholder="First name"
+              data-testid="subscribe-first-name-input"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="subscribe-last-name" class="text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              id="subscribe-last-name"
+              type="text"
+              formControlName="last_name"
+              placeholder="Last name"
+              data-testid="subscribe-last-name-input"
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" />
+          </div>
+        </div>
+
+        <lfx-button label="Subscribe" type="submit" [loading]="loading()" [disabled]="loading()" icon="fa-light fa-envelope" data-testid="subscribe-submit-btn">
+        </lfx-button>
+      </div>
+    }
+
+    @if (errorMessage()) {
+      <div class="mt-2 text-sm text-red-600" data-testid="subscribe-error">
+        {{ errorMessage() }}
+      </div>
+    }
+  </form>
+}
