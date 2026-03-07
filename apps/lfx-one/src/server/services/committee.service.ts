@@ -816,9 +816,11 @@ export class CommitteeService {
       });
 
       return {
+        uid: ml.uid,
         name: ml.group_name,
         url,
         subscriber_count: ml.subscriber_count,
+        audience_access: ml.audience_access,
       };
     } catch {
       logger.debug(req, 'get_committee_mailing_list', 'Failed to fetch mailing list for committee; returning null', {

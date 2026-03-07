@@ -9,16 +9,17 @@ import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, finalize, of } from 'rxjs';
 
-import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { ButtonComponent } from '@components/button/button.component';
 
 import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
+import { MailingListAudienceAccess } from '@lfx-one/shared/enums';
+
+import { MailingListSubscribeFormComponent } from '../components/mailing-list-subscribe-form/mailing-list-subscribe-form.component';
 
 @Component({
   selector: 'lfx-public-directory',
-  imports: [DecimalPipe, RouterLink, FormsModule, CardComponent, TagComponent, ButtonComponent],
+  imports: [DecimalPipe, RouterLink, FormsModule, TagComponent, MailingListSubscribeFormComponent],
   templateUrl: './public-directory.component.html',
   styleUrl: './public-directory.component.scss',
 })
@@ -94,6 +95,9 @@ export class PublicDirectoryComponent {
     return !!this.searchTerm() || !!this.selectedCategory() || !!this.selectedFoundation() || !!this.selectedProject();
   });
 
+  public expandedSubscribeId = signal<string | null>(null);
+  public readonly MailingListAudienceAccess = MailingListAudienceAccess;
+
   public constructor() {
     // Initialize filter signals from URL query params on first load and browser back/forward
     effect(() => {
@@ -130,6 +134,12 @@ export class PublicDirectoryComponent {
   public onProjectChange(event: Event): void {
     this.selectedProject.set((event.target as HTMLSelectElement).value);
     this.syncQueryParams();
+  }
+
+  public toggleSubscribe(event: Event, mailingListUid: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.expandedSubscribeId.set(this.expandedSubscribeId() === mailingListUid ? null : mailingListUid);
   }
 
   public clearFilters(): void {

@@ -27,6 +27,7 @@ import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
 import publicCommitteesRouter from './routes/public-committees.route';
+import publicMailingListsRouter from './routes/public-mailing-lists.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import publicProjectsRouter from './routes/public-projects.route';
 import searchRouter from './routes/search.route';
@@ -187,6 +188,7 @@ if (process.env['NODE_ENV'] !== 'production') {
 
 // Public API routes
 app.use('/public/api/committees', publicCommitteesRouter);
+app.use('/public/api/mailing-lists', publicMailingListsRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
 app.use('/public/api/projects', publicProjectsRouter);
 
@@ -207,6 +209,7 @@ app.use('/api/url-metadata', urlMetadataRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+app.use('/public/api/*', apiErrorHandler);
 
 /**
  * Handle all other requests by rendering the Angular application.

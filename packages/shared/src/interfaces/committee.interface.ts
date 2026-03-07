@@ -3,6 +3,7 @@
 
 import { CommitteeMemberVisibility } from '../enums/committee.enum';
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
+import { MailingListAudienceAccess } from '../enums/mailing-list.enum';
 
 // ── v2.0 Taxonomy Types ─────────────────────────────────────────────────────
 
@@ -133,12 +134,16 @@ export type ChatPlatform = 'slack' | 'discord';
  * A mailing list associated with a group (e.g., Groups.io, Google Groups).
  */
 export interface GroupMailingList {
+  /** Unique identifier of the mailing list */
+  uid?: string;
   /** Display name of the list (e.g., "tac-general") */
   name: string;
   /** Full URL to the mailing list archive or subscription page */
   url?: string;
   /** Number of subscribers (optional, for display) */
   subscriber_count?: number;
+  /** Who can discover and join this mailing list */
+  audience_access?: MailingListAudienceAccess;
 }
 
 /**
