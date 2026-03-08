@@ -3,6 +3,7 @@
 
 import { Page } from '@playwright/test';
 
+import { mockCommittee, mockCommitteeMembers, mockPendingApplication, mockPendingInvite } from '../fixtures/mock-data/committees.mock';
 import { getMockProject } from '../fixtures/mock-data';
 
 /**
@@ -56,6 +57,130 @@ export class ApiMockHelper {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(finalProject),
+      });
+    });
+  }
+
+  /**
+   * Mock GET /api/committees/:id — returns a single committee
+   */
+  static async setupCommitteeMock(page: Page, committeeId: string): Promise<void> {
+    await page.route(`**/api/committees/${committeeId}`, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...mockCommittee, uid: committeeId }),
+      });
+    });
+  }
+
+  /**
+   * Mock GET/POST/DELETE /api/committees/:id/members — member CRUD
+   */
+  static async setupCommitteeMembersMock(page: Page, committeeId: string): Promise<void> {
+    // Individual member DELETE
+    await page.route(`**/api/committees/${committeeId}/members/*`, async (route) => {
+      if (route.request().method() === 'DELETE') {
+        await route.fulfill({ status: 204, body: '' });
+        return;
+      }
+      await route.continue();
+    });
+
+    // List + Create
+    await page.route(`**/api/committees/${committeeId}/members`, async (route) => {
+      if (route.request().method() === 'POST') {
+        const body = await route.request().postDataJSON();
+        const created = {
+          uid: `mock-member-${Date.now()}`,
+          committee_uid: committeeId,
+          committee_name: mockCommittee.name,
+          ...body,
+          status: 'Active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(created),
+        });
+        return;
+      }
+
+      // GET — return member list
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockCommitteeMembers),
+      });
+    });
+  }
+
+  /**
+   * Mock POST /api/committees/:id/invites — send invites
+   */
+  static async setupCommitteeInviteMock(page: Page, committeeId: string): Promise<void> {
+    await page.route(`**/api/committees/${committeeId}/invites`, async (route) => {
+      if (route.request().method() === 'POST') {
+        const body = await route.request().postDataJSON();
+        const invites = (body.emails || []).map((email: string, i: number) => ({
+          ...mockPendingInvite,
+          uid: `mock-invite-${Date.now()}-${i}`,
+          committee_uid: committeeId,
+          invitee_email: email,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+        }));
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(invites),
+        });
+        return;
+      }
+
+      // GET — return pending invites
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([mockPendingInvite]),
+      });
+    });
+  }
+
+  /**
+   * Mock GET/POST /api/committees/:id/applications — join applications + approve/reject
+   */
+  static async setupCommitteeApplicationMock(page: Page, committeeId: string): Promise<void> {
+    // Approve / Reject sub-routes
+    await page.route(`**/api/committees/${committeeId}/applications/*/approve`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...mockPendingApplication, status: 'approved', reviewed_at: new Date().toISOString() }),
+      });
+    });
+
+    await page.route(`**/api/committees/${committeeId}/applications/*/reject`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...mockPendingApplication, status: 'rejected', reviewed_at: new Date().toISOString() }),
+      });
+    });
+
+    // List applications
+    await page.route(`**/api/committees/${committeeId}/applications`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([mockPendingApplication]),
       });
     });
   }
