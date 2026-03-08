@@ -72,6 +72,7 @@ export class PersonaService {
    */
   private enforceTlfOnlyContext(): void {
     this.projectContextService.clearProject();
+    this.projectContextService.clearFoundation();
 
     const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
     if (tlfProject) {
