@@ -4,10 +4,10 @@
 import { Component, computed, inject, input, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
-import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_FOUNDATION_HEALTH_METRICS } from '@lfx-one/shared/constants';
-import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
+import { CategorizedMetricCard, DashboardDrawerType, FilterPillOption } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -58,8 +58,8 @@ export class FoundationHealthComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   public readonly title = input<string>('Foundation Health');
-  public readonly customFilterOptions = input<FilterOption[]>();
-  public readonly additionalCards = input<{ card: DashboardMetricCard; category: string }[]>([]);
+  public readonly customFilterOptions = input<FilterPillOption[]>();
+  public readonly additionalCards = input<CategorizedMetricCard[]>([]);
   public readonly hideBuiltInCards = input<boolean>(false);
 
   // Loading signals for each data source
@@ -94,7 +94,7 @@ export class FoundationHealthComponent {
 
   public readonly selectedFilter = signal<string>('all');
 
-  private readonly defaultFilterOptions: FilterOption[] = [
+  private readonly defaultFilterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributors', label: 'Contribution' },
     { id: 'projects', label: 'Project' },
@@ -170,7 +170,7 @@ export class FoundationHealthComponent {
   private initializeMetricCards() {
     return computed(() => {
       const filter = this.selectedFilter();
-      const builtInCards: { card: DashboardMetricCard; category: string }[] = this.hideBuiltInCards()
+      const builtInCards: CategorizedMetricCard[] = this.hideBuiltInCards()
         ? []
         : [
             { card: this.softwareValueCard(), category: 'projects' },

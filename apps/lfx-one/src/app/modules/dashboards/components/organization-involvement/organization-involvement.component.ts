@@ -4,7 +4,7 @@
 import { Component, computed, inject, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
-import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_INVOLVEMENT_METRICS } from '@lfx-one/shared/constants';
 import { DashboardDrawerType } from '@lfx-one/shared/interfaces';
@@ -25,6 +25,7 @@ import { OrgTrainingEnrollmentsDrawerComponent } from '../org-training-enrollmen
 import type {
   CertifiedEmployeesResponse,
   DashboardMetricCard,
+  FilterPillOption,
   MembershipTierResponse,
   OrganizationContributorsResponse,
   OrganizationEventAttendanceMonthlyResponse,
@@ -86,7 +87,7 @@ export class OrganizationInvolvementComponent {
   public readonly selectedFilter = signal<string>('all');
   protected readonly activeDrawer = signal<DashboardDrawerType | null>(null);
   public readonly accountName = computed<string>(() => this.accountContextService.selectedAccount().accountName || 'Organization');
-  public readonly filterOptions: FilterOption[] = [
+  public readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributions', label: 'Contribution' },
     { id: 'events', label: 'Event' },

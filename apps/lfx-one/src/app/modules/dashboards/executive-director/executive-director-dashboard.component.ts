@@ -3,9 +3,8 @@
 
 import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FilterOption } from '@components/filter-pills/filter-pills.component';
 import { MARKETING_OVERVIEW_METRICS } from '@lfx-one/shared/constants';
-import { DashboardMetricCard, PendingActionItem } from '@lfx-one/shared/interfaces';
+import { CategorizedMetricCard, FilterPillOption, PendingActionItem } from '@lfx-one/shared/interfaces';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -27,7 +26,7 @@ export class ExecutiveDirectorDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
-  public readonly edFilterOptions: FilterOption[] = [
+  public readonly edFilterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'memberships', label: 'Memberships' },
     { id: 'marketing', label: 'Marketing' },
@@ -36,7 +35,7 @@ export class ExecutiveDirectorDashboardComponent {
     { id: 'projectOperations', label: 'Project Operations' },
   ];
 
-  public readonly marketingCards: { card: DashboardMetricCard; category: string }[] = MARKETING_OVERVIEW_METRICS.map((card) => ({
+  public readonly marketingCards: CategorizedMetricCard[] = MARKETING_OVERVIEW_METRICS.map((card) => ({
     card,
     category: card.category || 'marketing',
   }));

@@ -228,3 +228,25 @@ export interface ProjectTableRow {
   stars: number;
   lastUpdated: string | null;
 }
+
+/**
+ * Filter pill option for dashboard filter pills
+ * @description Used by FilterPillsComponent for category-based filtering
+ */
+export interface FilterPillOption {
+  /** Unique filter identifier matching a MetricCategory or 'all' */
+  id: string;
+  /** Display label for the filter pill */
+  label: string;
+}
+
+/**
+ * Metric card with its category for filtering
+ * @description Pairs a dashboard metric card with its category for filter-based display
+ */
+export interface CategorizedMetricCard {
+  /** The metric card data */
+  card: DashboardMetricCard;
+  /** Category used for filtering (should match MetricCategory values) */
+  category: string;
+}
