@@ -93,7 +93,12 @@ export class DashboardMeetingCardComponent {
       .getMeetingAttachmentDownloadUrl(meetingId, attachment.uid)
       .pipe(take(1))
       .subscribe({
-        next: (res) => window.open(res.download_url, '_blank'),
+        next: (res) => {
+          const newWindow = window.open(res.download_url, '_blank', 'noopener,noreferrer');
+          if (newWindow) {
+            newWindow.opener = null;
+          }
+        },
         error: () =>
           this.messageService.add({
             severity: 'error',

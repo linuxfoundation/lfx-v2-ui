@@ -274,7 +274,12 @@ export class MeetingCardComponent implements OnInit {
       : this.meetingService.getMeetingAttachmentDownloadUrl(meetingId, attachment.uid);
 
     download$.pipe(take(1)).subscribe({
-      next: (res) => window.open(res.download_url, '_blank'),
+      next: (res) => {
+        const newWindow = window.open(res.download_url, '_blank', 'noopener');
+        if (newWindow) {
+          newWindow.opener = null;
+        }
+      },
       error: () =>
         this.messageService.add({
           severity: 'error',
