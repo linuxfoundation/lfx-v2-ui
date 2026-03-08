@@ -10,7 +10,7 @@ import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { BehaviorSubject, catchError, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
 import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
@@ -27,12 +27,6 @@ export class ExecutiveDirectorDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
-  public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
-  public readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
-  public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
-  private readonly rawPendingActions: Signal<PendingActionItem[]>;
-  public readonly pendingActions: Signal<PendingActionItem[]>;
-
   public readonly edFilterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
     { id: 'projects', label: 'Memberships' },
@@ -46,6 +40,13 @@ export class ExecutiveDirectorDashboardComponent {
     card,
     category: card.category || 'marketing',
   }));
+
+  public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
+
+  public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
+  public readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  private readonly rawPendingActions: Signal<PendingActionItem[]>;
+  public readonly pendingActions: Signal<PendingActionItem[]>;
 
   public constructor() {
     this.rawPendingActions = this.initializePendingActions();
@@ -65,21 +66,17 @@ export class ExecutiveDirectorDashboardComponent {
     const project$ = toObservable(this.selectedProject);
 
     return toSignal(
-      this.refresh$.pipe(
+      combineLatest([this.refresh$, project$]).pipe(
         takeUntilDestroyed(),
-        switchMap(() => {
-          return project$.pipe(
-            switchMap((project) => {
-              if (!project?.slug || !project?.uid) {
-                return of([]);
-              }
+        switchMap(([, project]) => {
+          if (!project?.slug || !project?.uid) {
+            return of([]);
+          }
 
-              return this.projectService.getPendingActions(project.slug, project.uid, 'executive-director').pipe(
-                catchError((error) => {
-                  console.error('Failed to fetch pending actions:', error);
-                  return of([]);
-                })
-              );
+          return this.projectService.getPendingActions(project.slug, project.uid, 'executive-director').pipe(
+            catchError((error) => {
+              console.error('Failed to fetch pending actions:', error);
+              return of([]);
             })
           );
         })

@@ -47,12 +47,18 @@ export class PersonaService {
     if (persona !== this.currentPersona()) {
       this.currentPersona.set(persona);
 
-      // When switching to board-member or executive-director persona, clear any child project selection
-      // These personas should only work at the foundation level
-      if (persona === 'board-member' || persona === 'executive-director') {
-        this.projectContextService.clearProject();
-        this.router.navigate(['/']);
+      if (this.isBoardScopedPersona(persona)) {
+        this.enforceTlfOnlyContext();
       }
     }
+  }
+
+  public isBoardScopedPersona(persona: PersonaType): boolean {
+    return persona === 'board-member' || persona === 'executive-director';
+  }
+
+  private enforceTlfOnlyContext(): void {
+    this.projectContextService.clearProject();
+    this.router.navigate(['/']);
   }
 }
