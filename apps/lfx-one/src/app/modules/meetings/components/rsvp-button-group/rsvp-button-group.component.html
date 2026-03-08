@@ -5,7 +5,7 @@
 <div
   [ngClass]="{
     'bg-blue-50 border border-blue-300': selectedResponse() === null && !disabled() && !isLoading(),
-    'bg-gray-100/60': disabled(),
+    'bg-gray-100/60': disabled() && !isLoading(),
     'bg-blue-50/40 border border-blue-200': isLoading(),
     'bg-gray-200/50': selectedResponse() !== null && !disabled() && !isLoading(),
   }"
@@ -15,7 +15,7 @@
   <div
     [ngClass]="{
       'text-blue-600': selectedResponse() === null && !disabled() && !isLoading(),
-      'text-gray-400': disabled(),
+      'text-gray-400': disabled() && !isLoading(),
       'text-blue-500': isLoading(),
       'text-gray-500': selectedResponse() !== null && !disabled() && !isLoading(),
     }"
@@ -46,7 +46,7 @@
       [ngClass]="{
         'bg-blue-500 border-blue-500 text-white': selectedResponse() === 'accepted' && !disabled() && !isLoading(),
         'bg-white border-blue-500 text-blue-700 hover:bg-blue-50': selectedResponse() !== 'accepted' && !disabled() && !isLoading(),
-        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled(),
+        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled() && !isLoading(),
         'bg-blue-100/50 border-blue-200 text-blue-300 cursor-wait animate-pulse': isLoading(),
       }"
       class="flex-1 inline-flex items-center justify-center gap-[3.5px] px-[7px] py-[5.25px] rounded-[3.5px] h-[28px] border transition-colors"
@@ -62,7 +62,7 @@
       [ngClass]="{
         'bg-red-500 border-red-500 text-white': selectedResponse() === 'declined' && !disabled() && !isLoading(),
         'bg-white border-red-500 text-red-700 hover:bg-red-50': selectedResponse() !== 'declined' && !disabled() && !isLoading(),
-        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled(),
+        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled() && !isLoading(),
         'bg-blue-100/50 border-blue-200 text-blue-300 cursor-wait animate-pulse': isLoading(),
       }"
       class="flex-1 inline-flex items-center justify-center gap-[3.5px] px-[7px] py-[5.25px] rounded-[3.5px] h-[28px] border transition-colors"
@@ -78,7 +78,7 @@
       [ngClass]="{
         'bg-amber-500 border-amber-500 text-white': selectedResponse() === 'maybe' && !disabled() && !isLoading(),
         'bg-white border-amber-500 text-amber-700 hover:bg-amber-50': selectedResponse() !== 'maybe' && !disabled() && !isLoading(),
-        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled(),
+        'bg-white border-gray-300 text-gray-400 cursor-not-allowed': disabled() && !isLoading(),
         'bg-blue-100/50 border-blue-200 text-blue-300 cursor-wait animate-pulse': isLoading(),
       }"
       class="flex-1 inline-flex items-center justify-center gap-[3.5px] px-[7px] py-[5.25px] rounded-[3.5px] h-[28px] border transition-colors"
