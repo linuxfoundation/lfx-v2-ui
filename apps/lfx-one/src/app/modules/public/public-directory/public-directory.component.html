@@ -149,11 +149,13 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (committee of filteredCommittees(); track committee.uid) {
             <div
+              data-testid="directory-card-wrapper"
               (click)="navigateToGroup(committee.uid)"
               (keydown.enter)="navigateToGroup(committee.uid)"
-              (keydown.space)="navigateToGroup(committee.uid)"
+              (keydown.space)="$event.preventDefault(); navigateToGroup(committee.uid)"
               role="link"
               tabindex="0"
+              [attr.aria-label]="'View details for ' + (committee.display_name || committee.name)"
               class="block cursor-pointer group h-full">
               <div class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col">
                 <!-- Card Body -->
@@ -251,7 +253,9 @@
 
                 <!-- Card Footer -->
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-100 group-hover:bg-blue-50 transition">
-                  <div class="flex items-center justify-between text-sm font-medium text-blue-600 group-hover:text-blue-700">
+                  <div
+                    data-testid="directory-card-view-details"
+                    class="flex items-center justify-between text-sm font-medium text-blue-600 group-hover:text-blue-700">
                     <span>View Details</span>
                     <i class="fa-light fa-arrow-right"></i>
                   </div>

@@ -7,7 +7,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, finalize, of, tap } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 
 import { TagComponent } from '@components/tag/tag.component';
 
@@ -133,7 +133,7 @@ export class PublicDirectoryComponent {
   }
 
   public navigateToGroup(uid: string): void {
-    this.router.navigate(['/public/groups', uid]);
+    void this.router.navigate(['/public/groups', uid]);
   }
 
   public clearFilters(): void {
@@ -158,7 +158,6 @@ export class PublicDirectoryComponent {
   private initializeCommittees(): Signal<PublicCommittee[]> {
     return toSignal(
       this.http.get<PublicCommittee[]>('/public/api/committees').pipe(
-        tap((data) => console.info('committees', data)),
         catchError(() => of([] as PublicCommittee[])),
         finalize(() => this.loading.set(false))
       ),
