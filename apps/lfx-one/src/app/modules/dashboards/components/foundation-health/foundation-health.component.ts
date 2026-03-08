@@ -58,6 +58,9 @@ export class FoundationHealthComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   public readonly title = input<string>('Foundation Health');
+  public readonly customFilterOptions = input<FilterOption[]>();
+  public readonly additionalCards = input<{ card: DashboardMetricCard; category: string }[]>([]);
+  public readonly hideBuiltInCards = input<boolean>(false);
 
   // Loading signals for each data source
   protected readonly totalProjectsLoading = signal(true);
@@ -84,12 +87,14 @@ export class FoundationHealthComponent {
 
   public readonly selectedFilter = signal<string>('all');
 
-  public readonly filterOptions: FilterOption[] = [
+  private readonly defaultFilterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributors', label: 'Contribution' },
     { id: 'projects', label: 'Project' },
     { id: 'events', label: 'Event' },
   ];
+
+  public readonly filterOptions = computed(() => this.customFilterOptions() || this.defaultFilterOptions);
 
   public readonly sparklineOptions = BASE_LINE_CHART_OPTIONS;
   public readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
@@ -158,16 +163,20 @@ export class FoundationHealthComponent {
   private initializeMetricCards() {
     return computed(() => {
       const filter = this.selectedFilter();
-      const allCards = [
-        { card: this.softwareValueCard(), category: 'projects' },
-        { card: this.totalProjectsCard(), category: 'projects' },
-        { card: this.totalMembersCard(), category: 'projects' },
-        { card: this.companyBusFactorCard(), category: 'contributors' },
-        { card: this.activeContributorsCard(), category: 'contributors' },
-        { card: this.maintainersCard(), category: 'contributors' },
-        { card: this.eventsCard(), category: 'events' },
-        { card: this.projectHealthScoresCard(), category: 'projects' },
-      ];
+      const builtInCards: { card: DashboardMetricCard; category: string }[] = this.hideBuiltInCards()
+        ? []
+        : [
+            { card: this.softwareValueCard(), category: 'projects' },
+            { card: this.totalProjectsCard(), category: 'projects' },
+            { card: this.totalMembersCard(), category: 'projects' },
+            { card: this.companyBusFactorCard(), category: 'contributors' },
+            { card: this.activeContributorsCard(), category: 'contributors' },
+            { card: this.maintainersCard(), category: 'contributors' },
+            { card: this.eventsCard(), category: 'events' },
+            { card: this.projectHealthScoresCard(), category: 'projects' },
+          ];
+
+      const allCards = [...builtInCards, ...this.additionalCards()];
 
       if (filter === 'all') {
         return allCards.map((item) => item.card);

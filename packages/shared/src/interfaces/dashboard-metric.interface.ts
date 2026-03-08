@@ -13,7 +13,16 @@ export type FoundationHealthScore = 'excellent' | 'healthy' | 'stable' | 'unstea
  * Metric category type for dashboard filtering
  * @description Used to categorize and filter dashboard metrics
  */
-export type MetricCategory = 'contributors' | 'projects' | 'events' | 'code' | 'projectHealth';
+export type MetricCategory =
+  | 'contributors'
+  | 'projects'
+  | 'events'
+  | 'code'
+  | 'projectHealth'
+  | 'marketing'
+  | 'memberships'
+  | 'education'
+  | 'projectOperations';
 
 /**
  * Custom content type for specialized metric cards
@@ -45,6 +54,9 @@ export interface DashboardMetricCard {
 
   /** Trend direction indicator */
   trend?: 'up' | 'down';
+
+  /** Percentage change value (e.g., '+12.4%' or '-3.2%') */
+  changePercentage?: string;
 
   // ============================================
   // Chart Configuration

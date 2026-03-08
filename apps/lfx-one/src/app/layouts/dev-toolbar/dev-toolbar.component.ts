@@ -42,7 +42,10 @@ export class DevToolbarComponent {
   protected readonly personaOptions = PERSONA_OPTIONS;
 
   // Board member project override
-  protected readonly isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
+  protected readonly isBoardMember = computed(() => {
+    const persona = this.personaService.currentPersona();
+    return persona === 'board-member' || persona === 'executive-director';
+  });
 
   // Check if we're on the board dashboard page
   protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
@@ -62,7 +65,7 @@ export class DevToolbarComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member') {
+        if (value === 'board-member' || value === 'executive-director') {
           // TODO: DEMO - Remove when proper permissions are implemented
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {

@@ -13,7 +13,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <!-- Filter Pills -->
         <lfx-filter-pills
-          [options]="filterOptions"
+          [options]="filterOptions()"
           [selectedFilter]="selectedFilter()"
           (filterChange)="handleFilterChange($event)"
           data-testid="foundation-health-filters"></lfx-filter-pills>

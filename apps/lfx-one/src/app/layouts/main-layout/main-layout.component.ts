@@ -61,7 +61,8 @@ export class MainLayoutComponent {
   // Order: Overview, Meetings, Mailing Lists, Groups, Projects, My Activity, Insights, Governance
   protected readonly sidebarItems = computed(() => {
     const items: SidebarMenuItem[] = [];
-    const isBoardMember = this.personaService.currentPersona() === 'board-member';
+    const persona = this.personaService.currentPersona();
+    const isBoardMember = persona === 'board-member' || persona === 'executive-director';
 
     // Overview (Dashboard)
     items.push({

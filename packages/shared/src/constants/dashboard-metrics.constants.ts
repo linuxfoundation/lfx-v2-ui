@@ -155,6 +155,46 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
 ];
 
 // ============================================
+// Marketing Overview Metrics (Executive Director)
+// ============================================
+
+/**
+ * Marketing overview metrics for the executive director dashboard
+ * NOTE: Prototype data - will be replaced with live API data
+ */
+export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
+  {
+    title: 'Website Visits',
+    icon: 'fa-light fa-globe',
+    value: '127,543',
+    changePercentage: '+12.4%',
+    trend: 'up',
+    subtitle: 'Last 30 days',
+    chartType: 'line',
+    category: 'marketing',
+    testId: 'marketing-card-website-visits',
+    chartData: {
+      labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
+      datasets: [
+        {
+          data: [
+            3200, 3400, 3350, 3500, 3600, 3550, 3700, 3800, 3750, 3900, 4000, 3950, 4100, 4200, 4150, 4300, 4250, 4400, 4350, 4500, 4450, 4600, 4550, 4700,
+            4650, 4800, 4750, 4900, 4850, 5000,
+          ],
+          borderColor: lfxColors.blue[500],
+          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    },
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+  },
+];
+
+// ============================================
 // Progress Metrics (Core Developer & Maintainer)
 // ============================================
 
