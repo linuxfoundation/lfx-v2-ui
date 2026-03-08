@@ -20,6 +20,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
+import { InviteMemberDialogComponent } from '../invite-member-dialog/invite-member-dialog.component';
 import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
@@ -101,6 +102,24 @@ export class CommitteeMembersComponent implements OnInit {
     event.stopPropagation();
     this.selectedMember.set(member);
     menuComponent.toggle(event);
+  }
+
+  public openInviteMemberDialog(): void {
+    const dialogRef = this.dialogService.open(InviteMemberDialogComponent, {
+      header: 'Invite Members',
+      width: '550px',
+      modal: true,
+      closable: true,
+      data: {
+        committee: this.committee(),
+      },
+    }) as DynamicDialogRef;
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refreshMembers();
+      }
+    });
   }
 
   public openAddMemberDialog(): void {
