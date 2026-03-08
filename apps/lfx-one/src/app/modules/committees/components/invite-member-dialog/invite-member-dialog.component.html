@@ -18,7 +18,7 @@
       placeholder="Enter email addresses separated by commas or new lines"
       id="invite-emails"
       styleClass="w-full"
-      dataTest="invite-emails-input">
+      dataTest="committees-invite-emails-input">
     </lfx-textarea>
     @if (form.get('emails')?.touched && form.get('emails')?.hasError('required')) {
       <span class="text-xs text-red-500">At least one email address is required</span>
@@ -35,13 +35,13 @@
       placeholder="Add a personal note to the invite email..."
       id="invite-message"
       styleClass="w-full"
-      dataTest="invite-message-input">
+      dataTest="committees-invite-message-input">
     </lfx-textarea>
   </div>
 
   <!-- Actions -->
   <div class="flex justify-end gap-3 pt-2">
-    <lfx-button label="Cancel" severity="secondary" size="small" (onClick)="onCancel()" data-testid="invite-cancel-btn"></lfx-button>
+    <lfx-button label="Cancel" severity="secondary" size="small" (onClick)="onCancel()" data-testid="committees-invite-cancel-btn"></lfx-button>
     <lfx-button
       label="Send Invites"
       icon="fa-light fa-paper-plane"
@@ -49,7 +49,7 @@
       type="submit"
       [loading]="submitting()"
       [disabled]="submitting()"
-      data-testid="invite-send-btn">
+      data-testid="committees-invite-send-btn">
     </lfx-button>
   </div>
 </form>

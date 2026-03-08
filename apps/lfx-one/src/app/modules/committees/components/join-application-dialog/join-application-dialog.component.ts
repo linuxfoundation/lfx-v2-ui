@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee, GroupJoinApplicationRequest } from '@lfx-one/shared/interfaces';
@@ -25,7 +25,7 @@ export class JoinApplicationDialogComponent {
   public submitting = signal<boolean>(false);
 
   public form = new FormGroup({
-    reason: new FormControl('', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]),
+    reason: new FormControl('', [JoinApplicationDialogComponent.trimmedRequired, Validators.minLength(10), Validators.maxLength(500)]),
   });
 
   public get reasonLength(): number {
@@ -47,7 +47,7 @@ export class JoinApplicationDialogComponent {
     this.submitting.set(true);
 
     const payload: GroupJoinApplicationRequest = {
-      reason: this.form.value.reason || undefined,
+      reason: this.form.value.reason?.trim() || undefined,
     };
 
     this.committeeService.applyToJoin(this.committee.uid, payload).subscribe({
@@ -70,5 +70,9 @@ export class JoinApplicationDialogComponent {
         });
       },
     });
+  }
+
+  private static trimmedRequired(control: AbstractControl): ValidationErrors | null {
+    return (control.value as string)?.trim().length ? null : { required: true };
   }
 }
