@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, Signal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
@@ -41,8 +41,11 @@ export class DevToolbarComponent {
   // Persona options for SelectButton
   protected readonly personaOptions = PERSONA_OPTIONS;
 
-  // TLF-only persona project override
-  protected readonly isTlfOnlyPersona = this.personaService.isTlfOnlyPersona;
+  // Board-level persona project override
+  protected readonly isBoardLevelPersona = computed(() => {
+    const persona = this.personaService.currentPersona();
+    return persona === 'board-member' || persona === 'executive-director';
+  });
 
   // Check if we're on the board dashboard page
   protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
@@ -62,15 +65,12 @@ export class DevToolbarComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member' || value === 'executive-director') {
-          // TODO: DEMO - Remove when proper permissions are implemented
-          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+        this.personaService.setPersona(value);
+
+        if (this.personaService.isBoardScopedPersona(value)) {
+          // Sync form project selector with the enforced TLF foundation
+          const tlfProject = this.projectContextService.selectedFoundation();
           if (tlfProject) {
-            this.projectContextService.setFoundation({
-              uid: tlfProject.uid,
-              name: tlfProject.name,
-              slug: tlfProject.slug,
-            });
             this.form.get('selectedProjectUid')?.setValue(tlfProject.uid, { emitEvent: false });
           }
         } else {
@@ -80,8 +80,6 @@ export class DevToolbarComponent {
             this.projectContextService.setProject(firstProject);
           }
         }
-
-        this.personaService.setPersona(value);
       });
 
     // Subscribe to account selection changes
