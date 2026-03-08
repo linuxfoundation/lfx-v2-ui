@@ -37,7 +37,7 @@ import {
 import { RecurrenceType } from '@lfx-one/shared/enums';
 import { Request } from 'express';
 
-import { ResourceNotFoundError } from '../errors';
+import { MicroserviceError, ResourceNotFoundError } from '../errors';
 import { logger } from '../services/logger.service';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
@@ -59,7 +59,7 @@ export class CommitteeService {
 
   /**
    * Fetches all committees based on query parameters.
-   * Non-admin users only see public committees + private committees they belong to.
+   * Filters per-committee: public committees, committees with writer access, or member committees.
    */
   public async getCommittees(req: Request, query: Record<string, any> = {}): Promise<PaginatedResponse<Committee>> {
     logger.debug(req, 'get_committees', 'Starting committee fetch', { query_params: Object.keys(query) });
@@ -94,15 +94,15 @@ export class CommitteeService {
     // Add writer access field to all committees
     committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
 
-    // Non-admin users only see public committees + private committees they belong to
-    const hasWriterAccess = committees.some((c) => c.writer === true);
-    if (!hasWriterAccess) {
-      const myCommittees = await this.getMyCommittees(req);
-      const myUids = new Set(myCommittees.map((c) => c.uid));
-      committees = committees.filter((c) => c.public || myUids.has(c.uid));
+    // Filter visibility per committee: public, writer on that specific committee, or member
+    const myCommittees = await this.getMyCommittees(req);
+    const myUids = new Set(myCommittees.map((c) => c.uid));
+    const totalBefore = committees.length;
+    committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
 
-      logger.debug(req, 'get_committees', 'Filtered committees for non-admin user', {
-        total_before: resources.length,
+    if (committees.length < totalBefore) {
+      logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
+        total_before: totalBefore,
         visible_count: committees.length,
       });
     }
@@ -190,8 +190,12 @@ export class CommitteeService {
 
     try {
       committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
-    } catch {
-      logger.debug(req, 'get_committee_by_id', 'Direct endpoint failed, trying query service fallback', { committee_uid: committeeId });
+    } catch (error: unknown) {
+      // Only fall back to query service on 404; re-throw auth/server errors
+      if (error instanceof MicroserviceError && error.statusCode !== 404) {
+        throw error;
+      }
+      logger.debug(req, 'get_committee_by_id', 'Direct endpoint returned 404, trying query service fallback', { committee_uid: committeeId });
     }
 
     // Fallback: search all committees via query service and find by UID

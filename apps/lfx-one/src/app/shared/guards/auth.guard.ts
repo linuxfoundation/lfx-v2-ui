@@ -33,13 +33,6 @@ export const authGuard: CanActivateFn = (_route, state) => {
     return true;
   }
 
-  // TODO: TEMPORARY - Allow unauthenticated access for local dev preview
-  // Revert when Auth0 credentials are configured
-  // Check if running on localhost (local dev mode)
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return true;
-  }
-
   // Client-side: Redirect to login with returnTo parameter
   const returnTo = encodeURIComponent(state.url);
   window.location.href = `/login?returnTo=${returnTo}`;

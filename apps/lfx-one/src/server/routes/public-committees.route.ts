@@ -8,7 +8,7 @@ import { CommitteeController } from '../controllers/committee.controller';
 const router = Router();
 const committeeController = new CommitteeController();
 
-// GET /public/api/committees — list all public committees (no auth required)
-router.get('/', (req: Request, res: Response, next: NextFunction) => committeeController.getCommittees(req, res, next));
+// GET /public/api/committees — list public-safe committee data (no auth required)
+router.get('/', (req: Request, res: Response, next: NextFunction) => committeeController.getPublicCommittees(req, res, next));
 
 export default router;
