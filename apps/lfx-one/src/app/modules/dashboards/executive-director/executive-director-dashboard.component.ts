@@ -44,18 +44,12 @@ export class ExecutiveDirectorDashboardComponent {
 
   public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
   public readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
-  private readonly rawPendingActions: Signal<PendingActionItem[]>;
-  public readonly pendingActions: Signal<PendingActionItem[]>;
-
-  public constructor() {
-    this.rawPendingActions = this.initializePendingActions();
-
-    this.pendingActions = computed(() => {
-      return this.rawPendingActions()
-        .filter((item) => !this.hiddenActionsService.isActionHidden(item))
-        .slice(0, 2);
-    });
-  }
+  private readonly rawPendingActions: Signal<PendingActionItem[]> = this.initializePendingActions();
+  public readonly pendingActions: Signal<PendingActionItem[]> = computed(() => {
+    return this.rawPendingActions()
+      .filter((item) => !this.hiddenActionsService.isActionHidden(item))
+      .slice(0, 2);
+  });
 
   public handleActionClick(): void {
     this.refresh$.next();
