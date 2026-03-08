@@ -77,10 +77,33 @@ export class CommitteeService {
   }
 
   /**
-   * Fetches a single committee by ID
+   * Fetches a single committee by ID.
+   * Falls back to the query service if the direct endpoint returns 404.
    */
   public async getCommitteeById(req: Request, committeeId: string): Promise<Committee> {
-    const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+    let committee: Committee | null = null;
+
+    try {
+      committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+    } catch {
+      logger.debug(req, 'get_committee_by_id', 'Direct endpoint failed, trying query service fallback', { committee_uid: committeeId });
+    }
+
+    // Fallback: search all committees via query service and find by UID
+    if (!committee) {
+      try {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'committee',
+        });
+        const match = resources?.find((r) => r.data?.uid === committeeId || r.id === committeeId);
+        committee = match?.data || null;
+        if (committee) {
+          logger.debug(req, 'get_committee_by_id', 'Resolved committee via query service fallback', { committee_uid: committeeId });
+        }
+      } catch {
+        logger.debug(req, 'get_committee_by_id', 'Query service fallback also failed', { committee_uid: committeeId });
+      }
+    }
 
     if (!committee) {
       throw new ResourceNotFoundError('Committee', committeeId, {
