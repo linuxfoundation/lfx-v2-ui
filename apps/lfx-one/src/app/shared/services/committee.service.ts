@@ -12,6 +12,7 @@ import {
   GroupJoinApplication,
   GroupJoinApplicationRequest,
   MyCommittee,
+  PaginatedResponse,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
@@ -24,11 +25,11 @@ export class CommitteeService {
 
   private readonly http = inject(HttpClient);
 
-  public getCommittees(params?: HttpParams): Observable<Committee[]> {
-    return this.http.get<Committee[]>('/api/committees', { params }).pipe(
+  public getCommittees(params?: HttpParams): Observable<PaginatedResponse<Committee>> {
+    return this.http.get<PaginatedResponse<Committee>>('/api/committees', { params }).pipe(
       catchError((error) => {
         console.error('Failed to load committees:', error);
-        return of([]);
+        return of({ data: [] as Committee[], page_token: undefined });
       })
     );
   }
@@ -36,7 +37,7 @@ export class CommitteeService {
   public getCommitteesByProject(uid: string): Observable<Committee[]> {
     const params = new HttpParams().set('tags', `project_uid:${uid}`);
 
-    return this.getCommittees(params);
+    return this.getCommittees(params).pipe(map((response) => response.data));
   }
 
   public getCommitteesCountByProject(uid: string): Observable<number> {

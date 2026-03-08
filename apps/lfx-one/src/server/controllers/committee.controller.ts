@@ -29,13 +29,14 @@ export class CommitteeController {
     });
 
     try {
-      const committees = await this.committeeService.getCommittees(req, req.query);
+      const { data, page_token } = await this.committeeService.getCommittees(req, req.query);
 
       logger.success(req, 'get_committees', startTime, {
-        committee_count: committees.length,
+        committee_count: data.length,
+        has_more_pages: !!page_token,
       });
 
-      res.json(committees);
+      res.json({ data, page_token });
     } catch (error) {
       next(error);
     }
