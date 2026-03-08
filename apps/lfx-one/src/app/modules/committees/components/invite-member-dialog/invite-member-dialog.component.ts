@@ -50,7 +50,7 @@ export class InviteMemberDialogComponent {
         rawEmails
           .split(/[,;\n\s]+/)
           .map((e: string) => e.trim().toLowerCase())
-          .filter((e: string) => e.length > 0 && e.includes('@'))
+          .filter((e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
       ),
     ];
 

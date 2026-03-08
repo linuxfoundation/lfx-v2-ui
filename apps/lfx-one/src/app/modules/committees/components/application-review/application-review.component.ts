@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, UpperCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, signal, Signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { Committee, GroupJoinApplication } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
-import { PersonaService } from '@services/persona.service';
 import { MessageService } from 'primeng/api';
 
 @Component({
@@ -15,10 +14,9 @@ import { MessageService } from 'primeng/api';
   imports: [DatePipe, UpperCasePipe, CardComponent, ButtonComponent],
   templateUrl: './application-review.component.html',
 })
-export class ApplicationReviewComponent implements OnInit {
+export class ApplicationReviewComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
-  private readonly personaService = inject(PersonaService);
 
   // Inputs
   public committee = input.required<Committee | null>();
@@ -31,12 +29,8 @@ export class ApplicationReviewComponent implements OnInit {
   public loading = signal<boolean>(true);
   public processingId = signal<string | null>(null);
 
-  // Permissions — only admins/maintainers can review applications
-  public canReview: Signal<boolean> = computed(() => {
-    const persona = this.personaService.currentPersona();
-    const c = this.committee();
-    return persona === 'maintainer' || !!c?.writer;
-  });
+  // Permissions — only writers can review applications
+  public canReview: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
   // Only show this section if the group uses the 'apply' join mode
   public isApplyMode: Signal<boolean> = computed(() => {
@@ -51,16 +45,20 @@ export class ApplicationReviewComponent implements OnInit {
     return this.pendingApplications().length;
   });
 
-  public ngOnInit(): void {
-    this.loadApplications();
+  public constructor() {
+    effect(() => {
+      const c = this.committee();
+      if (!c?.uid) {
+        this.loading.set(false);
+        return;
+      }
+      this.loadApplications(c.uid);
+    });
   }
 
-  public loadApplications(): void {
-    const c = this.committee();
-    if (!c?.uid) return;
-
+  public loadApplications(committeeUid: string): void {
     this.loading.set(true);
-    this.committeeService.getApplications(c.uid).subscribe({
+    this.committeeService.getApplications(committeeUid).subscribe({
       next: (apps) => {
         this.applications.set(apps);
         this.loading.set(false);
