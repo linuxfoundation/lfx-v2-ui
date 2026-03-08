@@ -13,6 +13,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
+import { generateM2MToken } from '../utils/m2m-token.util';
 
 /**
  * Controller for handling committee HTTP requests
@@ -52,6 +53,10 @@ export class CommitteeController {
     const startTime = logger.startOperation(req, 'get_public_committees', { project_uid: projectUid });
 
     try {
+      // Generate M2M token for unauthenticated backend calls
+      const m2mToken = await generateM2MToken(req);
+      req.bearerToken = m2mToken;
+
       const publicCommittees = projectUid
         ? await this.committeeService.getPublicCommitteesByProject(req, projectUid)
         : await this.committeeService.getPublicCommittees(req);

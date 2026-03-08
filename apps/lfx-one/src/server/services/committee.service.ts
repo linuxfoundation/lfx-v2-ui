@@ -166,14 +166,15 @@ export class CommitteeService {
 
     const publicCommittees = await Promise.all(
       committees.map(async (committee) => {
-        const [members, mailingList, meeting, settings] = await Promise.all([
+        const [members, memberCount, mailingList, meeting, settings] = await Promise.all([
           this.getCommitteeMembersSafe(req, committee.uid),
+          this.getCommitteeMembersCount(req, committee.uid),
           this.getCommitteeMailingList(req, committee.uid),
           this.getCommitteeMeetingSafe(req, committee.uid),
           this.getCommitteeSettings(req, committee.uid),
         ]);
 
-        return this.toPublicCommittee({ ...committee, ...settings }, members, mailingList, meeting);
+        return this.toPublicCommittee({ ...committee, ...settings, total_members: memberCount }, members, mailingList, meeting);
       })
     );
 
@@ -199,14 +200,15 @@ export class CommitteeService {
     // Enrich each committee with members, mailing list, meeting, and settings in parallel
     const publicCommittees = await Promise.all(
       committees.map(async (committee) => {
-        const [members, mailingList, meeting, settings] = await Promise.all([
+        const [members, memberCount, mailingList, meeting, settings] = await Promise.all([
           this.getCommitteeMembersSafe(req, committee.uid),
+          this.getCommitteeMembersCount(req, committee.uid),
           this.getCommitteeMailingList(req, committee.uid),
           this.getCommitteeMeetingSafe(req, committee.uid),
           this.getCommitteeSettings(req, committee.uid),
         ]);
 
-        return this.toPublicCommittee({ ...committee, ...settings }, members, mailingList, meeting);
+        return this.toPublicCommittee({ ...committee, ...settings, total_members: memberCount }, members, mailingList, meeting);
       })
     );
 
