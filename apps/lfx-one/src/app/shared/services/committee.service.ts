@@ -3,7 +3,16 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupInvite,
+  GroupJoinApplication,
+  GroupJoinApplicationRequest,
+  QueryServiceCountResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -87,5 +96,61 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  // ── Invite & Join Methods ──────────────────────────────────────────────────
+
+  public createInvites(committeeId: string, payload: CreateGroupInviteRequest): Observable<GroupInvite[]> {
+    return this.http.post<GroupInvite[]>(`/api/committees/${committeeId}/invites`, payload).pipe(take(1));
+  }
+
+  public getInvites(committeeId: string): Observable<GroupInvite[]> {
+    return this.http.get<GroupInvite[]>(`/api/committees/${committeeId}/invites`).pipe(
+      catchError((error) => {
+        console.error('Failed to load invites:', error);
+        return of([]);
+      })
+    );
+  }
+
+  public acceptInvite(committeeId: string, inviteId: string): Observable<GroupInvite> {
+    return this.http.post<GroupInvite>(`/api/committees/${committeeId}/invites/${inviteId}/accept`, {}).pipe(take(1));
+  }
+
+  public declineInvite(committeeId: string, inviteId: string): Observable<GroupInvite> {
+    return this.http.post<GroupInvite>(`/api/committees/${committeeId}/invites/${inviteId}/decline`, {}).pipe(take(1));
+  }
+
+  public revokeInvite(committeeId: string, inviteId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/invites/${inviteId}`).pipe(take(1));
+  }
+
+  public joinCommittee(committeeId: string): Observable<CommitteeMember> {
+    return this.http.post<CommitteeMember>(`/api/committees/${committeeId}/join`, {}).pipe(take(1));
+  }
+
+  public leaveCommittee(committeeId: string): Observable<void> {
+    return this.http.post<void>(`/api/committees/${committeeId}/leave`, {}).pipe(take(1));
+  }
+
+  public applyToJoin(committeeId: string, payload: GroupJoinApplicationRequest): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications`, payload).pipe(take(1));
+  }
+
+  public getApplications(committeeId: string): Observable<GroupJoinApplication[]> {
+    return this.http.get<GroupJoinApplication[]>(`/api/committees/${committeeId}/applications`).pipe(
+      catchError((error) => {
+        console.error('Failed to load applications:', error);
+        return of([]);
+      })
+    );
+  }
+
+  public approveApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/approve`, {}).pipe(take(1));
+  }
+
+  public rejectApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
   }
 }
