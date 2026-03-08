@@ -234,7 +234,7 @@ export interface ProjectTableRow {
  * @description Used by filter-pills component for category filtering
  */
 export interface FilterPillOption {
-  /** Unique filter identifier matching a MetricCategory or 'all' */
+  /** Unique filter identifier used for category filtering */
   id: string;
   /** Display label for the filter pill */
   label: string;

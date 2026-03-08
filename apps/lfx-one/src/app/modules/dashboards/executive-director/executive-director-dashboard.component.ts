@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MARKETING_OVERVIEW_METRICS } from '@lfx-one/shared/constants';
 import { CategorizedMetricCard, FilterPillOption, PendingActionItem } from '@lfx-one/shared/interfaces';
 import { HiddenActionsService } from '@services/hidden-actions.service';
@@ -71,7 +71,6 @@ export class ExecutiveDirectorDashboardComponent {
 
     return toSignal(
       combineLatest([this.refresh$, project$]).pipe(
-        takeUntilDestroyed(),
         switchMap(([, project]) => {
           if (!project?.slug || !project?.uid) {
             return of([]);

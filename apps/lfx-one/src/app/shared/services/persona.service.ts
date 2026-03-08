@@ -65,7 +65,10 @@ export class PersonaService {
 
   /**
    * Enforce TLF-only context for board-scoped personas
-   * Clears child project selection and sets TLF as the active foundation
+   * Clears child project selection and sets TLF as the active foundation.
+   * Note: availableProjects may not be populated yet during early initialization.
+   * The sidebar component also filters to TLF for board-level personas,
+   * ensuring correct state once projects load.
    */
   private enforceTlfOnlyContext(): void {
     this.projectContextService.clearProject();

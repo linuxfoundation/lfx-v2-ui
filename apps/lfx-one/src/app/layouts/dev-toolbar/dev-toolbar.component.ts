@@ -42,10 +42,7 @@ export class DevToolbarComponent {
   protected readonly personaOptions = PERSONA_OPTIONS;
 
   // Board-level persona project override
-  protected readonly isBoardLevelPersona = computed(() => {
-    const persona = this.personaService.currentPersona();
-    return persona === 'board-member' || persona === 'executive-director';
-  });
+  protected readonly isBoardLevelPersona = computed(() => this.personaService.isBoardScopedPersona(this.personaService.currentPersona()));
 
   // Check if we're on the board dashboard page
   protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
