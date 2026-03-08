@@ -9,7 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CreateCommitteeMemberRequest, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
+import { Committee, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -190,7 +190,7 @@ export class CommitteeDashboardComponent {
     switch (joinMode) {
       case 'open':
         // Direct join — backend resolves current user from auth context
-        this.committeeService.createCommitteeMember(committee.uid, { email: '' } as CreateCommitteeMemberRequest).subscribe({
+        this.committeeService.joinCommittee(committee.uid).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',
@@ -266,10 +266,7 @@ export class CommitteeDashboardComponent {
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
       rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => {
-        if (!committee.myMemberUid) {
-          return;
-        }
-        this.committeeService.deleteCommitteeMember(committee.uid, committee.myMemberUid).subscribe({
+        this.committeeService.leaveCommittee(committee.uid).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',

@@ -130,8 +130,18 @@ export class CommitteeService {
    * (e.g. query committee_member resources filtered by the current user's email/username).
    */
   public async getMyCommittees(req: Request): Promise<(Committee & { myRole: string; myMemberUid?: string })[]> {
-    logger.warning(req, 'get_my_committees', 'Not yet implemented — backend endpoint pending, returning empty');
-    return [];
+    logger.debug(req, 'get_my_committees', 'Fetching current user committees');
+    try {
+      return await this.microserviceProxy.proxyRequest<(Committee & { myRole: string; myMemberUid?: string })[]>(
+        req,
+        'LFX_V2_SERVICE',
+        '/committees/my',
+        'GET'
+      );
+    } catch {
+      logger.warning(req, 'get_my_committees', 'Failed to fetch user committees, returning empty');
+      return [];
+    }
   }
 
   /**
@@ -948,15 +958,15 @@ export class CommitteeService {
       case RecurrenceType.DAILY:
         return interval === 1 ? 'Daily' : `Every ${interval} days`;
       case RecurrenceType.WEEKLY: {
-        const prefix = interval === 1 ? 'Every' : `Every ${interval} weeks on`;
         if (recurrence.weekly_days) {
           const days = recurrence.weekly_days
             .split(',')
             .map((d) => dayNames[parseInt(d, 10)] || d)
             .join(', ');
+          const prefix = interval === 1 ? 'Every' : `Every ${interval} weeks on`;
           return `${prefix} ${days}`;
         }
-        return `${prefix} week`;
+        return interval === 1 ? 'Weekly' : `Every ${interval} weeks`;
       }
       case RecurrenceType.MONTHLY:
         return interval === 1 ? 'Monthly' : `Every ${interval} months`;

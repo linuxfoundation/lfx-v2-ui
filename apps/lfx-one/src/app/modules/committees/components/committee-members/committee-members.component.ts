@@ -87,10 +87,12 @@ export class CommitteeMembersComponent implements OnInit {
     this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
     this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
     this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
-    // Invite is available to any persona (Maintainer OR Board Member) when join_mode allows it
+    // Invite requires both a compatible join_mode and management permission (writer or maintainer)
     this.canInviteMembers = computed(() => {
-      const joinMode = this.committee()?.join_mode;
-      return joinMode === 'invite-only' || joinMode === 'open';
+      const committee = this.committee();
+      const joinMode = committee?.join_mode;
+      const hasInviteMode = joinMode === 'invite-only' || joinMode === 'open';
+      return hasInviteMode && (!!committee?.writer || this.canManageMembers());
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
