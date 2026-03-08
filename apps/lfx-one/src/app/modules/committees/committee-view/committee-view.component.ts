@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -22,6 +24,7 @@ import {
   isOtherClass,
 } from '@lfx-one/shared/constants';
 import {
+  ChatPlatform,
   Committee,
   CommitteeActivity,
   CommitteeBudgetSummary,
@@ -55,6 +58,8 @@ import { AssignLeadershipDialogComponent } from '../components/assign-leadership
 @Component({
   selector: 'lfx-committee-view',
   imports: [
+    NgClass,
+    FormsModule,
     BreadcrumbComponent,
     CardComponent,
     ButtonComponent,
@@ -192,6 +197,23 @@ export class CommitteeViewComponent {
     }
   });
 
+  // -- Collaboration editing signals --
+  public editingCollaboration = signal(false);
+  public collabSaving = signal(false);
+  public collabEdit = signal<{
+    mailingListName: string;
+    mailingListUrl: string;
+    chatChannelPlatform: string;
+    chatChannelName: string;
+    chatChannelUrl: string;
+  }>({
+    mailingListName: '',
+    mailingListUrl: '',
+    chatChannelPlatform: 'slack',
+    chatChannelName: '',
+    chatChannelUrl: '',
+  });
+
   public constructor() {
     this.initializeCommittee();
   }
@@ -243,6 +265,56 @@ export class CommitteeViewComponent {
           this.committeeSignal.set(updated);
         }
       }
+    });
+  }
+
+  public startEditCollaboration(): void {
+    const committee = this.committee();
+    this.collabEdit.set({
+      mailingListName: committee?.mailing_list?.name || '',
+      mailingListUrl: committee?.mailing_list?.url || '',
+      chatChannelPlatform: committee?.chat_channel?.platform || 'slack',
+      chatChannelName: committee?.chat_channel?.name || '',
+      chatChannelUrl: committee?.chat_channel?.url || '',
+    });
+    this.editingCollaboration.set(true);
+  }
+
+  public cancelEditCollaboration(): void {
+    this.editingCollaboration.set(false);
+  }
+
+  public updateCollabField(field: string, value: string): void {
+    this.collabEdit.update((current) => ({ ...current, [field]: value }));
+  }
+
+  public saveCollaboration(): void {
+    const committeeId = this.committee()?.uid;
+    if (!committeeId) return;
+
+    this.collabSaving.set(true);
+    const edit = this.collabEdit();
+
+    const payload: Partial<Committee> = {
+      mailing_list: edit.mailingListName
+        ? { name: edit.mailingListName, url: edit.mailingListUrl || undefined, subscriber_count: this.committee()?.mailing_list?.subscriber_count }
+        : undefined,
+      chat_channel: edit.chatChannelName
+        ? { platform: edit.chatChannelPlatform as ChatPlatform, name: edit.chatChannelName, url: edit.chatChannelUrl || undefined }
+        : undefined,
+    };
+
+    this.committeeService.updateCommittee(committeeId, payload).subscribe({
+      next: () => {
+        this.collabSaving.set(false);
+        this.editingCollaboration.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Collaboration channels updated' });
+        this.refresh.next();
+      },
+      error: () => {
+        this.collabSaving.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update collaboration channels' });
+      },
     });
   }
 

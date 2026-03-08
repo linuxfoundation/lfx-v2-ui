@@ -102,7 +102,7 @@
         </div>
 
         <!-- Action Buttons -->
-        @if (!isBoardMember()) {
+        @if (canManageConfigurations()) {
           <div class="flex items-center gap-2 flex-shrink-0">
             <lfx-button
               icon="fa-light fa-pen-to-square"
@@ -585,108 +585,178 @@
 
                   <!-- ═══ CHANNELS CARD (all types) ═══ -->
                   <lfx-card data-testid="committee-view-channels">
-                    <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
-                    <div class="flex flex-col gap-4">
-                      <!-- Mailing List -->
-                      @if (committee()?.mailing_list; as mailingList) {
-                        <div>
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                              <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
-                            </div>
-                            <div class="min-w-0">
-                              @if (mailingList.url) {
-                                <a
-                                  [href]="mailingList.url"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                                  {{ mailingList.name }}
-                                  <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                                </a>
-                              } @else {
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
-                              }
-                              @if (mailingList.subscriber_count) {
-                                <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      } @else {
-                        <div class="opacity-40">
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <i class="fa-light fa-envelope text-gray-400 text-sm"></i>
-                            </div>
-                            <p class="text-sm text-gray-400">No mailing list connected</p>
-                          </div>
-                        </div>
-                      }
-
-                      <!-- Chat Channel -->
-                      @if (committee()?.chat_channel; as chatChannel) {
-                        <div>
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">
-                            {{ chatChannel.platform === 'slack' ? 'Slack' : 'Discord' }} Channel
-                          </p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
-                              <i
-                                class="text-sm"
-                                [class]="chatChannel.platform === 'slack' ? 'fa-brands fa-slack text-purple-600' : 'fa-brands fa-discord text-indigo-600'"></i>
-                            </div>
-                            <div class="min-w-0">
-                              @if (chatChannel.url) {
-                                <a
-                                  [href]="chatChannel.url"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                                  {{ chatChannel.name }}
-                                  <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                                </a>
-                              } @else {
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ chatChannel.name }}</p>
-                              }
-                              <p class="text-xs text-gray-500 capitalize">{{ chatChannel.platform }}</p>
-                            </div>
-                          </div>
-                        </div>
-                      } @else {
-                        <div class="opacity-40">
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <i class="fa-light fa-comment text-gray-400 text-sm"></i>
-                            </div>
-                            <p class="text-sm text-gray-400">No chat channel connected</p>
-                          </div>
-                        </div>
-                      }
-
-                      <!-- Website -->
-                      @if (committee()?.website) {
-                        <div>
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Website</p>
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-                              <i class="fa-light fa-globe text-gray-600 text-sm"></i>
-                            </div>
-                            <a
-                              [href]="committee()!.website"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate">
-                              {{ committee()!.website }}
-                              <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                            </a>
-                          </div>
-                        </div>
+                    <div class="flex items-center justify-between mb-4">
+                      <h3 class="text-sm font-medium"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
+                      @if (canManageConfigurations() && !editingCollaboration()) {
+                        <lfx-button
+                          icon="fa-light fa-pen-to-square"
+                          size="small"
+                          [text]="true"
+                          severity="secondary"
+                          styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
+                          (onClick)="startEditCollaboration()"
+                          data-testid="committee-view-channels-edit-btn">
+                        </lfx-button>
                       }
                     </div>
+
+                    @if (editingCollaboration()) {
+                      <div class="flex flex-col gap-4">
+                        <div>
+                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
+                          <div class="flex flex-col gap-2">
+                            <input
+                              type="text"
+                              class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="List name (e.g. gold-voting-class)"
+                              [ngModel]="collabEdit().mailingListName"
+                              (ngModelChange)="updateCollabField('mailingListName', $event)" />
+                            <input
+                              type="url"
+                              class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="URL (e.g. https://lists.aaif.dev/g/...)"
+                              [ngModel]="collabEdit().mailingListUrl"
+                              (ngModelChange)="updateCollabField('mailingListUrl', $event)" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
+                          <div class="flex flex-col gap-2">
+                            <select
+                              class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                              [ngModel]="collabEdit().chatChannelPlatform"
+                              (ngModelChange)="updateCollabField('chatChannelPlatform', $event)">
+                              <option value="slack">Slack</option>
+                              <option value="discord">Discord</option>
+                            </select>
+                            <input
+                              type="text"
+                              class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Channel name (e.g. #gold-voting-class)"
+                              [ngModel]="collabEdit().chatChannelName"
+                              (ngModelChange)="updateCollabField('chatChannelName', $event)" />
+                            <input
+                              type="url"
+                              class="w-full text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="URL (e.g. https://aaif.slack.com/archives/...)"
+                              [ngModel]="collabEdit().chatChannelUrl"
+                              (ngModelChange)="updateCollabField('chatChannelUrl', $event)" />
+                          </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                          <lfx-button label="Cancel" size="small" [text]="true" severity="secondary" (onClick)="cancelEditCollaboration()"></lfx-button>
+                          <lfx-button label="Save" size="small" severity="primary" [loading]="collabSaving()" (onClick)="saveCollaboration()"></lfx-button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="flex flex-col gap-4">
+                        <!-- Mailing List -->
+                        @if (committee()?.mailing_list; as mailingList) {
+                          <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
+                            <div class="flex items-center gap-3">
+                              <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
+                              </div>
+                              <div class="min-w-0">
+                                @if (mailingList.url) {
+                                  <a
+                                    [href]="mailingList.url"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                                    {{ mailingList.name }}
+                                    <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                                  </a>
+                                } @else {
+                                  <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
+                                }
+                                @if (mailingList.subscriber_count) {
+                                  <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        } @else {
+                          <div class="opacity-40">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Mailing List</p>
+                            <div class="flex items-center gap-3">
+                              <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-light fa-envelope text-gray-400 text-sm"></i>
+                              </div>
+                              <p class="text-sm text-gray-400">No mailing list connected</p>
+                            </div>
+                          </div>
+                        }
+
+                        <!-- Chat Channel -->
+                        @if (committee()?.chat_channel; as chatChannel) {
+                          <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                              {{ chatChannel.platform === 'slack' ? 'Slack' : 'Discord' }} Channel
+                            </p>
+                            <div class="flex items-center gap-3">
+                              <div
+                                class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                                [ngClass]="chatChannel.platform === 'slack' ? 'bg-purple-50' : 'bg-indigo-50'">
+                                <i
+                                  class="text-sm"
+                                  [ngClass]="
+                                    chatChannel.platform === 'slack' ? 'fa-brands fa-slack text-purple-600' : 'fa-brands fa-discord text-indigo-600'
+                                  "></i>
+                              </div>
+                              <div class="min-w-0">
+                                @if (chatChannel.url) {
+                                  <a
+                                    [href]="chatChannel.url"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                                    {{ chatChannel.name }}
+                                    <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                                  </a>
+                                } @else {
+                                  <p class="text-sm font-medium text-gray-900 truncate">{{ chatChannel.name }}</p>
+                                }
+                                <p class="text-xs text-gray-500 capitalize">{{ chatChannel.platform }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        } @else {
+                          <div class="opacity-40">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
+                            <div class="flex items-center gap-3">
+                              <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-light fa-comment text-gray-400 text-sm"></i>
+                              </div>
+                              <p class="text-sm text-gray-400">No chat channel connected</p>
+                            </div>
+                          </div>
+                        }
+
+                        <!-- Website -->
+                        @if (committee()?.website) {
+                          <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Website</p>
+                            <div class="flex items-center gap-3">
+                              <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-light fa-globe text-gray-600 text-sm"></i>
+                              </div>
+                              <a
+                                [href]="committee()!.website"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate">
+                                {{ committee()!.website }}
+                                <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                              </a>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
                   </lfx-card>
 
                   <!-- Configurations Card (admin only) -->
