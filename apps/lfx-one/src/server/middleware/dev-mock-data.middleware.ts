@@ -1309,7 +1309,7 @@ export function wrapWithMockFallback(app: Express): void {
     const memberData = req.body;
 
     // Generate unique uid
-    const newUid = `mem-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newUid = `mem-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     const newMember = {
       uid: newUid,
