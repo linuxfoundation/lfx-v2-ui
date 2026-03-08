@@ -82,3 +82,9 @@ export * from './my-activity.interface';
 
 // Filter interfaces
 export * from './filter.interface';
+
+// Committee application interfaces
+export * from './committee-application.interface';
+
+// Public committee interfaces
+export * from './public-committee.interface';
