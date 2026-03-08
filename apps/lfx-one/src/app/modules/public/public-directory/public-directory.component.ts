@@ -132,6 +132,10 @@ export class PublicDirectoryComponent {
     this.syncQueryParams();
   }
 
+  public navigateToGroup(uid: string): void {
+    this.router.navigate(['/public/groups', uid]);
+  }
+
   public clearFilters(): void {
     this.searchTerm.set('');
     this.selectedCategory.set('');
