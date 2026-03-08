@@ -35,14 +35,36 @@ export interface PublicCommitteeLinks {
  * Public-safe committee representation for unauthenticated consumers.
  * Used by foundation websites and external integrations.
  */
+export interface PublicCommitteeMailingList {
+  name: string;
+  url?: string;
+}
+
+export interface PublicCommitteeChatChannel {
+  platform: string;
+  name: string;
+  url?: string;
+}
+
+/**
+ * Public-safe committee representation for unauthenticated consumers.
+ * Used by foundation websites and external integrations.
+ */
 export interface PublicCommittee {
   uid: string;
   name: string;
+  display_name?: string;
   description?: string;
   category: string;
+  public: boolean;
+  enable_voting: boolean;
+  project_name?: string;
+  foundation_name?: string;
   chairs: PublicCommitteeMember[];
   members: PublicCommitteeMember[];
   total_members: number;
+  mailing_list?: PublicCommitteeMailingList;
+  chat_channel?: PublicCommitteeChatChannel;
   meeting_schedule?: PublicCommitteeMeeting;
   external_links: PublicCommitteeLinks;
 }

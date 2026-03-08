@@ -9,16 +9,14 @@ import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, finalize, of } from 'rxjs';
 
-import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { ButtonComponent } from '@components/button/button.component';
 
-import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { getCommitteeCategorySeverity, PublicCommittee, TagSeverity } from '@lfx-one/shared';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 
 @Component({
   selector: 'lfx-public-directory',
-  imports: [DecimalPipe, RouterLink, FormsModule, CardComponent, TagComponent, ButtonComponent],
+  imports: [DecimalPipe, RouterLink, FormsModule, TagComponent],
   templateUrl: './public-directory.component.html',
   styleUrl: './public-directory.component.scss',
 })
@@ -34,7 +32,7 @@ export class PublicDirectoryComponent {
   public loading = signal(true);
 
   // Data signals — initialValue prevents hydration mismatch
-  public committees: Signal<Committee[]> = this.initializeCommittees();
+  public committees: Signal<PublicCommittee[]> = this.initializeCommittees();
   public searchTerm = signal('');
   public selectedCategory = signal('');
   public selectedFoundation = signal('');
@@ -151,13 +149,13 @@ export class PublicDirectoryComponent {
   }
 
   // Private initializer — follows meetings module pattern
-  private initializeCommittees(): Signal<Committee[]> {
+  private initializeCommittees(): Signal<PublicCommittee[]> {
     return toSignal(
-      this.http.get<Committee[]>('/public/api/committees').pipe(
-        catchError(() => of([] as Committee[])),
+      this.http.get<PublicCommittee[]>('/public/api/committees').pipe(
+        catchError(() => of([] as PublicCommittee[])),
         finalize(() => this.loading.set(false))
       ),
-      { initialValue: [] as Committee[] }
+      { initialValue: [] as PublicCommittee[] }
     );
   }
 }

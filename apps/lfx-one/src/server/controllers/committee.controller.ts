@@ -45,31 +45,23 @@ export class CommitteeController {
   /**
    * GET /public/api/committees
    * Returns public-safe committee data stripped of internal fields.
-   * Requires a project_uid query param to scope results.
+   * Optionally scoped by project_uid query param.
    */
   public async getPublicCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const projectUid = req.query['project_uid'] as string;
+    const projectUid = req.query['project_uid'] as string | undefined;
     const startTime = logger.startOperation(req, 'get_public_committees', { project_uid: projectUid });
 
     try {
-      if (!projectUid) {
-        const validationError = ServiceValidationError.forField('project_uid', 'project_uid query parameter is required', {
-          operation: 'get_public_committees',
-          service: 'committee_controller',
-          path: req.path,
-        });
-        next(validationError);
-        return;
-      }
-
-      const publicCommittees = await this.committeeService.getPublicCommitteesByProject(req, projectUid);
+      const publicCommittees = projectUid
+        ? await this.committeeService.getPublicCommitteesByProject(req, projectUid)
+        : await this.committeeService.getPublicCommittees(req);
 
       logger.success(req, 'get_public_committees', startTime, {
         project_uid: projectUid,
         committee_count: publicCommittees.length,
       });
 
-      res.json({ data: publicCommittees });
+      res.json(publicCommittees);
     } catch (error) {
       next(error);
     }

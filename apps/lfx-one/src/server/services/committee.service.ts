@@ -149,6 +149,37 @@ export class CommitteeService {
    * Used by unauthenticated consumers (e.g., foundation websites).
    * Strips private fields (emails, internal IDs, settings).
    */
+  /**
+   * Fetches all public committees, stripped of internal fields.
+   */
+  public async getPublicCommittees(req: Request): Promise<PublicCommittee[]> {
+    const params = { type: 'committee' };
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+
+    const committees = resources.map((resource) => resource.data).filter((c) => c.public);
+
+    logger.debug(req, 'get_public_committees', 'Fetched all public committees', {
+      total: resources.length,
+      public_count: committees.length,
+    });
+
+    const publicCommittees = await Promise.all(
+      committees.map(async (committee) => {
+        const [members, mailingList, meeting, settings] = await Promise.all([
+          this.getCommitteeMembersSafe(req, committee.uid),
+          this.getCommitteeMailingList(req, committee.uid),
+          this.getCommitteeMeetingSafe(req, committee.uid),
+          this.getCommitteeSettings(req, committee.uid),
+        ]);
+
+        return this.toPublicCommittee({ ...committee, ...settings }, members, mailingList, meeting);
+      })
+    );
+
+    return publicCommittees;
+  }
+
   public async getPublicCommitteesByProject(req: Request, projectUid: string): Promise<PublicCommittee[]> {
     const params = {
       type: 'committee',
@@ -165,16 +196,17 @@ export class CommitteeService {
       public_count: committees.length,
     });
 
-    // Enrich each committee with members, mailing list, and meeting data in parallel
+    // Enrich each committee with members, mailing list, meeting, and settings in parallel
     const publicCommittees = await Promise.all(
       committees.map(async (committee) => {
-        const [members, mailingList, meeting] = await Promise.all([
+        const [members, mailingList, meeting, settings] = await Promise.all([
           this.getCommitteeMembersSafe(req, committee.uid),
           this.getCommitteeMailingList(req, committee.uid),
           this.getCommitteeMeetingSafe(req, committee.uid),
+          this.getCommitteeSettings(req, committee.uid),
         ]);
 
-        return this.toPublicCommittee(committee, members, mailingList, meeting);
+        return this.toPublicCommittee({ ...committee, ...settings }, members, mailingList, meeting);
       })
     );
 
@@ -1034,12 +1066,25 @@ export class CommitteeService {
 
     return {
       uid: committee.uid,
-      name: committee.display_name || committee.name,
+      name: committee.name,
+      ...(committee.display_name && { display_name: committee.display_name }),
       ...(committee.description && { description: committee.description }),
       category: committee.category,
+      public: committee.public,
+      enable_voting: committee.enable_voting ?? false,
+      ...(committee.project_name && { project_name: committee.project_name }),
+      ...(committee.foundation_name && { foundation_name: committee.foundation_name }),
       chairs,
       members: nonChairMembers,
       total_members: committee.total_members || members.length,
+      ...(mailingList && { mailing_list: { name: mailingList.name, url: mailingList.url } }),
+      ...(committee.chat_channel && {
+        chat_channel: {
+          platform: committee.chat_channel.platform,
+          name: committee.chat_channel.name,
+          url: committee.chat_channel.url,
+        },
+      }),
       ...(meeting && { meeting_schedule: meeting }),
       external_links: externalLinks,
     };
