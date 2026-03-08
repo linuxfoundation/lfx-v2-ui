@@ -50,6 +50,7 @@ snowflake.log
 .claude/doc
 .claude/sessions
 .claude/tasks
+.claude/settings.local.json
 
 # Serena
 .serena/
