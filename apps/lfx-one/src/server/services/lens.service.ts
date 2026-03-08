@@ -76,7 +76,7 @@ export class LensService {
    * Read upstream SSE stream from LFX Lens API and re-emit as our events.
    * The upstream sends events like: status, content, block, session_id, done, error.
    */
-  private async *readUpstreamSSE(req: Request, response: Response): AsyncGenerator<LensSSEEvent> {
+  private async *readUpstreamSSE(req: Request, response: globalThis.Response): AsyncGenerator<LensSSEEvent> {
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -87,7 +87,7 @@ export class LensService {
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const blocks = buffer.split('\n\n');
+        const blocks = buffer.split(/\r?\n\r?\n/);
         buffer = blocks.pop() || '';
 
         for (const block of blocks) {
@@ -99,6 +99,9 @@ export class LensService {
           }
         }
       }
+
+      // Flush any remaining multibyte characters from the decoder
+      buffer += decoder.decode();
 
       // Handle remaining buffer
       if (buffer.trim()) {
@@ -117,8 +120,8 @@ export class LensService {
   /**
    * Fallback: parse a synchronous JSON response and yield blocks individually.
    */
-  private async *handleSyncResponse(req: Request, response: Response): AsyncGenerator<LensSSEEvent> {
-    const result = (await (response as unknown as globalThis.Response).json()) as LfxLensApiResponse;
+  private async *handleSyncResponse(req: Request, fetchResponse: globalThis.Response): AsyncGenerator<LensSSEEvent> {
+    const result = (await fetchResponse.json()) as LfxLensApiResponse;
 
     if (result.status === 'ERROR') {
       throw new Error(`LFX Lens workflow error: ${JSON.stringify(result.content)}`);
@@ -132,7 +135,8 @@ export class LensService {
 
     yield { type: 'session_id', data: result.session_id };
 
-    for (const block of result.content.blocks) {
+    const blocks = result.content?.blocks ?? [];
+    for (const block of blocks) {
       // For message blocks, emit as content events (character-streamable on the client)
       if (block.type === 'message') {
         yield { type: 'content', data: block.content };
@@ -146,17 +150,21 @@ export class LensService {
 
   private parseUpstreamSSEBlock(block: string): LensSSEEvent | null {
     let eventType = '';
-    let data = '';
+    const dataLines: string[] = [];
 
-    for (const line of block.split('\n')) {
+    for (const line of block.split(/\r?\n/)) {
       if (line.startsWith('event: ')) {
         eventType = line.slice(7).trim();
       } else if (line.startsWith('data: ')) {
-        data = line.slice(6);
+        dataLines.push(line.slice(6));
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5));
       }
     }
 
-    if (!eventType && !data) return null;
+    if (!eventType && dataLines.length === 0) return null;
+
+    const data = dataLines.join('\n');
 
     let parsed: unknown;
     try {

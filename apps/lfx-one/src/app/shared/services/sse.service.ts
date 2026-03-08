@@ -73,6 +73,9 @@ export class SseService {
         }
       }
 
+      // Flush any remaining multibyte characters from the decoder
+      buffer += decoder.decode();
+
       // Handle remaining buffer
       if (buffer.trim()) {
         const finalResult = this.parseSSEBuffer<T>(buffer + '\n\n');
@@ -102,17 +105,24 @@ export class SseService {
 
       let eventType = 'status' as T;
       let data: unknown = '';
+      const dataLines: string[] = [];
 
       for (const line of block.split('\n')) {
         if (line.startsWith('event: ')) {
           eventType = line.slice(7).trim() as T;
         } else if (line.startsWith('data: ')) {
-          const raw = line.slice(6);
-          try {
-            data = JSON.parse(raw);
-          } catch {
-            data = raw;
-          }
+          dataLines.push(line.slice(6));
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5));
+        }
+      }
+
+      if (dataLines.length > 0) {
+        const raw = dataLines.join('\n');
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = raw;
         }
       }
 

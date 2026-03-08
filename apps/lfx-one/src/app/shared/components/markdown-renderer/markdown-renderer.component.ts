@@ -18,7 +18,7 @@ export class MarkdownRendererComponent {
   protected readonly renderedHtml = computed(() => {
     const raw = this.content();
     if (!raw) return '';
-    const html = marked.parse(raw, { async: false }) as string;
+    const html = marked.parse(raw) as string;
     return this.sanitizer.sanitize(SecurityContext.HTML, html) ?? '';
   });
 }

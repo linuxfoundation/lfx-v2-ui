@@ -2,22 +2,33 @@
 // SPDX-License-Identifier: MIT
 
 import { FlushableResponse, LensChatRequest, LensSSEEventType } from '@lfx-one/shared/interfaces';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
+import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { LensService } from '../services/lens.service';
 
 export class LensController {
   private readonly lensService = new LensService();
 
-  public async chat(req: Request, res: Response): Promise<void> {
+  public async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { message, sessionId, context } = req.body as LensChatRequest;
-    const userId = (req.oidc?.user?.['email'] as string) || 'anonymous';
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      const validationError = ServiceValidationError.forField('message', 'message is required and must be a non-empty string', {
+        operation: 'lens_chat',
+        service: 'lens_controller',
+        path: req.path,
+      });
+      next(validationError);
+      return;
+    }
+
+    const userId = (req.oidc?.user?.['sub'] as string) || 'anonymous';
 
     const startTime = logger.startOperation(req, 'lens_chat', {
       has_session: !!sessionId,
       has_context: !!context,
-      user_id: userId,
     });
 
     // SSE headers — Content-Encoding: identity bypasses compression middleware
@@ -35,7 +46,7 @@ export class LensController {
     const abortController = new AbortController();
     let clientDisconnected = false;
 
-    req.on('close', () => {
+    res.on('close', () => {
       clientDisconnected = true;
       abortController.abort();
     });

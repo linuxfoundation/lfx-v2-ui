@@ -10,6 +10,6 @@ const router = Router();
 const lensController = new LensController();
 
 // POST /lens/chat - SSE endpoint for LFX Lens chat
-router.post('/chat', (req, res) => lensController.chat(req, res));
+router.post('/chat', (req, res, next) => lensController.chat(req, res, next));
 
 export default router;

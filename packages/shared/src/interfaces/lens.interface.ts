@@ -42,8 +42,8 @@ export interface LensMessage {
 
 // Context passed from dashboards (maps to API's additional_data)
 export interface LensContext {
-  company?: { id: string; name: string };
-  project?: { slug: string; name: string };
+  company?: { id: string; name?: string };
+  project?: { slug: string; name?: string };
 }
 
 // Request body from Angular to Express

@@ -1,8 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-/* Auto-grow textarea */
+/* Auto-grow textarea — field-sizing: content for Chromium, JS fallback for others */
 .chat-textarea {
   max-height: 120px;
   field-sizing: content;
+  overflow-y: auto;
 }

@@ -60,7 +60,9 @@ export class DataCopilotComponent {
 
   // Auto-scroll
   private readonly messagesContainer = viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
+  private readonly chatTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('chatTextarea');
   private autoScroll = true;
+  private needsJsAutoGrow = false;
 
   // Context
   private readonly organizationId = computed(() => this.accountContextService.selectedAccount()?.accountId ?? '');
@@ -71,6 +73,10 @@ export class DataCopilotComponent {
 
   public constructor() {
     this.initAutoScroll();
+    // Detect if field-sizing: content is unsupported (Firefox, older Safari)
+    if (typeof CSS !== 'undefined' && !CSS.supports('field-sizing', 'content')) {
+      this.needsJsAutoGrow = true;
+    }
   }
 
   protected openDrawer(): void {
@@ -112,15 +118,29 @@ export class DataCopilotComponent {
     this.lensService.abort();
   }
 
+  protected autoGrowTextarea(): void {
+    if (!this.needsJsAutoGrow) return;
+    const el = this.chatTextarea()?.nativeElement;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }
+
   private buildContext(): LensContext | undefined {
     const ctx: LensContext = {};
 
     if (this.includeOrganizationId() && this.organizationId()) {
-      ctx.company = { id: this.organizationId(), name: this.organizationName() };
+      ctx.company = {
+        id: this.organizationId(),
+        ...(this.includeOrganizationName() ? { name: this.organizationName() } : {}),
+      };
     }
 
     if (this.includeProjectSlug() && this.projectSlug()) {
-      ctx.project = { slug: this.projectSlug(), name: this.projectName() };
+      ctx.project = {
+        slug: this.projectSlug(),
+        ...(this.includeProjectName() ? { name: this.projectName() } : {}),
+      };
     }
 
     return Object.keys(ctx).length > 0 ? ctx : undefined;

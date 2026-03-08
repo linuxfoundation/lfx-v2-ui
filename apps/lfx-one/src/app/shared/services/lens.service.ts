@@ -49,6 +49,7 @@ export class LensService {
         this.error.set('Connection failed. Please try again.');
         this.streaming.set(false);
         this.currentStatus.set('');
+        this.clearEmptyAssistantPlaceholder();
         this.markLastAssistantDone();
       },
       complete: () => {
@@ -66,6 +67,7 @@ export class LensService {
     this.subscription = null;
     this.streaming.set(false);
     this.currentStatus.set('');
+    this.clearEmptyAssistantPlaceholder();
     this.markLastAssistantDone();
   }
 
@@ -181,6 +183,13 @@ export class LensService {
         };
       }
       return updated;
+    });
+  }
+
+  private clearEmptyAssistantPlaceholder(): void {
+    this.messages.update((msgs) => {
+      const last = msgs[msgs.length - 1];
+      return last && last.role === 'assistant' && !last.content && last.blocks.length === 0 ? msgs.slice(0, -1) : msgs;
     });
   }
 
