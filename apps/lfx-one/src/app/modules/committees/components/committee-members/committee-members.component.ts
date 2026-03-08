@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
+import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
+import { Component, computed, inject, input, OnInit, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -47,6 +47,7 @@ export class CommitteeMembersComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // Input signals
   public committee = input.required<Committee | null>();
@@ -243,7 +244,11 @@ export class CommitteeMembersComponent implements OnInit {
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
-        command: () => window.open(`mailto:${this.selectedMember()?.email}`, '_blank'),
+        command: () => {
+          if (isPlatformBrowser(this.platformId)) {
+            window.open(`mailto:${this.selectedMember()?.email}`, '_blank');
+          }
+        },
       },
       {
         separator: true,
