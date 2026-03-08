@@ -243,6 +243,32 @@ export interface CreateMailingListMemberRequest {
 }
 
 /**
+ * Request payload for subscribing to a public mailing list (unauthenticated)
+ * @description Used by the public subscribe endpoint for unauthenticated users
+ */
+export interface PublicMailingListSubscribeRequest {
+  /** Subscriber's email address (required) */
+  email: string;
+  /** Subscriber's first name (optional) */
+  first_name?: string;
+  /** Subscriber's last name (optional) */
+  last_name?: string;
+}
+
+/**
+ * Response payload for a public mailing list subscription
+ * @description Returned by the public subscribe endpoint
+ */
+export interface PublicMailingListSubscribeResponse {
+  /** Whether the subscription was successful */
+  success: boolean;
+  /** Human-readable result message */
+  message: string;
+  /** Title/name of the mailing list subscribed to */
+  mailing_list_title: string;
+}
+
+/**
  * Request payload for updating a mailing list member
  * @description Partial update for existing members (email is immutable)
  */

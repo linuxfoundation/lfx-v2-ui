@@ -50,6 +50,10 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'public/groups',
+    loadComponent: () => import('./modules/public/public-directory/public-directory.component').then((m) => m.PublicDirectoryComponent),
+  },
+  {
     path: 'meetings/not-found',
     loadComponent: () => import('./modules/meetings/meeting-not-found/meeting-not-found.component').then((m) => m.MeetingNotFoundComponent),
   },
