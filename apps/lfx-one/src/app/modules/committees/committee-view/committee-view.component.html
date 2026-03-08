@@ -102,13 +102,13 @@
 
       <!-- Tabs -->
       <p-tabs value="0">
-        <p-tabList>
+        <p-tablist>
           <p-tab value="0" data-testid="committee-view-tab-overview">Overview</p-tab>
           <p-tab value="1" data-testid="committee-view-tab-members">Members</p-tab>
-        </p-tabList>
-        <p-tabPanels>
+        </p-tablist>
+        <p-tabpanels>
           <!-- Overview Tab -->
-          <p-tabPanel value="0">
+          <p-tabpanel value="0">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
               <!-- Left Column: Upcoming Meetings -->
               <div class="lg:col-span-2 flex flex-col gap-6">
@@ -186,18 +186,18 @@
                 </lfx-card>
               </div>
             </div>
-          </p-tabPanel>
+          </p-tabpanel>
 
           <!-- Members Tab -->
-          <p-tabPanel value="1">
+          <p-tabpanel value="1">
             <div class="mt-4">
               @if (committee()?.uid) {
                 <lfx-committee-members [committee]="committee()" [members]="members()" [membersLoading]="membersLoading()" (refresh)="refreshMembers()">
                 </lfx-committee-members>
               }
             </div>
-          </p-tabPanel>
-        </p-tabPanels>
+          </p-tabpanel>
+        </p-tabpanels>
       </p-tabs>
     </div>
   }
