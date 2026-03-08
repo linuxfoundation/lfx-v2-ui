@@ -3,6 +3,7 @@
 
 import { CommitteeMemberVisibility } from '../enums/committee.enum';
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
+import { MailingListAudienceAccess } from '../enums/mailing-list.enum';
 
 /**
  * Lightweight committee reference for cross-module use
@@ -15,6 +16,39 @@ export interface CommitteeReference {
   name?: string;
   /** Allowed voting statuses: Voting Rep, Alternate Voting Rep, Observer, Emeritus, None */
   allowed_voting_statuses?: CommitteeMemberVotingStatus[];
+}
+
+// ── Communication Channel Types ─────────────────────────────────────────────
+
+/** Platform type for chat channels */
+export type ChatPlatform = 'slack' | 'discord';
+
+/**
+ * A mailing list associated with a group (e.g., Groups.io, Google Groups).
+ */
+export interface GroupMailingList {
+  /** Unique identifier of the mailing list */
+  uid?: string;
+  /** Display name of the list (e.g., "tac-general") */
+  name: string;
+  /** Full URL to the mailing list archive or subscription page */
+  url?: string;
+  /** Number of subscribers (optional, for display) */
+  subscriber_count?: number;
+  /** Who can discover and join this mailing list */
+  audience_access?: MailingListAudienceAccess;
+}
+
+/**
+ * A chat channel (Slack or Discord) associated with a group.
+ */
+export interface GroupChatChannel {
+  /** Platform type */
+  platform: ChatPlatform;
+  /** Channel name (e.g., "#tac-general") */
+  name: string;
+  /** Direct link to the channel */
+  url?: string;
 }
 
 /**
@@ -60,6 +94,12 @@ export interface Committee {
   project_uid: string;
   /** Associated project name (populated from project data) */
   project_name?: string;
+  /** Foundation name this committee belongs to (populated from project hierarchy) */
+  foundation_name?: string;
+  /** Mailing list associated with the group (e.g., Groups.io list) */
+  mailing_list?: GroupMailingList;
+  /** Chat channel associated with the group (Slack, Discord, etc.) */
+  chat_channel?: GroupChatChannel;
   /** Calendar visibility settings */
   calendar?: {
     /** Whether committee calendar is public */
