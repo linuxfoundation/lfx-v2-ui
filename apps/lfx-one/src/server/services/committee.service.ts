@@ -13,6 +13,8 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
+
 import { ResourceNotFoundError } from '../errors';
 import { logger } from '../services/logger.service';
 import { AccessCheckService } from './access-check.service';
@@ -89,14 +91,16 @@ export class CommitteeService {
       logger.debug(req, 'get_committee_by_id', 'Direct endpoint failed, trying query service fallback', { committee_uid: committeeId });
     }
 
-    // Fallback: search all committees via query service and find by UID
+    // Fallback: search all committees via query service (paginated) and find by UID
     if (!committee) {
       try {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'committee',
-        });
-        const match = resources?.find((r) => r.data?.uid === committeeId || r.id === committeeId);
-        committee = match?.data || null;
+        const allCommittees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            type: 'committee',
+            ...(pageToken && { page_token: pageToken }),
+          })
+        );
+        committee = allCommittees.find((c) => c.uid === committeeId) || null;
         if (committee) {
           logger.debug(req, 'get_committee_by_id', 'Resolved committee via query service fallback', { committee_uid: committeeId });
         }
