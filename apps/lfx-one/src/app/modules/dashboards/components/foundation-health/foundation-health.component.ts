@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, input, signal, ViewChild } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
 import { FilterOption, FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
@@ -12,7 +12,7 @@ import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, map, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
 
 import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
 import { EventsDrawerComponent } from '../events-drawer/events-drawer.component';
@@ -73,6 +73,13 @@ export class FoundationHealthComponent {
   private readonly eventsLoading = signal(true);
 
   private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((foundation) => foundation?.slug || ''));
+
+  // Observable that emits foundation slug only when built-in cards should be fetched
+  private readonly activeFoundationSlug$ = combineLatest([this.selectedFoundationSlug$, toObservable(this.hideBuiltInCards)]).pipe(
+    takeUntilDestroyed(),
+    filter(([, hidden]) => !hidden),
+    map(([slug]) => slug)
+  );
   public readonly hasFoundationSelected = computed<boolean>(() => !!this.projectContextService.selectedFoundation());
 
   // Data signals - each fetches its own data independently
@@ -519,7 +526,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.totalProjectsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationTotalProjects(foundationSlug).pipe(
@@ -543,7 +550,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.totalMembersLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationTotalMembers(foundationSlug).pipe(
@@ -574,7 +581,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.softwareValueLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationValueConcentration(foundationSlug).pipe(
@@ -599,7 +606,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.companyBusFactorLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getCompanyBusFactor(foundationSlug).pipe(
@@ -623,7 +630,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.maintainersLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationMaintainers(foundationSlug).pipe(
@@ -649,7 +656,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.healthScoresLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationHealthScoreDistribution(foundationSlug).pipe(
@@ -673,7 +680,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.activeContributorsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getUniqueContributorsDaily(foundationSlug, 'foundation').pipe(
@@ -697,7 +704,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.selectedFoundationSlug$.pipe(
+      this.activeFoundationSlug$.pipe(
         tap(() => this.eventsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getHealthEventsMonthly(foundationSlug, 'foundation').pipe(

@@ -29,11 +29,11 @@ export class ExecutiveDirectorDashboardComponent {
 
   public readonly edFilterOptions: FilterOption[] = [
     { id: 'all', label: 'All' },
-    { id: 'projects', label: 'Memberships' },
+    { id: 'memberships', label: 'Memberships' },
     { id: 'marketing', label: 'Marketing' },
     { id: 'events', label: 'Events' },
-    { id: 'contributors', label: 'Education' },
-    { id: 'projectHealth', label: 'Project Operations' },
+    { id: 'education', label: 'Education' },
+    { id: 'projectOperations', label: 'Project Operations' },
   ];
 
   public readonly marketingCards: { card: DashboardMetricCard; category: string }[] = MARKETING_OVERVIEW_METRICS.map((card) => ({

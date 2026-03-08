@@ -30,6 +30,10 @@ export class PersonaService {
     if (persona) {
       this.currentPersona.set(persona);
       this.isAutoDetected.set(true);
+
+      if (this.isBoardScopedPersona(persona)) {
+        this.enforceTlfOnlyContext();
+      }
     } else {
       // No auto-detected persona, allow manual selection
       this.isAutoDetected.set(false);
@@ -59,6 +63,12 @@ export class PersonaService {
 
   private enforceTlfOnlyContext(): void {
     this.projectContextService.clearProject();
+
+    const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+    if (tlfProject) {
+      this.projectContextService.setFoundation(tlfProject);
+    }
+
     this.router.navigate(['/']);
   }
 }

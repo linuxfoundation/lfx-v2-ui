@@ -41,7 +41,7 @@ export class PersonaSelectorComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member') {
+        if (value === 'board-member' || value === 'executive-director') {
           // TODO: DEMO - Remove when proper permissions are implemented
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {

@@ -42,7 +42,7 @@ export class DevToolbarComponent {
   protected readonly personaOptions = PERSONA_OPTIONS;
 
   // Board member project override
-  protected readonly isBoardMember = computed(() => {
+  protected readonly isBoardLevelPersona = computed(() => {
     const persona = this.personaService.currentPersona();
     return persona === 'board-member' || persona === 'executive-director';
   });

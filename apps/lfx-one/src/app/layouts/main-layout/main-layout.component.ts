@@ -62,7 +62,7 @@ export class MainLayoutComponent {
   protected readonly sidebarItems = computed(() => {
     const items: SidebarMenuItem[] = [];
     const persona = this.personaService.currentPersona();
-    const isBoardMember = persona === 'board-member' || persona === 'executive-director';
+    const isBoardLevelPersona = persona === 'board-member' || persona === 'executive-director';
 
     // Overview (Dashboard)
     items.push({
@@ -118,7 +118,7 @@ export class MainLayoutComponent {
     });
 
     // Governance section (Votes, Surveys, Permissions) - only for non-board-members
-    if (!isBoardMember) {
+    if (!isBoardLevelPersona) {
       items.push({
         label: 'Governance',
         isSection: true,
