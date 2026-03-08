@@ -7,7 +7,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, finalize, of } from 'rxjs';
+import { catchError, finalize, of, tap } from 'rxjs';
 
 import { TagComponent } from '@components/tag/tag.component';
 
@@ -75,13 +75,15 @@ export class PublicDirectoryComponent {
     const category = this.selectedCategory();
     const foundation = this.selectedFoundation();
     const project = this.selectedProject();
-    return this.committees().filter((c) => {
-      const matchesSearch = !search || c.name.toLowerCase().includes(search) || (c.description && c.description.toLowerCase().includes(search));
-      const matchesCategory = !category || c.category === category;
-      const matchesFoundation = !foundation || c.foundation_name === foundation;
-      const matchesProject = !project || c.project_name === project;
-      return matchesSearch && matchesCategory && matchesFoundation && matchesProject;
-    });
+    return this.committees()
+      .filter((c) => !!c.uid)
+      .filter((c) => {
+        const matchesSearch = !search || c.name.toLowerCase().includes(search) || (c.description && c.description.toLowerCase().includes(search));
+        const matchesCategory = !category || c.category === category;
+        const matchesFoundation = !foundation || c.foundation_name === foundation;
+        const matchesProject = !project || c.project_name === project;
+        return matchesSearch && matchesCategory && matchesFoundation && matchesProject;
+      });
   });
 
   public totalMembers = computed(() => this.committees().reduce((sum, c) => sum + (c.total_members || 0), 0));
@@ -152,6 +154,7 @@ export class PublicDirectoryComponent {
   private initializeCommittees(): Signal<PublicCommittee[]> {
     return toSignal(
       this.http.get<PublicCommittee[]>('/public/api/committees').pipe(
+        tap((data) => console.info('committees', data)),
         catchError(() => of([] as PublicCommittee[])),
         finalize(() => this.loading.set(false))
       ),
