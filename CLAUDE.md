@@ -58,6 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Application Flow](#application-flow) - User journey and navigation
 - [Current State & Development Roadmap](#current-state--development-roadmap) - Implementation status
 - [Development Memories](#development-memories) - Important reminders and patterns
+- [PR Workflow](#pr-workflow) - Automated review loop after every push
 
 ## Project Overview
 
@@ -622,3 +623,25 @@ Before starting any work or commits:
 - Always run yarn build to validate that your changes are building too for validation
 - Always remember that our JIRA sprint field is customfield_10020. When we create tickets, we need to assign them to the current user and set it to the current sprint.
 - Always use `flex + flex-col + gap-*` instead of `space-y-*`
+
+## PR Workflow
+
+After every git push to a PR branch, run this automatically:
+
+1. Wait 2 minutes for automated reviewers to run
+2. Check for feedback:
+   gh pr view <number> --comments
+   gh api repos/linuxfoundation/lfx-v2-ui/pulls/<number>/reviews
+   gh api repos/linuxfoundation/lfx-v2-ui/pulls/<number>/comments
+
+3. Fix ALL issues flagged by CodeRabbit and Copilot before
+   requesting human review — especially anything marked HIGH or
+   blocking
+
+4. Commit fixes as:
+   fix(<scope>): address automated review feedback LFXV2-XXXX
+   Signed-off-by: Manish Dixit <mdixit@linuxfoundation.org>
+
+5. Push and re-check until zero open automated comments remain
+
+Never ask for human review while automated tool comments are unresolved.
