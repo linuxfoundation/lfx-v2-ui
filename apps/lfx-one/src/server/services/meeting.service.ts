@@ -688,7 +688,8 @@ export class MeetingService {
     });
 
     // Resolve registrant_id — try email first, fall back to username
-    const email = req.oidc?.user?.['email'] as string | undefined;
+    const rawEmail = req.oidc?.user?.['email'] as string | undefined;
+    const email = rawEmail?.toLowerCase();
     let registrants: MeetingRegistrant[] = [];
 
     if (email) {
@@ -731,13 +732,12 @@ export class MeetingService {
     const rsvp = mapITXResponseToMeetingRsvp(result);
 
     // Poll query service until the RSVP is propagated so the UI can fetch it immediately
-    const username = registrants[0].username;
     await pollEndpoint({
       req,
       operation: 'create_meeting_rsvp_poll',
       pollFn: async () => {
         const allRsvps = await this.getMeetingRsvps(req, meetingUid);
-        return allRsvps.some((r) => username && usernameMatches(username, r.username) && r.response === rsvpData.response && r.scope === rsvpData.scope);
+        return allRsvps.some((r) => r.id === rsvp.id && r.response === rsvp.response);
       },
       maxRetries: 5,
       retryDelayMs: 1000,

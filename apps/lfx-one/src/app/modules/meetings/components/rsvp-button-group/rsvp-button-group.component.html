@@ -14,7 +14,7 @@
   <!-- Header -->
   <div
     [ngClass]="{
-      'text-blue-600': selectedResponse() === null && !disabled(),
+      'text-blue-600': selectedResponse() === null && !disabled() && !isLoading(),
       'text-gray-400': disabled(),
       'text-blue-500': isLoading(),
       'text-gray-500': selectedResponse() !== null && !disabled() && !isLoading(),
