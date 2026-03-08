@@ -30,29 +30,51 @@ export class PersonaService {
     if (persona) {
       this.currentPersona.set(persona);
       this.isAutoDetected.set(true);
+
+      if (this.isBoardScopedPersona(persona)) {
+        this.enforceTlfOnlyContext();
+      }
     } else {
       // No auto-detected persona, allow manual selection
       this.isAutoDetected.set(false);
-      // Default to maintainer persona if no auto-detected persona is available
       this.setPersona('maintainer');
     }
   }
 
   /**
    * Set the current persona
-   * When switching to board-member, clear child project selection
+   * When switching to a board-scoped persona, enforce TLF-only context
    * Cannot change persona if it was auto-detected from committee membership
    */
   public setPersona(persona: PersonaType): void {
     if (persona !== this.currentPersona()) {
       this.currentPersona.set(persona);
 
-      // When switching to board-member persona, clear any child project selection
-      // Board members should only work at the foundation level
-      if (persona === 'board-member') {
-        this.projectContextService.clearProject();
-        this.router.navigate(['/']);
+      if (this.isBoardScopedPersona(persona)) {
+        this.enforceTlfOnlyContext();
       }
     }
+  }
+
+  /**
+   * Check if a persona is board-scoped (requires TLF-only context)
+   */
+  public isBoardScopedPersona(persona: PersonaType): boolean {
+    return persona === 'board-member' || persona === 'executive-director';
+  }
+
+  /**
+   * Enforce TLF-only context for board-scoped personas
+   * Clears child project selection and sets TLF as the active foundation
+   */
+  private enforceTlfOnlyContext(): void {
+    this.projectContextService.clearProject();
+
+    const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+    if (tlfProject) {
+      this.projectContextService.setFoundation(tlfProject);
+    }
+
+    this.router.navigate(['/']);
   }
 }
