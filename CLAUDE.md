@@ -59,6 +59,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Current State & Development Roadmap](#current-state--development-roadmap) - Implementation status
 - [Development Memories](#development-memories) - Important reminders and patterns
 - [PR Workflow](#pr-workflow) - Automated review loop after every push
+- [Bug Fix Standards](#bug-fix-standards) - Checklist for every bug fix commit
 
 ## Project Overview
 
@@ -645,3 +646,35 @@ After every git push to a PR branch, run this automatically:
 5. Push and re-check until zero open automated comments remain
 
 Never ask for human review while automated tool comments are unresolved.
+
+## Bug Fix Standards
+
+Before committing any bug fix, verify all of the following:
+
+### HTML Validity
+
+- No nested `<a>` inside `<a>` — use `div` + `router.navigate()` instead
+- No interactive elements missing `role`/`tabindex` when not using native tags
+- Run: `yarn lint` to catch template issues
+
+### Angular Standards
+
+- Use `inject()` pattern, not constructor injection
+- Use signals for state, not class properties
+- `@for` track must use a guaranteed non-null field (`uid`, `id`) — add `.filter(c => !!c.uid)` guard if API source is not trusted
+
+### Accessibility (a11y)
+
+- Every clickable non-`<a>`/`<button>` element needs:
+  - `role="link"` or `role="button"`
+  - `tabindex="0"`
+  - `keydown.enter` and `keydown.space` handlers
+  - `aria-label` describing the action
+
+### After Fixing
+
+1. Run `yarn lint` and fix all errors
+2. Visually verify the fix on staging (`ui-pr-<number>.dev.v2.cluster.linuxfound.info`)
+3. Run `/review-pr` — zero open HIGH issues before pushing
+4. Commit format: `fix(scope): description LFXV2-XXXX`
+   `Signed-off-by: Manish Dixit <mdixit@linuxfoundation.org>`
