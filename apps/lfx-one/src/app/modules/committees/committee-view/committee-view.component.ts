@@ -21,6 +21,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap, throwError } from 'rxjs';
 
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
+import { DashboardMeetingCardComponent } from '../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -32,6 +33,7 @@ import { CommitteeMembersComponent } from '../components/committee-members/commi
     ButtonComponent,
     TagComponent,
     CommitteeMembersComponent,
+    DashboardMeetingCardComponent,
     ConfirmDialogModule,
     Tabs,
     Tab,
@@ -57,6 +59,8 @@ export class CommitteeViewComponent {
   public members = signal<CommitteeMember[]>([]);
   public membersLoading = signal<boolean>(true);
   public upcomingMeetingsLoading = signal<boolean>(true);
+  public activeTab = signal<string>('overview');
+  public documents = signal<never[]>([]);
   public refresh = new BehaviorSubject<void>(undefined);
 
   // Computed / Read-only signals
