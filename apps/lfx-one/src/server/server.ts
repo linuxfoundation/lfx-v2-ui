@@ -16,7 +16,6 @@ import pinoHttp from 'pino-http';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
-import { wrapWithMockFallback } from './middleware/dev-mock-data.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
@@ -174,16 +173,6 @@ app.use('/login', (req: Request, res: Response) => {
 
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
-
-// Register dev mock data fallback (must be BEFORE real routes)
-// The function itself checks isDev and no-ops in production
-wrapWithMockFallback(app);
-
-// Mount API routes after authentication middleware
-// DEV-ONLY: Add mock data fallback when upstream API is unreachable
-if (process.env['NODE_ENV'] !== 'production') {
-  wrapWithMockFallback(app);
-}
 
 // Public API routes
 app.use('/public/api/committees', publicCommitteesRouter);

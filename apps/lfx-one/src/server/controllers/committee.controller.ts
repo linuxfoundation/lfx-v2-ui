@@ -29,15 +29,7 @@ export class CommitteeController {
     });
 
     try {
-      let committees = await this.committeeService.getCommittees(req, req.query);
-
-      // Non-admin users only see public groups + private groups they belong to
-      const hasWriterAccess = committees.some((c) => c.writer === true);
-      if (!hasWriterAccess) {
-        const myCommittees = await this.committeeService.getMyCommittees(req);
-        const myUids = new Set(myCommittees.map((c) => c.uid));
-        committees = committees.filter((c) => c.public || myUids.has(c.uid));
-      }
+      const committees = await this.committeeService.getCommittees(req, req.query);
 
       logger.success(req, 'get_committees', startTime, {
         committee_count: committees.length,

@@ -41,9 +41,12 @@ export class CommitteeService {
   }
 
   /**
-   * Fetches all committees based on query parameters
+   * Fetches all committees based on query parameters.
+   * Non-admin users only see public committees + private committees they belong to.
    */
   public async getCommittees(req: Request, query: Record<string, any> = {}): Promise<Committee[]> {
+    logger.debug(req, 'get_committees', 'Starting committee fetch', { query_params: Object.keys(query) });
+
     const params = {
       ...query,
       type: 'committee',
@@ -66,7 +69,22 @@ export class CommitteeService {
     );
 
     // Add writer access field to all committees
-    return await this.accessCheckService.addAccessToResources(req, committees, 'committee');
+    committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
+
+    // Non-admin users only see public committees + private committees they belong to
+    const hasWriterAccess = committees.some((c) => c.writer === true);
+    if (!hasWriterAccess) {
+      const myCommittees = await this.getMyCommittees(req);
+      const myUids = new Set(myCommittees.map((c) => c.uid));
+      committees = committees.filter((c) => c.public || myUids.has(c.uid));
+
+      logger.debug(req, 'get_committees', 'Filtered committees for non-admin user', {
+        total_before: resources.length,
+        visible_count: committees.length,
+      });
+    }
+
+    return committees;
   }
 
   /**
@@ -85,40 +103,11 @@ export class CommitteeService {
 
   /**
    * Fetches committees the current user is a member of, enriched with their role.
-   * TODO: Replace mock data with real implementation using getCommitteeMembersByCategory
-   * once the backend supports user-filtered committee queries.
+   * TODO: Implement once the backend supports user-filtered committee queries
+   * (e.g. query committee_member resources filtered by the current user's email/username).
    */
   public async getMyCommittees(req: Request): Promise<(Committee & { myRole: string; myMemberUid?: string })[]> {
-    // TODO: Real implementation would:
-    // 1. Get current user identity from req.oidc
-    // 2. Query committee_member resources filtered by user email/username
-    // 3. For each membership, fetch the committee and attach the role
-    // For now, return mock data for development
-    const isDev = process.env['ENV'] === 'development' || process.env['NODE_ENV'] === 'development';
-
-    if (isDev) {
-      logger.debug(req, 'get_my_committees', 'Serving mock my-committees data (no backend endpoint yet)');
-
-      // Fetch real committees first, then simulate user membership on a subset
-      try {
-        const allCommittees = await this.getCommittees(req, {});
-        const mockRoles = ['Chair', 'Member', 'Observer', 'Vice Chair', 'Lead'];
-
-        // Simulate the user being a member of up to 3 committees
-        const myCommittees = allCommittees.slice(0, Math.min(3, allCommittees.length)).map((committee, index) => ({
-          ...committee,
-          myRole: mockRoles[index] || 'Member',
-          myMemberUid: `mock-member-${index}`,
-        }));
-
-        return myCommittees;
-      } catch {
-        logger.warning(req, 'get_my_committees', 'Failed to fetch committees for mock data, returning empty');
-        return [];
-      }
-    }
-
-    // Production: not yet implemented
+    logger.warning(req, 'get_my_committees', 'Not yet implemented — backend endpoint pending, returning empty');
     return [];
   }
 
