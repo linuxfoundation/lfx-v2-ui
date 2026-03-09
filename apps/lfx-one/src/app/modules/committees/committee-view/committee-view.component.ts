@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, ViewChild, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal, untracked, ViewChild, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -210,6 +210,10 @@ export class CommitteeViewComponent {
   public canLeave: Signal<boolean>;
   public isClosed: Signal<boolean>;
 
+  // Tab visibility signals
+  public isMembersTabVisible: Signal<boolean>;
+  public isVotesTabVisible: Signal<boolean>;
+
   // Document computed signals
   public documentFiles: Signal<CommitteeDocument[]>;
   public documentLinks: Signal<CommitteeDocument[]>;
@@ -363,6 +367,28 @@ export class CommitteeViewComponent {
       const joinMode = this.committee()?.join_mode || 'closed';
       return (joinMode === 'closed' || joinMode === 'invite-only') && !this.isCurrentMember() && !this.canManageConfigurations();
     });
+
+    // Tab visibility signals
+    this.isMembersTabVisible = computed(
+      () => this.committee()?.member_visibility !== 'hidden' || this.isCurrentMember() || this.canManageConfigurations()
+    );
+    this.isVotesTabVisible = computed(() => !!this.committee()?.enable_voting);
+
+    // Redirect active tab to overview when hidden tabs are active
+    effect(() => {
+      const membersVisible = this.isMembersTabVisible();
+      const votesVisible = this.isVotesTabVisible();
+      const currentTab = this.activeTab();
+
+      untracked(() => {
+        if (!membersVisible && currentTab === 'members') {
+          this.activeTab.set('overview');
+        }
+        if (!votesVisible && currentTab === 'votes') {
+          this.activeTab.set('overview');
+        }
+      });
+    }, { allowSignalWrites: true });
 
     // Document computed signals
     this.documentFiles = computed(() => this.documents().filter((d) => d.type === 'file'));
