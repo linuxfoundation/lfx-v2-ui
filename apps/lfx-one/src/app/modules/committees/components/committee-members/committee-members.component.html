@@ -21,6 +21,11 @@
       </div>
     </div>
 
+    @if (!isMembersVisible()) {
+      <div class="text-sm text-gray-500 text-center py-6" data-testid="members-hidden-placeholder">
+        Member list is not publicly visible for this group.
+      </div>
+    } @else {
     <!-- Search and Filter Controls -->
     <div class="flex flex-col md:flex-row md:flex-wrap gap-4 mb-6">
       <!-- Search Input -->
@@ -205,5 +210,6 @@
         }
       </ng-template>
     </lfx-table>
+    }
   </lfx-card>
 </div>

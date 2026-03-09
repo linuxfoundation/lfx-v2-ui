@@ -40,22 +40,24 @@ import {
   isOtherClass,
 } from '@lfx-one/shared/constants';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Meeting } from '@lfx-one/shared/interfaces';
+import { Meeting, MyCommittee } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectService } from '@services/project.service';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { MenuItem, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap, take } from 'rxjs';
 
 import { FileSizePipe } from '@pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
+import { JoinApplicationDialogComponent } from '../components/join-application-dialog/join-application-dialog.component';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 
 @Component({
@@ -76,6 +78,7 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
     NgClass,
     FormsModule,
     ConfirmDialogModule,
+    DynamicDialogModule,
     TooltipModule,
     DatePipe,
     DecimalPipe,
@@ -83,6 +86,7 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
     FileTypeIconPipe,
     RouterLink,
   ],
+  providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -94,6 +98,8 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
@@ -194,6 +200,15 @@ export class CommitteeViewComponent {
   // Configuration label signals
   public joinModeLabel: Signal<string>;
   public memberVisibilityLabel: Signal<string>;
+
+  // Join/Leave membership state signals
+  public myCommittees: Signal<MyCommittee[]>;
+  public myCommitteeUids: Signal<Set<string>>;
+  public isCurrentMember: Signal<boolean>;
+  public canJoin: Signal<boolean>;
+  public canApply: Signal<boolean>;
+  public canLeave: Signal<boolean>;
+  public isClosed: Signal<boolean>;
 
   // Document computed signals
   public documentFiles: Signal<CommitteeDocument[]>;
@@ -334,6 +349,21 @@ export class CommitteeViewComponent {
       }
     });
 
+    // Join/Leave membership state
+    this.myCommittees = this.initializeMyCommittees();
+    this.myCommitteeUids = computed(() => new Set(this.myCommittees().map((c) => c.uid)));
+    this.isCurrentMember = computed(() => {
+      const uid = this.committee()?.uid;
+      return !!uid && this.myCommitteeUids().has(uid);
+    });
+    this.canJoin = computed(() => this.committee()?.join_mode === 'open' && !this.isCurrentMember());
+    this.canApply = computed(() => this.committee()?.join_mode === 'apply' && !this.isCurrentMember());
+    this.canLeave = computed(() => this.isCurrentMember());
+    this.isClosed = computed(() => {
+      const joinMode = this.committee()?.join_mode || 'closed';
+      return (joinMode === 'closed' || joinMode === 'invite-only') && !this.isCurrentMember() && !this.canManageConfigurations();
+    });
+
     // Document computed signals
     this.documentFiles = computed(() => this.documents().filter((d) => d.type === 'file'));
     this.documentLinks = computed(() => this.documents().filter((d) => d.type === 'link'));
@@ -379,6 +409,66 @@ export class CommitteeViewComponent {
 
   public refreshMembers(): void {
     this.refresh.next();
+  }
+
+  public joinGroup(): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    this.committeeService.joinCommittee(committee.uid).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Joined', detail: `You have joined "${committee.name}"` });
+        this.refresh.next();
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to join "${committee.name}"` });
+      },
+    });
+  }
+
+  public applyToJoin(): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    const dialogRef = this.dialogService.open(JoinApplicationDialogComponent, {
+      header: 'Request to Join',
+      width: '500px',
+      modal: true,
+      closable: true,
+      duplicate: true,
+      data: { committee },
+    });
+
+    dialogRef?.onClose.pipe(take(1)).subscribe((submitted: boolean | undefined) => {
+      if (submitted) {
+        this.refresh.next();
+      }
+    });
+  }
+
+  public leaveGroup(): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to leave "${committee.name}"?`,
+      header: 'Leave Group',
+      acceptLabel: 'Leave',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
+      accept: () => {
+        this.committeeService.leaveCommittee(committee.uid).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Left Group', detail: `You have left "${committee.name}"` });
+            this.refresh.next();
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
+          },
+        });
+      },
+    });
   }
 
   // ── Collaboration inline-edit methods ──────────────────────────────
@@ -583,6 +673,19 @@ export class CommitteeViewComponent {
     }
 
     // ── other: no type-specific cards (just meetings, docs, members) ──
+  }
+
+  private initializeMyCommittees(): Signal<MyCommittee[]> {
+    return toSignal(
+      this.refresh.pipe(
+        switchMap(() =>
+          this.committeeService.getMyCommittees().pipe(
+            catchError(() => of([]))
+          )
+        )
+      ),
+      { initialValue: [] }
+    );
   }
 
   private initializeFormattedUpdatedDate(): Signal<string> {

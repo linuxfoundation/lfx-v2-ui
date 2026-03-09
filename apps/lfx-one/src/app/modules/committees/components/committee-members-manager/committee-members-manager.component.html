@@ -11,18 +11,20 @@
     <p class="text-gray-500 text-base">Add members to your {{ committeeLabel.toLowerCase() }} to enable collaboration</p>
   </div>
 
-  <div class="flex items-center mb-4">
-    <div class="flex items-center gap-3">
-      <lfx-button
-        size="small"
-        label="Add Member"
-        icon="fa-light fa-user-plus"
-        severity="secondary"
-        data-testid="add-member-button"
-        (click)="openAddMemberDialog()">
-      </lfx-button>
+  @if (canManageMembers()) {
+    <div class="flex items-center mb-4">
+      <div class="flex items-center gap-3">
+        <lfx-button
+          size="small"
+          label="Add Member"
+          icon="fa-light fa-user-plus"
+          severity="secondary"
+          data-testid="add-member-button"
+          (click)="openAddMemberDialog()">
+        </lfx-button>
+      </div>
     </div>
-  </div>
+  }
 
   <!-- Main members content -->
   <div class="flex flex-col gap-4">
@@ -135,16 +137,18 @@
               }
               <!-- Action buttons -->
               <div class="flex items-center gap-2">
-                <lfx-button
-                  size="small"
-                  icon="fa-light fa-pen"
-                  [text]="true"
-                  styleClass="text-gray-400 hover:text-blue-600"
-                  pTooltip="Edit"
-                  tooltipPosition="top"
-                  data-testid="edit-member-button"
-                  (click)="openEditMemberDialog(member)">
-                </lfx-button>
+                @if (canManageMembers()) {
+                  <lfx-button
+                    size="small"
+                    icon="fa-light fa-pen"
+                    [text]="true"
+                    styleClass="text-gray-400 hover:text-blue-600"
+                    pTooltip="Edit"
+                    tooltipPosition="top"
+                    data-testid="edit-member-button"
+                    (click)="openEditMemberDialog(member)">
+                  </lfx-button>
+                }
                 <lfx-button
                   size="small"
                   icon="fa-light fa-envelope"
@@ -154,15 +158,17 @@
                   tooltipPosition="top"
                   (click)="onSendMessage(member)">
                 </lfx-button>
-                <lfx-button
-                  size="small"
-                  icon="fa-light fa-trash"
-                  [text]="true"
-                  styleClass="text-gray-400 hover:text-red-600"
-                  pTooltip="Remove"
-                  tooltipPosition="top"
-                  (click)="handleMemberDelete(member.uid || member.tempId || '')">
-                </lfx-button>
+                @if (canManageMembers()) {
+                  <lfx-button
+                    size="small"
+                    icon="fa-light fa-trash"
+                    [text]="true"
+                    styleClass="text-gray-400 hover:text-red-600"
+                    pTooltip="Remove"
+                    tooltipPosition="top"
+                    (click)="handleMemberDelete(member.uid || member.tempId || '')">
+                  </lfx-button>
+                }
               </div>
             </div>
           </div>

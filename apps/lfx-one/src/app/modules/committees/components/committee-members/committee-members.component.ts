@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
+import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
+import { Component, computed, inject, input, OnInit, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -48,6 +48,7 @@ export class CommitteeMembersComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // Input signals
   public committee = input.required<Committee | null>();
@@ -66,6 +67,7 @@ export class CommitteeMembersComponent implements OnInit {
   public isMaintainer: Signal<boolean>;
   public canManageMembers: Signal<boolean>;
   public canInviteMembers: Signal<boolean>;
+  public isMembersVisible: Signal<boolean>;
 
   // Filter-related variables
   public filterForm: FormGroup;
@@ -86,10 +88,17 @@ export class CommitteeMembersComponent implements OnInit {
     this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
     this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
     this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
-    // Invite is available when join_mode allows it
+    // Members visible when visibility is not 'hidden' OR user has management access
+    this.isMembersVisible = computed(() => {
+      const visibility = this.committee()?.member_visibility;
+      return visibility !== 'hidden' || this.canManageMembers();
+    });
+    // Invite requires both a compatible join_mode and management permission (writer or maintainer)
     this.canInviteMembers = computed(() => {
-      const joinMode = this.committee()?.join_mode;
-      return joinMode === 'invite-only' || joinMode === 'open';
+      const committee = this.committee();
+      const joinMode = committee?.join_mode;
+      const hasInviteMode = joinMode === 'invite-only' || joinMode === 'open';
+      return hasInviteMode && (!!committee?.writer || this.canManageMembers());
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
@@ -274,7 +283,11 @@ export class CommitteeMembersComponent implements OnInit {
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
-        command: () => window.open(`mailto:${this.selectedMember()?.email}`, '_blank'),
+        command: () => {
+          if (isPlatformBrowser(this.platformId)) {
+            window.open(`mailto:${this.selectedMember()?.email}`, '_blank');
+          }
+        },
       },
       {
         separator: true,
