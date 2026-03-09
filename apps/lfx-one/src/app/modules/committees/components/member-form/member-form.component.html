@@ -88,7 +88,7 @@
 
     <!-- Individual Toggle -->
     <div data-testid="member-form-individual-toggle">
-      <lfx-checkbox [form]="form()" control="is_individual" label="Individual (no org affiliation)" (click)="onIndividualToggle()"></lfx-checkbox>
+      <lfx-checkbox [form]="form()" control="is_individual" label="Individual (no org affiliation)"></lfx-checkbox>
     </div>
 
     <!-- Organization Search -->
@@ -153,6 +153,7 @@
             placeholder="Start date"
             [showButtonBar]="true"
             appendTo="body"
+            (onSelect)="onDateChange()"
             data-testid="member-form-role-start"></lfx-calendar>
           <lfx-calendar
             [form]="form()"
@@ -160,6 +161,7 @@
             placeholder="End date"
             [showButtonBar]="true"
             appendTo="body"
+            (onSelect)="onDateChange()"
             data-testid="member-form-role-end"></lfx-calendar>
         </div>
         @if (form().errors?.['role_start_after_role_end']) {
@@ -190,11 +192,7 @@
         <div class="flex items-center justify-between mb-1">
           <label class="block text-sm font-medium text-gray-700">Voting Status Date Range</label>
           @if (form().get('voting_status_start')?.value || form().get('voting_status_end')?.value) {
-            <button
-              type="button"
-              class="text-xs text-blue-600 hover:text-blue-800"
-              (click)="clearVotingDates()"
-              data-testid="member-form-clear-voting-dates">
+            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" (click)="clearVotingDates()" data-testid="member-form-clear-voting-dates">
               Clear
             </button>
           }
@@ -206,6 +204,7 @@
             placeholder="Start date"
             [showButtonBar]="true"
             appendTo="body"
+            (onSelect)="onDateChange()"
             data-testid="member-form-voting-start"></lfx-calendar>
           <lfx-calendar
             [form]="form()"
@@ -213,6 +212,7 @@
             placeholder="End date"
             [showButtonBar]="true"
             appendTo="body"
+            (onSelect)="onDateChange()"
             data-testid="member-form-voting-end"></lfx-calendar>
         </div>
         @if (form().errors?.['voting_status_start_after_voting_status_end']) {
@@ -229,6 +229,7 @@
         [form]="form()"
         control="appointed_by"
         [options]="appointedByOptions"
+        [filter]="true"
         placeholder="Select appointment source"
         styleClass="w-full"
         appendTo="body"

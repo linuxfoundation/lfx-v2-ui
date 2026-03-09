@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -27,6 +28,7 @@ export class MemberFormComponent {
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   // Loading state for form submissions
   public submitting = signal<boolean>(false);
@@ -58,6 +60,12 @@ export class MemberFormComponent {
 
     // Initialize form with data when component is created
     this.initializeForm();
+
+    // Listen to individual toggle changes (fixes click-before-value-update timing)
+    this.form()
+      .get('is_individual')
+      ?.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe(() => this.onIndividualToggle());
   }
 
   public onIndividualToggle(): void {
@@ -80,13 +88,22 @@ export class MemberFormComponent {
   }
 
   public clearRoleDates(): void {
-    this.form().get('role_start')?.setValue(null);
-    this.form().get('role_end')?.setValue(null);
+    this.form().get('role_start')?.reset();
+    this.form().get('role_end')?.reset();
+    this.form().updateValueAndValidity();
+    this.cdr.detectChanges();
   }
 
   public clearVotingDates(): void {
-    this.form().get('voting_status_start')?.setValue(null);
-    this.form().get('voting_status_end')?.setValue(null);
+    this.form().get('voting_status_start')?.reset();
+    this.form().get('voting_status_end')?.reset();
+    this.form().updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
+  public onDateChange(): void {
+    this.form().updateValueAndValidity();
+    this.cdr.detectChanges();
   }
 
   public onCancel(): void {
@@ -177,10 +194,8 @@ export class MemberFormComponent {
         },
       });
     } else {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.form().controls).forEach((key) => {
-        this.form().get(key)?.markAsTouched();
-      });
+      this.form().markAllAsTouched();
+      this.cdr.detectChanges();
     }
   }
 
