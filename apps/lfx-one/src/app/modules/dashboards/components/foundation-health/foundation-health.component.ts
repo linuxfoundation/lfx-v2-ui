@@ -75,7 +75,7 @@ export class FoundationHealthComponent {
   private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((foundation) => foundation?.slug || ''));
   private readonly activeFoundationSlug$ = combineLatest([this.selectedFoundationSlug$, toObservable(this.hideBuiltInCards)]).pipe(
     takeUntilDestroyed(),
-    filter(([, hidden]) => !hidden),
+    filter(([slug, hidden]) => !hidden && !!slug),
     map(([slug]) => slug)
   );
   public readonly hasFoundationSelected = computed<boolean>(() => !!this.projectContextService.selectedFoundation());
