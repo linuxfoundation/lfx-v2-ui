@@ -3,23 +3,22 @@
 
 import { Component, computed, inject, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { MARKETING_OVERVIEW_METRICS } from '@lfx-one/shared/constants';
-import { CategorizedMetricCard, FilterPillOption, PendingActionItem } from '@lfx-one/shared/interfaces';
+import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
-import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
 import { PendingActionsComponent } from '../components/pending-actions/pending-actions.component';
 
+import { MarketingOverviewComponent } from './components/marketing-overview/marketing-overview.component';
+
 @Component({
   selector: 'lfx-executive-director-dashboard',
-  imports: [PendingActionsComponent, MyMeetingsComponent, FoundationHealthComponent, SkeletonModule],
+  imports: [PendingActionsComponent, MyMeetingsComponent, MarketingOverviewComponent, SkeletonModule],
   templateUrl: './executive-director-dashboard.component.html',
-  styleUrl: './executive-director-dashboard.component.scss',
 })
 export class ExecutiveDirectorDashboardComponent {
   // === Services ===
@@ -27,22 +26,12 @@ export class ExecutiveDirectorDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
-  // === Inputs ===
-  public readonly edFilterOptions: FilterPillOption[] = [
-    { id: 'all', label: 'All' },
-    { id: 'marketing', label: 'Marketing' },
-  ];
-
-  public readonly marketingCards: CategorizedMetricCard[] = MARKETING_OVERVIEW_METRICS.map((card) => ({
-    card,
-    category: card.category || 'marketing',
-  }));
-
-  public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
+  // === Configuration ===
+  private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   // === Computed Signals ===
-  public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
-  public readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  protected readonly selectedFoundation = this.projectContextService.selectedFoundation;
+  protected readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
   private readonly rawPendingActions: Signal<PendingActionItem[]>;
   public readonly pendingActions: Signal<PendingActionItem[]>;
 

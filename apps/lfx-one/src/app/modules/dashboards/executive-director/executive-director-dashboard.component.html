@@ -11,9 +11,9 @@
 
   <!-- Dashboard Sections -->
   <div class="flex flex-col gap-6" data-testid="ed-dashboard-sections-grid">
-    <!-- Foundation Health with Marketing Cards - Full Width -->
+    <!-- Marketing Overview - Full Width -->
     @defer (on idle) {
-      <lfx-foundation-health title="Marketing Overview" [customFilterOptions]="edFilterOptions" [additionalCards]="marketingCards" [hideBuiltInCards]="true" />
+      <lfx-marketing-overview />
     } @placeholder {
       <section data-testid="ed-dashboard-marketing-placeholder">
         <div class="flex flex-wrap gap-3 items-end justify-between mb-4">

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PersonaType } from '@lfx-one/shared/interfaces';
 
@@ -16,6 +16,12 @@ export class PersonaService {
 
   public readonly currentPersona: WritableSignal<PersonaType>;
   public readonly isAutoDetected: WritableSignal<boolean> = signal(false);
+
+  // Centralized check for personas that require TLF-only context
+  public readonly isTlfOnlyPersona = computed(() => {
+    const persona = this.currentPersona();
+    return persona === 'board-member' || persona === 'executive-director';
+  });
 
   public constructor() {
     // Default persona - will be overridden by initializeFromAuth if backend provides one
@@ -40,7 +46,7 @@ export class PersonaService {
 
   /**
    * Set the current persona
-   * When switching to board-member or executive-director, clear child project selection
+   * When switching to a TLF-only persona, clear child project selection
    * Cannot change persona if it was auto-detected from committee membership
    */
   public setPersona(persona: PersonaType): void {

@@ -41,8 +41,10 @@ export class PersonaSelectorComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member' || value === 'executive-director') {
-          // TODO: DEMO - Remove when proper permissions are implemented
+        this.personaService.setPersona(value);
+
+        // TODO: DEMO - Remove when proper permissions are implemented
+        if (this.personaService.isTlfOnlyPersona()) {
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {
             this.projectContextService.setFoundation({
@@ -52,8 +54,6 @@ export class PersonaSelectorComponent {
             });
           }
         }
-
-        this.personaService.setPersona(value);
       });
   }
 }

@@ -13,7 +13,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <!-- Filter Pills -->
         <lfx-filter-pills
-          [options]="filterOptions()"
+          [options]="filterOptions"
           [selectedFilter]="selectedFilter()"
           (filterChange)="handleFilterChange($event)"
           data-testid="foundation-health-filters"></lfx-filter-pills>
@@ -179,8 +179,6 @@
                 [chartOptions]="card.chartOptions"
                 [value]="card.value"
                 [subtitle]="card.subtitle"
-                [trend]="card.trend"
-                [changePercentage]="card.changePercentage"
                 [loading]="card.loading"
                 [clickable]="!!card.drawerType"
                 (cardClick)="handleCardClick(card.drawerType!)"></lfx-metric-card>
