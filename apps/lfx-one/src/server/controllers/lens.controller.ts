@@ -24,11 +24,15 @@ export class LensController {
       return;
     }
 
+    // Sanitize optional fields — only forward valid types to upstream
+    const validSessionId = typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : undefined;
+    const validContext = context && typeof context === 'object' && !Array.isArray(context) ? context : undefined;
+
     const userId = (req.oidc?.user?.['sub'] as string) || 'anonymous';
 
     const startTime = logger.startOperation(req, 'lens_chat', {
-      has_session: !!sessionId,
-      has_context: !!context,
+      has_session: !!validSessionId,
+      has_context: !!validContext,
     });
 
     // SSE headers — Content-Encoding: identity bypasses compression middleware
@@ -63,7 +67,11 @@ export class LensController {
       let blockCount = 0;
       let resolvedSessionId: string | undefined;
 
-      for await (const event of this.lensService.streamQuery(req, { message, userId, sessionId, context }, abortController.signal)) {
+      for await (const event of this.lensService.streamQuery(
+        req,
+        { message, userId, sessionId: validSessionId, context: validContext },
+        abortController.signal
+      )) {
         if (clientDisconnected) return;
 
         if (event.type === 'session_id') {

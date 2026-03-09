@@ -11,6 +11,12 @@ export class LensService {
   private readonly apiUrl = process.env['LENS_API_URL'] || LENS_CONFIG.DEFAULT_API_URL;
   private readonly apiKey = process.env['LENS_API_KEY'] || '';
 
+  public constructor() {
+    if (!this.apiKey) {
+      logger.warning(undefined, 'lens_service_init', 'LENS_API_KEY is not set — LFX Lens API requests will fail authentication');
+    }
+  }
+
   /**
    * Stream query — tries stream=true first. If the upstream returns a non-streaming
    * JSON response (e.g. when they don't support streaming yet), falls back to

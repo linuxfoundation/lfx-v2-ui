@@ -56,6 +56,7 @@ export class LensService {
         this.flushCharBuffer();
         this.streaming.set(false);
         this.currentStatus.set('');
+        this.clearEmptyAssistantPlaceholder();
         this.markLastAssistantDone();
       },
     });

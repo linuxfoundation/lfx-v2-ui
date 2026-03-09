@@ -94,6 +94,7 @@ export class DataCopilotComponent {
 
     this.lensService.sendMessage(message, this.buildContext());
     this.messageControl.setValue('');
+    this.resetTextareaHeight();
     this.autoScroll = true;
   }
 
@@ -124,6 +125,14 @@ export class DataCopilotComponent {
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }
+
+  private resetTextareaHeight(): void {
+    if (!this.needsJsAutoGrow) return;
+    const el = this.chatTextarea()?.nativeElement;
+    if (el) {
+      el.style.height = 'auto';
+    }
   }
 
   private buildContext(): LensContext | undefined {
