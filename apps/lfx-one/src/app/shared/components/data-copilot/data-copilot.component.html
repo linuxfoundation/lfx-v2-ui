@@ -25,7 +25,14 @@
   data-testid="data-copilot-drawer">
   <div class="flex h-full flex-col">
     <!-- Messages area (scrollable) -->
-    <div #messagesContainer class="flex-1 overflow-y-auto px-4 py-4" (scroll)="onMessagesScroll()" data-testid="data-copilot-messages">
+    <div
+      #messagesContainer
+      class="flex-1 overflow-y-auto px-4 py-4"
+      tabindex="0"
+      role="log"
+      aria-label="Chat messages"
+      (scroll)="onMessagesScroll()"
+      data-testid="data-copilot-messages">
       @if (!hasMessages()) {
         <!-- Empty state -->
         <div class="flex h-full flex-col items-center justify-center gap-4">

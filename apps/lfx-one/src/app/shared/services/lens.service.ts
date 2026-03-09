@@ -24,6 +24,10 @@ export class LensService {
   public sendMessage(message: string, context?: LensContext): void {
     if (!message.trim() || this.streaming()) return;
 
+    // Tear down any lingering subscription from a previous stream
+    this.subscription?.unsubscribe();
+    this.subscription = null;
+
     this.error.set('');
     this.currentStatus.set('');
 
