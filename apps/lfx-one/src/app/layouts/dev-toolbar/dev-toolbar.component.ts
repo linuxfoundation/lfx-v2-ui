@@ -41,8 +41,11 @@ export class DevToolbarComponent {
   // Persona options for SelectButton
   protected readonly personaOptions = PERSONA_OPTIONS;
 
-  // Board-level persona project override
-  protected readonly isBoardLevelPersona = computed(() => this.personaService.isBoardScopedPersona(this.personaService.currentPersona()));
+  // Board member project override
+  protected readonly isBoardMember = computed(() => {
+    const persona = this.personaService.currentPersona();
+    return persona === 'board-member' || persona === 'executive-director';
+  });
 
   // Check if we're on the board dashboard page
   protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
@@ -62,12 +65,15 @@ export class DevToolbarComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        this.personaService.setPersona(value);
-
-        if (this.personaService.isBoardScopedPersona(value)) {
-          // Sync form project selector with the enforced TLF foundation
-          const tlfProject = this.projectContextService.selectedFoundation();
+        if (value === 'board-member' || value === 'executive-director') {
+          // TODO: DEMO - Remove when proper permissions are implemented
+          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {
+            this.projectContextService.setFoundation({
+              uid: tlfProject.uid,
+              name: tlfProject.name,
+              slug: tlfProject.slug,
+            });
             this.form.get('selectedProjectUid')?.setValue(tlfProject.uid, { emitEvent: false });
           }
         } else {
@@ -77,6 +83,8 @@ export class DevToolbarComponent {
             this.projectContextService.setProject(firstProject);
           }
         }
+
+        this.personaService.setPersona(value);
       });
 
     // Subscribe to account selection changes
