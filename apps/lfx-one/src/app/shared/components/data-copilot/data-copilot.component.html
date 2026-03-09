@@ -94,7 +94,7 @@
 
     <!-- Status bar -->
     @if (currentStatus()) {
-      <div class="flex items-center gap-2.5 px-4 py-2" data-testid="data-copilot-status-bar">
+      <div class="flex items-center gap-2.5 px-4 py-2" role="status" aria-live="polite" data-testid="data-copilot-status-bar">
         <div class="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"></div>
         <span class="text-xs text-gray-500">{{ currentStatus() }}</span>
       </div>
@@ -102,7 +102,7 @@
 
     <!-- Error bar -->
     @if (error()) {
-      <div class="flex items-center gap-2.5 px-4 py-2" data-testid="data-copilot-error-bar">
+      <div class="flex items-center gap-2.5 px-4 py-2" role="alert" data-testid="data-copilot-error-bar">
         <i class="fa-duotone fa-circle-exclamation text-xs text-red-500"></i>
         <span class="text-xs text-red-600">{{ error() }}</span>
       </div>
