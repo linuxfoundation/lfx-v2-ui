@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 import { LENS_CONFIG } from '@lfx-one/shared/constants';
-import { LensQueryParams, LensSSEEvent, LensSSEEventType, LfxLensApiResponse } from '@lfx-one/shared/interfaces';
+import { LensBlock, LensQueryParams, LensSSEEvent, LfxLensApiResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
 
 export class LensService {
-  private readonly apiUrl = process.env['LENS_API_URL'] || LENS_CONFIG.DEFAULT_API_URL;
-  private readonly apiKey = process.env['LENS_API_KEY'] || '';
+  private get apiUrl(): string {
+    return process.env['LENS_API_URL'] || LENS_CONFIG.DEFAULT_API_URL;
+  }
 
-  public constructor() {
-    if (!this.apiKey) {
-      logger.warning(undefined, 'lens_service_init', 'LENS_API_KEY is not set — LFX Lens API requests will fail authentication');
-    }
+  private get apiKey(): string {
+    return process.env['LENS_API_KEY'] || '';
   }
 
   /**
@@ -79,8 +78,9 @@ export class LensService {
   }
 
   /**
-   * Read upstream SSE stream from LFX Lens API and re-emit as our events.
-   * The upstream sends events like: status, content, block, session_id, done, error.
+   * Read upstream SSE stream from LFX Lens API and re-emit as our normalized events.
+   * The upstream sends workflow events (WorkflowStarted, StepStarted, RunContent, etc.)
+   * which are translated to our status/content/block/session_id/done/error types.
    */
   private async *readUpstreamSSE(req: Request, response: globalThis.Response): AsyncGenerator<LensSSEEvent> {
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
@@ -99,8 +99,7 @@ export class LensService {
         for (const block of blocks) {
           if (!block.trim()) continue;
 
-          const event = this.parseUpstreamSSEBlock(block);
-          if (event) {
+          for (const event of this.parseUpstreamSSEBlock(block)) {
             yield event;
           }
         }
@@ -111,8 +110,7 @@ export class LensService {
 
       // Handle remaining buffer
       if (buffer.trim()) {
-        const event = this.parseUpstreamSSEBlock(buffer);
-        if (event) {
+        for (const event of this.parseUpstreamSSEBlock(buffer)) {
           yield event;
         }
       }
@@ -154,7 +152,14 @@ export class LensService {
     yield { type: 'done', data: '' };
   }
 
-  private parseUpstreamSSEBlock(block: string): LensSSEEvent | null {
+  /**
+   * Parse a raw SSE text block into zero or more normalized LensSSEEvents.
+   *
+   * The upstream Lens API sends workflow-level events (WorkflowStarted, StepStarted,
+   * RunContent, WorkflowCompleted, etc.) — NOT the simple status/content/block/done
+   * events our client expects. This method translates between the two.
+   */
+  private parseUpstreamSSEBlock(block: string): LensSSEEvent[] {
     let eventType = '';
     const dataLines: string[] = [];
 
@@ -168,40 +173,92 @@ export class LensService {
       }
     }
 
-    if (!eventType && dataLines.length === 0) return null;
+    if (!eventType && dataLines.length === 0) return [];
 
     const data = dataLines.join('\n');
 
-    let parsed: unknown;
+    let parsed: Record<string, unknown>;
     try {
-      parsed = JSON.parse(data);
+      parsed = JSON.parse(data) as Record<string, unknown>;
     } catch {
-      parsed = data;
+      return [];
     }
 
-    // Map upstream event types to our SSE event types
-    const mappedType = this.mapUpstreamEventType(eventType);
-    if (!mappedType) return null;
-
-    return { type: mappedType, data: parsed };
+    return this.mapUpstreamEvent(eventType, parsed);
   }
 
-  private mapUpstreamEventType(upstreamType: string): LensSSEEventType | null {
-    switch (upstreamType) {
-      case 'status':
-        return 'status';
-      case 'content':
-        return 'content';
-      case 'block':
-        return 'block';
-      case 'session_id':
-        return 'session_id';
-      case 'done':
-        return 'done';
-      case 'error':
-        return 'error';
+  /**
+   * Translate a single upstream workflow event into our normalized SSE events.
+   *
+   * Upstream event flow:
+   *   WorkflowStarted → session_id
+   *   StepStarted     → status (humanized step name)
+   *   RunContent       → content (string) or block[] (object with blocks)
+   *   WorkflowCompleted → done
+   */
+  private mapUpstreamEvent(eventType: string, data: Record<string, unknown>): LensSSEEvent[] {
+    switch (eventType) {
+      case 'WorkflowStarted': {
+        const sessionId = data['session_id'] as string | undefined;
+        return sessionId ? [{ type: 'session_id', data: sessionId }] : [];
+      }
+
+      case 'StepStarted': {
+        const stepName = data['step_name'] as string | undefined;
+        if (stepName) {
+          return [{ type: 'status', data: this.humanizeStepName(stepName) }];
+        }
+        return [];
+      }
+
+      case 'RunContent': {
+        const content = data['content'];
+        if (!content) return [];
+
+        // String content → intermediate status or text content
+        if (typeof content === 'string') {
+          return [{ type: 'content', data: content }];
+        }
+
+        // Object content with blocks → extract and emit each block
+        if (typeof content === 'object' && !Array.isArray(content)) {
+          const blocks = (content as Record<string, unknown>)['blocks'] as LensBlock[] | undefined;
+          if (!blocks || !Array.isArray(blocks)) return [];
+
+          const events: LensSSEEvent[] = [];
+          for (const block of blocks) {
+            if (block.type === 'message') {
+              events.push({ type: 'content', data: block.content });
+            } else {
+              events.push({ type: 'block', data: block });
+            }
+          }
+          return events;
+        }
+
+        return [];
+      }
+
+      case 'WorkflowCompleted':
+        return [{ type: 'done', data: '' }];
+
       default:
-        return null;
+        return [];
+    }
+  }
+
+  private humanizeStepName(stepName: string): string {
+    switch (stepName) {
+      case 'resolve_context':
+        return 'Resolving context...';
+      case 'Check Query Cache':
+        return 'Checking cache...';
+      case 'Prepare LFX Lens Input':
+        return 'Preparing query...';
+      case 'LFX Lens Agent':
+        return 'Analyzing your question...';
+      default:
+        return `Processing: ${stepName}...`;
     }
   }
 }
