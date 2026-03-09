@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 🚀 Development Patterns
 
 - [Angular Patterns](docs/architecture/frontend/angular-patterns.md) - Zoneless change detection, signals, components
+- [Full-Stack Feature Pattern](#full-stack-feature-pattern) - How every feature is built: route → controller → service → proxy
+- [Angular Service Pattern](#angular-service-pattern) - Injectable services, signals, Observable returns, error handling
 - [Component Organization Pattern](#component-organization-pattern) - Standardized component structure
 - [Feature Modules](#feature-modules) - 9 application feature modules
 - [Shared Package (@lfx-one/shared)](#shared-package-lfx-oneshared) - Types, interfaces, constants
@@ -52,6 +54,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [Logging & Monitoring](docs/architecture/backend/logging-monitoring.md) - Structured logging
 - [E2E Testing](docs/architecture/testing/e2e-testing.md) - Comprehensive end-to-end testing with dual architecture
 - [Testing Best Practices](docs/architecture/testing/testing-best-practices.md) - Testing patterns and implementation guide
+
+### 🧪 Testing & Local Dev
+
+- [Mock Data & Local Development Pattern](#mock-data--local-development-pattern) - Playwright-only mocking, no server-side fallbacks
+- [Anti-Patterns](#anti-patterns) - Things we never do in this codebase
 
 ### 💡 Quick Reference
 
@@ -95,6 +102,245 @@ lfx-v2-ui/
 ```
 
 [... rest of the existing content remains unchanged ...]
+
+## Full-Stack Feature Pattern
+
+Every feature follows the same four-layer chain. **Never skip a layer or combine them.**
+
+```
+HTTP request
+    │
+    ▼
+Route file          (/src/server/routes/foo.route.ts)
+    │  thin — only registers controller methods on Express Router
+    ▼
+Controller          (/src/server/controllers/foo.controller.ts)
+    │  HTTP boundary — logging, validation, response format
+    ▼
+Service             (/src/server/services/foo.service.ts)
+    │  business logic — data transformation, enrichment, orchestration
+    ▼
+MicroserviceProxyService
+    │  network — forwards to LFX_V2_SERVICE with auth token
+    ▼
+LFX V2 backend      (http://lfx-api.k8s.orb.local by default)
+```
+
+### Route File
+
+Thin — only creates a Router, instantiates one controller, and wires methods. No logic.
+
+```typescript
+// src/server/routes/votes.route.ts
+import { Router } from 'express';
+import { VoteController } from '../controllers/vote.controller';
+
+const router = Router();
+const voteController = new VoteController();
+
+// GET /api/votes
+router.get('/', (req, res, next) => voteController.getVotes(req, res, next));
+// GET /api/votes/:uid
+router.get('/:uid', (req, res, next) => voteController.getVoteById(req, res, next));
+// POST /api/votes
+router.post('/', (req, res, next) => voteController.createVote(req, res, next));
+// PUT /api/votes/:uid
+router.put('/:uid', (req, res, next) => voteController.updateVote(req, res, next));
+// DELETE /api/votes/:uid
+router.delete('/:uid', (req, res, next) => voteController.deleteVote(req, res, next));
+
+export default router;
+```
+
+### Controller
+
+HTTP boundary only. Logs the operation, calls the service, responds. **Always** delegates errors to `next(error)`.
+
+```typescript
+// src/server/controllers/vote.controller.ts
+export class VoteController {
+  // Services instantiated as class properties — NOT in constructor
+  private voteService: VoteService = new VoteService();
+
+  public async getVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_votes', {
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      const { data, page_token } = await this.voteService.getVotes(req, req.query as Record<string, any>);
+
+      logger.success(req, 'get_votes', startTime, {
+        vote_count: data.length,
+        has_more_pages: !!page_token,
+      });
+
+      res.json({ data, page_token });       // always res.json(), never res.send()
+    } catch (error) {
+      next(error);                           // always next(error), never inline handling
+    }
+  }
+}
+```
+
+Rules:
+- `logger.startOperation()` first thing, `logger.success()` before `res.json()`
+- List responses: `res.json({ data, page_token })`
+- Single resource: `res.json(resource)`
+- Create: `res.status(201).json(resource)`
+- Delete: `res.status(204).send()`
+- **Never** catch and re-handle — always `next(error)`
+
+### Service
+
+Business logic layer. First parameter is always `req: Request` (for logging correlation).
+
+```typescript
+// src/server/services/vote.service.ts
+export class VoteService {
+  // Dependencies instantiated in constructor
+  private microserviceProxy: MicroserviceProxyService;
+
+  public constructor() {
+    this.microserviceProxy = new MicroserviceProxyService();
+  }
+
+  /**
+   * Fetches all votes with pagination support.
+   * @param req - Express request (for auth + logging)
+   * @param query - Query parameters for filtering/pagination
+   */
+  public async getVotes(req: Request, query: Record<string, any> = {}): Promise<PaginatedResponse<Vote>> {
+    logger.debug(req, 'get_votes', 'Starting vote fetch', { query_params: Object.keys(query) });
+
+    const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      { ...query, type: 'vote' }
+    );
+
+    return { data: resources.map(r => r.data), page_token };
+  }
+
+  // Use Promise.all() for independent parallel fetches
+  public async getVoteWithDetails(req: Request, uid: string): Promise<VoteDetail> {
+    logger.debug(req, 'get_vote_with_details', 'Fetching vote and comments', { uid });
+
+    const [vote, comments] = await Promise.all([
+      this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/itx/votes/${uid}`),
+      this.microserviceProxy.proxyRequest<Comment[]>(req, 'LFX_V2_SERVICE', `/itx/votes/${uid}/comments`),
+    ]);
+
+    return { ...vote, comments };
+  }
+
+  // Graceful degradation — return null/[] on failure, log as warning
+  private async enrichWithProject(req: Request, vote: Vote): Promise<Vote> {
+    try {
+      const project = await this.projectService.getProject(req, vote.project_uid);
+      return { ...vote, project_name: project.name };
+    } catch {
+      logger.warning(req, 'enrich_with_project', 'Could not enrich vote with project, proceeding without', {
+        vote_uid: vote.uid,
+      });
+      return vote;
+    }
+  }
+}
+```
+
+Rules:
+- Constructor instantiates all dependencies (`new ServiceName()`)
+- `logger.debug()` at the start of every public method
+- `logger.info()` for significant transformations or enrichments
+- `logger.warning()` when returning a fallback (null / empty array) due to error
+- Private methods for data transformation / enrichment
+- `Promise.all()` for independent parallel operations (comment why they're independent)
+
+### MicroserviceProxyService Call Signatures
+
+```typescript
+// GET — most common
+const data = await this.microserviceProxy.proxyRequest<MyType>(req, 'LFX_V2_SERVICE', '/path');
+
+// GET with query params
+const data = await this.microserviceProxy.proxyRequest<MyType>(req, 'LFX_V2_SERVICE', '/path', 'GET', queryParams);
+
+// POST / PUT / DELETE with body
+const data = await this.microserviceProxy.proxyRequest<MyType>(req, 'LFX_V2_SERVICE', '/path', 'POST', undefined, body);
+
+// Query service (list endpoints)
+const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MyType>>(
+  req, 'LFX_V2_SERVICE', '/query/resources', 'GET', { type: 'my-type', ...query }
+);
+```
+
+### Registering a New Route in server.ts
+
+```typescript
+// server.ts — add after the other route imports
+import myRouter from './routes/my-feature.route';
+
+// Add after the other app.use() route registrations
+app.use('/api/my-feature', myRouter);
+```
+
+## Angular Service Pattern
+
+Angular services that call server endpoints follow a strict, consistent pattern.
+
+```typescript
+// src/app/shared/services/vote.service.ts
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { catchError, Observable, of } from 'rxjs';
+import { Vote, CreateVoteRequest } from '@lfx-one/shared/interfaces';
+
+@Injectable({
+  providedIn: 'root',   // always 'root' for singleton
+})
+export class VoteService {
+  private readonly http = inject(HttpClient);   // inject() not constructor param
+
+  /**
+   * Get all votes for the current user.
+   * @returns Observable of paginated vote response
+   */
+  public getVotes(): Observable<{ data: Vote[]; page_token?: string }> {
+    return this.http.get<{ data: Vote[]; page_token?: string }>('/api/votes').pipe(
+      catchError(() => of({ data: [] }))       // always catchError with typed default
+    );
+  }
+
+  /**
+   * Get a single vote by UID.
+   */
+  public getVoteById(uid: string): Observable<Vote | null> {
+    return this.http.get<Vote>(`/api/votes/${uid}`).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  /**
+   * Create a new vote.
+   */
+  public createVote(payload: CreateVoteRequest): Observable<Vote | null> {
+    return this.http.post<Vote>('/api/votes', payload).pipe(
+      catchError(() => of(null))
+    );
+  }
+}
+```
+
+Rules:
+- `@Injectable({ providedIn: 'root' })` — always
+- `inject()` function, never constructor parameter injection
+- All public methods return `Observable<T>` — never subscribe internally
+- Every observable has `.pipe(catchError(() => of(defaultValue)))` — never let errors propagate raw
+- Default fallback matches the type exactly (`of([])` for arrays, `of(null)` for single resources)
+- Full JSDoc on every public method
 
 ## Component Organization Pattern
 
@@ -608,6 +854,154 @@ private async fetchFromNats(req: Request, slug: string): Promise<Project> {
 - Branch names should be following the commit types (feat,fix,docs, etc) followed by the JIRA ticket number. i.e; feat/LFXV2-123 or ci/LFXV2-456
 - PR titles must also follow a similar format as conventional commits - `type(scope): description`. The scope has to follow the angular config for conventional commit and not include the JIRA ticket in the title, and everything should be in lowercase.
 - All interfaces, reusable constants, and enums should live in the shared package.
+
+## Mock Data & Local Development Pattern
+
+**Rule: Server routes are always pure proxies. Never add mock data or upstream-fallback logic to the Express server.**
+
+### Architecture
+
+The codebase separates concerns strictly:
+
+| Layer | Role | Where |
+|---|---|---|
+| **Express server** | Proxy only — forwards requests to `LFX_V2_SERVICE` via `MicroserviceProxyService` | `src/server/routes/`, `src/server/controllers/`, `src/server/services/` |
+| **E2E mock data** | Fixture objects returned by Playwright's `page.route()` interceptors | `apps/lfx-one/e2e/fixtures/mock-data/` |
+| **E2E interceptors** | `page.route()` helpers that intercept HTTP at the network level during tests | `apps/lfx-one/e2e/helpers/api-mock.helper.ts` |
+| **Dev toolbar** | Client-side persona / account / project context switching | `src/app/layouts/dev-toolbar/` |
+
+### ❌ Never Do This
+
+```typescript
+// ❌ DO NOT add mock middleware or fallback logic to the Express server
+if (process.env['NODE_ENV'] !== 'production') {
+  app.use(createDevMockRouter()); // Wrong — violates the proxy-only rule
+}
+
+// ❌ DO NOT add upstream-reachability probes or in-memory stores to server code
+async function isUpstreamReachable(): Promise<boolean> { ... } // Wrong
+const MOCK_DATA = new Map<string, MyType[]>(); // Wrong
+```
+
+### ✅ Correct Pattern: Playwright `page.route()` for Test Mocking
+
+When you need mock data for local development or e2e tests, intercept at the **Playwright network layer**, not the server.
+
+**Step 1 — Define fixtures in `e2e/fixtures/mock-data/`:**
+
+```typescript
+// apps/lfx-one/e2e/fixtures/mock-data/committees.mock.ts
+import { CommitteeMember } from '@lfx-one/shared/interfaces';
+import { CommitteeMemberStatus } from '@lfx-one/shared/enums';
+
+export const mockCommitteeMembers: CommitteeMember[] = [
+  {
+    uid: 'mock-member-001',
+    committee_uid: 'mock-committee-001',
+    committee_name: 'Technical Advisory Council',
+    email: 'alice@example.org',
+    first_name: 'Alice',
+    last_name: 'Smith',
+    status: CommitteeMemberStatus.ACTIVE,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
+];
+```
+
+**Step 2 — Intercept using `page.route()` in a helper or directly in the test:**
+
+```typescript
+// apps/lfx-one/e2e/helpers/api-mock.helper.ts  (extend the existing class)
+import { mockCommitteeMembers } from '../fixtures/mock-data/committees.mock';
+
+export class ApiMockHelper {
+  /** Mock GET /api/committees/:id/members */
+  static async setupCommitteeMembersMock(page: Page, committeeId: string): Promise<void> {
+    await page.route(`**/api/committees/${committeeId}/members`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: mockCommitteeMembers }),
+      });
+    });
+  }
+
+  /** Mock POST /api/committees/:id/members */
+  static async setupCreateMemberMock(page: Page, committeeId: string): Promise<void> {
+    await page.route(`**/api/committees/${committeeId}/members`, async (route) => {
+      if (route.request().method() !== 'POST') { await route.continue(); return; }
+      const body = await route.request().postDataJSON();
+      const created = {
+        ...body,
+        uid: `mock-${Date.now()}`,
+        committee_uid: committeeId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(created) });
+    });
+  }
+}
+```
+
+**Step 3 — Use in tests:**
+
+```typescript
+// apps/lfx-one/e2e/committees/members.spec.ts
+test('shows member list', async ({ page }) => {
+  await ApiMockHelper.setupCommitteeMembersMock(page, 'mock-committee-001');
+  await page.goto('/committees/mock-committee-001');
+  await expect(page.getByTestId('member-row')).toHaveCount(1);
+});
+```
+
+### Local Dev Without Mock Data
+
+For manual local development (non-test), simply point at the real upstream:
+
+```bash
+# The server auto-connects to the real backend if reachable
+LFX_V2_SERVICE=http://lfx-api.k8s.orb.local yarn dev
+```
+
+If the backend is unavailable, use the e2e test suite as your development harness — it fully controls API responses via `page.route()` and doesn't require a live backend.
+
+### Reference Implementations
+
+- **Fixture pattern** (Asitha): `apps/lfx-one/e2e/fixtures/mock-data/projects.mock.ts`
+- **Interceptor pattern** (Asitha): `apps/lfx-one/e2e/helpers/api-mock.helper.ts` → `setupProjectSlugMock()`
+- **Pure proxy server service** (Asitha): `apps/lfx-one/src/server/services/vote.service.ts`
+- **Pure proxy controller** (Asitha): `apps/lfx-one/src/server/controllers/vote.controller.ts`
+
+## Anti-Patterns
+
+Things the codebase never does. If you find yourself writing any of these, stop and reconsider.
+
+**Server-side**
+- `console.log` / `console.error` — use `logger` service always
+- `res.send()` / `res.status(200).send(text)` — use `res.json()` always
+- Inline `catch` blocks in controllers that don't call `next(error)` — always delegate
+- Mock data, in-memory stores, or upstream-reachability probes in Express code
+- Hardcoded URLs — always `process.env['SERVICE_URL'] ?? 'default'`
+- Calling `serverLogger` directly outside of `server.ts` / `logger.service.ts`
+- Duplicate `logger.startOperation()` calls for the same operation in both controller and service
+
+**Frontend**
+- Constructor parameter injection — use `inject()` function
+- Subscribing inside a service — services return Observables, components subscribe
+- Observables without `catchError()` — every HTTP call must have a fallback
+- `console.error` / `console.log` in components — no logging in the UI layer
+- Barrel exports (`index.ts`) for standalone components — always direct imports
+- `space-y-*` Tailwind utility — always `flex flex-col gap-*` instead
+- Nested ternary expressions in templates or TypeScript
+- Interfaces / enums defined locally in a component file — always in `@lfx-one/shared`
+
+**General**
+- Missing copyright/SPDX header on any source file
+- Commits without a JIRA ticket reference
+- Components without `data-testid` attributes on key interactive elements
+- Skipping `yarn lint` before `yarn build`
 
 ## Commit Workflow with JIRA Tracking
 

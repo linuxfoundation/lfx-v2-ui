@@ -355,6 +355,206 @@ export class CommitteeService {
     return userMemberships;
   }
 
+  // ── Public / My Committees ────────────────────────────────────────────────
+
+  public async getPublicCommitteesByProject(req: Request, projectUid: string): Promise<Committee[]> {
+    return this.getCommittees(req, { tags: `project_uid:${projectUid}`, public: true });
+  }
+
+  public async getPublicCommittees(req: Request): Promise<Committee[]> {
+    return this.getCommittees(req, { public: true });
+  }
+
+  public async getMyCommittees(req: Request): Promise<Committee[]> {
+    return this.getCommittees(req, { my: true });
+  }
+
+  // ── Invite Methods ──────────────────────────────────────────────────────────
+
+  public async createInvites(req: Request, committeeId: string, payload: any): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'POST', {}, payload);
+  }
+
+  public async getInvites(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const result = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
+      return Array.isArray(result) ? result : result?.resources?.map((r: any) => r.data) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async acceptInvite(req: Request, committeeId: string, inviteId: string): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/accept`, 'POST');
+  }
+
+  public async declineInvite(req: Request, committeeId: string, inviteId: string): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/decline`, 'POST');
+  }
+
+  public async revokeInvite(req: Request, committeeId: string, inviteId: string): Promise<void> {
+    await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}`, 'DELETE');
+  }
+
+  // ── Join / Leave Methods ────────────────────────────────────────────────────
+
+  public async joinCommittee(req: Request, committeeId: string): Promise<CommitteeMember> {
+    return this.microserviceProxy.proxyRequest<CommitteeMember>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/join`, 'POST');
+  }
+
+  public async leaveCommittee(req: Request, committeeId: string): Promise<void> {
+    await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/leave`, 'POST');
+  }
+
+  // ── Application Methods ─────────────────────────────────────────────────────
+
+  public async applyToJoin(req: Request, committeeId: string, payload: any): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, payload);
+  }
+
+  public async getApplications(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const result = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
+      return Array.isArray(result) ? result : result?.resources?.map((r: any) => r.data) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async approveApplication(req: Request, committeeId: string, applicationId: string): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications/${applicationId}/approve`, 'POST');
+  }
+
+  public async rejectApplication(req: Request, committeeId: string, applicationId: string): Promise<any> {
+    return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications/${applicationId}/reject`, 'POST');
+  }
+
+  // ── Dashboard Sub-Resource Methods ──────────────────────────────────────────
+
+  public async getCommitteeVotes(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_vote',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_resolution',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeActivity(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_activity',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeContributors(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_contributor',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_deliverable',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_discussion',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeEvents(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_event',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_campaign',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
+  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<any> {
+    try {
+      return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
+    } catch {
+      return {};
+    }
+  }
+
+  public async getCommitteeBudget(req: Request, committeeId: string): Promise<any> {
+    try {
+      return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/budget`, 'GET');
+    } catch {
+      return null;
+    }
+  }
+
+  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'committee_document',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
   /**
    * Fetches committee settings by ID
    * @returns Committee settings or empty object if not found/error

@@ -78,6 +78,9 @@ export class CommitteeMembersManagerComponent implements OnInit {
   public readonly memberCount = computed(() => this.visibleMembers().length);
   public readonly votingCount = computed(() => this.visibleMembers().filter((m) => this.isVotingMember(m)).length);
 
+  // Permission check — only writers can add/edit/delete members
+  public readonly canManageMembers = computed(() => !!this.committee()?.writer);
+
   // Complex computed signals (using private initializers)
   public readonly filteredMembers = this.initFilteredMembers();
 
