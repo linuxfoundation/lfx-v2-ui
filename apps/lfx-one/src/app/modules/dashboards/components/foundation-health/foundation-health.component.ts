@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, input, signal, ViewChild } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DataCopilotComponent } from '@app/shared/components/data-copilot/data-copilot.component';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { BASE_BAR_CHART_OPTIONS, BASE_LINE_CHART_OPTIONS, lfxColors, PRIMARY_FOUNDATION_HEALTH_METRICS } from '@lfx-one/shared/constants';
-import { CategorizedMetricCard, DashboardDrawerType, FilterPillOption } from '@lfx-one/shared/interfaces';
+import { DashboardDrawerType, FilterPillOption } from '@lfx-one/shared/interfaces';
 import { hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
+import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 
 import { ActiveContributorsDrawerComponent } from '../active-contributors-drawer/active-contributors-drawer.component';
 import { EventsDrawerComponent } from '../events-drawer/events-drawer.component';
@@ -58,9 +58,6 @@ export class FoundationHealthComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   public readonly title = input<string>('Foundation Health');
-  public readonly customFilterOptions = input<FilterPillOption[]>();
-  public readonly additionalCards = input<CategorizedMetricCard[]>([]);
-  public readonly hideBuiltInCards = input<boolean>(false);
 
   // Loading signals for each data source
   protected readonly totalProjectsLoading = signal(true);
@@ -72,11 +69,9 @@ export class FoundationHealthComponent {
   private readonly activeContributorsLoading = signal(true);
   private readonly eventsLoading = signal(true);
 
-  private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((foundation) => foundation?.slug || ''));
-  private readonly activeFoundationSlug$ = combineLatest([this.selectedFoundationSlug$, toObservable(this.hideBuiltInCards)]).pipe(
-    takeUntilDestroyed(),
-    filter(([slug, hidden]) => !hidden && !!slug),
-    map(([slug]) => slug)
+  private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(
+    map((foundation) => foundation?.slug || ''),
+    filter((slug) => !!slug)
   );
   public readonly hasFoundationSelected = computed<boolean>(() => !!this.projectContextService.selectedFoundation());
 
@@ -92,13 +87,12 @@ export class FoundationHealthComponent {
 
   public readonly selectedFilter = signal<string>('all');
 
-  private readonly defaultFilterOptions: FilterPillOption[] = [
+  public readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'contributors', label: 'Contribution' },
     { id: 'projects', label: 'Project' },
     { id: 'events', label: 'Event' },
   ];
-  public readonly filterOptions = computed(() => this.customFilterOptions() || this.defaultFilterOptions);
 
   public readonly sparklineOptions = BASE_LINE_CHART_OPTIONS;
   public readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
@@ -167,20 +161,16 @@ export class FoundationHealthComponent {
   private initializeMetricCards() {
     return computed(() => {
       const filter = this.selectedFilter();
-      const builtInCards: CategorizedMetricCard[] = this.hideBuiltInCards()
-        ? []
-        : [
-            { card: this.softwareValueCard(), category: 'projects' },
-            { card: this.totalProjectsCard(), category: 'projects' },
-            { card: this.totalMembersCard(), category: 'projects' },
-            { card: this.companyBusFactorCard(), category: 'contributors' },
-            { card: this.activeContributorsCard(), category: 'contributors' },
-            { card: this.maintainersCard(), category: 'contributors' },
-            { card: this.eventsCard(), category: 'events' },
-            { card: this.projectHealthScoresCard(), category: 'projects' },
-          ];
-
-      const allCards = [...builtInCards, ...this.additionalCards()];
+      const allCards = [
+        { card: this.softwareValueCard(), category: 'projects' },
+        { card: this.totalProjectsCard(), category: 'projects' },
+        { card: this.totalMembersCard(), category: 'projects' },
+        { card: this.companyBusFactorCard(), category: 'contributors' },
+        { card: this.activeContributorsCard(), category: 'contributors' },
+        { card: this.maintainersCard(), category: 'contributors' },
+        { card: this.eventsCard(), category: 'events' },
+        { card: this.projectHealthScoresCard(), category: 'projects' },
+      ];
 
       if (filter === 'all') {
         return allCards.map((item) => item.card);
@@ -523,7 +513,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.totalProjectsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationTotalProjects(foundationSlug).pipe(
@@ -547,7 +537,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.totalMembersLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationTotalMembers(foundationSlug).pipe(
@@ -578,7 +568,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.softwareValueLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationValueConcentration(foundationSlug).pipe(
@@ -603,7 +593,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.companyBusFactorLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getCompanyBusFactor(foundationSlug).pipe(
@@ -627,7 +617,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.maintainersLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationMaintainers(foundationSlug).pipe(
@@ -653,7 +643,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.healthScoresLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getFoundationHealthScoreDistribution(foundationSlug).pipe(
@@ -677,7 +667,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.activeContributorsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getUniqueContributorsDaily(foundationSlug, 'foundation').pipe(
@@ -701,7 +691,7 @@ export class FoundationHealthComponent {
     };
 
     return toSignal(
-      this.activeFoundationSlug$.pipe(
+      this.selectedFoundationSlug$.pipe(
         tap(() => this.eventsLoading.set(true)),
         switchMap((foundationSlug) =>
           this.analyticsService.getHealthEventsMonthly(foundationSlug, 'foundation').pipe(
