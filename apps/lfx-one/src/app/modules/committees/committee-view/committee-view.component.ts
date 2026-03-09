@@ -51,7 +51,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, forkJoin, of, switchMap, take } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, of, switchMap, take, tap } from 'rxjs';
 
 import { FileSizePipe } from '@pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
@@ -594,20 +594,19 @@ export class CommitteeViewComponent {
           );
 
           return combineLatest([committeeQuery, membersQuery, meetingsQuery, documentsQuery]).pipe(
-            switchMap(([committee, members, meetings, documents]) => {
+            tap(([committee, members, meetings, documents]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
               this.documents.set(Array.isArray(documents) ? documents : []);
-              this.loading.set(false);
               this.membersLoading.set(false);
 
               // Load group-type-specific data from APIs
               if (committee) {
                 this.loadGroupTypeData(committeeId, committee);
               }
-
-              return of(committee);
-            })
+            }),
+            map(([committee]) => committee),
+            finalize(() => this.loading.set(false))
           );
         })
       ),
