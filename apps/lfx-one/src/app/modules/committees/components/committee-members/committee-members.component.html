@@ -22,194 +22,192 @@
     </div>
 
     @if (!isMembersVisible()) {
-      <div class="text-sm text-gray-500 text-center py-6" data-testid="members-hidden-placeholder">
-        Member list is not publicly visible for this group.
-      </div>
+      <div class="text-sm text-gray-500 text-center py-6" data-testid="members-hidden-placeholder">Member list is not publicly visible for this group.</div>
     } @else {
-    <!-- Search and Filter Controls -->
-    <div class="flex flex-col md:flex-row md:flex-wrap gap-4 mb-6">
-      <!-- Search Input -->
-      <div class="flex-1">
-        <lfx-input-text [form]="filterForm" control="search" placeholder="Search members..." icon="fa-light fa-search" styleClass="w-full" size="small">
-        </lfx-input-text>
+      <!-- Search and Filter Controls -->
+      <div class="flex flex-col md:flex-row md:flex-wrap gap-4 mb-6">
+        <!-- Search Input -->
+        <div class="flex-1">
+          <lfx-input-text [form]="filterForm" control="search" placeholder="Search members..." icon="fa-light fa-search" styleClass="w-full" size="small">
+          </lfx-input-text>
+        </div>
+
+        <!-- Role Filter -->
+        <div class="w-full flex-1 sm:flex-none md:w-48">
+          <lfx-select
+            [form]="filterForm"
+            control="role"
+            size="small"
+            [options]="roleOptions()"
+            placeholder="Filter by Role"
+            [showClear]="true"
+            styleClass="w-full">
+          </lfx-select>
+        </div>
+
+        <!-- Voting Status Filter -->
+        <div class="w-full flex-1 sm:flex-none md:w-48">
+          <lfx-select
+            [form]="filterForm"
+            control="votingStatus"
+            size="small"
+            [options]="votingStatusOptions()"
+            placeholder="Filter by Voting Status"
+            [showClear]="true"
+            styleClass="w-full">
+          </lfx-select>
+        </div>
+
+        <!-- Organization Filter -->
+        <div class="w-full flex-1 sm:flex-none md:w-48">
+          <lfx-select
+            [form]="filterForm"
+            control="organization"
+            size="small"
+            [options]="organizationOptions()"
+            placeholder="Filter by Organization"
+            [showClear]="true"
+            styleClass="w-full">
+          </lfx-select>
+        </div>
       </div>
 
-      <!-- Role Filter -->
-      <div class="w-full flex-1 sm:flex-none md:w-48">
-        <lfx-select
-          [form]="filterForm"
-          control="role"
-          size="small"
-          [options]="roleOptions()"
-          placeholder="Filter by Role"
-          [showClear]="true"
-          styleClass="w-full">
-        </lfx-select>
-      </div>
-
-      <!-- Voting Status Filter -->
-      <div class="w-full flex-1 sm:flex-none md:w-48">
-        <lfx-select
-          [form]="filterForm"
-          control="votingStatus"
-          size="small"
-          [options]="votingStatusOptions()"
-          placeholder="Filter by Voting Status"
-          [showClear]="true"
-          styleClass="w-full">
-        </lfx-select>
-      </div>
-
-      <!-- Organization Filter -->
-      <div class="w-full flex-1 sm:flex-none md:w-48">
-        <lfx-select
-          [form]="filterForm"
-          control="organization"
-          size="small"
-          [options]="organizationOptions()"
-          placeholder="Filter by Organization"
-          [showClear]="true"
-          styleClass="w-full">
-        </lfx-select>
-      </div>
-    </div>
-
-    <!-- Table View -->
-    <lfx-table
-      [value]="filteredMembers()"
-      [paginator]="true"
-      [rows]="10"
-      [rowsPerPageOptions]="[10, 25, 50]"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} members"
-      styleClass="p-datatable-sm"
-      sortField="first_name"
-      [sortOrder]="1">
-      <ng-template #header>
-        <tr>
-          <th>
-            <span class="text-sm font-sans text-gray-500">Name</span>
-          </th>
-          <th>
-            <span class="text-sm font-sans text-gray-500">Email</span>
-          </th>
-          <th>
-            <span class="text-sm font-sans text-gray-500">Organization</span>
-          </th>
-          @if (committee()?.enable_voting) {
+      <!-- Table View -->
+      <lfx-table
+        [value]="filteredMembers()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} members"
+        styleClass="p-datatable-sm"
+        sortField="first_name"
+        [sortOrder]="1">
+        <ng-template #header>
+          <tr>
             <th>
-              <span class="text-sm font-sans text-gray-500">Role</span>
+              <span class="text-sm font-sans text-gray-500">Name</span>
             </th>
             <th>
-              <span class="text-sm font-sans text-gray-500">Voting Status</span>
+              <span class="text-sm font-sans text-gray-500">Email</span>
             </th>
-          }
-          <th style="width: 80px">
-            <div class="flex justify-center">
-              <span class="text-sm font-sans text-gray-500">Actions</span>
-            </div>
-          </th>
-        </tr>
-      </ng-template>
-
-      <ng-template #body let-member>
-        <tr>
-          <td>
-            <span class="text-sm font-sans text-gray-900 font-medium">
-              {{ (member.first_name || '') + ' ' + (member.last_name || '') | titlecase }}
-            </span>
-          </td>
-          <td>
-            <span class="text-sm font-sans text-gray-500">{{ member.email || '-' }}</span>
-          </td>
-          <td>
-            @if (member.organization?.website) {
-              <a [href]="member.organization.website" target="_blank" class="text-primary hover:text-primary-600 text-sm font-sans">
-                {{ member.organization.name }}
-              </a>
-            } @else {
-              <span class="text-sm font-sans text-gray-500">{{ member.organization?.name || '-' }}</span>
+            <th>
+              <span class="text-sm font-sans text-gray-500">Organization</span>
+            </th>
+            @if (committee()?.enable_voting) {
+              <th>
+                <span class="text-sm font-sans text-gray-500">Role</span>
+              </th>
+              <th>
+                <span class="text-sm font-sans text-gray-500">Voting Status</span>
+              </th>
             }
-          </td>
-          @if (committee()?.enable_voting) {
+            <th style="width: 80px">
+              <div class="flex justify-center">
+                <span class="text-sm font-sans text-gray-500">Actions</span>
+              </div>
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-member>
+          <tr>
             <td>
-              <span class="text-sm font-sans text-gray-500">{{ member.role?.name || 'None' }}</span>
+              <span class="text-sm font-sans text-gray-900 font-medium">
+                {{ (member.first_name || '') + ' ' + (member.last_name || '') | titlecase }}
+              </span>
             </td>
             <td>
-              <span class="text-sm font-sans text-gray-500">{{ member.voting?.status || 'None' }}</span>
+              <span class="text-sm font-sans text-gray-500">{{ member.email || '-' }}</span>
             </td>
-          }
-          <td class="text-right relative">
-            <lfx-menu #memberActionMenu [model]="memberActionMenuItems" [popup]="true" appendTo="body"> </lfx-menu>
-            @if (canManageMembers()) {
-              <lfx-button
-                icon="fa-light fa-ellipsis-vertical"
-                [text]="true"
-                [rounded]="true"
-                size="small"
-                severity="secondary"
-                (onClick)="toggleMemberActionMenu($event, member, memberActionMenu)">
-              </lfx-button>
-            } @else {
-              <lfx-button
-                icon="fa-light fa-envelope"
-                [text]="true"
-                [rounded]="true"
-                size="small"
-                severity="secondary"
-                [href]="`mailto:${member.email}`"
-                target="_blank"
-                pTooltip="Send Message">
-              </lfx-button>
+            <td>
+              @if (member.organization?.website) {
+                <a [href]="member.organization.website" target="_blank" class="text-primary hover:text-primary-600 text-sm font-sans">
+                  {{ member.organization.name }}
+                </a>
+              } @else {
+                <span class="text-sm font-sans text-gray-500">{{ member.organization?.name || '-' }}</span>
+              }
+            </td>
+            @if (committee()?.enable_voting) {
+              <td>
+                <span class="text-sm font-sans text-gray-500">{{ member.role?.name || 'None' }}</span>
+              </td>
+              <td>
+                <span class="text-sm font-sans text-gray-500">{{ member.voting?.status || 'None' }}</span>
+              </td>
             }
-          </td>
-        </tr>
-      </ng-template>
+            <td class="text-right relative">
+              <lfx-menu #memberActionMenu [model]="memberActionMenuItems" [popup]="true" appendTo="body"> </lfx-menu>
+              @if (canManageMembers()) {
+                <lfx-button
+                  icon="fa-light fa-ellipsis-vertical"
+                  [text]="true"
+                  [rounded]="true"
+                  size="small"
+                  severity="secondary"
+                  (onClick)="toggleMemberActionMenu($event, member, memberActionMenu)">
+                </lfx-button>
+              } @else {
+                <lfx-button
+                  icon="fa-light fa-envelope"
+                  [text]="true"
+                  [rounded]="true"
+                  size="small"
+                  severity="secondary"
+                  [href]="`mailto:${member.email}`"
+                  target="_blank"
+                  pTooltip="Send Message">
+                </lfx-button>
+              }
+            </td>
+          </tr>
+        </ng-template>
 
-      <!-- Empty Message Template -->
-      <ng-template #emptymessage>
-        @if (membersLoading()) {
-          <tr>
-            <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
-              <!-- Loading skeleton rows -->
-              <div class="flex flex-col gap-3 animate-pulse px-4">
-                @for (_ of [1, 2, 3]; track _) {
-                  <div class="flex items-center gap-4">
-                    <div class="w-8 h-8 rounded-full bg-gray-200"></div>
-                    <div class="h-4 bg-gray-200 rounded w-32"></div>
-                    <div class="h-4 bg-gray-200 rounded w-40"></div>
-                    <div class="h-4 bg-gray-200 rounded w-24"></div>
-                  </div>
-                }
-              </div>
-            </td>
-          </tr>
-        } @else {
-          <tr>
-            <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
-              <div class="text-center">
-                @if (groupBehavioralClass() === 'governing-board' || groupBehavioralClass() === 'oversight-committee') {
-                  <i class="fa-light fa-user-crown text-3xl text-gray-300 mb-2"></i>
-                  <p class="text-sm font-medium text-gray-600">No Board Members Found</p>
-                  <p class="text-xs text-gray-400 mt-1">Board members with voting rights will appear here once added.</p>
-                } @else {
-                  <i class="fa-light fa-users-gear text-3xl text-gray-300 mb-2"></i>
-                  <p class="text-sm font-medium text-gray-600">No Contributors Yet</p>
-                  <p class="text-xs text-gray-400 mt-1">Contributors will appear here as they join this working group.</p>
-                }
-                @if (canManageMembers()) {
-                  <div class="mt-3">
-                    <button class="text-xs text-blue-600 hover:text-blue-700 font-medium" (click)="openAddMemberDialog()">
-                      <i class="fa-light fa-user-plus mr-1"></i>Add the first member
-                    </button>
-                  </div>
-                }
-              </div>
-            </td>
-          </tr>
-        }
-      </ng-template>
-    </lfx-table>
+        <!-- Empty Message Template -->
+        <ng-template #emptymessage>
+          @if (membersLoading()) {
+            <tr>
+              <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
+                <!-- Loading skeleton rows -->
+                <div class="flex flex-col gap-3 animate-pulse px-4">
+                  @for (_ of [1, 2, 3]; track _) {
+                    <div class="flex items-center gap-4">
+                      <div class="w-8 h-8 rounded-full bg-gray-200"></div>
+                      <div class="h-4 bg-gray-200 rounded w-32"></div>
+                      <div class="h-4 bg-gray-200 rounded w-40"></div>
+                      <div class="h-4 bg-gray-200 rounded w-24"></div>
+                    </div>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @else {
+            <tr>
+              <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
+                <div class="text-center">
+                  @if (groupBehavioralClass() === 'governing-board' || groupBehavioralClass() === 'oversight-committee') {
+                    <i class="fa-light fa-user-crown text-3xl text-gray-300 mb-2"></i>
+                    <p class="text-sm font-medium text-gray-600">No Board Members Found</p>
+                    <p class="text-xs text-gray-400 mt-1">Board members with voting rights will appear here once added.</p>
+                  } @else {
+                    <i class="fa-light fa-users-gear text-3xl text-gray-300 mb-2"></i>
+                    <p class="text-sm font-medium text-gray-600">No Contributors Yet</p>
+                    <p class="text-xs text-gray-400 mt-1">Contributors will appear here as they join this working group.</p>
+                  }
+                  @if (canManageMembers()) {
+                    <div class="mt-3">
+                      <button class="text-xs text-blue-600 hover:text-blue-700 font-medium" (click)="openAddMemberDialog()">
+                        <i class="fa-light fa-user-plus mr-1"></i>Add the first member
+                      </button>
+                    </div>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </ng-template>
+      </lfx-table>
     }
   </lfx-card>
 </div>

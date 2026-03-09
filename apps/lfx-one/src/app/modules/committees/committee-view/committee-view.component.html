@@ -668,7 +668,9 @@
                           severity="secondary"
                           styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
                           pTooltip="Assign Chair / Co-Chair"
-                          tooltipPosition="top">
+                          tooltipPosition="top"
+                          (onClick)="openAssignLeadership('chair')"
+                          data-testid="committee-view-leadership-edit-btn">
                         </lfx-button>
                       }
                     </div>
@@ -703,7 +705,12 @@
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
                               @if (isMaintainer()) {
-                                <button class="text-xs text-blue-600 hover:text-blue-700 font-medium">Assign Chair</button>
+                                <button
+                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  (click)="openAssignLeadership('chair')"
+                                  data-testid="committee-view-assign-chair-btn">
+                                  Assign Chair
+                                </button>
                               }
                             </div>
                           </div>
@@ -740,7 +747,12 @@
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
                               @if (isMaintainer()) {
-                                <button class="text-xs text-blue-600 hover:text-blue-700 font-medium">Assign Co-Chair</button>
+                                <button
+                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  (click)="openAssignLeadership('co_chair')"
+                                  data-testid="committee-view-assign-co-chair-btn">
+                                  Assign Co-Chair
+                                </button>
                               }
                             </div>
                           </div>
@@ -954,7 +966,15 @@
                           <span class="text-sm text-gray-600">Join Mode</span>
                           <lfx-tag
                             [value]="joinModeLabel()"
-                            [severity]="committee()?.join_mode === 'open' ? 'success' : committee()?.join_mode === 'invite-only' ? 'info' : committee()?.join_mode === 'apply' ? 'warn' : 'danger'"></lfx-tag>
+                            [severity]="
+                              committee()?.join_mode === 'open'
+                                ? 'success'
+                                : committee()?.join_mode === 'invite-only'
+                                  ? 'info'
+                                  : committee()?.join_mode === 'apply'
+                                    ? 'warn'
+                                    : 'danger'
+                            "></lfx-tag>
                         </div>
                         <div class="flex items-center justify-between" data-testid="committee-view-config-member-visibility">
                           <span class="text-sm text-gray-600">Member Visibility</span>
@@ -1049,15 +1069,12 @@
                 @if (openVotes().length > 0) {
                   <lfx-card data-testid="committee-view-votes">
                     <div class="flex items-center justify-between mb-4">
-                      <h3 class="text-sm font-medium">
-                        <i class="fa-light fa-check-to-slot text-gray-400 mr-2"></i>Open Votes
-                      </h3>
+                      <h3 class="text-sm font-medium"><i class="fa-light fa-check-to-slot text-gray-400 mr-2"></i>Open Votes</h3>
                       <span class="text-xs text-gray-400">{{ openVotes().length }} open</span>
                     </div>
                     <div class="flex flex-col gap-2">
                       @for (vote of openVotes(); track vote.uid) {
-                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                             [attr.data-testid]="'vote-item-' + vote.uid">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0" [attr.data-testid]="'vote-item-' + vote.uid">
                           <span class="text-sm text-gray-700">{{ vote.title }}</span>
                           <lfx-tag value="Open" severity="warn"></lfx-tag>
                         </div>
@@ -1077,14 +1094,13 @@
                 @if (recentResolutions().length > 0) {
                   <lfx-card data-testid="committee-view-resolutions">
                     <div class="flex items-center justify-between mb-4">
-                      <h3 class="text-sm font-medium">
-                        <i class="fa-light fa-gavel text-gray-400 mr-2"></i>Recent Resolutions
-                      </h3>
+                      <h3 class="text-sm font-medium"><i class="fa-light fa-gavel text-gray-400 mr-2"></i>Recent Resolutions</h3>
                     </div>
                     <div class="flex flex-col gap-2">
                       @for (resolution of recentResolutions(); track resolution.uid) {
-                        <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                             [attr.data-testid]="'resolution-item-' + resolution.uid">
+                        <div
+                          class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                          [attr.data-testid]="'resolution-item-' + resolution.uid">
                           <span class="text-sm text-gray-700">{{ resolution.title }}</span>
                           <lfx-tag [value]="resolution.result" severity="secondary"></lfx-tag>
                         </div>

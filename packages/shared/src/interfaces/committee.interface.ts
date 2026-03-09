@@ -157,6 +157,9 @@ export interface GroupChatChannel {
  * Committee leadership position (Chair, Co-Chair, etc.)
  * @description Represents a member in a leadership position within a committee
  */
+/** Leadership role type for chair/co-chair assignment */
+export type LeadershipRole = 'chair' | 'co_chair';
+
 export interface CommitteeLeadership {
   /** Unique identifier for the leader (member UID) */
   uid: string;
@@ -310,7 +313,12 @@ export interface CommitteeCreateData {
  * Data for updating existing committee
  * @description Partial update payload allowing any field from create data to be modified
  */
-export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {}
+export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {
+  /** Assign or remove chair */
+  chair?: CommitteeLeadership | null;
+  /** Assign or remove co-chair */
+  co_chair?: CommitteeLeadership | null;
+}
 
 /**
  * Committee settings update data

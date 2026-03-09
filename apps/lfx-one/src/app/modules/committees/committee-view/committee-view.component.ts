@@ -25,6 +25,7 @@ import {
   CommitteeResolution,
   CommitteeVote,
   getCommitteeCategorySeverity,
+  LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
 import {
@@ -48,7 +49,7 @@ import { ProjectService } from '@services/project.service';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, of, switchMap, take, tap } from 'rxjs';
@@ -56,6 +57,7 @@ import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, of
 import { FileSizePipe } from '@pipes/file-size.pipe';
 import { FileTypeIconPipe } from '@pipes/file-type-icon.pipe';
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
+import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { JoinApplicationDialogComponent } from '../components/join-application-dialog/join-application-dialog.component';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
@@ -369,26 +371,27 @@ export class CommitteeViewComponent {
     });
 
     // Tab visibility signals
-    this.isMembersTabVisible = computed(
-      () => this.committee()?.member_visibility !== 'hidden' || this.isCurrentMember() || this.canManageConfigurations()
-    );
+    this.isMembersTabVisible = computed(() => this.committee()?.member_visibility !== 'hidden' || this.isCurrentMember() || this.canManageConfigurations());
     this.isVotesTabVisible = computed(() => !!this.committee()?.enable_voting);
 
     // Redirect active tab to overview when hidden tabs are active
-    effect(() => {
-      const membersVisible = this.isMembersTabVisible();
-      const votesVisible = this.isVotesTabVisible();
-      const currentTab = this.activeTab();
+    effect(
+      () => {
+        const membersVisible = this.isMembersTabVisible();
+        const votesVisible = this.isVotesTabVisible();
+        const currentTab = this.activeTab();
 
-      untracked(() => {
-        if (!membersVisible && currentTab === 'members') {
-          this.activeTab.set('overview');
-        }
-        if (!votesVisible && currentTab === 'votes') {
-          this.activeTab.set('overview');
-        }
-      });
-    }, { allowSignalWrites: true });
+        untracked(() => {
+          if (!membersVisible && currentTab === 'members') {
+            this.activeTab.set('overview');
+          }
+          if (!votesVisible && currentTab === 'votes') {
+            this.activeTab.set('overview');
+          }
+        });
+      },
+      { allowSignalWrites: true }
+    );
 
     // Document computed signals
     this.documentFiles = computed(() => this.documents().filter((d) => d.type === 'file'));
@@ -435,6 +438,33 @@ export class CommitteeViewComponent {
 
   public refreshMembers(): void {
     this.refresh.next();
+  }
+
+  public openAssignLeadership(role: LeadershipRole): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    const currentLeader = role === 'chair' ? this.chair() : this.coChair();
+    const roleLabel = role === 'chair' ? 'Assign Chair' : 'Assign Co-Chair';
+
+    const dialogRef = this.dialogService.open(AssignLeadershipDialogComponent, {
+      header: roleLabel,
+      width: '500px',
+      modal: true,
+      closable: true,
+      data: {
+        role,
+        committee,
+        members: this.members(),
+        currentLeader: currentLeader ?? null,
+      },
+    }) as DynamicDialogRef;
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refresh.next();
+      }
+    });
   }
 
   public joinGroup(): void {
@@ -701,16 +731,7 @@ export class CommitteeViewComponent {
   }
 
   private initializeMyCommittees(): Signal<MyCommittee[]> {
-    return toSignal(
-      this.refresh.pipe(
-        switchMap(() =>
-          this.committeeService.getMyCommittees().pipe(
-            catchError(() => of([]))
-          )
-        )
-      ),
-      { initialValue: [] }
-    );
+    return toSignal(this.refresh.pipe(switchMap(() => this.committeeService.getMyCommittees().pipe(catchError(() => of([]))))), { initialValue: [] });
   }
 
   private initializeFormattedUpdatedDate(): Signal<string> {
