@@ -30,11 +30,7 @@ export class ExecutiveDirectorDashboardComponent {
   // === Inputs ===
   public readonly edFilterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
-    { id: 'memberships', label: 'Memberships' },
     { id: 'marketing', label: 'Marketing' },
-    { id: 'events', label: 'Events' },
-    { id: 'education', label: 'Education' },
-    { id: 'projectOperations', label: 'Project Operations' },
   ];
 
   public readonly marketingCards: CategorizedMetricCard[] = MARKETING_OVERVIEW_METRICS.map((card) => ({
