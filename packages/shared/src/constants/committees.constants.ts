@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
+import { CommitteeMemberAppointedBy, CommitteeMemberRole, CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
 import { lfxColors } from './colors.constants';
 
 /**
@@ -234,6 +234,30 @@ export const VOTING_STATUSES = [
   { label: 'Observer', value: CommitteeMemberVotingStatus.OBSERVER },
   { label: 'Voting Rep', value: CommitteeMemberVotingStatus.VOTING_REP },
   { label: 'None', value: CommitteeMemberVotingStatus.NONE },
+];
+
+/**
+ * Available appointment sources for committee members
+ * @description Defines how a member was appointed to the committee
+ * @readonly
+ */
+export const APPOINTED_BY_OPTIONS = [
+  { label: 'Community', value: CommitteeMemberAppointedBy.COMMUNITY },
+  { label: 'Membership Entitlement', value: CommitteeMemberAppointedBy.MEMBERSHIP_ENTITLEMENT },
+  { label: 'Vote of Academic Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_ACADEMIC_MEMBER_CLASS },
+  { label: 'Vote of End User Committee', value: CommitteeMemberAppointedBy.VOTE_OF_END_USER_COMMITTEE },
+  { label: 'Vote of End User Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_END_USER_MEMBER_CLASS },
+  { label: 'Vote of General Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_GENERAL_MEMBER_CLASS },
+  { label: 'Vote of Gold Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_GOLD_MEMBER_CLASS },
+  { label: 'Vote of Governing Board', value: CommitteeMemberAppointedBy.VOTE_OF_GOVERNING_BOARD },
+  { label: 'Vote of Lab Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_LAB_MEMBER_CLASS },
+  { label: 'Vote of Marketing Committee', value: CommitteeMemberAppointedBy.VOTE_OF_MARKETING_COMMITTEE },
+  { label: 'Vote of Silver Member Class', value: CommitteeMemberAppointedBy.VOTE_OF_SILVER_MEMBER_CLASS },
+  { label: 'Vote of Strategic Membership Class', value: CommitteeMemberAppointedBy.VOTE_OF_STRATEGIC_MEMBERSHIP_CLASS },
+  { label: 'Vote of TAC Committee', value: CommitteeMemberAppointedBy.VOTE_OF_TAC_COMMITTEE },
+  { label: 'Vote of TOC Committee', value: CommitteeMemberAppointedBy.VOTE_OF_TOC_COMMITTEE },
+  { label: 'Vote of TSC Committee', value: CommitteeMemberAppointedBy.VOTE_OF_TSC_COMMITTEE },
+  { label: 'None', value: CommitteeMemberAppointedBy.NONE },
 ];
 
 /**
