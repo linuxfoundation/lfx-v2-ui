@@ -83,6 +83,13 @@ export class DataCopilotComponent {
     this.visible.set(true);
   }
 
+  protected onShow(): void {
+    const el = this.chatTextarea()?.nativeElement;
+    if (el) {
+      setTimeout(() => el.focus(), 100);
+    }
+  }
+
   protected onHide(): void {
     this.visible.set(false);
     this.lensService.reset();

@@ -4,3 +4,17 @@
 :host {
   display: block;
 }
+
+/* SQL table row hover */
+.sql-row {
+  transition: background-color 150ms ease;
+
+  &:hover {
+    background-color: #eff6ff; // blue-50
+  }
+}
+
+/* Suggestion chip hover */
+.suggestion-chip {
+  transition: all 200ms ease;
+}
