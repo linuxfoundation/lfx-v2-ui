@@ -1,0 +1,137 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ButtonComponent } from '@components/button/button.component';
+import { CalendarComponent } from '@components/calendar/calendar.component';
+import { SelectComponent } from '@components/select/select.component';
+import { Committee, CommitteeLeadership, CommitteeMember, LeadershipRole } from '@lfx-one/shared/interfaces';
+import { formatDateToISOString } from '@lfx-one/shared/utils';
+import { CommitteeService } from '@services/committee.service';
+import { MessageService } from 'primeng/api';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+
+@Component({
+  selector: 'lfx-assign-leadership-dialog',
+  imports: [ReactiveFormsModule, ButtonComponent, CalendarComponent, SelectComponent],
+  templateUrl: './assign-leadership-dialog.component.html',
+})
+export class AssignLeadershipDialogComponent {
+  private readonly config = inject(DynamicDialogConfig);
+  private readonly dialogRef = inject(DynamicDialogRef);
+  private readonly committeeService = inject(CommitteeService);
+  private readonly messageService = inject(MessageService);
+
+  // Config-based properties
+  public readonly role: LeadershipRole;
+  public readonly committee: Committee;
+  public readonly members: CommitteeMember[];
+  public readonly currentLeader: CommitteeLeadership | null;
+
+  // Form
+  public form: FormGroup;
+  public memberOptions: Signal<{ label: string; value: string }[]>;
+
+  // State
+  public submitting = signal(false);
+  public removing = signal(false);
+
+  public readonly roleLabel: string;
+
+  public constructor() {
+    this.role = this.config.data?.role ?? 'chair';
+    this.committee = this.config.data?.committee;
+    this.members = this.config.data?.members ?? [];
+    this.currentLeader = this.config.data?.currentLeader ?? null;
+
+    this.roleLabel = this.role === 'chair' ? 'Chair' : 'Co-Chair';
+
+    this.form = new FormGroup({
+      member_uid: new FormControl(this.currentLeader?.uid ?? null),
+      elected_date: new FormControl(this.currentLeader?.elected_date ? new Date(this.currentLeader.elected_date) : null),
+    });
+
+    this.memberOptions = this.initializeMemberOptions();
+  }
+
+  public onCancel(): void {
+    this.dialogRef.close();
+  }
+
+  public onSubmit(): void {
+    const memberUid = this.form.value.member_uid;
+    if (!memberUid) return;
+
+    const selectedMember = this.members.find((m) => m.uid === memberUid);
+    if (!selectedMember) return;
+
+    this.submitting.set(true);
+
+    const leadership: CommitteeLeadership = {
+      uid: selectedMember.uid,
+      first_name: selectedMember.first_name,
+      last_name: selectedMember.last_name,
+      email: selectedMember.email,
+      elected_date: formatDateToISOString(this.form.value.elected_date) || undefined,
+      organization: selectedMember.organization?.name,
+    };
+
+    const payload = this.role === 'chair' ? { chair: leadership } : { co_chair: leadership };
+
+    this.committeeService.updateCommittee(this.committee.uid, payload).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.roleLabel} assigned successfully`,
+        });
+        this.dialogRef.close(true);
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `Failed to assign ${this.roleLabel.toLowerCase()}`,
+        });
+      },
+    });
+  }
+
+  public onRemove(): void {
+    this.removing.set(true);
+
+    const payload = this.role === 'chair' ? { chair: null } : { co_chair: null };
+
+    this.committeeService.updateCommittee(this.committee.uid, payload).subscribe({
+      next: () => {
+        this.removing.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.roleLabel} removed`,
+        });
+        this.dialogRef.close(true);
+      },
+      error: () => {
+        this.removing.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `Failed to remove ${this.roleLabel.toLowerCase()}`,
+        });
+      },
+    });
+  }
+
+  private initializeMemberOptions(): Signal<{ label: string; value: string }[]> {
+    return computed(() =>
+      this.members.map((m) => ({
+        label: `${m.first_name} ${m.last_name}${m.organization?.name ? ` — ${m.organization.name}` : ''}`,
+        value: m.uid,
+      }))
+    );
+  }
+}
