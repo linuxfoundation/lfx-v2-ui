@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Injector, input, OnInit, runInInjectionContext, Signal } from '@angular/core';
+import { Component, computed, inject, Injector, input, OnInit, runInInjectionContext, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Meeting } from '@lfx-one/shared/interfaces';
@@ -38,7 +38,8 @@ export class UpcomingCommitteeMeetingComponent implements OnInit {
   }
 
   private initializeUpcomingMeeting(): Signal<Meeting | null> {
-    const uid = this.project()?.uid || this.projectUid() || 'a27394a3-7a6c-4d0f-9e0f-692d8753924f';
+    const uid = this.project()?.uid || this.projectUid();
+    if (!uid) return signal(null);
     return toSignal(this.getNextUpcomingCommitteeMeeting(uid, this.committeeId()), {
       initialValue: null,
     });

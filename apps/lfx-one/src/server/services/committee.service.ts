@@ -21,6 +21,12 @@ import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
+function getVoteStatus(status: string): 'open' | 'closed' | 'cancelled' {
+  if (status === 'ended') return 'closed';
+  if (status === 'cancelled') return 'cancelled';
+  return 'open';
+}
+
 /**
  * Service for handling committee business logic
  */
@@ -548,7 +554,7 @@ export class CommitteeService {
         .map((r) => ({
           uid: r.data.uid,
           title: r.data.name,
-          status: r.data.status === 'ended' ? 'closed' : r.data.status === 'cancelled' ? 'cancelled' : 'open',
+          status: getVoteStatus(r.data.status),
           deadline: r.data.end_time,
           votesFor: r.data.num_response_received ?? 0,
           votesAgainst: 0,

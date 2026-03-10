@@ -63,8 +63,7 @@ export class ApplicationReviewComponent {
         this.applications.set(apps);
         this.loading.set(false);
       },
-      error: (err) => {
-        console.error('Failed to load applications:', err);
+      error: () => {
         this.loading.set(false);
       },
     });
@@ -89,9 +88,8 @@ export class ApplicationReviewComponent {
         // Notify parent to refresh members
         this.memberAdded.emit();
       },
-      error: (err) => {
+      error: () => {
         this.processingId.set(null);
-        console.error('Failed to approve application:', err);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -118,9 +116,8 @@ export class ApplicationReviewComponent {
         // Remove from list
         this.applications.update((apps) => apps.filter((a) => a.uid !== application.uid));
       },
-      error: (err) => {
+      error: () => {
         this.processingId.set(null);
-        console.error('Failed to reject application:', err);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',

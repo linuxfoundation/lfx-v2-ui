@@ -60,9 +60,8 @@ export class JoinApplicationDialogComponent {
         });
         this.dialogRef.close(true);
       },
-      error: (error) => {
+      error: () => {
         this.submitting.set(false);
-        console.error('Failed to submit application:', error);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',

@@ -125,14 +125,13 @@ export class CommitteeTableComponent {
         });
         this.refresh.emit();
       },
-      error: (error) => {
+      error: () => {
         this.isDeleting.set(false);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
           detail: `Failed to delete ${this.committeeLabel.toLowerCase()}`,
         });
-        console.error(`Failed to delete ${this.committeeLabel.toLowerCase()}:`, error);
       },
     });
   }

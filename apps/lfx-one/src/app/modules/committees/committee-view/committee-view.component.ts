@@ -712,18 +712,12 @@ export class CommitteeViewComponent {
           );
 
           const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(
-            catchError(() => {
-              console.error('Failed to load committee members');
-              return of([]);
-            })
+            catchError(() => of([]))
           );
 
           // Fetch documents for this committee
           const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(
-            catchError(() => {
-              console.error('Failed to load documents');
-              return of([]);
-            })
+            catchError(() => of([]))
           );
 
           // Fetch surveys for this committee
@@ -733,13 +727,10 @@ export class CommitteeViewComponent {
           // projectService.project() may not be populated yet on direct navigation to this page.
           return committeeQuery.pipe(
             switchMap((committee) => {
-              const projectUid = committee?.project_uid || this.projectService.project()?.uid || 'a09410d0-3455-11ea-978f-2e728ce88125';
-              const meetingsQuery = this.meetingService.getMeetingsByProject(projectUid).pipe(
-                catchError(() => {
-                  console.error('Failed to load meetings');
-                  return of([]);
-                })
-              );
+              const projectUid = committee?.project_uid || this.projectService.project()?.uid;
+              const meetingsQuery = projectUid
+                ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([])))
+                : of([]);
               return combineLatest([of(committee), membersQuery, meetingsQuery, documentsQuery, surveysQuery]);
             }),
           ).pipe(

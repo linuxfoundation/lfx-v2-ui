@@ -246,8 +246,7 @@ export class CommitteeManageComponent {
           this.showMemberOperationToast(totalSuccess, totalFailed, totalSuccess + totalFailed);
           this.router.navigate(['/groups']);
         },
-        error: (error) => {
-          console.error('Error processing member changes:', error);
+        error: () => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -333,8 +332,7 @@ export class CommitteeManageComponent {
           // Navigate back to committees list
           this.router.navigate(['/groups']);
         },
-        error: (error: unknown) => {
-          console.error('Error saving committee and members:', error);
+        error: () => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -457,8 +455,7 @@ export class CommitteeManageComponent {
     }
   }
 
-  private handleCommitteeError(error: unknown, operation: 'create' | 'update'): void {
-    console.error(`Error ${operation} committee:`, error);
+  private handleCommitteeError(_: unknown, operation: 'create' | 'update'): void {
     this.submitting.set(false);
 
     this.messageService.add({
@@ -572,10 +569,7 @@ export class CommitteeManageComponent {
   private createMemberOperation(type: string, operation: () => Observable<unknown>) {
     return operation().pipe(
       switchMap(() => of({ type, success: 1, failed: 0 })),
-      catchError((error) => {
-        console.error(`Error ${type} member:`, error);
-        return of({ type, success: 0, failed: 1 });
-      })
+      catchError(() => of({ type, success: 0, failed: 1 }))
     );
   }
 

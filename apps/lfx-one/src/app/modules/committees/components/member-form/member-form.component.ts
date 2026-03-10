@@ -176,7 +176,6 @@ export class MemberFormComponent {
         },
         error: (error) => {
           this.submitting.set(false);
-          console.error('Failed to save member:', error);
 
           if (error.status === 409) {
             this.messageService.add({

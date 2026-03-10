@@ -209,7 +209,7 @@ export class CommitteeDashboardComponent {
         });
         break;
 
-      case 'apply':
+      case 'apply': {
         // Open application dialog
         const dialogRef = this.dialogService.open(JoinApplicationDialogComponent, {
           header: 'Request to Join',
@@ -225,6 +225,7 @@ export class CommitteeDashboardComponent {
           }
         });
         break;
+      }
 
       case 'invite-only':
         this.messageService.add({
@@ -295,10 +296,7 @@ export class CommitteeDashboardComponent {
         switchMap(() => {
           this.myCommitteesLoading.set(true);
           return this.committeeService.getMyCommittees().pipe(
-            catchError((error) => {
-              console.error('Failed to load my committees:', error);
-              return of([]);
-            }),
+            catchError(() => of([])),
             finalize(() => this.myCommitteesLoading.set(false))
           );
         })
@@ -333,10 +331,7 @@ export class CommitteeDashboardComponent {
 
           this.committeesLoading.set(true);
           return this.committeeService.getCommitteesByProject(project.uid).pipe(
-            catchError((error) => {
-              console.error('Failed to load committees:', error);
-              return of([]);
-            }),
+            catchError(() => of([])),
             finalize(() => this.committeesLoading.set(false))
           );
         })

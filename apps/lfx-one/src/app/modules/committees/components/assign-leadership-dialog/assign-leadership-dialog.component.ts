@@ -111,8 +111,7 @@ export class AssignLeadershipDialogComponent {
           });
           this.dialogRef.close({ role: this.role, leadership });
         },
-        error: (err) => {
-          console.error('[AssignLeadership] Failed to assign:', err);
+        error: () => {
           this.submitting.set(false);
           this.messageService.add({
             severity: 'error',

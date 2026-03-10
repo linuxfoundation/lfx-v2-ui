@@ -79,9 +79,8 @@ export class InviteMemberDialogComponent {
         });
         this.dialogRef.close(true);
       },
-      error: (error) => {
+      error: () => {
         this.submitting.set(false);
-        console.error('Failed to send invites:', error);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
