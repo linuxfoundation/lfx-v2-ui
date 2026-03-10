@@ -527,24 +527,34 @@ export class CommitteeService {
       }
 
       // Fall back to type: 'vote' resources created via the LFX voting module.
-      // Uses the same tags pattern as committee_vote — votes are indexed with
-      // committee_uid:<uid> tag when committee_uid is set on creation.
+      // Votes are indexed by project_uid tag (not committee_uid), so we resolve the
+      // project_uid from the committee first, then filter by committee_uid in code.
+      const committee = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+      const projectUid: string | undefined = committee?.project_uid;
+
+      if (!projectUid) {
+        return [];
+      }
+
       const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote',
-        tags: `committee_uid:${committeeId}`,
+        tags: `project_uid:${projectUid}`,
+        page_size: 100,
       });
 
-      return voteResources.map((r) => ({
-        uid: r.data.uid,
-        title: r.data.name,
-        status: r.data.status === 'active' ? 'open' : r.data.status === 'ended' ? 'closed' : 'cancelled',
-        deadline: r.data.end_time,
-        votesFor: r.data.num_response_received ?? 0,
-        votesAgainst: 0,
-        votesAbstain: 0,
-        totalEligible: r.data.total_voting_request_invitations ?? 0,
-        created_by: '',
-      }));
+      return voteResources
+        .filter((r) => r.data.committee_uid === committeeId)
+        .map((r) => ({
+          uid: r.data.uid,
+          title: r.data.name,
+          status: r.data.status === 'active' ? 'open' : r.data.status === 'ended' ? 'closed' : 'cancelled',
+          deadline: r.data.end_time,
+          votesFor: r.data.num_response_received ?? 0,
+          votesAgainst: 0,
+          votesAbstain: 0,
+          totalEligible: r.data.total_voting_request_invitations ?? 0,
+          created_by: '',
+        }));
     } catch {
       return [];
     }
