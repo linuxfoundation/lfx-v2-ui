@@ -255,43 +255,6 @@ export class LoggerService {
   }
 
   /**
-   * Logs validation errors at WARN level (ADR 0002: user input errors are not ERROR)
-   * @param req - Request object (optional - use undefined for infrastructure operations)
-   */
-  public validation(req: Request | undefined, operation: string, validationErrors: unknown[], metadata: Record<string, unknown> = {}): void {
-    // Infrastructure logging (no request context)
-    // ADR 0002: validation errors from user input are WARN, not ERROR
-    if (!req) {
-      serverLogger.warn(
-        {
-          operation,
-          status: 'failed',
-          error_type: 'validation',
-          validation_errors: validationErrors,
-          status_code: 400,
-          ...(Object.keys(metadata).length > 0 && { data: metadata }),
-        },
-        `Validation failed for ${this.formatOperation(operation)}`
-      );
-      return;
-    }
-
-    // Request-scoped logging
-    req.log.warn(
-      {
-        operation,
-        status: 'failed',
-        error_type: 'validation',
-        validation_errors: validationErrors,
-        status_code: 400,
-        request_id: req.id,
-        ...(Object.keys(metadata).length > 0 && { data: metadata }),
-      },
-      `Validation failed for ${this.formatOperation(operation)}`
-    );
-  }
-
-  /**
    * Logs ETag-related operations
    * @param req - Request object (optional - use undefined for infrastructure operations)
    */

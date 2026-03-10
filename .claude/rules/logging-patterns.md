@@ -34,8 +34,7 @@ logger.success(undefined, 'nats_connect', startTime, metadata);
 - `logger.success(req|undefined, 'operation', startTime, metadata)` — DEBUG for reads (GET/HEAD/OPTIONS), INFO for writes (POST/PUT/DELETE/PATCH), INFO for infrastructure
 - `logger.error(req|undefined, 'operation', startTime, error, metadata, options?)` — Logs at ERROR with 'err' field
 - `logger.info(req|undefined, 'operation', message, metadata)` — Logs at INFO for significant operations
-- `logger.warning(req|undefined, 'operation', message, metadata)` — Logs at WARN
-- `logger.validation(req|undefined, 'operation', errors[], metadata)` — Logs at WARN (user input errors per ADR 0002)
+- `logger.warning(req|undefined, 'operation', message, metadata)` — Logs at WARN (also used for validation errors per ADR 0002)
 - `logger.debug(req|undefined, 'operation', message, metadata)` — Logs at DEBUG
 - `logger.etag(req|undefined, 'operation', resourceType, resourceId, etag?, metadata)` — Logs ETag operations
 
@@ -122,7 +121,7 @@ This means: 0 INFO lines for read endpoints, 1 INFO line for write endpoints, al
 
 **WARN** — Recoverable issues and invalid user input:
 
-- Validation errors from user input (via `logger.validation()`)
+- Validation errors from user input (logged by `apiErrorHandler` via `getSeverity()`)
 - Error conditions with graceful degradation (returning null/empty arrays)
 - Data quality issues, user not found
 - Fallback behaviors, NATS failures with graceful handling
@@ -144,7 +143,7 @@ This means: 0 INFO lines for read endpoints, 1 INFO line for write endpoints, al
 - System failures, unhandled exceptions
 - Critical errors requiring immediate attention
 - Operations that cannot continue
-- **NOT** for validation errors (use WARN via `logger.validation()`)
+- **NOT** for validation errors (handled at WARN by `apiErrorHandler`)
 
 ## Features
 
