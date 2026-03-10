@@ -526,10 +526,12 @@ export class CommitteeService {
         return committeeVoteResources.map((r) => r.data);
       }
 
-      // Fall back to type: 'vote' resources created via the LFX voting module
+      // Fall back to type: 'vote' resources created via the LFX voting module.
+      // Uses the same tags pattern as committee_vote — votes are indexed with
+      // committee_uid:<uid> tag when committee_uid is set on creation.
       const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote',
-        committee_uid: committeeId,
+        tags: `committee_uid:${committeeId}`,
       });
 
       return voteResources.map((r) => ({
