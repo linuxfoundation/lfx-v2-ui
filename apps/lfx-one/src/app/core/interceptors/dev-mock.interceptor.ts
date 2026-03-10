@@ -27,6 +27,23 @@ export const devMockInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  // GET /api/committees/my → the upstream API ignores the `my` filter in local dev
+  // and returns all committees without myRole/myMemberUid. Patch the response to
+  // return only the demo committee (AI Ethics & Governance WG) with membership info.
+  if (req.url.startsWith('/api/committees/my')) {
+    return next(req).pipe(
+      map((event) => {
+        if (!(event instanceof HttpResponse) || !event.body) return event;
+        const allCommittees: any[] = Array.isArray(event.body) ? event.body : [];
+        const demoCommittee = allCommittees.find((c: any) => c.uid === MOCK_COMMITTEE_UID);
+        const myCommittees = demoCommittee
+          ? [{ ...demoCommittee, myRole: 'Chair', myMemberUid: 'mock-member-chair-001' }]
+          : [];
+        return event.clone({ body: myCommittees });
+      })
+    );
+  }
+
   // GET /api/committees/<uid>/activity → return mock activity items
   const committeeActivityMatch = req.url.match(/\/api\/committees\/([^/]+)\/activity/);
   if (committeeActivityMatch) {

@@ -958,38 +958,6 @@
                     }
                   </lfx-card>
 
-                  <!-- Linked Mailing Lists Card — hidden for non-admins when empty -->
-                  @if (linkedMailingLists().length > 0 || canManageConfigurations()) {
-                    <lfx-card data-testid="committee-view-linked-mailing-lists">
-                      <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-envelope text-gray-400 mr-2"></i>Mailing Lists</h3>
-
-                      @if (loadingMailingLists()) {
-                        <div class="flex items-center gap-2 text-sm text-gray-400 py-2">
-                          <i class="fa-light fa-circle-notch fa-spin"></i>
-                          Loading...
-                        </div>
-                      } @else if (linkedMailingLists().length > 0) {
-                        <div class="flex flex-col gap-3">
-                          @for (list of linkedMailingLists(); track list.uid) {
-                            <a [routerLink]="['/mailing-lists', list.uid]" class="flex items-center gap-3 group" data-testid="linked-mailing-list-item">
-                              <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
-                              </div>
-                              <div class="min-w-0">
-                                <p class="text-sm font-medium text-blue-600 group-hover:text-blue-700 truncate">
-                                  {{ list.title || list.group_name }}
-                                </p>
-                                <p class="text-xs text-gray-500">{{ list.subscriber_count }} subscribers</p>
-                              </div>
-                            </a>
-                          }
-                        </div>
-                      } @else {
-                        <p class="text-sm text-gray-400">No mailing lists linked to this group</p>
-                      }
-                    </lfx-card>
-                  }
-
                   <!-- Configurations Card — admin only (maintainer persona or writer access) -->
                   @if (canManageConfigurations()) {
                     <lfx-card data-testid="committee-view-configurations">
@@ -1185,43 +1153,79 @@
           <!-- ════════════════════════════════════════════════════════════════ -->
           <!-- MEETINGS TAB                                                    -->
           <!-- ════════════════════════════════════════════════════════════════ -->
-          <!-- TODO: pass showAttendees input once lfx-dashboard-meeting-card supports it -->
           <p-tabpanel value="meetings">
-            <div class="flex flex-col gap-6 pt-4">
-              <lfx-card data-testid="committee-view-meetings">
-                <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-sm font-medium"><i class="fa-light fa-calendar text-gray-400 mr-2"></i>Upcoming Meetings</h3>
-                  <div class="flex items-center gap-3">
-                    @if (upcomingMeetings().length > 0) {
-                      <span class="text-xs text-gray-400">{{ upcomingMeetings().length }} upcoming</span>
-                    }
-                    @if (!isBoardMember()) {
-                      <lfx-button
-                        icon="fa-light fa-plus"
-                        label="Create Meeting"
-                        size="small"
-                        severity="secondary"
-                        styleClass="p-button-outlined"
-                        (onClick)="createMeeting()"
-                        data-testid="committee-view-create-meeting-btn">
-                      </lfx-button>
-                    }
+            <div class="flex flex-col gap-4 pt-4">
+              <!-- Meetings header: title, filter, create button -->
+              <div class="flex items-center justify-between gap-4">
+                <h3 class="text-base font-semibold"><i class="fa-light fa-calendar text-gray-400 mr-2"></i>Meetings</h3>
+                <div class="flex items-center gap-3">
+                  <div class="flex rounded-md border border-gray-200 overflow-hidden text-sm">
+                    <button
+                      type="button"
+                      class="px-4 py-1.5 font-medium transition-colors"
+                      [ngClass]="meetingViewFilter() === 'upcoming' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      (click)="meetingViewFilter.set('upcoming')">
+                      Upcoming
+                    </button>
+                    <button
+                      type="button"
+                      class="px-4 py-1.5 font-medium border-l border-gray-200 transition-colors"
+                      [ngClass]="meetingViewFilter() === 'past' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      (click)="meetingViewFilter.set('past')">
+                      Past
+                    </button>
                   </div>
+                  @if (!isBoardMember()) {
+                    <lfx-button
+                      icon="fa-light fa-plus"
+                      label="Create Meeting"
+                      size="small"
+                      severity="secondary"
+                      styleClass="p-button-outlined"
+                      (onClick)="createMeeting()"
+                      data-testid="committee-view-create-meeting-btn">
+                    </lfx-button>
+                  }
                 </div>
-                @if (upcomingMeetings().length > 0) {
-                  <div class="flex flex-col gap-3">
-                    @for (meeting of upcomingMeetings(); track meeting.id) {
-                      <lfx-dashboard-meeting-card [meeting]="meeting" [attr.data-testid]="'committee-meeting-card-' + meeting.id"> </lfx-dashboard-meeting-card>
+              </div>
+
+              <!-- Meeting cards -->
+              @if (meetingViewFilter() === 'upcoming' && upcomingMeetings().length > 0) {
+                <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
+                  @for (meeting of upcomingMeetings(); track meeting.id) {
+                    <lfx-meeting-card
+                      [attr.data-testid]="'committee-meeting-card-' + meeting.id"
+                      [meetingInput]="meeting"
+                      [showBorder]="true"
+                      [pastMeeting]="false">
+                    </lfx-meeting-card>
+                  }
+                </div>
+              } @else if (meetingViewFilter() === 'past' && pastCommitteeMeetings().length > 0) {
+                <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
+                  @for (meeting of pastCommitteeMeetings(); track meeting.id) {
+                    <lfx-meeting-card
+                      [attr.data-testid]="'committee-meeting-card-' + meeting.id"
+                      [meetingInput]="meeting"
+                      [showBorder]="true"
+                      [pastMeeting]="true">
+                    </lfx-meeting-card>
+                  }
+                </div>
+              } @else {
+                <lfx-card>
+                  <div class="text-center py-8">
+                    <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
+                    @if (meetingViewFilter() === 'upcoming') {
+                      <p class="text-sm font-medium text-gray-700">No Upcoming Meetings</p>
+                      <p class="text-xs text-gray-500 mt-1">There are no upcoming meetings scheduled for this group.</p>
+                    } @else {
+                      <p class="text-sm font-medium text-gray-700">No Past Meetings</p>
+                      <p class="text-xs text-gray-500 mt-1">No past meetings found for this group.</p>
                     }
                   </div>
-                } @else {
-                  <div class="text-center py-6">
-                    <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
-                    <p class="text-sm font-medium text-gray-700">No Upcoming Meetings</p>
-                    <p class="text-xs text-gray-500 mt-1">There are no upcoming meetings scheduled for this group.</p>
-                  </div>
-                }
-              </lfx-card>
+                </lfx-card>
+              }
             </div>
           </p-tabpanel>
 

@@ -61,7 +61,7 @@ import { ApplicationReviewComponent } from '../components/application-review/app
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { JoinApplicationDialogComponent } from '../components/join-application-dialog/join-application-dialog.component';
-import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
+import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -72,7 +72,7 @@ import { DashboardMeetingCardComponent } from '@app/modules/dashboards/component
     TagComponent,
     ApplicationReviewComponent,
     CommitteeMembersComponent,
-    DashboardMeetingCardComponent,
+    MeetingCardComponent,
     Tabs,
     TabList,
     Tab,
@@ -204,7 +204,9 @@ export class CommitteeViewComponent {
   public coChairElectedDate: Signal<string>;
 
   // Meeting computed signals
+  public meetingViewFilter: WritableSignal<'upcoming' | 'past'>;
   public upcomingMeetings: Signal<Meeting[]>;
+  public pastCommitteeMeetings: Signal<Meeting[]>;
 
   // Configuration label signals
   public joinModeLabel: Signal<string>;
@@ -270,6 +272,7 @@ export class CommitteeViewComponent {
 
     // Meeting signals
     this.committeeMeetings = signal<Meeting[]>([]);
+    this.meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
 
     // Survey signals
     this.committeeSurveys = signal<Survey[]>([]);
@@ -417,19 +420,27 @@ export class CommitteeViewComponent {
     this.documentFiles = computed(() => this.documents().filter((d) => d.type === 'file'));
     this.documentLinks = computed(() => this.documents().filter((d) => d.type === 'link'));
 
-    // Meeting computed signals — show upcoming meetings and those from the past 7 days
-    // (7-day look-back handles recently-ended recurring meetings that are still relevant)
+    // Meeting computed signals
     this.upcomingMeetings = computed(() => {
       const committeeId = this.committee()?.uid;
       if (!committeeId) return [];
       const meetings = this.committeeMeetings();
       if (!Array.isArray(meetings)) return [];
-      const now = new Date().getTime();
-      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+      const sevenDaysAgo = new Date().getTime() - 7 * 24 * 60 * 60 * 1000;
       return meetings
         .filter((m) => m.start_time && new Date(m.start_time).getTime() > sevenDaysAgo && m.committees?.some((c) => c.uid === committeeId))
-        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-        .slice(0, 3);
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    });
+
+    this.pastCommitteeMeetings = computed(() => {
+      const committeeId = this.committee()?.uid;
+      if (!committeeId) return [];
+      const meetings = this.committeeMeetings();
+      if (!Array.isArray(meetings)) return [];
+      const sevenDaysAgo = new Date().getTime() - 7 * 24 * 60 * 60 * 1000;
+      return meetings
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() <= sevenDaysAgo && m.committees?.some((c) => c.uid === committeeId))
+        .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
   }
 

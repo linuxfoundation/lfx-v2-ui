@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## ⚠️ COWORK SESSION WORKING MODE
+
+When this project is open inside a **Cowork / Claude desktop** session (not a Claude Code terminal),
+**do NOT directly edit source files**.
+
+Your role in that context is to **generate ready-to-paste Claude Code prompts** that Manish runs
+himself in a separate Claude Code terminal. This preserves his git workflow and code review process.
+
+Format your prompts like this:
+
+```
+Please make the following change to <relative file path>:
+
+<clear description of what to change and why, with enough detail that no follow-up is needed>
+
+Expected result: <what the user should see after the change>
+```
+
+You can still freely read files, grep the codebase, and run tsc/lint checks to inform your prompt.
+Just don't write or modify source files directly from a Cowork session.
+
+---
+
 ## 📋 Table of Contents
 
 ### 🏗 Architecture & Setup
@@ -175,15 +200,16 @@ export class VoteController {
         has_more_pages: !!page_token,
       });
 
-      res.json({ data, page_token });       // always res.json(), never res.send()
+      res.json({ data, page_token }); // always res.json(), never res.send()
     } catch (error) {
-      next(error);                           // always next(error), never inline handling
+      next(error); // always next(error), never inline handling
     }
   }
 }
 ```
 
 Rules:
+
 - `logger.startOperation()` first thing, `logger.success()` before `res.json()`
 - List responses: `res.json({ data, page_token })`
 - Single resource: `res.json(resource)`
@@ -213,15 +239,12 @@ export class VoteService {
   public async getVotes(req: Request, query: Record<string, any> = {}): Promise<PaginatedResponse<Vote>> {
     logger.debug(req, 'get_votes', 'Starting vote fetch', { query_params: Object.keys(query) });
 
-    const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      { ...query, type: 'vote' }
-    );
+    const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      ...query,
+      type: 'vote',
+    });
 
-    return { data: resources.map(r => r.data), page_token };
+    return { data: resources.map((r) => r.data), page_token };
   }
 
   // Use Promise.all() for independent parallel fetches
@@ -252,6 +275,7 @@ export class VoteService {
 ```
 
 Rules:
+
 - Constructor instantiates all dependencies (`new ServiceName()`)
 - `logger.debug()` at the start of every public method
 - `logger.info()` for significant transformations or enrichments
@@ -272,9 +296,10 @@ const data = await this.microserviceProxy.proxyRequest<MyType>(req, 'LFX_V2_SERV
 const data = await this.microserviceProxy.proxyRequest<MyType>(req, 'LFX_V2_SERVICE', '/path', 'POST', undefined, body);
 
 // Query service (list endpoints)
-const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MyType>>(
-  req, 'LFX_V2_SERVICE', '/query/resources', 'GET', { type: 'my-type', ...query }
-);
+const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MyType>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+  type: 'my-type',
+  ...query,
+});
 ```
 
 ### Registering a New Route in server.ts
@@ -299,10 +324,10 @@ import { catchError, Observable, of } from 'rxjs';
 import { Vote, CreateVoteRequest } from '@lfx-one/shared/interfaces';
 
 @Injectable({
-  providedIn: 'root',   // always 'root' for singleton
+  providedIn: 'root', // always 'root' for singleton
 })
 export class VoteService {
-  private readonly http = inject(HttpClient);   // inject() not constructor param
+  private readonly http = inject(HttpClient); // inject() not constructor param
 
   /**
    * Get all votes for the current user.
@@ -310,7 +335,7 @@ export class VoteService {
    */
   public getVotes(): Observable<{ data: Vote[]; page_token?: string }> {
     return this.http.get<{ data: Vote[]; page_token?: string }>('/api/votes').pipe(
-      catchError(() => of({ data: [] }))       // always catchError with typed default
+      catchError(() => of({ data: [] })) // always catchError with typed default
     );
   }
 
@@ -318,23 +343,20 @@ export class VoteService {
    * Get a single vote by UID.
    */
   public getVoteById(uid: string): Observable<Vote | null> {
-    return this.http.get<Vote>(`/api/votes/${uid}`).pipe(
-      catchError(() => of(null))
-    );
+    return this.http.get<Vote>(`/api/votes/${uid}`).pipe(catchError(() => of(null)));
   }
 
   /**
    * Create a new vote.
    */
   public createVote(payload: CreateVoteRequest): Observable<Vote | null> {
-    return this.http.post<Vote>('/api/votes', payload).pipe(
-      catchError(() => of(null))
-    );
+    return this.http.post<Vote>('/api/votes', payload).pipe(catchError(() => of(null)));
   }
 }
 ```
 
 Rules:
+
 - `@Injectable({ providedIn: 'root' })` — always
 - `inject()` function, never constructor parameter injection
 - All public methods return `Observable<T>` — never subscribe internally
@@ -863,12 +885,12 @@ private async fetchFromNats(req: Request, slug: string): Promise<Project> {
 
 The codebase separates concerns strictly:
 
-| Layer | Role | Where |
-|---|---|---|
-| **Express server** | Proxy only — forwards requests to `LFX_V2_SERVICE` via `MicroserviceProxyService` | `src/server/routes/`, `src/server/controllers/`, `src/server/services/` |
-| **E2E mock data** | Fixture objects returned by Playwright's `page.route()` interceptors | `apps/lfx-one/e2e/fixtures/mock-data/` |
-| **E2E interceptors** | `page.route()` helpers that intercept HTTP at the network level during tests | `apps/lfx-one/e2e/helpers/api-mock.helper.ts` |
-| **Dev toolbar** | Client-side persona / account / project context switching | `src/app/layouts/dev-toolbar/` |
+| Layer                | Role                                                                              | Where                                                                   |
+| -------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Express server**   | Proxy only — forwards requests to `LFX_V2_SERVICE` via `MicroserviceProxyService` | `src/server/routes/`, `src/server/controllers/`, `src/server/services/` |
+| **E2E mock data**    | Fixture objects returned by Playwright's `page.route()` interceptors              | `apps/lfx-one/e2e/fixtures/mock-data/`                                  |
+| **E2E interceptors** | `page.route()` helpers that intercept HTTP at the network level during tests      | `apps/lfx-one/e2e/helpers/api-mock.helper.ts`                           |
+| **Dev toolbar**      | Client-side persona / account / project context switching                         | `src/app/layouts/dev-toolbar/`                                          |
 
 ### ❌ Never Do This
 
@@ -930,7 +952,10 @@ export class ApiMockHelper {
   /** Mock POST /api/committees/:id/members */
   static async setupCreateMemberMock(page: Page, committeeId: string): Promise<void> {
     await page.route(`**/api/committees/${committeeId}/members`, async (route) => {
-      if (route.request().method() !== 'POST') { await route.continue(); return; }
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
       const body = await route.request().postDataJSON();
       const created = {
         ...body,
@@ -979,6 +1004,7 @@ If the backend is unavailable, use the e2e test suite as your development harnes
 Things the codebase never does. If you find yourself writing any of these, stop and reconsider.
 
 **Server-side**
+
 - `console.log` / `console.error` — use `logger` service always
 - `res.send()` / `res.status(200).send(text)` — use `res.json()` always
 - Inline `catch` blocks in controllers that don't call `next(error)` — always delegate
@@ -988,6 +1014,7 @@ Things the codebase never does. If you find yourself writing any of these, stop 
 - Duplicate `logger.startOperation()` calls for the same operation in both controller and service
 
 **Frontend**
+
 - Constructor parameter injection — use `inject()` function
 - Subscribing inside a service — services return Observables, components subscribe
 - Observables without `catchError()` — every HTTP call must have a fallback
@@ -998,6 +1025,7 @@ Things the codebase never does. If you find yourself writing any of these, stop 
 - Interfaces / enums defined locally in a component file — always in `@lfx-one/shared`
 
 **General**
+
 - Missing copyright/SPDX header on any source file
 - Commits without a JIRA ticket reference
 - Components without `data-testid` attributes on key interactive elements
