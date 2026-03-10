@@ -707,15 +707,6 @@ export class CommitteeViewComponent {
             })
           );
 
-          // Fetch meetings for this project (filter by committee happens in computed signal)
-          const projectUid = this.projectService.project()?.uid || 'a09410d0-3455-11ea-978f-2e728ce88125';
-          const meetingsQuery = this.meetingService.getMeetingsByProject(projectUid).pipe(
-            catchError(() => {
-              console.error('Failed to load meetings');
-              return of([]);
-            })
-          );
-
           // Fetch documents for this committee
           const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(
             catchError(() => {
@@ -727,7 +718,20 @@ export class CommitteeViewComponent {
           // Fetch surveys for this committee
           const surveysQuery = this.committeeService.getCommitteeSurveys(committeeId).pipe(catchError(() => of([] as Survey[])));
 
-          return combineLatest([committeeQuery, membersQuery, meetingsQuery, documentsQuery, surveysQuery]).pipe(
+          // Fetch meetings after the committee resolves so we can use its project_uid.
+          // projectService.project() may not be populated yet on direct navigation to this page.
+          return committeeQuery.pipe(
+            switchMap((committee) => {
+              const projectUid = committee?.project_uid || this.projectService.project()?.uid || 'a09410d0-3455-11ea-978f-2e728ce88125';
+              const meetingsQuery = this.meetingService.getMeetingsByProject(projectUid).pipe(
+                catchError(() => {
+                  console.error('Failed to load meetings');
+                  return of([]);
+                })
+              );
+              return combineLatest([of(committee), membersQuery, meetingsQuery, documentsQuery, surveysQuery]);
+            }),
+          ).pipe(
             tap(([committee, members, meetings, documents, surveys]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);

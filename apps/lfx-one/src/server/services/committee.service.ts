@@ -675,11 +675,31 @@ export class CommitteeService {
 
   public async getCommitteeSurveys(req: Request, committeeId: string): Promise<any[]> {
     try {
+      // Surveys are indexed by project_uid in the query service, not by committee_uid tag.
+      // Resolve project_uid from the committee first, then filter by committee in code.
+      // Note: the survey service stores committee associations via committee_id (not committee_uid),
+      // which is typically the same as the v2 committee UID. We check both the external UID
+      // (committeeId) and any internal alias stored in the data.
+      const committee = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+      const projectUid: string | undefined = committee?.project_uid;
+
+      if (!projectUid) {
+        return [];
+      }
+
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'survey',
-        tags: `committee_uid:${committeeId}`,
+        project_uid: projectUid,
+        page_size: 100,
       });
-      return resources.map((r) => r.data);
+
+      // Filter surveys that include our committee (matched by committee_id or committee_uid field)
+      return resources
+        .filter((r) => {
+          const committees: any[] = r.data.committees ?? [];
+          return committees.some((c) => c.committee_id === committeeId || c.committee_uid === committeeId);
+        })
+        .map((r) => r.data);
     } catch {
       return [];
     }

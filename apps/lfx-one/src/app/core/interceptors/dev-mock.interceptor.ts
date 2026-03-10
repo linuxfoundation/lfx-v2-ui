@@ -79,11 +79,20 @@ export const devMockInterceptor: HttpInterceptorFn = (req, next) => {
         if (meetings.length === 0) return event;
 
         const patched = meetings.map((meeting: any) => {
-          if (!meeting.committees?.length) return meeting;
-          const fixedCommittees = meeting.committees.map((c: any) =>
-            c.uid === API_CLIENT_INTERNAL_COMMITTEE_UID ? { ...c, uid: MOCK_COMMITTEE_UID } : c
-          );
-          return { ...meeting, committees: fixedCommittees };
+          // Case 1: meetings from api_client_service use a singular `committee` string field
+          // (not a `committees` array). Normalize it into the array shape the component expects.
+          if (typeof meeting.committee === 'string' && !meeting.committees?.length) {
+            const normalizedUid = meeting.committee === API_CLIENT_INTERNAL_COMMITTEE_UID ? MOCK_COMMITTEE_UID : meeting.committee;
+            return { ...meeting, committees: [{ uid: normalizedUid }] };
+          }
+          // Case 2: meetings that already have a `committees` array — patch the internal UID.
+          if (meeting.committees?.length) {
+            const fixedCommittees = meeting.committees.map((c: any) =>
+              c.uid === API_CLIENT_INTERNAL_COMMITTEE_UID ? { ...c, uid: MOCK_COMMITTEE_UID } : c
+            );
+            return { ...meeting, committees: fixedCommittees };
+          }
+          return meeting;
         });
 
         const patchedBody = Array.isArray(body) ? patched : { ...body, data: patched };
