@@ -193,7 +193,6 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/user', userRouter);
 app.use('/api/votes', votesRouter);
 app.use('/api/surveys', surveysRouter);
-app.use('/api/url-metadata', urlMetadataRouter);
 app.use('/api/lens', lensRouter);
 
 // Add API error handler middleware
