@@ -60,7 +60,7 @@ The build must succeed. If it fails:
 Verify no protected infrastructure files were modified:
 
 ```bash
-git diff --name-only HEAD
+git diff --name-only origin/main...HEAD
 ```
 
 **Flag any changes to these files** — they should NOT be modified without code owner approval:
@@ -95,7 +95,7 @@ If protected files appear in the diff, warn the contributor and ask them to reve
 Generate a summary of all changes for the PR description:
 
 ```bash
-git diff --stat HEAD
+git diff --stat origin/main...HEAD
 ```
 
 List:

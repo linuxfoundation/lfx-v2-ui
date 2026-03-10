@@ -35,7 +35,7 @@ apps/lfx-one/src/app/modules/
 1. **Section Organization**: Each major feature area (meetings, committees, etc.) has its own folder
 2. **Route Components**: Components that have routes live directly in their section folder
 3. **Shared Components Within Section**: Components used only within a section live in that section's `components` folder
-4. **Truly Shared Components**: Only components used across multiple sections remain in `app/shared/components`
+4. **Truly Shared Components**: Only components used across multiple sections remain in `apps/lfx-one/src/app/shared/components`
 
 ### Import Pattern
 

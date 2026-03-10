@@ -47,7 +47,7 @@ The project requires environment variables to connect to backend services. All v
    - Access the **LFX One Dev Environment** vault in 1Password
    - Copy all required values into `apps/lfx-one/.env`
    - The `.env.example` file documents every variable and its purpose — use it as your reference
-   - If you don't have 1Password access, contact a code owner on for help
+   - If you don't have 1Password access, contact a code owner on Slack for help
 
 **Important:** All services point to the shared dev environment. No local infrastructure setup is needed.
 

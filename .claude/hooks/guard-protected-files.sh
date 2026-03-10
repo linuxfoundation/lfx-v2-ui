@@ -12,7 +12,7 @@ set -euo pipefail
 INPUT=$(cat)
 
 # Extract file_path from the JSON input
-FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//')
+FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//;s/"$//' || true)
 
 # If no file_path found, allow the operation
 if [ -z "$FILE_PATH" ]; then
@@ -31,12 +31,12 @@ fi
 # Helper: warn about a protected file (allows the edit to proceed)
 warn() {
   local reason="$1"
-  echo ""
-  echo "⚠ WARNING: This file is part of the project's core infrastructure."
-  echo "File: $FILE_PATH"
-  echo "Reason: $reason"
-  echo "Ensure this change is intentional and reviewed by a code owner."
-  echo ""
+  echo "" >&2
+  echo "⚠ WARNING: This file is part of the project's core infrastructure." >&2
+  echo "File: $FILE_PATH" >&2
+  echo "Reason: $reason" >&2
+  echo "Ensure this change is intentional and reviewed by a code owner." >&2
+  echo "" >&2
   exit 0
 }
 

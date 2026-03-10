@@ -34,7 +34,7 @@ globs: '*'
 
 - **E2E tests use dual architecture** — both content-based (`*.spec.ts`) and structural (`*-robust.spec.ts`) tests
 - **Always add `data-testid` attributes** when creating new components for reliable test targeting
-- **Run `yarn e2e` before major changes** to ensure all 85+ tests pass consistently
+- **Run `yarn e2e` before major changes** to ensure all tests pass consistently
 - **Use `data-testid` naming convention** — `[section]-[component]-[element]` for hierarchical structure
 - **Test responsive behavior** — validate mobile, tablet, and desktop viewports appropriately
 - When running tests to validate UI tests, use `reporter=list`

@@ -69,9 +69,9 @@ export const getItems = async (req: Request, res: Response, next: NextFunction) 
   const startTime = logger.startOperation(req, 'get_items', { query: req.query });
 
   try {
-    const items = await itemService.getItems(req, req.query);
-    logger.success(req, 'get_items', startTime, { count: items.length });
-    res.json(items);
+    const result = await itemService.getItems(req, req.query);
+    logger.success(req, 'get_items', startTime, { count: result.data.length });
+    res.json(result);
   } catch (error) {
     logger.error(req, 'get_items', startTime, error);
     next(error); // Never res.status(500).json() — use next(error)
@@ -83,7 +83,7 @@ export const getItems = async (req: Request, res: Response, next: NextFunction) 
 
 ```typescript
 export class ItemService {
-  public async getItems(req: Request, query: Record<string, any>): Promise<Item[]> {
+  public async getItems(req: Request, query: Record<string, any>): Promise<{ data: Item[]; page_token?: string }> {
     logger.debug(req, 'get_items', 'Fetching items', { query_params: Object.keys(query) });
 
     const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Item>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {

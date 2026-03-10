@@ -62,7 +62,7 @@ Design tokens (colors, font sizes), configuration values, and static lookup data
 **Conventions:**
 
 - Use `as const` assertions for immutable values
-- Group by domain (e.g., `meeting.constant.ts`, `ai.constants.ts`)
+- Group by domain (e.g., `meeting.constants.ts`, `ai.constants.ts`)
 - Subdirectories are allowed for large groupings (e.g., `meeting-templates/`)
 
 ### Enums (`enums/`)

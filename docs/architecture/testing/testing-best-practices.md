@@ -491,7 +491,7 @@ test('should meet performance thresholds', async ({ page }) => {
 
 ### Per-Feature Checklist
 
-**Per Feature**:
+**Per Feature:**
 
 - [ ] Add both content-based and structural tests
 - [ ] Include responsive design validation
@@ -537,6 +537,6 @@ test('should meet performance thresholds', async ({ page }) => {
 4. **Validate and Document**
    - Run tests across all browsers
    - Update relevant documentation
-   - Add to maintenance schedule
+   - Update relevant documentation
 
 This comprehensive testing approach ensures reliable, maintainable tests that provide confidence in both user experience and technical implementation while supporting long-term project sustainability.
