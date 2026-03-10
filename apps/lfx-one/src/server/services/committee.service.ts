@@ -527,8 +527,8 @@ export class CommitteeService {
       }
 
       // Fall back to type: 'vote' resources created via the LFX voting module.
-      // Votes are indexed by project_uid tag (not committee_uid), so we resolve the
-      // project_uid from the committee first, then filter by committee_uid in code.
+      // Votes are indexed under parent:project:<uid> (not by committee tag), so we
+      // resolve the project_uid from the committee first, then filter by committee_uid in code.
       const committee = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
       const projectUid: string | undefined = committee?.project_uid;
 
@@ -536,9 +536,10 @@ export class CommitteeService {
         return [];
       }
 
+      // Votes are indexed under parent: project:<uid> (not tags) in the query service
       const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote',
-        tags: `project_uid:${projectUid}`,
+        parent: `project:${projectUid}`,
         page_size: 100,
       });
 
