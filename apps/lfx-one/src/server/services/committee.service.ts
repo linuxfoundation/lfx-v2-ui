@@ -516,11 +516,33 @@ export class CommitteeService {
 
   public async getCommitteeVotes(req: Request, committeeId: string): Promise<any[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      // First try committee_vote resources (managed by api_client_service)
+      const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_vote',
         tags: `committee_uid:${committeeId}`,
       });
-      return resources.map((r) => r.data);
+
+      if (committeeVoteResources.length > 0) {
+        return committeeVoteResources.map((r) => r.data);
+      }
+
+      // Fall back to type: 'vote' resources created via the LFX voting module
+      const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'vote',
+        committee_uid: committeeId,
+      });
+
+      return voteResources.map((r) => ({
+        uid: r.data.uid,
+        title: r.data.name,
+        status: r.data.status === 'active' ? 'open' : r.data.status === 'ended' ? 'closed' : 'cancelled',
+        deadline: r.data.end_time,
+        votesFor: r.data.num_response_received ?? 0,
+        votesAgainst: 0,
+        votesAbstain: 0,
+        totalEligible: r.data.total_voting_request_invitations ?? 0,
+        created_by: '',
+      }));
     } catch {
       return [];
     }

@@ -417,15 +417,17 @@ export class CommitteeViewComponent {
     this.documentFiles = computed(() => this.documents().filter((d) => d.type === 'file'));
     this.documentLinks = computed(() => this.documents().filter((d) => d.type === 'link'));
 
-    // Meeting computed signals
+    // Meeting computed signals — show upcoming meetings and those from the past 7 days
+    // (7-day look-back handles recently-ended recurring meetings that are still relevant)
     this.upcomingMeetings = computed(() => {
       const committeeId = this.committee()?.uid;
       if (!committeeId) return [];
       const meetings = this.committeeMeetings();
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
       return meetings
-        .filter((m) => m.start_time && new Date(m.start_time).getTime() > now && m.committees?.some((c) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() > sevenDaysAgo && m.committees?.some((c) => c.uid === committeeId))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
         .slice(0, 3);
     });

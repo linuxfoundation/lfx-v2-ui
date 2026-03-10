@@ -3,13 +3,13 @@
 
 import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { isDevMode } from '@angular/core';
-import { API_CLIENT_INTERNAL_COMMITTEE_UID, getMockCommitteeActivity, getMockCommitteeChannels, getMockCommitteeEvents, getMockCommitteeVotes, MOCK_COMMITTEE_UID } from '@mock-data';
+import { API_CLIENT_INTERNAL_COMMITTEE_UID, getMockCommitteeActivity, getMockCommitteeChannels, getMockCommitteeEvents, MOCK_COMMITTEE_UID } from '@mock-data';
 import { map, of } from 'rxjs';
 
 /**
  * Dev-only HTTP interceptor that injects mock data for endpoints not yet backed
- * by real data (activity, events, channels, committee votes) and applies dev-only
- * UID corrections to real API responses.
+ * by real data (activity, events, channels) and applies dev-only UID corrections
+ * to real API responses.
  *
  * Also patches meeting responses to replace the api_client_service internal committee
  * UUID with the external UUID so the client-side committee filter can match.
@@ -43,18 +43,6 @@ export const devMockInterceptor: HttpInterceptorFn = (req, next) => {
     const events = getMockCommitteeEvents(committeeEventsMatch[1]);
     if (events.length > 0) {
       return of(new HttpResponse({ status: 200, body: events }));
-    }
-    return next(req);
-  }
-
-  // GET /api/committees/<uid>/votes → return mock committee votes
-  // CommitteeVote (type: 'committee_vote') is managed by api_client_service and cannot
-  // be created via POST /votes (which creates type: 'vote' resources instead).
-  const committeeVotesMatch = req.url.match(/\/api\/committees\/([^/]+)\/votes/);
-  if (committeeVotesMatch) {
-    const votes = getMockCommitteeVotes(committeeVotesMatch[1]);
-    if (votes.length > 0) {
-      return of(new HttpResponse({ status: 200, body: votes }));
     }
     return next(req);
   }
