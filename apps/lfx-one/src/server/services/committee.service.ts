@@ -548,7 +548,7 @@ export class CommitteeService {
         .map((r) => ({
           uid: r.data.uid,
           title: r.data.name,
-          status: r.data.status === 'active' ? 'open' : r.data.status === 'ended' ? 'closed' : 'cancelled',
+          status: r.data.status === 'ended' ? 'closed' : r.data.status === 'cancelled' ? 'cancelled' : 'open',
           deadline: r.data.end_time,
           votesFor: r.data.num_response_received ?? 0,
           votesAgainst: 0,
