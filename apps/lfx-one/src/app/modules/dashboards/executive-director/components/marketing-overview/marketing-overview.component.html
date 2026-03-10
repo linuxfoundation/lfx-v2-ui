@@ -3,17 +3,7 @@
 
 <section data-testid="marketing-overview-section">
   <div class="flex flex-wrap gap-3 items-end justify-between mb-4">
-    <div class="flex flex-col gap-3">
-      <h2 class="mb-0">Marketing Overview</h2>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <lfx-filter-pills
-          [options]="filterOptions"
-          [selectedFilter]="selectedFilter()"
-          (filterChange)="handleFilterChange($event)"
-          data-testid="marketing-overview-filters"></lfx-filter-pills>
-      </div>
-    </div>
+    <h2 class="mb-0">Marketing Overview</h2>
 
     <!-- Carousel Controls -->
     <div class="flex items-center gap-2">

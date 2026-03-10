@@ -53,9 +53,8 @@ export class PersonaService {
     if (persona !== this.currentPersona()) {
       this.currentPersona.set(persona);
 
-      // When switching to board-level persona, clear any child project selection
-      // Board members and executive directors should only work at the foundation level
-      if (persona === 'board-member' || persona === 'executive-director') {
+      // When switching to TLF-only persona, clear any child project selection
+      if (this.isTlfOnlyPersona()) {
         this.projectContextService.clearProject();
         this.router.navigate(['/']);
       }
