@@ -489,20 +489,7 @@ test('should meet performance thresholds', async ({ page }) => {
 
 ## 📊 Test Maintenance Guidelines
 
-### Regular Review Checklist
-
-**Weekly**:
-
-- [ ] Run full test suite on all browsers
-- [ ] Check for flaky tests and investigate
-- [ ] Review test execution times
-
-**Monthly**:
-
-- [ ] Update test documentation
-- [ ] Review data-testid naming consistency
-- [ ] Evaluate new testing patterns
-- [ ] Clean up obsolete tests
+### Per-Feature Checklist
 
 **Per Feature**:
 

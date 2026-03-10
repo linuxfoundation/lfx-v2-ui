@@ -22,3 +22,6 @@ node_modules/
 !*.scss
 !*.md
 !*.mdx
+
+# Include .claude directory (Prettier 3.x ignores dot-directories by default)
+!.claude/
