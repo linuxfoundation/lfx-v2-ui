@@ -24,6 +24,7 @@ import {
   GroupJoinApplicationRequest,
   MyCommittee,
   QueryServiceCountResponse,
+  Survey,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
@@ -70,8 +71,7 @@ export class CommitteeService {
   public getCommittee(id: string): Observable<Committee> {
     return this.http.get<Committee>(`/api/committees/${id}`).pipe(
       catchError((error) => {
-        console.error(`Failed to load committee ${id}:`, error);
-        return throwError(() => new Error(`Failed to load committee ${id}`));
+        return throwError(() => error);
       }),
       tap((committee) => this.committee.set(committee ?? null))
     );
@@ -248,5 +248,10 @@ export class CommitteeService {
   /** Get documents for a committee */
   public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
     return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(catchError(() => of([])));
+  }
+
+  /** Get surveys for a committee */
+  public getCommitteeSurveys(committeeId: string): Observable<Survey[]> {
+    return this.http.get<Survey[]>(`/api/committees/${committeeId}/surveys`).pipe(catchError(() => of([])));
   }
 }

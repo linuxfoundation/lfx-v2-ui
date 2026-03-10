@@ -8,6 +8,17 @@
       <h3 class="text-lg font-medium text-gray-900">{{ committeeLabel.singular }} Members</h3>
       <!-- Member Actions -->
       <div class="flex gap-2">
+        @if (canManageMembers()) {
+          <lfx-button
+            icon="fa-light fa-user-plus"
+            label="Add Member"
+            size="small"
+            severity="secondary"
+            styleClass="p-button-outlined"
+            (onClick)="openAddMemberDialog()"
+            data-testid="add-member-btn">
+          </lfx-button>
+        }
         @if (canInviteMembers()) {
           <lfx-button
             label="Invite"

@@ -397,6 +397,7 @@ export class VoteManageComponent {
             );
           }
           this.mode.set('create');
+          this.preselectCommitteeFromQueryParams();
           return of(null);
         })
       ),
@@ -405,7 +406,18 @@ export class VoteManageComponent {
   }
 
   private initProject(): Signal<ReturnType<typeof this.projectContextService.selectedProject>> {
-    return computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+    return computed(() => {
+      const fromContext = this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation();
+      if (fromContext) return fromContext;
+
+      // Fallback: use project_uid from query params (e.g., when navigating from group detail)
+      const projectUid = this.route.snapshot.queryParamMap.get('project_uid');
+      if (projectUid) {
+        return { uid: projectUid, name: '', slug: '' };
+      }
+
+      return null;
+    });
   }
 
   private initFormValue(): Signal<Record<string, unknown>> {
@@ -520,5 +532,15 @@ export class VoteManageComponent {
 
   private markAllFormControlsAsTouched(): void {
     markFormControlsAsTouched(this.form());
+  }
+
+  private preselectCommitteeFromQueryParams(): void {
+    const snapshot = this.route.snapshot.queryParamMap;
+    const committeeUid = snapshot.get('committee_uid');
+    const committeeName = snapshot.get('committee_name');
+    if (committeeUid) {
+      const committeeRef: CommitteeReference = { uid: committeeUid, name: committeeName || undefined };
+      this.form().get('committee')?.setValue(committeeRef);
+    }
   }
 }

@@ -12,6 +12,9 @@ const surveyController = new SurveyController();
 // GET /surveys - get all surveys
 router.get('/', (req, res, next) => surveyController.getSurveys(req, res, next));
 
+// POST /surveys - create a new survey
+router.post('/', (req, res, next) => surveyController.createSurvey(req, res, next));
+
 // GET /surveys/:uid - get a single survey
 router.get('/:uid', (req, res, next) => surveyController.getSurveyById(req, res, next));
 

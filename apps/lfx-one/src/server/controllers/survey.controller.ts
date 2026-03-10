@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CreateSurveyRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { validateUidParameter } from '../helpers/validation.helper';
@@ -29,6 +30,30 @@ export class SurveyController {
       });
 
       res.json(surveys);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /surveys
+   */
+  public async createSurvey(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const surveyData: CreateSurveyRequest = req.body;
+    const startTime = logger.startOperation(req, 'create_survey', {
+      project_uid: surveyData?.project_uid,
+      committee_count: surveyData?.committee_uids?.length,
+    });
+
+    try {
+      const survey = await this.surveyService.createSurvey(req, surveyData);
+
+      logger.success(req, 'create_survey', startTime, {
+        survey_id: survey.id,
+        project_uid: surveyData?.project_uid,
+      });
+
+      res.status(201).json(survey);
     } catch (error) {
       next(error);
     }

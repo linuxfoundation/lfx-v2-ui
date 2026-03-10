@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Survey } from '@lfx-one/shared/interfaces';
+import { CreateSurveyRequest, Survey } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of, take, throwError } from 'rxjs';
 
 @Injectable({
@@ -33,6 +33,13 @@ export class SurveyService {
     }
 
     return this.getSurveys(params);
+  }
+
+  /**
+   * Create a new survey.
+   */
+  public createSurvey(surveyData: CreateSurveyRequest): Observable<Survey> {
+    return this.http.post<Survey>('/api/surveys', surveyData).pipe(take(1));
   }
 
   public getSurvey(surveyUid: string): Observable<Survey> {

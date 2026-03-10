@@ -54,5 +54,6 @@ router.get('/:id/campaigns', (req, res, next) => committeeController.getCommitte
 router.get('/:id/engagement', (req, res, next) => committeeController.getCommitteeEngagement(req, res, next));
 router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBudget(req, res, next));
 router.get('/:id/documents', (req, res, next) => committeeController.getCommitteeDocuments(req, res, next));
+router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
 
 export default router;

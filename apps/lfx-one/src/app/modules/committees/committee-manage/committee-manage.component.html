@@ -65,6 +65,7 @@
               @if (committeeId()) {
                 <lfx-committee-members-manager
                   [committeeId]="committeeId()"
+                  [projectUid]="project()?.uid || null"
                   [memberUpdates]="memberUpdates()"
                   (memberUpdatesChange)="onMemberUpdatesChange($event)">
                 </lfx-committee-members-manager>

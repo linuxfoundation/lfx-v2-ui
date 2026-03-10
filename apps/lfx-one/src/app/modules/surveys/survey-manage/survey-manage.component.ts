@@ -14,8 +14,10 @@ import {
   SURVEY_MANAGE_TOTAL_STEPS,
 } from '@lfx-one/shared/constants';
 import { CommitteeReference, SurveyDistributionMethod, SurveyReminderType } from '@lfx-one/shared/interfaces';
-import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
+import { buildCreateSurveyRequest, markFormControlsAsTouched, SurveyFormValue } from '@lfx-one/shared/utils';
 import { trimmedRequired } from '@lfx-one/shared/validators';
+import { ProjectContextService } from '@services/project-context.service';
+import { SurveyService } from '@services/survey.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
@@ -48,6 +50,8 @@ export class SurveyManageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly surveyService = inject(SurveyService);
+  private readonly projectContextService = inject(ProjectContextService);
 
   // Protected constants
   public readonly totalSteps = SURVEY_MANAGE_TOTAL_STEPS;
@@ -61,6 +65,17 @@ export class SurveyManageComponent {
   public readonly surveyId = signal<string | null>(null);
   public readonly submitting = signal<boolean>(false);
   private readonly internalStep = signal<number>(1);
+
+  // Project context with query-param fallback (same pattern as vote-manage/meeting-manage)
+  public readonly project = computed(() => {
+    const fromContext = this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation();
+    if (fromContext) return fromContext;
+    const projectUid = this.route.snapshot.queryParamMap.get('project_uid');
+    if (projectUid) {
+      return { uid: projectUid, name: '', slug: '' };
+    }
+    return null;
+  });
 
   // Complex computed/toSignal signals
   public readonly isEditMode: Signal<boolean> = this.initIsEditMode();
@@ -222,20 +237,41 @@ export class SurveyManageComponent {
   }
 
   private submitSurvey(): void {
+    const project = this.project();
+    if (!project?.uid) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No project selected',
+      });
+      return;
+    }
+
     this.submitting.set(true);
 
-    // TODO: Implement actual API call
-    setTimeout(() => {
-      const action = this.getSubmitAction();
+    const formValue = this.form().value as SurveyFormValue;
+    const createRequest = buildCreateSurveyRequest(formValue, project.uid);
 
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${this.surveyLabel.singular} ${action} successfully`,
-      });
-      this.submitting.set(false);
-      this.router.navigate(['/surveys']);
-    }, 1000);
+    this.surveyService.createSurvey(createRequest).subscribe({
+      next: () => {
+        const action = this.getSubmitAction();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.surveyLabel.singular} ${action} successfully`,
+        });
+        this.submitting.set(false);
+        this.router.navigate(['/surveys']);
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `Failed to create ${this.surveyLabel.singular.toLowerCase()}: ${error.message || 'Unknown error'}`,
+        });
+        this.submitting.set(false);
+      },
+    });
   }
 
   // Private initializer functions
@@ -324,12 +360,31 @@ Thank you,
             return of(1);
           }
           this.mode.set('create');
+
+          // Preselect committee from query params (e.g., navigating from group detail)
+          this.preselectCommitteeFromQueryParams(queryParams);
+
           return of(internalStep);
         }),
         distinctUntilChanged()
       ),
       { initialValue: 1 }
     );
+  }
+
+  private preselectCommitteeFromQueryParams(queryParams: import('@angular/router').ParamMap): void {
+    const committeeUid = queryParams.get('committee_uid');
+    const committeeName = queryParams.get('committee_name');
+    if (committeeUid) {
+      const currentCommittees = this.form().get('committees')?.value as CommitteeReference[];
+      const alreadySelected = currentCommittees?.some((c) => c.uid === committeeUid);
+      if (!alreadySelected) {
+        const newCommittee: CommitteeReference = { uid: committeeUid, name: committeeName || undefined };
+        this.form()
+          .get('committees')
+          ?.setValue([...(currentCommittees || []), newCommittee]);
+      }
+    }
   }
 
   private canNavigateToStep(step: number): boolean {

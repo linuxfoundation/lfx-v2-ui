@@ -21,12 +21,13 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { generateTempId } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, finalize, of, take, tap } from 'rxjs';
 
+import { MailingListImportComponent } from '../mailing-list-import/mailing-list-import.component';
 import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
@@ -37,6 +38,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
     ButtonComponent,
     CardComponent,
     InputTextComponent,
+    MailingListImportComponent,
     SelectComponent,
     ConfirmDialogModule,
     DynamicDialogModule,
@@ -49,11 +51,13 @@ export class CommitteeMembersManagerComponent implements OnInit {
   // Injected services
   private readonly committeeService = inject(CommitteeService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Input signals
   public committeeId = input.required<string | null>();
+  public projectUid = input<string | null>(null);
   public memberUpdates = input<MemberPendingChanges>({ toAdd: [], toUpdate: [], toDelete: [] });
   public refresh = input<BehaviorSubject<void>>();
 
@@ -72,6 +76,9 @@ export class CommitteeMembersManagerComponent implements OnInit {
 
   // Committee data
   public committee = signal<Committee | null>(null);
+
+  // Tab state: 'search' = manual add, 'mailing-lists' = import from mailing list
+  public activeTab = signal<'search' | 'mailing-lists'>('search');
 
   // Simple computed signals
   public readonly visibleMembers = computed(() => this.membersWithState().filter((m) => m.state !== 'deleted'));
@@ -221,6 +228,73 @@ export class CommitteeMembersManagerComponent implements OnInit {
     if (member?.email) {
       window.open(`mailto:${member.email}`, '_blank');
     }
+  }
+
+  public onMailingListImport(importedMembers: CreateCommitteeMemberRequest[]): void {
+    const existingEmails = new Set(this.visibleMembers().map((m) => m.email.toLowerCase()));
+    let duplicateCount = 0;
+
+    const newMembers: CommitteeMemberWithState[] = [];
+
+    for (const memberData of importedMembers) {
+      if (existingEmails.has(memberData.email.toLowerCase())) {
+        duplicateCount++;
+        continue;
+      }
+
+      existingEmails.add(memberData.email.toLowerCase());
+
+      const newMember: CommitteeMemberWithState = {
+        uid: '',
+        committee_uid: this.committeeId() || '',
+        committee_name: this.committee()?.name || '',
+        email: memberData.email,
+        first_name: memberData.first_name || '',
+        last_name: memberData.last_name || '',
+        job_title: memberData.job_title || undefined,
+        appointed_by: undefined,
+        organization: memberData.organization ? { name: memberData.organization.name || '', website: memberData.organization.website || undefined } : undefined,
+        role: undefined,
+        voting: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        state: 'new' as CommitteeMemberState,
+        tempId: generateTempId(),
+        originalData: undefined,
+      };
+
+      newMembers.push(newMember);
+    }
+
+    if (newMembers.length > 0) {
+      this.membersWithState.update((members) => [...members, ...newMembers]);
+      this.emitMemberUpdates();
+    }
+
+    // Show toast feedback
+    const addedCount = newMembers.length;
+    if (addedCount > 0 && duplicateCount > 0) {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Import Complete',
+        detail: `${addedCount} member(s) imported, ${duplicateCount} duplicate(s) skipped.`,
+      });
+    } else if (addedCount > 0) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Import Complete',
+        detail: `${addedCount} member(s) imported successfully.`,
+      });
+    } else if (duplicateCount > 0) {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'No New Members',
+        detail: `All ${duplicateCount} member(s) already exist in the group.`,
+      });
+    }
+
+    // Switch back to search tab to show imported members
+    this.activeTab.set('search');
   }
 
   private handleEditMemberResult(originalMember: CommitteeMemberWithState, memberData: CreateCommitteeMemberRequest): void {

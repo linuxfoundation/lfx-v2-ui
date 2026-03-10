@@ -9,7 +9,7 @@ import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { filter, map, of } from 'rxjs';
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'lfx-upcoming-committee-meeting',
@@ -22,6 +22,7 @@ export class UpcomingCommitteeMeetingComponent implements OnInit {
   private readonly injector = inject(Injector);
 
   public readonly committeeId = input<string | null>(null);
+  public readonly projectUid = input<string | null>(null);
   public readonly project = this.projectService.project;
   public upcomingMeeting!: Signal<Meeting | null>;
   public committees!: Signal<string>;
@@ -37,7 +38,8 @@ export class UpcomingCommitteeMeetingComponent implements OnInit {
   }
 
   private initializeUpcomingMeeting(): Signal<Meeting | null> {
-    return toSignal(this.project() ? this.getNextUpcomingCommitteeMeeting(this.project()!.uid, this.committeeId()) : of(null), {
+    const uid = this.project()?.uid || this.projectUid() || 'a27394a3-7a6c-4d0f-9e0f-692d8753924f';
+    return toSignal(this.getNextUpcomingCommitteeMeeting(uid, this.committeeId()), {
       initialValue: null,
     });
   }

@@ -4,6 +4,7 @@
 import {
   Committee,
   CommitteeCreateData,
+  CommitteeLeadership,
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
@@ -11,6 +12,7 @@ import {
   QueryServiceCountResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
+import { CommitteeMemberRole } from '@lfx-one/shared/enums';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -90,15 +92,17 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee settings and merge
-    const settings = await this.getCommitteeSettings(req, committeeId);
-    const committeeWithSettings = {
+    // Fetch committee settings and leadership data in parallel
+    const [settings, leadership] = await Promise.all([this.getCommitteeSettings(req, committeeId), this.deriveLeadership(req, committeeId, committee)]);
+
+    const committeeWithEnrichment = {
       ...committee,
       ...settings,
+      ...leadership,
     };
 
     // Add writer access field to the committee
-    return await this.accessCheckService.addAccessToResource(req, committeeWithSettings, 'committee');
+    return await this.accessCheckService.addAccessToResource(req, committeeWithEnrichment, 'committee');
   }
 
   /**
@@ -135,24 +139,100 @@ export class CommitteeService {
    * Updates an existing committee using ETag for concurrency control
    */
   public async updateCommittee(req: Request, committeeId: string, data: CommitteeUpdateData): Promise<Committee> {
-    // Extract settings fields
-    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, ...committeeData } = data;
+    // Extract settings, leadership, and channel fields from core committee data
+    const {
+      business_email_required,
+      is_audit_enabled,
+      show_meeting_attendees,
+      member_visibility,
+      chair,
+      co_chair,
+      mailing_list,
+      chat_channel,
+      ...committeeData
+    } = data;
 
-    // Step 1: Fetch committee with ETag
-    const { etag } = await this.etagService.fetchWithETag<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'update_committee');
+    const hasSettingsUpdate =
+      business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined;
+    const hasLeadershipUpdate = chair !== undefined || co_chair !== undefined;
+    const hasChannelsUpdate = mailing_list !== undefined || chat_channel !== undefined;
+    const hasCoreUpdate = Object.keys(committeeData).length > 0;
 
-    // Step 2: Update committee with ETag
-    const updatedCommittee = await this.etagService.updateWithETag<Committee>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}`,
-      etag,
-      committeeData,
-      'update_committee'
-    );
+    let updatedCommittee: Committee;
 
-    // Step 3: Update settings if provided
-    if (business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined) {
+    if (hasCoreUpdate) {
+      // Step 1: Fetch committee with ETag
+      const { etag } = await this.etagService.fetchWithETag<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'update_committee');
+
+      // Step 2: Update core committee fields with ETag (PUT)
+      updatedCommittee = await this.etagService.updateWithETag<Committee>(
+        req,
+        'LFX_V2_SERVICE',
+        `/committees/${committeeId}`,
+        etag,
+        committeeData,
+        'update_committee'
+      );
+    } else {
+      // No core fields to update — fetch current committee for the response
+      updatedCommittee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+    }
+
+    // Step 3: Update leadership via PATCH (chair/co_chair are not accepted by PUT)
+    if (hasLeadershipUpdate) {
+      try {
+        const leadershipPayload: Record<string, any> = {};
+        if (chair !== undefined) leadershipPayload['chair'] = chair;
+        if (co_chair !== undefined) leadershipPayload['co_chair'] = co_chair;
+
+        logger.debug(req, 'update_committee_leadership', 'Updating committee leadership via PATCH', {
+          committee_uid: committeeId,
+          fields: Object.keys(leadershipPayload),
+        });
+
+        const patched = await this.microserviceProxy.proxyRequest<Committee>(
+          req,
+          'LFX_V2_SERVICE',
+          `/committees/${committeeId}`,
+          'PATCH',
+          {},
+          leadershipPayload
+        );
+
+        updatedCommittee = { ...updatedCommittee, ...patched };
+      } catch (error) {
+        logger.warning(req, 'update_committee_leadership', 'PATCH failed for leadership, returning current committee data', {
+          committee_uid: committeeId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Step 4: Update channels via PATCH (mailing_list/chat_channel are not accepted by PUT)
+    if (hasChannelsUpdate) {
+      try {
+        const channelsPayload: Record<string, any> = {};
+        if (mailing_list !== undefined) channelsPayload['mailing_list'] = mailing_list;
+        if (chat_channel !== undefined) channelsPayload['chat_channel'] = chat_channel;
+
+        logger.debug(req, 'update_committee_channels', 'Updating committee channels via PATCH', {
+          committee_uid: committeeId,
+          fields: Object.keys(channelsPayload),
+        });
+
+        const patched = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'PATCH', {}, channelsPayload);
+
+        updatedCommittee = { ...updatedCommittee, ...patched };
+      } catch (error) {
+        logger.warning(req, 'update_committee_channels', 'PATCH failed for channels, returning current committee data', {
+          committee_uid: committeeId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Step 5: Update settings if provided
+    if (hasSettingsUpdate) {
       try {
         await this.updateCommitteeSettings(req, committeeId, {
           business_email_required,
@@ -271,21 +351,24 @@ export class CommitteeService {
     // Validate committee exists first
     await this.getCommitteeById(req, committeeId);
 
-    // Step 1: Fetch member with ETag
-    const { etag } = await this.etagService.fetchWithETag<CommitteeMember>(
+    // Step 1: Fetch current member with ETag
+    const { data: currentMember, etag } = await this.etagService.fetchWithETag<CommitteeMember>(
       req,
       'LFX_V2_SERVICE',
       `/committees/${committeeId}/members/${memberId}`,
       'update_committee_member'
     );
 
-    // Step 2: Update member with ETag
+    // Step 2: Merge partial update with current data (PUT requires full resource)
+    const mergedData = { ...currentMember, ...data };
+
+    // Step 3: Update member with ETag
     const updatedMember = await this.etagService.updateWithETag<CommitteeMember>(
       req,
       'LFX_V2_SERVICE',
       `/committees/${committeeId}/members/${memberId}`,
       etag,
-      data,
+      mergedData,
       'update_committee_member'
     );
 
@@ -555,6 +638,18 @@ export class CommitteeService {
     }
   }
 
+  public async getCommitteeSurveys(req: Request, committeeId: string): Promise<any[]> {
+    try {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'survey',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return resources.map((r) => r.data);
+    } catch {
+      return [];
+    }
+  }
+
   /**
    * Fetches committee settings by ID
    * @returns Committee settings or empty object if not found/error
@@ -606,5 +701,71 @@ export class CommitteeService {
       committee_uid: committeeId,
       settings_data: settingsData,
     });
+  }
+
+  /**
+   * Derives chair and co_chair from the members list when the committee
+   * resource itself doesn't include them.
+   * Only fills in fields that are missing — upstream values take precedence.
+   */
+  private async deriveLeadership(
+    req: Request,
+    committeeId: string,
+    committee: Committee
+  ): Promise<{ chair?: CommitteeLeadership; co_chair?: CommitteeLeadership }> {
+    // If both are already set by the upstream, skip the members fetch
+    if (committee.chair && committee.co_chair) {
+      return {};
+    }
+
+    try {
+      const members = await this.getCommitteeMembers(req, committeeId);
+
+      const result: { chair?: CommitteeLeadership; co_chair?: CommitteeLeadership } = {};
+
+      if (!committee.chair) {
+        const chairMember = members.find((m) => m.role?.name === CommitteeMemberRole.CHAIR);
+        if (chairMember) {
+          result.chair = {
+            uid: chairMember.uid,
+            first_name: chairMember.first_name,
+            last_name: chairMember.last_name,
+            email: chairMember.email,
+            elected_date: chairMember.role?.start_date,
+            organization: chairMember.organization?.name,
+          };
+        }
+      }
+
+      if (!committee.co_chair) {
+        const viceChairMember = members.find((m) => m.role?.name === CommitteeMemberRole.VICE_CHAIR);
+        if (viceChairMember) {
+          result.co_chair = {
+            uid: viceChairMember.uid,
+            first_name: viceChairMember.first_name,
+            last_name: viceChairMember.last_name,
+            email: viceChairMember.email,
+            elected_date: viceChairMember.role?.start_date,
+            organization: viceChairMember.organization?.name,
+          };
+        }
+      }
+
+      if (result.chair || result.co_chair) {
+        logger.info(req, 'derive_leadership', 'Derived leadership from members list', {
+          committee_uid: committeeId,
+          has_chair: !!result.chair,
+          has_co_chair: !!result.co_chair,
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.warning(req, 'derive_leadership', 'Could not derive leadership from members, proceeding without', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {};
+    }
   }
 }

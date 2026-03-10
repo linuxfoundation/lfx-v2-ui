@@ -921,6 +921,30 @@ export class CommitteeController {
     }
   }
 
+  /**
+   * GET /committees/:id/surveys
+   */
+  public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    if (!committeeId) {
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'get_committee_surveys',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
+      return;
+    }
+    const startTime = logger.startOperation(req, 'get_committee_surveys', { committee_id: committeeId });
+    try {
+      const surveys = await this.committeeService.getCommitteeSurveys(req, committeeId);
+      logger.success(req, 'get_committee_surveys', startTime, { survey_count: surveys.length });
+      res.json(surveys);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── Application Endpoints (join_mode = 'apply') ──────────────────────────
 
   /**

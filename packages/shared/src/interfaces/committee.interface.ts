@@ -318,6 +318,10 @@ export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {
   chair?: CommitteeLeadership | null;
   /** Assign or remove co-chair */
   co_chair?: CommitteeLeadership | null;
+  /** Update mailing list (sent via PATCH, not PUT) */
+  mailing_list?: GroupMailingList;
+  /** Update chat channel (sent via PATCH, not PUT) */
+  chat_channel?: GroupChatChannel;
 }
 
 /**

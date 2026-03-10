@@ -25,6 +25,7 @@ import {
   ImportantLinkFormValue,
   Meeting,
   MeetingAttachment,
+  MeetingCommittee,
   MeetingRegistrant,
   PendingAttachment,
   PresignAttachmentResponse,
@@ -116,7 +117,18 @@ export class MeetingManageComponent {
 
   // Validation signals for template
   public readonly canProceed = signal<boolean>(false);
-  public readonly project = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  public readonly project = computed(() => {
+    const fromContext = this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation();
+    if (fromContext) return fromContext;
+
+    // Fallback: use project_uid from query params (e.g., when navigating from group detail)
+    const projectUid = this.route.snapshot.queryParamMap.get('project_uid');
+    if (projectUid) {
+      return { uid: projectUid, name: '', slug: '' };
+    }
+
+    return null;
+  });
   public readonly canGoNext = computed(() => this.currentStep() + 1 < this.totalSteps && this.canNavigateToStep(this.currentStep() + 1));
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly isFirstStep = computed(() => this.currentStep() === 1);
@@ -454,7 +466,7 @@ export class MeetingManageComponent {
     }
 
     return {
-      project_uid: this.projectContextService.selectedProject()?.uid || this.projectContextService.selectedFoundation()?.uid || '',
+      project_uid: this.project()?.uid || '',
       title: formValue.title,
       description: formValue.description || '',
       start_time: startDateTime,
@@ -672,11 +684,22 @@ export class MeetingManageComponent {
           }
 
           this.mode.set('create');
+          this.preselectCommitteeFromQueryParams();
           return of(null);
         })
       ),
       { initialValue: null }
     );
+  }
+
+  private preselectCommitteeFromQueryParams(): void {
+    const snapshot = this.route.snapshot.queryParamMap;
+    const committeeUid = snapshot.get('committee_uid');
+    const committeeName = snapshot.get('committee_name');
+    if (committeeUid) {
+      const committee: MeetingCommittee = { uid: committeeUid, name: committeeName || undefined };
+      this.form().get('committees')?.setValue([committee]);
+    }
   }
 
   private populateFormWithMeetingData(meeting: Meeting): void {
@@ -938,7 +961,7 @@ export class MeetingManageComponent {
     const form = this.form();
     const meetingType = form.get('meeting_type')?.value;
     const startDate = form.get('startDate')?.value;
-    const project = this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation();
+    const project = this.project();
 
     // Only auto-generate if we have meeting type, start date, and the title is empty
     const currentTitle = form.get('title')?.value;

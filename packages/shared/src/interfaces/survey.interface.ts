@@ -90,6 +90,35 @@ export interface Survey {
 }
 
 /**
+ * Request payload for creating a new survey
+ * @description Sent to POST /surveys to create a survey
+ */
+export interface CreateSurveyRequest {
+  /** Survey title */
+  survey_title: string;
+  /** V2 project UID the survey belongs to */
+  project_uid: string;
+  /** Committee UIDs to target */
+  committee_uids: string[];
+  /** Survey cutoff/close date in ISO format */
+  survey_cutoff_date: string;
+  /** Whether this is an NPS survey */
+  is_nps_survey: boolean;
+  /** Distribution method: immediate or scheduled */
+  distribution_method: 'immediate' | 'scheduled';
+  /** Scheduled send date in ISO format (only when distribution_method is 'scheduled') */
+  scheduled_date?: string;
+  /** Reminder type: automatic or manual */
+  reminder_type: 'automatic' | 'manual';
+  /** Reminder frequency in days (only when reminder_type is 'automatic') */
+  reminder_frequency_days?: number;
+  /** Email subject line */
+  email_subject: string;
+  /** Email body content */
+  email_body: string;
+}
+
+/**
  * NPS breakdown data
  * @description Breakdown of NPS responses into promoters, passives, and detractors
  */

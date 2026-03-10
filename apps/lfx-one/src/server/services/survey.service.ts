@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
+import { CreateSurveyRequest, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -48,6 +48,26 @@ export class SurveyService {
     });
 
     return surveys;
+  }
+
+  /**
+   * Creates a new survey
+   */
+  public async createSurvey(req: Request, surveyData: CreateSurveyRequest): Promise<Survey> {
+    logger.debug(req, 'create_survey', 'Creating survey', {
+      project_uid: surveyData.project_uid,
+      committee_count: surveyData.committee_uids?.length,
+    });
+
+    const newSurvey = await this.microserviceProxy.proxyRequest<Survey>(req, 'LFX_V2_SERVICE', '/surveys', 'POST', undefined, surveyData, {
+      ['X-Sync']: 'true',
+    });
+
+    logger.debug(req, 'create_survey', 'Survey created successfully', {
+      survey_id: newSurvey.id,
+    });
+
+    return newSurvey;
   }
 
   /**

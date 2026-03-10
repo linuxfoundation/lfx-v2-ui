@@ -2,7 +2,43 @@
 // SPDX-License-Identifier: MIT
 
 import { SurveyResponseStatus, SurveyStatus } from '../enums/survey.enum';
-import { Survey, UserSurvey } from '../interfaces/survey.interface';
+import { CreateSurveyRequest, Survey, UserSurvey } from '../interfaces/survey.interface';
+
+/**
+ * Survey form value shape matching the survey-manage form
+ */
+export interface SurveyFormValue {
+  committees: { uid: string; name?: string }[];
+  surveyTemplate: string;
+  distributionMethod: 'immediate' | 'scheduled';
+  scheduledDate: Date | null;
+  cutoffDate: Date | null;
+  reminderType: 'automatic' | 'manual';
+  reminderFrequency: string;
+  emailSubject: string;
+  emailBody: string;
+}
+
+/**
+ * Build a CreateSurveyRequest from form values and project UID
+ */
+export function buildCreateSurveyRequest(formValue: SurveyFormValue, projectUid: string): CreateSurveyRequest {
+  const isNps = formValue.surveyTemplate === 'nps';
+
+  return {
+    survey_title: isNps ? 'NPS Survey' : 'Working Group Survey',
+    project_uid: projectUid,
+    committee_uids: formValue.committees.map((c) => c.uid),
+    survey_cutoff_date: formValue.cutoffDate ? formValue.cutoffDate.toISOString() : '',
+    is_nps_survey: isNps,
+    distribution_method: formValue.distributionMethod,
+    ...(formValue.distributionMethod === 'scheduled' && formValue.scheduledDate ? { scheduled_date: formValue.scheduledDate.toISOString() } : {}),
+    reminder_type: formValue.reminderType,
+    ...(formValue.reminderType === 'automatic' ? { reminder_frequency_days: parseInt(formValue.reminderFrequency, 10) || 7 } : {}),
+    email_subject: formValue.emailSubject,
+    email_body: formValue.emailBody,
+  };
+}
 
 /**
  * Combined survey status type

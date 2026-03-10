@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { HttpInterceptorFn, provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions, withIncrementalHydration } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -10,11 +10,13 @@ import { lfxCardTheme, lfxDataTableTheme } from '@lfx-one/shared';
 import { lfxPreset } from '@linuxfoundation/lfx-ui-core';
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
+import { environment } from '@environments/environment';
 import { authenticationInterceptor } from '@shared/interceptors/authentication.interceptor';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { DialogService } from 'primeng/dynamicdialog';
 
+import { devMockInterceptor } from './core/interceptors/dev-mock.interceptor';
 import { routes } from './app.routes';
 import { provideDataDogRum } from './shared/providers/datadog-rum.provider';
 import { provideFeatureFlags } from './shared/providers/feature-flag.provider';
@@ -31,12 +33,18 @@ const customPreset = definePreset(Aura, {
   } as any,
 });
 
+// Build interceptor chain — dev mock interceptor is excluded from production builds
+const httpInterceptors: HttpInterceptorFn[] = [authenticationInterceptor];
+if (!environment.production) {
+  httpInterceptors.push(devMockInterceptor);
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes, withPreloading(CustomPreloadingStrategy), withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideClientHydration(withEventReplay(), withIncrementalHydration(), withHttpTransferCacheOptions({ includeHeaders: ['Authorization'] })),
-    provideHttpClient(withFetch(), withInterceptors([authenticationInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors(httpInterceptors)),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {

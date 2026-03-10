@@ -6,11 +6,13 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
 import { SelectComponent } from '@components/select/select.component';
-import { Committee, CommitteeLeadership, CommitteeMember, LeadershipRole } from '@lfx-one/shared/interfaces';
+import { CommitteeMemberRole } from '@lfx-one/shared/enums';
+import { Committee, CommitteeLeadership, CommitteeMember, CreateCommitteeMemberRequest, LeadershipRole } from '@lfx-one/shared/interfaces';
 import { formatDateToISOString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { catchError, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-assign-leadership-dialog',
@@ -77,35 +79,57 @@ export class AssignLeadershipDialogComponent {
       organization: selectedMember.organization?.name,
     };
 
-    const payload = this.role === 'chair' ? { chair: leadership } : { co_chair: leadership };
+    const roleName = this.role === 'chair' ? CommitteeMemberRole.CHAIR : CommitteeMemberRole.VICE_CHAIR;
+    const roleUpdate: Partial<CreateCommitteeMemberRequest> = {
+      role: {
+        name: roleName,
+        start_date: formatDateToISOString(this.form.value.elected_date) || null,
+      },
+    };
 
-    this.committeeService.updateCommittee(this.committee.uid, payload).subscribe({
-      next: () => {
-        this.submitting.set(false);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: `${this.roleLabel} assigned successfully`,
-        });
-        this.dialogRef.close(true);
-      },
-      error: () => {
-        this.submitting.set(false);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: `Failed to assign ${this.roleLabel.toLowerCase()}`,
-        });
-      },
-    });
+    // Step 1: Update the selected member's role to Chair/Vice Chair (persistent)
+    this.committeeService
+      .updateCommitteeMember(this.committee.uid, memberUid, roleUpdate)
+      .pipe(
+        // Step 2: If previous leader is a different person, clear their role
+        switchMap(() => {
+          if (this.currentLeader && this.currentLeader.uid !== memberUid) {
+            return this.committeeService
+              .updateCommitteeMember(this.committee.uid, this.currentLeader.uid, { role: { name: CommitteeMemberRole.NONE } })
+              .pipe(catchError(() => of(null)));
+          }
+          return of(null);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: `${this.roleLabel} assigned successfully`,
+          });
+          this.dialogRef.close({ role: this.role, leadership });
+        },
+        error: (err) => {
+          console.error('[AssignLeadership] Failed to assign:', err);
+          this.submitting.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: `Failed to assign ${this.roleLabel.toLowerCase()}`,
+          });
+        },
+      });
   }
 
   public onRemove(): void {
+    if (!this.currentLeader) return;
+
     this.removing.set(true);
 
-    const payload = this.role === 'chair' ? { chair: null } : { co_chair: null };
-
-    this.committeeService.updateCommittee(this.committee.uid, payload).subscribe({
+    // Clear the current leader's role back to None
+    this.committeeService.updateCommitteeMember(this.committee.uid, this.currentLeader.uid, { role: { name: CommitteeMemberRole.NONE } }).subscribe({
       next: () => {
         this.removing.set(false);
         this.messageService.add({
@@ -113,7 +137,7 @@ export class AssignLeadershipDialogComponent {
           summary: 'Success',
           detail: `${this.roleLabel} removed`,
         });
-        this.dialogRef.close(true);
+        this.dialogRef.close({ role: this.role, leadership: null });
       },
       error: () => {
         this.removing.set(false);

@@ -4,7 +4,7 @@
 import { Component, computed, effect, inject, signal, Signal, untracked, ViewChild, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -41,8 +41,9 @@ import {
   isOtherClass,
 } from '@lfx-one/shared/constants';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Meeting, MyCommittee } from '@lfx-one/shared/interfaces';
+import { CommitteeLeadership, GroupsIOMailingList, Meeting, MyCommittee, Survey } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
+import { MailingListService } from '@services/mailing-list.service';
 import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectService } from '@services/project.service';
@@ -102,6 +103,7 @@ export class CommitteeViewComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
+  private readonly mailingListService = inject(MailingListService);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
@@ -115,6 +117,7 @@ export class CommitteeViewComponent {
   public membersLoading: WritableSignal<boolean>;
   public loading: WritableSignal<boolean>;
   public error: WritableSignal<boolean>;
+  public errorMessage: WritableSignal<string>;
   public refresh: BehaviorSubject<void>;
 
   // Governance-specific mock data
@@ -137,9 +140,13 @@ export class CommitteeViewComponent {
   public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]>;
   public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null>;
 
-  // Meeting and document writables
+  // Meeting, document, and survey writables
   public committeeMeetings: WritableSignal<Meeting[]>;
   public documents: WritableSignal<CommitteeDocument[]>;
+  public committeeSurveys: WritableSignal<Survey[]>;
+
+  // Delete state
+  public isDeleting = signal<boolean>(false);
 
   // Collaboration inline-edit state
   public editingCollaboration = signal<boolean>(false);
@@ -158,8 +165,8 @@ export class CommitteeViewComponent {
     chatChannelPlatform: 'slack',
   });
 
-  // ── Computed / Read-only Signals ──────────────────────────────────────────
-  public committee: Signal<Committee | null>;
+  // ── Committee (writable so leadership updates apply instantly) ────────────
+  public committee: WritableSignal<Committee | null>;
   public formattedCreatedDate: Signal<string>;
   public formattedUpdatedDate: Signal<string>;
   public categorySeverity: Signal<TagSeverity>;
@@ -216,6 +223,10 @@ export class CommitteeViewComponent {
   public isMembersTabVisible: Signal<boolean>;
   public isVotesTabVisible: Signal<boolean>;
 
+  // Linked mailing lists
+  public linkedMailingLists: WritableSignal<GroupsIOMailingList[]>;
+  public loadingMailingLists: WritableSignal<boolean>;
+
   // Document computed signals
   public documentFiles: Signal<CommitteeDocument[]>;
   public documentLinks: Signal<CommitteeDocument[]>;
@@ -228,6 +239,7 @@ export class CommitteeViewComponent {
     // If signals like committeeMeetings or documents aren't initialized yet,
     // calling .set() on them throws: TypeError: Cannot read properties of undefined (reading 'set')
     this.error = signal<boolean>(false);
+    this.errorMessage = signal<string>('');
     this.refresh = new BehaviorSubject<void>(undefined);
     this.members = signal<CommitteeMember[]>([]);
     this.membersLoading = signal<boolean>(true);
@@ -259,8 +271,16 @@ export class CommitteeViewComponent {
     // Meeting signals
     this.committeeMeetings = signal<Meeting[]>([]);
 
-    // ── 2. Now safe to call initializeCommittee() which subscribes via toSignal() ──
-    this.committee = this.initializeCommittee();
+    // Survey signals
+    this.committeeSurveys = signal<Survey[]>([]);
+
+    // Linked mailing lists
+    this.linkedMailingLists = signal<GroupsIOMailingList[]>([]);
+    this.loadingMailingLists = signal<boolean>(false);
+
+    // ── 2. Now safe to call initializeCommittee() which subscribes and sets this.committee ──
+    this.committee = signal<Committee | null>(null);
+    this.initializeCommittee();
 
     // ── 3. Computed signals (depend on committee/members signals above) ──
     this.formattedCreatedDate = this.initializeFormattedCreatedDate();
@@ -460,10 +480,46 @@ export class CommitteeViewComponent {
       },
     }) as DynamicDialogRef;
 
-    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+    dialogRef.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
       if (result) {
-        this.refresh.next();
+        // Immediately merge leadership data into the committee signal so UI updates instantly.
+        // Do NOT call refresh.next() — it triggers a full re-fetch with loading skeleton,
+        // which overwrites the optimistic update if the upstream GET doesn't return chair/co_chair.
+        const current = this.committee();
+        if (current) {
+          const updated = { ...current };
+          if (result.role === 'chair') {
+            updated.chair = result.leadership;
+          } else {
+            updated.co_chair = result.leadership;
+          }
+          this.committee.set(updated);
+        }
       }
+    });
+  }
+
+  public createVote(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/votes/create'], {
+      queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
+    });
+  }
+
+  public createMeeting(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/meetings/create'], {
+      queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
+    });
+  }
+
+  public createSurvey(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/surveys/create'], {
+      queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
     });
   }
 
@@ -527,6 +583,42 @@ export class CommitteeViewComponent {
     });
   }
 
+  public deleteGroup(): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete the ${this.committeeLabel.singular.toLowerCase()} "${committee.name}"? This action cannot be undone.`,
+      header: `Delete ${this.committeeLabel.singular}`,
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
+      accept: () => {
+        this.isDeleting.set(true);
+        this.committeeService.deleteCommittee(committee.uid).subscribe({
+          next: () => {
+            this.isDeleting.set(false);
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Deleted',
+              detail: `${this.committeeLabel.singular} "${committee.name}" deleted successfully`,
+            });
+            this.router.navigate(['/groups']);
+          },
+          error: () => {
+            this.isDeleting.set(false);
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: `Failed to delete ${this.committeeLabel.singular.toLowerCase()}`,
+            });
+          },
+        });
+      },
+    });
+  }
+
   // ── Collaboration inline-edit methods ──────────────────────────────
   public startEditCollaboration(): void {
     const c = this.committee();
@@ -572,28 +664,35 @@ export class CommitteeViewComponent {
         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Collaboration channels updated' });
         this.refresh.next(); // re-fetch committee to reflect changes
       },
-      error: (err) => {
+      error: () => {
         this.collabSaving.set(false);
-        console.error('Failed to update collaboration channels:', err);
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update collaboration channels' });
       },
     });
   }
 
-  private initializeCommittee(): Signal<Committee | null> {
-    return toSignal(
-      combineLatest([this.route.paramMap, this.refresh]).pipe(
+  private initializeCommittee(): void {
+    combineLatest([this.route.paramMap, this.refresh])
+      .pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
             this.error.set(true);
+            this.errorMessage.set('No committee ID provided');
             return of(null);
           }
 
+          // Reset state on each fetch attempt (e.g., after refresh or route change)
+          this.error.set(false);
+          this.errorMessage.set('');
+          this.loading.set(true);
+
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
-            catchError(() => {
-              console.error('Failed to load committee');
+            catchError((err) => {
+              const status = err?.status || err?.error?.status || '';
+              const msg = err?.error?.message || err?.message || 'Unknown error';
               this.error.set(true);
+              this.errorMessage.set(status ? `${status}: ${msg}` : msg);
               this.loading.set(false);
               return of(null);
             })
@@ -623,25 +722,32 @@ export class CommitteeViewComponent {
             })
           );
 
-          return combineLatest([committeeQuery, membersQuery, meetingsQuery, documentsQuery]).pipe(
-            tap(([committee, members, meetings, documents]) => {
+          // Fetch surveys for this committee
+          const surveysQuery = this.committeeService.getCommitteeSurveys(committeeId).pipe(catchError(() => of([] as Survey[])));
+
+          return combineLatest([committeeQuery, membersQuery, meetingsQuery, documentsQuery, surveysQuery]).pipe(
+            tap(([committee, members, meetings, documents, surveys]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
               this.documents.set(Array.isArray(documents) ? documents : []);
+              this.committeeSurveys.set(Array.isArray(surveys) ? surveys : []);
               this.membersLoading.set(false);
 
               // Load group-type-specific data from APIs
               if (committee) {
                 this.loadGroupTypeData(committeeId, committee);
+                this.loadLinkedMailingLists(committeeId);
               }
             }),
             map(([committee]) => committee),
             finalize(() => this.loading.set(false))
           );
-        })
-      ),
-      { initialValue: null }
-    );
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe((committee) => {
+        this.committee.set(committee);
+      });
   }
 
   private initializeFormattedCreatedDate(): Signal<string> {
@@ -694,13 +800,15 @@ export class CommitteeViewComponent {
       });
     }
 
-    // ── working-group: activity, contributors, deliverables ──
+    // ── working-group: votes, activity, contributors, deliverables ──
     if (cls === 'working-group') {
       forkJoin([
+        this.committeeService.getCommitteeVotes(committeeId),
         this.committeeService.getCommitteeActivity(committeeId),
         this.committeeService.getCommitteeContributors(committeeId),
         this.committeeService.getCommitteeDeliverables(committeeId),
-      ]).subscribe(([activity, contributors, deliverables]) => {
+      ]).subscribe(([votes, activity, contributors, deliverables]) => {
+        this.openVotes.set(votes);
         this.recentActivity.set(activity);
         this.topContributors.set(contributors);
         this.deliverables.set(deliverables);
@@ -728,6 +836,24 @@ export class CommitteeViewComponent {
     }
 
     // ── other: no type-specific cards (just meetings, docs, members) ──
+  }
+
+  private loadLinkedMailingLists(committeeId: string): void {
+    const projectUid = this.projectService.project()?.uid;
+    if (!projectUid) return;
+
+    this.loadingMailingLists.set(true);
+    this.mailingListService
+      .getMailingListsByProject(projectUid)
+      .pipe(
+        take(1),
+        map((lists) => lists.filter((list) => list.committees?.some((c) => c.uid === committeeId))),
+        catchError(() => of([])),
+        finalize(() => this.loadingMailingLists.set(false))
+      )
+      .subscribe((lists) => {
+        this.linkedMailingLists.set(lists);
+      });
   }
 
   private initializeMyCommittees(): Signal<MyCommittee[]> {
