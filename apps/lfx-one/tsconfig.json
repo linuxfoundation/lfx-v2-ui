@@ -29,9 +29,7 @@
       "@environments/*": ["./src/environments/*"],
       "@lfx-one/shared": ["../../packages/shared/src"],
       "@lfx-one/shared/*": ["../../packages/shared/src/*"],
-      "@modules/*": ["./src/app/modules/*"],
-      "@mock-data": ["./e2e/fixtures/mock-data"],
-      "@mock-data/*": ["./e2e/fixtures/mock-data/*"]
+      "@modules/*": ["./src/app/modules/*"]
     }
   },
   "angularCompilerOptions": {

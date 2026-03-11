@@ -120,12 +120,12 @@ export class CommitteeViewComponent {
   public errorMessage: WritableSignal<string>;
   public refresh: BehaviorSubject<void>;
 
-  // Governance-specific mock data
+  // Governance-specific data
   public openVotes: WritableSignal<CommitteeVote[]>;
   public budgetSummary: WritableSignal<CommitteeBudgetSummary | null>;
   public recentResolutions: WritableSignal<CommitteeResolution[]>;
 
-  // Collaboration-specific mock data
+  // Collaboration-specific data
   public recentActivity: WritableSignal<CommitteeActivity[]>;
   public topContributors: WritableSignal<CommitteeContributor[]>;
 
@@ -235,11 +235,11 @@ export class CommitteeViewComponent {
 
   public constructor() {
     // ── 1. Initialize ALL writable signals FIRST ──────────────────────
-    // This must happen before initializeCommittee() because the mock data
-    // interceptor returns synchronous responses (via `of()`), which causes
-    // the switchMap callback to fire immediately during toSignal() construction.
-    // If signals like committeeMeetings or documents aren't initialized yet,
-    // calling .set() on them throws: TypeError: Cannot read properties of undefined (reading 'set')
+    // This must happen before initializeCommittee() because synchronous
+    // Observable responses (via `of()`) cause the switchMap callback to fire
+    // immediately during toSignal() construction. If signals like
+    // committeeMeetings or documents aren't initialized yet, calling .set()
+    // on them throws: TypeError: Cannot read properties of undefined (reading 'set')
     this.error = signal<boolean>(false);
     this.errorMessage = signal<string>('');
     this.refresh = new BehaviorSubject<void>(undefined);
@@ -711,45 +711,41 @@ export class CommitteeViewComponent {
             })
           );
 
-          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(
-            catchError(() => of([]))
-          );
+          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
 
           // Fetch documents for this committee
-          const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(
-            catchError(() => of([]))
-          );
+          const documentsQuery = this.committeeService.getCommitteeDocuments(committeeId).pipe(catchError(() => of([])));
 
           // Fetch surveys for this committee
           const surveysQuery = this.committeeService.getCommitteeSurveys(committeeId).pipe(catchError(() => of([] as Survey[])));
 
           // Fetch meetings after the committee resolves so we can use its project_uid.
           // projectService.project() may not be populated yet on direct navigation to this page.
-          return committeeQuery.pipe(
-            switchMap((committee) => {
-              const projectUid = committee?.project_uid || this.projectService.project()?.uid;
-              const meetingsQuery = projectUid
-                ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([])))
-                : of([]);
-              return combineLatest([of(committee), membersQuery, meetingsQuery, documentsQuery, surveysQuery]);
-            }),
-          ).pipe(
-            tap(([committee, members, meetings, documents, surveys]) => {
-              this.members.set(Array.isArray(members) ? members : []);
-              this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
-              this.documents.set(Array.isArray(documents) ? documents : []);
-              this.committeeSurveys.set(Array.isArray(surveys) ? surveys : []);
-              this.membersLoading.set(false);
+          return committeeQuery
+            .pipe(
+              switchMap((committee) => {
+                const projectUid = committee?.project_uid || this.projectService.project()?.uid;
+                const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
+                return combineLatest([of(committee), membersQuery, meetingsQuery, documentsQuery, surveysQuery]);
+              })
+            )
+            .pipe(
+              tap(([committee, members, meetings, documents, surveys]) => {
+                this.members.set(Array.isArray(members) ? members : []);
+                this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
+                this.documents.set(Array.isArray(documents) ? documents : []);
+                this.committeeSurveys.set(Array.isArray(surveys) ? surveys : []);
+                this.membersLoading.set(false);
 
-              // Load group-type-specific data from APIs
-              if (committee) {
-                this.loadGroupTypeData(committeeId, committee);
-                this.loadLinkedMailingLists(committeeId);
-              }
-            }),
-            map(([committee]) => committee),
-            finalize(() => this.loading.set(false))
-          );
+                // Load group-type-specific data from APIs
+                if (committee) {
+                  this.loadGroupTypeData(committeeId, committee);
+                  this.loadLinkedMailingLists(committeeId);
+                }
+              }),
+              map(([committee]) => committee),
+              finalize(() => this.loading.set(false))
+            );
         }),
         takeUntilDestroyed()
       )
