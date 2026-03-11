@@ -116,7 +116,10 @@ export class MarketingOverviewComponent {
       combineLatest([toObservable(this.browserReady), this.selectedFoundationSlug$]).pipe(
         filter(([ready, slug]) => ready && !!slug),
         map(([, slug]) => slug),
-        tap(() => this.marketingDataLoading.set(true)),
+        tap(() => {
+          this.marketingDataLoading.set(true);
+          this.activeDrawer.set(null);
+        }),
         switchMap((foundationSlug) =>
           forkJoin({
             webActivities: this.analyticsService.getWebActivitiesSummary(foundationSlug),

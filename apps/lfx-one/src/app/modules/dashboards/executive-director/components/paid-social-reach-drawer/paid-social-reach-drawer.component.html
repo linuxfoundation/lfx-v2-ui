@@ -59,17 +59,15 @@
     }
 
     <!-- Channel Breakdown -->
-    @if (data().channelGroups.length > 0) {
+    @if (data().channelGroups.length > 1) {
       <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="paid-social-reach-drawer-channels-section">
         <div class="flex flex-col gap-1">
           <h3 class="text-sm font-semibold text-gray-900">Impressions by Channel</h3>
           <p class="text-sm text-gray-600">Paid ad distribution across channels over the last 6 months</p>
         </div>
-        @if (data().channelGroups.length > 1) {
-          <div class="h-[240px]" data-testid="paid-social-reach-drawer-channels-chart">
-            <lfx-chart type="bar" [data]="channelChartData()" [options]="channelChartOptions" height="100%"></lfx-chart>
-          </div>
-        }
+        <div class="h-[240px]" data-testid="paid-social-reach-drawer-channels-chart">
+          <lfx-chart type="bar" [data]="channelChartData()" [options]="channelChartOptions" height="100%"></lfx-chart>
+        </div>
       </div>
     }
   </div>

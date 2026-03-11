@@ -54,17 +54,15 @@
     }
 
     <!-- Domain Breakdown -->
-    @if (data().domainGroups.length > 0) {
+    @if (data().domainGroups.length > 1) {
       <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="website-visits-drawer-domains-section">
         <div class="flex flex-col gap-1">
           <h3 class="text-sm font-semibold text-gray-900">Sessions by Domain</h3>
           <p class="text-sm text-gray-600">Web traffic distribution across project domains</p>
         </div>
-        @if (data().domainGroups.length > 1) {
-          <div class="h-[240px]" data-testid="website-visits-drawer-domains-chart">
-            <lfx-chart type="bar" [data]="domainChartData()" [options]="domainChartOptions" height="100%"></lfx-chart>
-          </div>
-        }
+        <div class="h-[240px]" data-testid="website-visits-drawer-domains-chart">
+          <lfx-chart type="bar" [data]="domainChartData()" [options]="domainChartOptions" height="100%"></lfx-chart>
+        </div>
       </div>
     }
   </div>
