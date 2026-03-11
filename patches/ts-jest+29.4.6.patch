@@ -1,0 +1,18 @@
+diff --git a/node_modules/ts-jest/dist/transformers/hoist-jest.js b/node_modules/ts-jest/dist/transformers/hoist-jest.js
+index 1234567..abcdefg 100644
+--- a/node_modules/ts-jest/dist/transformers/hoist-jest.js
++++ b/node_modules/ts-jest/dist/transformers/hoist-jest.js
+@@ -69,7 +69,12 @@ function factory({ configSet }) {
+     };
+     const createVisitor = (ctx, _) => {
+         const visitor = (node) => {
+-            const resultNode = ts.visitEachChild(node, visitor, ctx);
++            let resultNode;
++            try {
++                resultNode = ts.visitEachChild(node, visitor, ctx);
++            } catch {
++                return node;
++            }
+             // Since we use `visitEachChild`, we go upwards tree so all children node elements are checked first
+             if (ts.isBlock(resultNode) && canHoistInBlockScope(resultNode)) {
+                 const newNodeArrayStatements = ts.factory.createNodeArray(sortStatements(resultNode.statements));
