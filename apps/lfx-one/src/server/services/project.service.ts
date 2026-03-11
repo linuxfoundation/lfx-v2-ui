@@ -1783,7 +1783,7 @@ export class ProjectService {
   /**
    * Get email click-through rate data from Snowflake
    * Queries PLATINUM.EMAIL_MARKETING_OVERALL_KPIS for monthly CTR trend
-   * @param foundationSlug - Foundation slug to filter by (uses "All Projects" row)
+   * @param foundationSlug - Foundation slug used to filter metrics to the foundation and its related projects
    * @returns Email CTR response with monthly trend and change percentage
    */
   public async getEmailCtr(foundationSlug: string): Promise<EmailCtrResponse> {
