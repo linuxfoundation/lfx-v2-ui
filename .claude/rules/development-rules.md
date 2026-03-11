@@ -56,8 +56,9 @@ When building or modifying API integrations, always check the upstream microserv
 | Voting        | [lfx-v2-voting-service](https://github.com/linuxfoundation/lfx-v2-voting-service)             |
 | Surveys       | [lfx-v2-survey-service](https://github.com/linuxfoundation/lfx-v2-survey-service)             |
 
-- Use `gh api repos/linuxfoundation/<repo>/contents/<path>` to browse and read files
-- Check route definitions, request validation, response schemas, and query parameters
+- These are Go microservices using the Goa framework — API contracts are in `design/` (Goa DSL) and `gen/http/` (generated OpenAPI specs)
+- To check the API contract, read the OpenAPI spec: `gh api repos/linuxfoundation/<repo>/contents/gen/http/openapi3.yaml --jq '.content' | base64 -d`
+- To browse the Goa DSL definitions: `gh api repos/linuxfoundation/<repo>/contents/design --jq '.[].name'`
 - The LFX One backend is a thin proxy layer — request/response shapes must match upstream
 
 ## Code Quality

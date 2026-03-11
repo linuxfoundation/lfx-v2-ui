@@ -68,27 +68,33 @@ When building or modifying features that involve API calls, you **must** check t
 
 **How to check external repos:**
 
-```bash
-# Browse repo structure to find routes/controllers
-gh api repos/linuxfoundation/<repo-name>/contents/src --jq '.[].name'
+These are Go microservices using the **Goa framework**. API contracts are defined in `design/` (Goa DSL) and generated as OpenAPI specs in `gen/http/`.
 
-# Read a specific file for endpoint definitions
-gh api repos/linuxfoundation/<repo-name>/contents/src/routes/<file>.ts \
+```bash
+# Read the OpenAPI spec for the full API contract (endpoints, schemas, params)
+gh api repos/linuxfoundation/<repo-name>/contents/gen/http/openapi3.yaml \
   --jq '.content' | base64 -d
 
-# Search for endpoint patterns
-gh api "search/code?q=router+repo:linuxfoundation/<repo-name>" --jq '.items[].path'
+# Browse the Goa DSL design files for API definitions
+gh api repos/linuxfoundation/<repo-name>/contents/design --jq '.[].name'
+
+# Read a specific Goa design file
+gh api repos/linuxfoundation/<repo-name>/contents/design/<file>.go \
+  --jq '.content' | base64 -d
+
+# Browse repo structure
+gh api repos/linuxfoundation/<repo-name>/contents/ --jq '.[].name'
 ```
 
-**What to look for:**
+**What to look for in the OpenAPI spec:**
 
-- **Route definitions** — Available endpoints and HTTP methods
-- **Request validation** — Required fields, types, constraints
+- **Paths** — Available endpoints and HTTP methods
+- **Request bodies / parameters** — Required fields, types, constraints
 - **Response schemas** — What the API actually returns (field names, nesting, types)
 - **Query parameters** — Supported filters, pagination params, sort options
 - **Error responses** — Error codes and response format
 
-> **Why this matters:** The LFX One backend is a thin orchestration layer — it proxies requests to these microservices via `MicroserviceProxyService`. The request/response shapes in this UI codebase must match what the upstream services actually accept and return. Guessing at API shapes leads to runtime failures.
+> **Why this matters:** The LFX One backend is a thin proxy layer — it proxies requests to these microservices via `MicroserviceProxyService`. The request/response shapes in this UI codebase must match what the upstream services actually accept and return. Guessing at API shapes leads to runtime failures.
 
 ## Step 3: Check What Exists
 
