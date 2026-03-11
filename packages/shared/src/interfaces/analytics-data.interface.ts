@@ -2655,7 +2655,7 @@ export interface WebActivitiesSummaryResponse {
 }
 
 // ============================================
-// Email CTR (Marketing Dashboard)
+// Social Reach (Marketing Dashboard)
 // ============================================
 
 /**
@@ -2695,6 +2695,10 @@ export interface SocialReachResponse {
   monthlyLabels: string[];
   channelGroups: SocialReachChannelGroup[];
 }
+
+// ============================================
+// Email CTR (Marketing Dashboard)
+// ============================================
 
 /**
  * Email CTR row from Snowflake PLATINUM.EMAIL_MARKETING_OVERALL_KPIS

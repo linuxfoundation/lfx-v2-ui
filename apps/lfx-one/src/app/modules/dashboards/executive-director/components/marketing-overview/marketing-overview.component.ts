@@ -168,7 +168,7 @@ export class MarketingOverviewComponent {
       ...card,
       loading,
       value: data.currentCtr > 0 ? `${data.currentCtr.toFixed(1)}%` : undefined,
-      subtitle: data.currentCtr > 0 ? 'Last 30 days' : undefined,
+      subtitle: data.currentCtr > 0 ? 'Last 6 months' : undefined,
       changePercentage: data.changePercentage !== 0 ? `${data.changePercentage}%` : undefined,
       trend: data.trend,
       chartData:
@@ -197,7 +197,7 @@ export class MarketingOverviewComponent {
       ...card,
       loading,
       value: data.totalReach > 0 ? this.formatNumber(data.totalReach) : undefined,
-      subtitle: data.totalReach > 0 ? 'Last 30 days' : undefined,
+      subtitle: data.totalReach > 0 ? 'Last 6 months' : undefined,
       changePercentage: data.changePercentage !== 0 ? `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%` : undefined,
       trend: data.trend,
       chartData:
