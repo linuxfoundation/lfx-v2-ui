@@ -52,6 +52,42 @@ Read the relevant architecture docs **before generating code**. These are the so
 
 - **`docs/architecture/shared/package-architecture.md`** — Package structure, exports, utilities, validators
 
+### External Microservice Repos
+
+When building or modifying features that involve API calls, you **must** check the relevant upstream microservice repo to understand the actual API contract (endpoints, request/response schemas, query parameters, error responses).
+
+| Domain            | External Repo                                                                                 | Key Areas to Check                                |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **Queries**       | [lfx-v2-query-service](https://github.com/linuxfoundation/lfx-v2-query-service)               | Resource types, query params, pagination, filters |
+| **Projects**      | [lfx-v2-project-service](https://github.com/linuxfoundation/lfx-v2-project-service)           | Project CRUD, slugs, membership                   |
+| **Meetings**      | [lfx-v2-meeting-service](https://github.com/linuxfoundation/lfx-v2-meeting-service)           | Meeting CRUD, RSVPs, recordings, calendar         |
+| **Mailing Lists** | [lfx-v2-mailing-list-service](https://github.com/linuxfoundation/lfx-v2-mailing-list-service) | Groups.io integration, subscriptions              |
+| **Committees**    | [lfx-v2-committee-service](https://github.com/linuxfoundation/lfx-v2-committee-service)       | Committee CRUD, membership, roles                 |
+
+**How to check external repos:**
+
+```bash
+# Browse repo structure to find routes/controllers
+gh api repos/linuxfoundation/<repo-name>/contents/src --jq '.[].name'
+
+# Read a specific file for endpoint definitions
+gh api repos/linuxfoundation/<repo-name>/contents/src/routes/<file>.ts \
+  --jq '.content' | base64 -d
+
+# Search for endpoint patterns
+gh api "search/code?q=router+repo:linuxfoundation/<repo-name>" --jq '.items[].path'
+```
+
+**What to look for:**
+
+- **Route definitions** — Available endpoints and HTTP methods
+- **Request validation** — Required fields, types, constraints
+- **Response schemas** — What the API actually returns (field names, nesting, types)
+- **Query parameters** — Supported filters, pagination params, sort options
+- **Error responses** — Error codes and response format
+
+> **Why this matters:** The LFX One backend is a thin orchestration layer — it proxies requests to these microservices via `MicroserviceProxyService`. The request/response shapes in this UI codebase must match what the upstream services actually accept and return. Guessing at API shapes leads to runtime failures.
+
 ## Step 3: Check What Exists
 
 Before creating anything, check what already exists to avoid duplicates:
@@ -102,10 +138,21 @@ Follow the workflow(s) identified in Step 1. The sections below provide the key 
 
 Creates three files: **service** → **controller** → **route**.
 
+#### Step 0: Check the Upstream API Contract
+
+Before writing any backend code, **check the relevant external microservice repo** (see the External Microservice Repos table above) to understand:
+
+1. What endpoints are available and what HTTP methods they support
+2. What request body / query params the upstream API expects
+3. What response shape the upstream API returns
+
+Use `gh api` to browse the repo and read route/controller files. This ensures the proxy calls in your service match the actual upstream API.
+
 #### Service (`src/server/services/<name>.service.ts`)
 
 - Uses `MicroserviceProxyService` for ALL external API calls
 - API reads: `/query/resources`, writes: `/itx/...`
+- **Authentication: Use the user's bearer token** (passed via `req.bearerToken` from the OIDC session). Do NOT use M2M tokens — they are only for public endpoints (`/public/api/...`) where no user session exists. See the "Authentication: User Tokens vs M2M Tokens" section in development rules.
 - `logger.debug()` for step-by-step tracing, `logger.info()` for significant operations
 - `logger.warning()` for recoverable errors (returning null/empty)
 - NEVER use `serverLogger` directly — always use `logger` from `./services/logger.service`
@@ -134,6 +181,8 @@ Tell the contributor:
 ### Frontend Service
 
 **Location:** `apps/lfx-one/src/app/shared/services/<name>.service.ts`
+
+> **API contract:** If the backend endpoint doesn't exist yet, check the relevant external microservice repo (see External Microservice Repos table above) to understand the response shape. The backend proxy is a thin layer — the data structure the frontend receives closely mirrors what the upstream microservice returns.
 
 - `@Injectable({ providedIn: 'root' })` — always tree-shakeable
 - `inject(HttpClient)` — never constructor-based DI

@@ -18,6 +18,42 @@ globs: '*'
 - **AI Environment Variables**: `AI_PROXY_URL` and `AI_API_KEY` required for AI functionality
 - **M2M Environment Variables**: `M2M_AUTH_CLIENT_ID`, `M2M_AUTH_CLIENT_SECRET` for machine-to-machine auth
 
+## Authentication: User Tokens vs M2M Tokens
+
+**Default: Always use user bearer tokens.** The vast majority of endpoints use the authenticated user's bearer token (`req.bearerToken` from the OIDC session). This is the normal auth flow — do NOT reach for M2M tokens unless you are in a public endpoint context.
+
+**M2M tokens are ONLY for public-facing endpoints where no user session exists.** They represent the application, not a user. Current legitimate use cases:
+
+| Use Case                                         | Why M2M Is Needed                                  |
+| ------------------------------------------------ | -------------------------------------------------- |
+| Public meeting page (`/public/api/meetings/:id`) | Unauthenticated users view public meetings         |
+| Public meeting registration                      | Unauthenticated users register for public meetings |
+
+**Do NOT use M2M tokens when:**
+
+- The request has an authenticated user session (`req.oidc.isAuthenticated()`)
+- Building a new protected API endpoint (`/api/...`)
+- Making server-side calls where the user's identity or permissions matter
+- Building any feature behind the login wall
+
+**Why this matters:** M2M tokens lose all user identity, permissions, and audit trail. Using them where a user token is available means the backend cannot enforce per-user authorization, and audit logs cannot attribute actions to the correct user.
+
+## External Microservice Repos
+
+When building or modifying API integrations, always check the upstream microservice repo to verify the actual API contract before writing proxy calls or defining interfaces:
+
+| Domain        | Repo                                                                                          |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| Queries       | [lfx-v2-query-service](https://github.com/linuxfoundation/lfx-v2-query-service)               |
+| Projects      | [lfx-v2-project-service](https://github.com/linuxfoundation/lfx-v2-project-service)           |
+| Meetings      | [lfx-v2-meeting-service](https://github.com/linuxfoundation/lfx-v2-meeting-service)           |
+| Mailing Lists | [lfx-v2-mailing-list-service](https://github.com/linuxfoundation/lfx-v2-mailing-list-service) |
+| Committees    | [lfx-v2-committee-service](https://github.com/linuxfoundation/lfx-v2-committee-service)       |
+
+- Use `gh api repos/linuxfoundation/<repo>/contents/<path>` to browse and read files
+- Check route definitions, request validation, response schemas, and query parameters
+- The LFX One backend is a thin proxy layer — request/response shapes must match upstream
+
 ## Code Quality
 
 - **License headers are required on all source files** — run `./check-headers.sh` to verify
