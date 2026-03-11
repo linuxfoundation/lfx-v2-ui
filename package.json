@@ -31,7 +31,9 @@
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-angular": "^20.0.0",
+    "@jest/globals": "^30.3.0",
     "@linuxfoundation/lfx-ui-core": "^0.0.22",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.2.1",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
@@ -39,8 +41,12 @@
     "@typescript-eslint/types": "^8.39.1",
     "@typescript-eslint/utils": "^8.39.1",
     "husky": "^9.1.7",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "jest-preset-angular": "^16.1.1",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
+    "ts-jest": "^29.4.6",
     "tslib": "^2.8.1",
     "turbo": "^2.6.3",
     "typescript": "5.8.3"
