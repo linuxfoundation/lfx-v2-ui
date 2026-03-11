@@ -62,6 +62,14 @@ import {
   UniqueContributorsDailyResponse,
   UniqueContributorsWeeklyResponse,
   UniqueContributorsWeeklyRow,
+  WebActivitiesSummaryResponse,
+  WebActivitiesSummaryRow,
+  EmailCtrCampaignRow,
+  EmailCtrResponse,
+  EmailCtrRow,
+  SocialReachResponse,
+  SocialReachRow,
+  SocialReachChannelRow,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -1661,6 +1669,298 @@ export class ProjectService {
       })),
       totalCommits,
       totalDays: result.rows.length,
+    };
+  }
+
+  /**
+   * Get web activities summary grouped by domain category
+   * Queries SILVER_FACT.WEB_ACTIVITIES and groups by LF domain categories
+   */
+  public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
+    logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
+
+    const query = `
+      WITH foundation_projects AS (
+        SELECT PROJECT_ID, SLUG
+        FROM ANALYTICS.SILVER_DIM.PROJECTS
+        WHERE SLUG = ?
+        UNION ALL
+        SELECT c.PROJECT_ID, c.SLUG
+        FROM ANALYTICS.SILVER_DIM.PROJECTS c
+        INNER JOIN ANALYTICS.SILVER_DIM.PROJECTS p ON c.PARENT_PROJECT_SLUG = p.SLUG
+        WHERE p.SLUG = ? OR p.PARENT_PROJECT_SLUG = ?
+      ),
+      project_domains AS (
+        SELECT DISTINCT
+          CASE
+            WHEN p.PROJECT_WEBSITE LIKE 'http%'
+            THEN SPLIT_PART(SPLIT_PART(p.PROJECT_WEBSITE, '://', 2), '/', 1)
+            ELSE SPLIT_PART(p.PROJECT_WEBSITE, '/', 1)
+          END AS DOMAIN_HOST
+        FROM ANALYTICS.SILVER_DIM.PROJECTS p
+        INNER JOIN foundation_projects fp ON p.PROJECT_ID = fp.PROJECT_ID
+        WHERE p.PROJECT_WEBSITE IS NOT NULL
+          AND p.IS_ACTIVE = TRUE
+      ),
+      domain_classified AS (
+        SELECT
+          DATE_TRUNC('day', wa.SESSION_START_TSTAMP)::DATE AS SESSION_DATE,
+          CASE
+            WHEN wa.FIRST_PAGE_URL_HOST IN (
+              'www.linuxfoundation.org', 'linuxfoundation.org',
+              'sso.linuxfoundation.org', 'cb-login-static.linuxfoundation.org',
+              'wiki.linuxfoundation.org', 'register.linuxfoundation.org',
+              'www.linux.com'
+            ) THEN 'LF Corporate'
+            WHEN wa.FIRST_PAGE_URL_HOST IN (
+              'events.linuxfoundation.org', 'zoom.platform.linuxfoundation.org'
+            ) THEN 'LF Events'
+            WHEN wa.FIRST_PAGE_URL_HOST IN (
+              'training.linuxfoundation.org', 'trainingstg.linuxfoundation.org'
+            ) THEN 'LF Training'
+            WHEN wa.FIRST_PAGE_URL_HOST IN (
+              'insights.linuxfoundation.org', 'mentorship.lfx.linuxfoundation.org',
+              'lfx.linuxfoundation.org', 'projectadmin.lfx.linuxfoundation.org',
+              'openprofile.dev', 'contributor.easycla.lfx.linuxfoundation.org',
+              'enrollment.lfx.linuxfoundation.org', 'myorg.lfx.dev',
+              'organization.lfx.linuxfoundation.org', 'app.lfx.dev',
+              'community.lfx.dev'
+            ) THEN 'LFX Platform'
+            WHEN pd.DOMAIN_HOST IS NOT NULL THEN 'Project Websites'
+            ELSE NULL
+          END AS DOMAIN_GROUP,
+          wa.PAGE_VIEWS
+        FROM ANALYTICS.SILVER_FACT.WEB_ACTIVITIES wa
+        LEFT JOIN project_domains pd ON wa.FIRST_PAGE_URL_HOST = pd.DOMAIN_HOST
+        WHERE wa.IS_LIKELY_BOT = FALSE
+          AND wa.SESSION_START_TSTAMP >= DATEADD('day', -30, CURRENT_DATE())
+      )
+      SELECT
+        DOMAIN_GROUP,
+        SESSION_DATE,
+        COUNT(*) AS TOTAL_SESSIONS,
+        SUM(PAGE_VIEWS) AS TOTAL_PAGE_VIEWS
+      FROM domain_classified
+      WHERE DOMAIN_GROUP IS NOT NULL
+      GROUP BY DOMAIN_GROUP, SESSION_DATE
+      ORDER BY SESSION_DATE ASC, DOMAIN_GROUP ASC
+    `;
+
+    const result = await this.snowflakeService.execute<WebActivitiesSummaryRow>(query, [foundationSlug, foundationSlug, foundationSlug]);
+
+    const groupTotals = new Map<string, { sessions: number; pageViews: number }>();
+    const dailyTotals = new Map<string, number>();
+
+    for (const row of result.rows) {
+      const existing = groupTotals.get(row.DOMAIN_GROUP) || { sessions: 0, pageViews: 0 };
+      existing.sessions += row.TOTAL_SESSIONS;
+      existing.pageViews += row.TOTAL_PAGE_VIEWS;
+      groupTotals.set(row.DOMAIN_GROUP, existing);
+
+      const dateKey = new Date(row.SESSION_DATE).toISOString().split('T')[0];
+      dailyTotals.set(dateKey, (dailyTotals.get(dateKey) || 0) + row.TOTAL_SESSIONS);
+    }
+
+    const domainGroups = Array.from(groupTotals.entries()).map(([domainGroup, totals]) => ({
+      domainGroup,
+      totalSessions: totals.sessions,
+      totalPageViews: totals.pageViews,
+    }));
+
+    const totalSessions = domainGroups.reduce((sum, g) => sum + g.totalSessions, 0);
+    const totalPageViews = domainGroups.reduce((sum, g) => sum + g.totalPageViews, 0);
+
+    const sortedDays = Array.from(dailyTotals.entries()).sort(([a], [b]) => a.localeCompare(b));
+    const dailyData = sortedDays.map(([, count]) => count);
+    const dailyLabels = sortedDays.map(([dateStr]) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    return { totalSessions, totalPageViews, domainGroups, dailyData, dailyLabels };
+  }
+
+  /**
+   * Get email click-through rate data from Snowflake
+   * Queries PLATINUM.EMAIL_MARKETING_OVERALL_KPIS for monthly CTR trend
+   * @param foundationSlug - Foundation slug to filter by (uses "All Projects" row)
+   * @returns Email CTR response with monthly trend and change percentage
+   */
+  public async getEmailCtr(foundationSlug: string): Promise<EmailCtrResponse> {
+    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake', { foundation_slug: foundationSlug });
+
+    const foundationCte = `
+      WITH foundation_projects AS (
+        SELECT NAME FROM ANALYTICS.SILVER_DIM.PROJECTS WHERE SLUG = ?
+        UNION ALL
+        SELECT c.NAME FROM ANALYTICS.SILVER_DIM.PROJECTS c
+        INNER JOIN ANALYTICS.SILVER_DIM.PROJECTS p ON c.PARENT_PROJECT_SLUG = p.SLUG
+        WHERE p.SLUG = ? OR p.PARENT_PROJECT_SLUG = ?
+      )
+    `;
+
+    const monthlyQuery = `
+      ${foundationCte}
+      SELECT
+        em.CREATED_MONTH_DATE,
+        SUM(em.TOTAL_CLICKS)::FLOAT / NULLIF(SUM(em.TOTAL_SENDS), 0) as OVERALL_CTR,
+        SUM(em.TOTAL_SENDS) as TOTAL_SENDS,
+        SUM(em.TOTAL_CLICKS) as TOTAL_CLICKS,
+        SUM(em.TOTAL_OPENS) as TOTAL_OPENS
+      FROM ANALYTICS.PLATINUM.EMAIL_MARKETING_OVERALL_KPIS em
+      WHERE em.PROJECT_NAME != 'All Projects'
+        AND EXISTS (
+          SELECT 1 FROM foundation_projects fp
+          WHERE fp.NAME ILIKE '%' || em.PROJECT_NAME || '%'
+             OR em.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
+        )
+        AND em.CREATED_MONTH_DATE >= DATEADD('month', -6, CURRENT_DATE())
+      GROUP BY em.CREATED_MONTH_DATE
+      ORDER BY em.CREATED_MONTH_DATE ASC
+    `;
+
+    const campaignQuery = `
+      ${foundationCte}
+      SELECT
+        em.PROJECT_NAME,
+        AVG(em.OVERALL_CTR) as AVG_CTR,
+        SUM(em.TOTAL_SENDS) as TOTAL_SENDS,
+        SUM(em.TOTAL_CLICKS) as TOTAL_CLICKS
+      FROM ANALYTICS.PLATINUM.EMAIL_MARKETING_OVERALL_KPIS em
+      WHERE em.PROJECT_NAME != 'All Projects'
+        AND EXISTS (
+          SELECT 1 FROM foundation_projects fp
+          WHERE fp.NAME ILIKE '%' || em.PROJECT_NAME || '%'
+             OR em.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
+        )
+        AND em.CREATED_MONTH_DATE >= DATEADD('month', -6, CURRENT_DATE())
+      GROUP BY em.PROJECT_NAME
+      ORDER BY TOTAL_SENDS DESC
+    `;
+
+    const params = [foundationSlug, foundationSlug, foundationSlug];
+
+    const [monthlyResult, campaignResult] = await Promise.all([
+      this.snowflakeService.execute<EmailCtrRow>(monthlyQuery, params),
+      this.snowflakeService.execute<EmailCtrCampaignRow>(campaignQuery, params),
+    ]);
+
+    if (monthlyResult.rows.length === 0) {
+      return { currentCtr: 0, changePercentage: 0, trend: 'up', monthlyData: [], monthlyLabels: [], campaignGroups: [], monthlySends: [], monthlyOpens: [] };
+    }
+
+    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.OVERALL_CTR * 10000) / 100);
+    const monthlySends = monthlyResult.rows.map((row) => row.TOTAL_SENDS);
+    const monthlyOpens = monthlyResult.rows.map((row) => row.TOTAL_OPENS);
+    const monthlyLabels = monthlyResult.rows.map((row) => {
+      const date = new Date(row.CREATED_MONTH_DATE);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+
+    const currentCtr = monthlyData[monthlyData.length - 1];
+    const previousCtr = monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2] : currentCtr;
+    const changePercentage = previousCtr > 0 ? Math.round(((currentCtr - previousCtr) / previousCtr) * 100) : 0;
+
+    const campaignGroups = campaignResult.rows.map((row) => ({
+      campaignName: row.PROJECT_NAME,
+      avgCtr: Math.round(row.AVG_CTR * 10000) / 100,
+      totalSends: row.TOTAL_SENDS,
+      totalClicks: row.TOTAL_CLICKS,
+    }));
+
+    return {
+      currentCtr,
+      changePercentage,
+      trend: changePercentage >= 0 ? 'up' : 'down',
+      monthlyData,
+      monthlyLabels,
+      campaignGroups,
+      monthlySends,
+      monthlyOpens,
+    };
+  }
+
+  public async getSocialReach(foundationSlug: string): Promise<SocialReachResponse> {
+    logger.debug(undefined, 'get_social_reach', 'Fetching paid impressions from Snowflake', { foundation_slug: foundationSlug });
+
+    const foundationCte = `
+      WITH foundation_projects AS (
+        SELECT NAME FROM ANALYTICS.SILVER_DIM.PROJECTS WHERE SLUG = ?
+        UNION ALL
+        SELECT c.NAME FROM ANALYTICS.SILVER_DIM.PROJECTS c
+        INNER JOIN ANALYTICS.SILVER_DIM.PROJECTS p ON c.PARENT_PROJECT_SLUG = p.SLUG
+        WHERE p.SLUG = ? OR p.PARENT_PROJECT_SLUG = ?
+      )
+    `;
+
+    const monthlyQuery = `
+      ${foundationCte}
+      SELECT
+        TO_CHAR(pa.CAMPAIGN_MONTH, 'YYYY-MM') as MONTH,
+        SUM(pa.IMPRESSIONS) as TOTAL_IMPRESSIONS
+      FROM ANALYTICS.PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH pa
+      WHERE EXISTS (
+        SELECT 1 FROM foundation_projects fp
+        WHERE fp.NAME ILIKE '%' || pa.PROJECT_NAME || '%'
+           OR pa.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
+      )
+      AND pa.CAMPAIGN_MONTH >= DATEADD('month', -6, CURRENT_DATE())
+      GROUP BY pa.CAMPAIGN_MONTH
+      ORDER BY pa.CAMPAIGN_MONTH ASC
+    `;
+
+    const channelQuery = `
+      ${foundationCte}
+      SELECT
+        pa.CHANNEL,
+        SUM(pa.IMPRESSIONS) as TOTAL_IMPRESSIONS
+      FROM ANALYTICS.PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH pa
+      WHERE EXISTS (
+        SELECT 1 FROM foundation_projects fp
+        WHERE fp.NAME ILIKE '%' || pa.PROJECT_NAME || '%'
+           OR pa.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
+      )
+      AND pa.CAMPAIGN_MONTH >= DATEADD('month', -6, CURRENT_DATE())
+      GROUP BY pa.CHANNEL
+      ORDER BY TOTAL_IMPRESSIONS DESC
+    `;
+
+    const params = [foundationSlug, foundationSlug, foundationSlug];
+
+    const [monthlyResult, channelResult] = await Promise.all([
+      this.snowflakeService.execute<SocialReachRow>(monthlyQuery, params),
+      this.snowflakeService.execute<SocialReachChannelRow>(channelQuery, params),
+    ]);
+
+    if (monthlyResult.rows.length === 0) {
+      return { totalReach: 0, changePercentage: 0, trend: 'up', monthlyData: [], monthlyLabels: [], channelGroups: [] };
+    }
+
+    const monthlyData = monthlyResult.rows.map((row) => row.TOTAL_IMPRESSIONS);
+    const monthlyLabels = monthlyResult.rows.map((row) => {
+      const [year, month] = row.MONTH.split('-');
+      const date = new Date(Number(year), Number(month) - 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+
+    const currentMonth = monthlyData[monthlyData.length - 1];
+    const previousMonth = monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2] : currentMonth;
+    const changePercentage = previousMonth > 0 ? Math.round(((currentMonth - previousMonth) / previousMonth) * 1000) / 10 : 0;
+
+    const totalReach = monthlyData.reduce((sum, val) => sum + val, 0);
+
+    const channelGroups = channelResult.rows.map((row) => ({
+      channel: row.CHANNEL,
+      totalImpressions: row.TOTAL_IMPRESSIONS,
+    }));
+
+    return {
+      totalReach,
+      changePercentage,
+      trend: changePercentage >= 0 ? 'up' : 'down',
+      monthlyData,
+      monthlyLabels,
+      channelGroups,
     };
   }
 
