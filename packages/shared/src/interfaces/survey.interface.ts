@@ -101,7 +101,7 @@ export interface CreateSurveyRequest {
   /** Committee UIDs to target */
   committee_uids: string[];
   /** Survey cutoff/close date in ISO format */
-  survey_cutoff_date: string;
+  survey_cutoff_date?: string;
   /** Whether this is an NPS survey */
   is_nps_survey: boolean;
   /** Distribution method: immediate or scheduled */

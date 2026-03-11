@@ -29,7 +29,7 @@ export function buildCreateSurveyRequest(formValue: SurveyFormValue, projectUid:
     survey_title: isNps ? 'NPS Survey' : 'Working Group Survey',
     project_uid: projectUid,
     committee_uids: formValue.committees.map((c) => c.uid),
-    survey_cutoff_date: formValue.cutoffDate ? formValue.cutoffDate.toISOString() : '',
+    ...(formValue.cutoffDate ? { survey_cutoff_date: formValue.cutoffDate.toISOString() } : {}),
     is_nps_survey: isNps,
     distribution_method: formValue.distributionMethod,
     ...(formValue.distributionMethod === 'scheduled' && formValue.scheduledDate ? { scheduled_date: formValue.scheduledDate.toISOString() } : {}),

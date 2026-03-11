@@ -536,7 +536,7 @@ export class CommitteeController {
 
       logger.success(req, 'create_invites', startTime, {
         committee_id: id,
-        invite_count: invites.length,
+        invite_count: Array.isArray(invites) ? invites.length : 1,
       });
 
       res.status(201).json(invites);

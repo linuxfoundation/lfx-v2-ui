@@ -99,9 +99,7 @@ export class CommitteeDashboardComponent {
       }
       const isMaintainerAndNotFoundation = this.isMaintainer() && !this.isFoundationContext();
       const hasFeatureFlag = this.foundationCreateCommitteeFlag();
-      // TODO: TEMPORARY - Allow create in local dev even at foundation level
-      const isLocalDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      return isMaintainerAndNotFoundation || hasFeatureFlag || (isLocalDev && this.isMaintainer());
+      return isMaintainerAndNotFoundation || hasFeatureFlag;
     });
 
     // Initialize state
@@ -267,6 +265,11 @@ export class CommitteeDashboardComponent {
       rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => {
         if (!committee.myMemberUid) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Unable to leave group — membership data unavailable',
+          });
           return;
         }
         this.committeeService.deleteCommitteeMember(committee.uid, committee.myMemberUid).subscribe({

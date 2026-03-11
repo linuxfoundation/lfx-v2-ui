@@ -523,10 +523,16 @@ export class CommitteeService {
   public async getCommitteeVotes(req: Request, committeeId: string): Promise<any[]> {
     try {
       // First try committee_vote resources (managed by api_client_service)
-      const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_vote',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_vote',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
 
       if (committeeVoteResources.length > 0) {
         return committeeVoteResources.map((r) => r.data);
@@ -543,11 +549,17 @@ export class CommitteeService {
       }
 
       // Votes are indexed under parent: project:<uid> (not tags) in the query service
-      const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'vote',
-        parent: `project:${projectUid}`,
-        page_size: 100,
-      });
+      const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'vote',
+          parent: `project:${projectUid}`,
+          page_size: 100,
+        }
+      );
 
       return voteResources
         .filter((r) => r.data.committee_uid === committeeId)

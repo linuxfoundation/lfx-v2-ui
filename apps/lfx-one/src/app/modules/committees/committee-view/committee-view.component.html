@@ -300,9 +300,11 @@
                                   <span>Deadline: {{ vote.deadline | date: 'MMM d, y' }}</span>
                                 </div>
                                 <div class="w-full bg-gray-100 rounded-full h-2 flex overflow-hidden">
-                                  <div class="bg-emerald-500 h-2 rounded-l-full" [style.width.%]="(vote.votesFor / vote.totalEligible) * 100"></div>
-                                  <div class="bg-red-400 h-2" [style.width.%]="(vote.votesAgainst / vote.totalEligible) * 100"></div>
-                                  <div class="bg-gray-300 h-2" [style.width.%]="(vote.votesAbstain / vote.totalEligible) * 100"></div>
+                                  <div
+                                    class="bg-emerald-500 h-2 rounded-l-full"
+                                    [style.width.%]="vote.totalEligible ? (vote.votesFor / vote.totalEligible) * 100 : 0"></div>
+                                  <div class="bg-red-400 h-2" [style.width.%]="vote.totalEligible ? (vote.votesAgainst / vote.totalEligible) * 100 : 0"></div>
+                                  <div class="bg-gray-300 h-2" [style.width.%]="vote.totalEligible ? (vote.votesAbstain / vote.totalEligible) * 100 : 0"></div>
                                 </div>
                                 <div class="flex items-center gap-3 mt-1.5 text-xs">
                                   <span class="text-emerald-600">{{ vote.votesFor }} for</span>
@@ -345,12 +347,14 @@
                         <!-- Budget overview bar -->
                         <div class="mb-4">
                           <div class="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-                            <span>{{ ((budget.spent / budget.total_budget) * 100).toFixed(0) }}% spent</span>
+                            <span>{{ (budget.total_budget ? (budget.spent / budget.total_budget) * 100 : 0).toFixed(0) }}% spent</span>
                             <span>${{ (budget.total_budget / 1000000).toFixed(1) }}M total</span>
                           </div>
                           <div class="w-full bg-gray-100 rounded-full h-3 flex overflow-hidden">
-                            <div class="bg-blue-500 h-3 rounded-l-full" [style.width.%]="(budget.spent / budget.total_budget) * 100"></div>
-                            <div class="bg-blue-200 h-3" [style.width.%]="(budget.committed / budget.total_budget) * 100"></div>
+                            <div
+                              class="bg-blue-500 h-3 rounded-l-full"
+                              [style.width.%]="budget.total_budget ? (budget.spent / budget.total_budget) * 100 : 0"></div>
+                            <div class="bg-blue-200 h-3" [style.width.%]="budget.total_budget ? (budget.committed / budget.total_budget) * 100 : 0"></div>
                           </div>
                           <div class="flex items-center gap-4 mt-1.5 text-xs">
                             <span class="flex items-center gap-1"
@@ -371,7 +375,7 @@
                               <span class="text-xs text-gray-600">{{ cat.name }}</span>
                               <div class="flex items-center gap-2">
                                 <div class="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                  <div class="bg-blue-400 h-1.5 rounded-full" [style.width.%]="(cat.spent / cat.allocated) * 100"></div>
+                                  <div class="bg-blue-400 h-1.5 rounded-full" [style.width.%]="cat.allocated ? (cat.spent / cat.allocated) * 100 : 0"></div>
                                 </div>
                                 <span class="text-xs text-gray-400 w-20 text-right"
                                   >${{ (cat.spent / 1000).toFixed(0) }}K / ${{ (cat.allocated / 1000).toFixed(0) }}K</span

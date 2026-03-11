@@ -779,9 +779,9 @@ export class CommitteeViewComponent {
     // ── governing-board: votes, budget, resolutions ──
     if (cls === 'governing-board') {
       forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId),
-        this.committeeService.getCommitteeResolutions(committeeId),
-        this.committeeService.getCommitteeBudget(committeeId),
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeBudget(committeeId).pipe(catchError(() => of(null))),
       ]).subscribe(([votes, resolutions, budget]) => {
         this.openVotes.set(votes);
         this.recentResolutions.set(resolutions);
@@ -792,10 +792,10 @@ export class CommitteeViewComponent {
     // ── oversight-committee: votes + resolutions (no budget), activity + contributors ──
     if (cls === 'oversight-committee') {
       forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId),
-        this.committeeService.getCommitteeResolutions(committeeId),
-        this.committeeService.getCommitteeActivity(committeeId),
-        this.committeeService.getCommitteeContributors(committeeId),
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
       ]).subscribe(([votes, resolutions, activity, contributors]) => {
         this.openVotes.set(votes);
         this.recentResolutions.set(resolutions);
@@ -807,10 +807,10 @@ export class CommitteeViewComponent {
     // ── working-group: votes, activity, contributors, deliverables ──
     if (cls === 'working-group') {
       forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId),
-        this.committeeService.getCommitteeActivity(committeeId),
-        this.committeeService.getCommitteeContributors(committeeId),
-        this.committeeService.getCommitteeDeliverables(committeeId),
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeDeliverables(committeeId).pipe(catchError(() => of([]))),
       ]).subscribe(([votes, activity, contributors, deliverables]) => {
         this.openVotes.set(votes);
         this.recentActivity.set(activity);
@@ -821,22 +821,24 @@ export class CommitteeViewComponent {
 
     // ── special-interest-group: discussions, events ──
     if (cls === 'special-interest-group') {
-      forkJoin([this.committeeService.getCommitteeDiscussions(committeeId), this.committeeService.getCommitteeEvents(committeeId)]).subscribe(
-        ([discussions, events]) => {
-          this.discussionThreads.set(discussions);
-          this.upcomingEvents.set(events);
-        }
-      );
+      forkJoin([
+        this.committeeService.getCommitteeDiscussions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeEvents(committeeId).pipe(catchError(() => of([]))),
+      ]).subscribe(([discussions, events]) => {
+        this.discussionThreads.set(discussions);
+        this.upcomingEvents.set(events);
+      });
     }
 
     // ── ambassador-program: campaigns, engagement ──
     if (cls === 'ambassador-program') {
-      forkJoin([this.committeeService.getCommitteeCampaigns(committeeId), this.committeeService.getCommitteeEngagement(committeeId)]).subscribe(
-        ([campaigns, engagement]) => {
-          this.outreachCampaigns.set(campaigns);
-          this.engagementMetrics.set(engagement);
-        }
-      );
+      forkJoin([
+        this.committeeService.getCommitteeCampaigns(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeEngagement(committeeId).pipe(catchError(() => of(null))),
+      ]).subscribe(([campaigns, engagement]) => {
+        this.outreachCampaigns.set(campaigns);
+        this.engagementMetrics.set(engagement);
+      });
     }
 
     // ── other: no type-specific cards (just meetings, docs, members) ──

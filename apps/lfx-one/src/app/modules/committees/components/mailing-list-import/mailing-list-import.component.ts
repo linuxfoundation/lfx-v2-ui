@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -51,7 +51,12 @@ export class MailingListImportComponent {
   });
 
   public constructor() {
-    this.loadMailingLists();
+    effect(() => {
+      const uid = this.projectUid();
+      if (uid) {
+        this.loadMailingLists();
+      }
+    });
   }
 
   public onListSelected(): void {
