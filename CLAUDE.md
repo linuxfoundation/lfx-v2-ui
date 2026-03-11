@@ -520,6 +520,7 @@ The shared package provides form validators in `packages/shared/src/validators/`
 
 ## Development Memories
 
+- **Bug workflow**: When a bug is reported, do NOT start by trying to fix it. First write a failing test that reproduces the bug. Then have subagents attempt the fix, proving it with a passing test.
 - Always reference PrimeNG's component interface when trying to define types
 - The project logo display is currently hardcoded but will be dynamic once API is integrated
 - Metrics data is hardcoded but structured to match future API responses
