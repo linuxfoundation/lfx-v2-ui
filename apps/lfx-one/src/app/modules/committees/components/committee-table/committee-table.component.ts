@@ -17,11 +17,8 @@ import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { take } from 'rxjs';
-
-import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
   selector: 'lfx-committee-table',
@@ -75,24 +72,10 @@ export class CommitteeTableComponent {
 
   // Event handlers
   public onAddMember(committee: Committee): void {
-    const dialogRef = this.dialogService.open(MemberFormComponent, {
-      header: 'Add Member',
-      width: '700px',
-      modal: true,
-      closable: true,
-      data: {
-        isEditing: false,
-        committee: committee,
-        onCancel: () => {
-          // Dialog will close itself
-        },
-      },
-    }) as DynamicDialogRef;
-
-    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
-      if (result) {
-        this.refresh.emit();
-      }
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Add Member',
+      detail: `Member management for "${committee.name}" is coming soon.`,
     });
   }
 
