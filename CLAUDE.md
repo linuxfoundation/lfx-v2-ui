@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 When this project is open inside a **Cowork / Claude desktop** session (not a Claude Code terminal),
 **do NOT directly edit source files**.
 
-Your role in that context is to **generate ready-to-paste Claude Code prompts** that Manish runs
+Your role in that context is to **generate ready-to-paste Claude Code prompts** that user runs
 himself in a separate Claude Code terminal. This preserves his git workflow and code review process.
 
 Format your prompts like this:
@@ -490,7 +490,7 @@ The application is organized into 9 feature modules under `apps/lfx-one/src/app/
 | **surveys**       | Survey management - create surveys, collect responses, view NPS analytics        |
 | **votes**         | Voting system - create polls, cast votes, and view results                       |
 
-## Shared Package Utilities
+## Shared Package
 
 The shared package (`@lfx-one/shared`) provides utility modules in `packages/shared/src/utils/`:
 
@@ -510,26 +510,17 @@ import { formatDate, getRelativeDate } from '@lfx-one/shared/utils';
 import { buildUrl, parseQueryParams } from '@lfx-one/shared/utils';
 ```
 
-> **Note**: Domain-specific utilities (meetings, surveys, polls, etc.) are also available. See [Package Architecture docs](docs/architecture/shared/package-architecture.md) for complete documentation.
-
-## Shared Package Validators
-
-The shared package provides form validators in `packages/shared/src/validators/`. Import and use them in Angular reactive forms as needed.
-
-> **Note**: See [Package Architecture docs](docs/architecture/shared/package-architecture.md) for validator details and usage examples.
+> **Note**: Domain-specific utilities (meetings, surveys, polls, etc.) are also available. See [Package Architecture docs](docs/architecture/shared/package-architecture.md) for complete documentation including validators.
 
 ## Development Memories
 
 - **Bug workflow**: When a bug is reported, do NOT start by trying to fix it. First write a failing test that reproduces the bug. Then have subagents attempt the fix, proving it with a passing test.
 - Always reference PrimeNG's component interface when trying to define types
-- The project logo display is currently hardcoded but will be dynamic once API is integrated
-- Metrics data is hardcoded but structured to match future API responses
 - All PrimeNG components are wrapped in LFX components for UI library independence
 - Always use direct imports for standalone components - no barrel exports
 - **Authentication uses selective pattern** - public routes bypass auth, protected routes require authentication
 - **Public routes include** `/meeting` and `/public/api` endpoints
 - **M2M tokens are used** for server-side API calls from public endpoints
-- **Protected routes middleware** handles selective authentication logic
 - **Custom login handler** at `/login` with URL validation and secure redirects
 - Authentication is handled by Auth0/Authelia with express-openid-connect middleware
 
@@ -1045,3 +1036,37 @@ Before starting any work or commits:
 - Always run yarn build to validate that your changes are building too for validation
 - Always remember that our JIRA sprint field is customfield_10020. When we create tickets, we need to assign them to the current user and set it to the current sprint.
 - Always use `flex + flex-col + gap-*` instead of `space-y-*`
+## Rule Files
+
+Detailed patterns are in `.claude/rules/` and loaded contextually based on file globs:
+
+| Rule File                   | Glob                | Topics                                                                      |
+| --------------------------- | ------------------- | --------------------------------------------------------------------------- |
+| `component-organization.md` | `**/*.component.ts` | Signal initialization, component structure order, model signals, interfaces |
+| `logging-patterns.md`       | `**/server/**`      | Logger service API, layer responsibilities, log levels, code examples       |
+| `development-rules.md`      | `*`                 | Shared package, license headers, testing, formatting, doc maintenance       |
+| `commit-workflow.md`        | `*`                 | Commit conventions, branch naming, PR format, JIRA tracking                 |
+| `skill-guidance.md`         | `*`                 | Guides Claude to suggest `/setup`, `/develop`, `/preflight` skills          |
+
+## Architecture Documentation
+
+| Document                                                                       | Topics                                             |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- |
+| [Angular Patterns](docs/architecture/frontend/angular-patterns.md)             | Zoneless change detection, signals, components     |
+| [Component Architecture](docs/architecture/frontend/component-architecture.md) | PrimeNG wrapper patterns                           |
+| [Styling System](docs/architecture/frontend/styling-system.md)                 | Tailwind, fonts, theming                           |
+| [Drawer Pattern](docs/architecture/frontend/drawer-pattern.md)                 | Drawer components, lazy loading, chart integration |
+| [Backend Architecture](docs/architecture/backend/README.md)                    | Controller-Service pattern, Express.js server      |
+| [Authentication](docs/architecture/backend/authentication.md)                  | Auth0 setup, selective auth middleware             |
+| [SSR Server](docs/architecture/backend/ssr-server.md)                          | Server-side rendering                              |
+| [Logging & Monitoring](docs/architecture/backend/logging-monitoring.md)        | Structured logging with Pino                       |
+| [Error Handling](docs/architecture/backend/error-handling-architecture.md)     | Error classification, middleware                   |
+| [Server Helpers](docs/architecture/backend/server-helpers.md)                  | Validation, pagination, URL utilities              |
+| [Pagination](docs/architecture/backend/pagination.md)                          | Cursor-based pagination, infinite scroll           |
+| [AI Service](docs/architecture/backend/ai-service.md)                          | LiteLLM proxy, agenda generation                   |
+| [NATS Integration](docs/architecture/backend/nats-integration.md)              | Inter-service messaging                            |
+| [Snowflake Integration](docs/architecture/backend/snowflake-integration.md)    | Analytics queries, connection pooling              |
+| [Public Meetings](docs/architecture/backend/public-meetings.md)                | Unauthenticated access, M2M tokens                 |
+| [Shared Package](docs/architecture/shared/package-architecture.md)             | Types, interfaces, utilities, validators           |
+| [E2E Testing](docs/architecture/testing/e2e-testing.md)                        | Dual architecture testing                          |
+| [Testing Best Practices](docs/architecture/testing/testing-best-practices.md)  | Testing patterns and guide                         |
