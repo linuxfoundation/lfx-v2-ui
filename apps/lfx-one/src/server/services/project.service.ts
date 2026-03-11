@@ -1863,7 +1863,7 @@ export class ProjectService {
 
     const campaignGroups = campaignResult.rows.map((row) => ({
       campaignName: row.PROJECT_NAME,
-      avgCtr: Math.round(row.AVG_CTR * 10000) / 100,
+      avgCtr: Math.round(row.AVG_CTR * 100) / 100,
       totalSends: row.TOTAL_SENDS,
       totalClicks: row.TOTAL_CLICKS,
     }));
