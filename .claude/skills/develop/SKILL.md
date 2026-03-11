@@ -63,6 +63,8 @@ When building or modifying features that involve API calls, you **must** check t
 | **Meetings**      | [lfx-v2-meeting-service](https://github.com/linuxfoundation/lfx-v2-meeting-service)           | Meeting CRUD, RSVPs, recordings, calendar         |
 | **Mailing Lists** | [lfx-v2-mailing-list-service](https://github.com/linuxfoundation/lfx-v2-mailing-list-service) | Groups.io integration, subscriptions              |
 | **Committees**    | [lfx-v2-committee-service](https://github.com/linuxfoundation/lfx-v2-committee-service)       | Committee CRUD, membership, roles                 |
+| **Voting**        | [lfx-v2-voting-service](https://github.com/linuxfoundation/lfx-v2-voting-service)             | Poll CRUD, casting votes, results                 |
+| **Surveys**       | [lfx-v2-survey-service](https://github.com/linuxfoundation/lfx-v2-survey-service)             | Survey CRUD, responses, NPS analytics             |
 
 **How to check external repos:**
 

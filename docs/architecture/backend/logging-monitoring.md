@@ -327,7 +327,7 @@ export class MeetingController {
 
 ### Service Layer Pattern
 
-Services use `debug()` for step-by-step tracing, `info()` for significant business operations, and `warning()` for graceful error handling. In most cases, services should prefer these methods and leave HTTP/request lifecycle `startOperation()`/`success()` logging to controllers; only use `startOperation()`/`success()` in a service when you specifically need operation timing and/or duplicate-prevention semantics for a service-owned operation.
+Services use `debug()` for step-by-step tracing, `info()` for significant business operations, and `warning()` for graceful error handling. Services should **not** use `startOperation()`/`success()` — controllers own the HTTP lifecycle and duration tracking.
 
 ```typescript
 export class MeetingService {
@@ -432,6 +432,14 @@ export function apiErrorHandler(error: Error, req: Request, res: Response, next:
 
   if (isBaseApiError(error)) {
     const logLevel = error.getSeverity();
+    const logContext = {
+      error_type: error.code,
+      status_code: error.statusCode,
+      ...error.getLogContext(),
+      request_id: req.id,
+      path: req.path,
+      method: req.method,
+    };
 
     if (logLevel === 'error') {
       // Skip if already logged by controller
@@ -448,7 +456,18 @@ export function apiErrorHandler(error: Error, req: Request, res: Response, next:
   }
 
   // Unhandled errors always log at ERROR
-  logger.error(req, operation, startTime, error, logContext, { skipIfLogged: true });
+  logger.error(
+    req,
+    operation,
+    startTime,
+    error,
+    {
+      error_type: 'unhandled',
+      path: req.path,
+      method: req.method,
+    },
+    { skipIfLogged: true }
+  );
   res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR', path: req.path });
 }
 ```

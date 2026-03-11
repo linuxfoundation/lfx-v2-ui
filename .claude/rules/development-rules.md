@@ -25,7 +25,7 @@ globs: '*'
 **M2M tokens represent the application, not a user.** They should be used only for:
 
 - **Public-facing endpoints where no user session exists** (e.g. public meeting pages or public meeting registration)
-- **Explicit privileged upstream calls** from an authenticated route, *after* the route has validated the user's access/authorization in-app, and only for the specific upstream request that requires application-level credentials (e.g. certain meeting registrant or invitation checks)
+- **Explicit privileged upstream calls** from an authenticated route, _after_ the route has validated the user's access/authorization in-app, and only for the specific upstream request that requires application-level credentials (e.g. certain meeting registrant or invitation checks)
 
 In the authenticated-route case, always:
 
@@ -53,6 +53,8 @@ When building or modifying API integrations, always check the upstream microserv
 | Meetings      | [lfx-v2-meeting-service](https://github.com/linuxfoundation/lfx-v2-meeting-service)           |
 | Mailing Lists | [lfx-v2-mailing-list-service](https://github.com/linuxfoundation/lfx-v2-mailing-list-service) |
 | Committees    | [lfx-v2-committee-service](https://github.com/linuxfoundation/lfx-v2-committee-service)       |
+| Voting        | [lfx-v2-voting-service](https://github.com/linuxfoundation/lfx-v2-voting-service)             |
+| Surveys       | [lfx-v2-survey-service](https://github.com/linuxfoundation/lfx-v2-survey-service)             |
 
 - Use `gh api repos/linuxfoundation/<repo>/contents/<path>` to browse and read files
 - Check route definitions, request validation, response schemas, and query parameters
