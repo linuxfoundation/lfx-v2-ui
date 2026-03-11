@@ -327,7 +327,7 @@ export class MeetingController {
 
 ### Service Layer Pattern
 
-Services use `debug()` for step-by-step tracing, `info()` for significant business operations, and `warning()` for graceful error handling. Services should **not** use `startOperation()`/`success()` — that's the controller's responsibility.
+Services use `debug()` for step-by-step tracing, `info()` for significant business operations, and `warning()` for graceful error handling. In most cases, services should prefer these methods and leave HTTP/request lifecycle `startOperation()`/`success()` logging to controllers; only use `startOperation()`/`success()` in a service when you specifically need operation timing and/or duplicate-prevention semantics for a service-owned operation.
 
 ```typescript
 export class MeetingService {
@@ -376,7 +376,8 @@ export class MeetingService {
     } catch (error) {
       logger.warning(req, 'get_recording', 'Failed to fetch recording, returning null', {
         meeting_uid: meetingUid,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
       });
       return null;
     }

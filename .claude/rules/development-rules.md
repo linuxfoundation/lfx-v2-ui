@@ -20,23 +20,27 @@ globs: '*'
 
 ## Authentication: User Tokens vs M2M Tokens
 
-**Default: Always use user bearer tokens.** The vast majority of endpoints use the authenticated user's bearer token (`req.bearerToken` from the OIDC session). This is the normal auth flow — do NOT reach for M2M tokens unless you are in a public endpoint context.
+**Default: Prefer user bearer tokens.** The vast majority of endpoints must use the authenticated user's bearer token (`req.bearerToken` from the OIDC session). This is the normal auth flow — do NOT reach for M2M tokens unless you are in a public endpoint context or performing an explicit privileged upstream call that cannot be made with a user token.
 
-**M2M tokens are ONLY for public-facing endpoints where no user session exists.** They represent the application, not a user. Current legitimate use cases:
+**M2M tokens represent the application, not a user.** They should be used only for:
 
-| Use Case                                         | Why M2M Is Needed                                  |
-| ------------------------------------------------ | -------------------------------------------------- |
-| Public meeting page (`/public/api/meetings/:id`) | Unauthenticated users view public meetings         |
-| Public meeting registration                      | Unauthenticated users register for public meetings |
+- **Public-facing endpoints where no user session exists** (e.g. public meeting pages or public meeting registration)
+- **Explicit privileged upstream calls** from an authenticated route, *after* the route has validated the user's access/authorization in-app, and only for the specific upstream request that requires application-level credentials (e.g. certain meeting registrant or invitation checks)
+
+In the authenticated-route case, always:
+
+- Keep enforcing user-level authorization and checks in-app
+- Limit the M2M token usage to the minimal upstream call scope
+- Restore the original user bearer token / auth context immediately after the privileged call
 
 **Do NOT use M2M tokens when:**
 
-- The request has an authenticated user session (`req.oidc.isAuthenticated()`)
-- Building a new protected API endpoint (`/api/...`)
-- Making server-side calls where the user's identity or permissions matter
-- Building any feature behind the login wall
+- Replacing the user's identity or permissions for normal in-app operations
+- Building a new protected API endpoint (`/api/...`) where user identity and permissions should drive behavior
+- Skipping or weakening per-user authorization checks because "the service has M2M access"
+- Attributing user actions in a way that cannot be tied back to the initiating user in audit logs
 
-**Why this matters:** M2M tokens lose all user identity, permissions, and audit trail. Using them where a user token is available means the backend cannot enforce per-user authorization, and audit logs cannot attribute actions to the correct user.
+**Why this matters:** M2M tokens lose all user identity, permissions, and audit trail. Misusing them (for example, instead of user tokens for normal authenticated flows, or without restoring the original token context) means the backend cannot reliably enforce per-user authorization, and audit logs cannot attribute actions to the correct user.
 
 ## External Microservice Repos
 
