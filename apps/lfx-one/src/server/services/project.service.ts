@@ -1823,7 +1823,7 @@ export class ProjectService {
       ${foundationCte}
       SELECT
         em.PROJECT_NAME,
-        AVG(em.OVERALL_CTR) as AVG_CTR,
+        SUM(em.TOTAL_CLICKS)::FLOAT / NULLIF(SUM(em.TOTAL_SENDS), 0) * 100 AS AVG_CTR,
         SUM(em.TOTAL_SENDS) as TOTAL_SENDS,
         SUM(em.TOTAL_CLICKS) as TOTAL_CLICKS
       FROM ANALYTICS.PLATINUM.EMAIL_MARKETING_OVERALL_KPIS em
