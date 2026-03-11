@@ -49,6 +49,7 @@ export class ApplicationReviewComponent {
     effect(() => {
       const c = this.committee();
       if (!c?.uid) {
+        this.applications.set([]);
         this.loading.set(false);
         return;
       }
@@ -57,13 +58,17 @@ export class ApplicationReviewComponent {
   }
 
   public loadApplications(committeeUid: string): void {
+    this.applications.set([]);
     this.loading.set(true);
     this.committeeService.getApplications(committeeUid).subscribe({
       next: (apps) => {
+        if (this.committee()?.uid !== committeeUid) return;
         this.applications.set(apps);
         this.loading.set(false);
       },
       error: () => {
+        if (this.committee()?.uid !== committeeUid) return;
+        this.applications.set([]);
         this.loading.set(false);
       },
     });

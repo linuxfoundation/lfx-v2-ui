@@ -12,7 +12,7 @@ import { formatDateToISOString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { catchError, of, switchMap } from 'rxjs';
+import { of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-assign-leadership-dialog',
@@ -91,12 +91,14 @@ export class AssignLeadershipDialogComponent {
     this.committeeService
       .updateCommitteeMember(this.committee.uid, memberUid, roleUpdate)
       .pipe(
-        // Step 2: If previous leader is a different person, clear their role
+        // Step 2: If previous leader is a different person, clear their role.
+        // Let errors propagate so the user is notified if demotion fails,
+        // preventing two members from holding the same leadership role.
         switchMap(() => {
           if (this.currentLeader && this.currentLeader.uid !== memberUid) {
-            return this.committeeService
-              .updateCommitteeMember(this.committee.uid, this.currentLeader.uid, { role: { name: CommitteeMemberRole.NONE } })
-              .pipe(catchError(() => of(null)));
+            return this.committeeService.updateCommitteeMember(this.committee.uid, this.currentLeader.uid, {
+              role: { name: CommitteeMemberRole.NONE },
+            });
           }
           return of(null);
         })
