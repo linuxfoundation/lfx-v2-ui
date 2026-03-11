@@ -995,7 +995,7 @@ If the backend is unavailable, use the e2e test suite as your development harnes
 
 Things the codebase never does. If you find yourself writing any of these, stop and reconsider.
 
-**Server-side**
+### Server-side
 
 - `console.log` / `console.error` — use `logger` service always
 - `res.send()` / `res.status(200).send(text)` — use `res.json()` always
@@ -1005,7 +1005,7 @@ Things the codebase never does. If you find yourself writing any of these, stop 
 - Calling `serverLogger` directly outside of `server.ts` / `logger.service.ts`
 - Duplicate `logger.startOperation()` calls for the same operation in both controller and service
 
-**Frontend**
+### Frontend
 
 - Constructor parameter injection — use `inject()` function
 - Subscribing inside a service — services return Observables, components subscribe
@@ -1016,7 +1016,7 @@ Things the codebase never does. If you find yourself writing any of these, stop 
 - Nested ternary expressions in templates or TypeScript
 - Interfaces / enums defined locally in a component file — always in `@lfx-one/shared`
 
-**General**
+### General
 
 - Missing copyright/SPDX header on any source file
 - Commits without a JIRA ticket reference
@@ -1036,6 +1036,7 @@ Before starting any work or commits:
 - Always run yarn build to validate that your changes are building too for validation
 - Always remember that our JIRA sprint field is customfield_10020. When we create tickets, we need to assign them to the current user and set it to the current sprint.
 - Always use `flex + flex-col + gap-*` instead of `space-y-*`
+
 ## Rule Files
 
 Detailed patterns are in `.claude/rules/` and loaded contextually based on file globs:
