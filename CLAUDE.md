@@ -14,7 +14,7 @@ himself in a separate Claude Code terminal. This preserves his git workflow and 
 
 Format your prompts like this:
 
-```
+```text
 Please make the following change to <relative file path>:
 
 <clear description of what to change and why, with enough detail that no follow-up is needed>
@@ -132,7 +132,7 @@ lfx-v2-ui/
 
 Every feature follows the same four-layer chain. **Never skip a layer or combine them.**
 
-```
+```text
 HTTP request
     │
     ▼
