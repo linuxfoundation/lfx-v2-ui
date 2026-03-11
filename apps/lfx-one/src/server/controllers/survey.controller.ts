@@ -1,8 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { SurveyCreateData } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
+import { ServiceValidationError } from '../errors';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { SurveyService } from '../services/survey.service';
@@ -62,6 +64,54 @@ export class SurveyController {
       });
 
       res.json(survey);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /surveys
+   */
+  public async createSurvey(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'create_survey', {});
+
+    try {
+      const { title, type, project_id } = req.body as SurveyCreateData;
+
+      if (!title) {
+        const validationError = ServiceValidationError.forField('title', 'Title is required', {
+          operation: 'create_survey',
+          service: 'survey_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      if (!type) {
+        const validationError = ServiceValidationError.forField('type', 'Survey type is required', {
+          operation: 'create_survey',
+          service: 'survey_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      if (!project_id) {
+        const validationError = ServiceValidationError.forField('project_id', 'Project ID is required', {
+          operation: 'create_survey',
+          service: 'survey_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      const survey = await this.surveyService.createSurvey(req, req.body as SurveyCreateData);
+
+      logger.success(req, 'create_survey', startTime, { surveyUid: survey.id });
+      res.status(201).json(survey);
     } catch (error) {
       next(error);
     }

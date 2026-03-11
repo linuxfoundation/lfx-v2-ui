@@ -15,6 +15,9 @@ router.get('/', (req, res, next) => surveyController.getSurveys(req, res, next))
 // GET /surveys/:uid - get a single survey
 router.get('/:uid', (req, res, next) => surveyController.getSurveyById(req, res, next));
 
+// POST /surveys - create a survey
+router.post('/', (req, res, next) => surveyController.createSurvey(req, res, next));
+
 // DELETE /surveys/:uid - delete a survey
 router.delete('/:uid', (req, res, next) => surveyController.deleteSurvey(req, res, next));
 
