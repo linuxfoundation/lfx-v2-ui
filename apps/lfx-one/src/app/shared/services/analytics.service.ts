@@ -48,6 +48,9 @@ import {
   UserCodeCommitsResponse,
   UserProjectsResponse,
   UserPullRequestsResponse,
+  EmailCtrResponse,
+  SocialReachResponse,
+  WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -789,6 +792,62 @@ export class AnalyticsService {
     return this.http.get<OrgTrainingEnrollmentsDistributionResponse>('/api/analytics/org-training-enrollments-distribution', { params }).pipe(
       catchError(() => {
         return of({ projects: [] });
+      })
+    );
+  }
+
+  /**
+   * Get web activities summary grouped by domain category
+   * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
+   * @returns Observable of web activities summary response
+   */
+  public getWebActivitiesSummary(foundationSlug: string): Observable<WebActivitiesSummaryResponse> {
+    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalSessions: 0,
+          totalPageViews: 0,
+          domainGroups: [],
+          dailyData: [],
+          dailyLabels: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get email click-through rate data
+   * @param foundationSlug - Foundation slug to filter by
+   * @returns Observable of email CTR response
+   */
+  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          currentCtr: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          monthlyLabels: [],
+          campaignGroups: [],
+          monthlySends: [],
+          monthlyOpens: [],
+        });
+      })
+    );
+  }
+
+  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalReach: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          monthlyLabels: [],
+          channelGroups: [],
+        });
       })
     );
   }

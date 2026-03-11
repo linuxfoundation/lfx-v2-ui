@@ -1668,4 +1668,94 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/web-activities-summary
+   * Get web activities summary grouped by domain category
+   */
+  public async getWebActivitiesSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_web_activities_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_web_activities_summary',
+        });
+      }
+
+      const response = await this.projectService.getWebActivitiesSummary(foundationSlug);
+
+      logger.success(req, 'get_web_activities_summary', startTime, {
+        foundation_slug: foundationSlug,
+        total_sessions: response.totalSessions,
+        domain_groups_count: response.domainGroups.length,
+        daily_data_points: response.dailyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_web_activities_summary', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/email-ctr
+   * Get email click-through rate data
+   */
+  public async getEmailCtr(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_email_ctr');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_email_ctr',
+        });
+      }
+
+      const response = await this.projectService.getEmailCtr(foundationSlug);
+
+      logger.success(req, 'get_email_ctr', startTime, {
+        foundation_slug: foundationSlug,
+        current_ctr: response.currentCtr,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_email_ctr', startTime, error);
+      next(error);
+    }
+  }
+
+  public async getSocialReach(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_social_reach');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_social_reach',
+        });
+      }
+
+      const response = await this.projectService.getSocialReach(foundationSlug);
+
+      logger.success(req, 'get_social_reach', startTime, {
+        foundation_slug: foundationSlug,
+        total_reach: response.totalReach,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_social_reach', startTime, error);
+      next(error);
+    }
+  }
 }

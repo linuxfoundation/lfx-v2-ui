@@ -2618,3 +2618,127 @@ export interface OrgCertifiedEmployeesDistributionItem {
 export interface OrgCertifiedEmployeesDistributionResponse {
   programs: OrgCertifiedEmployeesDistributionItem[];
 }
+
+// ============================================
+// Web Activities (Marketing Dashboard)
+// ============================================
+
+/**
+ * Web Activities summary row from Snowflake SILVER_FACT.WEB_ACTIVITIES
+ * Represents daily session counts grouped by domain category
+ */
+export interface WebActivitiesSummaryRow {
+  DOMAIN_GROUP: string;
+  SESSION_DATE: string;
+  TOTAL_SESSIONS: number;
+  TOTAL_PAGE_VIEWS: number;
+}
+
+/**
+ * Domain group breakdown in the API response
+ */
+export interface WebActivitiesDomainGroup {
+  domainGroup: string;
+  totalSessions: number;
+  totalPageViews: number;
+}
+
+/**
+ * API response for Web Activities Summary query
+ */
+export interface WebActivitiesSummaryResponse {
+  totalSessions: number;
+  totalPageViews: number;
+  domainGroups: WebActivitiesDomainGroup[];
+  dailyData: number[];
+  dailyLabels: string[];
+}
+
+// ============================================
+// Email CTR (Marketing Dashboard)
+// ============================================
+
+/**
+ * Social Reach row from Snowflake PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH
+ * Monthly paid ad impressions aggregated per foundation
+ */
+export interface SocialReachRow {
+  MONTH: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Social Reach channel row from Snowflake PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH
+ * Channel-level paid ad impressions aggregated per foundation
+ */
+export interface SocialReachChannelRow {
+  CHANNEL: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Channel group for paid social reach breakdown
+ */
+export interface SocialReachChannelGroup {
+  channel: string;
+  totalImpressions: number;
+}
+
+/**
+ * API response for Social Reach query (paid impressions)
+ */
+export interface SocialReachResponse {
+  totalReach: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  channelGroups: SocialReachChannelGroup[];
+}
+
+/**
+ * Email CTR row from Snowflake PLATINUM.EMAIL_MARKETING_OVERALL_KPIS
+ * Represents monthly email click-through rate data
+ */
+export interface EmailCtrRow {
+  CREATED_MONTH_DATE: string;
+  OVERALL_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+  TOTAL_OPENS: number;
+}
+
+/**
+ * Email CTR campaign row from Snowflake PLATINUM.EMAIL_MARKETING_OVERALL_KPIS
+ * Campaign-level email metrics aggregated over the period
+ */
+export interface EmailCtrCampaignRow {
+  PROJECT_NAME: string;
+  AVG_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+}
+
+/**
+ * Campaign group for email CTR breakdown
+ */
+export interface EmailCtrCampaignGroup {
+  campaignName: string;
+  avgCtr: number;
+  totalSends: number;
+  totalClicks: number;
+}
+
+/**
+ * API response for Email CTR query
+ */
+export interface EmailCtrResponse {
+  currentCtr: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  campaignGroups: EmailCtrCampaignGroup[];
+  monthlySends: number[];
+  monthlyOpens: number[];
+}
