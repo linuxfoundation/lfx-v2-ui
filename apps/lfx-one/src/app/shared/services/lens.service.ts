@@ -220,7 +220,8 @@ export class LensService {
     const stageIndex = LENS_STAGE_ORDER.indexOf(stage);
     this.stageHistory.set(
       LENS_STAGE_ORDER.map((s, i) => {
-        const config = LENS_STAGE_CONFIGS[s];
+        const key = s as Exclude<LensStreamStage, 'complete'>;
+        const config = LENS_STAGE_CONFIGS[key];
         let status: 'pending' | 'active' | 'completed';
         if (i < stageIndex) {
           status = 'completed';
@@ -229,7 +230,7 @@ export class LensService {
         } else {
           status = 'pending';
         }
-        return { stage: s as LensStreamStage, label: config.label, dotColor: config.dotColor, status };
+        return { stage: s, label: config.label, dotColor: config.dotColor, status };
       })
     );
   }

@@ -8,9 +8,6 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 
 export class LensService {
-  // Tracks RunContent occurrences per stream to determine frontend stage
-  private runContentCount = 0;
-
   private get apiUrl(): string {
     return process.env['LENS_API_URL'] || LENS_CONFIG.DEFAULT_API_URL;
   }
@@ -86,7 +83,8 @@ export class LensService {
    * which are translated to our status/content/block/session_id/done/error types.
    */
   private async *readUpstreamSSE(req: Request, response: globalThis.Response): AsyncGenerator<LensSSEEvent> {
-    this.runContentCount = 0;
+    // Per-stream counter — local to avoid concurrency issues across parallel requests
+    const streamState = { runContentCount: 0 };
 
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
@@ -104,7 +102,7 @@ export class LensService {
         for (const block of blocks) {
           if (!block.trim()) continue;
 
-          for (const event of this.parseUpstreamSSEBlock(block)) {
+          for (const event of this.parseUpstreamSSEBlock(block, streamState)) {
             yield event;
           }
         }
@@ -115,7 +113,7 @@ export class LensService {
 
       // Handle remaining buffer
       if (buffer.trim()) {
-        for (const event of this.parseUpstreamSSEBlock(buffer)) {
+        for (const event of this.parseUpstreamSSEBlock(buffer, streamState)) {
           yield event;
         }
       }
@@ -164,7 +162,7 @@ export class LensService {
    * RunContent, WorkflowCompleted, etc.) — NOT the simple status/content/block/done
    * events our client expects. This method translates between the two.
    */
-  private parseUpstreamSSEBlock(block: string): LensSSEEvent[] {
+  private parseUpstreamSSEBlock(block: string, streamState: { runContentCount: number }): LensSSEEvent[] {
     let eventType = '';
     const dataLines: string[] = [];
 
@@ -189,7 +187,7 @@ export class LensService {
       return [];
     }
 
-    return this.mapUpstreamEvent(eventType, parsed);
+    return this.mapUpstreamEvent(eventType, parsed, streamState);
   }
 
   /**
@@ -206,15 +204,14 @@ export class LensService {
    *   WorkflowCompleted                         → emit blocks + done
    *   WorkflowError                             → error
    */
-  private mapUpstreamEvent(eventType: string, data: Record<string, unknown>): LensSSEEvent[] {
+  private mapUpstreamEvent(eventType: string, data: Record<string, unknown>, streamState: { runContentCount: number }): LensSSEEvent[] {
     switch (eventType) {
       case 'WorkflowStarted': {
         const sessionId = data['session_id'] as string | undefined;
-        const events: LensSSEEvent[] = [{ type: 'status', data: 'Thinking...' }];
-        if (sessionId) {
-          events.unshift({ type: 'session_id', data: sessionId });
-        }
-        return events;
+        // Only emit session_id — the controller already sends an initial
+        // "Analyzing your question..." status before streaming begins.
+        // Emitting another status here would regress the frontend stage.
+        return sessionId ? [{ type: 'session_id', data: sessionId }] : [];
       }
 
       case 'StepStarted': {
@@ -234,8 +231,8 @@ export class LensService {
 
         // String narrations → stage-based status updates
         if (typeof content === 'string') {
-          this.runContentCount++;
-          const status = this.runContentCount <= 1 ? 'Analyzing your question...' : 'Running queries...';
+          streamState.runContentCount++;
+          const status = streamState.runContentCount <= 1 ? 'Analyzing your question...' : 'Running queries...';
           return [{ type: 'status', data: status }];
         }
 

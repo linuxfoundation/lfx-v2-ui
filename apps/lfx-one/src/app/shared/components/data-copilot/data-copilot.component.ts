@@ -60,7 +60,7 @@ export class DataCopilotComponent {
   // Context-aware display
   protected readonly contextLabel: Signal<string> = this.initContextLabel();
   protected readonly contextDescription: Signal<string> = this.initContextDescription();
-  protected readonly suggestedPromptsForContext: Signal<string[]> = this.initSuggestedPrompts();
+  protected readonly suggestedPromptsForContext: Signal<readonly string[]> = this.initSuggestedPrompts();
 
   // Auto-scroll
   private readonly messagesContainer = viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
@@ -99,14 +99,21 @@ export class DataCopilotComponent {
     const message = this.messageControl.value?.trim();
     if (!message || this.streaming()) return;
 
-    this.lensService.sendMessage(message, this.buildContext());
+    const context = this.buildContext();
+    if (!context) return;
+
+    this.lensService.sendMessage(message, context);
     this.messageControl.setValue('');
     this.autoScroll = true;
   }
 
   protected sendPrompt(prompt: string): void {
     if (this.streaming()) return;
-    this.lensService.sendMessage(prompt, this.buildContext());
+
+    const context = this.buildContext();
+    if (!context) return;
+
+    this.lensService.sendMessage(prompt, context);
     this.autoScroll = true;
   }
 
@@ -184,7 +191,7 @@ export class DataCopilotComponent {
     });
   }
 
-  private initSuggestedPrompts(): Signal<string[]> {
+  private initSuggestedPrompts(): Signal<readonly string[]> {
     return computed(() => (this.hasCompanyContext() ? LENS_COMPANY_PROMPTS : LENS_FOUNDATION_PROMPTS));
   }
 

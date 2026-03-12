@@ -35,6 +35,7 @@
       </div>
       @if (hasMessages()) {
         <button
+          type="button"
           (click)="newChat()"
           class="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
           data-testid="data-copilot-new-chat">
@@ -68,6 +69,7 @@
             <div class="flex w-full flex-wrap justify-center gap-2 px-4">
               @for (prompt of suggestedPromptsForContext(); track prompt) {
                 <button
+                  type="button"
                   (click)="sendPrompt(prompt)"
                   class="rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-600 transition-all hover:bg-blue-50"
                   data-testid="data-copilot-suggested-prompt">
@@ -99,7 +101,7 @@
                         <div class="absolute -inset-0.5 animate-spin rounded-full border-2 border-transparent border-r-blue-400 border-t-blue-400"></div>
                         <img src="/images/lens-avatar.png" alt="LFX Lens" class="h-7 w-7 rounded-full" />
                       </div>
-                      <div class="flex flex-col gap-1.5 pt-0.5">
+                      <div class="flex flex-col gap-1.5 pt-0.5" role="status" aria-live="polite">
                         @for (stage of stageHistory(); track stage.stage) {
                           <div class="flex items-center gap-2">
                             @if (stage.status === 'completed') {
@@ -161,6 +163,7 @@
           data-testid="data-copilot-input" />
         @if (streaming()) {
           <button
+            type="button"
             (click)="abort()"
             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white transition-all hover:bg-red-600"
             title="Stop generating"
@@ -170,6 +173,7 @@
           </button>
         } @else {
           <button
+            type="button"
             (click)="send()"
             [disabled]="!canSend()"
             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-30"
