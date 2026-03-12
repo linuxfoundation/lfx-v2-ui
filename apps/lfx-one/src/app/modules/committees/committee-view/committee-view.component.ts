@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -22,6 +22,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -40,6 +41,9 @@ import { AssignLeadershipDialogComponent } from '../components/assign-leadership
     Tab,
     TabPanels,
     TabPanel,
+    DatePipe,
+    DecimalPipe,
+    CommitteeMembersComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -65,6 +69,8 @@ export class CommitteeViewComponent {
   public error = signal<boolean>(false);
   public refresh = new BehaviorSubject<void>(undefined);
 
+  // Sub-resource writable signals
+  public membersLoading = signal<boolean>(true);
   public members: WritableSignal<CommitteeMember[]> = signal([]);
 
   // -- Committee (writable so leadership updates apply instantly) --
@@ -208,6 +214,7 @@ export class CommitteeViewComponent {
 
           this.error.set(false);
           this.loading.set(true);
+          this.membersLoading.set(true);
 
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
@@ -226,6 +233,8 @@ export class CommitteeViewComponent {
           return combineLatest([committeeQuery, membersQuery]).pipe(
             switchMap(([committee, members]) => {
               this.members.set(Array.isArray(members) ? members : []);
+              this.membersLoading.set(false);
+
               this.committeeSignal.set(committee);
               return of(null);
             }),
