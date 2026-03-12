@@ -17,7 +17,7 @@ import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
@@ -35,10 +35,9 @@ import { TooltipModule } from 'primeng/tooltip';
     SelectComponent,
     TooltipModule,
     ConfirmDialogModule,
-    DynamicDialogModule,
     CommitteeCategorySeverityPipe,
   ],
-  providers: [ConfirmationService, DialogService],
+  providers: [ConfirmationService],
   templateUrl: './committee-table.component.html',
   styleUrl: './committee-table.component.scss',
 })
@@ -47,7 +46,6 @@ export class CommitteeTableComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
-  private readonly dialogService = inject(DialogService);
   private readonly personaService = inject(PersonaService);
 
   // Inputs

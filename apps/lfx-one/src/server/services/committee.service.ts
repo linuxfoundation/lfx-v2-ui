@@ -3,15 +3,29 @@
 
 import {
   Committee,
+  CommitteeActivity,
+  CommitteeBudgetSummary,
+  CommitteeContributor,
   CommitteeCreateData,
+  CommitteeDeliverable,
+  CommitteeDiscussionThread,
+  CommitteeDocument,
+  CommitteeEngagementMetrics,
+  CommitteeEvent,
   CommitteeLeadership,
   CommitteeMember,
+  CommitteeOutreachCampaign,
+  CommitteeResolution,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CommitteeVote,
   CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupInvite,
   QueryServiceCountResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
+import { CommitteeJoinApplication, CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberRole } from '@lfx-one/shared/enums';
 import { Request } from 'express';
 
@@ -460,24 +474,24 @@ export class CommitteeService {
 
   // ── Invite Methods ──────────────────────────────────────────────────────────
 
-  public async createInvites(req: Request, committeeId: string, payload: any): Promise<any> {
+  public async createInvites(req: Request, committeeId: string, payload: CreateGroupInviteRequest): Promise<GroupInvite[]> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'POST', {}, payload);
   }
 
-  public async getInvites(req: Request, committeeId: string): Promise<any[]> {
+  public async getInvites(req: Request, committeeId: string): Promise<GroupInvite[]> {
     try {
-      const result = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
-      return Array.isArray(result) ? result : result?.resources?.map((r: any) => r.data) || [];
+      const result = await this.microserviceProxy.proxyRequest<GroupInvite[] | QueryServiceResponse<GroupInvite>>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
+      return Array.isArray(result) ? result : (result as QueryServiceResponse<GroupInvite>)?.resources?.map((r) => r.data) || [];
     } catch {
       return [];
     }
   }
 
-  public async acceptInvite(req: Request, committeeId: string, inviteId: string): Promise<any> {
+  public async acceptInvite(req: Request, committeeId: string, inviteId: string): Promise<GroupInvite> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/accept`, 'POST');
   }
 
-  public async declineInvite(req: Request, committeeId: string, inviteId: string): Promise<any> {
+  public async declineInvite(req: Request, committeeId: string, inviteId: string): Promise<GroupInvite> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites/${inviteId}/decline`, 'POST');
   }
 
@@ -497,30 +511,30 @@ export class CommitteeService {
 
   // ── Application Methods ─────────────────────────────────────────────────────
 
-  public async applyToJoin(req: Request, committeeId: string, payload: any): Promise<any> {
+  public async applyToJoin(req: Request, committeeId: string, payload: CreateCommitteeJoinApplicationRequest): Promise<CommitteeJoinApplication> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, payload);
   }
 
-  public async getApplications(req: Request, committeeId: string): Promise<any[]> {
+  public async getApplications(req: Request, committeeId: string): Promise<CommitteeJoinApplication[]> {
     try {
-      const result = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
-      return Array.isArray(result) ? result : result?.resources?.map((r: any) => r.data) || [];
+      const result = await this.microserviceProxy.proxyRequest<CommitteeJoinApplication[] | QueryServiceResponse<CommitteeJoinApplication>>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
+      return Array.isArray(result) ? result : (result as QueryServiceResponse<CommitteeJoinApplication>)?.resources?.map((r) => r.data) || [];
     } catch {
       return [];
     }
   }
 
-  public async approveApplication(req: Request, committeeId: string, applicationId: string): Promise<any> {
+  public async approveApplication(req: Request, committeeId: string, applicationId: string): Promise<CommitteeJoinApplication> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications/${applicationId}/approve`, 'POST');
   }
 
-  public async rejectApplication(req: Request, committeeId: string, applicationId: string): Promise<any> {
+  public async rejectApplication(req: Request, committeeId: string, applicationId: string): Promise<CommitteeJoinApplication> {
     return this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications/${applicationId}/reject`, 'POST');
   }
 
   // ── Dashboard Sub-Resource Methods ──────────────────────────────────────────
 
-  public async getCommitteeVotes(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeVotes(req: Request, committeeId: string): Promise<CommitteeVote[]> {
     try {
       // First try committee_vote resources (managed by api_client_service)
       const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(
@@ -568,10 +582,10 @@ export class CommitteeService {
           title: r.data.name,
           status: getVoteStatus(r.data.status),
           deadline: r.data.end_time,
-          votesFor: r.data.num_response_received ?? 0,
-          votesAgainst: 0,
-          votesAbstain: 0,
-          totalEligible: r.data.total_voting_request_invitations ?? 0,
+          votes_for: r.data.num_response_received ?? 0,
+          votes_against: 0,
+          votes_abstain: 0,
+          total_eligible: r.data.total_voting_request_invitations ?? 0,
           created_by: '',
         }));
     } catch {
@@ -579,7 +593,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<CommitteeResolution[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_resolution',
@@ -591,7 +605,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeActivity(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeActivity(req: Request, committeeId: string): Promise<CommitteeActivity[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_activity',
@@ -603,7 +617,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeContributors(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeContributors(req: Request, committeeId: string): Promise<CommitteeContributor[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_contributor',
@@ -615,7 +629,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<CommitteeDeliverable[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_deliverable',
@@ -627,7 +641,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<CommitteeDiscussionThread[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_discussion',
@@ -639,7 +653,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeEvents(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeEvents(req: Request, committeeId: string): Promise<CommitteeEvent[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_event',
@@ -651,7 +665,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<CommitteeOutreachCampaign[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_campaign',
@@ -663,15 +677,15 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<any> {
+  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<CommitteeEngagementMetrics | null> {
     try {
-      return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
+      return await this.microserviceProxy.proxyRequest<CommitteeEngagementMetrics>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
     } catch {
-      return {};
+      return null;
     }
   }
 
-  public async getCommitteeBudget(req: Request, committeeId: string): Promise<any> {
+  public async getCommitteeBudget(req: Request, committeeId: string): Promise<CommitteeBudgetSummary | null> {
     try {
       return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/budget`, 'GET');
     } catch {
@@ -679,7 +693,7 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_document',
@@ -691,6 +705,7 @@ export class CommitteeService {
     }
   }
 
+   
   public async getCommitteeSurveys(req: Request, committeeId: string): Promise<any[]> {
     try {
       // Surveys are indexed by project_uid in the query service, not by committee_uid tag.

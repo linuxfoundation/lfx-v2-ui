@@ -6,8 +6,8 @@ import {
   CommitteeUpdateData,
   CreateCommitteeMemberRequest,
   CreateGroupInviteRequest,
-  GroupJoinApplicationRequest,
 } from '@lfx-one/shared/interfaces';
+import { CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -44,8 +44,9 @@ export class CommitteeController {
 
   /**
    * GET /public/api/committees
-   * Returns public-safe committee data stripped of internal fields.
+   * Returns committees filtered to public-only.
    * Optionally scoped by project_uid query param.
+   * // TODO: map response to PublicCommittee shape before exposing publicly
    */
   public async getPublicCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
     const projectUid = req.query['project_uid'] as string | undefined;
@@ -955,7 +956,7 @@ export class CommitteeController {
     const startTime = logger.startOperation(req, 'apply_to_join', { committee_id: id });
 
     try {
-      const payload: GroupJoinApplicationRequest = req.body;
+      const payload: CreateCommitteeJoinApplicationRequest = req.body;
       const application = await this.committeeService.applyToJoin(req, id, payload);
 
       logger.success(req, 'apply_to_join', startTime, { committee_id: id });
