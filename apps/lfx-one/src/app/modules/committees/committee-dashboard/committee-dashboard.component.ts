@@ -16,7 +16,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+
 import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
 
@@ -24,8 +24,8 @@ import { CommitteeTableComponent } from '../components/committee-table/committee
 
 @Component({
   selector: 'lfx-committee-dashboard',
-  imports: [DecimalPipe, ButtonComponent, CardComponent, CommitteeTableComponent, ConfirmDialogModule, DynamicDialogModule, RouterLink, TooltipModule],
-  providers: [ConfirmationService, DialogService],
+  imports: [DecimalPipe, ButtonComponent, CardComponent, CommitteeTableComponent, ConfirmDialogModule, RouterLink, TooltipModule],
+  providers: [ConfirmationService],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',
 })
@@ -38,7 +38,6 @@ export class CommitteeDashboardComponent {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
-  private readonly dialogService = inject(DialogService);
 
   // Use the configurable label constants
   protected readonly committeeLabel = COMMITTEE_LABEL.singular;
@@ -249,15 +248,7 @@ export class CommitteeDashboardComponent {
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
       rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => {
-        if (!committee.myMemberUid) {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Unable to leave group — membership data unavailable',
-          });
-          return;
-        }
-        this.committeeService.deleteCommitteeMember(committee.uid, committee.myMemberUid).subscribe({
+        this.committeeService.leaveCommittee(committee.uid).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',

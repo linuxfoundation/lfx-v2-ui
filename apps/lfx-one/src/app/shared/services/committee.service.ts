@@ -20,12 +20,11 @@ import {
   CreateCommitteeMemberRequest,
   CreateGroupInviteRequest,
   GroupInvite,
-  GroupJoinApplication,
-  GroupJoinApplicationRequest,
   MyCommittee,
   QueryServiceCountResponse,
   Survey,
 } from '@lfx-one/shared/interfaces';
+import { CommitteeJoinApplication, CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -128,13 +127,13 @@ export class CommitteeService {
   }
 
   /** Apply to join a group (join_mode = 'apply') */
-  public applyToJoin(committeeId: string, payload: GroupJoinApplicationRequest): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications`, payload).pipe(take(1));
+  public applyToJoin(committeeId: string, payload: CreateCommitteeJoinApplicationRequest): Observable<CommitteeJoinApplication> {
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, payload).pipe(take(1));
   }
 
   /** List pending applications (admin view) */
-  public getApplications(committeeId: string): Observable<GroupJoinApplication[]> {
-    return this.http.get<GroupJoinApplication[]>(`/api/committees/${committeeId}/applications`).pipe(
+  public getApplications(committeeId: string): Observable<CommitteeJoinApplication[]> {
+    return this.http.get<CommitteeJoinApplication[]>(`/api/committees/${committeeId}/applications`).pipe(
       catchError((error) => {
         console.error('Failed to load applications:', error);
         return of([]);
@@ -143,13 +142,13 @@ export class CommitteeService {
   }
 
   /** Approve a join application */
-  public approveApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/approve`, {}).pipe(take(1));
+  public approveApplication(committeeId: string, applicationId: string): Observable<CommitteeJoinApplication> {
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/approve`, {}).pipe(take(1));
   }
 
   /** Reject a join application */
-  public rejectApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
+  public rejectApplication(committeeId: string, applicationId: string): Observable<CommitteeJoinApplication> {
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
   }
 
   // ── Public / My Committees ────────────────────────────────────────────────

@@ -89,17 +89,17 @@
                     <span
                       class="inline-flex items-center text-xs font-medium rounded-full px-2.5 py-1 flex-shrink-0"
                       [class]="
-                        committee.myRole === 'Chair'
+                        committee.my_role === 'Chair'
                           ? 'bg-blue-100 text-blue-800'
-                          : committee.myRole === 'Vice Chair'
+                          : committee.my_role === 'Vice Chair'
                             ? 'bg-indigo-100 text-indigo-800'
-                            : committee.myRole === 'Member'
+                            : committee.my_role === 'Member'
                               ? 'bg-green-100 text-green-800'
-                              : committee.myRole === 'Lead'
+                              : committee.my_role === 'Lead'
                                 ? 'bg-purple-100 text-purple-800'
                                 : 'bg-gray-100 text-gray-600'
                       ">
-                      {{ committee.myRole }}
+                      {{ committee.my_role }}
                     </span>
                   </div>
 
