@@ -2,32 +2,23 @@
 // SPDX-License-Identifier: MIT
 
 import otelApi from '@opentelemetry/api';
-import otelCore from '@opentelemetry/core';
-import otelExporterGrpc from '@opentelemetry/exporter-trace-otlp-grpc';
 import otelExporterProto from '@opentelemetry/exporter-trace-otlp-proto';
 import otelExpress from '@opentelemetry/instrumentation-express';
 import otelHttp from '@opentelemetry/instrumentation-http';
 import otelUndici from '@opentelemetry/instrumentation-undici';
-import otelB3 from '@opentelemetry/propagator-b3';
-import otelJaeger from '@opentelemetry/propagator-jaeger';
-import otelResources from '@opentelemetry/resources';
 import otelSdk from '@opentelemetry/sdk-node';
-import otelTraceBase from '@opentelemetry/sdk-trace-base';
 import otelSemconv from '@opentelemetry/semantic-conventions';
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating';
 
 const { diag, DiagConsoleLogger, DiagLogLevel } = otelApi;
-const { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } = otelCore;
-const { OTLPTraceExporter: OTLPTraceExporterGrpc } = otelExporterGrpc;
 const { OTLPTraceExporter: OTLPTraceExporterProto } = otelExporterProto;
 const { ExpressInstrumentation } = otelExpress;
 const { HttpInstrumentation } = otelHttp;
 const { UndiciInstrumentation } = otelUndici;
-const { B3Propagator, B3InjectEncoding } = otelB3;
-const { JaegerPropagator } = otelJaeger;
-const { resourceFromAttributes } = otelResources;
-const { NodeSDK } = otelSdk;
-const { AlwaysOnSampler, AlwaysOffSampler, TraceIdRatioBasedSampler, ParentBasedSampler } = otelTraceBase;
+const { NodeSDK, resources, core, tracing } = otelSdk;
+const { resourceFromAttributes } = resources;
+const { CompositePropagator, W3CTraceContextPropagator, W3CBaggagePropagator } = core;
+const { AlwaysOnSampler, AlwaysOffSampler, TraceIdRatioBasedSampler, ParentBasedSampler } = tracing;
 const { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } = otelSemconv;
 
 const otlpEndpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
@@ -61,14 +52,7 @@ if (!otlpEndpoint) {
     [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: process.env['NODE_ENV'] === 'dev' ? 'development' : (process.env['NODE_ENV'] || 'development'),
   });
 
-  // Exporter protocol: grpc or http/protobuf (default)
-  const protocol = process.env['OTEL_EXPORTER_OTLP_PROTOCOL'] || 'http/protobuf';
-  let traceExporter;
-  if (protocol === 'grpc') {
-    traceExporter = new OTLPTraceExporterGrpc({ url: otlpEndpoint });
-  } else {
-    traceExporter = new OTLPTraceExporterProto({ url: `${otlpEndpoint}/v1/traces` });
-  }
+  const traceExporter = new OTLPTraceExporterProto({ url: `${otlpEndpoint}/v1/traces` });
 
   // Trace sampling ratio (0.0 to 1.0, default 1.0 = sample everything)
   const rawRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
@@ -105,25 +89,9 @@ if (!otlpEndpoint) {
       break;
   }
 
-  // Propagators: comma-separated list (default: tracecontext,baggage)
-  const propagatorNames = (process.env['OTEL_PROPAGATORS'] || 'tracecontext,baggage').split(',').map((p) => p.trim());
-  const propagatorMap = {
-    tracecontext: () => new W3CTraceContextPropagator(),
-    baggage: () => new W3CBaggagePropagator(),
-    b3: () => new B3Propagator(),
-    b3multi: () => new B3Propagator({ injectEncoding: B3InjectEncoding.MULTI_HEADER }),
-    jaeger: () => new JaegerPropagator(),
-  };
-  const propagators = propagatorNames
-    .filter((name) => {
-      if (!propagatorMap[name]) {
-        console.warn(`[otel] Unknown propagator: ${name}, skipping`);
-        return false;
-      }
-      return true;
-    })
-    .map((name) => propagatorMap[name]());
-  const textMapPropagator = new CompositePropagator({ propagators });
+  const textMapPropagator = new CompositePropagator({
+    propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
+  });
 
   const sdk = new NodeSDK({
     resource,
@@ -151,10 +119,8 @@ if (!otlpEndpoint) {
   console.log('[otel] Tracing enabled:', JSON.stringify({
     service: serviceName,
     version: serviceVersion,
-    protocol,
     sampler: samplerName,
     ratio: traceRatio,
-    propagators: propagatorNames,
   }));
 
   const shutdown = async () => {
