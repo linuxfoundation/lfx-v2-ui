@@ -27,9 +27,7 @@
   <ng-template #header>
     <div class="flex w-full items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
-          <i class="fa-duotone fa-sparkles text-xs text-white"></i>
-        </div>
+        <img src="/images/lens-avatar.png" alt="LFX Lens" class="h-8 w-8 rounded-full" />
         <div class="flex flex-col">
           <span class="text-sm font-semibold text-gray-900">LFX Lens</span>
           <span class="text-[10px] text-gray-400">AI-powered data assistant</span>
@@ -48,95 +46,97 @@
   </ng-template>
 
   <div class="flex h-full flex-col">
-    <!-- Messages area (scrollable) -->
-    <div
-      #messagesContainer
-      class="messages-area flex-1 overflow-y-auto px-5 py-5"
-      tabindex="0"
-      role="log"
-      aria-label="Chat messages"
-      (scroll)="onMessagesScroll()"
-      data-testid="data-copilot-messages">
-      @if (!hasMessages()) {
-        <!-- Empty state -->
-        <div class="flex h-full flex-col items-center justify-center gap-5">
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
-            <i class="fa-duotone fa-sparkles text-lg text-blue-500"></i>
+    <!-- Messages area wrapper (relative for background positioning) -->
+    <div class="relative min-h-0 flex-1">
+      <img src="/images/copilot-bg.png" alt="" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-50" />
+      <div
+        #messagesContainer
+        class="messages-area absolute inset-0 overflow-y-auto px-5 py-5"
+        tabindex="0"
+        role="log"
+        aria-label="Chat messages"
+        (scroll)="onMessagesScroll()"
+        data-testid="data-copilot-messages">
+        @if (!hasMessages()) {
+          <!-- Empty state -->
+          <div class="flex h-full flex-col items-center justify-center gap-5">
+            <img src="/images/lens-avatar.png" alt="LFX Lens" class="h-12 w-12 rounded-full" />
+            <div class="flex flex-col items-center gap-1.5">
+              <h3 class="font-display text-2xl font-light text-gray-900">Ask about {{ contextLabel() }}</h3>
+              <p class="max-w-sm text-center text-sm text-gray-400">{{ contextDescription() }}</p>
+            </div>
+            <div class="flex w-full flex-wrap justify-center gap-2 px-4">
+              @for (prompt of suggestedPromptsForContext(); track prompt) {
+                <button
+                  (click)="sendPrompt(prompt)"
+                  class="rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-600 transition-all hover:bg-blue-50"
+                  data-testid="data-copilot-suggested-prompt">
+                  {{ prompt }}
+                </button>
+              }
+            </div>
           </div>
-          <div class="flex flex-col items-center gap-1.5">
-            <h3 class="font-display text-2xl font-light text-gray-900">Ask about {{ contextLabel() }}</h3>
-            <p class="max-w-sm text-center text-sm text-gray-400">{{ contextDescription() }}</p>
-          </div>
-          <div class="flex w-full flex-wrap justify-center gap-2 px-4">
-            @for (prompt of suggestedPromptsForContext(); track prompt) {
-              <button
-                (click)="sendPrompt(prompt)"
-                class="rounded-full border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-600 transition-all hover:bg-blue-50"
-                data-testid="data-copilot-suggested-prompt">
-                {{ prompt }}
-              </button>
-            }
-          </div>
-        </div>
-      } @else {
-        <!-- Message list -->
-        <div class="flex flex-col gap-5" data-testid="data-copilot-message-list">
-          @for (msg of messages(); track $index) {
-            @if (msg.role === 'user') {
-              <!-- User message -->
-              <div class="message-fade-in flex w-full justify-end">
-                <div
-                  class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-blue-600 px-4 py-3 text-[13px] leading-relaxed text-white shadow-sm"
-                  data-testid="data-copilot-user-message">
-                  {{ msg.content }}
+        } @else {
+          <!-- Message list -->
+          <div class="flex flex-col gap-5" data-testid="data-copilot-message-list">
+            @for (msg of messages(); track $index) {
+              @if (msg.role === 'user') {
+                <!-- User message -->
+                <div class="message-fade-in flex w-full justify-end">
+                  <div
+                    class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-blue-600 px-4 py-3 text-[13px] leading-relaxed text-white shadow-sm"
+                    data-testid="data-copilot-user-message">
+                    {{ msg.content }}
+                  </div>
                 </div>
-              </div>
-            } @else {
-              <!-- Assistant message -->
-              <div class="message-fade-in flex w-full flex-col gap-1.5">
-                @if (msg.loading && !msg.content && msg.blocks.length === 0) {
-                  <!-- Multi-stage loading indicator -->
-                  <div class="fade-slide-in flex items-start gap-3">
-                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50">
-                      <i class="fa-duotone fa-sparkles sparkle-spin text-xs text-blue-500"></i>
+              } @else {
+                <!-- Assistant message -->
+                <div class="message-fade-in flex w-full flex-col gap-1.5">
+                  @if (msg.loading && !msg.content && msg.blocks.length === 0) {
+                    <!-- Multi-stage loading indicator -->
+                    <div class="fade-slide-in flex items-start gap-3">
+                      <div class="relative flex h-8 w-8 shrink-0 items-center justify-center">
+                        <div class="absolute -inset-0.5 animate-spin rounded-full border-2 border-transparent border-r-blue-400 border-t-blue-400"></div>
+                        <img src="/images/lens-avatar.png" alt="LFX Lens" class="h-7 w-7 rounded-full" />
+                      </div>
+                      <div class="flex flex-col gap-1.5 pt-0.5">
+                        @for (stage of stageHistory(); track stage.stage) {
+                          <div class="flex items-center gap-2">
+                            @if (stage.status === 'completed') {
+                              <i class="fa-solid fa-check text-[10px] text-gray-400"></i>
+                            } @else if (stage.status === 'active') {
+                              <span class="dot-pulse inline-block h-2 w-2 rounded-full {{ stage.dotColor }}"></span>
+                            } @else {
+                              <span class="inline-block h-2 w-2 rounded-full bg-gray-200"></span>
+                            }
+                            <span
+                              class="text-xs"
+                              [class.text-gray-600]="stage.status === 'active'"
+                              [class.text-gray-400]="stage.status === 'completed'"
+                              [class.text-gray-300]="stage.status === 'pending'">
+                              {{ stage.label }}
+                            </span>
+                          </div>
+                        }
+                        @if (stageHistory().length === 0) {
+                          <div class="flex items-center gap-2">
+                            <span class="dot-pulse inline-block h-2 w-2 rounded-full bg-violet-400"></span>
+                            <span class="text-xs text-gray-600">Starting...</span>
+                          </div>
+                        }
+                      </div>
                     </div>
-                    <div class="flex flex-col gap-1.5 pt-0.5">
-                      @for (stage of stageHistory(); track stage.stage) {
-                        <div class="flex items-center gap-2">
-                          @if (stage.status === 'completed') {
-                            <i class="fa-solid fa-check text-[10px] text-gray-400"></i>
-                          } @else if (stage.status === 'active') {
-                            <span class="dot-pulse inline-block h-2 w-2 rounded-full {{ stage.dotColor }}"></span>
-                          } @else {
-                            <span class="inline-block h-2 w-2 rounded-full bg-gray-200"></span>
-                          }
-                          <span
-                            class="text-xs"
-                            [class.text-gray-600]="stage.status === 'active'"
-                            [class.text-gray-400]="stage.status === 'completed'"
-                            [class.text-gray-300]="stage.status === 'pending'">
-                            {{ stage.label }}
-                          </span>
-                        </div>
-                      }
-                      @if (stageHistory().length === 0) {
-                        <div class="flex items-center gap-2">
-                          <span class="dot-pulse inline-block h-2 w-2 rounded-full bg-violet-400"></span>
-                          <span class="text-xs text-gray-600">Starting...</span>
-                        </div>
-                      }
+                  } @else {
+                    <div class="text-[13px] leading-[1.7]" data-testid="data-copilot-assistant-message">
+                      <lfx-lens-response [content]="msg.content" [blocks]="msg.blocks" (suggestionClick)="sendPrompt($event)" />
                     </div>
-                  </div>
-                } @else {
-                  <div class="text-[13px] leading-[1.7]" data-testid="data-copilot-assistant-message">
-                    <lfx-lens-response [content]="msg.content" [blocks]="msg.blocks" (suggestionClick)="sendPrompt($event)" />
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
             }
-          }
-        </div>
-      }
+          </div>
+        }
+      </div>
     </div>
 
     <!-- Error bar -->

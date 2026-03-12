@@ -18,21 +18,6 @@
   }
 }
 
-/* Sparkle icon slow rotation */
-.sparkle-spin {
-  animation: sparkle-rotate 3s linear infinite;
-}
-
-@keyframes sparkle-rotate {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Pulsing dot for active stage */
 .dot-pulse {
   animation: dot-pulse-anim 1.5s ease-in-out infinite;
