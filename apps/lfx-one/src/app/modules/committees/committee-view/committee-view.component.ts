@@ -3,6 +3,7 @@
 
 import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { FormControl, FormGroup } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -31,6 +32,7 @@ import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, ta
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
+import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -50,6 +52,7 @@ import { CommitteeMembersComponent } from '../components/committee-members/commi
     TabPanels,
     TabPanel,
     CommitteeMembersComponent,
+    CommitteeSettingsComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -146,6 +149,10 @@ export class CommitteeViewComponent {
   public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
   public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
 
+  // -- Settings form --
+  public settingsForm: FormGroup = this.createSettingsForm();
+  public settingsSaving = signal<boolean>(false);
+
   // -- Configuration label signals --
   public joinModeLabel: Signal<string> = computed(() => {
     switch (this.committee()?.join_mode) {
@@ -178,6 +185,38 @@ export class CommitteeViewComponent {
 
   public getMembersCountByOrg(org: string): number {
     return this.members().filter((m) => m.organization?.name === org).length;
+  }
+
+  public saveSettings(): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    this.settingsSaving.set(true);
+    const payload = this.settingsForm.value;
+
+    this.committeeService
+      .updateCommittee(committee.uid, payload)
+      .pipe(
+        take(1),
+        finalize(() => this.settingsSaving.set(false))
+      )
+      .subscribe({
+        next: (updated) => {
+          this.committeeSignal.set(updated);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Settings saved successfully',
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to save settings. Please try again.',
+          });
+        },
+      });
   }
 
   public openAssignLeadership(role: LeadershipRole): void {
@@ -252,6 +291,11 @@ export class CommitteeViewComponent {
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
+
+              if (committee) {
+                this.populateSettingsForm(committee);
+              }
+
               return of(null);
             }),
             finalize(() => this.loading.set(false))
@@ -301,6 +345,35 @@ export class CommitteeViewComponent {
       const c = this.coChair();
       if (!c?.elected_date) return '';
       return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    });
+  }
+
+  private createSettingsForm(): FormGroup {
+    return new FormGroup({
+      business_email_required: new FormControl(false),
+      enable_voting: new FormControl(false),
+      is_audit_enabled: new FormControl(false),
+      public: new FormControl(false),
+      sso_group_enabled: new FormControl(false),
+      // TODO(LFXV2-1255): Remove joinable once join_mode is fully wired backend-side.
+      joinable: new FormControl(false),
+      join_mode: new FormControl('closed'),
+      member_visibility: new FormControl('hidden'),
+      show_meeting_attendees: new FormControl(false),
+    });
+  }
+
+  private populateSettingsForm(committee: Committee): void {
+    this.settingsForm.patchValue({
+      business_email_required: committee.business_email_required || false,
+      enable_voting: committee.enable_voting || false,
+      is_audit_enabled: committee.is_audit_enabled || false,
+      public: committee.public || false,
+      sso_group_enabled: committee.sso_group_enabled || false,
+      joinable: false,
+      join_mode: committee.join_mode || 'closed',
+      member_visibility: committee.member_visibility || 'hidden',
+      show_meeting_attendees: committee.show_meeting_attendees || false,
     });
   }
 }
