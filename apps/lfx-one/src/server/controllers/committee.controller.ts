@@ -716,7 +716,12 @@ export class CommitteeController {
   public async createInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
     const committeeId = req.params['id'];
     if (!committeeId) {
-      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'create_invites', service: 'committee_controller', path: req.path }));
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'create_invites',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'create_invites', { committee_id: committeeId });
@@ -742,7 +747,12 @@ export class CommitteeController {
   public async getInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
     const committeeId = req.params['id'];
     if (!committeeId) {
-      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'get_invites', service: 'committee_controller', path: req.path }));
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'get_invites',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'get_invites', { committee_id: committeeId });
@@ -767,7 +777,12 @@ export class CommitteeController {
   public async applyToJoin(req: Request, res: Response, next: NextFunction): Promise<void> {
     const committeeId = req.params['id'];
     if (!committeeId) {
-      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'apply_to_join', service: 'committee_controller', path: req.path }));
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'apply_to_join',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'apply_to_join', { committee_id: committeeId });
@@ -789,9 +804,12 @@ export class CommitteeController {
   public async getApplications(req: Request, res: Response, next: NextFunction): Promise<void> {
     const committeeId = req.params['id'];
     if (!committeeId) {
-      next(
-        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'get_applications', service: 'committee_controller', path: req.path })
-      );
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'get_applications',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'get_applications', { committee_id: committeeId });
@@ -817,19 +835,21 @@ export class CommitteeController {
     const committeeId = req.params['id'];
     const applicationId = req.params['applicationId'];
     if (!committeeId) {
-      next(
-        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'approve_application', service: 'committee_controller', path: req.path })
-      );
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'approve_application',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     if (!applicationId) {
-      next(
-        ServiceValidationError.forField('applicationId', 'Application ID is required', {
-          operation: 'approve_application',
-          service: 'committee_controller',
-          path: req.path,
-        })
-      );
+      const validationError = ServiceValidationError.forField('applicationId', 'Application ID is required', {
+        operation: 'approve_application',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'approve_application', { committee_id: committeeId, application_id: applicationId });
@@ -851,19 +871,21 @@ export class CommitteeController {
     const committeeId = req.params['id'];
     const applicationId = req.params['applicationId'];
     if (!committeeId) {
-      next(
-        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'reject_application', service: 'committee_controller', path: req.path })
-      );
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'reject_application',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     if (!applicationId) {
-      next(
-        ServiceValidationError.forField('applicationId', 'Application ID is required', {
-          operation: 'reject_application',
-          service: 'committee_controller',
-          path: req.path,
-        })
-      );
+      const validationError = ServiceValidationError.forField('applicationId', 'Application ID is required', {
+        operation: 'reject_application',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
       return;
     }
     const startTime = logger.startOperation(req, 'reject_application', { committee_id: committeeId, application_id: applicationId });

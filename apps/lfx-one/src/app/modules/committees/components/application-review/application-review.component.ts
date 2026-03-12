@@ -53,6 +53,16 @@ export class ApplicationReviewComponent {
         this.loading.set(false);
         return;
       }
+      if (c.join_mode !== 'apply') {
+        this.applications.set([]);
+        this.loading.set(false);
+        return;
+      }
+      if (!c.writer) {
+        this.applications.set([]);
+        this.loading.set(false);
+        return;
+      }
       this.loadApplications(c.uid);
     });
   }

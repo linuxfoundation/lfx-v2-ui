@@ -93,12 +93,11 @@ export class CommitteeMembersComponent implements OnInit {
       const visibility = this.committee()?.member_visibility;
       return visibility !== 'hidden' || this.canManageMembers();
     });
-    // Invite requires both a compatible join_mode and management permission (writer or maintainer)
+    // Invite requires both a compatible join_mode and management permission
     this.canInviteMembers = computed(() => {
       const committee = this.committee();
-      const joinMode = committee?.join_mode;
-      const hasInviteMode = joinMode === 'invite-only' || joinMode === 'open';
-      return hasInviteMode && (!!committee?.writer || this.canManageMembers());
+      const hasInviteMode = committee?.join_mode === 'invite-only' || committee?.join_mode === 'open';
+      return hasInviteMode && this.canManageMembers();
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
