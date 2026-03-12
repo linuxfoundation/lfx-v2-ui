@@ -27,6 +27,7 @@ import {
   MeetingAttachment,
   MeetingRegistrant,
   PendingAttachment,
+  PresignAttachmentResponse,
   RegistrantPendingChanges,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -44,6 +45,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { toZonedTime } from 'date-fns-tz';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { SkeletonModule } from 'primeng/skeleton';
 import { StepperModule } from 'primeng/stepper';
 import { BehaviorSubject, catchError, concat, filter, finalize, forkJoin, from, mergeMap, Observable, of, switchMap, take, toArray } from 'rxjs';
 
@@ -66,6 +68,7 @@ import { MeetingTypeSelectionComponent } from '../components/meeting-type-select
     MeetingResourcesSummaryComponent,
     MeetingRegistrantsManagerComponent,
     RouterLink,
+    SkeletonModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-manage.component.html',
@@ -90,6 +93,7 @@ export class MeetingManageComponent {
   });
   // Initialize meeting data using toSignal
   public meeting = this.initializeMeeting();
+  public meetingLoading = computed(() => this.isEditMode() && this.meeting() === null);
   // Initialize meeting attachments with refresh capability
   private attachmentsRefresh$ = new BehaviorSubject<void>(undefined);
   public attachments = this.initializeAttachments();
@@ -238,14 +242,18 @@ export class MeetingManageComponent {
 
     this.submitting.set(true);
     const meetingData = this.prepareMeetingData();
-    const operation = this.isEditMode()
-      ? this.meetingService.updateMeeting(this.meetingId()!, meetingData as UpdateMeetingRequest, 'single')
-      : this.meetingService.createMeeting(meetingData as CreateMeetingRequest);
 
-    operation.subscribe({
-      next: (meeting) => this.handleMeetingSuccess(meeting),
-      error: (error) => this.handleMeetingError(error),
-    });
+    if (this.isEditMode()) {
+      this.meetingService.updateMeeting(this.meetingId()!, meetingData as UpdateMeetingRequest, 'single').subscribe({
+        next: () => this.handleMeetingSuccess(),
+        error: (error) => this.handleMeetingError(error),
+      });
+    } else {
+      this.meetingService.createMeeting(meetingData as CreateMeetingRequest).subscribe({
+        next: (meeting) => this.handleMeetingSuccess(meeting),
+        error: (error) => this.handleMeetingError(error),
+      });
+    }
   }
 
   public deleteAttachment(attachmentId: string): void {
@@ -302,11 +310,11 @@ export class MeetingManageComponent {
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: (result: {
-          meeting: Meeting;
+          meeting: void;
           registrants: { type: string; success: number; failed: number }[];
           attachments: {
             deletions: { successes: number; failures: string[] };
-            uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+            uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
             links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
           } | null;
         }) => {
@@ -460,22 +468,27 @@ export class MeetingManageComponent {
       visibility: formValue.visibility || MeetingVisibility.PRIVATE,
       restricted: formValue.restricted || false,
       recording_enabled: formValue.recording_enabled || false,
-      transcript_enabled: formValue.transcript_enabled || false,
-      youtube_upload_enabled: formValue.youtube_upload_enabled || false,
-      show_meeting_attendees: formValue.show_meeting_attendees || false,
+      transcript_enabled: formValue.recording_enabled ? formValue.transcript_enabled || false : false,
+      youtube_upload_enabled: formValue.recording_enabled ? formValue.youtube_upload_enabled || false : false,
+      show_meeting_attendees: false, // Coming Soon — disabled in form
       zoom_config: {
-        ai_companion_enabled: formValue.zoom_ai_enabled || false,
-        ai_summary_require_approval: formValue.require_ai_summary_approval || false,
+        ai_companion_enabled: formValue.recording_enabled ? formValue.zoom_ai_enabled || false : false,
+        ai_summary_require_approval: formValue.recording_enabled ? formValue.require_ai_summary_approval || false : false,
       },
-      artifact_visibility: formValue.artifact_visibility || DEFAULT_ARTIFACT_VISIBILITY,
+      artifact_visibility: formValue.recording_enabled ? formValue.artifact_visibility || DEFAULT_ARTIFACT_VISIBILITY : null,
       recurrence: recurrenceObject,
       platform: formValue.platform || DEFAULT_MEETING_TOOL,
       committees: formValue.committees || [],
     };
   }
 
-  private handleMeetingSuccess(meeting: Meeting): void {
-    this.meetingId.set(meeting.uid);
+  private handleMeetingSuccess(meeting?: Meeting): void {
+    // In create mode, set the meeting ID from the response; in edit mode, it's already set
+    if (meeting) {
+      this.meetingId.set(meeting.id);
+    }
+
+    const meetingId = this.meetingId()!;
 
     // If we're in create mode and before the resources step (step 4), just continue to next step
     // We need to process attachments starting from step 4 (Resources & Summary) onwards
@@ -486,7 +499,7 @@ export class MeetingManageComponent {
     }
 
     // Process attachment operations using extracted method
-    this.processAttachmentOperations(meeting.uid).subscribe({
+    this.processAttachmentOperations(meetingId).subscribe({
       next: (result) => {
         if (result) {
           // Process attachment operations after meeting save
@@ -548,7 +561,7 @@ export class MeetingManageComponent {
 
   private handleAttachmentOperationsResults(result: {
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   }): void {
     const totalDeleteSuccesses = result.deletions.successes;
@@ -828,7 +841,6 @@ export class MeetingManageComponent {
       case 2: // Meeting Details
         return !!(
           form.get('title')?.value &&
-          form.get('description')?.value &&
           form.get('startDate')?.value &&
           form.get('startTime')?.value &&
           form.get('timezone')?.value &&
@@ -862,7 +874,7 @@ export class MeetingManageComponent {
 
         // Step 2: Meeting Details
         title: new FormControl('', [Validators.required]),
-        description: new FormControl('', [Validators.required, Validators.maxLength(2000)]),
+        description: new FormControl('', [Validators.maxLength(2000)]),
         aiPrompt: new FormControl(''),
         startDate: new FormControl(defaultDateTime.date, [Validators.required]),
         startTime: new FormControl(defaultDateTime.time, [Validators.required]),
@@ -892,7 +904,7 @@ export class MeetingManageComponent {
         recording_enabled: new FormControl(false),
         transcript_enabled: new FormControl({ value: false, disabled: true }),
         youtube_upload_enabled: new FormControl({ value: false, disabled: true }),
-        show_meeting_attendees: new FormControl(false),
+        show_meeting_attendees: new FormControl({ value: false, disabled: true }),
         zoom_ai_enabled: new FormControl({ value: false, disabled: true }),
         require_ai_summary_approval: new FormControl(false),
         artifact_visibility: new FormControl(DEFAULT_ARTIFACT_VISIBILITY),
@@ -945,7 +957,7 @@ export class MeetingManageComponent {
 
   private processAttachmentOperations(meetingId: string): Observable<{
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   } | null> {
     const hasPendingDeletions = this.pendingAttachmentDeletions().length > 0;
@@ -988,7 +1000,7 @@ export class MeetingManageComponent {
 
     return from(attachmentIdsToDelete).pipe(
       mergeMap((attachmentId) =>
-        this.meetingService.deleteAttachment(meetingId, attachmentId).pipe(
+        this.meetingService.deleteMeetingAttachment(meetingId, attachmentId).pipe(
           switchMap(() => of({ success: attachmentId, failure: null })),
           catchError(() => of({ success: null, failure: attachmentId }))
         )
@@ -1003,7 +1015,7 @@ export class MeetingManageComponent {
     );
   }
 
-  private savePendingAttachments(meetingId: string): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
+  private savePendingAttachments(meetingId: string): Observable<{ successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] }> {
     const attachmentsToSave = this.pendingAttachments.filter(
       (attachment) => !attachment.uploading && !attachment.uploadError && !attachment.uploaded && attachment.file
     );
@@ -1014,10 +1026,16 @@ export class MeetingManageComponent {
 
     return from(attachmentsToSave).pipe(
       mergeMap((attachment) =>
-        this.meetingService.createFileAttachment(meetingId, attachment.file).pipe(
-          switchMap((result) => of({ success: result, failure: null })),
-          catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
-        )
+        this.meetingService
+          .uploadMeetingFile(meetingId, attachment.file, {
+            name: attachment.fileName,
+            file_size: attachment.fileSize,
+            file_type: attachment.mimeType,
+          })
+          .pipe(
+            switchMap((result) => of({ success: result, failure: null })),
+            catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
+          )
       ),
       toArray(),
       switchMap((results) => {
@@ -1041,7 +1059,7 @@ export class MeetingManageComponent {
 
     return from(linksToSave).pipe(
       mergeMap((link: ImportantLinkFormValue) =>
-        this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
+        this.meetingService.createMeetingAttachment(meetingId, { type: 'link', category: 'Other', name: link.title, link: link.url }).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { linkName: link.title, error } }))
         )
@@ -1168,17 +1186,10 @@ export class MeetingManageComponent {
 
     if (totalFailed === 0) {
       // All successful
-      const parts = [];
-      if (registrantSuccess > 0) {
-        parts.push(`${registrantSuccess} guest(s)`);
-      }
-      if (attachmentSuccess > 0) {
-        parts.push(`${attachmentSuccess} attachment(s)`);
-      }
       this.messageService.add({
         severity: 'success',
         summary: 'Success',
-        detail: `Meeting updated successfully with ${parts.join(' and ')}`,
+        detail: `Meeting updated successfully`,
       });
     } else if (totalSuccess > 0 && totalFailed > 0) {
       // Partial success
