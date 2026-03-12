@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, signal } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee, GroupJoinApplicationRequest } from '@lfx-one/shared/interfaces';
@@ -25,7 +25,11 @@ export class JoinApplicationDialogComponent {
   public submitting = signal<boolean>(false);
 
   public form = new FormGroup({
-    reason: new FormControl('', [JoinApplicationDialogComponent.trimmedRequired, Validators.minLength(10), Validators.maxLength(500)]),
+    reason: new FormControl('', [
+      JoinApplicationDialogComponent.trimmedRequired,
+      JoinApplicationDialogComponent.trimmedMinLength(10),
+      Validators.maxLength(500),
+    ]),
   });
 
   public get reasonLength(): number {
@@ -73,5 +77,12 @@ export class JoinApplicationDialogComponent {
 
   private static trimmedRequired(control: AbstractControl): ValidationErrors | null {
     return (control.value as string)?.trim().length ? null : { required: true };
+  }
+
+  private static trimmedMinLength(min: number): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const trimmed = (control.value as string)?.trim() ?? '';
+      return trimmed.length >= min ? null : { minlength: { requiredLength: min, actualLength: trimmed.length } };
+    };
   }
 }
