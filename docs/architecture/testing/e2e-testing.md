@@ -1,5 +1,9 @@
 # End-to-End Testing Architecture
 
+> **Status: Planned — Not Yet Implemented**
+>
+> The E2E testing architecture described below represents the planned testing strategy. The test framework (Playwright) is configured but test files have not been implemented yet. The patterns and architecture below serve as the blueprint for when E2E tests are written.
+
 ## 🏗 Overview
 
 Our E2E testing strategy employs a **dual architecture approach** combining content-based and structural tests to ensure comprehensive, maintainable, and reliable test coverage across the LFX One application.
@@ -20,10 +24,10 @@ Our E2E testing strategy employs a **dual architecture approach** combining cont
 - **Best For**: Technical validation, UI library independence
 - **Examples**: `homepage-robust.spec.ts`, `project-dashboard-robust.spec.ts`
 
-## 📊 Current Test Coverage
+## 📊 Planned Test Coverage
 
 ```text
-Total E2E Tests: 85+ (All Passing)
+Target E2E Tests: 85+
 ├── Homepage Tests: 33 tests
 │   ├── homepage.spec.ts: 11 content-based tests
 │   └── homepage-robust.spec.ts: 22 structural tests
@@ -371,19 +375,12 @@ expect(cardCount).toBeGreaterThan(0, 'Should have at least one project card');
 
 ### Test Health Metrics
 
-#### Current Status: ✅ 85/85 tests passing
+#### Target Metrics
 
 1. **Reliability**: Zero flaky tests
-2. **Performance**: Average test suite runs in ~54 seconds (Chromium)
-3. **Coverage**: All major user journeys covered
-4. **Maintainability**: Data-testid architecture prevents UI change breakage
-
-### Test Maintenance Schedule
-
-**Weekly**: Run full test suite across all browsers
-**Per PR**: Automated test execution in CI/CD
-**Monthly**: Review and update test documentation
-**Quarterly**: Evaluate new testing patterns and tools
+2. **Performance**: Target test suite run time ~60 seconds (Chromium)
+3. **Coverage**: All major user journeys
+4. **Maintainability**: Data-testid architecture to prevent UI change breakage
 
 ### Debugging Guidelines
 
@@ -392,26 +389,6 @@ expect(cardCount).toBeGreaterThan(0, 'Should have at least one project card');
 3. **Network Analysis**: Monitor API calls and responses
 4. **Console Logs**: Check for JavaScript errors
 5. **Element Inspection**: Validate data-testid attributes in dev tools
-
-## 🔄 Implementation Checklist
-
-### ✅ Completed
-
-- [x] Dual testing architecture (content + structural)
-- [x] Data-testid implementation across components
-- [x] Multi-browser configuration (Chromium, Mobile Chrome)
-- [x] Responsive design testing
-- [x] Authentication flow with global setup
-- [x] Angular signals integration testing
-- [x] Component architecture validation
-
-### 🔲 Future Enhancements
-
-- [ ] Visual regression testing with screenshot comparison
-- [ ] Accessibility testing with axe-core integration
-- [ ] Performance testing with Core Web Vitals
-- [ ] Cross-platform testing (Windows, macOS, Linux)
-- [ ] Test reporting dashboard with historical data
 
 ## 🎯 Testing Guidelines for New Features
 

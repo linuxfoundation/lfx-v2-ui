@@ -1,7 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { PastMeeting, PastMeetingRecording, PastMeetingSummary, UpdatePastMeetingSummaryRequest } from '@lfx-one/shared/interfaces';
+import {
+  AttachmentDownloadUrlResponse,
+  PastMeeting,
+  PastMeetingAttachment,
+  PastMeetingRecording,
+  PastMeetingSummary,
+  UpdatePastMeetingSummaryRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { validateUidParameter } from '../helpers/validation.helper';
@@ -71,7 +78,6 @@ export class PastMeetingController {
         !validateUidParameter(uid, req, next, {
           operation: 'get_past_meeting_participants',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -114,7 +120,6 @@ export class PastMeetingController {
         !validateUidParameter(uid, req, next, {
           operation: 'get_past_meeting_recording',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -168,7 +173,6 @@ export class PastMeetingController {
         !validateUidParameter(uid, req, next, {
           operation: 'get_past_meeting_summary',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -222,7 +226,6 @@ export class PastMeetingController {
         !validateUidParameter(uid, req, next, {
           operation: 'get_past_meeting_attachments',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -266,12 +269,10 @@ export class PastMeetingController {
         !validateUidParameter(uid, req, next, {
           operation: 'update_past_meeting_summary',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         }) ||
         !validateUidParameter(summaryUid, req, next, {
           operation: 'update_past_meeting_summary',
           service: 'past_meeting_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -307,6 +308,88 @@ export class PastMeetingController {
       });
 
       // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  /**
+   * GET /past-meetings/:uid/attachments/:attachmentId
+   */
+  public async getPastMeetingAttachment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid, attachmentId } = req.params;
+    const startTime = logger.startOperation(req, 'get_past_meeting_attachment', {
+      past_meeting_id: uid,
+      attachment_id: attachmentId,
+    });
+
+    try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_past_meeting_attachment',
+          service: 'past_meeting_controller',
+        }) ||
+        !validateUidParameter(attachmentId, req, next, {
+          operation: 'get_past_meeting_attachment',
+          service: 'past_meeting_controller',
+        })
+      ) {
+        return;
+      }
+
+      const attachment: PastMeetingAttachment = await this.meetingService.getPastMeetingAttachmentInfo(req, uid, attachmentId);
+
+      logger.success(req, 'get_past_meeting_attachment', startTime, {
+        past_meeting_id: uid,
+        attachment_id: attachmentId,
+      });
+
+      res.json(attachment);
+    } catch (error) {
+      logger.error(req, 'get_past_meeting_attachment', startTime, error, {
+        past_meeting_id: uid,
+        attachment_id: attachmentId,
+      });
+      next(error);
+    }
+  }
+
+  /**
+   * GET /past-meetings/:uid/attachments/:attachmentId/download
+   */
+  public async getPastMeetingAttachmentDownloadUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { uid, attachmentId } = req.params;
+    const startTime = logger.startOperation(req, 'get_past_meeting_attachment_download_url', {
+      past_meeting_id: uid,
+      attachment_id: attachmentId,
+    });
+
+    try {
+      if (
+        !validateUidParameter(uid, req, next, {
+          operation: 'get_past_meeting_attachment_download_url',
+          service: 'past_meeting_controller',
+        }) ||
+        !validateUidParameter(attachmentId, req, next, {
+          operation: 'get_past_meeting_attachment_download_url',
+          service: 'past_meeting_controller',
+        })
+      ) {
+        return;
+      }
+
+      const result: AttachmentDownloadUrlResponse = await this.meetingService.getPastMeetingAttachmentDownloadUrl(req, uid, attachmentId);
+
+      logger.success(req, 'get_past_meeting_attachment_download_url', startTime, {
+        past_meeting_id: uid,
+        attachment_id: attachmentId,
+      });
+
+      res.json(result);
+    } catch (error) {
+      logger.error(req, 'get_past_meeting_attachment_download_url', startTime, error, {
+        past_meeting_id: uid,
+        attachment_id: attachmentId,
+      });
       next(error);
     }
   }

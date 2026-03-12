@@ -48,7 +48,6 @@ export class SurveyController {
         !validateUidParameter(uid, req, next, {
           operation: 'get_survey_by_id',
           service: 'survey_controller',
-          logStartTime: startTime,
         })
       ) {
         return;
@@ -82,7 +81,6 @@ export class SurveyController {
         !validateUidParameter(uid, req, next, {
           operation: 'delete_survey',
           service: 'survey_controller',
-          logStartTime: startTime,
         })
       ) {
         return;

@@ -24,17 +24,16 @@ import {
   buildJoinUrlWithParams,
   canJoinMeeting,
   COMMITTEE_LABEL,
-  extractUrls,
   getCurrentOrNextOccurrence,
   Meeting,
   MeetingAttachment,
   MeetingCancelOccurrenceResult,
   MeetingOccurrence,
   PastMeeting,
+  PastMeetingAttachment,
   PastMeetingRecording,
   PastMeetingSummary,
   TagSeverity,
-  UrlMetadata,
 } from '@lfx-one/shared';
 import { RecordingModalComponent } from '@modules/meetings/components/recording-modal/recording-modal.component';
 import { SummaryModalComponent } from '@modules/meetings/components/summary-modal/summary-modal.component';
@@ -50,7 +49,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, map, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { CancelOccurrenceConfirmationComponent } from '../../components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
 import { MeetingRsvpDetailsComponent } from '../../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -101,7 +100,7 @@ export class MeetingCardComponent implements OnInit {
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
-  public attachments: Signal<MeetingAttachment[]> = signal([]);
+  public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
 
   // Computed values for template
   public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
@@ -143,7 +142,6 @@ export class MeetingCardComponent implements OnInit {
 
   public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
   public readonly meetingDescription: Signal<string> = this.initMeetingDescription();
-  public readonly resolvedResources: Signal<UrlMetadata[]> = this.initResolvedResources();
   public readonly hasAiCompanion: Signal<boolean> = this.initHasAiCompanion();
   public readonly joinQueryParams: Signal<Record<string, string>> = this.initJoinQueryParams();
 
@@ -202,8 +200,7 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public ngOnInit(): void {
-    // TODO: Resources section is "Coming Soon" — skip attachment fetches until enabled
-    // this.attachments = this.initAttachments();
+    this.attachments = this.initAttachments();
     if (this.pastMeeting()) {
       this.initRecording();
       this.initSummary();
@@ -267,6 +264,28 @@ export class MeetingCardComponent implements OnInit {
         this.additionalRegistrantsCount.set(this.additionalRegistrantsCount() + 1);
         this.refreshMeeting();
       }
+    });
+  }
+
+  public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
+    const meetingId = this.meeting().id;
+    const download$ = this.pastMeeting()
+      ? this.meetingService.getPastMeetingAttachmentDownloadUrl(meetingId, attachment.uid)
+      : this.meetingService.getMeetingAttachmentDownloadUrl(meetingId, attachment.uid);
+
+    download$.pipe(take(1)).subscribe({
+      next: (res) => {
+        const newWindow = window.open(res.download_url, '_blank', 'noopener');
+        if (newWindow) {
+          newWindow.opener = null;
+        }
+      },
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Download Failed',
+          detail: 'Unable to download the attachment. Please try again.',
+        }),
     });
   }
 
@@ -462,9 +481,14 @@ export class MeetingCardComponent implements OnInit {
       .subscribe();
   }
 
-  private initAttachments(): Signal<MeetingAttachment[]> {
+  private initAttachments(): Signal<(MeetingAttachment | PastMeetingAttachment)[]> {
     return runInInjectionContext(this.injector, () => {
-      return toSignal(this.meetingService.getMeetingAttachments(this.meetingInput().id).pipe(catchError(() => of([]))), {
+      const id = this.meetingInput().id;
+      const attachments$: Observable<(MeetingAttachment | PastMeetingAttachment)[]> = this.pastMeeting()
+        ? this.meetingService.getPastMeetingAttachments(id)
+        : this.meetingService.getMeetingAttachments(id);
+
+      return toSignal(attachments$.pipe(catchError(() => of([] as (MeetingAttachment | PastMeetingAttachment)[]))), {
         initialValue: [],
       });
     });
@@ -525,7 +549,7 @@ export class MeetingCardComponent implements OnInit {
 
   private initTotalResourcesCount(): Signal<number> {
     return computed(() => {
-      return this.resolvedResources().length;
+      return this.attachments().length;
     });
   }
 
@@ -716,22 +740,6 @@ export class MeetingCardComponent implements OnInit {
       const meeting = this.meeting();
       return occurrence?.description || meeting.description || '';
     });
-  }
-
-  private initResolvedResources(): Signal<UrlMetadata[]> {
-    return toSignal(
-      toObservable(this.meetingDescription).pipe(
-        map((description) => extractUrls(description)),
-        switchMap((urls) => {
-          if (urls.length === 0) {
-            return of([]);
-          }
-          return this.meetingService.resolveUrlMetadata(urls);
-        }),
-        catchError(() => of([] as UrlMetadata[]))
-      ),
-      { initialValue: [] }
-    );
   }
 
   private initHasAiCompanion(): Signal<boolean> {
