@@ -929,14 +929,82 @@
             </p-tabpanel>
           }
 
-          <!-- Meetings Tab (placeholder) -->
+          <!-- Meetings Tab -->
           <p-tabpanel value="meetings">
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Meetings</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+            <div class="flex flex-col gap-4 pt-4">
+              <!-- Meetings header: title, filter, create button -->
+              <div class="flex items-center justify-between gap-4">
+                <h3 class="text-base font-semibold"><i class="fa-light fa-calendar text-gray-400 mr-2"></i>Meetings</h3>
+                <div class="flex items-center gap-3">
+                  <div class="flex rounded-md border border-gray-200 overflow-hidden text-sm">
+                    <button
+                      type="button"
+                      class="px-4 py-1.5 font-medium transition-colors"
+                      [ngClass]="meetingViewFilter() === 'upcoming' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      (click)="meetingViewFilter.set('upcoming')"
+                      data-testid="committee-meetings-upcoming-btn">
+                      Upcoming
+                    </button>
+                    <button
+                      type="button"
+                      class="px-4 py-1.5 font-medium border-l border-gray-200 transition-colors"
+                      [ngClass]="meetingViewFilter() === 'past' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      (click)="meetingViewFilter.set('past')"
+                      data-testid="committee-meetings-past-btn">
+                      Past
+                    </button>
+                  </div>
+                  @if (!isBoardMember()) {
+                    <lfx-button
+                      icon="fa-light fa-plus"
+                      label="Create Meeting"
+                      size="small"
+                      severity="secondary"
+                      styleClass="p-button-outlined"
+                      (onClick)="createMeeting()"
+                      data-testid="committee-view-create-meeting-btn">
+                    </lfx-button>
+                  }
+                </div>
               </div>
+
+              <!-- Meeting cards -->
+              @if (meetingViewFilter() === 'upcoming' && upcomingMeetings().length > 0) {
+                <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
+                  @for (meeting of upcomingMeetings(); track meeting.id) {
+                    <lfx-meeting-card
+                      [attr.data-testid]="'committee-meeting-card-' + meeting.id"
+                      [meetingInput]="meeting"
+                      [showBorder]="true"
+                      [pastMeeting]="false">
+                    </lfx-meeting-card>
+                  }
+                </div>
+              } @else if (meetingViewFilter() === 'past' && pastCommitteeMeetings().length > 0) {
+                <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
+                  @for (meeting of pastCommitteeMeetings(); track meeting.id) {
+                    <lfx-meeting-card
+                      [attr.data-testid]="'committee-meeting-card-' + meeting.id"
+                      [meetingInput]="meeting"
+                      [showBorder]="true"
+                      [pastMeeting]="true">
+                    </lfx-meeting-card>
+                  }
+                </div>
+              } @else {
+                <lfx-card>
+                  <div class="text-center py-8">
+                    <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
+                    @if (meetingViewFilter() === 'upcoming') {
+                      <p class="text-sm font-medium text-gray-700">No Upcoming Meetings</p>
+                      <p class="text-xs text-gray-500 mt-1">There are no upcoming meetings scheduled for this group.</p>
+                    } @else {
+                      <p class="text-sm font-medium text-gray-700">No Past Meetings</p>
+                      <p class="text-xs text-gray-500 mt-1">No past meetings found for this group.</p>
+                    }
+                  </div>
+                </lfx-card>
+              }
             </div>
           </p-tabpanel>
 
