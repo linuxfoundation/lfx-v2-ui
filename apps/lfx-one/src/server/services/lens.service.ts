@@ -8,6 +8,9 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 
 export class LensService {
+  // Tracks RunContent occurrences per stream to determine frontend stage
+  private runContentCount = 0;
+
   private get apiUrl(): string {
     return process.env['LENS_API_URL'] || LENS_CONFIG.DEFAULT_API_URL;
   }
@@ -83,6 +86,8 @@ export class LensService {
    * which are translated to our status/content/block/session_id/done/error types.
    */
   private async *readUpstreamSSE(req: Request, response: globalThis.Response): AsyncGenerator<LensSSEEvent> {
+    this.runContentCount = 0;
+
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -190,23 +195,35 @@ export class LensService {
   /**
    * Translate a single upstream workflow event into our normalized SSE events.
    *
-   * Upstream event flow:
-   *   WorkflowStarted → session_id
-   *   StepStarted     → status (humanized step name)
-   *   RunContent       → content (string) or block[] (object with blocks)
-   *   WorkflowCompleted → done
+   * Stage mapping (from API guide):
+   *   WorkflowStarted                          → session_id + "starting"
+   *   StepStarted (lens agent)                  → "analyzing"
+   *   RunContent (1st, string)                  → "analyzing"
+   *   ToolCallStarted (tool != run_query)       → "analyzing"
+   *   RunContent (2nd, string)                  → "querying"
+   *   ToolCallStarted (tool == run_query)       → "querying"
+   *   StepStarted (assemble)                    → "preparing"
+   *   WorkflowCompleted                         → emit blocks + done
+   *   WorkflowError                             → error
    */
   private mapUpstreamEvent(eventType: string, data: Record<string, unknown>): LensSSEEvent[] {
     switch (eventType) {
       case 'WorkflowStarted': {
         const sessionId = data['session_id'] as string | undefined;
-        return sessionId ? [{ type: 'session_id', data: sessionId }] : [];
+        const events: LensSSEEvent[] = [{ type: 'status', data: 'Thinking...' }];
+        if (sessionId) {
+          events.unshift({ type: 'session_id', data: sessionId });
+        }
+        return events;
       }
 
       case 'StepStarted': {
-        const stepName = data['step_name'] as string | undefined;
-        if (stepName) {
-          return [{ type: 'status', data: this.humanizeStepName(stepName) }];
+        const stepName = ((data['step_name'] as string) || '').toLowerCase();
+        if (stepName.includes('lens agent')) {
+          return [{ type: 'status', data: 'Analyzing your question...' }];
+        }
+        if (stepName.includes('assemble')) {
+          return [{ type: 'status', data: 'Preparing results...' }];
         }
         return [];
       }
@@ -215,50 +232,53 @@ export class LensService {
         const content = data['content'];
         if (!content) return [];
 
-        // String content → intermediate status or text content
+        // String narrations → stage-based status updates
         if (typeof content === 'string') {
-          return [{ type: 'content', data: content }];
+          this.runContentCount++;
+          const status = this.runContentCount <= 1 ? 'Analyzing your question...' : 'Running queries...';
+          return [{ type: 'status', data: status }];
         }
 
-        // Object content with blocks → extract and emit each block
-        if (typeof content === 'object' && !Array.isArray(content)) {
-          const blocks = (content as Record<string, unknown>)['blocks'] as LensBlock[] | undefined;
-          if (!blocks || !Array.isArray(blocks)) return [];
-
-          const events: LensSSEEvent[] = [];
-          for (const block of blocks) {
-            if (block.type === 'message') {
-              events.push({ type: 'content', data: block.content });
-            } else {
-              events.push({ type: 'block', data: block });
-            }
-          }
-          return events;
-        }
-
+        // Object content (structured LFXLensAgentOutput) → ignore, blocks come from WorkflowCompleted
         return [];
       }
 
-      case 'WorkflowCompleted':
-        return [{ type: 'done', data: '' }];
+      case 'ToolCallStarted': {
+        const tool = data['tool'] as Record<string, unknown> | undefined;
+        const toolName = (tool?.['tool_name'] as string) || '';
+        if (toolName === 'run_query') {
+          return [{ type: 'status', data: 'Running queries...' }];
+        }
+        return [{ type: 'status', data: 'Analyzing your question...' }];
+      }
+
+      case 'ToolCallCompleted':
+        return [];
+
+      case 'WorkflowCompleted': {
+        const content = data['content'] as Record<string, unknown> | undefined;
+        const blocks = (content?.['blocks'] as LensBlock[]) || [];
+        const events: LensSSEEvent[] = [];
+
+        for (const block of blocks) {
+          if (block.type === 'message') {
+            events.push({ type: 'content', data: block.content });
+          } else {
+            events.push({ type: 'block', data: block });
+          }
+        }
+
+        events.push({ type: 'done', data: '' });
+        return events;
+      }
+
+      case 'WorkflowError': {
+        const error = (data['error'] as string) || 'Something went wrong. Please try again.';
+        return [{ type: 'error', data: error }];
+      }
 
       default:
         return [];
-    }
-  }
-
-  private humanizeStepName(stepName: string): string {
-    switch (stepName) {
-      case 'resolve_context':
-        return 'Resolving context...';
-      case 'Check Query Cache':
-        return 'Checking cache...';
-      case 'Prepare LFX Lens Input':
-        return 'Preparing query...';
-      case 'LFX Lens Agent':
-        return 'Analyzing your question...';
-      default:
-        return `Processing: ${stepName}...`;
     }
   }
 }

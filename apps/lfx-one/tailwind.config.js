@@ -55,6 +55,7 @@ export default {
       inter: ['Inter', 'sans-serif'],
       display: ['Roboto Slab', 'serif'],
       serif: ['Roboto Slab', 'serif'],
+      mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
     },
   },
   plugins: [PrimeUI],
