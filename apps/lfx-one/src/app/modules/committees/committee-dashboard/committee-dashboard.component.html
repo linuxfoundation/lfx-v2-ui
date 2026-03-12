@@ -71,7 +71,7 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           @for (committee of myCommittees(); track committee.uid) {
-            <a [routerLink]="['/groups', committee.uid]" class="block no-underline">
+            <div class="block cursor-pointer" (click)="onCommitteeClick(committee)">
               <lfx-card styleClass="hover:shadow-md transition-shadow cursor-pointer h-full">
                 <div class="flex flex-col h-full">
                   <!-- Header: Name + Role Badge -->
@@ -154,7 +154,7 @@
                   </div>
                 </div>
               </lfx-card>
-            </a>
+            </div>
           }
         </div>
       </div>
@@ -171,7 +171,7 @@
     }
 
     <!-- All Groups Section -->
-    @if (myCommittees().length > 0) {
+    @if (committees().length > 0) {
       <div class="flex items-center gap-2 mb-4">
         <h2 class="text-lg font-semibold text-gray-900">All {{ committeeLabelPlural }}</h2>
         <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ totalCommittees() }}</span>
