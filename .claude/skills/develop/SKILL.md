@@ -10,21 +10,85 @@ You are helping a contributor build within the LFX One codebase. This skill hand
 
 **Important:** You are integrating features within existing architecture — not making architectural decisions. If the work requires changes to routing, auth, middleware, or infrastructure, flag it for a code owner.
 
-## Step 1: Understand the Work
+## Step 1: Start from Latest Main
 
-Ask the contributor what they're building. Based on their answer, determine which workflow(s) apply:
+Follow the "Starting New Work" rule in `development-rules.md` — checkout `main`, pull latest, and create a feature branch before writing any code.
+
+## Step 2: Plan the Feature (Ideation)
+
+Ask the contributor what they're building. Before writing any code, create a plan that answers:
+
+1. **What is the feature?** — Describe the user-facing behavior
+2. **What data does it need?** — Identify the API endpoints, request/response shapes, and data flow
+3. **What upstream APIs are required?** — List which microservice endpoints the feature depends on
+4. **Do the upstream microservices (not just this repo's proxy endpoints) already support this?** — This is critical (see Step 3)
+5. **What frontend components are needed?** — Pages, shared components, services
+
+Based on the plan, determine which workflow(s) apply:
 
 | Workflow               | When to Use                                                               |
 | ---------------------- | ------------------------------------------------------------------------- |
 | **Shared Types**       | New interfaces, enums, or constants needed                                |
-| **Backend Endpoint**   | New API route with controller + service                                   |
+| **Backend Endpoint**   | New API route with controller + service in this repo                      |
 | **Frontend Service**   | New Angular service or methods on an existing one                         |
 | **Frontend Component** | New Angular component (page, module-specific, shared, or PrimeNG wrapper) |
 | **Full Feature**       | End-to-end integration (combines multiple workflows above)                |
 
-For a **full feature**, execute the workflows in this order: Shared Types → Backend Endpoint → Frontend Service → Frontend Component.
+**Build order is strict:** Shared Types → Backend → Frontend Service → Frontend Component. Never skip ahead.
 
-## Step 2: Required Reading
+## Step 3: Validate Backend Support (Backend First)
+
+**Before writing any frontend code**, verify that the upstream microservice APIs needed for this feature actually exist and support the required operations.
+
+### Check the Upstream API Contract
+
+The LFX One backend is a thin proxy layer — it proxies requests to external Go microservices. The feature can only work if those microservices expose the endpoints you need.
+
+| Domain            | External Repo                                                                                 | Key Areas to Check                                |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **Queries**       | [lfx-v2-query-service](https://github.com/linuxfoundation/lfx-v2-query-service)               | Resource types, query params, pagination, filters |
+| **Projects**      | [lfx-v2-project-service](https://github.com/linuxfoundation/lfx-v2-project-service)           | Project CRUD, slugs, membership                   |
+| **Meetings**      | [lfx-v2-meeting-service](https://github.com/linuxfoundation/lfx-v2-meeting-service)           | Meeting CRUD, RSVPs, recordings, calendar         |
+| **Mailing Lists** | [lfx-v2-mailing-list-service](https://github.com/linuxfoundation/lfx-v2-mailing-list-service) | Groups.io integration, subscriptions              |
+| **Committees**    | [lfx-v2-committee-service](https://github.com/linuxfoundation/lfx-v2-committee-service)       | Committee CRUD, membership, roles                 |
+| **Voting**        | [lfx-v2-voting-service](https://github.com/linuxfoundation/lfx-v2-voting-service)             | Poll CRUD, casting votes, results                 |
+| **Surveys**       | [lfx-v2-survey-service](https://github.com/linuxfoundation/lfx-v2-survey-service)             | Survey CRUD, responses, NPS analytics             |
+
+```bash
+# Read the OpenAPI spec for the full API contract
+gh api repos/linuxfoundation/<repo-name>/contents/gen/http/openapi3.yaml \
+  --jq '.content' | base64 -d
+
+# Browse the Goa DSL design files
+gh api repos/linuxfoundation/<repo-name>/contents/design --jq '.[].name'
+
+# Read a specific Goa design file
+gh api repos/linuxfoundation/<repo-name>/contents/design/<file>.go \
+  --jq '.content' | base64 -d
+```
+
+### If the API Does NOT Exist
+
+**STOP. Do not proceed to frontend work.** Instead:
+
+1. **Switch to the upstream microservice repo** — clone it and check if it has its own Claude Code skills (`/develop`, etc.) that should be used for building there
+2. **Build the required API endpoints** in the upstream repo first, following that repo's conventions and skills
+3. **Get the upstream changes merged and deployed** (or at minimum, confirm the API contract is finalized)
+4. **Then return to this repo** to build the proxy layer and frontend
+
+### If the API Exists
+
+Confirm:
+
+- The endpoint paths and HTTP methods match what you need
+- The request/response schemas have the fields your feature requires
+- Query parameters support the filtering/pagination your UI needs
+
+Then proceed to Step 4.
+
+> **Critical rule: NO mock data, NO placeholder APIs, NO fake responses.** Every API call in the frontend must connect to a real, working backend endpoint. If the data doesn't flow end-to-end, the feature is not ready to be built. Do not stub services, hardcode responses, or create temporary mocks to "unblock" frontend work.
+
+## Step 4: Required Reading
 
 Read the relevant architecture docs **before generating code**. These are the source of truth.
 
@@ -52,7 +116,7 @@ Read the relevant architecture docs **before generating code**. These are the so
 
 - **`docs/architecture/shared/package-architecture.md`** — Package structure, exports, utilities, validators
 
-## Step 3: Check What Exists
+## Step 5: Check What Exists
 
 Before creating anything, check what already exists to avoid duplicates:
 
@@ -75,13 +139,15 @@ ls packages/shared/src/constants/                    # Constants
 
 If related code already exists, **read it first** and extend it rather than creating new files.
 
-## Step 4: Read an Existing Example
+## Step 6: Read an Existing Example
 
 Read a representative file in the target area to match the team's current patterns. Pick something in the same module or domain as the work being done.
 
-## Step 5: Build
+## Step 7: Build
 
-Follow the workflow(s) identified in Step 1. The sections below provide the key conventions for each.
+Follow the workflow(s) identified in Step 2. The sections below provide the key conventions for each.
+
+> **Reminder:** Build in strict order — Shared Types → Backend → Frontend Service → Frontend Component. Never build frontend code against APIs that don't exist yet. No mock data, no placeholder services, no hardcoded responses.
 
 ---
 
@@ -102,10 +168,13 @@ Follow the workflow(s) identified in Step 1. The sections below provide the key 
 
 Creates three files: **service** → **controller** → **route**.
 
+The upstream API contract should already be validated in Step 3. Use the confirmed endpoint paths, request/response schemas, and query parameters when building the proxy layer below.
+
 #### Service (`src/server/services/<name>.service.ts`)
 
 - Uses `MicroserviceProxyService` for ALL external API calls
 - API reads: `/query/resources`, writes: `/itx/...`
+- **Authentication: Default to the user's bearer token** (passed via `req.bearerToken` from the OIDC session) for all authenticated routes. Only use M2M tokens when the upstream service requires service credentials **and** the route has already enforced authorization using the user token (for example, privileged upstream reads that temporarily swap `req.bearerToken` to an M2M token and then restore it). For public endpoints (`/public/api/...`) with no user session, use M2M tokens. See the "Authentication: User Tokens vs M2M Tokens" section in development rules.
 - `logger.debug()` for step-by-step tracing, `logger.info()` for significant operations
 - `logger.warning()` for recoverable errors (returning null/empty)
 - NEVER use `serverLogger` directly — always use `logger` from `./services/logger.service`
@@ -134,6 +203,8 @@ Tell the contributor:
 ### Frontend Service
 
 **Location:** `apps/lfx-one/src/app/shared/services/<name>.service.ts`
+
+> **Prerequisite:** The backend endpoint must already exist (validated in Step 3, built in Step 7 if needed). Do not create a frontend service that calls an API endpoint that doesn't exist — no mock data, no placeholder URLs.
 
 - `@Injectable({ providedIn: 'root' })` — always tree-shakeable
 - `inject(HttpClient)` — never constructor-based DI
@@ -191,7 +262,7 @@ Generate three files (`.component.ts`, `.component.html`, `.component.scss`), ea
 
 ---
 
-## Step 6: Validate
+## Step 8: Validate
 
 Run the full validation suite:
 
@@ -203,7 +274,7 @@ yarn build         # Verify build succeeds
 
 Fix any issues before finishing.
 
-## Step 7: Summary
+## Step 9: Summary
 
 Provide a clear summary:
 
