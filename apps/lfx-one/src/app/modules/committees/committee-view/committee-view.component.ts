@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -41,9 +41,13 @@ import {
   LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
+import { Meeting } from '@lfx-one/shared/interfaces';
+import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
+import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
+import { ProjectService } from '@services/project.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -77,7 +81,9 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     CommitteeMembersComponent,
     CommitteeSettingsComponent,
     ApplicationReviewComponent,
+    MeetingCardComponent,
     ReactiveFormsModule,
+    NgClass,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -88,6 +94,8 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly meetingService = inject(MeetingService);
+  private readonly projectService = inject(ProjectService);
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
@@ -116,6 +124,12 @@ export class CommitteeViewComponent {
   public upcomingEvents: WritableSignal<CommitteeEvent[]> = signal([]);
   public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]> = signal([]);
   public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null> = signal(null);
+  public committeeMeetings: WritableSignal<Meeting[]> = signal([]);
+
+  // -- Meeting computed signals --
+  public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
+  public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
+  public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -259,6 +273,14 @@ export class CommitteeViewComponent {
       });
   }
 
+  public createMeeting(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/meetings/create'], {
+      queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
+    });
+  }
+
   public openAssignLeadership(role: LeadershipRole): void {
     const committee = this.committee();
     if (!committee) return;
@@ -325,9 +347,15 @@ export class CommitteeViewComponent {
 
           const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
 
-          return combineLatest([committeeQuery, membersQuery]).pipe(
-            switchMap(([committee, members]) => {
+          return committeeQuery.pipe(
+            switchMap((committee) => {
+              const projectUid = committee?.project_uid || this.projectService.project()?.uid;
+              const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
+              return combineLatest([of(committee), membersQuery, meetingsQuery]);
+            }),
+            switchMap(([committee, members, meetings]) => {
               this.members.set(Array.isArray(members) ? members : []);
+              this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
@@ -462,6 +490,32 @@ export class CommitteeViewComponent {
       const c = this.coChair();
       if (!c?.elected_date) return '';
       return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    });
+  }
+
+  private initializeUpcomingMeetings(): Signal<Meeting[]> {
+    return computed(() => {
+      const committeeId = this.committee()?.uid;
+      if (!committeeId) return [];
+      const meetings = this.committeeMeetings();
+      if (!Array.isArray(meetings)) return [];
+      const now = new Date().getTime();
+      return meetings
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now && m.committees?.some((c) => c.uid === committeeId))
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    });
+  }
+
+  private initializePastMeetings(): Signal<Meeting[]> {
+    return computed(() => {
+      const committeeId = this.committee()?.uid;
+      if (!committeeId) return [];
+      const meetings = this.committeeMeetings();
+      if (!Array.isArray(meetings)) return [];
+      const now = new Date().getTime();
+      return meetings
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now && m.committees?.some((c) => c.uid === committeeId))
+        .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
   }
 
