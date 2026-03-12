@@ -137,8 +137,8 @@ export class CommitteeService {
     return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`).pipe(catchError(() => of([])));
   }
 
-  public getCommitteeEngagement(committeeId: string): Observable<CommitteeEngagementMetrics> {
-    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`).pipe(catchError(() => of({} as CommitteeEngagementMetrics)));
+  public getCommitteeEngagement(committeeId: string): Observable<CommitteeEngagementMetrics | null> {
+    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`).pipe(catchError(() => of(null)));
   }
 
   public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
