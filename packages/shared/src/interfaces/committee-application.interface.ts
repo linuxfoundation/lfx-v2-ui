@@ -27,3 +27,13 @@ export interface CommitteeJoinApplication {
 export interface CreateCommitteeJoinApplicationRequest {
   reason?: string;
 }
+
+/**
+ * Alias for CreateCommitteeJoinApplicationRequest used in group-context components
+ */
+export type GroupJoinApplicationRequest = CreateCommitteeJoinApplicationRequest;
+
+/**
+ * Alias for CommitteeJoinApplication used in group-context components
+ */
+export type GroupJoinApplication = CommitteeJoinApplication;

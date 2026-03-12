@@ -50,6 +50,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 
@@ -72,6 +73,7 @@ import { CommitteeMembersComponent } from '../components/committee-members/commi
     DatePipe,
     DecimalPipe,
     CommitteeMembersComponent,
+    ApplicationReviewComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -206,6 +208,10 @@ export class CommitteeViewComponent {
 
   public refreshCommittee(): void {
     this.loading.set(true);
+    this.refresh.next();
+  }
+
+  public refreshMembers(): void {
     this.refresh.next();
   }
 
