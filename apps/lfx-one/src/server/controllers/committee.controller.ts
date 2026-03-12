@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import {
+  Committee,
   CommitteeCreateData,
   CommitteeUpdateData,
   CreateCommitteeMemberRequest,
   CreateGroupInviteRequest,
+  PublicCommittee,
 } from '@lfx-one/shared/interfaces';
 import { CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
@@ -14,6 +16,28 @@ import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { generateM2MToken } from '../utils/m2m-token.util';
+
+/**
+ * Maps an internal Committee to the public-safe DTO shape.
+ */
+function toPublicCommittee(c: Committee): PublicCommittee {
+  return {
+    uid: c.uid,
+    name: c.display_name || c.name,
+    description: c.description,
+    category: c.category,
+    chairs: [c.chair, c.co_chair]
+      .filter((l): l is NonNullable<typeof l> => !!l)
+      .map((l) => ({ name: `${l.first_name} ${l.last_name}`, organization: l.organization, role: l === c.chair ? 'Chair' : 'Co-Chair' })),
+    members: [],
+    total_members: c.total_members || 0,
+    external_links: {
+      website: c.website,
+      mailing_list_url: c.mailing_list?.url,
+      chat_channel_url: c.chat_channel?.url,
+    },
+  };
+}
 
 /**
  * Controller for handling committee HTTP requests
@@ -44,29 +68,38 @@ export class CommitteeController {
 
   /**
    * GET /public/api/committees
-   * Returns committees filtered to public-only.
+   * Returns public-safe committee DTOs filtered to public-only.
    * Optionally scoped by project_uid query param.
-   * // TODO: map response to PublicCommittee shape before exposing publicly
    */
   public async getPublicCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
     const projectUid = req.query['project_uid'] as string | undefined;
     const startTime = logger.startOperation(req, 'get_public_committees', { project_uid: projectUid });
 
     try {
+      // Save original token (public route — typically undefined)
+      const originalToken = req.bearerToken;
+
       // Generate M2M token for unauthenticated backend calls
       const m2mToken = await generateM2MToken(req);
       req.bearerToken = m2mToken;
 
-      const publicCommittees = projectUid
+      const committees = projectUid
         ? await this.committeeService.getPublicCommitteesByProject(req, projectUid)
         : await this.committeeService.getPublicCommittees(req);
 
+      // Restore original token
+      if (originalToken !== undefined) {
+        req.bearerToken = originalToken;
+      } else {
+        delete req.bearerToken;
+      }
+
       logger.success(req, 'get_public_committees', startTime, {
         project_uid: projectUid,
-        committee_count: publicCommittees.length,
+        committee_count: committees.length,
       });
 
-      res.json(publicCommittees);
+      res.json(committees.map(toPublicCommittee));
     } catch (error) {
       next(error);
     }

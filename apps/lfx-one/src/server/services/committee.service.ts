@@ -482,7 +482,11 @@ export class CommitteeService {
     try {
       const result = await this.microserviceProxy.proxyRequest<GroupInvite[] | QueryServiceResponse<GroupInvite>>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
       return Array.isArray(result) ? result : (result as QueryServiceResponse<GroupInvite>)?.resources?.map((r) => r.data) || [];
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_invites', 'Failed to fetch invites, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -519,7 +523,11 @@ export class CommitteeService {
     try {
       const result = await this.microserviceProxy.proxyRequest<CommitteeJoinApplication[] | QueryServiceResponse<CommitteeJoinApplication>>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
       return Array.isArray(result) ? result : (result as QueryServiceResponse<CommitteeJoinApplication>)?.resources?.map((r) => r.data) || [];
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_applications', 'Failed to fetch applications, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -588,7 +596,11 @@ export class CommitteeService {
           total_eligible: r.data.total_voting_request_invitations ?? 0,
           created_by: '',
         }));
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_votes', 'Failed to fetch votes, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -600,7 +612,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_resolutions', 'Failed to fetch resolutions, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -612,7 +628,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_activity', 'Failed to fetch activity, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -624,7 +644,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_contributors', 'Failed to fetch contributors, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -636,7 +660,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_deliverables', 'Failed to fetch deliverables, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -648,7 +676,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_discussions', 'Failed to fetch discussions, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -660,7 +692,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_events', 'Failed to fetch events, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -672,7 +708,11 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_campaigns', 'Failed to fetch campaigns, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
@@ -680,7 +720,11 @@ export class CommitteeService {
   public async getCommitteeEngagement(req: Request, committeeId: string): Promise<CommitteeEngagementMetrics | null> {
     try {
       return await this.microserviceProxy.proxyRequest<CommitteeEngagementMetrics>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_engagement', 'Failed to fetch engagement, returning null', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return null;
     }
   }
@@ -688,7 +732,11 @@ export class CommitteeService {
   public async getCommitteeBudget(req: Request, committeeId: string): Promise<CommitteeBudgetSummary | null> {
     try {
       return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/budget`, 'GET');
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_budget', 'Failed to fetch budget, returning null', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return null;
     }
   }
@@ -700,12 +748,16 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return resources.map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_documents', 'Failed to fetch documents, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }
 
-   
+
   public async getCommitteeSurveys(req: Request, committeeId: string): Promise<any[]> {
     try {
       // Surveys are indexed by project_uid in the query service, not by committee_uid tag.
@@ -733,7 +785,11 @@ export class CommitteeService {
           return committees.some((c) => c.committee_id === committeeId || c.committee_uid === committeeId);
         })
         .map((r) => r.data);
-    } catch {
+    } catch (error) {
+      logger.warning(req, 'get_committee_surveys', 'Failed to fetch surveys, returning empty', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       return [];
     }
   }

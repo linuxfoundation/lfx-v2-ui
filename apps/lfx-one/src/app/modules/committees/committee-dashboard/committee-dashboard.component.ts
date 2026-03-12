@@ -5,7 +5,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
@@ -24,7 +24,7 @@ import { CommitteeTableComponent } from '../components/committee-table/committee
 
 @Component({
   selector: 'lfx-committee-dashboard',
-  imports: [DecimalPipe, ButtonComponent, CardComponent, CommitteeTableComponent, ConfirmDialogModule, RouterLink, TooltipModule],
+  imports: [DecimalPipe, ButtonComponent, CardComponent, CommitteeTableComponent, ConfirmDialogModule, TooltipModule],
   providers: [ConfirmationService],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',
@@ -270,12 +270,21 @@ export class CommitteeDashboardComponent {
   }
 
   private initializeMyCommittees(): Signal<MyCommittee[]> {
+    const project$ = toObservable(this.project);
+
     return toSignal(
-      this.refresh.pipe(
-        switchMap(() => {
+      combineLatest([project$, this.refresh]).pipe(
+        switchMap(([project]) => {
           this.myCommitteesLoading.set(true);
           return this.committeeService.getMyCommittees().pipe(
-            catchError(() => of([])),
+            catchError(() => of([] as MyCommittee[])),
+            switchMap((all) => {
+              // Scope to current project context
+              if (project?.uid) {
+                return of(all.filter((c) => c.project_uid === project.uid));
+              }
+              return of(all);
+            }),
             finalize(() => this.myCommitteesLoading.set(false))
           );
         })
