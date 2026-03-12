@@ -406,10 +406,10 @@ export class CommitteeService {
           title: r.data.name,
           status: getVoteStatus(r.data.status),
           deadline: r.data.end_time,
-          votesFor: r.data.num_response_received ?? 0,
-          votesAgainst: 0,
-          votesAbstain: 0,
-          totalEligible: r.data.total_voting_request_invitations ?? 0,
+          votes_for: r.data.num_response_received ?? 0,
+          votes_against: 0,
+          votes_abstain: 0,
+          total_eligible: r.data.total_voting_request_invitations ?? 0,
           created_by: '',
         }));
     } catch {
@@ -529,10 +529,10 @@ export class CommitteeService {
     try {
       return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
     } catch {
-      logger.warning(req, 'get_committee_engagement', 'Failed to fetch committee engagement, returning empty', {
+      logger.warning(req, 'get_committee_engagement', 'Failed to fetch committee engagement, returning null', {
         committee_uid: committeeId,
       });
-      return {};
+      return null;
     }
   }
 
