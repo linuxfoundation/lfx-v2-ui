@@ -48,7 +48,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, EMPTY, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 
@@ -279,13 +279,12 @@ export class CommitteeViewComponent {
             switchMap(([committee, members]) => {
               this.members.set(Array.isArray(members) ? members : []);
 
+              this.committeeSignal.set(committee);
+
               if (committee) {
-                return this.loadGroupTypeData$(committeeId, committee).pipe(
-                  tap(() => this.committeeSignal.set(committee))
-                );
+                return this.loadGroupTypeData$(committeeId, committee);
               }
 
-              this.committeeSignal.set(committee);
               return of(null);
             }),
             finalize(() => this.loading.set(false))
@@ -369,7 +368,7 @@ export class CommitteeViewComponent {
       );
     }
 
-    return EMPTY;
+    return of(null);
   }
 
   private initializeFormattedCreatedDate(): Signal<string> {
