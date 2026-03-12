@@ -21,7 +21,7 @@ Ask the contributor what they're building. Before writing any code, create a pla
 1. **What is the feature?** — Describe the user-facing behavior
 2. **What data does it need?** — Identify the API endpoints, request/response shapes, and data flow
 3. **What upstream APIs are required?** — List which microservice endpoints the feature depends on
-4. **Does the backend already support this?** — This is critical (see Step 3)
+4. **Do the upstream microservices (not just this repo's proxy endpoints) already support this?** — This is critical (see Step 3)
 5. **What frontend components are needed?** — Pages, shared components, services
 
 Based on the plan, determine which workflow(s) apply:
