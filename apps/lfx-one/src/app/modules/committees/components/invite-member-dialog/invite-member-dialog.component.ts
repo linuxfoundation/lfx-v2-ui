@@ -10,6 +10,8 @@ import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 @Component({
   selector: 'lfx-invite-member-dialog',
   imports: [ReactiveFormsModule, ButtonComponent, TextareaComponent],
@@ -23,6 +25,7 @@ export class InviteMemberDialogComponent {
 
   public readonly committee: Committee | undefined = this.config.data?.committee;
   public submitting = signal<boolean>(false);
+  public invalidAddresses = signal<string[]>([]);
 
   public form = new FormGroup({
     emails: new FormControl('', [Validators.required]),
@@ -41,31 +44,40 @@ export class InviteMemberDialogComponent {
       return;
     }
 
-    this.submitting.set(true);
-
     const rawEmails = this.form.value.emails || '';
     // Split by comma, semicolon, newline, or space — then trim and de-dup
-    const emails = [
+    const parsed = [
       ...new Set(
         rawEmails
           .split(/[,;\n\s]+/)
           .map((e: string) => e.trim().toLowerCase())
-          .filter((e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+          .filter((e: string) => e.length > 0)
       ),
     ];
 
-    if (emails.length === 0) {
+    const validEmails = parsed.filter((e) => EMAIL_REGEX.test(e));
+    const invalidEmails = parsed.filter((e) => !EMAIL_REGEX.test(e));
+
+    if (invalidEmails.length > 0) {
+      this.invalidAddresses.set(invalidEmails);
+      return;
+    }
+
+    this.invalidAddresses.set([]);
+
+    if (validEmails.length === 0) {
       this.messageService.add({
         severity: 'warn',
         summary: 'No valid emails',
         detail: 'Please enter at least one valid email address.',
       });
-      this.submitting.set(false);
       return;
     }
 
+    this.submitting.set(true);
+
     const payload: CreateGroupInviteRequest = {
-      emails,
+      emails: validEmails,
       message: this.form.value.message || undefined,
     };
 
