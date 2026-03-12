@@ -1,0 +1,98 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex flex-col gap-4" data-testid="mailing-list-import">
+  <!-- Warning callout -->
+  <lfx-message severity="warn" icon="fa-light fa-triangle-exclamation">
+    <ng-template #content>
+      <p class="text-sm">
+        Importing members from a mailing list copies their name and email into the {{ committeeLabel.toLowerCase() }}. It does <strong>not</strong> create a
+        live sync — future changes to the mailing list will not be reflected.
+      </p>
+    </ng-template>
+  </lfx-message>
+
+  <!-- Mailing list selector -->
+  <div class="flex flex-col gap-2">
+    <label class="text-sm font-medium text-gray-700">Select a Mailing List</label>
+    @if (loadingLists()) {
+      <div class="flex items-center gap-2 text-sm text-gray-500 py-2">
+        <i class="fa-light fa-circle-notch fa-spin"></i>
+        Loading mailing lists...
+      </div>
+    } @else if (mailingListOptions().length === 0) {
+      <p class="text-sm text-gray-500 py-2">No mailing lists found for this project.</p>
+    } @else {
+      <lfx-select
+        [form]="listForm"
+        control="mailingList"
+        [options]="mailingListOptions()"
+        placeholder="Choose a mailing list..."
+        styleClass="w-full"
+        size="small"
+        (onChange)="onListSelected()"
+        data-testid="mailing-list-select">
+      </lfx-select>
+    }
+  </div>
+
+  <!-- Over-limit error -->
+  @if (isOverLimit()) {
+    <lfx-message severity="error" icon="fa-light fa-circle-exclamation">
+      <ng-template #content>
+        <p class="text-sm">
+          This list has <strong>{{ memberCount() }}</strong> members, which exceeds the {{ maxImportLimit }}-member import limit. Please choose a smaller list
+          or manually add members.
+        </p>
+      </ng-template>
+    </lfx-message>
+  }
+
+  <!-- Loading members -->
+  @if (loadingMembers()) {
+    <div class="flex items-center justify-center gap-2 text-sm text-gray-500 py-6" data-testid="loading-members">
+      <i class="fa-light fa-circle-notch fa-spin text-lg"></i>
+      Loading members...
+    </div>
+  }
+
+  <!-- Member preview table -->
+  @if (!loadingMembers() && mailingListMembers().length > 0 && !isOverLimit()) {
+    <lfx-card data-testid="member-preview-card">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-gray-700">{{ memberCount() }} members to import</span>
+      </div>
+
+      <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th class="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th class="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">Email</th>
+              <th class="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase">Organization</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of mailingListMembers(); track member.uid) {
+              <tr class="border-t border-gray-100 hover:bg-gray-50" data-testid="preview-row">
+                <td class="px-3 py-2 text-gray-900">
+                  {{ member.first_name || '' }} {{ member.last_name || '' }}
+                  @if (!member.first_name && !member.last_name) {
+                    <span class="text-gray-400">—</span>
+                  }
+                </td>
+                <td class="px-3 py-2 text-gray-600">{{ member.email }}</td>
+                <td class="px-3 py-2 text-gray-600">{{ member.organization || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </lfx-card>
+
+    <!-- Import button -->
+    <div class="flex justify-end">
+      <lfx-button label="Import Members" icon="fa-light fa-file-import" size="small" (onClick)="onImport()" data-testid="import-members-btn"> </lfx-button>
+    </div>
+  }
+</div>
