@@ -51,6 +51,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -70,6 +71,7 @@ import { AssignLeadershipDialogComponent } from '../components/assign-leadership
     TabPanel,
     DatePipe,
     DecimalPipe,
+    CommitteeMembersComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -96,6 +98,7 @@ export class CommitteeViewComponent {
   public refresh = new BehaviorSubject<void>(undefined);
 
   // Sub-resource writable signals
+  public membersLoading = signal<boolean>(true);
   public members: WritableSignal<CommitteeMember[]> = signal([]);
   public openVotes: WritableSignal<CommitteeVote[]> = signal([]);
   public budgetSummary: WritableSignal<CommitteeBudgetSummary | null> = signal(null);
@@ -260,6 +263,7 @@ export class CommitteeViewComponent {
 
           this.error.set(false);
           this.loading.set(true);
+          this.membersLoading.set(true);
 
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
@@ -278,6 +282,7 @@ export class CommitteeViewComponent {
           return combineLatest([committeeQuery, membersQuery]).pipe(
             switchMap(([committee, members]) => {
               this.members.set(Array.isArray(members) ? members : []);
+              this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
 
