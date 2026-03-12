@@ -22,12 +22,15 @@ import {
   CreateCommitteeMemberRequest,
   CreateGroupInviteRequest,
   GroupInvite,
+  MyCommittee,
   QueryServiceCountResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
 import { CommitteeJoinApplication, CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberRole } from '@lfx-one/shared/enums';
 import { Request } from 'express';
+
+import { getUsernameFromAuth } from '../utils/auth-helper';
 
 import { ResourceNotFoundError } from '../errors';
 import { logger } from '../services/logger.service';
@@ -468,8 +471,71 @@ export class CommitteeService {
     return this.getCommittees(req, { public: true });
   }
 
-  public async getMyCommittees(req: Request): Promise<Committee[]> {
-    return this.getCommittees(req, { my: true });
+  public async getMyCommittees(req: Request): Promise<MyCommittee[]> {
+    const username = await getUsernameFromAuth(req);
+    if (!username) {
+      return [];
+    }
+
+    // Fetch all committee_member records for the current user
+    // Uses the same tags_all pattern as getCommitteeMembersByCategory (persona helper)
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      {
+        v: '1',
+        type: 'committee_member',
+        tags_all: [`username:${username}`],
+      }
+    );
+
+    const memberships = resources.map((r) => r.data);
+
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    logger.debug(req, 'get_my_committees', 'Found user memberships', {
+      username,
+      membership_count: memberships.length,
+    });
+
+    // Build a map of committee_uid → role for quick lookup
+    const membershipMap = new Map<string, { role: string; member_uid: string }>();
+    for (const m of memberships) {
+      membershipMap.set(m.committee_uid, {
+        role: m.role?.name || 'Member',
+        member_uid: m.uid,
+      });
+    }
+
+    // Fetch committee details for each membership in parallel
+    const committeeUids = Array.from(membershipMap.keys());
+    const committees = await Promise.all(
+      committeeUids.map(async (uid) => {
+        try {
+          const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${uid}`, 'GET');
+          const [memberCount, settings] = await Promise.all([
+            this.getCommitteeMembersCount(req, uid),
+            this.getCommitteeSettings(req, uid),
+          ]);
+          const membership = membershipMap.get(uid)!;
+          return {
+            ...committee,
+            ...settings,
+            total_members: memberCount,
+            my_role: membership.role,
+            my_member_uid: membership.member_uid,
+          } as MyCommittee;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return committees.filter((c): c is MyCommittee => c !== null);
   }
 
   // ── Invite Methods ──────────────────────────────────────────────────────────
