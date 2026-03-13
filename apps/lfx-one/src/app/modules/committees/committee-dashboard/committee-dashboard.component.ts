@@ -9,6 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, ProjectContext } from '@lfx-one/shared/interfaces';
+import { generateCsv, sanitizeFilename } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -140,6 +141,46 @@ export class CommitteeDashboardComponent {
 
   public onCommitteeClick(committee: Committee): void {
     this.router.navigate(['/groups', committee.uid]);
+  }
+
+  public exportToCsv(): void {
+    const data = this.filteredCommittees();
+    if (data.length === 0) {
+      return;
+    }
+
+    const csvContent = generateCsv(
+      [
+        { key: 'name' as keyof Committee, label: 'Name' },
+        { key: 'category' as keyof Committee, label: 'Type' },
+        { key: 'description' as keyof Committee, label: 'Description', formatter: (val: Committee[keyof Committee]) => (val as string) ?? '' },
+        { key: 'total_members' as keyof Committee, label: 'Members' },
+        { key: 'enable_voting' as keyof Committee, label: 'Voting Enabled', formatter: (val: Committee[keyof Committee]) => ((val as boolean) ? 'Yes' : 'No') },
+        { key: 'public' as keyof Committee, label: 'Public', formatter: (val: Committee[keyof Committee]) => ((val as boolean) ? 'Yes' : 'No') },
+        {
+          key: 'updated_at' as keyof Committee,
+          label: 'Last Updated',
+          formatter: (val: Committee[keyof Committee]) => {
+            if (!val) return '';
+            const d = new Date(val as string);
+            return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+          },
+        },
+      ],
+      data
+    );
+
+    const projectName = this.project()?.name || 'project';
+    const date = new Date().toISOString().split('T')[0];
+    const filename = sanitizeFilename(`${projectName}-groups-${date}`) + '.csv';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   private initializeSearchForm(): FormGroup {
