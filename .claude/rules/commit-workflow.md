@@ -1,5 +1,5 @@
 ---
-description: Commit conventions, branch naming, PR format, and JIRA tracking workflow
+description: Commit conventions, branch naming, PR format, PR size guidelines, and JIRA tracking workflow
 globs: '*'
 ---
 
@@ -26,6 +26,12 @@ globs: '*'
 - The scope follows the Angular config for conventional commits
 - Do not include the JIRA ticket in the title
 - Everything should be in lowercase
+
+## PR Size & Focus
+
+- **Target under 1000 lines of diff** — one feature, one bug fix, or one refactor per PR
+- **Don't bundle unrelated changes** — keeps reviews focused and rollbacks clean
+- PR sizing should be planned upfront during development — see the `/develop` skill's "Scope for PR Size" section for detailed guidance on splitting work
 
 ## JIRA Tracking
 
