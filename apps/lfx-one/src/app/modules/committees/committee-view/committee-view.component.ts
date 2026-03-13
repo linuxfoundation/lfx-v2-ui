@@ -208,14 +208,12 @@ export class CommitteeViewComponent {
     switch (this.committee()?.join_mode) {
       case 'open':
         return 'Open';
-      case 'invite-only':
+      case 'invite_only':
         return 'Invite Only';
-      case 'apply':
+      case 'application':
         return 'Apply to Join';
-      case 'closed':
-        return 'Closed';
       default:
-        return 'Closed';
+        return 'Invite Only';
     }
   });
 
@@ -526,9 +524,7 @@ export class CommitteeViewComponent {
       is_audit_enabled: new FormControl(false),
       public: new FormControl(false),
       sso_group_enabled: new FormControl(false),
-      // TODO(LFXV2-1255): Remove joinable once join_mode is fully wired backend-side.
-      joinable: new FormControl(false),
-      join_mode: new FormControl('closed'),
+      join_mode: new FormControl('invite_only'),
       member_visibility: new FormControl('hidden'),
       show_meeting_attendees: new FormControl(false),
     });
@@ -541,8 +537,7 @@ export class CommitteeViewComponent {
       is_audit_enabled: committee.is_audit_enabled || false,
       public: committee.public || false,
       sso_group_enabled: committee.sso_group_enabled || false,
-      joinable: false,
-      join_mode: committee.join_mode || 'closed',
+      join_mode: committee.join_mode || 'invite_only',
       member_visibility: committee.member_visibility || 'hidden',
       show_meeting_attendees: committee.show_meeting_attendees || false,
     });
