@@ -144,25 +144,25 @@ export class CommitteeDashboardComponent {
   }
 
   public exportToCsv(): void {
-    const data = this.filteredCommittees();
+    const data = [...this.filteredCommittees()].sort((a, b) => a.name.localeCompare(b.name));
     if (data.length === 0) {
       return;
     }
 
-    const csvContent = generateCsv(
+    const csvContent = generateCsv<Committee>(
       [
-        { key: 'name' as keyof Committee, label: 'Name' },
-        { key: 'category' as keyof Committee, label: 'Type' },
-        { key: 'description' as keyof Committee, label: 'Description', formatter: (val: Committee[keyof Committee]) => (val as string) ?? '' },
-        { key: 'total_members' as keyof Committee, label: 'Members' },
-        { key: 'enable_voting' as keyof Committee, label: 'Voting Enabled', formatter: (val: Committee[keyof Committee]) => ((val as boolean) ? 'Yes' : 'No') },
-        { key: 'public' as keyof Committee, label: 'Public', formatter: (val: Committee[keyof Committee]) => ((val as boolean) ? 'Yes' : 'No') },
+        { key: 'name', label: 'Name' },
+        { key: 'category', label: 'Type' },
+        { key: 'description', label: 'Description', formatter: (row) => row.description ?? '' },
+        { key: 'total_members', label: 'Members' },
+        { key: 'enable_voting', label: 'Voting Enabled', formatter: (row) => (row.enable_voting ? 'Yes' : 'No') },
+        { key: 'public', label: 'Public', formatter: (row) => (row.public ? 'Yes' : 'No') },
         {
-          key: 'updated_at' as keyof Committee,
+          key: 'updated_at',
           label: 'Last Updated',
-          formatter: (val: Committee[keyof Committee]) => {
-            if (!val) return '';
-            const d = new Date(val as string);
+          formatter: (row) => {
+            if (!row.updated_at) return '';
+            const d = new Date(row.updated_at);
             return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
           },
         },
@@ -179,7 +179,9 @@ export class CommitteeDashboardComponent {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
 
