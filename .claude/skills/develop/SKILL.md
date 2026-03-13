@@ -41,7 +41,7 @@ Ask the contributor what they're building. Before writing any code, create a pla
 
 Before jumping into code, assess whether the planned work fits in a single PR. PRs that exceed ~1000 lines of diff become significantly harder to review, more likely to introduce bugs, and slower to merge.
 
-- **If the feature touches multiple layers** (types + backend + frontend), consider whether each layer is a separate PR. For example: shared types first, then backend endpoint, then frontend — each as its own PR.
+- **If the feature touches multiple layers** (types + backend + frontend) and the total diff is approaching the limit, consider splitting by layer — e.g., shared types first, then backend, then frontend. If all layers fit comfortably under 1000 lines, keep them in one PR.
 - **If the feature has independent sub-features**, split them. A "committee management" feature might break into: list view, create form, edit/delete — each independently deliverable.
 - **Separate refactors from features** — if existing code needs restructuring to support the new feature, do the refactor PR first.
 - **Generated/mechanical changes get their own PR** — bulk renames, formatting, dependency bumps, or migration outputs should not be mixed with hand-written logic.
