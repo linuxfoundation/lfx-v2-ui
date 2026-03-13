@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CreateCommitteeMemberRequest, PublicCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -87,5 +87,13 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  /**
+   * Get a single public committee by ID (unauthenticated).
+   * Uses the public API endpoint that returns a PublicCommittee shape.
+   */
+  public getPublicCommitteeById(committeeId: string): Observable<PublicCommittee> {
+    return this.http.get<PublicCommittee>(`/public/api/committees/${committeeId}`);
   }
 }

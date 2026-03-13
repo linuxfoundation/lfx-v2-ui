@@ -25,6 +25,7 @@ import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
@@ -133,6 +134,7 @@ app.use(auth(authConfig));
 // If user has SSO session elsewhere, they'll be authenticated automatically
 // If not, they proceed as unauthenticated (route is optional auth)
 app.use('/meetings/', attemptSilentLogin());
+app.use('/public/groups/', attemptSilentLogin());
 
 app.use('/login', (req: Request, res: Response) => {
   if (req.oidc?.isAuthenticated() && !req.oidc?.accessToken?.isExpired()) {
@@ -159,6 +161,7 @@ app.use(authMiddleware);
 
 // Mount API routes after authentication middleware
 // Public API routes
+app.use('/public/api/committees', publicCommitteesRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
 
 // Protected API routes
@@ -178,6 +181,7 @@ app.use('/api/lens', lensRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+app.use('/public/api/*', apiErrorHandler);
 
 /**
  * Handle all other requests by rendering the Angular application.
