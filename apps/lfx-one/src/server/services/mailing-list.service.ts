@@ -110,7 +110,7 @@ export class MailingListService {
    * Creates a new Groups.io service
    */
   public async createService(req: Request, data: CreateGroupsIOServiceRequest): Promise<GroupsIOService> {
-    const newService = await this.microserviceProxy.proxyRequest<GroupsIOService>(req, 'LFX_V2_SERVICE', '/groupsio/services', 'POST', { v: '1' }, data);
+    const newService = await this.microserviceProxy.proxyRequest<GroupsIOService>(req, 'LFX_V2_SERVICE', '/groupsio/services', 'POST', undefined, data);
 
     logger.debug(req, 'create_groupsio_service', 'Groups.io service created successfully', {
       service_uid: newService.uid,
@@ -138,11 +138,11 @@ export class MailingListService {
     });
 
     if (indexed) {
-      return indexed;
+      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_service');
     }
 
     logger.warning(req, 'create_groupsio_service', 'Service not yet indexed in query service, returning POST response', { service_uid: newService.uid });
-    return newService;
+    return await this.accessCheckService.addAccessToResource(req, newService, 'groupsio_service');
   }
 
   /**
@@ -154,7 +154,7 @@ export class MailingListService {
       'LFX_V2_SERVICE',
       `/groupsio/services/${serviceId}`,
       'PUT',
-      { v: '1' },
+      undefined,
       data
     );
 
@@ -169,14 +169,14 @@ export class MailingListService {
    * Deletes a Groups.io service
    */
   public async deleteService(req: Request, serviceId: string): Promise<void> {
-    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/services/${serviceId}`, 'DELETE', { v: '1' });
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/services/${serviceId}`, 'DELETE');
 
     logger.debug(req, 'delete_groupsio_service', 'Groups.io service deleted successfully', {
       service_uid: serviceId,
     });
 
     // Poll the query service until the service is removed from the index
-    await pollEndpoint({
+    const removed = await pollEndpoint({
       req,
       operation: 'delete_groupsio_service',
       pollFn: async () => {
@@ -194,6 +194,10 @@ export class MailingListService {
       },
       metadata: { service_uid: serviceId },
     });
+
+    if (!removed) {
+      logger.warning(req, 'delete_groupsio_service', 'Service not yet removed from query index', { service_uid: serviceId });
+    }
   }
 
   // ============================================
@@ -282,7 +286,7 @@ export class MailingListService {
       'LFX_V2_SERVICE',
       '/groupsio/mailing-lists',
       'POST',
-      { v: '1' },
+      undefined,
       data
     );
 
@@ -312,13 +316,13 @@ export class MailingListService {
     });
 
     if (indexed) {
-      return indexed;
+      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_mailing_list');
     }
 
     logger.warning(req, 'create_mailing_list', 'Mailing list not yet indexed in query service, returning POST response', {
       mailing_list_uid: newMailingList.uid,
     });
-    return newMailingList;
+    return await this.accessCheckService.addAccessToResource(req, newMailingList, 'groupsio_mailing_list');
   }
 
   /**
@@ -330,7 +334,7 @@ export class MailingListService {
       'LFX_V2_SERVICE',
       `/groupsio/mailing-lists/${mailingListId}`,
       'PUT',
-      { v: '1' },
+      undefined,
       data
     );
 
@@ -345,14 +349,14 @@ export class MailingListService {
    * Deletes a mailing list
    */
   public async deleteMailingList(req: Request, mailingListId: string): Promise<void> {
-    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/mailing-lists/${mailingListId}`, 'DELETE', { v: '1' });
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/mailing-lists/${mailingListId}`, 'DELETE');
 
     logger.debug(req, 'delete_mailing_list', 'Mailing list deleted successfully', {
       mailing_list_uid: mailingListId,
     });
 
     // Poll the query service until the mailing list is removed from the index
-    await pollEndpoint({
+    const removed = await pollEndpoint({
       req,
       operation: 'delete_mailing_list',
       pollFn: async () => {
@@ -370,6 +374,10 @@ export class MailingListService {
       },
       metadata: { mailing_list_uid: mailingListId },
     });
+
+    if (!removed) {
+      logger.warning(req, 'delete_mailing_list', 'Mailing list not yet removed from query index', { mailing_list_uid: mailingListId });
+    }
   }
 
   // ============================================
@@ -423,17 +431,8 @@ export class MailingListService {
       req,
       'LFX_V2_SERVICE',
       `/groupsio/mailing-lists/${mailingListId}/members/${memberId}`,
-      'GET',
-      { v: '1' }
+      'GET'
     );
-
-    if (!member) {
-      throw new ResourceNotFoundError('Mailing List Member', memberId, {
-        operation: 'get_member_by_id',
-        service: 'mailing_list_service',
-        path: `/groupsio/mailing-lists/${mailingListId}/members/${memberId}`,
-      });
-    }
 
     // Add writer access field to the member
     return await this.accessCheckService.addAccessToResource(req, member, 'groupsio_member');
@@ -448,7 +447,7 @@ export class MailingListService {
       'LFX_V2_SERVICE',
       `/groupsio/mailing-lists/${mailingListId}/members`,
       'POST',
-      { v: '1' },
+      undefined,
       data
     );
 
@@ -478,11 +477,11 @@ export class MailingListService {
     });
 
     if (indexed) {
-      return indexed;
+      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_member');
     }
 
     logger.warning(req, 'create_mailing_list_member', 'Member not yet indexed in query service, returning POST response', { member_uid: newMember.uid });
-    return newMember;
+    return await this.accessCheckService.addAccessToResource(req, newMember, 'groupsio_member');
   }
 
   /**
@@ -494,7 +493,7 @@ export class MailingListService {
       'LFX_V2_SERVICE',
       `/groupsio/mailing-lists/${mailingListId}/members/${memberId}`,
       'PUT',
-      { v: '1' },
+      undefined,
       data
     );
 
@@ -510,9 +509,7 @@ export class MailingListService {
    * Deletes a member
    */
   public async deleteMember(req: Request, mailingListId: string, memberId: string): Promise<void> {
-    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/mailing-lists/${mailingListId}/members/${memberId}`, 'DELETE', {
-      v: '1',
-    });
+    await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/groupsio/mailing-lists/${mailingListId}/members/${memberId}`, 'DELETE');
 
     logger.debug(req, 'delete_mailing_list_member', 'Mailing list member deleted successfully', {
       mailing_list_uid: mailingListId,
@@ -520,7 +517,7 @@ export class MailingListService {
     });
 
     // Poll the query service until the member is removed from the index
-    await pollEndpoint({
+    const removed = await pollEndpoint({
       req,
       operation: 'delete_mailing_list_member',
       pollFn: async () => {
@@ -538,6 +535,13 @@ export class MailingListService {
       },
       metadata: { mailing_list_uid: mailingListId, member_uid: memberId },
     });
+
+    if (!removed) {
+      logger.warning(req, 'delete_mailing_list_member', 'Member not yet removed from query index', {
+        mailing_list_uid: mailingListId,
+        member_uid: memberId,
+      });
+    }
   }
 
   // ============================================

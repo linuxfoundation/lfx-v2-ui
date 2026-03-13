@@ -63,6 +63,8 @@ export interface GroupsIOService {
   writers?: UserInfo[];
   /** Auditor users who can audit this resource */
   auditors?: UserInfo[];
+  /** Whether the current user has write access (response-only, set by access check) */
+  writer?: boolean;
   /** Creation timestamp */
   created_at: string;
   /** Last update timestamp */
@@ -120,6 +122,8 @@ export interface GroupsIOMailingList {
   group_id?: number | null;
   /** Number of subscribers (read-only, maintained by service) */
   subscriber_count: number;
+  /** Whether the current user has write access (response-only, set by access check) */
+  writer?: boolean;
 }
 
 /**
@@ -157,7 +161,7 @@ export interface CreateMailingListRequest {
  */
 export interface CreateGroupsIOServiceRequest {
   /** Service type */
-  type: string;
+  type: GroupsIOServiceType;
   /** Domain for the service */
   domain?: string;
   /** Prefix for mailing lists (optional) */
