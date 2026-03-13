@@ -11,10 +11,10 @@ All shared types live in `packages/shared/src/`:
 ## Conventions
 
 - License header required on all new files
-- Use TypeScript interfaces (not union types) for better maintainability
+- Prefer `interface` for shared object shapes; use `type` for literal unions and discriminated unions
 - Use `as const` for constant objects to get literal types
 - Export from the barrel file (`index.ts`) in the same directory
-- NEVER define interfaces locally in component or service files — always in `@lfx-one/shared/interfaces`
+- Shared types used across modules belong in `@lfx-one/shared/interfaces` — purely local UI types (e.g., component-internal state) may be defined locally when they have no reuse potential
 
 ## File Naming
 

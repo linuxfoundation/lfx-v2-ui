@@ -57,10 +57,18 @@ The project requires environment variables to connect to backend services. All v
 3. **Validate critical env vars are populated:**
 
    ```bash
-   grep -cE "^(PCC_AUTH0_CLIENT_ID|PCC_AUTH0_CLIENT_SECRET|PCC_AUTH0_ISSUER_BASE_URL|LFX_V2_SERVICE)=.+" apps/lfx-one/.env
+   missing=()
+   for key in PCC_AUTH0_CLIENT_ID PCC_AUTH0_CLIENT_SECRET PCC_AUTH0_ISSUER_BASE_URL PCC_AUTH0_AUDIENCE PCC_AUTH0_SECRET PCC_BASE_URL LFX_V2_SERVICE; do
+     grep -qE "^${key}=.+" apps/lfx-one/.env || missing+=("$key")
+   done
+   if [ ${#missing[@]} -gt 0 ]; then
+     printf "Missing env vars: %s\n" "${missing[*]}"
+   else
+     echo "All critical env vars are populated."
+   fi
    ```
 
-   If the count is less than 4, authentication will fail. Go back to 1Password and fill in the missing values.
+   If any keys are missing, authentication will fail. Go back to 1Password and fill in the missing values. Note: `PCC_AUTH0_SECRET` can be any sufficiently long random string — it's used for session encryption, not fetched from 1Password.
 
 **Important:** All services point to the shared dev environment. No local infrastructure setup is needed.
 

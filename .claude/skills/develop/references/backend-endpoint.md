@@ -20,17 +20,24 @@ The upstream API contract should already be validated in Step 3 of the develop s
 ### Service Example Pattern
 
 ```typescript
+import { QueryServiceResponse } from '@lfx-one/shared/interfaces';
+import { Request } from 'express';
+
 import { logger } from './logger.service';
-import { microserviceProxyService } from './microservice-proxy.service';
+import { MicroserviceProxyService } from './microservice-proxy.service';
 
 class MyService {
+  private microserviceProxy: MicroserviceProxyService;
+
+  constructor() {
+    this.microserviceProxy = new MicroserviceProxyService();
+  }
+
   public async getItems(req: Request): Promise<Item[]> {
     logger.debug(req, 'get_items', 'Fetching items from upstream', {});
 
-    const { resources } = await microserviceProxyService.proxyRequest(req, {
-      method: 'GET',
-      path: '/query/resources',
-      params: { resource_type: 'my_items' },
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Item>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      resource_type: 'my_items',
     });
 
     logger.debug(req, 'get_items', 'Fetched items', { count: resources.length });
