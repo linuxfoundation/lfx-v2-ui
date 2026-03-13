@@ -110,7 +110,7 @@ export async function pollUntilIndexed<T>(options: PollUntilIndexedOptions<T>): 
         attempts: maxRetries,
       });
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.warning(req, operation, 'Unexpected error during polling', {
         ...metadata,
         attempt,

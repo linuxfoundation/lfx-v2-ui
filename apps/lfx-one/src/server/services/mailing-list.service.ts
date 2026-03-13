@@ -118,31 +118,14 @@ export class MailingListService {
     });
 
     // Poll the query service until the service is indexed
-    const indexed = await pollUntilIndexed<GroupsIOService>({
-      req,
-      operation: 'create_groupsio_service',
-      pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOService>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_service',
-            tags: `service_uid:${newService.uid}`,
-          }
-        );
-        return resources.length > 0 ? resources[0].data : null;
-      },
-      metadata: { service_uid: newService.uid },
+    const indexed = await this.pollUntilResourceIndexed<GroupsIOService>(req, 'create_groupsio_service', 'groupsio_service', 'service_uid', newService.uid, {
+      service_uid: newService.uid,
     });
 
-    if (indexed) {
-      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_service');
+    if (!indexed) {
+      logger.warning(req, 'create_groupsio_service', 'Service not yet indexed in query service, returning POST response', { service_uid: newService.uid });
     }
-
-    logger.warning(req, 'create_groupsio_service', 'Service not yet indexed in query service, returning POST response', { service_uid: newService.uid });
-    return await this.accessCheckService.addAccessToResource(req, newService, 'groupsio_service');
+    return await this.accessCheckService.addAccessToResource(req, indexed ?? newService, 'groupsio_service');
   }
 
   /**
@@ -162,7 +145,12 @@ export class MailingListService {
       service_uid: serviceId,
     });
 
-    return updatedService;
+    // Poll the query service until the updated service is indexed
+    const indexed = await this.pollUntilResourceIndexed<GroupsIOService>(req, 'update_groupsio_service', 'groupsio_service', 'service_uid', serviceId, {
+      service_uid: serviceId,
+    });
+
+    return indexed ?? updatedService;
   }
 
   /**
@@ -176,28 +164,9 @@ export class MailingListService {
     });
 
     // Poll the query service until the service is removed from the index
-    const removed = await pollEndpoint({
-      req,
-      operation: 'delete_groupsio_service',
-      pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOService>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_service',
-            tags: `service_uid:${serviceId}`,
-          }
-        );
-        return resources.length === 0;
-      },
-      metadata: { service_uid: serviceId },
+    await this.pollUntilResourceRemoved(req, 'delete_groupsio_service', 'groupsio_service', 'service_uid', serviceId, {
+      service_uid: serviceId,
     });
-
-    if (!removed) {
-      logger.warning(req, 'delete_groupsio_service', 'Service not yet removed from query index', { service_uid: serviceId });
-    }
   }
 
   // ============================================
@@ -296,33 +265,21 @@ export class MailingListService {
     });
 
     // Poll the query service until the mailing list is indexed
-    const indexed = await pollUntilIndexed<GroupsIOMailingList>({
+    const indexed = await this.pollUntilResourceIndexed<GroupsIOMailingList>(
       req,
-      operation: 'create_mailing_list',
-      pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_mailing_list',
-            tags: `groupsio_mailing_list_uid:${newMailingList.uid}`,
-          }
-        );
-        return resources.length > 0 ? resources[0].data : null;
-      },
-      metadata: { mailing_list_uid: newMailingList.uid },
-    });
+      'create_mailing_list',
+      'groupsio_mailing_list',
+      'groupsio_mailing_list_uid',
+      newMailingList.uid,
+      { mailing_list_uid: newMailingList.uid }
+    );
 
-    if (indexed) {
-      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_mailing_list');
+    if (!indexed) {
+      logger.warning(req, 'create_mailing_list', 'Mailing list not yet indexed in query service, returning POST response', {
+        mailing_list_uid: newMailingList.uid,
+      });
     }
-
-    logger.warning(req, 'create_mailing_list', 'Mailing list not yet indexed in query service, returning POST response', {
-      mailing_list_uid: newMailingList.uid,
-    });
-    return await this.accessCheckService.addAccessToResource(req, newMailingList, 'groupsio_mailing_list');
+    return await this.accessCheckService.addAccessToResource(req, indexed ?? newMailingList, 'groupsio_mailing_list');
   }
 
   /**
@@ -342,7 +299,17 @@ export class MailingListService {
       mailing_list_uid: mailingListId,
     });
 
-    return updatedMailingList;
+    // Poll the query service until the updated mailing list is indexed
+    const indexed = await this.pollUntilResourceIndexed<GroupsIOMailingList>(
+      req,
+      'update_mailing_list',
+      'groupsio_mailing_list',
+      'groupsio_mailing_list_uid',
+      mailingListId,
+      { mailing_list_uid: mailingListId }
+    );
+
+    return indexed ?? updatedMailingList;
   }
 
   /**
@@ -356,28 +323,9 @@ export class MailingListService {
     });
 
     // Poll the query service until the mailing list is removed from the index
-    const removed = await pollEndpoint({
-      req,
-      operation: 'delete_mailing_list',
-      pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_mailing_list',
-            tags: `groupsio_mailing_list_uid:${mailingListId}`,
-          }
-        );
-        return resources.length === 0;
-      },
-      metadata: { mailing_list_uid: mailingListId },
+    await this.pollUntilResourceRemoved(req, 'delete_mailing_list', 'groupsio_mailing_list', 'groupsio_mailing_list_uid', mailingListId, {
+      mailing_list_uid: mailingListId,
     });
-
-    if (!removed) {
-      logger.warning(req, 'delete_mailing_list', 'Mailing list not yet removed from query index', { mailing_list_uid: mailingListId });
-    }
   }
 
   // ============================================
@@ -457,31 +405,15 @@ export class MailingListService {
     });
 
     // Poll the query service until the member is indexed
-    const indexed = await pollUntilIndexed<MailingListMember>({
-      req,
-      operation: 'create_mailing_list_member',
-      pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_member',
-            tags: `member_uid:${newMember.uid}`,
-          }
-        );
-        return resources.length > 0 ? resources[0].data : null;
-      },
-      metadata: { mailing_list_uid: mailingListId, member_uid: newMember.uid },
+    const indexed = await this.pollUntilResourceIndexed<MailingListMember>(req, 'create_mailing_list_member', 'groupsio_member', 'member_uid', newMember.uid, {
+      mailing_list_uid: mailingListId,
+      member_uid: newMember.uid,
     });
 
-    if (indexed) {
-      return await this.accessCheckService.addAccessToResource(req, indexed, 'groupsio_member');
+    if (!indexed) {
+      logger.warning(req, 'create_mailing_list_member', 'Member not yet indexed in query service, returning POST response', { member_uid: newMember.uid });
     }
-
-    logger.warning(req, 'create_mailing_list_member', 'Member not yet indexed in query service, returning POST response', { member_uid: newMember.uid });
-    return await this.accessCheckService.addAccessToResource(req, newMember, 'groupsio_member');
+    return await this.accessCheckService.addAccessToResource(req, indexed ?? newMember, 'groupsio_member');
   }
 
   /**
@@ -502,7 +434,13 @@ export class MailingListService {
       member_uid: memberId,
     });
 
-    return updatedMember;
+    // Poll the query service until the updated member is indexed
+    const indexed = await this.pollUntilResourceIndexed<MailingListMember>(req, 'update_mailing_list_member', 'groupsio_member', 'member_uid', memberId, {
+      mailing_list_uid: mailingListId,
+      member_uid: memberId,
+    });
+
+    return indexed ?? updatedMember;
   }
 
   /**
@@ -517,30 +455,61 @@ export class MailingListService {
     });
 
     // Poll the query service until the member is removed from the index
+    await this.pollUntilResourceRemoved(req, 'delete_mailing_list_member', 'groupsio_member', 'member_uid', memberId, {
+      mailing_list_uid: mailingListId,
+      member_uid: memberId,
+    });
+  }
+
+  // ============================================
+  // Private Polling Helpers
+  // ============================================
+
+  private async pollUntilResourceIndexed<T>(
+    req: Request,
+    operation: string,
+    type: string,
+    tagKey: string,
+    tagValue: string,
+    metadata: Record<string, unknown>
+  ): Promise<T | null> {
+    return pollUntilIndexed<T>({
+      req,
+      operation,
+      pollFn: async () => {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<T>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type,
+          tags: `${tagKey}:${tagValue}`,
+        });
+        return resources.length > 0 ? resources[0].data : null;
+      },
+      metadata,
+    });
+  }
+
+  private async pollUntilResourceRemoved(
+    req: Request,
+    operation: string,
+    type: string,
+    tagKey: string,
+    tagValue: string,
+    metadata: Record<string, unknown>
+  ): Promise<void> {
     const removed = await pollEndpoint({
       req,
-      operation: 'delete_mailing_list_member',
+      operation,
       pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            type: 'groupsio_member',
-            tags: `member_uid:${memberId}`,
-          }
-        );
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<unknown>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type,
+          tags: `${tagKey}:${tagValue}`,
+        });
         return resources.length === 0;
       },
-      metadata: { mailing_list_uid: mailingListId, member_uid: memberId },
+      metadata,
     });
 
     if (!removed) {
-      logger.warning(req, 'delete_mailing_list_member', 'Member not yet removed from query index', {
-        mailing_list_uid: mailingListId,
-        member_uid: memberId,
-      });
+      logger.warning(req, operation, 'Resource not yet removed from query index', metadata);
     }
   }
 
