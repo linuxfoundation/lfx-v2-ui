@@ -33,6 +33,14 @@ globs: '*'
 - **Don't bundle unrelated changes** — keeps reviews focused and rollbacks clean
 - PR sizing should be planned upfront during development — see the `/develop` skill's "Scope for PR Size" section for detailed guidance on splitting work
 
+## External References
+
+When a PR depends on or relates to work in other repos (e.g., upstream microservice changes), include links in the PR description so reviewers have full context:
+
+- **Upstream API changes** — link to the PR or commit in the microservice repo that adds/modifies the endpoint this PR consumes
+- **Related PRs in other repos** — link any PRs that were part of the same feature effort (e.g., a committee-service PR that this frontend PR builds on)
+- **Deployed dependencies** — if the PR requires an upstream change to be deployed first, call that out explicitly so reviewers and mergers know the ordering
+
 ## JIRA Tracking
 
 Before starting any work or commits:
