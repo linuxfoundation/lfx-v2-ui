@@ -195,9 +195,8 @@ export class CommitteeMembersComponent implements OnInit {
         // Refresh members list by re-fetching
         this.refreshMembers();
       },
-      error: (error) => {
+      error: () => {
         this.isDeleting.set(false);
-        console.error('Failed to delete member:', error);
 
         this.messageService.add({
           severity: 'error',

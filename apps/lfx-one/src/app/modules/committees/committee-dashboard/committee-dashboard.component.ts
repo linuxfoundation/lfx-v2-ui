@@ -168,8 +168,7 @@ export class CommitteeDashboardComponent {
 
           this.committeesLoading.set(true);
           return this.committeeService.getCommitteesByProject(project.uid).pipe(
-            catchError((error) => {
-              console.error('Failed to load committees:', error);
+            catchError(() => {
               return of([]);
             }),
             finalize(() => this.committeesLoading.set(false))
