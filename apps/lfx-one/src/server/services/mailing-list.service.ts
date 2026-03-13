@@ -16,7 +16,7 @@ import {
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
-import { pollEndpoint } from '../helpers/poll-endpoint.helper';
+import { pollEndpoint, pollUntilIndexed } from '../helpers/poll-endpoint.helper';
 import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -118,10 +118,7 @@ export class MailingListService {
     });
 
     // Poll the query service until the service is indexed
-    const serviceUid = newService.uid;
-    let fetchedService: GroupsIOService | undefined;
-
-    const resolved = await pollEndpoint({
+    const indexed = await pollUntilIndexed<GroupsIOService>({
       req,
       operation: 'create_groupsio_service',
       pollFn: async () => {
@@ -132,23 +129,19 @@ export class MailingListService {
           'GET',
           {
             type: 'groupsio_service',
-            tags: `service_uid:${serviceUid}`,
+            tags: `service_uid:${newService.uid}`,
           }
         );
-        if (resources.length > 0) {
-          fetchedService = resources[0].data;
-          return true;
-        }
-        return false;
+        return resources.length > 0 ? resources[0].data : null;
       },
-      metadata: { service_uid: serviceUid },
+      metadata: { service_uid: newService.uid },
     });
 
-    if (resolved && fetchedService) {
-      return fetchedService;
+    if (indexed) {
+      return indexed;
     }
 
-    logger.warning(req, 'create_groupsio_service', 'Service not yet indexed in query service, returning POST response', { service_uid: serviceUid });
+    logger.warning(req, 'create_groupsio_service', 'Service not yet indexed in query service, returning POST response', { service_uid: newService.uid });
     return newService;
   }
 
@@ -299,10 +292,7 @@ export class MailingListService {
     });
 
     // Poll the query service until the mailing list is indexed
-    const mailingListUid = newMailingList.uid;
-    let fetchedMailingList: GroupsIOMailingList | undefined;
-
-    const resolved = await pollEndpoint({
+    const indexed = await pollUntilIndexed<GroupsIOMailingList>({
       req,
       operation: 'create_mailing_list',
       pollFn: async () => {
@@ -313,23 +303,21 @@ export class MailingListService {
           'GET',
           {
             type: 'groupsio_mailing_list',
-            tags: `groupsio_mailing_list_uid:${mailingListUid}`,
+            tags: `groupsio_mailing_list_uid:${newMailingList.uid}`,
           }
         );
-        if (resources.length > 0) {
-          fetchedMailingList = resources[0].data;
-          return true;
-        }
-        return false;
+        return resources.length > 0 ? resources[0].data : null;
       },
-      metadata: { mailing_list_uid: mailingListUid },
+      metadata: { mailing_list_uid: newMailingList.uid },
     });
 
-    if (resolved && fetchedMailingList) {
-      return fetchedMailingList;
+    if (indexed) {
+      return indexed;
     }
 
-    logger.warning(req, 'create_mailing_list', 'Mailing list not yet indexed in query service, returning POST response', { mailing_list_uid: mailingListUid });
+    logger.warning(req, 'create_mailing_list', 'Mailing list not yet indexed in query service, returning POST response', {
+      mailing_list_uid: newMailingList.uid,
+    });
     return newMailingList;
   }
 
@@ -470,10 +458,7 @@ export class MailingListService {
     });
 
     // Poll the query service until the member is indexed
-    const memberUid = newMember.uid;
-    let fetchedMember: MailingListMember | undefined;
-
-    const resolved = await pollEndpoint({
+    const indexed = await pollUntilIndexed<MailingListMember>({
       req,
       operation: 'create_mailing_list_member',
       pollFn: async () => {
@@ -484,23 +469,19 @@ export class MailingListService {
           'GET',
           {
             type: 'groupsio_member',
-            tags: `member_uid:${memberUid}`,
+            tags: `member_uid:${newMember.uid}`,
           }
         );
-        if (resources.length > 0) {
-          fetchedMember = resources[0].data;
-          return true;
-        }
-        return false;
+        return resources.length > 0 ? resources[0].data : null;
       },
-      metadata: { mailing_list_uid: mailingListId, member_uid: memberUid },
+      metadata: { mailing_list_uid: mailingListId, member_uid: newMember.uid },
     });
 
-    if (resolved && fetchedMember) {
-      return fetchedMember;
+    if (indexed) {
+      return indexed;
     }
 
-    logger.warning(req, 'create_mailing_list_member', 'Member not yet indexed in query service, returning POST response', { member_uid: memberUid });
+    logger.warning(req, 'create_mailing_list_member', 'Member not yet indexed in query service, returning POST response', { member_uid: newMember.uid });
     return newMember;
   }
 

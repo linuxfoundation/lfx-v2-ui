@@ -187,6 +187,10 @@ export interface UpdateGroupsIOServiceRequest {
   public?: boolean;
   /** Service status (optional) */
   status?: string;
+  /** Manager users who can edit/modify this resource */
+  writers?: UserInfo[];
+  /** Auditor users who can audit this resource */
+  auditors?: UserInfo[];
 }
 
 /**
