@@ -35,8 +35,9 @@ export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | '
  *  - open:        Anyone can self-join; no approval required.
  *  - invite_only: Members / admins send invite links; invitee clicks to accept.
  *  - application: User submits application; admin reviews and approves/rejects.
+ *  - closed:      Only admins can add members directly.
  */
-export type JoinMode = 'open' | 'invite_only' | 'application';
+export type JoinMode = 'open' | 'invite_only' | 'application' | 'closed';
 
 /** Status of a member invite */
 export type InviteStatus = 'pending' | 'accepted' | 'declined' | 'expired';

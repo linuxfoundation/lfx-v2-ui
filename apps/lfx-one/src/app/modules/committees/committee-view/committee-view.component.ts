@@ -212,6 +212,8 @@ export class CommitteeViewComponent {
         return 'Invite Only';
       case 'application':
         return 'Apply to Join';
+      case 'closed':
+        return 'Closed';
       default:
         return 'Invite Only';
     }
