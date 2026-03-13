@@ -23,6 +23,8 @@ import {
   GroupInvite,
   GroupJoinApplication,
   GroupJoinApplicationRequest,
+  MyCommittee,
+  PublicCommittee,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
@@ -179,5 +181,28 @@ export class CommitteeService {
 
   public rejectApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
     return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
+  }
+
+  // Join/Leave methods
+  public joinCommittee(committeeId: string): Observable<CommitteeMember> {
+    return this.http.post<CommitteeMember>(`/api/committees/${committeeId}/join`, {}).pipe(take(1));
+  }
+
+  public leaveCommittee(committeeId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
+  }
+
+  // My Committees
+  public getMyCommittees(projectUid?: string): Observable<MyCommittee[]> {
+    let params = new HttpParams();
+    if (projectUid) {
+      params = params.set('project_uid', projectUid);
+    }
+    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(catchError(() => of([])));
+  }
+
+  // Public committee (unauthenticated)
+  public getPublicCommitteeById(committeeId: string): Observable<PublicCommittee> {
+    return this.http.get<PublicCommittee>(`/public/api/committees/${committeeId}`);
   }
 }

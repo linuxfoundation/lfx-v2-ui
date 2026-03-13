@@ -14,6 +14,7 @@ import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { SurveyService } from '../services/survey.service';
+import { generateM2MToken } from '../utils/m2m-token.util';
 
 /**
  * Controller for handling committee HTTP requests
@@ -968,6 +969,65 @@ export class CommitteeController {
       res.json(surveys);
     } catch (error) {
       next(error);
+    }
+  }
+
+  /**
+   * GET /public/api/committees/:id - Public endpoint (unauthenticated, uses M2M token)
+   */
+  public async getPublicCommitteeById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_public_committee_by_id', { committee_id: id });
+
+    if (!id) {
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'get_public_committee_by_id',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
+      return;
+    }
+
+    const originalToken = req.bearerToken;
+
+    try {
+      const m2mToken = await generateM2MToken(req);
+      req.bearerToken = m2mToken;
+
+      const committee = await this.committeeService.getCommitteeById(req, id);
+
+      if (!committee.public) {
+        res.status(404).json({ message: 'Committee not found' });
+        return;
+      }
+
+      const publicCommittee = {
+        uid: committee.uid,
+        name: committee.name,
+        description: committee.description,
+        category: committee.category,
+        join_mode: committee.join_mode,
+        chairs: [committee.chair, committee.co_chair].filter(Boolean).map((c) => ({
+          name: `${c!.first_name} ${c!.last_name}`,
+          organization: c!.organization,
+        })),
+        members: [],
+        total_members: committee.total_members,
+        external_links: {
+          website: committee.website,
+          mailing_list_url: committee.mailing_list?.url,
+          chat_channel_url: committee.chat_channel?.url,
+        },
+      };
+
+      logger.success(req, 'get_public_committee_by_id', startTime, { committee_id: id });
+      res.json(publicCommittee);
+    } catch (error) {
+      logger.error(req, 'get_public_committee_by_id', startTime, error, { committee_id: id });
+      next(error);
+    } finally {
+      req.bearerToken = originalToken;
     }
   }
 }

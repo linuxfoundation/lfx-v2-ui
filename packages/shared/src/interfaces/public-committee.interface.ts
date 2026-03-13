@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { JoinMode } from './committee.interface';
+
 /**
  * Public-safe committee member representation.
  * Strips emails, internal IDs, and other private fields.
@@ -40,6 +42,7 @@ export interface PublicCommittee {
   name: string;
   description?: string;
   category: string;
+  join_mode?: JoinMode;
   chairs: PublicCommitteeMember[];
   members: PublicCommitteeMember[];
   total_members: number;

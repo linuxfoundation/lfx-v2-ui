@@ -57,4 +57,8 @@ export const routes: Routes = [
     path: 'meetings/:id',
     loadComponent: () => import('./modules/meetings/meeting-join/meeting-join.component').then((m) => m.MeetingJoinComponent),
   },
+  {
+    path: 'public/groups/:id',
+    loadComponent: () => import('./modules/committees/committee-public-view/committee-public-view.component').then((m) => m.CommitteePublicViewComponent),
+  },
 ];
