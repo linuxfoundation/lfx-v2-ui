@@ -11,6 +11,7 @@ import {
   MailingListType,
 } from '../enums/mailing-list.enum';
 import { CommitteeReference } from './committee.interface';
+import { UserInfo } from './project.interface';
 
 /**
  * Linked group reference for mailing lists
@@ -56,6 +57,12 @@ export interface GroupsIOService {
   public: boolean;
   /** Associated project name */
   project_name: string;
+  /** Parent primary service UID (for shared type services) */
+  parent_service_uid?: string;
+  /** Manager users who can edit/modify this resource */
+  writers?: UserInfo[];
+  /** Auditor users who can audit this resource */
+  auditors?: UserInfo[];
   /** Creation timestamp */
   created_at: string;
   /** Last update timestamp */
@@ -97,10 +104,10 @@ export interface GroupsIOMailingList {
   last_reviewed_at?: string | null;
   /** Auditor user ID (nullable) */
   last_reviewed_by?: string | null;
-  /** Users who can edit */
-  writers?: string[];
-  /** Users who can audit */
-  auditors?: string[];
+  /** Manager users who can edit/modify this resource */
+  writers?: UserInfo[];
+  /** Auditor users who can audit this resource */
+  auditors?: UserInfo[];
   /** Creation timestamp */
   created_at: string;
   /** Last update timestamp */
@@ -138,6 +145,10 @@ export interface CreateMailingListRequest {
   committees?: CommitteeReference[];
   /** Email subject prefix (optional) */
   subject_tag?: string;
+  /** Manager users who can edit/modify this resource */
+  writers?: UserInfo[];
+  /** Auditor users who can audit this resource */
+  auditors?: UserInfo[];
 }
 
 /**
@@ -157,6 +168,10 @@ export interface CreateGroupsIOServiceRequest {
   group_name?: string;
   /** Whether the service is publicly accessible */
   public?: boolean;
+  /** Manager users who can edit/modify this resource */
+  writers?: UserInfo[];
+  /** Auditor users who can audit this resource */
+  auditors?: UserInfo[];
 }
 
 /**
