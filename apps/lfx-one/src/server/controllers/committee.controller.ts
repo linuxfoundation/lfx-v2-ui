@@ -13,6 +13,7 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
+import { generateM2MToken } from '../utils/m2m-token.util';
 
 /**
  * Controller for handling committee HTTP requests
@@ -36,6 +37,53 @@ export class CommitteeController {
       });
 
       res.json(committees);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /public/api/committees/:id
+   * Returns a single public-safe committee by ID.
+   * Returns 404 if the committee does not exist or is not public.
+   */
+  public async getPublicCommitteeById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_public_committee_by_id', { committee_id: id });
+
+    try {
+      const m2mToken = await generateM2MToken(req);
+      req.bearerToken = m2mToken;
+
+      const committee = await this.committeeService.getCommitteeById(req, id);
+
+      if (!committee.public) {
+        res.status(404).json({ message: 'Committee not found' });
+        return;
+      }
+
+      // Map to public-safe shape — strip internal fields
+      const publicCommittee = {
+        uid: committee.uid,
+        name: committee.name,
+        description: committee.description,
+        category: committee.category,
+        join_mode: committee.join_mode,
+        chairs: [committee.chair, committee.co_chair].filter(Boolean).map((c) => ({
+          name: `${c!.first_name} ${c!.last_name}`,
+          organization: c!.organization,
+        })),
+        members: [],
+        total_members: committee.total_members,
+        external_links: {
+          website: committee.website,
+          mailing_list_url: committee.mailing_list?.url,
+          chat_channel_url: committee.chat_channel?.url,
+        },
+      };
+
+      logger.success(req, 'get_public_committee_by_id', startTime, { committee_id: id });
+      res.json(publicCommittee);
     } catch (error) {
       next(error);
     }

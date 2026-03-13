@@ -1,0 +1,195 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+<lfx-header></lfx-header>
+
+@if (loading()) {
+  <div class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <i class="fa-light fa-spinner-third fa-spin text-3xl text-gray-400"></i>
+  </div>
+} @else if (error()) {
+  <div class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto py-16 px-8">
+      <div class="max-w-[600px] mx-auto text-center">
+        <i class="fa-light fa-circle-exclamation text-5xl text-gray-300 mb-4"></i>
+        <h2 class="text-xl font-semibold text-gray-700 mb-2">{{ error() }}</h2>
+        <p class="text-sm text-gray-500">The {{ committeeLabel.singular.toLowerCase() }} you're looking for may not exist or is not publicly available.</p>
+      </div>
+    </div>
+  </div>
+} @else if (committee(); as c) {
+  <div class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto py-6 px-8">
+      <div class="max-w-[900px] mx-auto flex flex-col gap-6">
+        <!-- Header Card -->
+        <lfx-card data-testid="public-group-header-card">
+          <div class="flex flex-col gap-4">
+            <div class="flex items-start justify-between">
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                  <h1 class="text-2xl font-semibold text-gray-900" data-testid="public-group-name">{{ c.name }}</h1>
+                  <lfx-tag [value]="c.category" [severity]="categorySeverity()" data-testid="public-group-category"></lfx-tag>
+                </div>
+                @if (c.description) {
+                  <p class="text-sm text-gray-600 max-w-[700px]" data-testid="public-group-description">{{ c.description }}</p>
+                }
+              </div>
+              <div class="flex items-center gap-2">
+                <lfx-tag [value]="joinModeLabel()" severity="secondary" data-testid="public-group-join-mode"></lfx-tag>
+              </div>
+            </div>
+
+            <!-- Stats row -->
+            <div class="flex items-center gap-6 text-sm text-gray-500">
+              <span data-testid="public-group-member-count">
+                <i class="fa-light fa-users mr-1"></i>
+                {{ c.total_members }} {{ c.total_members === 1 ? 'member' : 'members' }}
+              </span>
+            </div>
+          </div>
+        </lfx-card>
+
+        <!-- Leadership Card -->
+        @if (c.chairs.length > 0) {
+          <lfx-card data-testid="public-group-leadership-card">
+            <h3 class="text-base font-semibold text-gray-800 mb-3">Leadership</h3>
+            <div class="flex flex-col gap-3">
+              @for (chair of c.chairs; track chair.name) {
+                <div class="flex items-center gap-3" data-testid="public-group-chair">
+                  <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
+                    {{ chair.name.charAt(0) }}
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">{{ chair.name }}</div>
+                    @if (chair.organization) {
+                      <div class="text-xs text-gray-500">{{ chair.organization }}</div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </lfx-card>
+        }
+
+        <!-- Members Card -->
+        @if (c.members.length > 0) {
+          <lfx-card data-testid="public-group-members-card">
+            <h3 class="text-base font-semibold text-gray-800 mb-3">Members</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (member of c.members; track member.name) {
+                <div class="flex items-center gap-3" data-testid="public-group-member">
+                  <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-sm font-medium">
+                    {{ member.name.charAt(0) }}
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-900">{{ member.name }}</div>
+                    @if (member.organization) {
+                      <div class="text-xs text-gray-500">{{ member.organization }}</div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </lfx-card>
+        }
+
+        <!-- Meeting Schedule Card -->
+        @if (c.meeting_schedule) {
+          <lfx-card data-testid="public-group-meeting-card">
+            <h3 class="text-base font-semibold text-gray-800 mb-3">Meeting Schedule</h3>
+            <div class="flex flex-col gap-2 text-sm text-gray-600">
+              <div class="flex items-center gap-2">
+                <i class="fa-light fa-clock w-4 text-center"></i>
+                <span>{{ c.meeting_schedule.time }} ({{ c.meeting_schedule.timezone }})</span>
+              </div>
+              @if (c.meeting_schedule.recurrence) {
+                <div class="flex items-center gap-2">
+                  <i class="fa-light fa-repeat w-4 text-center"></i>
+                  <span>{{ c.meeting_schedule.recurrence }}</span>
+                </div>
+              }
+              @if (c.meeting_schedule.video_link) {
+                <div class="flex items-center gap-2">
+                  <i class="fa-light fa-video w-4 text-center"></i>
+                  <a [href]="c.meeting_schedule.video_link" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Join meeting</a>
+                </div>
+              }
+            </div>
+          </lfx-card>
+        }
+
+        <!-- Links Card -->
+        @if (c.external_links.website || c.external_links.mailing_list_url || c.external_links.chat_channel_url) {
+          <lfx-card data-testid="public-group-links-card">
+            <h3 class="text-base font-semibold text-gray-800 mb-3">Links</h3>
+            <div class="flex flex-col gap-2 text-sm">
+              @if (c.external_links.website) {
+                <a [href]="c.external_links.website" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:underline">
+                  <i class="fa-light fa-globe w-4 text-center"></i>
+                  <span>Website</span>
+                </a>
+              }
+              @if (c.external_links.mailing_list_url) {
+                <a
+                  [href]="c.external_links.mailing_list_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2 text-blue-600 hover:underline">
+                  <i class="fa-light fa-envelope w-4 text-center"></i>
+                  <span>Mailing List</span>
+                </a>
+              }
+              @if (c.external_links.chat_channel_url) {
+                <a
+                  [href]="c.external_links.chat_channel_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2 text-blue-600 hover:underline">
+                  <i class="fa-light fa-comment w-4 text-center"></i>
+                  <span>Chat Channel</span>
+                </a>
+              }
+            </div>
+          </lfx-card>
+        }
+
+        <!-- Join CTA Card -->
+        <lfx-card data-testid="public-group-cta-card">
+          @if (!authenticated()) {
+            <div class="flex flex-col items-center gap-3 py-4">
+              <p class="text-sm text-gray-600">Sign in to join this {{ committeeLabel.singular.toLowerCase() }}</p>
+              <lfx-button
+                label="Sign in to join"
+                icon="fa-light fa-arrow-right-to-bracket"
+                (clicked)="signIn()"
+                data-testid="public-group-signin-btn"></lfx-button>
+            </div>
+          } @else if (canJoin()) {
+            <div class="flex flex-col items-center gap-3 py-4">
+              <p class="text-sm text-gray-600">This {{ committeeLabel.singular.toLowerCase() }} is open for anyone to join.</p>
+              <lfx-button
+                label="Join {{ committeeLabel.singular }}"
+                icon="fa-light fa-user-plus"
+                (clicked)="joinGroup()"
+                data-testid="public-group-join-btn"></lfx-button>
+            </div>
+          } @else if (canApply()) {
+            <div class="flex flex-col items-center gap-3 py-4">
+              <p class="text-sm text-gray-600">This {{ committeeLabel.singular.toLowerCase() }} requires an application to join.</p>
+              <lfx-button label="Apply to Join" icon="fa-light fa-paper-plane" (clicked)="applyToJoin()" data-testid="public-group-apply-btn"></lfx-button>
+            </div>
+          } @else if (isInviteOnly()) {
+            <div class="flex flex-col items-center gap-3 py-4">
+              <p class="text-sm text-gray-500">This {{ committeeLabel.singular.toLowerCase() }} is invite only.</p>
+              <lfx-tag value="Invite Only" severity="info" icon="fa-light fa-envelope" data-testid="public-group-invite-badge"></lfx-tag>
+            </div>
+          } @else if (isClosed()) {
+            <div class="flex flex-col items-center gap-3 py-4">
+              <p class="text-sm text-gray-500">This {{ committeeLabel.singular.toLowerCase() }} is closed to new members.</p>
+              <lfx-tag value="Closed" severity="secondary" icon="fa-light fa-lock" data-testid="public-group-closed-badge"></lfx-tag>
+            </div>
+          }
+        </lfx-card>
+      </div>
+    </div>
+  </div>
+}

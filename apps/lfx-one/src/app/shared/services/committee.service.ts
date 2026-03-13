@@ -21,6 +21,8 @@ import {
   GroupInvite,
   GroupJoinApplication,
   GroupJoinApplicationRequest,
+  MyCommittee,
+  PublicCommittee,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
@@ -106,6 +108,62 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  // ── Public / My Committees ────────────────────────────────────────────────
+
+  /** Self-join an open group */
+  public joinCommittee(committeeId: string): Observable<CommitteeMember> {
+    return this.http.post<CommitteeMember>(`/api/committees/${committeeId}/join`, {}).pipe(take(1));
+  }
+
+  /** Leave a group */
+  public leaveCommittee(committeeId: string): Observable<void> {
+    return this.http.post<void>(`/api/committees/${committeeId}/leave`, {}).pipe(take(1));
+  }
+
+  /** Get committees for the current user */
+  public getMyCommittees(): Observable<MyCommittee[]> {
+    return this.http.get<MyCommittee[]>('/api/committees/my').pipe(catchError(() => of([])));
+  }
+
+  /** Get public committees for a specific project */
+  public getPublicCommitteesByProject(projectUid: string): Observable<Committee[]> {
+    const params = new HttpParams().set('tags', `project_uid:${projectUid}`).set('public', 'true');
+    return this.getCommittees(params);
+  }
+
+  /** Get all public committees */
+  public getPublicCommittees(): Observable<Committee[]> {
+    const params = new HttpParams().set('public', 'true');
+    return this.getCommittees(params);
+  }
+
+  /** Get a single public committee by ID (unauthenticated) */
+  public getPublicCommitteeById(committeeId: string): Observable<PublicCommittee> {
+    return this.http.get<PublicCommittee>(`/public/api/committees/${committeeId}`);
+  }
+
+  // ── Invite Methods ──────────────────────────────────────────────────────────
+
+  /** Get invites for a committee */
+  public getInvites(committeeId: string): Observable<GroupInvite[]> {
+    return this.http.get<GroupInvite[]>(`/api/committees/${committeeId}/invites`).pipe(catchError(() => of([])));
+  }
+
+  /** Accept an invite */
+  public acceptInvite(committeeId: string, inviteId: string): Observable<GroupInvite> {
+    return this.http.post<GroupInvite>(`/api/committees/${committeeId}/invites/${inviteId}/accept`, {}).pipe(take(1));
+  }
+
+  /** Decline an invite */
+  public declineInvite(committeeId: string, inviteId: string): Observable<GroupInvite> {
+    return this.http.post<GroupInvite>(`/api/committees/${committeeId}/invites/${inviteId}/decline`, {}).pipe(take(1));
+  }
+
+  /** Revoke an invite */
+  public revokeInvite(committeeId: string, inviteId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/invites/${inviteId}`).pipe(take(1));
   }
 
   // Dashboard sub-resource methods
