@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -28,8 +28,6 @@ export class MemberFormComponent {
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
-  private readonly cdr = inject(ChangeDetectorRef);
-
   // Loading state for form submissions
   public submitting = signal<boolean>(false);
 
@@ -91,19 +89,16 @@ export class MemberFormComponent {
     this.form().get('role_start')?.reset();
     this.form().get('role_end')?.reset();
     this.form().updateValueAndValidity();
-    this.cdr.detectChanges();
   }
 
   public clearVotingDates(): void {
     this.form().get('voting_status_start')?.reset();
     this.form().get('voting_status_end')?.reset();
     this.form().updateValueAndValidity();
-    this.cdr.detectChanges();
   }
 
   public onDateChange(): void {
     this.form().updateValueAndValidity();
-    this.cdr.detectChanges();
   }
 
   public onCancel(): void {
@@ -194,7 +189,6 @@ export class MemberFormComponent {
       });
     } else {
       this.form().markAllAsTouched();
-      this.cdr.detectChanges();
     }
   }
 
@@ -251,8 +245,8 @@ export class MemberFormComponent {
         is_individual: new FormControl(false),
         organization: new FormControl('', [Validators.required]),
         organization_url: new FormControl(''),
-        role: new FormControl('', [Validators.required]),
-        voting_status: new FormControl('', [Validators.required]),
+        role: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
+        voting_status: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         appointed_by: new FormControl(''),
         role_start: new FormControl(null),
         role_end: new FormControl(null),

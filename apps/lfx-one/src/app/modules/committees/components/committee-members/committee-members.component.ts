@@ -113,6 +113,12 @@ export class CommitteeMembersComponent implements OnInit {
     menuComponent.toggle(event);
   }
 
+  public sendMessage(email: string): void {
+    if (isPlatformBrowser(this.platformId)) {
+      window.open(`mailto:${email}`, '_blank');
+    }
+  }
+
   public openAddMemberDialog(): void {
     const dialogRef = this.dialogService.open(MemberFormComponent, {
       header: 'Add Member',
@@ -134,6 +140,16 @@ export class CommitteeMembersComponent implements OnInit {
         this.refreshMembers();
       }
     });
+  }
+
+  protected sanitizeUrl(url: string | undefined): string | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? url : null;
+    } catch {
+      return null;
+    }
   }
 
   private editMember(): void {

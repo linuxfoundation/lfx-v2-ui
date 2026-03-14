@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -41,8 +41,6 @@ import { CommitteeMembersComponent } from '../components/committee-members/commi
     Tab,
     TabPanels,
     TabPanel,
-    DatePipe,
-    DecimalPipe,
     CommitteeMembersComponent,
   ],
   providers: [ConfirmationService, DialogService],

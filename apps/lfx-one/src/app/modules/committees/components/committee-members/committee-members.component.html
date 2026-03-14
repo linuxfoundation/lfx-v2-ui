@@ -122,8 +122,8 @@
               <span class="text-sm font-sans text-gray-500">{{ member.email || '-' }}</span>
             </td>
             <td>
-              @if (member.organization?.website) {
-                <a [href]="member.organization.website" target="_blank" class="text-primary hover:text-primary-600 text-sm font-sans">
+              @if (sanitizeUrl(member.organization?.website); as safeUrl) {
+                <a [href]="safeUrl" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600 text-sm font-sans">
                   {{ member.organization.name }}
                 </a>
               } @else {
@@ -156,8 +156,7 @@
                   [rounded]="true"
                   size="small"
                   severity="secondary"
-                  [href]="`mailto:${member.email}`"
-                  target="_blank"
+                  (onClick)="sendMessage(member.email)"
                   pTooltip="Send Message">
                 </lfx-button>
               }
