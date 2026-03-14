@@ -110,7 +110,7 @@ export class SurveyController {
 
       const survey = await this.surveyService.createSurvey(req, req.body as SurveyCreateData);
 
-      logger.success(req, 'create_survey', startTime, { surveyUid: survey.id });
+      logger.success(req, 'create_survey', startTime, { surveyUid: survey.uid });
       res.status(201).json(survey);
     } catch (error) {
       next(error);
