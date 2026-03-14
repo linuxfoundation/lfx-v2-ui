@@ -208,6 +208,7 @@ export enum DashboardDrawerType {
   MarketingWebsiteVisits = 'marketing-website-visits',
   MarketingEmailCtr = 'marketing-email-ctr',
   MarketingPaidSocialReach = 'marketing-paid-social-reach',
+  MarketingSocialMedia = 'marketing-social-media',
 }
 
 /** Lifecycle stage of a foundation project */

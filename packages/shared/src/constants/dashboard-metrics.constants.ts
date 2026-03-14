@@ -194,6 +194,16 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
     drawerType: DashboardDrawerType.MarketingPaidSocialReach,
   },
+  {
+    title: 'Social Media',
+    icon: 'fa-light fa-thumbs-up',
+    chartType: 'line',
+    category: 'marketing',
+    testId: 'marketing-card-social-media',
+    chartData: EMPTY_CHART_DATA,
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    drawerType: DashboardDrawerType.MarketingSocialMedia,
+  },
 ];
 
 // ============================================
