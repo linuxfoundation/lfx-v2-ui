@@ -15,29 +15,16 @@
         <!-- Page Title with Create Group Button -->
         <div class="flex justify-between items-center w-full gap-4">
           <h1>{{ committeeLabelPlural }}</h1>
-          <div class="flex items-center gap-2">
-            @if (filteredCommittees().length > 0) {
-              <lfx-button
-                label="Export CSV"
-                icon="fa-light fa-file-export"
-                severity="secondary"
-                size="small"
-                [outlined]="true"
-                (onClick)="exportCsv()"
-                data-testid="committee-export-csv">
-              </lfx-button>
-            }
-            @if (canCreateGroup()) {
-              <lfx-button
-                [label]="'Create ' + committeeLabel"
-                icon="fa-light fa-users mr-1"
-                severity="info"
-                size="small"
-                (onClick)="openCreateDialog()"
-                data-testid="committee-new-cta">
-              </lfx-button>
-            }
-          </div>
+          @if (canCreateGroup()) {
+            <lfx-button
+              [label]="'Create ' + committeeLabel"
+              icon="fa-light fa-users mr-1"
+              severity="info"
+              size="small"
+              (onClick)="openCreateDialog()"
+              data-testid="committee-new-cta">
+            </lfx-button>
+          }
         </div>
         <p class="mt-2 text-gray-500" data-testid="dashboard-hero-description">
           Manage {{ committeeLabelPlural.toLowerCase() }} and governance for your project.
