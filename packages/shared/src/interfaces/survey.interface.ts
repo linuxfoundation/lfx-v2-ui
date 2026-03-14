@@ -274,3 +274,19 @@ export interface SurveyReviewData {
   /** Email body preview */
   emailBodyPreview: string;
 }
+
+/**
+ * Payload for creating a new survey via POST /api/surveys
+ */
+export interface SurveyCreateData {
+  title: string;
+  description?: string;
+  type: SurveyType;
+  project_id: string;
+  committee_id?: string;
+  start_date?: string;
+  end_date?: string;
+  reminder_frequency?: SurveyReminderFrequency;
+  distribution_method?: SurveyDistributionMethod;
+  questions?: unknown[];
+}
