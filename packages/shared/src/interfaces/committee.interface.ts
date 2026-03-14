@@ -237,11 +237,9 @@ export interface Committee {
   /** Chat channel URL or identifier associated with the group (plain string from upstream) */
   chat_channel?: string;
 
-  // ── Leadership ──
-  /** Chair of the committee */
-  chair?: CommitteeLeadership | null;
-  /** Co-Chair of the committee */
-  co_chair?: CommitteeLeadership | null;
+  // NOTE: chair/co_chair are NOT returned by GET /committees/{uid}.
+  // Leadership is derived from committee members with role.name === "Chair" / "Vice Chair".
+  // Server-side enrichment will be added in a follow-up PR.
 }
 
 /**
