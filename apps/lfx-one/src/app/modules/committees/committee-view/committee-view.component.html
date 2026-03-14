@@ -96,7 +96,7 @@
         </div>
 
         <!-- Action Buttons -->
-        @if (canManageConfigurations()) {
+        @if (!isBoardMember()) {
           <div class="flex items-center gap-2 flex-shrink-0">
             <lfx-button icon="fa-light fa-pen-to-square" label="Edit" size="small" [routerLink]="['/groups', committee()?.uid || '', 'edit']"></lfx-button>
           </div>
