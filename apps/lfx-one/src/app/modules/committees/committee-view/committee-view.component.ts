@@ -3,7 +3,6 @@
 
 import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -11,36 +10,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import {
-  getGroupBehavioralClass,
-  isGovernanceClass,
-  isCollaborationClass,
-  isGoverningBoard,
-  isOversightCommittee,
-  isWorkingGroup,
-  isSpecialInterestGroup,
-  isAmbassadorProgram,
-  isOtherClass,
-} from '@lfx-one/shared/constants';
-import {
-  Committee,
-  CommitteeActivity,
-  CommitteeBudgetSummary,
-  CommitteeContributor,
-  CommitteeDeliverable,
-  CommitteeDiscussionThread,
-  CommitteeEngagementMetrics,
-  CommitteeEvent,
-  CommitteeLeadership,
-  CommitteeMember,
-  CommitteeOutreachCampaign,
-  CommitteeResolution,
-  CommitteeVote,
-  getCommitteeCategorySeverity,
-  GroupBehavioralClass,
-  LeadershipRole,
-  TagSeverity,
-} from '@lfx-one/shared';
+import { Committee, CommitteeLeadership, CommitteeMember, getCommitteeCategorySeverity, LeadershipRole, TagSeverity } from '@lfx-one/shared';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
@@ -49,7 +19,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { EditChannelsDialogComponent, EditChannelsDialogResult } from '../components/edit-channels-dialog/edit-channels-dialog.component';
@@ -71,8 +41,6 @@ import { EditChannelsDialogComponent, EditChannelsDialogResult } from '../compon
     Tab,
     TabPanels,
     TabPanel,
-    DatePipe,
-    DecimalPipe,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -98,18 +66,7 @@ export class CommitteeViewComponent {
   public error = signal<boolean>(false);
   public refresh = new BehaviorSubject<void>(undefined);
 
-  // Sub-resource writable signals
   public members: WritableSignal<CommitteeMember[]> = signal([]);
-  public openVotes: WritableSignal<CommitteeVote[]> = signal([]);
-  public budgetSummary: WritableSignal<CommitteeBudgetSummary | null> = signal(null);
-  public recentResolutions: WritableSignal<CommitteeResolution[]> = signal([]);
-  public recentActivity: WritableSignal<CommitteeActivity[]> = signal([]);
-  public topContributors: WritableSignal<CommitteeContributor[]> = signal([]);
-  public deliverables: WritableSignal<CommitteeDeliverable[]> = signal([]);
-  public discussionThreads: WritableSignal<CommitteeDiscussionThread[]> = signal([]);
-  public upcomingEvents: WritableSignal<CommitteeEvent[]> = signal([]);
-  public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]> = signal([]);
-  public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null> = signal(null);
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -133,17 +90,6 @@ export class CommitteeViewComponent {
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
-
-  // -- Behavioral class signals --
-  public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
-  public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
-  public isCollaborationClass: Signal<boolean> = computed(() => isCollaborationClass(this.committee()?.category));
-  public isGoverningBoard: Signal<boolean> = computed(() => isGoverningBoard(this.committee()?.category));
-  public isOversightCommittee: Signal<boolean> = computed(() => isOversightCommittee(this.committee()?.category));
-  public isWorkingGroup: Signal<boolean> = computed(() => isWorkingGroup(this.committee()?.category));
-  public isSpecialInterestGroup: Signal<boolean> = computed(() => isSpecialInterestGroup(this.committee()?.category));
-  public isAmbassadorProgram: Signal<boolean> = computed(() => isAmbassadorProgram(this.committee()?.category));
-  public isOtherClass: Signal<boolean> = computed(() => isOtherClass(this.committee()?.category));
 
   // -- Dashboard stat signals --
   public totalMembers: Signal<number> = computed(() => this.members().length);
@@ -307,13 +253,7 @@ export class CommitteeViewComponent {
           return combineLatest([committeeQuery, membersQuery]).pipe(
             switchMap(([committee, members]) => {
               this.members.set(Array.isArray(members) ? members : []);
-
               this.committeeSignal.set(committee);
-
-              if (committee) {
-                return this.loadGroupTypeData$(committeeId, committee);
-              }
-
               return of(null);
             }),
             finalize(() => this.loading.set(false))
@@ -322,82 +262,6 @@ export class CommitteeViewComponent {
         takeUntilDestroyed()
       )
       .subscribe();
-  }
-
-  private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {
-    const cls = getGroupBehavioralClass(committee.category);
-
-    if (cls === 'governing-board') {
-      return forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeBudget(committeeId).pipe(catchError(() => of(null))),
-      ]).pipe(
-        tap(([votes, resolutions, budget]) => {
-          this.openVotes.set(votes);
-          this.recentResolutions.set(resolutions);
-          this.budgetSummary.set(budget);
-        })
-      );
-    }
-
-    if (cls === 'oversight-committee') {
-      return forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
-      ]).pipe(
-        tap(([votes, resolutions, activity, contributors]) => {
-          this.openVotes.set(votes);
-          this.recentResolutions.set(resolutions);
-          this.recentActivity.set(activity);
-          this.topContributors.set(contributors);
-        })
-      );
-    }
-
-    if (cls === 'working-group') {
-      return forkJoin([
-        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeDeliverables(committeeId).pipe(catchError(() => of([]))),
-      ]).pipe(
-        tap(([votes, activity, contributors, dels]) => {
-          this.openVotes.set(votes);
-          this.recentActivity.set(activity);
-          this.topContributors.set(contributors);
-          this.deliverables.set(dels);
-        })
-      );
-    }
-
-    if (cls === 'special-interest-group') {
-      return forkJoin([
-        this.committeeService.getCommitteeDiscussions(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeEvents(committeeId).pipe(catchError(() => of([]))),
-      ]).pipe(
-        tap(([discussions, events]) => {
-          this.discussionThreads.set(discussions);
-          this.upcomingEvents.set(events);
-        })
-      );
-    }
-
-    if (cls === 'ambassador-program') {
-      return forkJoin([
-        this.committeeService.getCommitteeCampaigns(committeeId).pipe(catchError(() => of([]))),
-        this.committeeService.getCommitteeEngagement(committeeId).pipe(catchError(() => of(null))),
-      ]).pipe(
-        tap(([campaigns, engagement]) => {
-          this.outreachCampaigns.set(campaigns);
-          this.engagementMetrics.set(engagement);
-        })
-      );
-    }
-
-    return of(null);
   }
 
   private initializeFormattedCreatedDate(): Signal<string> {
