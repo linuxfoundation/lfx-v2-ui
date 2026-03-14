@@ -204,7 +204,7 @@ export class CommitteeDashboardComponent {
         });
         break;
 
-      case 'apply':
+      case 'application':
         this.messageService.add({
           severity: 'info',
           summary: 'Apply to Join',
@@ -212,7 +212,7 @@ export class CommitteeDashboardComponent {
         });
         break;
 
-      case 'invite-only':
+      case 'invite_only':
         this.messageService.add({
           severity: 'info',
           summary: 'Invite Only',
