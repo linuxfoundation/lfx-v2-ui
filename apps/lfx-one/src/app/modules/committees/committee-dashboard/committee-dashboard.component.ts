@@ -17,6 +17,7 @@ import { MessageService } from 'primeng/api';
 import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
 
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
+import { exportGroupsToCsv } from '../utils/export-groups.util';
 
 @Component({
   selector: 'lfx-committee-dashboard',
@@ -134,6 +135,10 @@ export class CommitteeDashboardComponent {
     }
 
     this.router.navigate(['/groups/create']);
+  }
+
+  public exportCsv(): void {
+    exportGroupsToCsv(this.filteredCommittees());
   }
 
   public refreshCommittees(): void {
