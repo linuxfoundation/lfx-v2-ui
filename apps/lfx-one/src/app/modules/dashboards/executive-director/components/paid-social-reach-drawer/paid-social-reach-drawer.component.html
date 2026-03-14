@@ -44,12 +44,8 @@
           </div>
         </div>
         <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Total Spend</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ formatCurrency(data().totalSpend) }}</span>
-        </div>
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Total Revenue</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ formatCurrency(data().totalRevenue) }}</span>
+          <span class="text-sm text-gray-500">Total Impressions</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalReach) }}</span>
         </div>
       } @else {
         <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
