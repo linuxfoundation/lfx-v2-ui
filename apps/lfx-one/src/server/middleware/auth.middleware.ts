@@ -23,6 +23,9 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
   // Public meeting join - no authentication required
   { pattern: '/meetings/', type: 'ssr', auth: 'optional' },
 
+  // Public directory - no authentication required
+  { pattern: '/public/', type: 'ssr', auth: 'optional' },
+
   // Protected API routes - require authentication and token
   { pattern: '/api', type: 'api', auth: 'required', tokenRequired: true },
 
