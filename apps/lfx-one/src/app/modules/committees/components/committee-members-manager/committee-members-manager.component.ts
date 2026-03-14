@@ -388,8 +388,7 @@ export class CommitteeMembersManagerComponent implements OnInit {
       .getCommitteeMembers(committeeId)
       .pipe(
         take(1),
-        catchError((error) => {
-          console.error('Error loading members:', error);
+        catchError(() => {
           return of([]);
         }),
         finalize(() => {

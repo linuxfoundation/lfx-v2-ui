@@ -79,7 +79,6 @@ export class CommitteeViewComponent {
 
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
-              console.error('Failed to load committee');
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
@@ -92,7 +91,6 @@ export class CommitteeViewComponent {
 
           const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(
             catchError(() => {
-              console.error('Failed to load committee members');
               return of([]);
             })
           );
