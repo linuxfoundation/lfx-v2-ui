@@ -842,10 +842,14 @@ export class AnalyticsService {
       catchError(() => {
         return of({
           totalReach: 0,
+          roas: 0,
+          totalSpend: 0,
+          totalRevenue: 0,
           changePercentage: 0,
           trend: 'up' as const,
           monthlyData: [],
           monthlyLabels: [],
+          monthlyRoas: [],
           channelGroups: [],
         });
       })

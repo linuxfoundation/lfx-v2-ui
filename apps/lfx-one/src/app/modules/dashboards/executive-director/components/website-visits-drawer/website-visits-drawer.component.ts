@@ -7,7 +7,7 @@ import { lfxColors } from '@lfx-one/shared/constants';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { WebActivitiesSummaryResponse } from '@lfx-one/shared/interfaces';
+import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-website-visits-drawer',
@@ -26,6 +26,30 @@ export class WebsiteVisitsDrawerComponent {
     dailyData: [],
     dailyLabels: [],
   });
+
+  // === Dummy Data ===
+  protected readonly recommendedActions: MarketingRecommendedAction[] = [
+    {
+      title: 'Optimize top landing pages',
+      description: 'Improve load time and CTAs on the 5 highest-traffic pages',
+      priority: 'high',
+      dueLabel: 'This week',
+      iconClass: 'fa-light fa-gauge-high',
+    },
+    {
+      title: 'Add UTM tracking to campaigns',
+      description: 'Ensure all marketing links have proper UTM parameters',
+      priority: 'medium',
+      dueLabel: 'This month',
+      iconClass: 'fa-light fa-link',
+    },
+  ];
+
+  protected readonly keyInsights: MarketingKeyInsight[] = [
+    { text: 'Driver: Organic search traffic up 18%', type: 'driver' },
+    { text: 'Bounce rate increased on mobile devices', type: 'warning' },
+    { text: '65% of traffic from 3 primary domains', type: 'info' },
+  ];
 
   // === Computed Signals ===
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();

@@ -2624,12 +2624,11 @@ export interface OrgCertifiedEmployeesDistributionResponse {
 // ============================================
 
 /**
- * Web Activities summary row from Snowflake SILVER_FACT.WEB_ACTIVITIES
- * Represents daily session counts grouped by domain category
+ * Web Activities summary row from Snowflake PLATINUM.WEB_ACTIVITIES_SUMMARY
+ * Represents session/page view totals grouped by domain classification
  */
 export interface WebActivitiesSummaryRow {
-  DOMAIN_GROUP: string;
-  SESSION_DATE: string;
+  LF_SUB_DOMAIN_CLASSIFICATION: string;
   TOTAL_SESSIONS: number;
   TOTAL_PAGE_VIEWS: number;
 }
@@ -2652,6 +2651,29 @@ export interface WebActivitiesSummaryResponse {
   domainGroups: WebActivitiesDomainGroup[];
   dailyData: number[];
   dailyLabels: string[];
+}
+
+// ============================================
+// Marketing Dashboard Shared Types
+// ============================================
+
+/**
+ * Recommended action for marketing drawers
+ */
+export interface MarketingRecommendedAction {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  dueLabel: string;
+  iconClass: string;
+}
+
+/**
+ * Key insight for marketing drawers
+ */
+export interface MarketingKeyInsight {
+  text: string;
+  type: 'driver' | 'warning' | 'info';
 }
 
 // ============================================
@@ -2682,18 +2704,62 @@ export interface SocialReachChannelRow {
 export interface SocialReachChannelGroup {
   channel: string;
   totalImpressions: number;
+  totalSpend: number;
+  totalRevenue: number;
+  roas: number;
 }
 
 /**
- * API response for Social Reach query (paid impressions)
+ * API response for Paid Social query (ROAS + impressions)
  */
 export interface SocialReachResponse {
   totalReach: number;
+  roas: number;
+  totalSpend: number;
+  totalRevenue: number;
   changePercentage: number;
   trend: 'up' | 'down';
   monthlyData: number[];
   monthlyLabels: string[];
+  monthlyRoas: number[];
   channelGroups: SocialReachChannelGroup[];
+}
+
+// ============================================
+// Social Media (Marketing Dashboard)
+// ============================================
+
+/**
+ * Individual social media platform data
+ */
+export interface SocialMediaPlatform {
+  platform: string;
+  followers: number;
+  engagementRate: number;
+  postsLast30Days: number;
+  impressions: number;
+  iconClass: string;
+}
+
+/**
+ * Monthly social media metrics for trend chart
+ */
+export interface SocialMediaMonthlyData {
+  month: string;
+  totalFollowers: number;
+  totalEngagements: number;
+}
+
+/**
+ * API response for Social Media query
+ */
+export interface SocialMediaResponse {
+  totalFollowers: number;
+  totalPlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  platforms: SocialMediaPlatform[];
+  monthlyData: SocialMediaMonthlyData[];
 }
 
 // ============================================
