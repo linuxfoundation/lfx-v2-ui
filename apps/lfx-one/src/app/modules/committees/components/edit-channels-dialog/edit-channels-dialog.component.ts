@@ -54,6 +54,8 @@ export class EditChannelsDialogComponent {
   }
 
   public onSubmit(): void {
+    if (!this.committee?.uid) return;
+
     this.submitting.set(true);
 
     const val = this.form.value;
