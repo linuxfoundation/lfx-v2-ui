@@ -107,10 +107,10 @@
                   <span>{{ c.meeting_schedule.recurrence }}</span>
                 </div>
               }
-              @if (c.meeting_schedule.video_link) {
+              @if (sanitizeUrl(c.meeting_schedule.video_link); as safeVideoUrl) {
                 <div class="flex items-center gap-2">
                   <i class="fa-light fa-video w-4 text-center"></i>
-                  <a [href]="c.meeting_schedule.video_link" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Join meeting</a>
+                  <a [href]="safeVideoUrl" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Join meeting</a>
                 </div>
               }
             </div>
@@ -122,28 +122,20 @@
           <lfx-card data-testid="public-group-links-card">
             <h3 class="text-base font-semibold text-gray-800 mb-3">Links</h3>
             <div class="flex flex-col gap-2 text-sm">
-              @if (c.external_links.website) {
-                <a [href]="c.external_links.website" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:underline">
+              @if (sanitizeUrl(c.external_links.website); as safeWebsite) {
+                <a [href]="safeWebsite" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:underline">
                   <i class="fa-light fa-globe w-4 text-center"></i>
                   <span>Website</span>
                 </a>
               }
-              @if (c.external_links.mailing_list_url) {
-                <a
-                  [href]="c.external_links.mailing_list_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex items-center gap-2 text-blue-600 hover:underline">
+              @if (sanitizeUrl(c.external_links.mailing_list_url); as safeMailUrl) {
+                <a [href]="safeMailUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:underline">
                   <i class="fa-light fa-envelope w-4 text-center"></i>
                   <span>Mailing List</span>
                 </a>
               }
-              @if (c.external_links.chat_channel_url) {
-                <a
-                  [href]="c.external_links.chat_channel_url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex items-center gap-2 text-blue-600 hover:underline">
+              @if (sanitizeUrl(c.external_links.chat_channel_url); as safeChatUrl) {
+                <a [href]="safeChatUrl" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:underline">
                   <i class="fa-light fa-comment w-4 text-center"></i>
                   <span>Chat Channel</span>
                 </a>

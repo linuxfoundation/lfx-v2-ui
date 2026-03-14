@@ -471,6 +471,7 @@ export class CommitteeController {
   public async getPublicCommitteeById(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
     const startTime = logger.startOperation(req, 'get_public_committee_by_id', { committee_id: id });
+    const originalToken = req.bearerToken;
 
     try {
       const m2mToken = await generateM2MToken(req);
@@ -506,7 +507,10 @@ export class CommitteeController {
       logger.success(req, 'get_public_committee_by_id', startTime, { committee_id: id });
       res.json(publicCommittee);
     } catch (error) {
+      logger.error(req, 'get_public_committee_by_id', startTime, error, { committee_id: id });
       next(error);
+    } finally {
+      req.bearerToken = originalToken;
     }
   }
 }
