@@ -196,8 +196,21 @@
                 <div class="lg:col-span-2 flex flex-col gap-6">
                   <!-- ═══ CHANNELS CARD (all types) ═══ -->
                   <lfx-card data-testid="committee-view-channels">
-                    <div class="mb-4">
+                    <div class="flex items-center justify-between mb-4">
                       <h3 class="text-sm font-medium"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
+                      @if (canManageConfigurations()) {
+                        <lfx-button
+                          icon="fa-light fa-pen-to-square"
+                          size="small"
+                          [text]="true"
+                          severity="secondary"
+                          styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
+                          pTooltip="Edit Channels"
+                          tooltipPosition="top"
+                          (onClick)="openEditChannels()"
+                          data-testid="committee-view-channels-edit-btn">
+                        </lfx-button>
+                      }
                     </div>
 
                     <div class="flex flex-col gap-4">
