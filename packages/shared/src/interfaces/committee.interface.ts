@@ -144,9 +144,6 @@ export interface GroupChatChannel {
  * Committee leadership position (Chair, Co-Chair, etc.)
  * @description Represents a member in a leadership position within a committee
  */
-/** Leadership role type for chair/co-chair assignment */
-export type LeadershipRole = 'chair' | 'co_chair';
-
 export interface CommitteeLeadership {
   /** Unique identifier for the leader (member UID) */
   uid: string;
