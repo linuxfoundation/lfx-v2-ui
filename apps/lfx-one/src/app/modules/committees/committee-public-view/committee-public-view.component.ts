@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -31,7 +31,7 @@ export class CommitteePublicViewComponent {
   private readonly userService = inject(UserService);
 
   public readonly committeeLabel = COMMITTEE_LABEL;
-  public readonly authenticated: WritableSignal<boolean> = this.userService.authenticated;
+  public readonly authenticated: Signal<boolean> = this.userService.authenticated;
 
   public committee: Signal<PublicCommittee | null>;
   public error: Signal<string | null>;
@@ -89,6 +89,16 @@ export class CommitteePublicViewComponent {
     const committee = this.committee();
     if (!committee) return;
     this.router.navigate(['/groups', committee.uid]);
+  }
+
+  protected sanitizeUrl(url: string | undefined): string | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? url : null;
+    } catch {
+      return null;
+    }
   }
 
   private initializeCommittee(): {

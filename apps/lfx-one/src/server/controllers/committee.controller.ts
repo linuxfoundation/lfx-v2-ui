@@ -978,6 +978,7 @@ export class CommitteeController {
   public async getPublicCommitteeById(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
     const startTime = logger.startOperation(req, 'get_public_committee_by_id', { committee_id: id });
+    const originalToken = req.bearerToken;
 
     if (!id) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
