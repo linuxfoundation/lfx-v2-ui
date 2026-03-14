@@ -184,9 +184,9 @@ export class CommitteeViewComponent {
     switch (this.committee()?.join_mode) {
       case 'open':
         return 'Open';
-      case 'invite-only':
+      case 'invite_only':
         return 'Invite Only';
-      case 'apply':
+      case 'application':
         return 'Apply to Join';
       case 'closed':
         return 'Closed';
