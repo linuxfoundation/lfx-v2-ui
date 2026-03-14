@@ -145,7 +145,7 @@
                         <i class="fa-light fa-check-to-slot text-emerald-600"></i>
                       </div>
                       <div>
-                        <p class="text-2xl font-semibold text-emerald-600">{{ committee()?.total_voting_reps || 0 }}</p>
+                        <p class="text-2xl font-semibold text-emerald-600">{{ committee()?.total_voting_repos || 0 }}</p>
                         <p class="text-xs text-gray-500">Voting Reps</p>
                       </div>
                     </div>
@@ -196,21 +196,11 @@
                               <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
                             </div>
                             <div class="min-w-0">
-                              @if (mailingList.url) {
-                                <a
-                                  [href]="mailingList.url"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                                  {{ mailingList.name }}
-                                  <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                                </a>
-                              } @else {
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
-                              }
-                              @if (mailingList.subscriber_count) {
-                                <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
-                              }
+                              <a
+                                [href]="'mailto:' + mailingList"
+                                class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                                {{ mailingList }}
+                              </a>
                             </div>
                           </div>
                         </div>
@@ -229,29 +219,20 @@
                       <!-- Chat Channel -->
                       @if (committee()?.chat_channel; as chatChannel) {
                         <div>
-                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">
-                            {{ chatChannel.platform === 'slack' ? 'Slack' : 'Discord' }} Channel
-                          </p>
+                          <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chat Channel</p>
                           <div class="flex items-center gap-3">
                             <div class="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
-                              <i
-                                class="text-sm"
-                                [class]="chatChannel.platform === 'slack' ? 'fa-brands fa-slack text-purple-600' : 'fa-brands fa-discord text-indigo-600'"></i>
+                              <i class="fa-light fa-comment text-purple-600 text-sm"></i>
                             </div>
                             <div class="min-w-0">
-                              @if (chatChannel.url) {
-                                <a
-                                  [href]="chatChannel.url"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                                  {{ chatChannel.name }}
-                                  <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                                </a>
-                              } @else {
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ chatChannel.name }}</p>
-                              }
-                              <p class="text-xs text-gray-500 capitalize">{{ chatChannel.platform }}</p>
+                              <a
+                                [href]="chatChannel"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
+                                {{ chatChannel }}
+                                <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                              </a>
                             </div>
                           </div>
                         </div>

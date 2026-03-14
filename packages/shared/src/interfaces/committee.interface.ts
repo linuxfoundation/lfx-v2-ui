@@ -199,8 +199,8 @@ export interface Committee {
   updated_at: string;
   /** Total number of committee members */
   total_members: number;
-  /** Total number of voting representatives */
-  total_voting_reps: number;
+  /** Total number of voting representatives (upstream field name is total_voting_repos) */
+  total_voting_repos: number;
   /** Associated project UID */
   project_uid: string;
   /** Associated project name (populated from project data) */
@@ -232,10 +232,10 @@ export interface Committee {
   join_mode?: JoinMode;
 
   // ── Communication Channels ──
-  /** Mailing list associated with the group (e.g., Groups.io list) */
-  mailing_list?: GroupMailingList;
-  /** Chat channel associated with the group (Slack, Discord, etc.) */
-  chat_channel?: GroupChatChannel;
+  /** Mailing list email address associated with the group (plain string from upstream) */
+  mailing_list?: string;
+  /** Chat channel URL or identifier associated with the group (plain string from upstream) */
+  chat_channel?: string;
 
   // ── Leadership ──
   /** Chair of the committee */
@@ -303,10 +303,10 @@ export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {
   chair?: CommitteeLeadership | null;
   /** Assign or remove co-chair */
   co_chair?: CommitteeLeadership | null;
-  /** Update or clear mailing list */
-  mailing_list?: GroupMailingList | null;
+  /** Update or clear mailing list email */
+  mailing_list?: string | null;
   /** Update or clear chat channel */
-  chat_channel?: GroupChatChannel | null;
+  chat_channel?: string | null;
 }
 
 /**
