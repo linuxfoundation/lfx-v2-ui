@@ -224,18 +224,31 @@ export class SurveyManageComponent {
   private submitSurvey(): void {
     this.submitting.set(true);
 
-    // TODO: Implement actual API call
-    setTimeout(() => {
-      const action = this.getSubmitAction();
+    if (this.isEditMode()) {
+      // TODO: Implement updateSurvey API call using this.surveyId()
+      setTimeout(() => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.surveyLabel.singular} updated successfully`,
+        });
+        this.submitting.set(false);
+        this.router.navigate(['/surveys']);
+      }, 1000);
+    } else {
+      // TODO: Implement createSurvey API call
+      setTimeout(() => {
+        const action = this.getSubmitAction();
 
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${this.surveyLabel.singular} ${action} successfully`,
-      });
-      this.submitting.set(false);
-      this.router.navigate(['/surveys']);
-    }, 1000);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.surveyLabel.singular} ${action} successfully`,
+        });
+        this.submitting.set(false);
+        this.router.navigate(['/surveys']);
+      }, 1000);
+    }
   }
 
   // Private initializer functions
