@@ -7,7 +7,7 @@ import { lfxColors } from '@lfx-one/shared/constants';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EmailCtrResponse } from '@lfx-one/shared/interfaces';
+import type { EmailCtrResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
@@ -29,6 +29,30 @@ export class EmailCtrDrawerComponent {
     monthlySends: [],
     monthlyOpens: [],
   });
+
+  // === Dummy Data ===
+  protected readonly recommendedActions: MarketingRecommendedAction[] = [
+    {
+      title: 'Improve call-to-action clarity',
+      description: 'Test prominent, action-oriented CTAs in next campaign',
+      priority: 'high',
+      dueLabel: 'Next send',
+      iconClass: 'fa-light fa-bullseye-pointer',
+    },
+    {
+      title: 'Segment by audience type',
+      description: 'Personalize content for different member tiers',
+      priority: 'medium',
+      dueLabel: 'This month',
+      iconClass: 'fa-light fa-users',
+    },
+  ];
+
+  protected readonly keyInsights: MarketingKeyInsight[] = [
+    { text: 'Driver: Newsletter engagement ↓', type: 'driver' },
+    { text: 'CTR ↓12% vs last period', type: 'warning' },
+    { text: 'Clicks concentrated on 2–3 primary links', type: 'info' },
+  ];
 
   // === Computed Signals ===
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
