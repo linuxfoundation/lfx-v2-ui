@@ -12,14 +12,14 @@ import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
+import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, ConfirmDialogModule, RouterLink, Tabs, TabList, Tab, TabPanels, TabPanel],
+  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, ConfirmDialogModule, RouterLink, RouteLoadingComponent],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -61,14 +61,6 @@ export class CommitteeViewComponent {
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
-
-  // -- Leadership signals --
-  public chair: Signal<Committee['chair']> = computed(() => this.committee()?.chair || null);
-  public coChair: Signal<Committee['co_chair']> = computed(() => this.committee()?.co_chair || null);
-  public hasChair: Signal<boolean> = computed(() => !!this.chair());
-  public hasCoChair: Signal<boolean> = computed(() => !!this.coChair());
-  public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
-  public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
 
   // -- Configuration label signals --
   public joinModeLabel: Signal<string> = computed(() => {
@@ -155,19 +147,4 @@ export class CommitteeViewComponent {
     });
   }
 
-  private initializeChairElectedDate(): Signal<string> {
-    return computed(() => {
-      const c = this.chair();
-      if (!c?.elected_date) return '';
-      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-    });
-  }
-
-  private initializeCoChairElectedDate(): Signal<string> {
-    return computed(() => {
-      const c = this.coChair();
-      if (!c?.elected_date) return '';
-      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-    });
-  }
 }

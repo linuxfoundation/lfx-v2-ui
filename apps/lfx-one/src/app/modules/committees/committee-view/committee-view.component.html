@@ -2,55 +2,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="container mx-auto py-6 px-8">
-  <!-- Loading Skeleton State -->
+  <!-- Loading State -->
   @if (loading()) {
-    <div class="flex flex-col gap-6 animate-pulse">
-      <!-- Header skeleton -->
-      <div class="flex flex-col gap-3">
-        <div class="h-4 bg-gray-200 rounded w-32"></div>
-        <div class="h-8 bg-gray-200 rounded w-72"></div>
-        <div class="h-4 bg-gray-200 rounded w-96 max-w-full"></div>
-        <div class="flex gap-2">
-          <div class="h-6 bg-gray-200 rounded-full w-24"></div>
-          <div class="h-6 bg-gray-200 rounded-full w-28"></div>
-        </div>
-      </div>
-      <!-- Stats row skeleton -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        @for (_ of [1, 2, 3, 4]; track _) {
-          <div class="bg-white rounded-xl border p-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-gray-200"></div>
-              <div class="flex flex-col gap-2">
-                <div class="h-6 bg-gray-200 rounded w-12"></div>
-                <div class="h-3 bg-gray-200 rounded w-16"></div>
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-      <!-- Two-column skeleton -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 flex flex-col gap-4">
-          <div class="bg-white rounded-xl border p-6">
-            <div class="h-5 bg-gray-200 rounded w-40 mb-4"></div>
-            <div class="flex flex-col gap-3">
-              <div class="h-16 bg-gray-100 rounded-lg"></div>
-              <div class="h-16 bg-gray-100 rounded-lg"></div>
-            </div>
-          </div>
-        </div>
-        <div class="flex flex-col gap-4">
-          <div class="bg-white rounded-xl border p-6">
-            <div class="h-5 bg-gray-200 rounded w-28 mb-4"></div>
-            <div class="flex flex-col gap-3">
-              <div class="h-12 bg-gray-100 rounded-lg"></div>
-              <div class="h-12 bg-gray-100 rounded-lg"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <lfx-route-loading />
   } @else if (error()) {
     <!-- Error State -->
     <div class="flex justify-center items-center min-h-96">
@@ -84,9 +38,7 @@
               <lfx-tag [value]="committee()!.category" [severity]="categorySeverity()"></lfx-tag>
             }
             @if (committee()?.enable_voting) {
-              <span class="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                <i class="fa-light fa-check-circle"></i> Voting Enabled
-              </span>
+              <lfx-tag value="Voting Enabled" severity="success"></lfx-tag>
             }
             <span class="text-xs text-gray-400">Created {{ formattedCreatedDate() }}</span>
             @if (committee()?.updated_at) {
@@ -96,7 +48,7 @@
         </div>
 
         <!-- Action Buttons -->
-        @if (!isBoardMember()) {
+        @if (canManageConfigurations()) {
           <div class="flex items-center gap-2 flex-shrink-0">
             <lfx-button icon="fa-light fa-pen-to-square" label="Edit" size="small" [routerLink]="['/groups', committee()?.uid || '', 'edit']"></lfx-button>
           </div>
@@ -104,23 +56,70 @@
       </div>
 
       <!-- Tabs -->
-      <p-tabs [(value)]="activeTab" scrollable data-testid="committee-view-tabs">
-        <p-tablist>
-          <p-tab value="overview"><i class="fa-light fa-gauge mr-2"></i>Overview</p-tab>
-          @if (isMembersTabVisible()) {
-            <p-tab value="members"><i class="fa-light fa-users mr-2"></i>Members</p-tab>
-          }
-          @if (isVotesTabVisible()) {
-            <p-tab value="votes"><i class="fa-light fa-check-to-slot mr-2"></i>Votes</p-tab>
-          }
-          <p-tab value="meetings"><i class="fa-light fa-calendar mr-2"></i>Meetings</p-tab>
-          <p-tab value="surveys"><i class="fa-light fa-chart-simple mr-2"></i>Surveys</p-tab>
-          <p-tab value="documents"><i class="fa-light fa-folder-open mr-2"></i>Documents</p-tab>
-        </p-tablist>
+      <div class="flex gap-1 border-b" data-testid="committee-view-tabs">
+        <button
+          (click)="activeTab.set('overview')"
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.border-b-2]="activeTab() === 'overview'"
+          [class.border-blue-600]="activeTab() === 'overview'"
+          [class.text-blue-600]="activeTab() === 'overview'"
+          [class.text-gray-500]="activeTab() !== 'overview'">
+          <i class="fa-light fa-gauge mr-2"></i>Overview
+        </button>
+        @if (isMembersTabVisible()) {
+          <button
+            (click)="activeTab.set('members')"
+            class="px-4 py-2 text-sm font-medium transition-colors"
+            [class.border-b-2]="activeTab() === 'members'"
+            [class.border-blue-600]="activeTab() === 'members'"
+            [class.text-blue-600]="activeTab() === 'members'"
+            [class.text-gray-500]="activeTab() !== 'members'">
+            <i class="fa-light fa-users mr-2"></i>Members
+          </button>
+        }
+        @if (isVotesTabVisible()) {
+          <button
+            (click)="activeTab.set('votes')"
+            class="px-4 py-2 text-sm font-medium transition-colors"
+            [class.border-b-2]="activeTab() === 'votes'"
+            [class.border-blue-600]="activeTab() === 'votes'"
+            [class.text-blue-600]="activeTab() === 'votes'"
+            [class.text-gray-500]="activeTab() !== 'votes'">
+            <i class="fa-light fa-check-to-slot mr-2"></i>Votes
+          </button>
+        }
+        <button
+          (click)="activeTab.set('meetings')"
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.border-b-2]="activeTab() === 'meetings'"
+          [class.border-blue-600]="activeTab() === 'meetings'"
+          [class.text-blue-600]="activeTab() === 'meetings'"
+          [class.text-gray-500]="activeTab() !== 'meetings'">
+          <i class="fa-light fa-calendar mr-2"></i>Meetings
+        </button>
+        <button
+          (click)="activeTab.set('surveys')"
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.border-b-2]="activeTab() === 'surveys'"
+          [class.border-blue-600]="activeTab() === 'surveys'"
+          [class.text-blue-600]="activeTab() === 'surveys'"
+          [class.text-gray-500]="activeTab() !== 'surveys'">
+          <i class="fa-light fa-chart-simple mr-2"></i>Surveys
+        </button>
+        <button
+          (click)="activeTab.set('documents')"
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.border-b-2]="activeTab() === 'documents'"
+          [class.border-blue-600]="activeTab() === 'documents'"
+          [class.text-blue-600]="activeTab() === 'documents'"
+          [class.text-gray-500]="activeTab() !== 'documents'">
+          <i class="fa-light fa-folder-open mr-2"></i>Documents
+        </button>
+      </div>
 
-        <p-tabpanels>
-          <!-- Overview Tab -->
-          <p-tabpanel value="overview">
+      <!-- Tab Panels -->
+      <!-- Overview Tab -->
+      @if (activeTab() === 'overview') {
             <div class="flex flex-col gap-6 pt-4">
               <!-- Stats Row -->
               <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
@@ -312,134 +311,66 @@
                   }
                 </div>
 
-                <!-- Right Column: Leadership -->
-                <div class="flex flex-col gap-4">
-                  <!-- Leadership Card -->
-                  <lfx-card data-testid="committee-view-leadership">
-                    <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-crown text-gray-400 mr-2"></i>Leadership</h3>
-                    <div class="flex flex-col gap-4">
-                      <!-- Chair -->
-                      <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Chair</p>
-                        @if (chair(); as c) {
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                              <span class="text-sm font-medium text-blue-700">{{ c.first_name?.charAt(0) }}{{ c.last_name?.charAt(0) }}</span>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                              <p class="text-sm font-medium text-gray-900 truncate">{{ c.first_name }} {{ c.last_name }}</p>
-                              @if (c.organization) {
-                                <p class="text-xs text-gray-500 truncate">{{ c.organization }}</p>
-                              }
-                              @if (chairElectedDate()) {
-                                <p class="text-xs text-gray-400">Since {{ chairElectedDate() }}</p>
-                              }
-                            </div>
-                          </div>
-                        } @else {
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 border border-dashed border-gray-300">
-                              <i class="fa-light fa-user text-gray-400 text-sm"></i>
-                            </div>
-                            <p class="text-sm text-gray-400 italic">Vacant</p>
-                          </div>
-                        }
-                      </div>
-
-                      <!-- Co-Chair -->
-                      <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Co-Chair</p>
-                        @if (coChair(); as cc) {
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                              <span class="text-sm font-medium text-emerald-700">{{ cc.first_name?.charAt(0) }}{{ cc.last_name?.charAt(0) }}</span>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                              <p class="text-sm font-medium text-gray-900 truncate">{{ cc.first_name }} {{ cc.last_name }}</p>
-                              @if (cc.organization) {
-                                <p class="text-xs text-gray-500 truncate">{{ cc.organization }}</p>
-                              }
-                              @if (coChairElectedDate()) {
-                                <p class="text-xs text-gray-400">Since {{ coChairElectedDate() }}</p>
-                              }
-                            </div>
-                          </div>
-                        } @else {
-                          <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 border border-dashed border-gray-300">
-                              <i class="fa-light fa-user text-gray-400 text-sm"></i>
-                            </div>
-                            <p class="text-sm text-gray-400 italic">Vacant</p>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                  </lfx-card>
-                </div>
+                <!-- Leadership card removed: chair/co_chair are not returned by GET /committees/{uid}.
+                     Member-role-based derivation will be added in a follow-up PR. -->
               </div>
             </div>
-          </p-tabpanel>
+      }
 
-          <!-- Members Tab (placeholder) -->
-          @if (isMembersTabVisible()) {
-            <p-tabpanel value="members">
-              <div class="flex items-center justify-center py-16">
-                <div class="text-center">
-                  <i class="fa-light fa-users text-3xl text-gray-300 mb-3"></i>
-                  <p class="text-sm font-medium text-gray-600">Members</p>
-                  <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-                </div>
-              </div>
-            </p-tabpanel>
-          }
+      <!-- Members Tab (placeholder) -->
+      @if (activeTab() === 'members' && isMembersTabVisible()) {
+        <div class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <i class="fa-light fa-users text-3xl text-gray-300 mb-3"></i>
+            <p class="text-sm font-medium text-gray-600">Members</p>
+            <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+          </div>
+        </div>
+      }
 
-          <!-- Votes Tab (placeholder) -->
-          @if (isVotesTabVisible()) {
-            <p-tabpanel value="votes">
-              <div class="flex items-center justify-center py-16">
-                <div class="text-center">
-                  <i class="fa-light fa-check-to-slot text-3xl text-gray-300 mb-3"></i>
-                  <p class="text-sm font-medium text-gray-600">Votes</p>
-                  <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-                </div>
-              </div>
-            </p-tabpanel>
-          }
+      <!-- Votes Tab (placeholder) -->
+      @if (activeTab() === 'votes' && isVotesTabVisible()) {
+        <div class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <i class="fa-light fa-check-to-slot text-3xl text-gray-300 mb-3"></i>
+            <p class="text-sm font-medium text-gray-600">Votes</p>
+            <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+          </div>
+        </div>
+      }
 
-          <!-- Meetings Tab (placeholder) -->
-          <p-tabpanel value="meetings">
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Meetings</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-              </div>
-            </div>
-          </p-tabpanel>
+      <!-- Meetings Tab (placeholder) -->
+      @if (activeTab() === 'meetings') {
+        <div class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
+            <p class="text-sm font-medium text-gray-600">Meetings</p>
+            <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+          </div>
+        </div>
+      }
 
-          <!-- Surveys Tab (placeholder) -->
-          <p-tabpanel value="surveys">
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-chart-simple text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Surveys</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-              </div>
-            </div>
-          </p-tabpanel>
+      <!-- Surveys Tab (placeholder) -->
+      @if (activeTab() === 'surveys') {
+        <div class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <i class="fa-light fa-chart-simple text-3xl text-gray-300 mb-3"></i>
+            <p class="text-sm font-medium text-gray-600">Surveys</p>
+            <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+          </div>
+        </div>
+      }
 
-          <!-- Documents Tab (placeholder) -->
-          <p-tabpanel value="documents">
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-folder-open text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Documents</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-              </div>
-            </div>
-          </p-tabpanel>
-        </p-tabpanels>
-      </p-tabs>
+      <!-- Documents Tab (placeholder) -->
+      @if (activeTab() === 'documents') {
+        <div class="flex items-center justify-center py-16">
+          <div class="text-center">
+            <i class="fa-light fa-folder-open text-3xl text-gray-300 mb-3"></i>
+            <p class="text-sm font-medium text-gray-600">Documents</p>
+            <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+          </div>
+        </div>
+      }
     </div>
   }
 
