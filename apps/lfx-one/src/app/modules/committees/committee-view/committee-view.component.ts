@@ -22,7 +22,6 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
-import { EditChannelsDialogComponent, EditChannelsDialogResult } from '../components/edit-channels-dialog/edit-channels-dialog.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -190,32 +189,6 @@ export class CommitteeViewComponent {
             updated.co_chair = result.leadership;
           }
           this.committeeSignal.set(updated);
-        }
-      }
-    });
-  }
-
-  public openEditChannels(): void {
-    const committee = this.committee();
-    if (!committee) return;
-
-    const dialogRef = this.dialogService.open(EditChannelsDialogComponent, {
-      header: 'Edit Channels',
-      width: '500px',
-      modal: true,
-      closable: true,
-      data: { committee },
-    }) as DynamicDialogRef;
-
-    dialogRef.onClose.pipe(take(1)).subscribe((result: EditChannelsDialogResult | undefined) => {
-      if (result) {
-        const current = this.committee();
-        if (current) {
-          this.committeeSignal.set({
-            ...current,
-            mailing_list: result.mailing_list ?? undefined,
-            chat_channel: result.chat_channel ?? undefined,
-          });
         }
       }
     });
