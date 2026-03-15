@@ -41,17 +41,18 @@ import {
   LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
-import { Meeting } from '@lfx-one/shared/interfaces';
+import { Meeting, PastMeeting, PastMeetingSummary } from '@lfx-one/shared/interfaces';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
+import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
@@ -94,6 +95,7 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly meetingService = inject(MeetingService);
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
@@ -131,6 +133,11 @@ export class CommitteeViewComponent {
   public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
   public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
   public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
+
+  // -- Last meeting summary --
+  public lastPastMeeting = signal<PastMeeting | null>(null);
+  public lastMeetingSummary = signal<PastMeetingSummary | null>(null);
+  public summaryExpanded = signal<boolean>(false);
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -366,6 +373,7 @@ export class CommitteeViewComponent {
               if (committee) {
                 this.populateSettingsForm(committee);
                 this.loadMeetings(committeeId);
+                this.loadPastMeetingSummary(committee.project_uid);
                 return this.loadGroupTypeData$(committeeId, committee);
               }
 
@@ -391,6 +399,18 @@ export class CommitteeViewComponent {
         this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
         this.meetingsLoading.set(false);
       });
+  }
+
+  private loadPastMeetingSummary(projectUid: string | undefined): void {
+    if (!projectUid) return;
+    this.meetingService
+      .getPastMeetingsByProject(projectUid, 1)
+      .pipe(
+        take(1),
+        catchError(() => of([])),
+        switchMap((pastMeetings) => this.loadLastMeetingSummary$(pastMeetings))
+      )
+      .subscribe();
   }
 
   private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {
@@ -535,6 +555,22 @@ export class CommitteeViewComponent {
         .filter((m) => m.start_time && new Date(m.start_time).getTime() < now)
         .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
+  }
+
+  private loadLastMeetingSummary$(pastMeetings: PastMeeting[]): Observable<PastMeetingSummary | null> {
+    const sorted = [...(pastMeetings ?? [])].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+    const lastMeeting = sorted[0] ?? null;
+    this.lastPastMeeting.set(lastMeeting);
+    this.lastMeetingSummary.set(null);
+
+    if (!lastMeeting) {
+      return of(null);
+    }
+
+    return this.meetingService.getPastMeetingSummary(lastMeeting.id).pipe(
+      catchError(() => of(null)),
+      tap((summary) => this.lastMeetingSummary.set(summary))
+    );
   }
 
   private createSettingsForm(): FormGroup {
