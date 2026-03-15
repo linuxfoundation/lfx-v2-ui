@@ -99,9 +99,10 @@ export class CommitteeVotesListComponent {
   private initTotalCount(): Signal<number> {
     const filters$ = toObservable(this.filters);
     const projectUid$ = toObservable(this.projectUid);
+    const committeeName$ = toObservable(this.committeeName);
 
     return toSignal(
-      combineLatest([projectUid$, filters$, this.refresh$]).pipe(
+      combineLatest([projectUid$, committeeName$, filters$, this.refresh$]).pipe(
         switchMap(([projectUid]) => {
           if (!projectUid) return of(0);
           const searchName = this.filters().search;
@@ -119,9 +120,10 @@ export class CommitteeVotesListComponent {
   private initVotes(): Signal<Vote[]> {
     const filters$ = toObservable(this.filters);
     const projectUid$ = toObservable(this.projectUid);
+    const committeeName$ = toObservable(this.committeeName);
 
     return toSignal(
-      combineLatest([projectUid$, filters$, this.fetch$]).pipe(
+      combineLatest([projectUid$, committeeName$, filters$, this.fetch$]).pipe(
         tap(() => this.loading.set(true)),
         switchMap(([projectUid]) => {
           if (!projectUid) {
