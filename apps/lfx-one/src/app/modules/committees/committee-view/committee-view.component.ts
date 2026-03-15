@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -154,6 +154,10 @@ export class CommitteeViewComponent {
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
 
+  // -- Votes tab computed signals --
+  public activeVotesList: Signal<CommitteeVote[]> = computed(() => this.openVotes().filter((v) => v.status === 'open'));
+  public closedVotesList: Signal<CommitteeVote[]> = computed(() => this.openVotes().filter((v) => v.status !== 'open'));
+
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
   public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
@@ -221,6 +225,13 @@ export class CommitteeViewComponent {
 
   public constructor() {
     this.initializeCommittee();
+
+    // Redirect away from votes tab when voting is disabled
+    effect(() => {
+      if (!this.isVotesTabVisible() && this.activeTab() === 'votes') {
+        this.activeTab.set('overview');
+      }
+    });
   }
 
   // -- Public methods --
