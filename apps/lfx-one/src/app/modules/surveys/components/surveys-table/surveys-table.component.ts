@@ -53,6 +53,7 @@ export class SurveysTableComponent {
   public readonly surveys = input.required<Survey[]>();
   public readonly hasPMOAccess = input<boolean>(false);
   public readonly loading = input<boolean>(false);
+  public readonly hideGroupFilter = input<boolean>(false);
 
   // === Outputs ===
   public readonly viewResults = output<string>();

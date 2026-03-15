@@ -59,6 +59,7 @@ import { ApplicationReviewComponent } from '../components/application-review/app
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -84,6 +85,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    CommitteeSurveysListComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
