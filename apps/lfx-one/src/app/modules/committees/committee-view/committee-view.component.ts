@@ -181,6 +181,7 @@ export class CommitteeViewComponent {
     return [...new Set(orgs)];
   });
   public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
   public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
     const roleCounts: Record<string, number> = {};
     this.members().forEach((m) => {
