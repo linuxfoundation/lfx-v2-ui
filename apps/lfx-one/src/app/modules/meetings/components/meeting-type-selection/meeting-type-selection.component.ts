@@ -6,7 +6,7 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CardSelectorComponent } from '@components/card-selector/card-selector.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { MeetingType } from '@lfx-one/shared/enums';
-import { CardSelectorOption, CardSelectorOptionInfo } from '@lfx-one/shared/interfaces';
+import { CardSelectorOption, CardSelectorOptionInfo, MeetingCommittee } from '@lfx-one/shared/interfaces';
 import { PersonaService } from '@services/persona.service';
 
 @Component({
@@ -19,6 +19,12 @@ export class MeetingTypeSelectionComponent {
 
   // Form group input from parent
   public readonly form = input.required<FormGroup>();
+
+  // Pre-selected group from query params
+  public readonly preselectedGroup = computed<MeetingCommittee | null>(() => {
+    const committees: MeetingCommittee[] = this.form().get('committees')?.value || [];
+    return committees.length > 0 ? committees[0] : null;
+  });
 
   // Privacy options for Public/Restricted selection
   public readonly privacyOptions: CardSelectorOption<boolean>[] = [
