@@ -53,6 +53,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { VoteResultsDrawerComponent } from '@app/modules/votes/components/vote-results-drawer/vote-results-drawer.component';
+
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
@@ -82,6 +84,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    VoteResultsDrawerComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -156,6 +159,10 @@ export class CommitteeViewComponent {
   // -- Votes tab computed signals --
   public activeVotesList: Signal<CommitteeVote[]> = computed(() => this.openVotes().filter((v) => v.status === 'open'));
   public closedVotesList: Signal<CommitteeVote[]> = computed(() => this.openVotes().filter((v) => v.status !== 'open'));
+
+  // -- Vote drawer state --
+  public voteDrawerVisible = signal<boolean>(false);
+  public selectedVoteId = signal<string | null>(null);
 
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
@@ -289,6 +296,11 @@ export class CommitteeViewComponent {
     this.router.navigate(['/meetings/create'], {
       queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
     });
+  }
+
+  public onViewVote(voteId: string): void {
+    this.selectedVoteId.set(voteId);
+    this.voteDrawerVisible.set(true);
   }
 
   public openAssignLeadership(role: LeadershipRole): void {
