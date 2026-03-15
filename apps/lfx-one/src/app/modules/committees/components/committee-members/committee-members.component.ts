@@ -103,6 +103,35 @@ export class CommitteeMembersComponent implements OnInit {
     menuComponent.toggle(event);
   }
 
+  public exportMembersCsv(): void {
+    const members = this.filteredMembers();
+    if (members.length === 0) return;
+
+    const votingEnabled = this.committee()?.enable_voting;
+    const headers = ['Name', 'Email', 'Organization', ...(votingEnabled ? ['Role', 'Voting Status'] : []), 'Job Title', 'Appointed By', 'Status'];
+
+    const rows = members.map((member) => [
+      `${member.first_name || ''} ${member.last_name || ''}`.trim(),
+      member.email || '',
+      member.organization?.name || '',
+      ...(votingEnabled ? [member.role?.name || '', member.voting?.status || ''] : []),
+      member.job_title || '',
+      member.appointed_by || '',
+      member.status || '',
+    ]);
+
+    const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const committeeName = this.committee()?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'committee';
+    link.href = url;
+    link.download = `${committeeName}_members.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   public openAddMemberDialog(): void {
     const dialogRef = this.dialogService.open(MemberFormComponent, {
       header: 'Add Member',
