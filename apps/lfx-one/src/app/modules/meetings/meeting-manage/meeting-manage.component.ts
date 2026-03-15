@@ -25,6 +25,7 @@ import {
   ImportantLinkFormValue,
   Meeting,
   MeetingAttachment,
+  MeetingCommittee,
   MeetingRegistrant,
   PendingAttachment,
   PresignAttachmentResponse,
@@ -672,11 +673,22 @@ export class MeetingManageComponent {
           }
 
           this.mode.set('create');
+          this.preselectCommitteeFromQueryParams();
           return of(null);
         })
       ),
       { initialValue: null }
     );
+  }
+
+  private preselectCommitteeFromQueryParams(): void {
+    const snapshot = this.route.snapshot.queryParamMap;
+    const committeeUid = snapshot.get('committee_uid');
+    const committeeName = snapshot.get('committee_name');
+    if (committeeUid) {
+      const committee: MeetingCommittee = { uid: committeeUid, name: committeeName || undefined };
+      this.form().get('committees')?.setValue([committee]);
+    }
   }
 
   private populateFormWithMeetingData(meeting: Meeting): void {
