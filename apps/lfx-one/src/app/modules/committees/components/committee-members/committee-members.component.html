@@ -6,10 +6,21 @@
   <lfx-card>
     <div class="flex justify-between gap-4 mb-8">
       <h3 class="text-lg font-medium text-gray-900">{{ committeeLabel.singular }} Members</h3>
-      <!-- Add Member Button -->
-      @if (canManageMembers()) {
-        <lfx-button label="Add Member" icon="fa-light fa-user-plus" size="small" severity="secondary" (onClick)="openAddMemberDialog()"> </lfx-button>
-      }
+      <div class="flex gap-2">
+        <lfx-button
+          label="Export CSV"
+          icon="fa-light fa-file-export"
+          size="small"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="filteredMembers().length === 0"
+          data-testid="committee-members-export-csv"
+          (onClick)="exportMembersCsv()">
+        </lfx-button>
+        @if (canManageMembers()) {
+          <lfx-button label="Add Member" icon="fa-light fa-user-plus" size="small" severity="secondary" (onClick)="openAddMemberDialog()"> </lfx-button>
+        }
+      </div>
     </div>
 
     <!-- Search and Filter Controls -->
