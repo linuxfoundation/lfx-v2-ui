@@ -109,7 +109,10 @@ export class CommitteeVotesListComponent {
           const queryFilters = this.buildFilters();
           return this.voteService.getVotesCountByProject(projectUid, searchName || undefined, queryFilters).pipe(
             tap((count) => this.totalRecords.set(count)),
-            catchError(() => of(0))
+            catchError(() => {
+              this.totalRecords.set(0);
+              return of(0);
+            })
           );
         })
       ),
