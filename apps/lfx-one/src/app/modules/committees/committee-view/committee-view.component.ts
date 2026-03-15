@@ -41,7 +41,7 @@ import {
   LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
-import { Meeting } from '@lfx-one/shared/interfaces';
+import { Meeting, PastMeeting, PastMeetingSummary } from '@lfx-one/shared/interfaces';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -132,6 +132,11 @@ export class CommitteeViewComponent {
   public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
   public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
   public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
+
+  // -- Last meeting summary --
+  public lastPastMeeting = signal<PastMeeting | null>(null);
+  public lastMeetingSummary = signal<PastMeetingSummary | null>(null);
+  public summaryExpanded = signal<boolean>(false);
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -361,11 +366,13 @@ export class CommitteeViewComponent {
             switchMap((committee) => {
               const projectUid = committee?.project_uid || this.projectService.project()?.uid;
               const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
-              return combineLatest([of(committee), membersQuery, meetingsQuery]);
+              const pastMeetingsQuery = projectUid ? this.meetingService.getPastMeetingsByProject(projectUid, 1).pipe(catchError(() => of([]))) : of([]);
+              return combineLatest([of(committee), membersQuery, meetingsQuery, pastMeetingsQuery]);
             }),
-            switchMap(([committee, members, meetings]) => {
+            switchMap(([committee, members, meetings, pastMeetings]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
+              this.loadLastMeetingSummary(pastMeetings);
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
@@ -527,6 +534,19 @@ export class CommitteeViewComponent {
         .filter((m) => m.start_time && new Date(m.start_time).getTime() < now && m.committees?.some((c) => c.uid === committeeId))
         .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
+  }
+
+  private loadLastMeetingSummary(pastMeetings: PastMeeting[]): void {
+    const lastMeeting = pastMeetings?.[0] ?? null;
+    this.lastPastMeeting.set(lastMeeting);
+    this.lastMeetingSummary.set(null);
+
+    if (lastMeeting) {
+      this.meetingService
+        .getPastMeetingSummary(lastMeeting.id)
+        .pipe(catchError(() => of(null)))
+        .subscribe((summary) => this.lastMeetingSummary.set(summary));
+    }
   }
 
   private createSettingsForm(): FormGroup {
