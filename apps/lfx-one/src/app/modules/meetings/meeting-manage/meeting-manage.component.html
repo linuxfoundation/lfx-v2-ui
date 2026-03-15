@@ -151,7 +151,7 @@
           <div class="p-6 md:p-8">
             <p-step-panel [value]="1" data-testid="meeting-manage-panel-0">
               <ng-template #content let-activateCallback="activateCallback">
-                <lfx-meeting-type-selection [form]="form()"></lfx-meeting-type-selection>
+                <lfx-meeting-type-selection [form]="form()" [preselectedGroupName]="preselectedGroupName()"></lfx-meeting-type-selection>
               </ng-template>
             </p-step-panel>
 

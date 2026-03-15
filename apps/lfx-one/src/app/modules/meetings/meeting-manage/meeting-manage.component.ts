@@ -84,6 +84,7 @@ export class MeetingManageComponent {
   private readonly projectContextService = inject(ProjectContextService);
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
+  public preselectedGroupName = signal<string | null>(null);
   public meetingId = signal<string | null>(null);
   public isEditMode = computed(() => this.mode() === 'edit');
   public originalStartTime = signal<string | null>(null);
@@ -688,6 +689,7 @@ export class MeetingManageComponent {
     if (committeeUid) {
       const committee: MeetingCommittee = { uid: committeeUid, name: committeeName || undefined };
       this.form().get('committees')?.setValue([committee]);
+      this.preselectedGroupName.set(committeeName || null);
     }
   }
 
