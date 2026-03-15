@@ -208,7 +208,7 @@
                         </div>
                         <div class="flex flex-col gap-3">
                           @for (vote of openVotes(); track vote.uid) {
-                            <div class="border rounded-lg p-4 hover:border-blue-400 transition-all">
+                            <div class="border rounded-lg p-4 hover:border-blue-400 transition-all cursor-pointer" (click)="onViewVote(vote.uid)">
                               <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1 min-w-0">
                                   <h4 class="text-sm font-medium text-gray-900">{{ vote.title }}</h4>
@@ -932,7 +932,7 @@
                   @if (activeVotesList().length > 0) {
                     <div class="flex flex-col gap-4">
                       @for (vote of activeVotesList(); track vote.uid) {
-                        <lfx-card data-testid="votes-tab-open-vote">
+                        <lfx-card data-testid="votes-tab-open-vote" class="cursor-pointer" (click)="onViewVote(vote.uid)">
                           <div class="flex items-start justify-between gap-3">
                             <div class="flex-1 min-w-0">
                               <h4 class="text-sm font-medium text-gray-900">{{ vote.title }}</h4>
@@ -982,7 +982,9 @@
                     <lfx-card data-testid="votes-tab-closed-votes">
                       <div class="flex flex-col gap-0">
                         @for (vote of closedVotesList(); track vote.uid) {
-                          <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                          <div
+                            class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
+                            (click)="onViewVote(vote.uid)">
                             <div class="flex-1 min-w-0">
                               <p class="text-sm text-gray-800 truncate">{{ vote.title }}</p>
                               <p class="text-xs text-gray-400 mt-0.5">
@@ -1158,4 +1160,7 @@
 
   <!-- Confirmation Dialog -->
   <p-confirmDialog></p-confirmDialog>
+
+  <!-- Vote Results Drawer -->
+  <lfx-vote-results-drawer [(visible)]="voteDrawerVisible" [voteId]="selectedVoteId()" data-testid="committee-vote-results-drawer"> </lfx-vote-results-drawer>
 </div>
