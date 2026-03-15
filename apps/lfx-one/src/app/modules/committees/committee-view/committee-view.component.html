@@ -85,6 +85,14 @@
           @if (committee()?.description) {
             <p class="text-gray-500 max-w-2xl" data-testid="committee-view-description">{{ committee()?.description }}</p>
           }
+          <!-- Key Topics — pending API support (LFXV2-XXXX) -->
+          @if (committee()?.key_topics?.length) {
+            <div class="flex flex-wrap gap-2" data-testid="committee-view-key-topics">
+              @for (topic of committee()!.key_topics!; track topic) {
+                <span class="px-3 py-1 text-xs rounded-full border border-gray-200 text-gray-600 bg-gray-50">{{ topic }}</span>
+              }
+            </div>
+          }
           <div class="flex items-center gap-3 flex-wrap">
             @if (committee()?.category) {
               <lfx-tag [value]="committee()!.category" [severity]="categorySeverity()"></lfx-tag>
