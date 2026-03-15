@@ -208,7 +208,7 @@
                         </div>
                         <div class="flex flex-col gap-3">
                           @for (vote of openVotes(); track vote.uid) {
-                            <div class="border rounded-lg p-4 hover:border-blue-400 transition-all cursor-pointer" (click)="onViewVote(vote.uid)">
+                            <div class="border rounded-lg p-4 hover:border-blue-400 transition-all">
                               <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1 min-w-0">
                                   <h4 class="text-sm font-medium text-gray-900">{{ vote.title }}</h4>
@@ -919,107 +919,10 @@
           <!-- Votes Tab -->
           @if (isVotesTabVisible()) {
             <p-tabpanel value="votes">
-              <div class="flex flex-col gap-6 pt-4" data-testid="committee-view-votes-tab">
-                <!-- Open Votes Section -->
-                <div>
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-semibold"><i class="fa-light fa-check-to-slot text-gray-400 mr-2"></i>Open Votes</h3>
-                    @if (activeVotesList().length > 0) {
-                      <span class="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium"> {{ activeVotesList().length }} pending </span>
-                    }
-                  </div>
-
-                  @if (activeVotesList().length > 0) {
-                    <div class="flex flex-col gap-4">
-                      @for (vote of activeVotesList(); track vote.uid) {
-                        <lfx-card data-testid="votes-tab-open-vote" class="cursor-pointer" (click)="onViewVote(vote.uid)">
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="flex-1 min-w-0">
-                              <h4 class="text-sm font-medium text-gray-900">{{ vote.title }}</h4>
-                              @if (vote.created_by) {
-                                <p class="text-xs text-gray-500 mt-1">Proposed by {{ vote.created_by }}</p>
-                              }
-                            </div>
-                            <lfx-tag value="Open" severity="warn"></lfx-tag>
-                          </div>
-                          <!-- Voting progress bar -->
-                          <div class="mt-3">
-                            <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
-                              <span>{{ vote.votes_for + vote.votes_against + vote.votes_abstain }} of {{ vote.total_eligible }} votes cast</span>
-                              <span>Deadline: {{ vote.deadline | date: 'MMM d, y' }}</span>
-                            </div>
-                            <div class="w-full bg-gray-100 rounded-full h-2 flex overflow-hidden">
-                              <div
-                                class="bg-emerald-500 h-2 rounded-l-full"
-                                [style.width.%]="vote.total_eligible ? (vote.votes_for / vote.total_eligible) * 100 : 0"></div>
-                              <div class="bg-red-400 h-2" [style.width.%]="vote.total_eligible ? (vote.votes_against / vote.total_eligible) * 100 : 0"></div>
-                              <div class="bg-gray-300 h-2" [style.width.%]="vote.total_eligible ? (vote.votes_abstain / vote.total_eligible) * 100 : 0"></div>
-                            </div>
-                            <div class="flex items-center gap-3 mt-1.5 text-xs">
-                              <span class="text-emerald-600">{{ vote.votes_for }} for</span>
-                              <span class="text-red-500">{{ vote.votes_against }} against</span>
-                              <span class="text-gray-400">{{ vote.votes_abstain }} abstain</span>
-                            </div>
-                          </div>
-                        </lfx-card>
-                      }
-                    </div>
-                  } @else {
-                    <lfx-card data-testid="votes-tab-no-open-votes">
-                      <div class="text-center py-8">
-                        <i class="fa-light fa-check-circle text-3xl text-emerald-400 mb-3"></i>
-                        <p class="text-sm font-medium text-gray-700">No Open Votes</p>
-                        <p class="text-xs text-gray-500 mt-1">All votes have been resolved.</p>
-                      </div>
-                    </lfx-card>
-                  }
-                </div>
-
-                <!-- Closed / Past Votes Section -->
-                @if (closedVotesList().length > 0) {
-                  <div>
-                    <h3 class="text-base font-semibold mb-4"><i class="fa-light fa-box-archive text-gray-400 mr-2"></i>Past Votes</h3>
-                    <lfx-card data-testid="votes-tab-closed-votes">
-                      <div class="flex flex-col gap-0">
-                        @for (vote of closedVotesList(); track vote.uid) {
-                          <div
-                            class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
-                            (click)="onViewVote(vote.uid)">
-                            <div class="flex-1 min-w-0">
-                              <p class="text-sm text-gray-800 truncate">{{ vote.title }}</p>
-                              <p class="text-xs text-gray-400 mt-0.5">
-                                {{ vote.deadline | date: 'MMM d, y' }}
-                                · {{ vote.votes_for + vote.votes_against + vote.votes_abstain }} of {{ vote.total_eligible }} voted
-                              </p>
-                            </div>
-                            <lfx-tag
-                              [value]="vote.status === 'closed' ? 'Closed' : 'Cancelled'"
-                              [severity]="vote.status === 'closed' ? 'success' : 'danger'"></lfx-tag>
-                          </div>
-                        }
-                      </div>
-                    </lfx-card>
-                  </div>
-                }
-
-                <!-- Recent Resolutions Section -->
-                @if (recentResolutions().length > 0) {
-                  <div>
-                    <h3 class="text-base font-semibold mb-4"><i class="fa-light fa-gavel text-gray-400 mr-2"></i>Recent Resolutions</h3>
-                    <lfx-card data-testid="votes-tab-resolutions">
-                      <div class="flex flex-col gap-0">
-                        @for (res of recentResolutions(); track res.uid) {
-                          <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                            <div class="flex-1 min-w-0">
-                              <p class="text-sm text-gray-800 truncate">{{ res.title }}</p>
-                              <p class="text-xs text-gray-400 mt-0.5">{{ res.date | date: 'MMM d, y' }} · {{ res.votes_for }}-{{ res.votes_against }}</p>
-                            </div>
-                            <lfx-tag [value]="res.result" severity="success"></lfx-tag>
-                          </div>
-                        }
-                      </div>
-                    </lfx-card>
-                  </div>
+              <div class="pt-4" data-testid="committee-view-votes-tab">
+                @if (committee(); as c) {
+                  <lfx-committee-votes-list [projectUid]="c.project_uid" [committeeName]="c.name" [hasPMOAccess]="canManageConfigurations()">
+                  </lfx-committee-votes-list>
                 }
               </div>
             </p-tabpanel>
@@ -1160,7 +1063,4 @@
 
   <!-- Confirmation Dialog -->
   <p-confirmDialog></p-confirmDialog>
-
-  <!-- Vote Results Drawer -->
-  <lfx-vote-results-drawer [(visible)]="voteDrawerVisible" [voteId]="selectedVoteId()" data-testid="committee-vote-results-drawer"> </lfx-vote-results-drawer>
 </div>
