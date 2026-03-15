@@ -226,6 +226,8 @@ export interface Committee {
   oversight_sub_type?: OversightSubType;
   /** Membership-tier eligibility thresholds for participation */
   eligibility?: GroupEligibility;
+  /** Key focus areas or topics for the committee (pending API support) */
+  key_topics?: string[];
 
   // ── Join & Invite fields ──
   /** How users can join this group (default: 'closed') */

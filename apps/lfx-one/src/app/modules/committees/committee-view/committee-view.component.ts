@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -41,7 +41,7 @@ import {
   LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
-import { Meeting } from '@lfx-one/shared/interfaces';
+import { Meeting, PastMeeting, PastMeetingSummary } from '@lfx-one/shared/interfaces';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -53,12 +53,13 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -84,6 +85,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -130,6 +132,11 @@ export class CommitteeViewComponent {
   public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
   public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
   public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
+
+  // -- Last meeting summary --
+  public lastPastMeeting = signal<PastMeeting | null>(null);
+  public lastMeetingSummary = signal<PastMeetingSummary | null>(null);
+  public summaryExpanded = signal<boolean>(false);
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -180,6 +187,7 @@ export class CommitteeViewComponent {
     return [...new Set(orgs)];
   });
   public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
   public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
     const roleCounts: Record<string, number> = {};
     this.members().forEach((m) => {
@@ -221,6 +229,13 @@ export class CommitteeViewComponent {
 
   public constructor() {
     this.initializeCommittee();
+
+    // Redirect away from votes tab when voting is disabled
+    effect(() => {
+      if (!this.isVotesTabVisible() && this.activeTab() === 'votes') {
+        this.activeTab.set('overview');
+      }
+    });
   }
 
   // -- Public methods --
@@ -351,21 +366,24 @@ export class CommitteeViewComponent {
             switchMap((committee) => {
               const projectUid = committee?.project_uid || this.projectService.project()?.uid;
               const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
-              return combineLatest([of(committee), membersQuery, meetingsQuery]);
+              const pastMeetingsQuery = projectUid ? this.meetingService.getPastMeetingsByProject(projectUid, 1).pipe(catchError(() => of([]))) : of([]);
+              return combineLatest([of(committee), membersQuery, meetingsQuery, pastMeetingsQuery]);
             }),
-            switchMap(([committee, members, meetings]) => {
+            switchMap(([committee, members, meetings, pastMeetings]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
 
+              const summaryQuery = this.loadLastMeetingSummary$(pastMeetings);
+
               if (committee) {
                 this.populateSettingsForm(committee);
-                return this.loadGroupTypeData$(committeeId, committee);
+                return forkJoin([this.loadGroupTypeData$(committeeId, committee), summaryQuery]).pipe(map(() => null));
               }
 
-              return of(null);
+              return summaryQuery;
             }),
             finalize(() => this.loading.set(false))
           );
@@ -517,6 +535,22 @@ export class CommitteeViewComponent {
         .filter((m) => m.start_time && new Date(m.start_time).getTime() < now && m.committees?.some((c) => c.uid === committeeId))
         .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
+  }
+
+  private loadLastMeetingSummary$(pastMeetings: PastMeeting[]): Observable<PastMeetingSummary | null> {
+    const sorted = [...(pastMeetings ?? [])].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+    const lastMeeting = sorted[0] ?? null;
+    this.lastPastMeeting.set(lastMeeting);
+    this.lastMeetingSummary.set(null);
+
+    if (!lastMeeting) {
+      return of(null);
+    }
+
+    return this.meetingService.getPastMeetingSummary(lastMeeting.id).pipe(
+      catchError(() => of(null)),
+      tap((summary) => this.lastMeetingSummary.set(summary))
+    );
   }
 
   private createSettingsForm(): FormGroup {

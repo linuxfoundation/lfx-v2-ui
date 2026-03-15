@@ -85,6 +85,14 @@
           @if (committee()?.description) {
             <p class="text-gray-500 max-w-2xl" data-testid="committee-view-description">{{ committee()?.description }}</p>
           }
+          <!-- Key Topics — renders when API populates key_topics -->
+          @if (committee()?.key_topics?.length) {
+            <div class="flex flex-wrap gap-2" data-testid="committee-view-key-topics">
+              @for (topic of committee()!.key_topics!; track topic) {
+                <span class="px-3 py-1 text-xs rounded-full border border-gray-200 text-gray-600 bg-gray-50">{{ topic }}</span>
+              }
+            </div>
+          }
           <div class="flex items-center gap-3 flex-wrap">
             @if (committee()?.category) {
               <lfx-tag [value]="committee()!.category" [severity]="categorySeverity()"></lfx-tag>
@@ -137,7 +145,7 @@
           <p-tabpanel value="overview">
             <div class="flex flex-col gap-6 pt-4">
               <!-- Stats Row -->
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="committee-view-stats">
                 <!-- Total Members -->
                 <lfx-card>
                   <div class="flex items-center gap-3 py-1">
@@ -175,6 +183,19 @@
                     <div>
                       <p class="text-2xl font-semibold text-gray-900">{{ orgCount() }}</p>
                       <p class="text-xs text-gray-500">Organizations</p>
+                    </div>
+                  </div>
+                </lfx-card>
+
+                <!-- Observers -->
+                <lfx-card>
+                  <div class="flex items-center gap-3 py-1">
+                    <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                      <i class="fa-light fa-eye text-slate-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-2xl font-semibold text-gray-900">{{ observerCount() }}</p>
+                      <p class="text-xs text-gray-500">Observers</p>
                     </div>
                   </div>
                 </lfx-card>
@@ -586,6 +607,48 @@
                     </lfx-card>
                   }
 
+                  <!-- ═══ LAST MEETING SUMMARY ═══ -->
+                  @if (lastMeetingSummary(); as summary) {
+                    @if (summary.approved || canManageConfigurations()) {
+                      <lfx-card data-testid="committee-view-last-meeting-summary">
+                        <div class="flex items-center justify-between mb-3">
+                          <h3 class="text-sm font-medium flex items-center gap-2">
+                            <i class="fa-light fa-calendar-lines text-gray-400"></i> Last Meeting Summary
+                          </h3>
+                          @if (lastPastMeeting(); as meeting) {
+                            <span class="text-xs text-gray-400">{{ meeting.start_time | date: 'MMM d, y' }}</span>
+                          }
+                        </div>
+                        @if (lastPastMeeting(); as meeting) {
+                          <p class="text-sm font-medium text-gray-800 mb-2">{{ meeting.title }}</p>
+                        }
+                        <div class="text-sm text-gray-600" [class.line-clamp-3]="!summaryExpanded()" data-testid="committee-view-meeting-summary-text">
+                          {{ summary.summary_data.edited_content || summary.summary_data.content }}
+                        </div>
+                        <div class="flex items-center justify-between mt-3">
+                          <button
+                            type="button"
+                            class="text-xs text-gray-500 hover:text-gray-700 bg-transparent border-none cursor-pointer flex items-center gap-1"
+                            (click)="summaryExpanded.set(!summaryExpanded())"
+                            data-testid="committee-view-summary-toggle">
+                            @if (summaryExpanded()) {
+                              <i class="fa-light fa-chevron-up text-[10px]"></i> Show less
+                            } @else {
+                              <i class="fa-light fa-chevron-down text-[10px]"></i> Show more
+                            }
+                          </button>
+                          <button
+                            type="button"
+                            class="text-xs text-blue-600 hover:text-blue-700 bg-transparent border-none cursor-pointer"
+                            (click)="activeTab.set('meetings')"
+                            data-testid="committee-view-meetings-link">
+                            View all meetings &rarr;
+                          </button>
+                        </div>
+                      </lfx-card>
+                    }
+                  }
+
                   <!-- ═══ CHANNELS CARD (all types) ═══ -->
                   <lfx-card data-testid="committee-view-channels">
                     <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
@@ -916,15 +979,14 @@
             </p-tabpanel>
           }
 
-          <!-- Votes Tab (placeholder) -->
+          <!-- Votes Tab -->
           @if (isVotesTabVisible()) {
             <p-tabpanel value="votes">
-              <div class="flex items-center justify-center py-16">
-                <div class="text-center">
-                  <i class="fa-light fa-check-to-slot text-3xl text-gray-300 mb-3"></i>
-                  <p class="text-sm font-medium text-gray-600">Votes</p>
-                  <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-                </div>
+              <div class="pt-4" data-testid="committee-view-votes-tab">
+                @if (committee(); as c) {
+                  <lfx-committee-votes-list [projectUid]="c.project_uid" [committeeName]="c.name" [hasPMOAccess]="canManageConfigurations()">
+                  </lfx-committee-votes-list>
+                }
               </div>
             </p-tabpanel>
           }
