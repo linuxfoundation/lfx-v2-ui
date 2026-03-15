@@ -53,7 +53,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, map, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
@@ -372,17 +372,18 @@ export class CommitteeViewComponent {
             switchMap(([committee, members, meetings, pastMeetings]) => {
               this.members.set(Array.isArray(members) ? members : []);
               this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
-              this.loadLastMeetingSummary(pastMeetings);
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
 
+              const summaryQuery = this.loadLastMeetingSummary$(pastMeetings);
+
               if (committee) {
                 this.populateSettingsForm(committee);
-                return this.loadGroupTypeData$(committeeId, committee);
+                return forkJoin([this.loadGroupTypeData$(committeeId, committee), summaryQuery]).pipe(map(() => null));
               }
 
-              return of(null);
+              return summaryQuery;
             }),
             finalize(() => this.loading.set(false))
           );
@@ -536,17 +537,20 @@ export class CommitteeViewComponent {
     });
   }
 
-  private loadLastMeetingSummary(pastMeetings: PastMeeting[]): void {
-    const lastMeeting = pastMeetings?.[0] ?? null;
+  private loadLastMeetingSummary$(pastMeetings: PastMeeting[]): Observable<PastMeetingSummary | null> {
+    const sorted = [...(pastMeetings ?? [])].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+    const lastMeeting = sorted[0] ?? null;
     this.lastPastMeeting.set(lastMeeting);
     this.lastMeetingSummary.set(null);
 
-    if (lastMeeting) {
-      this.meetingService
-        .getPastMeetingSummary(lastMeeting.id)
-        .pipe(catchError(() => of(null)))
-        .subscribe((summary) => this.lastMeetingSummary.set(summary));
+    if (!lastMeeting) {
+      return of(null);
     }
+
+    return this.meetingService.getPastMeetingSummary(lastMeeting.id).pipe(
+      catchError(() => of(null)),
+      tap((summary) => this.lastMeetingSummary.set(summary))
+    );
   }
 
   private createSettingsForm(): FormGroup {
