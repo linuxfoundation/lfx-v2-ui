@@ -137,7 +137,7 @@
           <p-tabpanel value="overview">
             <div class="flex flex-col gap-6 pt-4">
               <!-- Stats Row -->
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="committee-view-stats">
                 <!-- Total Members -->
                 <lfx-card>
                   <div class="flex items-center gap-3 py-1">
@@ -175,6 +175,19 @@
                     <div>
                       <p class="text-2xl font-semibold text-gray-900">{{ orgCount() }}</p>
                       <p class="text-xs text-gray-500">Organizations</p>
+                    </div>
+                  </div>
+                </lfx-card>
+
+                <!-- Observers -->
+                <lfx-card>
+                  <div class="flex items-center gap-3 py-1">
+                    <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                      <i class="fa-light fa-eye text-slate-600"></i>
+                    </div>
+                    <div>
+                      <p class="text-2xl font-semibold text-gray-900">{{ observerCount() }}</p>
+                      <p class="text-xs text-gray-500">Observers</p>
                     </div>
                   </div>
                 </lfx-card>
