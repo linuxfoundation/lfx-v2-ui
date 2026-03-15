@@ -34,6 +34,7 @@ export class CommitteeSurveysListComponent {
 
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
+  protected readonly loadError = signal<boolean>(false);
   protected readonly resultsDrawerVisible = signal<boolean>(false);
   protected readonly selectedSurveyId = signal<string | null>(null);
 
@@ -56,17 +57,16 @@ export class CommitteeSurveysListComponent {
 
   protected refreshSurveys(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.refresh$.next();
   }
 
   protected onDuplicateSurvey(surveyId: string): void {
     console.warn('Survey duplication not yet implemented for:', surveyId);
-    this.resultsDrawerVisible.set(false);
   }
 
   protected onCloseSurvey(surveyId: string): void {
     console.warn('Survey close not yet implemented for:', surveyId);
-    this.resultsDrawerVisible.set(false);
   }
 
   // === Private Initializers ===
@@ -83,8 +83,12 @@ export class CommitteeSurveysListComponent {
           }
 
           this.loading.set(true);
+          this.loadError.set(false);
           return this.surveyService.getSurveysByProject(projectUid, 100).pipe(
-            catchError(() => of([])),
+            catchError(() => {
+              this.loadError.set(true);
+              return of([]);
+            }),
             finalize(() => this.loading.set(false))
           );
         })
@@ -101,34 +105,47 @@ export class CommitteeSurveysListComponent {
       const survey = this.surveys().find((s) => s.id === surveyId);
       if (!survey) return null;
 
+      const committeeData = this.getCommitteeData(survey);
+
       return {
         ...survey,
-        nps_score: this.calculateNpsScore(survey),
-        nps_breakdown: this.calculateNpsBreakdown(survey),
+        nps_score: this.calculateNpsScore(survey, committeeData),
+        nps_breakdown: this.calculateNpsBreakdown(survey, committeeData),
         additional_comments: [],
       };
     });
   }
 
   // === Private Helpers ===
-  private calculateNpsScore(survey: Survey): number | undefined {
-    if (!survey.is_nps_survey || !survey.committees?.length) return undefined;
+  private getCommitteeData(survey: Survey): Survey['committees'] {
+    const name = this.committeeName();
+    return survey.committees?.filter((c) => c.committee_name === name) ?? [];
+  }
 
-    const totalResponses = survey.committees.reduce((sum, c) => sum + c.total_responses, 0);
+  private calculateNpsScore(survey: Survey, committeeData: Survey['committees']): number | undefined {
+    if (!survey.is_nps_survey || !committeeData?.length) return undefined;
+
+    const totalResponses = committeeData.reduce((sum, c) => sum + c.total_responses, 0);
     if (totalResponses === 0) return 0;
 
-    const weightedNps = survey.committees.reduce((sum, c) => sum + c.nps_value * c.total_responses, 0);
+    const weightedNps = committeeData.reduce((sum, c) => sum + c.nps_value * c.total_responses, 0);
     return Math.round(weightedNps / totalResponses);
   }
 
-  private calculateNpsBreakdown(survey: Survey): { promoters: number; passives: number; detractors: number; nonResponses: number } | undefined {
-    if (!survey.is_nps_survey || !survey.committees?.length) return undefined;
+  private calculateNpsBreakdown(
+    survey: Survey,
+    committeeData: Survey['committees']
+  ): { promoters: number; passives: number; detractors: number; nonResponses: number } | undefined {
+    if (!survey.is_nps_survey || !committeeData?.length) return undefined;
+
+    const totalResponses = committeeData.reduce((sum, c) => sum + c.total_responses, 0);
+    const totalRecipients = committeeData.reduce((sum, c) => sum + (c.total_recipients ?? 0), 0);
 
     return {
-      promoters: survey.committees.reduce((sum, c) => sum + c.num_promoters, 0),
-      passives: survey.committees.reduce((sum, c) => sum + c.num_passives, 0),
-      detractors: survey.committees.reduce((sum, c) => sum + c.num_detractors, 0),
-      nonResponses: Math.max(0, survey.total_recipients - survey.total_responses),
+      promoters: committeeData.reduce((sum, c) => sum + c.num_promoters, 0),
+      passives: committeeData.reduce((sum, c) => sum + c.num_passives, 0),
+      detractors: committeeData.reduce((sum, c) => sum + c.num_detractors, 0),
+      nonResponses: Math.max(0, totalRecipients - totalResponses),
     };
   }
 }
