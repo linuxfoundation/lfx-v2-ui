@@ -93,6 +93,8 @@ export class MeetingManageComponent {
     toUpdate: [],
     toDelete: [],
   });
+  // Form state — must be before initializeMeeting() which reads form in preselectCommitteeFromQueryParams
+  public form = signal<FormGroup>(this.createMeetingFormGroup());
   // Initialize meeting data using toSignal
   public meeting = this.initializeMeeting();
   public meetingLoading = computed(() => this.isEditMode() && this.meeting() === null);
@@ -103,8 +105,6 @@ export class MeetingManageComponent {
   private internalStep = signal<number>(1);
   public currentStep = toSignal(of(1), { initialValue: 1 });
   public readonly totalSteps = TOTAL_STEPS;
-  // Form state
-  public form = signal<FormGroup>(this.createMeetingFormGroup());
   public submitting = signal<boolean>(false);
   public deletingAttachmentId = signal<string | null>(null);
   public pendingAttachmentDeletions = signal<string[]>([]);
