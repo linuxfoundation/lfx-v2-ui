@@ -35,6 +35,12 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
+  public getSurveysByCommittee(committeeUid: string): Observable<Survey[]> {
+    return this.http.get<Survey[]>(`/api/committees/${committeeUid}/surveys`).pipe(
+      catchError(() => of([])),
+    );
+  }
+
   public getSurvey(surveyUid: string, projectId?: string): Observable<Survey> {
     let params = new HttpParams();
     if (projectId) {
