@@ -6,10 +6,10 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Meeting } from '@lfx-one/shared/interfaces';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
-import { MeetingService } from '@services/meeting.service';
+import { CommitteeService } from '@services/committee.service';
 import { ProjectService } from '@services/project.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { filter, map, of } from 'rxjs';
+import { map, of } from 'rxjs';
 
 @Component({
   selector: 'lfx-upcoming-committee-meeting',
@@ -17,8 +17,8 @@ import { filter, map, of } from 'rxjs';
   templateUrl: './upcoming-committee-meeting.component.html',
 })
 export class UpcomingCommitteeMeetingComponent implements OnInit {
+  private readonly committeeService = inject(CommitteeService);
   private readonly projectService = inject(ProjectService);
-  private readonly meetingService = inject(MeetingService);
   private readonly injector = inject(Injector);
 
   public readonly committeeId = input<string | null>(null);
@@ -37,9 +37,21 @@ export class UpcomingCommitteeMeetingComponent implements OnInit {
   }
 
   private initializeUpcomingMeeting(): Signal<Meeting | null> {
-    return toSignal(this.project() ? this.getNextUpcomingCommitteeMeeting(this.project()!.uid, this.committeeId()) : of(null), {
-      initialValue: null,
-    });
+    const committeeId = this.committeeId();
+    if (!committeeId) return toSignal(of(null), { initialValue: null });
+
+    return toSignal(
+      this.committeeService.getCommitteeMeetings(committeeId).pipe(
+        map((meetings: Meeting[]) => {
+          const now = new Date().getTime();
+          const upcoming = meetings
+            .filter((m) => m.start_time && new Date(m.start_time).getTime() > now)
+            .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+          return upcoming[0] ?? null;
+        })
+      ),
+      { initialValue: null }
+    );
   }
 
   private initializeCommittees() {
@@ -48,38 +60,6 @@ export class UpcomingCommitteeMeetingComponent implements OnInit {
         this.upcomingMeeting()
           ?.committees?.map((committee) => committee.name)
           .join(', ') ?? ''
-    );
-  }
-
-  private getNextUpcomingCommitteeMeeting(uid: string, committeeId: string | null = null) {
-    return this.meetingService.getMeetingsByProject(uid).pipe(
-      filter((meetings: Meeting[]) => {
-        // Return only meetings that have a start time in the future and has a committee value regardless of the committee id
-        return (
-          meetings.filter((meeting) => new Date(meeting.start_time).getTime() > new Date().getTime() && meeting.committees && meeting.committees?.length > 0)
-            .length > 0
-        );
-      }),
-      map((meetings: Meeting[]) => {
-        if (meetings.length > 0) {
-          if (committeeId) {
-            // Find the earliest upcoming meeting that has the committee id and return it
-            const committeeMeetings = meetings.filter(
-              (meeting) =>
-                new Date(meeting.start_time).getTime() > new Date().getTime() &&
-                meeting.committees &&
-                meeting.committees?.length > 0 &&
-                meeting.committees.some((c) => c.uid === committeeId)
-            );
-
-            return committeeMeetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0];
-          }
-
-          // Return the next upcoming meeting by date in the future
-          return meetings.filter((meeting) => new Date(meeting.start_time).getTime() > new Date().getTime())[0];
-        }
-        return null;
-      })
     );
   }
 }

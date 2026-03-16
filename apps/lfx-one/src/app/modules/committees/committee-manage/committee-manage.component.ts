@@ -246,8 +246,7 @@ export class CommitteeManageComponent {
           this.showMemberOperationToast(totalSuccess, totalFailed, totalSuccess + totalFailed);
           this.router.navigate(['/groups']);
         },
-        error: (error) => {
-          console.error('Error processing member changes:', error);
+        error: () => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -333,8 +332,7 @@ export class CommitteeManageComponent {
           // Navigate back to committees list
           this.router.navigate(['/groups']);
         },
-        error: (error: unknown) => {
-          console.error('Error saving committee and members:', error);
+        error: () => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -378,6 +376,7 @@ export class CommitteeManageComponent {
       sso_group_enabled: committee.sso_group_enabled,
       sso_group_name: committee.sso_group_name,
       website: committee.website,
+      joinable: false,
       join_mode: committee.join_mode || 'invite_only',
       member_visibility: committee.member_visibility || 'hidden',
       show_meeting_attendees: committee.show_meeting_attendees || false,
@@ -403,6 +402,7 @@ export class CommitteeManageComponent {
       public: new FormControl(false),
       sso_group_enabled: new FormControl(false),
       sso_group_name: new FormControl(''),
+      joinable: new FormControl(false),
       join_mode: new FormControl('invite_only'),
       member_visibility: new FormControl('hidden'),
       show_meeting_attendees: new FormControl(false),
@@ -455,8 +455,7 @@ export class CommitteeManageComponent {
     }
   }
 
-  private handleCommitteeError(error: unknown, operation: 'create' | 'update'): void {
-    console.error(`Error ${operation} committee:`, error);
+  private handleCommitteeError(_: unknown, operation: 'create' | 'update'): void {
     this.submitting.set(false);
 
     this.messageService.add({
@@ -570,10 +569,7 @@ export class CommitteeManageComponent {
   private createMemberOperation(type: string, operation: () => Observable<unknown>) {
     return operation().pipe(
       switchMap(() => of({ type, success: 1, failed: 0 })),
-      catchError((error) => {
-        console.error(`Error ${type} member:`, error);
-        return of({ type, success: 0, failed: 1 });
-      })
+      catchError(() => of({ type, success: 0, failed: 1 }))
     );
   }
 
