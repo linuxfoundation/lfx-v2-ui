@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -36,7 +36,7 @@ export class AssignLeadershipDialogComponent {
   public submitting = signal(false);
   public removing = signal(false);
 
-  public memberOptions: Signal<{ label: string; value: string }[]>;
+  public readonly memberOptions: { label: string; value: string }[];
 
   public constructor() {
     this.role = this.config.data?.role ?? 'chair';
@@ -51,13 +51,18 @@ export class AssignLeadershipDialogComponent {
       elected_date: new FormControl(this.currentLeader?.elected_date ? new Date(this.currentLeader.elected_date) : null),
     });
 
-    this.memberOptions = this.initializeMemberOptions();
+    this.memberOptions = this.members.map((m) => ({
+      label: `${m.first_name} ${m.last_name}${m.organization?.name ? ` — ${m.organization.name}` : ''}`,
+      value: m.uid,
+    }));
   }
 
   public onCancel(): void {
     this.dialogRef.close();
   }
 
+  // TODO: Leadership assign + clear is two separate API calls. If the second fails,
+  // two leaders can exist for the same seat. This needs a server-side atomic swap operation.
   public onSubmit(): void {
     const memberUid = this.form.value.member_uid;
     if (!memberUid) return;
@@ -141,14 +146,5 @@ export class AssignLeadershipDialogComponent {
         });
       },
     });
-  }
-
-  private initializeMemberOptions(): Signal<{ label: string; value: string }[]> {
-    return computed(() =>
-      this.members.map((m) => ({
-        label: `${m.first_name} ${m.last_name}${m.organization?.name ? ` — ${m.organization.name}` : ''}`,
-        value: m.uid,
-      }))
-    );
   }
 }

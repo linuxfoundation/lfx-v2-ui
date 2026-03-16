@@ -18,29 +18,14 @@ import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [
-    NgClass,
-    BreadcrumbComponent,
-    CardComponent,
-    ButtonComponent,
-    TagComponent,
-    RouterLink,
-    ConfirmDialogModule,
-    DynamicDialogModule,
-    TooltipModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
-  ],
+  imports: [NgClass, BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, RouterLink, ConfirmDialogModule, DynamicDialogModule, TooltipModule],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
@@ -87,7 +72,11 @@ export class CommitteeViewComponent {
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
 
   // -- Tab visibility signals --
-  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
+  public isMembersTabVisible: Signal<boolean> = computed(() => {
+    const committee = this.committee();
+    if (!committee) return false;
+    return committee.member_visibility !== 'hidden' || this.canManageConfigurations();
+  });
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
 
   // -- Dashboard stat signals --
@@ -105,6 +94,14 @@ export class CommitteeViewComponent {
     return [...new Set(orgs)];
   });
   public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public orgMemberCounts: Signal<Map<string, number>> = computed(() => {
+    const counts = new Map<string, number>();
+    this.members().forEach((m) => {
+      const org = m.organization?.name;
+      if (org) counts.set(org, (counts.get(org) || 0) + 1);
+    });
+    return counts;
+  });
   public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
     const roleCounts: Record<string, number> = {};
     this.members().forEach((m) => {
@@ -152,10 +149,6 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.next();
-  }
-
-  public getMembersCountByOrg(org: string): number {
-    return this.members().filter((m) => m.organization?.name === org).length;
   }
 
   public openAssignLeadership(role: LeadershipRole): void {
