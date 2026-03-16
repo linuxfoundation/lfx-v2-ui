@@ -4,7 +4,6 @@
 import {
   Committee,
   CommitteeCreateData,
-  CommitteeLeadership,
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
@@ -13,7 +12,6 @@ import {
   QueryServiceCountResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
-import { CommitteeMemberRole } from '@lfx-one/shared/enums';
 import { Request } from 'express';
 
 import { getUsernameFromAuth } from '../utils/auth-helper';
@@ -94,13 +92,12 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee settings and leadership data in parallel
-    const [settings, leadership] = await Promise.all([this.getCommitteeSettings(req, committeeId), this.deriveLeadership(req, committeeId, committee)]);
+    // Fetch committee settings for enrichment
+    const settings = await this.getCommitteeSettings(req, committeeId);
 
     const committeeWithEnrichment = {
       ...committee,
       ...settings,
-      ...leadership,
     };
 
     // Add writer access field to the committee
@@ -564,71 +561,5 @@ export class CommitteeService {
       committee_uid: committeeId,
       settings_data: settingsData,
     });
-  }
-
-  /**
-   * Derives chair and co_chair from the members list when the committee
-   * resource itself doesn't include them.
-   * Only fills in fields that are missing — upstream values take precedence.
-   */
-  private async deriveLeadership(
-    req: Request,
-    committeeId: string,
-    committee: Committee
-  ): Promise<{ chair?: CommitteeLeadership; co_chair?: CommitteeLeadership }> {
-    // If both are already set by the upstream, skip the members fetch
-    if (committee.chair && committee.co_chair) {
-      return {};
-    }
-
-    try {
-      const members = await this.getCommitteeMembers(req, committeeId);
-
-      const result: { chair?: CommitteeLeadership; co_chair?: CommitteeLeadership } = {};
-
-      if (!committee.chair) {
-        const chairMember = members.find((m) => m.role?.name === CommitteeMemberRole.CHAIR);
-        if (chairMember) {
-          result.chair = {
-            uid: chairMember.uid,
-            first_name: chairMember.first_name,
-            last_name: chairMember.last_name,
-            email: chairMember.email,
-            elected_date: chairMember.role?.start_date,
-            organization: chairMember.organization?.name,
-          };
-        }
-      }
-
-      if (!committee.co_chair) {
-        const viceChairMember = members.find((m) => m.role?.name === CommitteeMemberRole.VICE_CHAIR);
-        if (viceChairMember) {
-          result.co_chair = {
-            uid: viceChairMember.uid,
-            first_name: viceChairMember.first_name,
-            last_name: viceChairMember.last_name,
-            email: viceChairMember.email,
-            elected_date: viceChairMember.role?.start_date,
-            organization: viceChairMember.organization?.name,
-          };
-        }
-      }
-
-      if (result.chair || result.co_chair) {
-        logger.info(req, 'derive_leadership', 'Derived leadership from members list', {
-          committee_uid: committeeId,
-          has_chair: !!result.chair,
-          has_co_chair: !!result.co_chair,
-        });
-      }
-
-      return result;
-    } catch (error) {
-      logger.warning(req, 'derive_leadership', 'Could not derive leadership from members, proceeding without', {
-        committee_uid: committeeId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      return {};
-    }
   }
 }
