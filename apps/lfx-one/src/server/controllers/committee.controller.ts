@@ -57,14 +57,15 @@ export class CommitteeController {
   }
 
   /**
-   * GET /committees/my
+   * GET /committees/my-committees
    * Returns committees the current user is a member of, with their role in each.
    */
   public async getMyCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'get_my_committees', {});
+    const projectUid = req.query['project_uid'] as string | undefined;
+    const startTime = logger.startOperation(req, 'get_my_committees', { project_uid: projectUid });
 
     try {
-      const myCommittees = await this.committeeService.getMyCommittees(req);
+      const myCommittees = await this.committeeService.getMyCommittees(req, projectUid);
 
       logger.success(req, 'get_my_committees', startTime, {
         committee_count: myCommittees.length,

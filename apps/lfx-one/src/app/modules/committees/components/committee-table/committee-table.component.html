@@ -10,7 +10,7 @@
         <lfx-input-text
           [form]="searchForm()"
           control="search"
-          [placeholder]="'Search ' + committeeLabelPlural.toLowerCase() + '...'"
+          [placeholder]="'Search ' + committeeLabel.plural.toLowerCase() + '...'"
           icon="fa-light fa-search"
           styleClass="w-full"
           size="small"
@@ -114,8 +114,9 @@
                 [href]="'mailto:' + committee.mailing_list"
                 class="inline-flex items-center text-gray-500 hover:text-blue-600 no-underline"
                 [pTooltip]="committee.mailing_list"
-                tooltipPosition="top">
-                <i class="fa-light fa-envelope w-4 h-4"></i>
+                tooltipPosition="top"
+                aria-label="Mailing list">
+                <i class="fa-light fa-envelope w-4 h-4" aria-hidden="true"></i>
               </a>
             } @else {
               <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="No mailing list" tooltipPosition="top">
@@ -129,8 +130,9 @@
                 rel="noopener"
                 class="inline-flex items-center text-gray-500 hover:text-blue-600 no-underline"
                 pTooltip="Chat channel"
-                tooltipPosition="top">
-                <i class="fa-light fa-comment w-4 h-4"></i>
+                tooltipPosition="top"
+                aria-label="Chat channel">
+                <i class="fa-light fa-comment w-4 h-4" aria-hidden="true"></i>
               </a>
             } @else {
               <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="No chat channel" tooltipPosition="top">
@@ -174,7 +176,7 @@
                 severity="info"
                 size="small"
                 [outlined]="true"
-                (onClick)="joinClick.emit(committee)"
+                (onClick)="joinGroup(committee)"
                 [attr.data-testid]="'committee-join-' + committee.uid">
               </lfx-button>
             } @else if (committee.public && committee.join_mode === 'invite_only') {
@@ -207,7 +209,7 @@
                   [text]="true"
                   styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   [attr.data-testid]="'committee-edit-' + committee.uid"
-                  [pTooltip]="'Edit ' + committeeLabel"
+                  [pTooltip]="'Edit ' + committeeLabel.singular"
                   tooltipPosition="top">
                 </lfx-button>
               </a>
@@ -220,7 +222,7 @@
                 (onClick)="onDeleteCommittee(committee)"
                 [disabled]="isDeleting()"
                 [attr.data-testid]="'committee-delete-' + committee.uid"
-                [pTooltip]="'Delete ' + committeeLabel"
+                [pTooltip]="'Delete ' + committeeLabel.singular"
                 tooltipPosition="top">
               </lfx-button>
             </div>
@@ -232,7 +234,7 @@
       <tr>
         <td colspan="8">
           <i class="fa-light fa-folder-open text-3xl text-gray-400 mb-2"></i>
-          <p class="text-sm text-gray-500">No {{ committeeLabelPlural.toLowerCase() }} found</p>
+          <p class="text-sm text-gray-500">No {{ committeeLabel.plural.toLowerCase() }} found</p>
         </td>
       </tr>
     </ng-template>

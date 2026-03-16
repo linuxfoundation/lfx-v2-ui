@@ -436,7 +436,7 @@ export class CommitteeService {
 
   // ── My Committees ─────────────────────────────────────────────────────────
 
-  public async getMyCommittees(req: Request): Promise<MyCommittee[]> {
+  public async getMyCommittees(req: Request, projectUid?: string): Promise<MyCommittee[]> {
     const username = await getUsernameFromAuth(req);
     if (!username) {
       return [];
@@ -483,13 +483,24 @@ export class CommitteeService {
             my_role: membership.role,
             my_member_uid: membership.member_uid,
           } as MyCommittee;
-        } catch {
+        } catch (error) {
+          logger.warning(req, 'get_my_committees', 'Failed to enrich committee membership, skipping committee', {
+            committee_uid: uid,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
           return null;
         }
       })
     );
 
-    return committees.filter((c): c is MyCommittee => c !== null);
+    const result = committees.filter((c): c is MyCommittee => c !== null);
+
+    // Filter by project_uid server-side if provided
+    if (projectUid) {
+      return result.filter((c) => c.project_uid === projectUid);
+    }
+
+    return result;
   }
 
   // ── Join / Leave Methods ────────────────────────────────────────────────────

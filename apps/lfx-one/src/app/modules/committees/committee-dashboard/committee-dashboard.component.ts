@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
@@ -14,18 +14,16 @@ import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MessageService } from 'primeng/api';
 
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, EMPTY, finalize, of, startWith, switchMap } from 'rxjs';
 
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
 
 @Component({
   selector: 'lfx-committee-dashboard',
-  imports: [DecimalPipe, ButtonComponent, CardComponent, CommitteeTableComponent, ConfirmDialogModule, TooltipModule],
-  providers: [ConfirmationService],
+  imports: [DecimalPipe, NgClass, ButtonComponent, CardComponent, CommitteeTableComponent, TooltipModule],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',
 })
@@ -37,11 +35,9 @@ export class CommitteeDashboardComponent {
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
-  private readonly confirmationService = inject(ConfirmationService);
 
   // Use the configurable label constants
-  protected readonly committeeLabel = COMMITTEE_LABEL.singular;
-  protected readonly committeeLabelPlural = COMMITTEE_LABEL.plural;
+  protected readonly committeeLabel = COMMITTEE_LABEL;
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading: WritableSignal<boolean>;
@@ -68,9 +64,6 @@ export class CommitteeDashboardComponent {
   public isFoundationContext: Signal<boolean>;
   public foundationCreateCommitteeFlag: Signal<boolean>;
   public canCreateGroup: Signal<boolean>;
-
-  // Persona display
-  public personaLabel: Signal<string>;
 
   // Statistics
   public totalCommittees: Signal<number>;
@@ -104,23 +97,6 @@ export class CommitteeDashboardComponent {
     this.myCommitteesLoading = signal<boolean>(true);
     this.refresh = new BehaviorSubject<void>(undefined);
 
-    // Persona label
-    this.personaLabel = computed(() => {
-      const persona = this.personaService.currentPersona();
-      switch (persona) {
-        case 'board-member':
-          return 'Board Member';
-        case 'maintainer':
-          return 'Maintainer';
-        case 'core-developer':
-          return 'Contributor';
-        case 'projects':
-          return 'Executive Director';
-        default:
-          return 'Member';
-      }
-    });
-
     // Initialize data
     this.committees = this.initializeCommittees();
     this.myCommittees = this.initializeMyCommittees();
@@ -142,18 +118,6 @@ export class CommitteeDashboardComponent {
     this.publicCommittees = computed(() => this.committees().filter((c) => c.public).length);
     this.activeVoting = computed(() => this.committees().filter((c) => c.enable_voting).length);
     this.totalMembers = computed(() => this.committees().reduce((sum, c) => sum + (c.total_members || 0), 0));
-  }
-
-  public onCategoryChange(value: string | null): void {
-    this.categoryFilter.set(value);
-  }
-
-  public onVotingStatusChange(value: string | null): void {
-    this.votingStatusFilter.set(value);
-  }
-
-  public onSearch(): void {
-    // Trigger search through form control value changes
   }
 
   public openCreateDialog(): void {
@@ -179,86 +143,19 @@ export class CommitteeDashboardComponent {
     this.router.navigate(['/groups', committee.uid]);
   }
 
-  public joinGroup(committee: Committee): void {
-    const joinMode = committee.join_mode || 'closed';
-
-    switch (joinMode) {
-      case 'open':
-        // Direct join — backend resolves current user from auth context
-        this.committeeService.joinCommittee(committee.uid).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Joined',
-              detail: `You have joined "${committee.name}"`,
-            });
-            this.refreshCommittees();
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: `Failed to join "${committee.name}"`,
-            });
-          },
-        });
-        break;
-
-      case 'application':
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Apply to Join',
-          detail: `"${committee.name}" requires an application. This feature is coming soon.`,
-        });
-        break;
-
-      case 'invite_only':
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Invite Only',
-          detail: `"${committee.name}" is invite-only. Ask an existing member to invite you.`,
-        });
-        break;
-
-      case 'closed':
+  public getRoleBadgeClass(role: string): string {
+    switch (role?.toLowerCase()) {
+      case 'chair':
+        return 'bg-blue-100 text-blue-800';
+      case 'vice chair':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'member':
+        return 'bg-green-100 text-green-800';
+      case 'lead':
+        return 'bg-purple-100 text-purple-800';
       default:
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Closed',
-          detail: `"${committee.name}" is not currently accepting new members.`,
-        });
-        break;
+        return 'bg-gray-100 text-gray-600';
     }
-  }
-
-  public leaveGroup(committee: MyCommittee): void {
-    this.confirmationService.confirm({
-      message: `Are you sure you want to leave "${committee.name}"?`,
-      header: 'Leave Group',
-      acceptLabel: 'Leave',
-      rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
-      accept: () => {
-        this.committeeService.leaveCommittee(committee.uid).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Left Group',
-              detail: `You have left "${committee.name}"`,
-            });
-            this.refreshCommittees();
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: `Failed to leave "${committee.name}"`,
-            });
-          },
-        });
-      },
-    });
   }
 
   private initializeMyCommittees(): Signal<MyCommittee[]> {
@@ -268,14 +165,10 @@ export class CommitteeDashboardComponent {
       combineLatest([project$, this.refresh]).pipe(
         switchMap(([project]) => {
           this.myCommitteesLoading.set(true);
-          return this.committeeService.getMyCommittees().pipe(
-            catchError(() => of([] as MyCommittee[])),
-            switchMap((all) => {
-              // Scope to current project context
-              if (project?.uid) {
-                return of(all.filter((c) => c.project_uid === project.uid));
-              }
-              return of(all);
+          return this.committeeService.getMyCommittees(project?.uid).pipe(
+            catchError(() => {
+              this.myCommitteesLoading.set(false);
+              return EMPTY;
             }),
             finalize(() => this.myCommitteesLoading.set(false))
           );

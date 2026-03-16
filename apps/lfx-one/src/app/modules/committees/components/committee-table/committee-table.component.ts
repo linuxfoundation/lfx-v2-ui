@@ -52,8 +52,7 @@ export class CommitteeTableComponent {
   public committees = input.required<Committee[]>();
   public canManageCommittee = input<boolean>(false);
   public myCommitteeUids = input<Set<string>>(new Set());
-  public readonly committeeLabel = COMMITTEE_LABEL.singular;
-  public readonly committeeLabelPlural = COMMITTEE_LABEL.plural;
+  public readonly committeeLabel = COMMITTEE_LABEL;
   public searchForm = input.required<FormGroup>();
   public categoryOptions = input.required<{ label: string; value: string | null }[]>();
   public votingStatusOptions = input.required<{ label: string; value: string | null }[]>();
@@ -65,11 +64,62 @@ export class CommitteeTableComponent {
   // Outputs
   public readonly refresh = output<void>();
   public readonly rowClick = output<Committee>();
-  public readonly joinClick = output<Committee>();
+
+  public joinGroup(committee: Committee): void {
+    const joinMode = committee.join_mode || 'closed';
+
+    switch (joinMode) {
+      case 'open':
+        this.committeeService.joinCommittee(committee.uid).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Joined',
+              detail: `You have joined "${committee.name}"`,
+            });
+            this.refresh.emit();
+          },
+          error: () => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: `Failed to join "${committee.name}"`,
+            });
+          },
+        });
+        break;
+
+      case 'application':
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Apply to Join',
+          detail: `"${committee.name}" requires an application. This feature is coming soon.`,
+        });
+        break;
+
+      case 'invite_only':
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Invite Only',
+          detail: `"${committee.name}" is invite-only. Ask an existing member to invite you.`,
+        });
+        break;
+
+      case 'closed':
+      default:
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Closed',
+          detail: `"${committee.name}" is not currently accepting new members.`,
+        });
+        break;
+    }
+  }
+
   public onDeleteCommittee(committee: Committee): void {
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete the ${this.committeeLabel.toLowerCase()} "${committee.name}"? This action cannot be undone.`,
-      header: `Delete ${this.committeeLabel}`,
+      message: `Are you sure you want to delete the ${this.committeeLabel.singular.toLowerCase()} "${committee.name}"? This action cannot be undone.`,
+      header: `Delete ${this.committeeLabel.singular}`,
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
@@ -91,7 +141,7 @@ export class CommitteeTableComponent {
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
-          detail: `${this.committeeLabel} deleted successfully`,
+          detail: `${this.committeeLabel.singular} deleted successfully`,
         });
         this.refresh.emit();
       },
@@ -100,7 +150,7 @@ export class CommitteeTableComponent {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: `Failed to delete ${this.committeeLabel.toLowerCase()}`,
+          detail: `Failed to delete ${this.committeeLabel.singular.toLowerCase()}`,
         });
       },
     });
