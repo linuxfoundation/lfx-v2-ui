@@ -9,7 +9,7 @@ import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
@@ -62,7 +62,7 @@ export class CommitteeViewComponent {
   public canEdit: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
   // -- Tab visibility signals --
-  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canEdit());
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
 
   // -- Public methods --
