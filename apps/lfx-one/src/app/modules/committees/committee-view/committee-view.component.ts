@@ -370,7 +370,7 @@ export class CommitteeViewComponent {
       is_audit_enabled: committee.is_audit_enabled || false,
       public: committee.public || false,
       sso_group_enabled: committee.sso_group_enabled || false,
-      joinable: false,
+      joinable: committee.join_mode === 'open' || committee.join_mode === 'application',
       join_mode: committee.join_mode || 'closed',
       member_visibility: committee.member_visibility || 'hidden',
       show_meeting_attendees: committee.show_meeting_attendees || false,
