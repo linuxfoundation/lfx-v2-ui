@@ -35,7 +35,7 @@ export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | '
  *  - open:        Anyone can self-join; no approval required.
  *  - invite_only: Members / admins send invite links; invitee clicks to accept.
  *  - application: User submits application; admin reviews and approves/rejects.
- *  - closed:      Only admins can add members directly.
+ *  - closed:      Only admins can add members (legacy behaviour).
  */
 export type JoinMode = 'open' | 'invite_only' | 'application' | 'closed';
 
@@ -228,7 +228,7 @@ export interface Committee {
   eligibility?: GroupEligibility;
 
   // ── Join & Invite fields ──
-  /** How users can join this group (default: 'invite_only') */
+  /** How users can join this group (default: 'closed') */
   join_mode?: JoinMode;
 
   // ── Communication Channels ──
@@ -286,6 +286,8 @@ export interface CommitteeCreateData {
   website?: string;
   /** Associated project UID */
   project_uid?: string;
+  /** @deprecated Use join_mode instead */
+  joinable?: boolean;
   /** How users can join this group */
   join_mode?: JoinMode;
   /** Member profile visibility setting */
