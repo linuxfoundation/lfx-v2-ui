@@ -121,8 +121,11 @@ export class CommitteeViewComponent {
   public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]> = signal([]);
   public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null> = signal(null);
   public committeeMeetings: WritableSignal<Meeting[]> = signal([]);
+  public meetingsLoading = signal<boolean>(false);
 
   // -- Meeting computed signals --
+  // TODO: upcoming/past split uses new Date() at compute-time and won't recompute as time passes.
+  // Add a 60s interval tick signal to force recomputation when a meeting crosses the now boundary.
   public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
   public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
   public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
@@ -343,20 +346,16 @@ export class CommitteeViewComponent {
 
           const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
 
-          return committeeQuery.pipe(
-            switchMap((committee) => {
-              const meetingsQuery = this.committeeService.getCommitteeMeetings(committeeId).pipe(catchError(() => of([])));
-              return combineLatest([of(committee), membersQuery, meetingsQuery]);
-            }),
-            switchMap(([committee, members, meetings]) => {
+          return combineLatest([committeeQuery, membersQuery]).pipe(
+            switchMap(([committee, members]) => {
               this.members.set(Array.isArray(members) ? members : []);
-              this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
               this.membersLoading.set(false);
 
               this.committeeSignal.set(committee);
 
               if (committee) {
                 this.populateSettingsForm(committee);
+                this.loadMeetings(committeeId);
                 return this.loadGroupTypeData$(committeeId, committee);
               }
 
@@ -368,6 +367,20 @@ export class CommitteeViewComponent {
         takeUntilDestroyed()
       )
       .subscribe();
+  }
+
+  private loadMeetings(committeeId: string): void {
+    this.meetingsLoading.set(true);
+    this.committeeService
+      .getCommitteeMeetings(committeeId)
+      .pipe(
+        take(1),
+        catchError(() => of([]))
+      )
+      .subscribe((meetings) => {
+        this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
+        this.meetingsLoading.set(false);
+      });
   }
 
   private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {
@@ -536,7 +549,7 @@ export class CommitteeViewComponent {
       is_audit_enabled: committee.is_audit_enabled || false,
       public: committee.public || false,
       sso_group_enabled: committee.sso_group_enabled || false,
-      joinable: false,
+      joinable: committee.join_mode === 'open' || committee.join_mode === 'application',
       join_mode: committee.join_mode || 'closed',
       member_visibility: committee.member_visibility || 'hidden',
       show_meeting_attendees: committee.show_meeting_attendees || false,
