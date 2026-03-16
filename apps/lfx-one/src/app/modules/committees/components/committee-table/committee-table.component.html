@@ -107,44 +107,33 @@
           </a>
         </td>
         <td>
-          <!-- Channels: always show both icons. Gray/dimmed when data not yet available from API. -->
+          <!-- Channels: mailing_list and chat_channel are plain strings from upstream -->
           <div class="flex items-center gap-2">
-            @if (sanitizeUrl(committee.mailing_list?.url); as safeMailUrl) {
-              <!-- Mailing list configured — active link -->
+            @if (committee.mailing_list) {
               <a
-                [href]="safeMailUrl"
-                target="_blank"
-                rel="noopener"
+                [href]="'mailto:' + committee.mailing_list"
                 class="inline-flex items-center text-gray-500 hover:text-blue-600 no-underline"
-                [pTooltip]="committee.mailing_list!.name"
-                tooltipPosition="top"
-                (click)="$event.stopPropagation()">
+                [pTooltip]="committee.mailing_list"
+                tooltipPosition="top">
                 <i class="fa-light fa-envelope w-4 h-4"></i>
               </a>
             } @else {
-              <!-- Mailing list not yet available from API — grayed-out placeholder -->
-              <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="Mailing list not yet available" tooltipPosition="top">
+              <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="No mailing list" tooltipPosition="top">
                 <i class="fa-light fa-envelope w-4 h-4"></i>
               </span>
             }
-            @if (sanitizeUrl(committee.chat_channel?.url); as safeChatUrl) {
-              <!-- Chat channel configured — active link -->
+            @if (committee.chat_channel) {
               <a
-                [href]="safeChatUrl"
+                [href]="committee.chat_channel"
                 target="_blank"
                 rel="noopener"
                 class="inline-flex items-center text-gray-500 hover:text-blue-600 no-underline"
-                [pTooltip]="committee.chat_channel!.name + ' (' + committee.chat_channel!.platform + ')'"
-                tooltipPosition="top"
-                (click)="$event.stopPropagation()">
-                <i
-                  class="fa-brands w-4 h-4"
-                  [class.fa-slack]="committee.chat_channel!.platform === 'slack'"
-                  [class.fa-discord]="committee.chat_channel!.platform === 'discord'"></i>
+                pTooltip="Chat channel"
+                tooltipPosition="top">
+                <i class="fa-light fa-comment w-4 h-4"></i>
               </a>
             } @else {
-              <!-- Chat channel not yet available from API — grayed-out placeholder -->
-              <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="Chat channel not yet available" tooltipPosition="top">
+              <span class="inline-flex items-center text-gray-300 cursor-default" pTooltip="No chat channel" tooltipPosition="top">
                 <i class="fa-light fa-comment w-4 h-4"></i>
               </span>
             }
@@ -185,7 +174,7 @@
                 severity="info"
                 size="small"
                 [outlined]="true"
-                (onClick)="joinClick.emit(committee); $event.stopPropagation()"
+                (onClick)="joinClick.emit(committee)"
                 [attr.data-testid]="'committee-join-' + committee.uid">
               </lfx-button>
             } @else if (committee.public && committee.join_mode === 'invite_only') {

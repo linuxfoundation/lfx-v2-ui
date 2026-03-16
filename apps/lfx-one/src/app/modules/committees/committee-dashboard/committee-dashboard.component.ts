@@ -231,14 +231,6 @@ export class CommitteeDashboardComponent {
     }
   }
 
-  public inviteToGroup(committee: Committee): void {
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Invite Members',
-      detail: `Invite functionality for "${committee.name}" is coming soon.`,
-    });
-  }
-
   public leaveGroup(committee: MyCommittee): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to leave "${committee.name}"?`,

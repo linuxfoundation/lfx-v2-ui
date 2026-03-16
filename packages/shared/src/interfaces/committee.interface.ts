@@ -111,35 +111,6 @@ export interface CommitteeReference {
   allowed_voting_statuses?: CommitteeMemberVotingStatus[];
 }
 
-// ── Communication Channel Types ─────────────────────────────────────────────
-
-/** Platform type for chat channels */
-export type ChatPlatform = 'slack' | 'discord';
-
-/**
- * A mailing list associated with a group (e.g., Groups.io, Google Groups).
- */
-export interface GroupMailingList {
-  /** Display name of the list (e.g., "tac-general") */
-  name: string;
-  /** Full URL to the mailing list archive or subscription page */
-  url?: string;
-  /** Number of subscribers (optional, for display) */
-  subscriber_count?: number;
-}
-
-/**
- * A chat channel (Slack or Discord) associated with a group.
- */
-export interface GroupChatChannel {
-  /** Platform type */
-  platform: ChatPlatform;
-  /** Channel name (e.g., "#tac-general") */
-  name: string;
-  /** Direct link to the channel */
-  url?: string;
-}
-
 /**
  * Committee leadership position (Chair, Co-Chair, etc.)
  * @description Represents a member in a leadership position within a committee
@@ -229,10 +200,10 @@ export interface Committee {
   join_mode?: JoinMode;
 
   // ── Communication Channels ──
-  /** Mailing list associated with the group (e.g., Groups.io list) */
-  mailing_list?: GroupMailingList;
-  /** Chat channel associated with the group (Slack, Discord, etc.) */
-  chat_channel?: GroupChatChannel;
+  /** Mailing list email address associated with the group (plain string from upstream) */
+  mailing_list?: string;
+  /** Chat channel URL or identifier associated with the group (plain string from upstream) */
+  chat_channel?: string;
 
   // ── Leadership ──
   /** Chair of the committee */
@@ -300,10 +271,10 @@ export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {
   chair?: CommitteeLeadership | null;
   /** Assign or remove co-chair */
   co_chair?: CommitteeLeadership | null;
-  /** Update or clear mailing list */
-  mailing_list?: GroupMailingList | null;
+  /** Update or clear mailing list email */
+  mailing_list?: string | null;
   /** Update or clear chat channel */
-  chat_channel?: GroupChatChannel | null;
+  chat_channel?: string | null;
 }
 
 /**

@@ -66,17 +66,6 @@ export class CommitteeTableComponent {
   public readonly refresh = output<void>();
   public readonly rowClick = output<Committee>();
   public readonly joinClick = output<Committee>();
-  public readonly inviteClick = output<Committee>();
-
-  // Event handlers
-  public onAddMember(committee: Committee): void {
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Add Member',
-      detail: `Member management for "${committee.name}" is coming soon.`,
-    });
-  }
-
   public onDeleteCommittee(committee: Committee): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete the ${this.committeeLabel.toLowerCase()} "${committee.name}"? This action cannot be undone.`,
@@ -91,16 +80,6 @@ export class CommitteeTableComponent {
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);
-  }
-
-  protected sanitizeUrl(url: string | undefined): string | null {
-    if (!url) return null;
-    try {
-      const parsed = new URL(url);
-      return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? url : null;
-    } catch {
-      return null;
-    }
   }
 
   private performDelete(committee: Committee): void {

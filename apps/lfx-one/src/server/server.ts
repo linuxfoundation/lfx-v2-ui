@@ -25,7 +25,6 @@ import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
-import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
@@ -160,7 +159,6 @@ app.use(authMiddleware);
 
 // Mount API routes after authentication middleware
 // Public API routes
-app.use('/public/api/committees', publicCommitteesRouter);
 app.use('/public/api/meetings', publicMeetingsRouter);
 
 // Protected API routes
