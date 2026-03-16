@@ -242,6 +242,10 @@ export interface Committee {
   // NOTE: chair/co_chair are NOT returned by GET /committees/{uid}.
   // Leadership is derived from committee members with role.name === "Chair" / "Vice Chair".
   // Server-side enrichment will be added in a follow-up PR.
+  /** Chair leadership (client-side enriched, not from upstream) */
+  chair?: CommitteeLeadership | null;
+  /** Co-chair leadership (client-side enriched, not from upstream) */
+  co_chair?: CommitteeLeadership | null;
 }
 
 /**
