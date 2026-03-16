@@ -52,7 +52,7 @@ export class CommitteeSurveysListComponent {
   }
 
   protected onRowClick(survey: Survey): void {
-    this.onViewResults(survey.id);
+    this.onViewResults(survey.uid);
   }
 
   protected refreshSurveys(): void {
@@ -102,7 +102,7 @@ export class CommitteeSurveysListComponent {
       const surveyId = this.selectedSurveyId();
       if (!surveyId) return null;
 
-      const survey = this.surveys().find((s) => s.id === surveyId);
+      const survey = this.surveys().find((s) => s.uid === surveyId);
       if (!survey) return null;
 
       const committeeData = this.getCommitteeData(survey);

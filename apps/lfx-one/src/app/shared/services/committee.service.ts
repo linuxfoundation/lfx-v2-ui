@@ -17,8 +17,6 @@ import {
   CommitteeResolution,
   CommitteeVote,
   CreateCommitteeMemberRequest,
-  Meeting,
-  PaginatedResponse,
   CreateGroupInviteRequest,
   GroupInvite,
   GroupJoinApplication,

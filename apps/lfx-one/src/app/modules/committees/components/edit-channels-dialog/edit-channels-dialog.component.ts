@@ -6,14 +6,14 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { ChatPlatform, Committee, GroupChatChannel, GroupMailingList } from '@lfx-one/shared/interfaces';
+import { Committee } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 export interface EditChannelsDialogResult {
-  mailing_list?: GroupMailingList | null;
-  chat_channel?: GroupChatChannel | null;
+  mailing_list?: string | null;
+  chat_channel?: string | null;
 }
 
 @Component({
@@ -41,11 +41,11 @@ export class EditChannelsDialogComponent {
     this.committee = this.config.data?.committee;
 
     this.form = new FormGroup({
-      mailingListName: new FormControl(this.committee?.mailing_list?.name ?? ''),
-      mailingListUrl: new FormControl(this.committee?.mailing_list?.url ?? ''),
-      chatChannelPlatform: new FormControl<string>(this.committee?.chat_channel?.platform ?? 'slack'),
-      chatChannelName: new FormControl(this.committee?.chat_channel?.name ?? ''),
-      chatChannelUrl: new FormControl(this.committee?.chat_channel?.url ?? ''),
+      mailingListName: new FormControl(this.committee?.mailing_list ?? ''),
+      mailingListUrl: new FormControl(''),
+      chatChannelPlatform: new FormControl<string>('slack'),
+      chatChannelName: new FormControl(this.committee?.chat_channel ?? ''),
+      chatChannelUrl: new FormControl(''),
     });
   }
 
@@ -60,20 +60,10 @@ export class EditChannelsDialogComponent {
 
     const val = this.form.value;
 
-    const mailingList: GroupMailingList | undefined = val.mailingListName
-      ? {
-          name: val.mailingListName,
-          url: val.mailingListUrl || undefined,
-          subscriber_count: this.committee?.mailing_list?.subscriber_count,
-        }
-      : undefined;
+    const mailingList: string | undefined = val.mailingListName ? val.mailingListName : undefined;
 
-    const chatChannel: GroupChatChannel | undefined = val.chatChannelName
-      ? {
-          platform: val.chatChannelPlatform as ChatPlatform,
-          name: val.chatChannelName,
-          url: val.chatChannelUrl || undefined,
-        }
+    const chatChannel: string | undefined = val.chatChannelName
+      ? val.chatChannelUrl || val.chatChannelName
       : undefined;
 
     const payload: Partial<Committee> = {
@@ -90,8 +80,8 @@ export class EditChannelsDialogComponent {
           detail: 'Channels updated successfully',
         });
         const result: EditChannelsDialogResult = {
-          mailing_list: mailingList ?? null,
-          chat_channel: chatChannel ?? null,
+          mailing_list: mailingList || null,
+          chat_channel: chatChannel || null,
         };
         this.dialogRef.close(result);
       },
