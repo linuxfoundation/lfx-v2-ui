@@ -75,10 +75,10 @@ export class CommitteeController {
     const projectUid = req.query['project_uid'] as string | undefined;
     const startTime = logger.startOperation(req, 'get_public_committees', { project_uid: projectUid });
 
-    try {
-      // Save original token (public route — typically undefined)
-      const originalToken = req.bearerToken;
+    // Save original token (public route — typically undefined)
+    const originalToken = req.bearerToken;
 
+    try {
       // Generate M2M token for unauthenticated backend calls
       const m2mToken = await generateM2MToken(req);
       req.bearerToken = m2mToken;
@@ -86,13 +86,6 @@ export class CommitteeController {
       const committees = projectUid
         ? await this.committeeService.getPublicCommitteesByProject(req, projectUid)
         : await this.committeeService.getPublicCommittees(req);
-
-      // Restore original token
-      if (originalToken !== undefined) {
-        req.bearerToken = originalToken;
-      } else {
-        delete req.bearerToken;
-      }
 
       logger.success(req, 'get_public_committees', startTime, {
         project_uid: projectUid,
@@ -102,6 +95,13 @@ export class CommitteeController {
       res.json(committees.map(toPublicCommittee));
     } catch (error) {
       next(error);
+    } finally {
+      // Always restore original token to prevent M2M token leak
+      if (originalToken !== undefined) {
+        req.bearerToken = originalToken;
+      } else {
+        delete req.bearerToken;
+      }
     }
   }
 
