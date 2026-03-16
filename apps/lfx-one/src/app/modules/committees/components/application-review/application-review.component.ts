@@ -32,9 +32,9 @@ export class ApplicationReviewComponent {
   // Permissions — only writers can review applications
   public canReview: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
-  // Only show this section if the group uses the 'apply' join mode
+  // Only show this section if the group uses the 'application' join mode
   public isApplyMode: Signal<boolean> = computed(() => {
-    return this.committee()?.join_mode === 'apply';
+    return this.committee()?.join_mode === 'application';
   });
 
   public pendingApplications: Signal<GroupJoinApplication[]> = computed(() => {
@@ -53,7 +53,7 @@ export class ApplicationReviewComponent {
         this.loading.set(false);
         return;
       }
-      if (c.join_mode !== 'apply') {
+      if (c.join_mode !== 'application') {
         this.applications.set([]);
         this.loading.set(false);
         return;
