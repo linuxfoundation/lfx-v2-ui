@@ -936,11 +936,12 @@
               <div class="flex items-center justify-between gap-4">
                 <h3 class="text-base font-semibold"><i class="fa-light fa-calendar text-gray-400 mr-2"></i>Meetings</h3>
                 <div class="flex items-center gap-3">
-                  <div class="flex rounded-md border border-gray-200 overflow-hidden text-sm">
+                  <div class="flex rounded-md border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Meeting filter">
                     <button
                       type="button"
                       class="px-4 py-1.5 font-medium transition-colors"
                       [ngClass]="meetingViewFilter() === 'upcoming' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      [attr.aria-pressed]="meetingViewFilter() === 'upcoming'"
                       (click)="meetingViewFilter.set('upcoming')"
                       data-testid="committee-meetings-upcoming-btn">
                       Upcoming
@@ -949,12 +950,13 @@
                       type="button"
                       class="px-4 py-1.5 font-medium border-l border-gray-200 transition-colors"
                       [ngClass]="meetingViewFilter() === 'past' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'"
+                      [attr.aria-pressed]="meetingViewFilter() === 'past'"
                       (click)="meetingViewFilter.set('past')"
                       data-testid="committee-meetings-past-btn">
                       Past
                     </button>
                   </div>
-                  @if (!isBoardMember()) {
+                  @if (canManageConfigurations()) {
                     <lfx-button
                       icon="fa-light fa-plus"
                       label="Create Meeting"
@@ -969,7 +971,13 @@
               </div>
 
               <!-- Meeting cards -->
-              @if (meetingViewFilter() === 'upcoming' && upcomingMeetings().length > 0) {
+              @if (meetingsLoading()) {
+                <div class="flex flex-col gap-3" data-testid="meetings-loading-skeleton">
+                  @for (i of [1, 2, 3]; track i) {
+                    <div class="h-24 bg-gray-100 rounded-lg animate-pulse"></div>
+                  }
+                </div>
+              } @else if (meetingViewFilter() === 'upcoming' && upcomingMeetings().length > 0) {
                 <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
                   @for (meeting of upcomingMeetings(); track meeting.id) {
                     <lfx-meeting-card
@@ -980,6 +988,8 @@
                     </lfx-meeting-card>
                   }
                 </div>
+                <!-- Past meetings: pastMeeting=false because these are scheduled Meeting[] filtered by date,
+                   not PastMeeting[] with recording/attachment data. TODO: wire getPastMeetingsByProject for full past-meeting support. -->
               } @else if (meetingViewFilter() === 'past' && pastCommitteeMeetings().length > 0) {
                 <div class="flex flex-col gap-4" data-testid="committee-view-meetings">
                   @for (meeting of pastCommitteeMeetings(); track meeting.id) {
@@ -987,7 +997,7 @@
                       [attr.data-testid]="'committee-meeting-card-' + meeting.id"
                       [meetingInput]="meeting"
                       [showBorder]="true"
-                      [pastMeeting]="true">
+                      [pastMeeting]="false">
                     </lfx-meeting-card>
                   }
                 </div>
