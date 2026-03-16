@@ -99,8 +99,8 @@ export class SnowflakeService {
     // Strip string literals from SQL for span attributes to avoid PII leaks
     const sanitizedSql = sqlText.replace(/'[^']*'/g, '?').substring(0, 100);
 
-    // Execute with lock to prevent duplicate queries
-    return this.lockManager.executeLocked(queryHash, () => {
+    // Lock first to deduplicate, then open span only for the executing query
+    return this.lockManager.executeLocked(queryHash, async () => {
       return tracer.startActiveSpan(
         `Snowflake ${sqlOp}`,
         {
@@ -114,12 +114,13 @@ export class SnowflakeService {
           },
         },
         async (span) => {
-          const startTime = logger.startOperation(undefined, 'snowflake_query', {
+          logger.debug(undefined, 'snowflake_query', 'Executing query', {
             query_hash: queryHash,
-            sql_preview: sqlText.substring(0, 100),
+            sql_preview: sqlText.substring(0, 100).replace(/\s+/g, ' ').trim(),
             bind_count: binds?.length || 0,
           });
 
+          const startTime = Date.now();
           const pool = await this.ensurePool();
 
           try {
@@ -145,16 +146,16 @@ export class SnowflakeService {
               });
             });
 
+            const rowCount = result.rows.length;
             const poolStats = this.getPoolStats();
-
-            const rowCount = result.rows?.length ?? 0;
 
             span.setStatus({ code: SpanStatusCode.OK });
             span.setAttribute(ATTR_DB_RESPONSE_RETURNED_ROWS, rowCount);
 
-            logger.success(undefined, 'snowflake_query', startTime, {
+            logger.debug(undefined, 'snowflake_query', 'Query completed', {
               query_hash: queryHash,
               row_count: rowCount,
+              duration_ms: Date.now() - startTime,
               pool_active: poolStats.activeConnections,
               pool_idle: poolStats.idleConnections,
             });
@@ -169,7 +170,7 @@ export class SnowflakeService {
 
             logger.error(undefined, 'snowflake_query', startTime, error instanceof Error ? error : new Error(String(error)), {
               query_hash: queryHash,
-              sql_preview: sqlText.substring(0, 100),
+              sql_preview: sqlText.substring(0, 100).replace(/\s+/g, ' ').trim(),
             });
 
             // Wrap Snowflake SDK errors in MicroserviceError for proper error handling

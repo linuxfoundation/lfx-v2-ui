@@ -4,31 +4,39 @@
 import { QueryServiceMeetingType } from '@lfx-one/shared/enums';
 import {
   ApiResponse,
+  AttachmentDownloadUrlResponse,
+  CreateMeetingAttachmentRequest,
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   CreateMeetingRsvpRequest,
   Meeting,
+  MeetingAttachment,
   MeetingJoinURL,
   MeetingRegistrant,
   MeetingRsvp,
   PaginatedResponse,
+  PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
+  PresignAttachmentRequest,
+  PresignAttachmentResponse,
   QueryServiceCountResponse,
   QueryServiceResponse,
+  UpdateMeetingAttachmentRequest,
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UpdatePastMeetingSummaryRequest,
+  ITXCreateMeetingResponseRequest,
+  ITXMeetingResponseResult,
 } from '@lfx-one/shared/interfaces';
-import { transformV1SummaryToV2 } from '@lfx-one/shared/utils';
+import { mapITXResponseToMeetingRsvp, transformV1SummaryToV2 } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth } from '../utils/auth-helper';
-import { generateM2MToken } from '../utils/m2m-token.util';
+import { getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
@@ -415,6 +423,36 @@ export class MeetingService {
   }
 
   /**
+   * Fetches all registrants for a meeting by username.
+   * Strips any auth provider prefix (e.g. "auth0|") since the query service stores plain usernames.
+   */
+  public async getMeetingRegistrantsByUsername(req: Request, meetingUid: string, username: string, m2mToken?: string): Promise<MeetingRegistrant[]> {
+    const plainUsername = stripAuthPrefix(username);
+    const params: Record<string, any> = {
+      type: 'v1_meeting_registrant',
+      parent: '',
+      tags_all: [`username:${plainUsername}`, `meeting_id:${meetingUid}`],
+      page_size: 100,
+    };
+
+    logger.debug(req, 'get_meeting_registrants_by_username', 'Fetching meeting registrants by username', { meeting_id: meetingUid, username: plainUsername });
+
+    const headers = m2mToken ? { Authorization: `Bearer ${m2mToken}` } : undefined;
+
+    return fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        { ...params, ...(pageToken && { page_token: pageToken }) },
+        undefined,
+        headers
+      )
+    );
+  }
+
+  /**
    * Creates a new meeting registrant
    */
   public async addMeetingRegistrant(req: Request, registrantData: CreateMeetingRegistrantRequest): Promise<MeetingRegistrant> {
@@ -640,7 +678,7 @@ export class MeetingService {
   }
 
   /**
-   * Create or update a meeting RSVP
+   * Create or update a meeting RSVP via the ITX responses endpoint
    */
   public async createMeetingRsvp(req: Request, meetingUid: string, rsvpData: CreateMeetingRsvpRequest): Promise<MeetingRsvp> {
     logger.debug(req, 'create_meeting_rsvp', 'Creating meeting RSVP', {
@@ -649,22 +687,68 @@ export class MeetingService {
       scope: rsvpData.scope,
     });
 
-    // Backend derives user from bearer token, so we don't need to pass username/email/registrant_id
-    const requestData: CreateMeetingRsvpRequest = {
+    // Resolve registrant_id — try email first, fall back to username
+    const rawEmail = req.oidc?.user?.['email'] as string | undefined;
+    const email = rawEmail?.toLowerCase();
+    let registrants: MeetingRegistrant[] = [];
+
+    if (email) {
+      registrants = await this.getMeetingRegistrantsByEmail(req, meetingUid, email);
+    }
+
+    if (registrants.length === 0) {
+      const username = await getUsernameFromAuth(req);
+      if (username) {
+        registrants = await this.getMeetingRegistrantsByUsername(req, meetingUid, username);
+      }
+    }
+
+    if (registrants.length === 0) {
+      throw new ResourceNotFoundError('Registrant', email || 'unknown', {
+        operation: 'create_meeting_rsvp',
+      });
+    }
+
+    const registrantId = registrants[0].uid;
+
+    // Build effective meeting ID for occurrence-specific RSVPs
+    const effectiveMeetingId = rsvpData.occurrence_id ? `${meetingUid}-${rsvpData.occurrence_id}` : meetingUid;
+
+    const requestData: ITXCreateMeetingResponseRequest = {
       response: rsvpData.response,
       scope: rsvpData.scope,
-      occurrence_id: rsvpData.occurrence_id,
-      email: rsvpData.email,
-      username: rsvpData.username,
+      registrant_id: registrantId,
     };
 
-    const rsvp = await this.microserviceProxy.proxyRequest<MeetingRsvp>(req, 'LFX_V2_SERVICE', `/itx/meetings/${meetingUid}/rsvp`, 'POST', {}, requestData);
+    const result = await this.microserviceProxy.proxyRequest<ITXMeetingResponseResult>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/meetings/${effectiveMeetingId}/responses`,
+      'POST',
+      {},
+      requestData
+    );
+
+    const rsvp = mapITXResponseToMeetingRsvp(result);
+
+    // Poll query service until the RSVP is propagated so the UI can fetch it immediately
+    await pollEndpoint({
+      req,
+      operation: 'create_meeting_rsvp_poll',
+      pollFn: async () => {
+        const allRsvps = await this.getMeetingRsvps(req, meetingUid);
+        return allRsvps.some((r) => r.id === rsvp.id && r.response === rsvp.response);
+      },
+      maxRetries: 5,
+      retryDelayMs: 1000,
+      metadata: { meeting_id: meetingUid, rsvp_id: rsvp.id },
+    });
 
     return rsvp;
   }
 
   /**
-   * Get current user's RSVP by calling meeting service directly with M2M token
+   * Get current user's RSVP via the query service
    * @param req Express request object
    * @param meetingUid Meeting UID to get RSVP for
    * @param occurrenceId Optional occurrence ID to filter RSVP for specific occurrence
@@ -687,27 +771,11 @@ export class MeetingService {
         return null;
       }
 
-      // Generate M2M token and set it on the request
-      const m2mToken = await generateM2MToken(req);
+      // Fetch all RSVPs for this meeting via query service
+      const allRsvps = await this.getMeetingRsvps(req, meetingUid);
 
-      // Call meeting service directly to get all RSVPs for this meeting
-      const response = await this.microserviceProxy.proxyRequest<{ rsvps: MeetingRsvp[] }>(
-        req,
-        'LFX_V2_SERVICE',
-        `/itx/meetings/${meetingUid}/rsvp`,
-        'GET',
-        undefined,
-        undefined,
-        {
-          Authorization: `Bearer ${m2mToken}`,
-        }
-      );
-
-      // Handle response - it might be wrapped in { data: [] } or be a direct array
-      const allRsvps = response.rsvps ?? [];
-
-      // Filter RSVPs for current user
-      const userRsvps = allRsvps.filter((rsvp) => rsvp.username === username);
+      // Filter RSVPs for current user (match with and without auth provider prefix)
+      const userRsvps = allRsvps.filter((rsvp) => usernameMatches(username, rsvp.username));
 
       if (occurrenceId) {
         // First try to find an occurrence-specific RSVP (takes precedence)
@@ -762,19 +830,34 @@ export class MeetingService {
   }
 
   /**
-   * Creates a new meeting attachment via LFX V2 API
-   * @param req - Express request object
-   * @param meetingUid - Meeting UID to attach file to
-   * @param attachmentData - Form data including type, name, and file/url
-   * @returns The created meeting attachment
+   * Gets all meeting attachments via Query Service
    */
-  public async createMeetingAttachment(req: Request, meetingUid: string, attachmentData: any): Promise<any> {
-    logger.debug(req, 'create_meeting_attachment', 'Creating meeting attachment', { meeting_id: meetingUid });
+  public async getMeetingAttachments(req: Request, meetingUid: string): Promise<MeetingAttachment[]> {
+    const params = {
+      type: 'v1_meeting_attachment',
+      parent: `meeting:${meetingUid}`,
+    };
 
-    // Call the LFX V2 API endpoint with multipart/form-data
-    // The attachmentData should be a FormData object from the controller
-    // The API client will automatically handle FormData and set the correct Content-Type with boundary
-    const attachment = await this.microserviceProxy.proxyRequest<any>(
+    logger.debug(req, 'get_meeting_attachments', 'Fetching meeting attachments', { meeting_id: meetingUid, query_params: params });
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingAttachment>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      params
+    );
+
+    return resources.map((resource) => resource.data);
+  }
+
+  /**
+   * Creates a new meeting attachment (link or file record) via ITX proxy
+   */
+  public async createMeetingAttachment(req: Request, meetingUid: string, attachmentData: CreateMeetingAttachmentRequest): Promise<MeetingAttachment> {
+    logger.debug(req, 'create_meeting_attachment', 'Creating meeting attachment', { meeting_id: meetingUid, type: attachmentData.type });
+
+    return this.microserviceProxy.proxyRequest<MeetingAttachment>(
       req,
       'LFX_V2_SERVICE',
       `/itx/meetings/${meetingUid}/attachments`,
@@ -782,92 +865,169 @@ export class MeetingService {
       undefined,
       attachmentData
     );
-
-    return attachment;
   }
 
   /**
-   * Gets a meeting attachment (downloads file) via LFX V2 API
-   * @param req - Express request object
-   * @param meetingUid - Meeting UID that the attachment belongs to
-   * @param attachmentUid - Attachment UID to get
-   * @returns The attachment file data
+   * Updates an existing meeting attachment via ITX proxy
+   * Returns 204 No Content on success
    */
-  public async getMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<Buffer> {
-    logger.debug(req, 'get_meeting_attachment', 'Fetching meeting attachment', { meeting_id: meetingUid, attachment_uid: attachmentUid });
+  public async updateMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string, updateData: UpdateMeetingAttachmentRequest): Promise<void> {
+    logger.debug(req, 'update_meeting_attachment', 'Updating meeting attachment', { meeting_id: meetingUid, attachment_uid: attachmentUid });
 
-    // Use the microservice proxy to download the binary file
-    const buffer = await this.microserviceProxy.proxyBinaryRequest(req, 'LFX_V2_SERVICE', `/itx/meetings/${meetingUid}/attachments/${attachmentUid}`, 'GET');
-
-    return buffer;
+    await this.microserviceProxy.proxyRequest<void>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/meetings/${meetingUid}/attachments/${attachmentUid}`,
+      'PUT',
+      undefined,
+      updateData
+    );
   }
 
   /**
-   * Deletes a meeting attachment via LFX V2 API
-   * @param req - Express request object
-   * @param meetingUid - Meeting UID that the attachment belongs to
-   * @param attachmentUid - Attachment UID to delete
+   * Deletes a meeting attachment via ITX proxy
    */
   public async deleteMeetingAttachment(req: Request, meetingUid: string, attachmentUid: string): Promise<void> {
     logger.debug(req, 'delete_meeting_attachment', 'Deleting meeting attachment', { meeting_id: meetingUid, attachment_uid: attachmentUid });
 
-    // Call the LFX V2 API endpoint to delete the attachment
     await this.microserviceProxy.proxyRequest<void>(req, 'LFX_V2_SERVICE', `/itx/meetings/${meetingUid}/attachments/${attachmentUid}`, 'DELETE');
   }
 
-  public async getMeetingAttachmentMetadata(req: Request, meetingUid: string, attachmentUid: string): Promise<any> {
-    logger.debug(req, 'get_meeting_attachment_metadata', 'Fetching meeting attachment metadata', { meeting_id: meetingUid, attachment_uid: attachmentUid });
+  /**
+   * Gets metadata for a single meeting attachment via ITX proxy
+   */
+  public async getMeetingAttachmentInfo(req: Request, meetingUid: string, attachmentUid: string): Promise<MeetingAttachment> {
+    logger.debug(req, 'get_meeting_attachment_info', 'Fetching meeting attachment info', { meeting_id: meetingUid, attachment_uid: attachmentUid });
 
-    const metadata = await this.microserviceProxy.proxyRequest<any>(
-      req,
-      'LFX_V2_SERVICE',
-      `/itx/meetings/${meetingUid}/attachments/${attachmentUid}/metadata`,
-      'GET'
-    );
-
-    return metadata;
+    return this.microserviceProxy.proxyRequest<MeetingAttachment>(req, 'LFX_V2_SERVICE', `/itx/meetings/${meetingUid}/attachments/${attachmentUid}`, 'GET');
   }
 
   /**
-   * Gets all meeting attachments via Query Service
-   * @param req - Express request object
-   * @param meetingUid - Meeting UID to get attachments for
-   * @returns Array of meeting attachments
+   * Generates a presigned upload URL for a meeting file attachment
    */
-  public async getMeetingAttachments(req: Request, meetingUid: string): Promise<any[]> {
-    const params = {
-      type: 'meeting_attachment',
-      tags: `meeting_id:${meetingUid}`,
-    };
+  public async presignMeetingAttachment(req: Request, meetingUid: string, presignData: PresignAttachmentRequest): Promise<PresignAttachmentResponse> {
+    logger.debug(req, 'presign_meeting_attachment', 'Generating presigned upload URL', { meeting_id: meetingUid, file_name: presignData.name });
 
-    logger.debug(req, 'get_meeting_attachments', 'Fetching meeting attachments', { meeting_id: meetingUid, query_params: params });
+    return this.microserviceProxy.proxyRequest<PresignAttachmentResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/meetings/${meetingUid}/attachments/presign`,
+      'POST',
+      undefined,
+      presignData
+    );
+  }
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+  /**
+   * Presigns a meeting file attachment then uploads the binary directly to S3.
+   * Consolidates the two-step presign+upload flow into a single server-side call,
+   * avoiding browser CORS restrictions on S3.
+   */
+  public async uploadMeetingAttachment(
+    req: Request,
+    meetingUid: string,
+    fileBuffer: Buffer,
+    presignData: PresignAttachmentRequest
+  ): Promise<PresignAttachmentResponse> {
+    logger.debug(req, 'upload_meeting_attachment', 'Presigning attachment', { meeting_id: meetingUid, file_name: presignData.name });
 
-    const attachments = resources.map((resource) => resource.data);
+    const presignResponse = await this.presignMeetingAttachment(req, meetingUid, presignData);
 
-    return attachments;
+    logger.debug(req, 'upload_meeting_attachment', 'Uploading file to S3', {
+      meeting_id: meetingUid,
+      attachment_uid: presignResponse.uid,
+      file_size: presignData.file_size,
+    });
+
+    const s3Response = await fetch(presignResponse.file_url, {
+      method: 'PUT',
+      body: new Uint8Array(fileBuffer),
+      headers: {
+        'Content-Type': presignData.file_type,
+        'Content-Length': String(presignData.file_size),
+      },
+      signal: AbortSignal.timeout(5 * 60 * 1000),
+    });
+
+    if (!s3Response.ok) {
+      const errorText = await s3Response.text().catch(() => '');
+      throw new Error(`S3 upload failed with status ${s3Response.status}: ${errorText}`);
+    }
+
+    logger.info(req, 'upload_meeting_attachment', 'File uploaded to S3 successfully', {
+      meeting_id: meetingUid,
+      attachment_uid: presignResponse.uid,
+      file_name: presignData.name,
+    });
+
+    return presignResponse;
+  }
+
+  /**
+   * Gets a presigned download URL for a meeting attachment
+   */
+  public async getMeetingAttachmentDownloadUrl(req: Request, meetingUid: string, attachmentUid: string): Promise<AttachmentDownloadUrlResponse> {
+    logger.debug(req, 'get_meeting_attachment_download_url', 'Getting download URL', { meeting_id: meetingUid, attachment_uid: attachmentUid });
+
+    return this.microserviceProxy.proxyRequest<AttachmentDownloadUrlResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/meetings/${meetingUid}/attachments/${attachmentUid}/download`,
+      'GET'
+    );
   }
 
   /**
    * Gets all past meeting attachments via Query Service
-   * @param req - Express request object
-   * @param pastMeetingUid - Past meeting UID to get attachments for
-   * @returns Array of past meeting attachments
    */
-  public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<any[]> {
+  public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<PastMeetingAttachment[]> {
     const params = {
-      type: 'past_meeting_attachment',
-      tags: `past_meeting_id:${pastMeetingUid}`,
+      type: 'v1_past_meeting_attachment',
+      parent: `past_meeting:${pastMeetingUid}`,
     };
 
-    logger.debug(req, 'get_past_meeting_attachments', 'Fetching past meeting attachments', { past_meeting_id: pastMeetingUid, query_params: params });
+    logger.debug(req, 'get_past_meeting_attachments', 'Fetching past meeting attachments', { past_meeting_id: pastMeetingUid });
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingAttachment>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      params
+    );
 
-    const attachments = resources.map((resource) => resource.data);
+    return resources.map((resource) => resource.data);
+  }
 
-    return attachments;
+  /**
+   * Gets a single past meeting attachment by UID via ITX proxy
+   */
+  public async getPastMeetingAttachmentInfo(req: Request, pastMeetingUid: string, attachmentUid: string): Promise<PastMeetingAttachment> {
+    logger.debug(req, 'get_past_meeting_attachment_info', 'Fetching past meeting attachment info', {
+      past_meeting_id: pastMeetingUid,
+      attachment_uid: attachmentUid,
+    });
+
+    return this.microserviceProxy.proxyRequest<PastMeetingAttachment>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/past_meetings/${pastMeetingUid}/attachments/${attachmentUid}`,
+      'GET'
+    );
+  }
+
+  /**
+   * Gets a presigned download URL for a past meeting attachment
+   */
+  public async getPastMeetingAttachmentDownloadUrl(req: Request, pastMeetingUid: string, attachmentUid: string): Promise<AttachmentDownloadUrlResponse> {
+    logger.debug(req, 'get_past_meeting_attachment_download_url', 'Getting download URL', { past_meeting_id: pastMeetingUid, attachment_uid: attachmentUid });
+
+    return this.microserviceProxy.proxyRequest<AttachmentDownloadUrlResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/itx/past_meetings/${pastMeetingUid}/attachments/${attachmentUid}/download`,
+      'GET'
+    );
   }
 
   /**

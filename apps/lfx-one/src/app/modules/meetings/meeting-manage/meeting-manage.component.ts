@@ -27,6 +27,7 @@ import {
   MeetingAttachment,
   MeetingRegistrant,
   PendingAttachment,
+  PresignAttachmentResponse,
   RegistrantPendingChanges,
   UpdateMeetingRequest,
 } from '@lfx-one/shared/interfaces';
@@ -242,6 +243,16 @@ export class MeetingManageComponent {
     this.submitting.set(true);
     const meetingData = this.prepareMeetingData();
 
+    if (!meetingData.project_uid) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Project is required. Please select a project before saving.',
+      });
+      this.submitting.set(false);
+      return;
+    }
+
     if (this.isEditMode()) {
       this.meetingService.updateMeeting(this.meetingId()!, meetingData as UpdateMeetingRequest, 'single').subscribe({
         next: () => this.handleMeetingSuccess(),
@@ -313,7 +324,7 @@ export class MeetingManageComponent {
           registrants: { type: string; success: number; failed: number }[];
           attachments: {
             deletions: { successes: number; failures: string[] };
-            uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+            uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
             links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
           } | null;
         }) => {
@@ -560,7 +571,7 @@ export class MeetingManageComponent {
 
   private handleAttachmentOperationsResults(result: {
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   }): void {
     const totalDeleteSuccesses = result.deletions.successes;
@@ -956,7 +967,7 @@ export class MeetingManageComponent {
 
   private processAttachmentOperations(meetingId: string): Observable<{
     deletions: { successes: number; failures: string[] };
-    uploads: { successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] };
+    uploads: { successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] };
     links: { successes: MeetingAttachment[]; failures: { linkName: string; error: any }[] };
   } | null> {
     const hasPendingDeletions = this.pendingAttachmentDeletions().length > 0;
@@ -999,7 +1010,7 @@ export class MeetingManageComponent {
 
     return from(attachmentIdsToDelete).pipe(
       mergeMap((attachmentId) =>
-        this.meetingService.deleteAttachment(meetingId, attachmentId).pipe(
+        this.meetingService.deleteMeetingAttachment(meetingId, attachmentId).pipe(
           switchMap(() => of({ success: attachmentId, failure: null })),
           catchError(() => of({ success: null, failure: attachmentId }))
         )
@@ -1014,7 +1025,7 @@ export class MeetingManageComponent {
     );
   }
 
-  private savePendingAttachments(meetingId: string): Observable<{ successes: MeetingAttachment[]; failures: { fileName: string; error: any }[] }> {
+  private savePendingAttachments(meetingId: string): Observable<{ successes: PresignAttachmentResponse[]; failures: { fileName: string; error: any }[] }> {
     const attachmentsToSave = this.pendingAttachments.filter(
       (attachment) => !attachment.uploading && !attachment.uploadError && !attachment.uploaded && attachment.file
     );
@@ -1025,10 +1036,16 @@ export class MeetingManageComponent {
 
     return from(attachmentsToSave).pipe(
       mergeMap((attachment) =>
-        this.meetingService.createFileAttachment(meetingId, attachment.file).pipe(
-          switchMap((result) => of({ success: result, failure: null })),
-          catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
-        )
+        this.meetingService
+          .uploadMeetingFile(meetingId, attachment.file, {
+            name: attachment.fileName,
+            file_size: attachment.fileSize,
+            file_type: attachment.mimeType,
+          })
+          .pipe(
+            switchMap((result) => of({ success: result, failure: null })),
+            catchError((error) => of({ success: null, failure: { fileName: attachment.fileName, error } }))
+          )
       ),
       toArray(),
       switchMap((results) => {
@@ -1052,7 +1069,7 @@ export class MeetingManageComponent {
 
     return from(linksToSave).pipe(
       mergeMap((link: ImportantLinkFormValue) =>
-        this.meetingService.createAttachmentFromUrl(meetingId, link.title, link.url).pipe(
+        this.meetingService.createMeetingAttachment(meetingId, { type: 'link', category: 'Other', name: link.title, link: link.url }).pipe(
           switchMap((result) => of({ success: result, failure: null })),
           catchError((error) => of({ success: null, failure: { linkName: link.title, error } }))
         )
