@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -19,7 +20,7 @@ import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } f
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, ConfirmDialogModule, RouterLink, RouteLoadingComponent],
+  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, ConfirmDialogModule, RouterLink, RouteLoadingComponent, DatePipe],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -44,8 +45,6 @@ export class CommitteeViewComponent {
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
-  public formattedCreatedDate: Signal<string> = this.initializeFormattedCreatedDate();
-  public formattedUpdatedDate: Signal<string> = this.initializeFormattedUpdatedDate();
 
   public categorySeverity: Signal<TagSeverity> = computed(() => {
     const category = this.committee()?.category;
@@ -120,31 +119,4 @@ export class CommitteeViewComponent {
       { initialValue: null }
     );
   }
-
-  private initializeFormattedCreatedDate(): Signal<string> {
-    return computed(() => {
-      const committee = this.committee();
-      if (!committee?.created_at) return '-';
-      const date = new Date(committee.created_at);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    });
-  }
-
-  private initializeFormattedUpdatedDate(): Signal<string> {
-    return computed(() => {
-      const committee = this.committee();
-      if (!committee?.updated_at) return '-';
-      const date = new Date(committee.updated_at);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    });
-  }
-
 }
