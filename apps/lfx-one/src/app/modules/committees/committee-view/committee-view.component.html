@@ -1077,7 +1077,20 @@
           <p-tabpanel value="surveys">
             <div class="pt-4" data-testid="committee-view-surveys-tab">
               @if (committee(); as c) {
-                <lfx-committee-surveys-list [projectUid]="c.project_uid" [committeeName]="c.name" [hasPMOAccess]="canManageConfigurations()">
+                <div class="flex items-center justify-end mb-4">
+                  @if (canManageConfigurations()) {
+                    <lfx-button
+                      icon="fa-light fa-plus"
+                      label="Create Survey"
+                      size="small"
+                      severity="secondary"
+                      styleClass="p-button-outlined"
+                      (onClick)="createSurvey()"
+                      data-testid="committee-view-create-survey-btn">
+                    </lfx-button>
+                  }
+                </div>
+                <lfx-committee-surveys-list [committeeUid]="c.uid" [committeeName]="c.name" [hasPMOAccess]="canManageConfigurations()">
                 </lfx-committee-surveys-list>
               }
             </div>
