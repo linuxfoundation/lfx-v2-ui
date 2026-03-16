@@ -17,9 +17,6 @@ router.post('/', (req, res, next) => committeeController.createCommittee(req, re
 router.put('/:id', (req, res, next) => committeeController.updateCommittee(req, res, next));
 router.delete('/:id', (req, res, next) => committeeController.deleteCommittee(req, res, next));
 
-// Committee meetings route
-router.get('/:id/meetings', (req, res, next) => committeeController.getCommitteeMeetings(req, res, next));
-
 // Committee member routes - now using committee controller
 router.get('/:id/members', (req, res, next) => committeeController.getCommitteeMembers(req, res, next));
 router.get('/:id/members/:memberId', (req, res, next) => committeeController.getCommitteeMemberById(req, res, next));

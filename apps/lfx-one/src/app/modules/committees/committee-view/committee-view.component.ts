@@ -3,24 +3,35 @@
 
 import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
+import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, ConfirmDialogModule, RouterLink, RouteLoadingComponent, DatePipe],
+  imports: [
+    BreadcrumbComponent,
+    CardComponent,
+    ButtonComponent,
+    TagComponent,
+    ConfirmDialogModule,
+    RouterLink,
+    RouteLoadingComponent,
+    DatePipe,
+    NgClass,
+    JoinModeLabelPipe,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -31,9 +42,6 @@ export class CommitteeViewComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
-
-  // -- Label constants --
-  protected readonly committeeLabel = COMMITTEE_LABEL;
 
   // -- Tab state --
   public activeTab = signal<string>('overview');
@@ -60,22 +68,6 @@ export class CommitteeViewComponent {
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
-
-  // -- Configuration label signals --
-  public joinModeLabel: Signal<string> = computed(() => {
-    switch (this.committee()?.join_mode) {
-      case 'open':
-        return 'Open';
-      case 'invite_only':
-        return 'Invite Only';
-      case 'application':
-        return 'Apply to Join';
-      case 'closed':
-        return 'Closed';
-      default:
-        return 'Closed';
-    }
-  });
 
   // -- Public methods --
   public goBack(): void {

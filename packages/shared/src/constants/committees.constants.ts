@@ -471,6 +471,17 @@ export const MEMBER_VISIBILITY_OPTIONS = [
 ];
 
 /**
+ * Human-readable labels for JoinMode enum values.
+ * Used by JoinModeLabelPipe for template display.
+ */
+export const JOIN_MODE_LABELS: Record<string, string> = {
+  open: 'Open',
+  invite_only: 'Invite Only',
+  application: 'Apply to Join',
+  closed: 'Closed',
+};
+
+/**
  * Join-mode options for the Group settings form (Step 3).
  * Maps to the JoinMode type in committee.interface.ts.
  */
