@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SurveyCreateData, SurveyType } from '@lfx-one/shared/interfaces';
+import { SurveyCreateData, SurveyDistributionMethod, SurveyReminderFrequency, SurveyType } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -121,10 +121,16 @@ export class SurveyController {
       }
 
       const createData: SurveyCreateData = {
-        ...(body as Partial<SurveyCreateData>),
         title: title.trim(),
         type: type as SurveyType,
         project_id: project_id.trim(),
+        ...(body['description'] !== undefined && { description: body['description'] as string }),
+        ...(body['committee_id'] !== undefined && { committee_id: body['committee_id'] as string }),
+        ...(body['start_date'] !== undefined && { start_date: body['start_date'] as string }),
+        ...(body['end_date'] !== undefined && { end_date: body['end_date'] as string }),
+        ...(body['reminder_frequency'] !== undefined && { reminder_frequency: body['reminder_frequency'] as SurveyReminderFrequency }),
+        ...(body['distribution_method'] !== undefined && { distribution_method: body['distribution_method'] as SurveyDistributionMethod }),
+        ...(body['questions'] !== undefined && { questions: body['questions'] as unknown[] }),
       };
 
       const survey = await this.surveyService.createSurvey(req, createData);
