@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SURVEY_TYPES, SurveyCreateData } from '@lfx-one/shared/interfaces';
+import { SurveyCreateData, SurveyType } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -98,8 +98,9 @@ export class SurveyController {
         return;
       }
 
-      if (!SURVEY_TYPES.includes(type)) {
-        const validationError = ServiceValidationError.forField('type', `Survey type must be one of: ${SURVEY_TYPES.join(', ')}`, {
+      const validTypes: SurveyType[] = ['nps', 'standard'];
+      if (!validTypes.includes(type)) {
+        const validationError = ServiceValidationError.forField('type', `Survey type must be one of: ${validTypes.join(', ')}`, {
           operation: 'create_survey',
           service: 'survey_controller',
           path: req.path,

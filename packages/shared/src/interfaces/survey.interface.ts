@@ -173,8 +173,7 @@ export type SurveyManageMode = 'create' | 'edit';
  * Survey type for survey creation
  * @description Determines the type of survey being created
  */
-export const SURVEY_TYPES = ['nps', 'standard'] as const;
-export type SurveyType = (typeof SURVEY_TYPES)[number];
+export type SurveyType = 'nps' | 'standard';
 
 /**
  * Survey reminder frequency
