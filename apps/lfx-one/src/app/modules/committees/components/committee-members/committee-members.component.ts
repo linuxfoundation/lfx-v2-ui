@@ -96,7 +96,7 @@ export class CommitteeMembersComponent implements OnInit {
     // Invite requires both a compatible join_mode and management permission
     this.canInviteMembers = computed(() => {
       const committee = this.committee();
-      const hasInviteMode = committee?.join_mode === 'invite-only' || committee?.join_mode === 'open';
+      const hasInviteMode = committee?.join_mode === 'invite_only' || committee?.join_mode === 'open';
       return hasInviteMode && this.canManageMembers();
     });
     // Initialize filter form

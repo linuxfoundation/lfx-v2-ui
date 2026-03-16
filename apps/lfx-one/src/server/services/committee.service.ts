@@ -12,6 +12,8 @@ import {
   GroupInvite,
   GroupJoinApplication,
   GroupJoinApplicationRequest,
+  Meeting,
+  PaginatedResponse,
   QueryServiceCountResponse,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
@@ -621,6 +623,39 @@ export class CommitteeService {
       `/committees/${committeeId}/applications/${applicationId}/reject`,
       'POST'
     );
+  }
+
+  /**
+   * Fetches meetings associated with a committee.
+   */
+  public async getCommitteeMeetings(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<PaginatedResponse<Meeting>> {
+    try {
+      const params = {
+        ...query,
+        committee_uid: committeeId,
+      };
+
+      logger.debug(req, 'get_committee_meetings', 'Fetching meetings for committee', {
+        committee_uid: committeeId,
+      });
+
+      // Lazy import to avoid circular dependency (MeetingService imports CommitteeService)
+      const { MeetingService } = await import('./meeting.service');
+      const meetingService = new MeetingService();
+      const result = await meetingService.getMeetings(req, params);
+
+      logger.debug(req, 'get_committee_meetings', 'Fetched committee meetings', {
+        committee_uid: committeeId,
+        count: result.data.length,
+      });
+
+      return result;
+    } catch {
+      logger.warning(req, 'get_committee_meetings', 'Failed to fetch committee meetings, returning empty', {
+        committee_uid: committeeId,
+      });
+      return { data: [], page_token: undefined };
+    }
   }
 
   /**
