@@ -942,21 +942,22 @@ export class CommitteeController {
    */
   public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
+
+    if (!id) {
+      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+        operation: 'get_committee_surveys',
+        service: 'committee_controller',
+        path: req.path,
+      });
+      next(validationError);
+      return;
+    }
+
     const startTime = logger.startOperation(req, 'get_committee_surveys', {
       committee_id: id,
     });
 
     try {
-      if (!id) {
-        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
-          operation: 'get_committee_surveys',
-          service: 'committee_controller',
-          path: req.path,
-        });
-        next(validationError);
-        return;
-      }
-
       const surveys = await this.surveyService.getCommitteeSurveys(req, id, req.query as Record<string, any>);
 
       logger.success(req, 'get_committee_surveys', startTime, {

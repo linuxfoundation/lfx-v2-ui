@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
@@ -17,11 +18,12 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   imports: [ReactiveFormsModule, ButtonComponent, TextareaComponent],
   templateUrl: './invite-member-dialog.component.html',
 })
-export class InviteMemberDialogComponent {
+export class InviteMemberDialogComponent implements OnInit {
   private readonly config = inject(DynamicDialogConfig);
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public readonly committee: Committee | undefined = this.config.data?.committee;
   public submitting = signal<boolean>(false);
@@ -31,6 +33,14 @@ export class InviteMemberDialogComponent {
     emails: new FormControl('', [Validators.required]),
     message: new FormControl(''),
   });
+
+  public ngOnInit(): void {
+    this.form.controls.emails.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.invalidAddresses().length > 0) {
+        this.invalidAddresses.set([]);
+      }
+    });
+  }
 
   public onCancel(): void {
     this.dialogRef.close();

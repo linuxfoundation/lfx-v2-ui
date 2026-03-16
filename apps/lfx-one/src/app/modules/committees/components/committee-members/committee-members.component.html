@@ -47,17 +47,19 @@
         </div>
 
         <!-- Voting Status Filter -->
-        <div class="w-full flex-1 sm:flex-none md:w-48">
-          <lfx-select
-            [form]="filterForm"
-            control="votingStatus"
-            size="small"
-            [options]="votingStatusOptions()"
-            placeholder="Filter by Voting Status"
-            [showClear]="true"
-            styleClass="w-full">
-          </lfx-select>
-        </div>
+        @if (committee()?.enable_voting) {
+          <div class="w-full flex-1 sm:flex-none md:w-48">
+            <lfx-select
+              [form]="filterForm"
+              control="votingStatus"
+              size="small"
+              [options]="votingStatusOptions()"
+              placeholder="Filter by Voting Status"
+              [showClear]="true"
+              styleClass="w-full">
+            </lfx-select>
+          </div>
+        }
 
         <!-- Organization Filter -->
         <div class="w-full flex-1 sm:flex-none md:w-48">
@@ -149,7 +151,7 @@
                   severity="secondary"
                   (onClick)="toggleMemberActionMenu($event, member, memberActionMenu)">
                 </lfx-button>
-              } @else {
+              } @else if (member.email) {
                 <lfx-button
                   icon="fa-light fa-envelope"
                   [text]="true"

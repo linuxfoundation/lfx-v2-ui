@@ -88,10 +88,13 @@ export class ApplicationReviewComponent {
     const c = this.committee();
     if (!c?.uid) return;
 
+    const committeeUid = c.uid;
     this.processingId.set(application.uid);
 
-    this.committeeService.approveApplication(c.uid, application.uid).subscribe({
+    this.committeeService.approveApplication(committeeUid, application.uid).subscribe({
       next: () => {
+        // Guard against committee switch during inflight request
+        if (this.committee()?.uid !== committeeUid) return;
         this.processingId.set(null);
         this.messageService.add({
           severity: 'success',
@@ -104,6 +107,8 @@ export class ApplicationReviewComponent {
         this.memberAdded.emit();
       },
       error: () => {
+        // Guard against committee switch during inflight request
+        if (this.committee()?.uid !== committeeUid) return;
         this.processingId.set(null);
         this.messageService.add({
           severity: 'error',
@@ -118,10 +123,13 @@ export class ApplicationReviewComponent {
     const c = this.committee();
     if (!c?.uid) return;
 
+    const committeeUid = c.uid;
     this.processingId.set(application.uid);
 
-    this.committeeService.rejectApplication(c.uid, application.uid).subscribe({
+    this.committeeService.rejectApplication(committeeUid, application.uid).subscribe({
       next: () => {
+        // Guard against committee switch during inflight request
+        if (this.committee()?.uid !== committeeUid) return;
         this.processingId.set(null);
         this.messageService.add({
           severity: 'info',
@@ -132,6 +140,8 @@ export class ApplicationReviewComponent {
         this.applications.update((apps) => apps.filter((a) => a.uid !== application.uid));
       },
       error: () => {
+        // Guard against committee switch during inflight request
+        if (this.committee()?.uid !== committeeUid) return;
         this.processingId.set(null);
         this.messageService.add({
           severity: 'error',

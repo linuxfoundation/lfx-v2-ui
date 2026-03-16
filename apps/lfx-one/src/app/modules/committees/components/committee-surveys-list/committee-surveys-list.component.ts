@@ -87,13 +87,13 @@ export class CommitteeSurveysListComponent {
                   this.loadError.set(true);
                   return of([]);
                 }),
-                finalize(() => this.loading.set(false)),
-              ),
-            ),
+                finalize(() => this.loading.set(false))
+              )
+            )
           );
-        }),
+        })
       ),
-      { initialValue: [] },
+      { initialValue: [] }
     );
   }
 
@@ -118,8 +118,8 @@ export class CommitteeSurveysListComponent {
 
   // === Private Helpers ===
   private getCommitteeData(survey: Survey): Survey['committees'] {
-    const name = this.committeeName();
-    return survey.committees?.filter((c) => c.committee_name === name) ?? [];
+    const uid = this.committeeUid();
+    return survey.committees?.filter((c) => c.committee_uid === uid) ?? [];
   }
 
   private calculateNpsScore(survey: Survey, committeeData: Survey['committees']): number | undefined {
@@ -134,7 +134,7 @@ export class CommitteeSurveysListComponent {
 
   private calculateNpsBreakdown(
     survey: Survey,
-    committeeData: Survey['committees'],
+    committeeData: Survey['committees']
   ): { promoters: number; passives: number; detractors: number; nonResponses: number } | undefined {
     if (!survey.is_nps_survey || !committeeData?.length) return undefined;
 

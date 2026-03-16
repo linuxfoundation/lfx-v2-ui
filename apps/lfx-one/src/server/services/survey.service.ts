@@ -105,9 +105,7 @@ export class SurveyService {
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Survey>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
 
-    const surveys: Survey[] = (resources ?? [])
-      .map((resource) => resource.data)
-      .filter((s) => s?.committees?.some((c) => c.committee_uid === committeeId));
+    const surveys: Survey[] = (resources ?? []).map((resource) => resource.data).filter((s) => s?.committees?.some((c) => c.committee_uid === committeeId));
 
     logger.debug(req, 'get_committee_surveys', 'Completed committee survey fetch', {
       committee_uid: committeeId,

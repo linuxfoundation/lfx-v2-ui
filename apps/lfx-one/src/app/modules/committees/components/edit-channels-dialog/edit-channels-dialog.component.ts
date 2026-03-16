@@ -62,9 +62,7 @@ export class EditChannelsDialogComponent {
 
     const mailingList: string | undefined = val.mailingListName ? val.mailingListName : undefined;
 
-    const chatChannel: string | undefined = val.chatChannelName
-      ? val.chatChannelUrl || val.chatChannelName
-      : undefined;
+    const chatChannel: string | undefined = val.chatChannelName ? val.chatChannelUrl || val.chatChannelName : undefined;
 
     const payload: Partial<Committee> = {
       mailing_list: mailingList,
