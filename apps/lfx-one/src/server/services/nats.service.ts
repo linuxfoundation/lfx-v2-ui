@@ -71,7 +71,7 @@ export class NatsService {
         try {
           const response = await connection.request(subject, data, requestOptions);
           span.setStatus({ code: SpanStatusCode.OK });
-          span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, response.data.length);
+          span.setAttribute(ATTR_MESSAGING_MESSAGE_BODY_SIZE, data.length);
           logger.debug(undefined, 'nats_request', 'NATS request completed', {
             subject,
             response_size: response.data.length,

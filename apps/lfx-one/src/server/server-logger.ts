@@ -7,11 +7,11 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
+import { customErrorSerializer } from './helpers/error-serializer';
+
 const SERVICE_NAME = process.env['OTEL_SERVICE_NAME'] || 'lfx-v2-ui';
 
 export const tracer = trace.getTracer(SERVICE_NAME);
-
-import { customErrorSerializer } from './helpers/error-serializer';
 
 /**
  * Whitelist-based request serializer.
