@@ -274,17 +274,138 @@ export interface SurveyReviewData {
  * @description Mirrors upstream ScheduleSurveyRequestBody from lfx-v2-survey-service
  */
 export interface SurveyCreateData {
-  survey_title: string;
+  /** Committee UID to send survey to (required by upstream) */
+  committee_uid: string;
+  /** Survey title */
+  survey_title?: string;
+  /** SurveyMonkey survey ID */
   survey_monkey_id?: string;
+  /** Whether the survey is project-level (true) or global-level (false) */
   is_project_survey?: boolean;
+  /** Project stage filter for global surveys */
   stage_filter?: string;
+  /** Send immediately (true) or schedule for later (false) */
   send_immediately?: boolean;
+  /** Date to send the survey (RFC3339 format) */
   survey_send_date?: string;
+  /** Survey cutoff/end date (RFC3339 format) */
   survey_cutoff_date?: string;
+  /** Days between automatic reminder emails (0 = no reminders) */
   survey_reminder_rate_days?: number;
+  /** Email subject line */
   email_subject?: string;
+  /** Email body HTML content */
   email_body?: string;
+  /** Email body plain text content */
   email_body_text?: string;
-  committees?: string[];
+  /** Whether committee voting is enabled */
   committee_voting_enabled?: boolean;
+  /** Creator's user ID */
+  creator_id?: string;
+  /** Creator's full name */
+  creator_name?: string;
+  /** Creator's username */
+  creator_username?: string;
+}
+
+/**
+ * Response from POST /api/surveys (schedule survey)
+ * @description Mirrors upstream SurveyScheduleResult from lfx-v2-survey-service
+ */
+export interface SurveyScheduleResult {
+  /** Survey unique identifier */
+  uid: string;
+  /** Survey title */
+  survey_title: string;
+  /** Survey status */
+  survey_status: string;
+  /** Survey cutoff date */
+  survey_cutoff_date: string;
+  /** Whether this is an NPS survey */
+  is_nps_survey: boolean;
+  /** Whether project-level or global-level survey */
+  is_project_survey: boolean;
+  /** Associated committees */
+  committees: SurveyScheduleCommittee[];
+  /** Committee category */
+  committee_category: string;
+  /** Whether committee voting is enabled */
+  committee_voting_enabled: boolean;
+  /** Total responses received */
+  total_responses: number;
+  /** Total number of recipients */
+  total_recipients: number;
+  /** Number of bounced emails */
+  total_bounced_emails: number;
+  /** Creation timestamp */
+  created_at: string;
+  /** Last modification timestamp */
+  last_modified_at: string;
+  /** User ID of last modifier */
+  last_modified_by: string;
+  /** Creator's user ID */
+  creator_id: string;
+  /** Creator's full name */
+  creator_name: string;
+  /** Creator's username */
+  creator_username: string;
+  /** Response status */
+  response_status: string;
+  /** Whether survey is sent immediately */
+  send_immediately: boolean;
+  /** Project stage filter */
+  stage_filter: string;
+  /** SurveyMonkey survey ID */
+  survey_monkey_id: string;
+  /** Days between reminder emails */
+  survey_reminder_rate_days: number;
+  /** Survey send date */
+  survey_send_date: string;
+  /** Survey URL */
+  survey_url: string;
+  /** Email subject line */
+  email_subject: string;
+  /** Email body HTML */
+  email_body: string;
+  /** Email body plain text */
+  email_body_text: string;
+  /** NPS value */
+  nps_value: number;
+  /** Number of promoters */
+  num_promoters: number;
+  /** Number of passives */
+  num_passives: number;
+  /** Number of detractors */
+  num_detractors: number;
+  /** Number of automated reminders sent */
+  num_automated_reminders_sent: number;
+  /** Number of automated reminders to send */
+  num_automated_reminders_to_send: number;
+  /** Latest automated reminder sent date */
+  latest_automated_reminder_sent_at: string;
+  /** Next automated reminder date */
+  next_automated_reminder_at: string;
+}
+
+/**
+ * Committee within a SurveyScheduleResult
+ * @description Mirrors upstream SurveyCommittee from lfx-v2-survey-service
+ */
+export interface SurveyScheduleCommittee {
+  /** Committee display name */
+  committee_name: string;
+  /** Committee UID */
+  committee_uid: string;
+  /** NPS value */
+  nps_value: number;
+  /** Project display name */
+  project_name: string;
+  /** Project UID */
+  project_uid: string;
+  /** Survey URL for this committee */
+  survey_url: string;
+  /** Total recipients for this committee */
+  total_recipients: number;
+  /** Total responses from this committee */
+  total_responses: number;
 }

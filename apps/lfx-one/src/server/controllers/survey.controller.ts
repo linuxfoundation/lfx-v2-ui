@@ -4,8 +4,7 @@
 import { SurveyCreateData } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
-import { ServiceValidationError } from '../errors';
-import { validateUidParameter } from '../helpers/validation.helper';
+import { validateRequestBody, validateRequiredParameter, validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { SurveyService } from '../services/survey.service';
 
@@ -73,36 +72,28 @@ export class SurveyController {
    * POST /surveys
    */
   public async createSurvey(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'create_survey', {});
+    const startTime = logger.startOperation(req, 'create_survey', {
+      has_committee_uid: !!req.body?.committee_uid,
+      has_survey_title: !!req.body?.survey_title,
+    });
 
     try {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const surveyTitle = body['survey_title'];
+      const validationContext = { operation: 'create_survey', service: 'survey_controller' };
 
-      if (typeof surveyTitle !== 'string' || !surveyTitle.trim()) {
-        const validationError = ServiceValidationError.forField('survey_title', 'Survey title is required', {
-          operation: 'create_survey',
-          service: 'survey_controller',
-          path: req.path,
-        });
-        next(validationError);
+      if (!validateRequestBody(req.body, req, next, validationContext)) {
+        return;
+      }
+
+      const body = req.body as SurveyCreateData;
+
+      if (!validateRequiredParameter(body.committee_uid, 'committee_uid', req, next, validationContext)) {
         return;
       }
 
       const createData: SurveyCreateData = {
-        survey_title: surveyTitle.trim(),
-        ...(body['survey_monkey_id'] !== undefined && { survey_monkey_id: body['survey_monkey_id'] as string }),
-        ...(body['is_project_survey'] !== undefined && { is_project_survey: body['is_project_survey'] as boolean }),
-        ...(body['stage_filter'] !== undefined && { stage_filter: body['stage_filter'] as string }),
-        ...(body['send_immediately'] !== undefined && { send_immediately: body['send_immediately'] as boolean }),
-        ...(body['survey_send_date'] !== undefined && { survey_send_date: body['survey_send_date'] as string }),
-        ...(body['survey_cutoff_date'] !== undefined && { survey_cutoff_date: body['survey_cutoff_date'] as string }),
-        ...(body['survey_reminder_rate_days'] !== undefined && { survey_reminder_rate_days: body['survey_reminder_rate_days'] as number }),
-        ...(body['email_subject'] !== undefined && { email_subject: body['email_subject'] as string }),
-        ...(body['email_body'] !== undefined && { email_body: body['email_body'] as string }),
-        ...(body['email_body_text'] !== undefined && { email_body_text: body['email_body_text'] as string }),
-        ...(body['committees'] !== undefined && { committees: body['committees'] as string[] }),
-        ...(body['committee_voting_enabled'] !== undefined && { committee_voting_enabled: body['committee_voting_enabled'] as boolean }),
+        ...body,
+        committee_uid: body.committee_uid.trim(),
+        ...(body.survey_title && { survey_title: body.survey_title.trim() }),
       };
 
       const survey = await this.surveyService.createSurvey(req, createData);
