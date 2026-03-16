@@ -1,9 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { FormControl, FormGroup } from '@angular/forms';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -12,14 +12,37 @@ import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import {
+  getGroupBehavioralClass,
+  isGovernanceClass,
+  isCollaborationClass,
+  isGoverningBoard,
+  isOversightCommittee,
+  isWorkingGroup,
+  isSpecialInterestGroup,
+  isAmbassadorProgram,
+  isOtherClass,
+} from '@lfx-one/shared/constants';
+import {
   Committee,
+  CommitteeActivity,
+  CommitteeBudgetSummary,
+  CommitteeContributor,
+  CommitteeDeliverable,
+  CommitteeDiscussionThread,
+  CommitteeEngagementMetrics,
+  CommitteeEvent,
   CommitteeLeadership,
   CommitteeMember,
+  CommitteeOutreachCampaign,
+  CommitteeResolution,
+  CommitteeVote,
   getCommitteeCategorySeverity,
   GroupBehavioralClass,
   LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
+import { Meeting } from '@lfx-one/shared/interfaces';
+import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
@@ -28,7 +51,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
@@ -38,7 +61,6 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
 @Component({
   selector: 'lfx-committee-view',
   imports: [
-    NgClass,
     BreadcrumbComponent,
     CardComponent,
     ButtonComponent,
@@ -52,9 +74,14 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     Tab,
     TabPanels,
     TabPanel,
-    ApplicationReviewComponent,
+    DatePipe,
+    DecimalPipe,
     CommitteeMembersComponent,
     CommitteeSettingsComponent,
+    ApplicationReviewComponent,
+    MeetingCardComponent,
+    ReactiveFormsModule,
+    NgClass,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -83,6 +110,25 @@ export class CommitteeViewComponent {
   // Sub-resource writable signals
   public membersLoading = signal<boolean>(true);
   public members: WritableSignal<CommitteeMember[]> = signal([]);
+  public openVotes: WritableSignal<CommitteeVote[]> = signal([]);
+  public budgetSummary: WritableSignal<CommitteeBudgetSummary | null> = signal(null);
+  public recentResolutions: WritableSignal<CommitteeResolution[]> = signal([]);
+  public recentActivity: WritableSignal<CommitteeActivity[]> = signal([]);
+  public topContributors: WritableSignal<CommitteeContributor[]> = signal([]);
+  public deliverables: WritableSignal<CommitteeDeliverable[]> = signal([]);
+  public discussionThreads: WritableSignal<CommitteeDiscussionThread[]> = signal([]);
+  public upcomingEvents: WritableSignal<CommitteeEvent[]> = signal([]);
+  public outreachCampaigns: WritableSignal<CommitteeOutreachCampaign[]> = signal([]);
+  public engagementMetrics: WritableSignal<CommitteeEngagementMetrics | null> = signal(null);
+  public committeeMeetings: WritableSignal<Meeting[]> = signal([]);
+  public meetingsLoading = signal<boolean>(false);
+
+  // -- Meeting computed signals --
+  // TODO: upcoming/past split uses new Date() at compute-time and won't recompute as time passes.
+  // Add a 60s interval tick signal to force recomputation when a meeting crosses the now boundary.
+  public meetingViewFilter = signal<'upcoming' | 'past'>('upcoming');
+  public upcomingMeetings: Signal<Meeting[]> = this.initializeUpcomingMeetings();
+  public pastCommitteeMeetings: Signal<Meeting[]> = this.initializePastMeetings();
 
   // -- Committee (writable so leadership updates apply instantly) --
   public committeeSignal: WritableSignal<Committee | null> = signal(null);
@@ -103,19 +149,20 @@ export class CommitteeViewComponent {
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
 
-  public behavioralClass: Signal<GroupBehavioralClass> = computed(() => {
-    const cat = this.committee()?.category?.toLowerCase() ?? '';
-    if (cat.includes('board')) return 'governing-board';
-    if (cat.includes('oversight') || cat.includes('tsc') || cat.includes('toc')) return 'oversight-committee';
-    if (cat.includes('working')) return 'working-group';
-    if (cat.includes('sig') || cat.includes('special')) return 'special-interest-group';
-    if (cat.includes('ambassador')) return 'ambassador-program';
-    return 'other';
-  });
-
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
+
+  // -- Behavioral class signals --
+  public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
+  public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
+  public isCollaborationClass: Signal<boolean> = computed(() => isCollaborationClass(this.committee()?.category));
+  public isGoverningBoard: Signal<boolean> = computed(() => isGoverningBoard(this.committee()?.category));
+  public isOversightCommittee: Signal<boolean> = computed(() => isOversightCommittee(this.committee()?.category));
+  public isWorkingGroup: Signal<boolean> = computed(() => isWorkingGroup(this.committee()?.category));
+  public isSpecialInterestGroup: Signal<boolean> = computed(() => isSpecialInterestGroup(this.committee()?.category));
+  public isAmbassadorProgram: Signal<boolean> = computed(() => isAmbassadorProgram(this.committee()?.category));
+  public isOtherClass: Signal<boolean> = computed(() => isOtherClass(this.committee()?.category));
 
   // -- Dashboard stat signals --
   public totalMembers: Signal<number> = computed(() => this.members().length);
@@ -225,6 +272,14 @@ export class CommitteeViewComponent {
       });
   }
 
+  public createMeeting(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/meetings/create'], {
+      queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
+    });
+  }
+
   public openAssignLeadership(role: LeadershipRole): void {
     const committee = this.committee();
     if (!committee) return;
@@ -300,6 +355,8 @@ export class CommitteeViewComponent {
 
               if (committee) {
                 this.populateSettingsForm(committee);
+                this.loadMeetings(committeeId);
+                return this.loadGroupTypeData$(committeeId, committee);
               }
 
               return of(null);
@@ -310,6 +367,122 @@ export class CommitteeViewComponent {
         takeUntilDestroyed()
       )
       .subscribe();
+  }
+
+  private loadMeetings(committeeId: string): void {
+    this.meetingsLoading.set(true);
+    this.committeeService
+      .getCommitteeMeetings(committeeId)
+      .pipe(
+        take(1),
+        catchError(() => of([]))
+      )
+      .subscribe((meetings) => {
+        this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
+        this.meetingsLoading.set(false);
+      });
+  }
+
+  private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {
+    const cls = getGroupBehavioralClass(committee.category);
+
+    if (cls === 'governing-board') {
+      return forkJoin([
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeBudget(committeeId).pipe(catchError(() => of(null))),
+      ]).pipe(
+        tap(([votes, resolutions, budget]) => {
+          this.openVotes.set(votes);
+          this.recentResolutions.set(resolutions);
+          this.budgetSummary.set(budget);
+        })
+      );
+    }
+
+    if (cls === 'oversight-committee') {
+      return forkJoin([
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeResolutions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
+      ]).pipe(
+        tap(([votes, resolutions, activity, contributors]) => {
+          this.openVotes.set(votes);
+          this.recentResolutions.set(resolutions);
+          this.recentActivity.set(activity);
+          this.topContributors.set(contributors);
+        })
+      );
+    }
+
+    if (cls === 'working-group') {
+      return forkJoin([
+        this.committeeService.getCommitteeVotes(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeActivity(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeContributors(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeDeliverables(committeeId).pipe(catchError(() => of([]))),
+      ]).pipe(
+        tap(([votes, activity, contributors, dels]) => {
+          this.openVotes.set(votes);
+          this.recentActivity.set(activity);
+          this.topContributors.set(contributors);
+          this.deliverables.set(dels);
+        })
+      );
+    }
+
+    if (cls === 'special-interest-group') {
+      return forkJoin([
+        this.committeeService.getCommitteeDiscussions(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeEvents(committeeId).pipe(catchError(() => of([]))),
+      ]).pipe(
+        tap(([discussions, events]) => {
+          this.discussionThreads.set(discussions);
+          this.upcomingEvents.set(events);
+        })
+      );
+    }
+
+    if (cls === 'ambassador-program') {
+      return forkJoin([
+        this.committeeService.getCommitteeCampaigns(committeeId).pipe(catchError(() => of([]))),
+        this.committeeService.getCommitteeEngagement(committeeId).pipe(catchError(() => of(null))),
+      ]).pipe(
+        tap(([campaigns, engagement]) => {
+          this.outreachCampaigns.set(campaigns);
+          this.engagementMetrics.set(engagement);
+        })
+      );
+    }
+
+    return of(null);
+  }
+
+  private initializeUpcomingMeetings(): Signal<Meeting[]> {
+    return computed(() => {
+      const committeeId = this.committee()?.uid;
+      if (!committeeId) return [];
+      const meetings = this.committeeMeetings();
+      if (!Array.isArray(meetings)) return [];
+      const now = new Date().getTime();
+      return meetings
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now)
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    });
+  }
+
+  private initializePastMeetings(): Signal<Meeting[]> {
+    return computed(() => {
+      const committeeId = this.committee()?.uid;
+      if (!committeeId) return [];
+      const meetings = this.committeeMeetings();
+      if (!Array.isArray(meetings)) return [];
+      const now = new Date().getTime();
+      return meetings
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now)
+        .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+    });
   }
 
   private initializeFormattedCreatedDate(): Signal<string> {
