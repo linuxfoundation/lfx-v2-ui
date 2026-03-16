@@ -45,9 +45,7 @@ import { Meeting } from '@lfx-one/shared/interfaces';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
-import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
-import { ProjectService } from '@services/project.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -59,6 +57,7 @@ import { ApplicationReviewComponent } from '../components/application-review/app
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -84,6 +83,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    CommitteeSurveysListComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -94,8 +94,6 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
-  private readonly meetingService = inject(MeetingService);
-  private readonly projectService = inject(ProjectService);
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
@@ -208,9 +206,9 @@ export class CommitteeViewComponent {
     switch (this.committee()?.join_mode) {
       case 'open':
         return 'Open';
-      case 'invite-only':
+      case 'invite_only':
         return 'Invite Only';
-      case 'apply':
+      case 'application':
         return 'Apply to Join';
       case 'closed':
         return 'Closed';
@@ -349,8 +347,7 @@ export class CommitteeViewComponent {
 
           return committeeQuery.pipe(
             switchMap((committee) => {
-              const projectUid = committee?.project_uid || this.projectService.project()?.uid;
-              const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
+              const meetingsQuery = this.committeeService.getCommitteeMeetings(committeeId).pipe(catchError(() => of([])));
               return combineLatest([of(committee), membersQuery, meetingsQuery]);
             }),
             switchMap(([committee, members, meetings]) => {
@@ -501,7 +498,7 @@ export class CommitteeViewComponent {
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
       return meetings
-        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now && m.committees?.some((c) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now)
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     });
   }
@@ -514,7 +511,7 @@ export class CommitteeViewComponent {
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
       return meetings
-        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now && m.committees?.some((c) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now)
         .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
   }
