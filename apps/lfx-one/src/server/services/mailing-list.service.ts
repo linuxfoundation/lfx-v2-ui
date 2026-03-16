@@ -208,7 +208,7 @@ export class MailingListService {
   /**
    * Fetches a single mailing list by ID
    */
-  public async getMailingListById(req: Request, mailingListId: string): Promise<GroupsIOMailingList> {
+  public async getMailingListById(req: Request, mailingListId: string, access: boolean = true): Promise<GroupsIOMailingList> {
     const params = {
       type: 'groupsio_mailing_list',
       tags: `groupsio_mailing_list_uid:${mailingListId}`,
@@ -234,8 +234,12 @@ export class MailingListService {
     const enriched = await this.enrichWithServices(req, [resources[0].data]);
     const mailingList = enriched[0];
 
-    // Add writer access field to the mailing list
-    return await this.accessCheckService.addAccessToResource(req, mailingList, 'groupsio_mailing_list');
+    if (access) {
+      // Add writer access field to the mailing list
+      return await this.accessCheckService.addAccessToResource(req, mailingList, 'groupsio_mailing_list');
+    }
+
+    return mailingList;
   }
 
   /**

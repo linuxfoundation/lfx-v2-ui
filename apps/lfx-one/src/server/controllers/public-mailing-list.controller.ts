@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { MailingListAudienceAccess, MailingListMemberDeliveryMode, MailingListMemberModStatus, MailingListMemberType } from '@lfx-one/shared/enums';
-import { CreateMailingListMemberRequest, PublicMailingListSubscribeRequest, PublicMailingListSubscribeResponse } from '@lfx-one/shared/interfaces';
+import { CreateMailingListMemberRequest, PublicMailingListSubscribeResponse } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
 import { AuthorizationError } from '../errors/authentication.error';
+import { MicroserviceError } from '../errors/microservice.error';
 import { validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { MailingListService } from '../services/mailing-list.service';
@@ -42,10 +43,11 @@ export class PublicMailingListController {
         return;
       }
 
-      // Validate request body
-      const body: PublicMailingListSubscribeRequest = req.body;
+      // Type-safe body parsing
+      const body = req.body as Record<string, unknown>;
+      const rawEmail = typeof body['email'] === 'string' ? body['email'] : '';
 
-      if (!body.email || !EMAIL_REGEX.test(body.email.trim())) {
+      if (!rawEmail || !EMAIL_REGEX.test(rawEmail.trim())) {
         const validationError = ServiceValidationError.forField('email', 'A valid email address is required', {
           operation: 'subscribe_to_public_mailing_list',
           service: 'public_mailing_list_controller',
@@ -54,17 +56,19 @@ export class PublicMailingListController {
         return next(validationError);
       }
 
-      const email = body.email.trim().toLowerCase();
-      const firstName = body.first_name?.trim() || undefined;
-      const lastName = body.last_name?.trim() || undefined;
+      const email = rawEmail.trim().toLowerCase();
+      const rawFirstName = typeof body['first_name'] === 'string' ? body['first_name'] : undefined;
+      const rawLastName = typeof body['last_name'] === 'string' ? body['last_name'] : undefined;
+      const firstName = rawFirstName?.trim() || undefined;
+      const lastName = rawLastName?.trim() || undefined;
 
       // Generate M2M token for server-to-server API calls
-      const m2mToken = await this.setupM2MToken(req);
+      await this.setupM2MToken(req);
 
-      // Fetch the mailing list to validate it exists and is public
+      // Fetch the mailing list to validate it exists and is public (skip access checks for public endpoint)
       let mailingList;
       try {
-        mailingList = await this.mailingListService.getMailingListById(req, id);
+        mailingList = await this.mailingListService.getMailingListById(req, id, false);
       } catch {
         // Don't reveal whether the list exists or not for non-public lists
         const authError = new AuthorizationError('This mailing list is not found or is not accepting public subscriptions', {
@@ -95,9 +99,6 @@ export class PublicMailingListController {
         mod_status: MailingListMemberModStatus.NONE,
       };
 
-      // Restore M2M token (getMailingListById may have overwritten it via access check)
-      req.bearerToken = m2mToken;
-
       // Create the member
       await this.mailingListService.createMember(req, id, memberData);
 
@@ -114,12 +115,11 @@ export class PublicMailingListController {
 
       res.status(201).json(response);
     } catch (error: unknown) {
-      // Handle duplicate subscriber errors gracefully
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.toLowerCase().includes('already') || errorMessage.toLowerCase().includes('duplicate') || errorMessage.toLowerCase().includes('exists')) {
+      // Handle duplicate subscriber errors gracefully — identical response to prevent email enumeration
+      if (error instanceof MicroserviceError && error.statusCode === 409) {
         const response: PublicMailingListSubscribeResponse = {
           success: true,
-          message: 'This email is already subscribed to this mailing list.',
+          message: 'You have been subscribed. A confirmation email may be sent by Groups.io.',
           mailing_list_title: '',
         };
 
@@ -140,16 +140,14 @@ export class PublicMailingListController {
   /**
    * Sets up M2M token for API calls
    */
-  private async setupM2MToken(req: Request): Promise<string> {
-    const startTime = logger.startOperation(req, 'setup_m2m_token');
+  private async setupM2MToken(req: Request): Promise<void> {
+    logger.debug(req, 'setup_m2m_token', 'Generating M2M token for public endpoint');
 
     const m2mToken = await generateM2MToken(req);
     req.bearerToken = m2mToken;
 
-    logger.success(req, 'setup_m2m_token', startTime, {
+    logger.debug(req, 'setup_m2m_token', 'M2M token generated', {
       has_token: !!m2mToken,
     });
-
-    return m2mToken;
   }
 }
