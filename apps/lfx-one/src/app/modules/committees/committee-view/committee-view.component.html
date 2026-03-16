@@ -514,13 +514,15 @@
           <!-- Members Tab -->
           @if (isMembersTabVisible()) {
             <p-tabpanel value="members">
-              <lfx-committee-members
-                [committee]="committee()"
-                [members]="members()"
-                [membersLoading]="membersLoading()"
-                [groupBehavioralClass]="behavioralClass()"
-                (refresh)="refreshCommittee()">
-              </lfx-committee-members>
+              <div class="flex flex-col gap-6 pt-4">
+                @if (committee()?.uid) {
+                  <lfx-application-review [committee]="committee()" (memberAdded)="refreshMembers()"></lfx-application-review>
+                }
+                @if (committee()?.uid) {
+                  <lfx-committee-members [committee]="committee()" [members]="members()" [membersLoading]="membersLoading()" (refresh)="refreshCommittee()">
+                  </lfx-committee-members>
+                }
+              </div>
             </p-tabpanel>
           }
 

@@ -19,6 +19,16 @@
             data-testid="add-member-btn">
           </lfx-button>
         }
+        @if (canInviteMembers()) {
+          <lfx-button
+            label="Invite"
+            icon="fa-light fa-paper-plane"
+            size="small"
+            severity="primary"
+            (onClick)="openInviteMemberDialog()"
+            data-testid="invite-member-btn">
+          </lfx-button>
+        }
       </div>
     </div>
 
@@ -122,8 +132,8 @@
               <span class="text-sm font-sans text-gray-500">{{ member.email || '-' }}</span>
             </td>
             <td>
-              @if (sanitizeUrl(member.organization?.website); as safeUrl) {
-                <a [href]="safeUrl" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600 text-sm font-sans">
+              @if (member.organization?.website) {
+                <a [href]="member.organization.website" target="_blank" class="text-primary hover:text-primary-600 text-sm font-sans">
                   {{ member.organization.name }}
                 </a>
               } @else {
@@ -156,7 +166,8 @@
                   [rounded]="true"
                   size="small"
                   severity="secondary"
-                  (onClick)="sendMessage(member.email)"
+                  [href]="`mailto:${member.email}`"
+                  target="_blank"
                   pTooltip="Send Message">
                 </lfx-button>
               }
