@@ -7,7 +7,7 @@ import { CardComponent } from '@components/card/card.component';
 import { SURVEY_LABEL } from '@lfx-one/shared';
 import { Survey, SurveyResultsDetail } from '@lfx-one/shared/interfaces';
 import { SurveyService } from '@services/survey.service';
-import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, of, switchMap } from 'rxjs';
 
 import { SurveyResultsDrawerComponent } from '@app/modules/surveys/components/survey-results-drawer/survey-results-drawer.component';
 import { SurveysTableComponent } from '@app/modules/surveys/components/surveys-table/surveys-table.component';
@@ -25,7 +25,7 @@ export class CommitteeSurveysListComponent {
   protected readonly surveyLabelPlural = SURVEY_LABEL.plural;
 
   // === Inputs ===
-  public readonly projectUid = input.required<string>();
+  public readonly committeeUid = input.required<string>();
   public readonly committeeName = input.required<string>();
   public readonly hasPMOAccess = input<boolean>(false);
 
@@ -39,10 +39,7 @@ export class CommitteeSurveysListComponent {
   protected readonly selectedSurveyId = signal<string | null>(null);
 
   // === Computed Signals ===
-  protected readonly allSurveys: Signal<Survey[]> = this.initSurveys();
-  protected readonly surveys: Signal<Survey[]> = computed(() =>
-    this.allSurveys().filter((s) => s.committees?.some((c) => c.committee_name === this.committeeName()))
-  );
+  protected readonly surveys: Signal<Survey[]> = this.initSurveys();
   protected readonly selectedSurvey: Signal<SurveyResultsDetail | null> = this.initSelectedSurvey();
 
   // === Protected Methods ===
@@ -71,29 +68,32 @@ export class CommitteeSurveysListComponent {
 
   // === Private Initializers ===
   private initSurveys(): Signal<Survey[]> {
-    const projectUid$ = toObservable(this.projectUid);
-    const committeeName$ = toObservable(this.committeeName);
+    const committeeUid$ = toObservable(this.committeeUid);
 
     return toSignal(
-      combineLatest([projectUid$, committeeName$, this.refresh$]).pipe(
-        switchMap(([projectUid]) => {
-          if (!projectUid) {
+      committeeUid$.pipe(
+        switchMap((committeeUid) => {
+          if (!committeeUid) {
             this.loading.set(false);
             return of([]);
           }
 
           this.loading.set(true);
           this.loadError.set(false);
-          return this.surveyService.getSurveysByProject(projectUid, 100).pipe(
-            catchError(() => {
-              this.loadError.set(true);
-              return of([]);
-            }),
-            finalize(() => this.loading.set(false))
+          return this.refresh$.pipe(
+            switchMap(() =>
+              this.surveyService.getSurveysByCommittee(committeeUid).pipe(
+                catchError(() => {
+                  this.loadError.set(true);
+                  return of([]);
+                }),
+                finalize(() => this.loading.set(false)),
+              ),
+            ),
           );
-        })
+        }),
       ),
-      { initialValue: [] }
+      { initialValue: [] },
     );
   }
 
@@ -134,7 +134,7 @@ export class CommitteeSurveysListComponent {
 
   private calculateNpsBreakdown(
     survey: Survey,
-    committeeData: Survey['committees']
+    committeeData: Survey['committees'],
   ): { promoters: number; passives: number; detractors: number; nonResponses: number } | undefined {
     if (!survey.is_nps_survey || !committeeData?.length) return undefined;
 

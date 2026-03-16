@@ -27,6 +27,9 @@ router.delete('/:id/members/:memberId', (req, res, next) => committeeController.
 // Meeting routes
 router.get('/:id/meetings', (req, res, next) => committeeController.getCommitteeMeetings(req, res, next));
 
+// Survey routes
+router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
+
 // Dashboard sub-resource routes
 router.get('/:id/votes', (req, res, next) => committeeController.getCommitteeVotes(req, res, next));
 router.get('/:id/resolutions', (req, res, next) => committeeController.getCommitteeResolutions(req, res, next));

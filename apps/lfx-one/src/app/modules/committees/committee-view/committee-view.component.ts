@@ -279,6 +279,17 @@ export class CommitteeViewComponent {
     });
   }
 
+  public createSurvey(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/surveys/create'], {
+      queryParams: {
+        committee_uid: committee.uid,
+        committee_name: committee.name,
+      },
+    });
+  }
+
   public openAssignLeadership(role: LeadershipRole): void {
     const committee = this.committee();
     if (!committee) return;
