@@ -11,7 +11,6 @@ import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
-import { PersonaService } from '@services/persona.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
@@ -41,7 +40,6 @@ export class CommitteeViewComponent {
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
-  private readonly personaService = inject(PersonaService);
 
   // -- Tab state --
   public activeTab = signal<string>('overview');
@@ -61,12 +59,10 @@ export class CommitteeViewComponent {
 
   public breadcrumbItems: Signal<MenuItem[]> = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
 
-  public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
-  public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
-  public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+  public canEdit: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
   // -- Tab visibility signals --
-  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canEdit());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
 
   // -- Public methods --

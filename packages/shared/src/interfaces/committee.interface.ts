@@ -113,33 +113,6 @@ export interface CommitteeReference {
 
 // ── Communication Channel Types ─────────────────────────────────────────────
 
-/** Platform type for chat channels */
-export type ChatPlatform = 'slack' | 'discord';
-
-/**
- * A mailing list associated with a group (e.g., Groups.io, Google Groups).
- */
-export interface GroupMailingList {
-  /** Display name of the list (e.g., "tac-general") */
-  name: string;
-  /** Full URL to the mailing list archive or subscription page */
-  url?: string;
-  /** Number of subscribers (optional, for display) */
-  subscriber_count?: number;
-}
-
-/**
- * A chat channel (Slack or Discord) associated with a group.
- */
-export interface GroupChatChannel {
-  /** Platform type */
-  platform: ChatPlatform;
-  /** Channel name (e.g., "#tac-general") */
-  name: string;
-  /** Direct link to the channel */
-  url?: string;
-}
-
 /**
  * Committee leadership position (Chair, Co-Chair, etc.)
  * @description Represents a member in a leadership position within a committee
