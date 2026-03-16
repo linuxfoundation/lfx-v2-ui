@@ -25,7 +25,7 @@ export class SurveyService {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
 
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit);
     }
 
     if (orderBy) {
@@ -35,8 +35,19 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
-  public getSurvey(surveyUid: string): Observable<Survey> {
-    return this.http.get<Survey>(`/api/surveys/${surveyUid}`).pipe(
+  public getSurveysByCommittee(committeeUid: string): Observable<Survey[]> {
+    return this.http.get<Survey[]>(`/api/committees/${committeeUid}/surveys`).pipe(
+      catchError(() => of([])),
+    );
+  }
+
+  public getSurvey(surveyUid: string, projectId?: string): Observable<Survey> {
+    let params = new HttpParams();
+    if (projectId) {
+      params = params.set('project_id', projectId);
+    }
+
+    return this.http.get<Survey>(`/api/surveys/${surveyUid}`, { params }).pipe(
       catchError((error) => {
         console.error(`Failed to load survey ${surveyUid}:`, error);
         return throwError(() => error);

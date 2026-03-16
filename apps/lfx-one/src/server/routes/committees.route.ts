@@ -39,6 +39,9 @@ router.get('/:id/campaigns', (req, res, next) => committeeController.getCommitte
 router.get('/:id/engagement', (req, res, next) => committeeController.getCommitteeEngagement(req, res, next));
 router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBudget(req, res, next));
 
+// Survey routes
+router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
+
 // Invite routes
 router.post('/:id/invites', (req, res, next) => committeeController.createInvites(req, res, next));
 router.get('/:id/invites', (req, res, next) => committeeController.getInvites(req, res, next));
