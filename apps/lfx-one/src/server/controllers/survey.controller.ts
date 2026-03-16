@@ -76,9 +76,10 @@ export class SurveyController {
     const startTime = logger.startOperation(req, 'create_survey', {});
 
     try {
-      const { title, type, project_id } = req.body as SurveyCreateData;
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const { title, type, project_id } = body;
 
-      if (!title || (typeof title === 'string' && !title.trim())) {
+      if (typeof title !== 'string' || !title.trim()) {
         const validationError = ServiceValidationError.forField('title', 'Title is required', {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -88,7 +89,7 @@ export class SurveyController {
         return;
       }
 
-      if (!type) {
+      if (typeof type !== 'string') {
         const validationError = ServiceValidationError.forField('type', 'Survey type is required', {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -99,7 +100,7 @@ export class SurveyController {
       }
 
       const validTypes: SurveyType[] = ['nps', 'standard'];
-      if (!validTypes.includes(type)) {
+      if (!validTypes.includes(type as SurveyType)) {
         const validationError = ServiceValidationError.forField('type', `Survey type must be one of: ${validTypes.join(', ')}`, {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -109,7 +110,7 @@ export class SurveyController {
         return;
       }
 
-      if (!project_id || (typeof project_id === 'string' && !project_id.trim())) {
+      if (typeof project_id !== 'string' || !project_id.trim()) {
         const validationError = ServiceValidationError.forField('project_id', 'Project ID is required', {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -119,7 +120,14 @@ export class SurveyController {
         return;
       }
 
-      const survey = await this.surveyService.createSurvey(req, req.body as SurveyCreateData);
+      const createData: SurveyCreateData = {
+        ...(body as Partial<SurveyCreateData>),
+        title: title.trim(),
+        type: type as SurveyType,
+        project_id: project_id.trim(),
+      };
+
+      const survey = await this.surveyService.createSurvey(req, createData);
 
       logger.success(req, 'create_survey', startTime, { survey_uid: survey.uid });
       res.status(201).json(survey);
