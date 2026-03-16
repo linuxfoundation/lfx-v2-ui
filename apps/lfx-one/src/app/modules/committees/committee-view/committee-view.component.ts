@@ -1,114 +1,240 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { Committee, CommitteeMember, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
+import { Committee, CommitteeLeadership, CommitteeMember, getCommitteeCategorySeverity, LeadershipRole, TagSeverity } from '@lfx-one/shared';
+import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
-import { MenuItem, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { BehaviorSubject, catchError, combineLatest, of, switchMap, throwError } from 'rxjs';
+import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { TooltipModule } from 'primeng/tooltip';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
-import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
+import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, CommitteeMembersComponent, ConfirmDialogModule],
+  imports: [
+    NgClass,
+    BreadcrumbComponent,
+    CardComponent,
+    ButtonComponent,
+    TagComponent,
+    RouterLink,
+    ConfirmDialogModule,
+    DynamicDialogModule,
+    TooltipModule,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
+  ],
+  providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
 export class CommitteeViewComponent {
+  // -- Injections --
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
 
-  public committee: Signal<Committee | null>;
-  public members: WritableSignal<CommitteeMember[]>;
-  public membersLoading: WritableSignal<boolean>;
-  public loading: WritableSignal<boolean>;
-  public error: WritableSignal<boolean>;
-  public formattedCreatedDate: Signal<string>;
-  public formattedUpdatedDate: Signal<string>;
-  public refresh: BehaviorSubject<void>;
-  public categorySeverity: Signal<TagSeverity>;
-  public breadcrumbItems: Signal<MenuItem[]>;
-  public isBoardMember: Signal<boolean>;
+  // -- Label constants --
+  protected readonly committeeLabel = COMMITTEE_LABEL;
+
+  // -- Tab state --
+  public activeTab = signal<string>('overview');
+
+  // -- Writable signals --
+  public loading = signal<boolean>(true);
+  public error = signal<boolean>(false);
+  public refresh = new BehaviorSubject<void>(undefined);
+
+  public members: WritableSignal<CommitteeMember[]> = signal([]);
+
+  // -- Committee (writable so leadership updates apply instantly) --
+  public committeeSignal: WritableSignal<Committee | null> = signal(null);
+  public committee: Signal<Committee | null> = this.committeeSignal.asReadonly();
+
+  // -- Computed / toSignal --
+  public formattedCreatedDate: Signal<string> = this.initializeFormattedCreatedDate();
+  public formattedUpdatedDate: Signal<string> = this.initializeFormattedUpdatedDate();
+
+  public categorySeverity: Signal<TagSeverity> = computed(() => {
+    const category = this.committee()?.category;
+    return getCommitteeCategorySeverity(category || '');
+  });
+
+  public breadcrumbItems: Signal<MenuItem[]> = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
+
+  public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
+  public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
+  public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+
+  // -- Tab visibility signals --
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
+  public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
+
+  // -- Dashboard stat signals --
+  public totalMembers: Signal<number> = computed(() => this.members().length);
+  public activeVoters: Signal<number> = computed(
+    () =>
+      this.members().filter(
+        (m) => m.voting?.status === CommitteeMemberVotingStatus.VOTING_REP || m.voting?.status === CommitteeMemberVotingStatus.ALTERNATE_VOTING_REP
+      ).length
+  );
+  public uniqueOrganizations: Signal<string[]> = computed(() => {
+    const orgs = this.members()
+      .map((m) => m.organization?.name)
+      .filter((name): name is string => !!name);
+    return [...new Set(orgs)];
+  });
+  public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
+    const roleCounts: Record<string, number> = {};
+    this.members().forEach((m) => {
+      const role = m.role?.name || 'Member';
+      roleCounts[role] = (roleCounts[role] || 0) + 1;
+    });
+    return Object.entries(roleCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  });
+
+  // -- Leadership signals --
+  public chair: Signal<Committee['chair']> = computed(() => this.committee()?.chair || null);
+  public coChair: Signal<Committee['co_chair']> = computed(() => this.committee()?.co_chair || null);
+  public hasChair: Signal<boolean> = computed(() => !!this.chair());
+  public hasCoChair: Signal<boolean> = computed(() => !!this.coChair());
+  public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
+  public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
+
+  // -- Configuration label signals --
+  public joinModeLabel: Signal<string> = computed(() => {
+    switch (this.committee()?.join_mode) {
+      case 'open':
+        return 'Open';
+      case 'invite_only':
+        return 'Invite Only';
+      case 'application':
+        return 'Apply to Join';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Closed';
+    }
+  });
 
   public constructor() {
-    this.error = signal<boolean>(false);
-    this.refresh = new BehaviorSubject<void>(undefined);
-    this.members = signal<CommitteeMember[]>([]);
-    this.membersLoading = signal<boolean>(true);
-    this.loading = signal<boolean>(true);
-    this.committee = this.initializeCommittee();
-    this.formattedCreatedDate = this.initializeFormattedCreatedDate();
-    this.formattedUpdatedDate = this.initializeFormattedUpdatedDate();
-    this.categorySeverity = computed(() => {
-      const category = this.committee()?.category;
-      return getCommitteeCategorySeverity(category || '');
-    });
-    this.breadcrumbItems = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
-    this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
+    this.initializeCommittee();
   }
 
+  // -- Public methods --
   public goBack(): void {
     this.router.navigate(['/', 'groups']);
   }
 
-  public refreshMembers(): void {
+  public refreshCommittee(): void {
+    this.loading.set(true);
     this.refresh.next();
   }
 
-  private initializeCommittee(): Signal<Committee | null> {
-    return toSignal(
-      combineLatest([this.route.paramMap, this.refresh]).pipe(
+  public getMembersCountByOrg(org: string): number {
+    return this.members().filter((m) => m.organization?.name === org).length;
+  }
+
+  public openAssignLeadership(role: LeadershipRole): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    const currentLeader = role === 'chair' ? this.chair() : this.coChair();
+    const roleLabel = role === 'chair' ? 'Assign Chair' : 'Assign Co-Chair';
+
+    const dialogRef = this.dialogService.open(AssignLeadershipDialogComponent, {
+      header: roleLabel,
+      width: '500px',
+      modal: true,
+      closable: true,
+      data: {
+        role,
+        committee,
+        members: this.members(),
+        currentLeader: currentLeader ?? null,
+      },
+    }) as DynamicDialogRef;
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
+      if (result) {
+        const current = this.committee();
+        if (current) {
+          const updated = { ...current };
+          if (result.role === 'chair') {
+            updated.chair = result.leadership;
+          } else {
+            updated.co_chair = result.leadership;
+          }
+          this.committeeSignal.set(updated);
+        }
+      }
+    });
+  }
+
+  // -- Private initializer functions --
+  private initializeCommittee(): void {
+    combineLatest([this.route.paramMap, this.refresh])
+      .pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
             this.error.set(true);
+            this.loading.set(false);
             return of(null);
           }
 
+          this.error.set(false);
+          this.loading.set(true);
+
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
-              console.error('Failed to load committee');
+              this.error.set(true);
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Failed to load committee',
+                detail: 'Failed to load group details',
               });
-              this.router.navigate(['/', 'groups']);
-              return throwError(() => new Error('Failed to load committee'));
+              return of(null);
             })
           );
 
-          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(
-            catchError(() => {
-              console.error('Failed to load committee members');
-              return of([]);
-            })
-          );
+          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
 
           return combineLatest([committeeQuery, membersQuery]).pipe(
             switchMap(([committee, members]) => {
-              this.members.set(members);
-              this.loading.set(false);
-              this.membersLoading.set(false);
-              return of(committee);
-            })
+              this.members.set(Array.isArray(members) ? members : []);
+              this.committeeSignal.set(committee);
+              return of(null);
+            }),
+            finalize(() => this.loading.set(false))
           );
-        })
-      ),
-      { initialValue: null }
-    );
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe();
   }
 
   private initializeFormattedCreatedDate(): Signal<string> {
@@ -120,8 +246,6 @@ export class CommitteeViewComponent {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     });
   }
@@ -135,9 +259,23 @@ export class CommitteeViewComponent {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       });
+    });
+  }
+
+  private initializeChairElectedDate(): Signal<string> {
+    return computed(() => {
+      const c = this.chair();
+      if (!c?.elected_date) return '';
+      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    });
+  }
+
+  private initializeCoChairElectedDate(): Signal<string> {
+    return computed(() => {
+      const c = this.coChair();
+      if (!c?.elected_date) return '';
+      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     });
   }
 }
