@@ -8,6 +8,17 @@
     <p class="text-sm text-gray-500 mt-1">Choose the meeting category and visibility to ensure the right people have access</p>
   </div>
 
+  <!-- Pre-selected group indicator -->
+  @if (preselectedGroupName()) {
+    <div class="flex items-center gap-3 mb-6 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg" data-testid="meeting-preselected-group">
+      <i class="fa-light fa-users-gear text-blue-500"></i>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-blue-700">Creating meeting for</span>
+        <span class="text-sm font-semibold text-blue-800">{{ preselectedGroupName() }}</span>
+      </div>
+    </div>
+  }
+
   <!-- Two Column Layout -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
     <!-- Left Column - Meeting Type Selection -->

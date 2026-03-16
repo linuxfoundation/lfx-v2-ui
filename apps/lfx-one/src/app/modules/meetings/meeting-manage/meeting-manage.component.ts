@@ -25,6 +25,7 @@ import {
   ImportantLinkFormValue,
   Meeting,
   MeetingAttachment,
+  MeetingCommittee,
   MeetingRegistrant,
   PendingAttachment,
   PresignAttachmentResponse,
@@ -83,6 +84,7 @@ export class MeetingManageComponent {
   private readonly projectContextService = inject(ProjectContextService);
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
+  public preselectedGroupName = signal<string | null>(null);
   public meetingId = signal<string | null>(null);
   public isEditMode = computed(() => this.mode() === 'edit');
   public originalStartTime = signal<string | null>(null);
@@ -91,6 +93,8 @@ export class MeetingManageComponent {
     toUpdate: [],
     toDelete: [],
   });
+  // Form state — must be before initializeMeeting() which reads form in preselectCommitteeFromQueryParams
+  public form = signal<FormGroup>(this.createMeetingFormGroup());
   // Initialize meeting data using toSignal
   public meeting = this.initializeMeeting();
   public meetingLoading = computed(() => this.isEditMode() && this.meeting() === null);
@@ -101,8 +105,6 @@ export class MeetingManageComponent {
   private internalStep = signal<number>(1);
   public currentStep = toSignal(of(1), { initialValue: 1 });
   public readonly totalSteps = TOTAL_STEPS;
-  // Form state
-  public form = signal<FormGroup>(this.createMeetingFormGroup());
   public submitting = signal<boolean>(false);
   public deletingAttachmentId = signal<string | null>(null);
   public pendingAttachmentDeletions = signal<string[]>([]);
@@ -672,11 +674,23 @@ export class MeetingManageComponent {
           }
 
           this.mode.set('create');
+          this.preselectCommitteeFromQueryParams();
           return of(null);
         })
       ),
       { initialValue: null }
     );
+  }
+
+  private preselectCommitteeFromQueryParams(): void {
+    const snapshot = this.route.snapshot.queryParamMap;
+    const committeeUid = snapshot.get('committee_uid');
+    const committeeName = snapshot.get('committee_name');
+    if (committeeUid) {
+      const committee: MeetingCommittee = { uid: committeeUid, name: committeeName || undefined };
+      this.form().get('committees')?.setValue([committee]);
+      this.preselectedGroupName.set(committeeName || null);
+    }
   }
 
   private populateFormWithMeetingData(meeting: Meeting): void {

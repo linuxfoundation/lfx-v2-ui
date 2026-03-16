@@ -20,6 +20,9 @@ export class MeetingTypeSelectionComponent {
   // Form group input from parent
   public readonly form = input.required<FormGroup>();
 
+  // Pre-selected group name from query params (passed by parent)
+  public readonly preselectedGroupName = input<string | null>(null);
+
   // Privacy options for Public/Restricted selection
   public readonly privacyOptions: CardSelectorOption<boolean>[] = [
     {
