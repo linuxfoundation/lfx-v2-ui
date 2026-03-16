@@ -170,12 +170,6 @@ export type NpsGaugeSize = 'small' | 'medium' | 'large';
 export type SurveyManageMode = 'create' | 'edit';
 
 /**
- * Survey type for survey creation
- * @description Determines the type of survey being created
- */
-export type SurveyType = 'nps' | 'standard';
-
-/**
  * Survey reminder frequency
  * @description How often to send reminder emails
  */
@@ -276,17 +270,21 @@ export interface SurveyReviewData {
 }
 
 /**
- * Payload for creating a new survey via POST /api/surveys
+ * Payload for scheduling a survey via POST /api/surveys
+ * @description Mirrors upstream ScheduleSurveyRequestBody from lfx-v2-survey-service
  */
 export interface SurveyCreateData {
-  title: string;
-  description?: string;
-  type: SurveyType;
-  project_id: string;
-  committee_id?: string;
-  start_date?: string;
-  end_date?: string;
-  reminder_frequency?: SurveyReminderFrequency;
-  distribution_method?: SurveyDistributionMethod;
-  questions?: unknown[];
+  survey_title: string;
+  survey_monkey_id?: string;
+  is_project_survey?: boolean;
+  stage_filter?: string;
+  send_immediately?: boolean;
+  survey_send_date?: string;
+  survey_cutoff_date?: string;
+  survey_reminder_rate_days?: number;
+  email_subject?: string;
+  email_body?: string;
+  email_body_text?: string;
+  committees?: string[];
+  committee_voting_enabled?: boolean;
 }

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SurveyCreateData, SurveyDistributionMethod, SurveyReminderFrequency, SurveyType } from '@lfx-one/shared/interfaces';
+import { SurveyCreateData } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -77,41 +77,10 @@ export class SurveyController {
 
     try {
       const body = (req.body ?? {}) as Record<string, unknown>;
-      const { title, type, project_id } = body;
+      const surveyTitle = body['survey_title'];
 
-      if (typeof title !== 'string' || !title.trim()) {
-        const validationError = ServiceValidationError.forField('title', 'Title is required', {
-          operation: 'create_survey',
-          service: 'survey_controller',
-          path: req.path,
-        });
-        next(validationError);
-        return;
-      }
-
-      if (typeof type !== 'string') {
-        const validationError = ServiceValidationError.forField('type', 'Survey type is required', {
-          operation: 'create_survey',
-          service: 'survey_controller',
-          path: req.path,
-        });
-        next(validationError);
-        return;
-      }
-
-      const validTypes: SurveyType[] = ['nps', 'standard'];
-      if (!validTypes.includes(type as SurveyType)) {
-        const validationError = ServiceValidationError.forField('type', `Survey type must be one of: ${validTypes.join(', ')}`, {
-          operation: 'create_survey',
-          service: 'survey_controller',
-          path: req.path,
-        });
-        next(validationError);
-        return;
-      }
-
-      if (typeof project_id !== 'string' || !project_id.trim()) {
-        const validationError = ServiceValidationError.forField('project_id', 'Project ID is required', {
+      if (typeof surveyTitle !== 'string' || !surveyTitle.trim()) {
+        const validationError = ServiceValidationError.forField('survey_title', 'Survey title is required', {
           operation: 'create_survey',
           service: 'survey_controller',
           path: req.path,
@@ -121,16 +90,19 @@ export class SurveyController {
       }
 
       const createData: SurveyCreateData = {
-        title: title.trim(),
-        type: type as SurveyType,
-        project_id: project_id.trim(),
-        ...(body['description'] !== undefined && { description: body['description'] as string }),
-        ...(body['committee_id'] !== undefined && { committee_id: body['committee_id'] as string }),
-        ...(body['start_date'] !== undefined && { start_date: body['start_date'] as string }),
-        ...(body['end_date'] !== undefined && { end_date: body['end_date'] as string }),
-        ...(body['reminder_frequency'] !== undefined && { reminder_frequency: body['reminder_frequency'] as SurveyReminderFrequency }),
-        ...(body['distribution_method'] !== undefined && { distribution_method: body['distribution_method'] as SurveyDistributionMethod }),
-        ...(body['questions'] !== undefined && { questions: body['questions'] as unknown[] }),
+        survey_title: surveyTitle.trim(),
+        ...(body['survey_monkey_id'] !== undefined && { survey_monkey_id: body['survey_monkey_id'] as string }),
+        ...(body['is_project_survey'] !== undefined && { is_project_survey: body['is_project_survey'] as boolean }),
+        ...(body['stage_filter'] !== undefined && { stage_filter: body['stage_filter'] as string }),
+        ...(body['send_immediately'] !== undefined && { send_immediately: body['send_immediately'] as boolean }),
+        ...(body['survey_send_date'] !== undefined && { survey_send_date: body['survey_send_date'] as string }),
+        ...(body['survey_cutoff_date'] !== undefined && { survey_cutoff_date: body['survey_cutoff_date'] as string }),
+        ...(body['survey_reminder_rate_days'] !== undefined && { survey_reminder_rate_days: body['survey_reminder_rate_days'] as number }),
+        ...(body['email_subject'] !== undefined && { email_subject: body['email_subject'] as string }),
+        ...(body['email_body'] !== undefined && { email_body: body['email_body'] as string }),
+        ...(body['email_body_text'] !== undefined && { email_body_text: body['email_body_text'] as string }),
+        ...(body['committees'] !== undefined && { committees: body['committees'] as string[] }),
+        ...(body['committee_voting_enabled'] !== undefined && { committee_voting_enabled: body['committee_voting_enabled'] as boolean }),
       };
 
       const survey = await this.surveyService.createSurvey(req, createData);
