@@ -1082,13 +1082,23 @@
 
           <!-- Surveys Tab (placeholder) -->
           <p-tabpanel value="surveys">
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-chart-simple text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Surveys</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
+            @if (committee(); as c) {
+              <div class="flex items-center justify-end mb-4" data-testid="committee-view-surveys-tab">
+                @if (!isBoardMember()) {
+                  <lfx-button
+                    icon="fa-light fa-plus"
+                    label="Create Survey"
+                    size="small"
+                    severity="secondary"
+                    styleClass="p-button-outlined"
+                    (onClick)="createSurvey()"
+                    data-testid="committee-view-create-survey-btn">
+                  </lfx-button>
+                }
               </div>
-            </div>
+              <lfx-committee-surveys-list [committeeUid]="c.uid" [committeeName]="c.name" [hasPMOAccess]="!isBoardMember()">
+              </lfx-committee-surveys-list>
+            }
           </p-tabpanel>
 
           <!-- Documents Tab (placeholder) -->

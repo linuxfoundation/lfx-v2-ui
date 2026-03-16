@@ -58,6 +58,7 @@ import { ApplicationReviewComponent } from '../components/application-review/app
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
 
 @Component({
@@ -84,6 +85,7 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    CommitteeSurveysListComponent,
     CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService, DialogService],
@@ -251,6 +253,17 @@ export class CommitteeViewComponent {
 
   public refreshMembers(): void {
     this.refresh.next();
+  }
+
+  public createSurvey(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/surveys/create'], {
+      queryParams: {
+        committee_uid: committee.uid,
+        committee_name: committee.name,
+      },
+    });
   }
 
   public getMembersCountByOrg(org: string): number {
