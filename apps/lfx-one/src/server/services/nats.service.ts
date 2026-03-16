@@ -12,7 +12,7 @@ import { ATTR_NETWORK_PROTOCOL_NAME, ATTR_SERVER_ADDRESS, ATTR_SERVER_PORT } fro
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { Codec, connect, Msg, NatsConnection, StringCodec } from 'nats';
 
-import { tracer } from '../server-logger';
+import { tracer } from '../server-tracer';
 import { logger } from './logger.service';
 
 /**

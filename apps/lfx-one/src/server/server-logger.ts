@@ -8,10 +8,7 @@ import pino from 'pino';
 import pinoPretty from 'pino-pretty';
 
 import { customErrorSerializer } from './helpers/error-serializer';
-
-const SERVICE_NAME = process.env['OTEL_SERVICE_NAME'] || 'lfx-v2-ui';
-
-export const tracer = trace.getTracer(SERVICE_NAME);
+import { SERVICE_NAME } from './server-tracer';
 
 /**
  * Whitelist-based request serializer.

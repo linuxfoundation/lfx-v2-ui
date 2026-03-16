@@ -43,7 +43,7 @@ async function initializeDataDogRum(): Promise<void> {
       defaultPrivacyLevel: 'allow',
       traceSampleRate: environment.datadog.env ? 100 : 0,
       allowedTracingUrls: allowedTracingUrls.map((url) => ({
-        match: url,
+        match: url.replace(/\/+$/, ''),
         propagatorTypes: ['tracecontext' as const],
       })),
     });

@@ -16,7 +16,7 @@ import { LockStats, SnowflakePoolStats, SnowflakeQueryOptions, SnowflakeQueryRes
 import snowflakeSdk from 'snowflake-sdk';
 
 import { MicroserviceError } from '../errors';
-import { tracer } from '../server-logger';
+import { tracer } from '../server-tracer';
 import { LockManager } from '../utils/lock-manager';
 import { logger } from './logger.service';
 

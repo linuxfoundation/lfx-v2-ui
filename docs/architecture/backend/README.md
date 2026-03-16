@@ -57,7 +57,8 @@ apps/lfx-one/src/server/
 │   └── error-handler.middleware.ts
 ├── utils/                    # Shared server utilities
 ├── server.ts                 # Server bootstrap and route registration
-└── server-logger.ts          # Base Pino logger instance
+├── server-logger.ts          # Base Pino logger instance
+└── server-tracer.ts          # OpenTelemetry tracer and SERVICE_NAME
 ```
 
 ## Key Patterns
