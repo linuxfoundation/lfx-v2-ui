@@ -45,9 +45,7 @@ import { Meeting, PastMeeting, PastMeetingSummary } from '@lfx-one/shared/interf
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
-import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
-import { ProjectService } from '@services/project.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -59,6 +57,7 @@ import { ApplicationReviewComponent } from '../components/application-review/app
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
 import { EditChannelsDialogComponent, EditChannelsDialogResult } from '../components/edit-channels-dialog/edit-channels-dialog.component';
 
@@ -87,6 +86,7 @@ import { EditChannelsDialogComponent, EditChannelsDialogResult } from '../compon
     MeetingCardComponent,
     ReactiveFormsModule,
     CommitteeVotesListComponent,
+    CommitteeSurveysListComponent,
   ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
@@ -97,8 +97,6 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
-  private readonly meetingService = inject(MeetingService);
-  private readonly projectService = inject(ProjectService);
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
