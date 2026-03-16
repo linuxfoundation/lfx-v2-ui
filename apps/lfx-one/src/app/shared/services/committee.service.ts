@@ -17,6 +17,8 @@ import {
   CommitteeResolution,
   CommitteeVote,
   CreateCommitteeMemberRequest,
+  Meeting,
+  PaginatedResponse,
   CreateGroupInviteRequest,
   GroupInvite,
   GroupJoinApplication,
@@ -106,6 +108,14 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  public getCommitteeMeetings(committeeId: string): Observable<Meeting[]> {
+    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(
+      map((response) => response.data),
+      catchError(() => of([])),
+      take(1)
+    );
   }
 
   // Dashboard sub-resource methods
