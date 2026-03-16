@@ -64,6 +64,7 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
 @Component({
   selector: 'lfx-committee-view',
   imports: [
+    NgClass,
     BreadcrumbComponent,
     CardComponent,
     ButtonComponent,
@@ -84,7 +85,6 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     ApplicationReviewComponent,
     MeetingCardComponent,
     ReactiveFormsModule,
-    NgClass,
     CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService, DialogService],
