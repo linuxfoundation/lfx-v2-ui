@@ -24,6 +24,9 @@ router.post('/:id/members', (req, res, next) => committeeController.createCommit
 router.put('/:id/members/:memberId', (req, res, next) => committeeController.updateCommitteeMember(req, res, next));
 router.delete('/:id/members/:memberId', (req, res, next) => committeeController.deleteCommitteeMember(req, res, next));
 
+// Meeting routes
+router.get('/:id/meetings', (req, res, next) => committeeController.getCommitteeMeetings(req, res, next));
+
 // Dashboard sub-resource routes
 router.get('/:id/votes', (req, res, next) => committeeController.getCommitteeVotes(req, res, next));
 router.get('/:id/resolutions', (req, res, next) => committeeController.getCommitteeResolutions(req, res, next));

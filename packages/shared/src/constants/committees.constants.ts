@@ -477,8 +477,8 @@ export const MEMBER_VISIBILITY_OPTIONS = [
  */
 export const JOIN_MODE_OPTIONS = [
   { label: 'Open — anyone can join', value: 'open' },
-  { label: 'Invite Only — members send invites', value: 'invite-only' },
-  { label: 'Apply & Review — admin approves', value: 'apply' },
+  { label: 'Invite Only — members send invites', value: 'invite_only' },
+  { label: 'Apply & Review — admin approves', value: 'application' },
   { label: 'Closed — admin adds members', value: 'closed' },
 ];
 
