@@ -112,25 +112,6 @@ export interface CommitteeReference {
 }
 
 /**
- * Committee leadership position (Chair, Co-Chair, etc.)
- * @description Represents a member in a leadership position within a committee
- */
-export interface CommitteeLeadership {
-  /** Unique identifier for the leader (member UID) */
-  uid: string;
-  /** Leader's first name */
-  first_name: string;
-  /** Leader's last name */
-  last_name: string;
-  /** Leader's email address */
-  email: string;
-  /** Date when the leader was elected/appointed (ISO 8601 date string) */
-  elected_date?: string;
-  /** Organization the leader belongs to (may not be returned by all API versions) */
-  organization?: string;
-}
-
-/**
  * Committee entity with complete details
  * @description Represents a committee/working group within a project with full metadata
  */
@@ -265,10 +246,6 @@ export interface CommitteeCreateData {
  * @description Partial update payload allowing any field from create data to be modified
  */
 export interface CommitteeUpdateData extends Partial<CommitteeCreateData> {
-  /** Assign or remove chair */
-  chair?: CommitteeLeadership | null;
-  /** Assign or remove co-chair */
-  co_chair?: CommitteeLeadership | null;
   /** Update or clear mailing list email */
   mailing_list?: string | null;
   /** Update or clear chat channel */

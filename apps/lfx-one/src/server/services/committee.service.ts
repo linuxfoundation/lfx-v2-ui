@@ -138,22 +138,11 @@ export class CommitteeService {
    * Updates an existing committee using ETag for concurrency control
    */
   public async updateCommittee(req: Request, committeeId: string, data: CommitteeUpdateData): Promise<Committee> {
-    // Extract settings, leadership, and channel fields from core committee data
-    const {
-      business_email_required,
-      is_audit_enabled,
-      show_meeting_attendees,
-      member_visibility,
-      chair,
-      co_chair,
-      mailing_list,
-      chat_channel,
-      ...committeeData
-    } = data;
+    // Extract settings and channel fields from core committee data
+    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, mailing_list, chat_channel, ...committeeData } = data;
 
     const hasSettingsUpdate =
       business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined;
-    const hasLeadershipUpdate = chair !== undefined || co_chair !== undefined;
     const hasChannelsUpdate = mailing_list !== undefined || chat_channel !== undefined;
     const hasCoreUpdate = Object.keys(committeeData).length > 0;
 
@@ -177,37 +166,7 @@ export class CommitteeService {
       updatedCommittee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
     }
 
-    // Step 3: Update leadership via PATCH (chair/co_chair are not accepted by PUT)
-    if (hasLeadershipUpdate) {
-      try {
-        const leadershipPayload: Record<string, any> = {};
-        if (chair !== undefined) leadershipPayload['chair'] = chair;
-        if (co_chair !== undefined) leadershipPayload['co_chair'] = co_chair;
-
-        logger.debug(req, 'update_committee_leadership', 'Updating committee leadership via PATCH', {
-          committee_uid: committeeId,
-          fields: Object.keys(leadershipPayload),
-        });
-
-        const patched = await this.microserviceProxy.proxyRequest<Committee>(
-          req,
-          'LFX_V2_SERVICE',
-          `/committees/${committeeId}`,
-          'PATCH',
-          {},
-          leadershipPayload
-        );
-
-        updatedCommittee = { ...updatedCommittee, ...patched };
-      } catch (error) {
-        logger.warning(req, 'update_committee_leadership', 'PATCH failed for leadership, returning current committee data', {
-          committee_uid: committeeId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    // Step 4: Update channels via PATCH (mailing_list/chat_channel are not accepted by PUT)
+    // Step 3: Update channels via PATCH (mailing_list/chat_channel are not accepted by PUT)
     if (hasChannelsUpdate) {
       try {
         const channelsPayload: Record<string, any> = {};
