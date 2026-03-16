@@ -10,7 +10,15 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CommitteeLeadership, CommitteeMember, getCommitteeCategorySeverity, LeadershipRole, TagSeverity } from '@lfx-one/shared';
+import {
+  Committee,
+  CommitteeLeadership,
+  CommitteeMember,
+  getCommitteeCategorySeverity,
+  GroupBehavioralClass,
+  LeadershipRole,
+  TagSeverity,
+} from '@lfx-one/shared';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
@@ -89,6 +97,16 @@ export class CommitteeViewComponent {
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+
+  public behavioralClass: Signal<GroupBehavioralClass> = computed(() => {
+    const cat = this.committee()?.category?.toLowerCase() ?? '';
+    if (cat.includes('board')) return 'governing-board';
+    if (cat.includes('oversight') || cat.includes('tsc') || cat.includes('toc')) return 'oversight-committee';
+    if (cat.includes('working')) return 'working-group';
+    if (cat.includes('sig') || cat.includes('special')) return 'special-interest-group';
+    if (cat.includes('ambassador')) return 'ambassador-program';
+    return 'other';
+  });
 
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
