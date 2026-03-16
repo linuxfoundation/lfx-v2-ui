@@ -216,9 +216,9 @@ export class CommitteeViewComponent {
     switch (this.committee()?.join_mode) {
       case 'open':
         return 'Open';
-      case 'invite-only':
+      case 'invite_only':
         return 'Invite Only';
-      case 'apply':
+      case 'application':
         return 'Apply to Join';
       case 'closed':
         return 'Closed';
@@ -365,7 +365,7 @@ export class CommitteeViewComponent {
           return committeeQuery.pipe(
             switchMap((committee) => {
               const projectUid = committee?.project_uid || this.projectService.project()?.uid;
-              const meetingsQuery = projectUid ? this.meetingService.getMeetingsByProject(projectUid).pipe(catchError(() => of([]))) : of([]);
+              const meetingsQuery = this.committeeService.getCommitteeMeetings(committeeId).pipe(catchError(() => of([])));
               const pastMeetingsQuery = projectUid ? this.meetingService.getPastMeetingsByProject(projectUid, 1).pipe(catchError(() => of([]))) : of([]);
               return combineLatest([of(committee), membersQuery, meetingsQuery, pastMeetingsQuery]);
             }),
@@ -519,7 +519,7 @@ export class CommitteeViewComponent {
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
       return meetings
-        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now && m.committees?.some((c) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() >= now)
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     });
   }
@@ -532,7 +532,7 @@ export class CommitteeViewComponent {
       if (!Array.isArray(meetings)) return [];
       const now = new Date().getTime();
       return meetings
-        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now && m.committees?.some((c) => c.uid === committeeId))
+        .filter((m) => m.start_time && new Date(m.start_time).getTime() < now)
         .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
     });
   }

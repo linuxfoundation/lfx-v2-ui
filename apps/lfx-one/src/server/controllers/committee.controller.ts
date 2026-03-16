@@ -899,4 +899,39 @@ export class CommitteeController {
       next(error);
     }
   }
+
+  /**
+   * GET /committees/:id/meetings
+   */
+  public async getCommitteeMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_meetings', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'get_committee_meetings',
+          service: 'committee_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      const result = await this.committeeService.getCommitteeMeetings(req, id, req.query as Record<string, any>);
+
+      logger.success(req, 'get_committee_meetings', startTime, {
+        committee_id: id,
+        meeting_count: result.data.length,
+      });
+
+      res.json(result);
+    } catch (error) {
+      logger.error(req, 'get_committee_meetings', startTime, error, { committee_id: id });
+      next(error);
+    }
+  }
 }
