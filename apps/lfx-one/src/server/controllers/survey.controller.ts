@@ -78,7 +78,7 @@ export class SurveyController {
     try {
       const { title, type, project_id } = req.body as SurveyCreateData;
 
-      if (!title) {
+      if (!title || (typeof title === 'string' && !title.trim())) {
         const validationError = ServiceValidationError.forField('title', 'Title is required', {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -98,7 +98,18 @@ export class SurveyController {
         return;
       }
 
-      if (!project_id) {
+      const validTypes = ['nps', 'standard'];
+      if (!validTypes.includes(type)) {
+        const validationError = ServiceValidationError.forField('type', `Survey type must be one of: ${validTypes.join(', ')}`, {
+          operation: 'create_survey',
+          service: 'survey_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      if (!project_id || (typeof project_id === 'string' && !project_id.trim())) {
         const validationError = ServiceValidationError.forField('project_id', 'Project ID is required', {
           operation: 'create_survey',
           service: 'survey_controller',
@@ -110,7 +121,7 @@ export class SurveyController {
 
       const survey = await this.surveyService.createSurvey(req, req.body as SurveyCreateData);
 
-      logger.success(req, 'create_survey', startTime, { surveyUid: survey.uid });
+      logger.success(req, 'create_survey', startTime, { survey_uid: survey.uid });
       res.status(201).json(survey);
     } catch (error) {
       next(error);

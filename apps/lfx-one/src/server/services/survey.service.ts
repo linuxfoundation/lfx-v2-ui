@@ -93,7 +93,11 @@ export class SurveyService {
    * Creates a new survey
    */
   public async createSurvey(req: Request, data: SurveyCreateData): Promise<Survey> {
-    logger.debug(req, 'create_survey', 'Creating survey', { data });
+    logger.debug(req, 'create_survey', 'Creating survey', {
+      title: data.title,
+      type: data.type,
+      project_id: data.project_id,
+    });
 
     const response = await this.microserviceProxy.proxyRequest<Survey>(req, 'LFX_V2_SERVICE', '/surveys', 'POST', undefined, data);
 
