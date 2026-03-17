@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal, Signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -13,7 +13,7 @@ import { CommitteeService } from '@services/committee.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
 
@@ -49,7 +49,7 @@ export class CommitteeViewComponent {
   public loading = signal<boolean>(true);
   public error = signal<boolean>(false);
   public errorType = signal<'not-found' | 'server-error' | null>(null);
-  public refresh = new BehaviorSubject<void>(undefined);
+  public refresh = signal(0);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -74,13 +74,13 @@ export class CommitteeViewComponent {
 
   public refreshCommittee(): void {
     this.loading.set(true);
-    this.refresh.next();
+    this.refresh.update((v) => v + 1);
   }
 
   // -- Private initializer functions --
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
-      combineLatest([this.route.paramMap, this.refresh]).pipe(
+      combineLatest([this.route.paramMap, toObservable(this.refresh)]).pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {

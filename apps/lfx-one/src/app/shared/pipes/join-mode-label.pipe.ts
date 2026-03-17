@@ -7,6 +7,7 @@ import { JoinMode } from '@lfx-one/shared/interfaces';
 
 @Pipe({
   name: 'joinModeLabel',
+  standalone: true,
 })
 export class JoinModeLabelPipe implements PipeTransform {
   public transform(mode: JoinMode | undefined): string {
