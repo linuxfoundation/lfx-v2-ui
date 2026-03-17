@@ -474,7 +474,7 @@ export class CommitteeController {
    * GET /committees/:id/votes
    */
   public async getCommitteeVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_votes',
@@ -498,7 +498,7 @@ export class CommitteeController {
    * GET /committees/:id/resolutions
    */
   public async getCommitteeResolutions(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_resolutions',
@@ -522,7 +522,7 @@ export class CommitteeController {
    * GET /committees/:id/activity
    */
   public async getCommitteeActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_activity',
@@ -546,7 +546,7 @@ export class CommitteeController {
    * GET /committees/:id/contributors
    */
   public async getCommitteeContributors(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_contributors',
@@ -570,7 +570,7 @@ export class CommitteeController {
    * GET /committees/:id/deliverables
    */
   public async getCommitteeDeliverables(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_deliverables',
@@ -594,7 +594,7 @@ export class CommitteeController {
    * GET /committees/:id/discussions
    */
   public async getCommitteeDiscussions(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_discussions',
@@ -618,7 +618,7 @@ export class CommitteeController {
    * GET /committees/:id/events
    */
   public async getCommitteeEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_events',
@@ -642,7 +642,7 @@ export class CommitteeController {
    * GET /committees/:id/campaigns
    */
   public async getCommitteeCampaigns(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_campaigns',
@@ -666,7 +666,7 @@ export class CommitteeController {
    * GET /committees/:id/engagement
    */
   public async getCommitteeEngagement(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_engagement',
@@ -690,7 +690,7 @@ export class CommitteeController {
    * GET /committees/:id/budget
    */
   public async getCommitteeBudget(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_committee_budget',
@@ -714,7 +714,7 @@ export class CommitteeController {
    * POST /committees/:id/invites
    */
   public async createInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'create_invites',
@@ -745,7 +745,7 @@ export class CommitteeController {
    * GET /committees/:id/invites
    */
   public async getInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_invites',
@@ -775,7 +775,7 @@ export class CommitteeController {
    * POST /committees/:id/applications
    */
   public async applyToJoin(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'apply_to_join',
@@ -802,7 +802,7 @@ export class CommitteeController {
    * GET /committees/:id/applications
    */
   public async getApplications(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
+    const { id: committeeId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'get_applications',
@@ -832,8 +832,8 @@ export class CommitteeController {
    * POST /committees/:id/applications/:applicationId/approve
    */
   public async approveApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
-    const applicationId = req.params['applicationId'];
+    const { id: committeeId } = req.params;
+    const { applicationId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'approve_application',
@@ -868,8 +868,8 @@ export class CommitteeController {
    * POST /committees/:id/applications/:applicationId/reject
    */
   public async rejectApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const committeeId = req.params['id'];
-    const applicationId = req.params['applicationId'];
+    const { id: committeeId } = req.params;
+    const { applicationId } = req.params;
     if (!committeeId) {
       const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
         operation: 'reject_application',

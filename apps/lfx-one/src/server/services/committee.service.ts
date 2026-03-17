@@ -3,10 +3,20 @@
 
 import {
   Committee,
+  CommitteeActivity,
+  CommitteeBudgetSummary,
+  CommitteeContributor,
   CommitteeCreateData,
+  CommitteeDeliverable,
+  CommitteeDiscussionThread,
+  CommitteeEngagementMetrics,
+  CommitteeEvent,
   CommitteeMember,
+  CommitteeOutreachCampaign,
+  CommitteeResolution,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CommitteeVote,
   CreateCommitteeMemberRequest,
   CreateGroupInviteRequest,
   GroupInvite,
@@ -367,9 +377,9 @@ export class CommitteeService {
 
   // ── Dashboard Sub-Resource Methods ──────────────────────────────────────────
 
-  public async getCommitteeVotes(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeVotes(req: Request, committeeId: string): Promise<CommitteeVote[]> {
     try {
-      const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(
+      const { resources: committeeVoteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeVote>>(
         req,
         'LFX_V2_SERVICE',
         '/query/resources',
@@ -384,14 +394,15 @@ export class CommitteeService {
         return committeeVoteResources.map((r) => r.data);
       }
 
-      const committee = await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
+      const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
       const projectUid: string | undefined = committee?.project_uid;
 
       if (!projectUid) {
         return [];
       }
 
-      const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(
+      // TODO: page_size: 100 does not follow page_token pagination. Use fetchAllQueryResources helper for full results.
+      const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Record<string, any>>>(
         req,
         'LFX_V2_SERVICE',
         '/query/resources',
@@ -404,16 +415,16 @@ export class CommitteeService {
       );
 
       return voteResources
-        .filter((r) => r.data.committee_uid === committeeId)
+        .filter((r) => r.data['committee_uid'] === committeeId)
         .map((r) => ({
-          uid: r.data.uid,
-          title: r.data.name,
-          status: getVoteStatus(r.data.status),
-          deadline: r.data.end_time,
-          votes_for: r.data.num_response_received ?? 0,
+          uid: r.data['uid'],
+          title: r.data['name'],
+          status: getVoteStatus(r.data['status']),
+          deadline: r.data['end_time'],
+          votes_for: r.data['num_response_received'] ?? 0,
           votes_against: 0,
           votes_abstain: 0,
-          total_eligible: r.data.total_voting_request_invitations ?? 0,
+          total_eligible: r.data['total_voting_request_invitations'] ?? 0,
           created_by: '',
         }));
     } catch {
@@ -424,12 +435,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeResolutions(req: Request, committeeId: string): Promise<CommitteeResolution[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_resolution',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeResolution>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_resolution',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_resolutions', 'Failed to fetch committee resolutions, returning empty', {
@@ -439,12 +456,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeActivity(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeActivity(req: Request, committeeId: string): Promise<CommitteeActivity[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_activity',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeActivity>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_activity',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_activity', 'Failed to fetch committee activity, returning empty', {
@@ -454,12 +477,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeContributors(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeContributors(req: Request, committeeId: string): Promise<CommitteeContributor[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_contributor',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeContributor>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_contributor',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_contributors', 'Failed to fetch committee contributors, returning empty', {
@@ -469,12 +498,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeDeliverables(req: Request, committeeId: string): Promise<CommitteeDeliverable[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_deliverable',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDeliverable>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_deliverable',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_deliverables', 'Failed to fetch committee deliverables, returning empty', {
@@ -484,12 +519,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeDiscussions(req: Request, committeeId: string): Promise<CommitteeDiscussionThread[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_discussion',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeDiscussionThread>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_discussion',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_discussions', 'Failed to fetch committee discussions, returning empty', {
@@ -499,9 +540,9 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeEvents(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeEvents(req: Request, committeeId: string): Promise<CommitteeEvent[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeEvent>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'committee_event',
         tags: `committee_uid:${committeeId}`,
       });
@@ -514,12 +555,18 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<any[]> {
+  public async getCommitteeCampaigns(req: Request, committeeId: string): Promise<CommitteeOutreachCampaign[]> {
     try {
-      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<any>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'committee_campaign',
-        tags: `committee_uid:${committeeId}`,
-      });
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeOutreachCampaign>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'committee_campaign',
+          tags: `committee_uid:${committeeId}`,
+        }
+      );
       return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_committee_campaigns', 'Failed to fetch committee campaigns, returning empty', {
@@ -529,9 +576,9 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<any> {
+  public async getCommitteeEngagement(req: Request, committeeId: string): Promise<CommitteeEngagementMetrics | null> {
     try {
-      return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
+      return await this.microserviceProxy.proxyRequest<CommitteeEngagementMetrics>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/engagement`, 'GET');
     } catch {
       logger.warning(req, 'get_committee_engagement', 'Failed to fetch committee engagement, returning null', {
         committee_uid: committeeId,
@@ -540,9 +587,9 @@ export class CommitteeService {
     }
   }
 
-  public async getCommitteeBudget(req: Request, committeeId: string): Promise<any> {
+  public async getCommitteeBudget(req: Request, committeeId: string): Promise<CommitteeBudgetSummary | null> {
     try {
-      return await this.microserviceProxy.proxyRequest<any>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/budget`, 'GET');
+      return await this.microserviceProxy.proxyRequest<CommitteeBudgetSummary>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/budget`, 'GET');
     } catch {
       logger.warning(req, 'get_committee_budget', 'Failed to fetch committee budget, returning null', {
         committee_uid: committeeId,
@@ -567,13 +614,13 @@ export class CommitteeService {
 
   public async getInvites(req: Request, committeeId: string): Promise<GroupInvite[]> {
     try {
-      const result = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupInvite>>(
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupInvite>>(
         req,
         'LFX_V2_SERVICE',
         `/committees/${committeeId}/invites`,
         'GET'
       );
-      return Array.isArray(result) ? result : result?.resources?.map((r) => r.data) || [];
+      return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_invites', 'Failed to fetch invites, returning empty', {
         committee_uid: committeeId,

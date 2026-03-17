@@ -35,7 +35,7 @@ export type GroupBehavioralClass = 'governing-board' | 'oversight-committee' | '
  *  - open:        Anyone can self-join; no approval required.
  *  - invite_only: Members / admins send invite links; invitee clicks to accept.
  *  - application: User submits application; admin reviews and approves/rejects.
- *  - closed:      Only admins can add members (legacy behaviour).
+ *  - closed:      Only admins can add members (legacy behavior).
  */
 export type JoinMode = 'open' | 'invite_only' | 'application' | 'closed';
 
@@ -286,6 +286,7 @@ export interface CommitteeCreateData {
   website?: string;
   /** Associated project UID */
   project_uid?: string;
+  // TODO(LFXV2-1255): Remove joinable once join_mode is fully wired backend-side.
   /** @deprecated Use join_mode instead */
   joinable?: boolean;
   /** How users can join this group */
