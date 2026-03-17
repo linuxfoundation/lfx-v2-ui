@@ -52,7 +52,7 @@
   }
 
   <!-- Mailing List Import tab content -->
-  @if (activeTab() === 'mailing-lists') {
+  @if (canManageMembers() && activeTab() === 'mailing-lists') {
     <lfx-mailing-list-import
       [committeeId]="committeeId()"
       [projectUid]="projectUid() || committee()?.project_uid || null"
@@ -200,7 +200,7 @@
                     tooltipPosition="top"
                     (click)="onSendMessage(member)">
                   </lfx-button>
-                  @if (canManageMembers()) {
+                  @if (canManageMembers() && (member.uid || member.tempId)) {
                     <lfx-button
                       size="small"
                       icon="fa-light fa-trash"
