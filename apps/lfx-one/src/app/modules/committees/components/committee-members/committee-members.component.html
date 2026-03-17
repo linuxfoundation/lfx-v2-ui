@@ -139,7 +139,7 @@
               </td>
             }
             <td class="text-right relative">
-              <lfx-menu #memberActionMenu [model]="memberActionMenuItems" [popup]="true" appendTo="body"> </lfx-menu>
+              <lfx-menu #memberActionMenu [model]="memberActionMenuItems()" [popup]="true" appendTo="body"> </lfx-menu>
               @if (canManageMembers()) {
                 <lfx-button
                   icon="fa-light fa-ellipsis-vertical"

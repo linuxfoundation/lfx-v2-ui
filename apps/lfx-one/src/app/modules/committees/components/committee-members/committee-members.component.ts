@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, input, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -40,7 +40,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
   templateUrl: './committee-members.component.html',
   styleUrl: './committee-members.component.scss',
 })
-export class CommitteeMembersComponent implements OnInit {
+export class CommitteeMembersComponent {
   // Injected services
   private readonly committeeService = inject(CommitteeService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -60,7 +60,7 @@ export class CommitteeMembersComponent implements OnInit {
   // Class variables with types
   public selectedMember: WritableSignal<CommitteeMember | null>;
   public isDeleting: WritableSignal<boolean>;
-  public memberActionMenuItems: MenuItem[] = [];
+  public memberActionMenuItems: Signal<MenuItem[]> = this.initializeMemberActionMenuItems();
   public committeeLabel = COMMITTEE_LABEL;
   public isBoardMember: Signal<boolean>;
   public isMaintainer: Signal<boolean>;
@@ -101,10 +101,6 @@ export class CommitteeMembersComponent implements OnInit {
     this.votingStatusOptions = this.initializeVotingStatusOptions();
     this.organizationOptions = this.initializeOrganizationOptions();
     this.filteredMembers = this.initializeFilteredMembers();
-  }
-
-  public ngOnInit(): void {
-    this.memberActionMenuItems = this.initializeMemberActionMenuItems();
   }
 
   public toggleMemberActionMenu(event: Event, member: CommitteeMember, menuComponent: MenuComponent): void {
@@ -265,8 +261,8 @@ export class CommitteeMembersComponent implements OnInit {
     return toSignal(this.filterForm.get('organization')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
   }
 
-  private initializeMemberActionMenuItems(): MenuItem[] {
-    return [
+  private initializeMemberActionMenuItems(): Signal<MenuItem[]> {
+    return computed(() => [
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
@@ -294,7 +290,7 @@ export class CommitteeMembersComponent implements OnInit {
         disabled: this.isDeleting(),
         command: () => this.deleteMember(),
       },
-    ];
+    ]);
   }
 
   private initializeRoleOptions(): Signal<{ label: string; value: string | null }[]> {
