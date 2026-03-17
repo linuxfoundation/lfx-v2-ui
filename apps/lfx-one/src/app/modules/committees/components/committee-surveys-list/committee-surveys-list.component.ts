@@ -4,9 +4,10 @@
 import { Component, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CardComponent } from '@components/card/card.component';
-import { SURVEY_LABEL } from '@lfx-one/shared';
+import { SURVEY_LABEL } from '@lfx-one/shared/constants';
 import { Survey } from '@lfx-one/shared/interfaces';
 import { SurveyService } from '@services/survey.service';
+import { MessageService } from 'primeng/api';
 import { BehaviorSubject, catchError, finalize, of, switchMap } from 'rxjs';
 
 import { SurveyResultsDrawerComponent } from '@app/modules/surveys/components/survey-results-drawer/survey-results-drawer.component';
@@ -20,6 +21,7 @@ import { SurveysTableComponent } from '@app/modules/surveys/components/surveys-t
 export class CommitteeSurveysListComponent {
   // === Services ===
   private readonly surveyService = inject(SurveyService);
+  private readonly messageService = inject(MessageService);
 
   // === Constants ===
   protected readonly surveyLabelPlural = SURVEY_LABEL.plural;
@@ -59,12 +61,14 @@ export class CommitteeSurveysListComponent {
     this.refresh$.next();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onDuplicateSurvey(surveyId: string): void {
-    console.warn('Survey duplication not yet implemented for:', surveyId);
+    this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Survey duplication is not yet available' });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onCloseSurvey(surveyId: string): void {
-    console.warn('Survey close not yet implemented for:', surveyId);
+    this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Survey close is not yet available' });
   }
 
   // === Private Initializers ===
@@ -88,13 +92,13 @@ export class CommitteeSurveysListComponent {
                   this.loadError.set(true);
                   return of([]);
                 }),
-                finalize(() => this.loading.set(false)),
-              ),
-            ),
+                finalize(() => this.loading.set(false))
+              )
+            )
           );
-        }),
+        })
       ),
-      { initialValue: [] },
+      { initialValue: [] }
     );
   }
 }
