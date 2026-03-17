@@ -519,7 +519,12 @@
                   <lfx-application-review [committee]="committee()" (memberAdded)="refreshMembers()"></lfx-application-review>
                 }
                 @if (committee()?.uid) {
-                  <lfx-committee-members [committee]="committee()" [members]="members()" [membersLoading]="membersLoading()" (refresh)="refreshCommittee()">
+                  <lfx-committee-members
+                    [committee]="committee()"
+                    [members]="members()"
+                    [membersLoading]="membersLoading()"
+                    [groupBehavioralClass]="behavioralClass()"
+                    (refresh)="refreshCommittee()">
                   </lfx-committee-members>
                 }
               </div>

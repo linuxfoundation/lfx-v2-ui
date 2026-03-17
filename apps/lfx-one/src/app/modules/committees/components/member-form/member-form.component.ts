@@ -61,6 +61,14 @@ export class MemberFormComponent {
     // Initialize form with data when component is created
     this.initializeForm();
 
+    // Conditionally add validators for role/voting_status when voting is enabled
+    if (this.committee?.enable_voting) {
+      this.form().get('role')?.setValidators([Validators.required]);
+      this.form().get('voting_status')?.setValidators([Validators.required]);
+      this.form().get('role')?.updateValueAndValidity();
+      this.form().get('voting_status')?.updateValueAndValidity();
+    }
+
     // Listen to individual toggle changes (fixes click-before-value-update timing)
     this.form()
       .get('is_individual')
@@ -251,8 +259,8 @@ export class MemberFormComponent {
         is_individual: new FormControl(false),
         organization: new FormControl('', [Validators.required]),
         organization_url: new FormControl(''),
-        role: new FormControl('', [Validators.required]),
-        voting_status: new FormControl('', [Validators.required]),
+        role: new FormControl(''),
+        voting_status: new FormControl(''),
         appointed_by: new FormControl(''),
         role_start: new FormControl(null),
         role_end: new FormControl(null),

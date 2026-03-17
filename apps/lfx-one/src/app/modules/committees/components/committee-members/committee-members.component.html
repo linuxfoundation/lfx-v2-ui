@@ -133,7 +133,7 @@
             </td>
             <td>
               @if (member.organization?.website) {
-                <a [href]="member.organization.website" target="_blank" class="text-primary hover:text-primary-600 text-sm font-sans">
+                <a [href]="member.organization.website" target="_blank" rel="noopener noreferrer" class="text-primary hover:text-primary-600 text-sm font-sans">
                   {{ member.organization.name }}
                 </a>
               } @else {

@@ -76,7 +76,8 @@ export class JoinApplicationDialogComponent {
   }
 
   private static trimmedRequired(control: AbstractControl): ValidationErrors | null {
-    return (control.value as string)?.trim().length ? null : { required: true };
+    const value = (control.value ?? '').toString().trim();
+    return value.length === 0 ? { required: true } : null;
   }
 
   private static trimmedMinLength(min: number): ValidatorFn {
