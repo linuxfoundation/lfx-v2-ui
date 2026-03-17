@@ -94,7 +94,7 @@
                     <!-- Role Badge -->
                     <span
                       class="inline-flex items-center text-xs font-medium rounded-full px-2.5 py-1 flex-shrink-0"
-                      [ngClass]="getRoleBadgeClass(committee.my_role)">
+                      [ngClass]="committee.my_role | roleBadgeClass">
                       {{ committee.my_role }}
                     </span>
                   </div>

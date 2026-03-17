@@ -10,6 +10,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
+import { RoleBadgeClassPipe } from '@pipes/role-badge-class.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -23,7 +24,7 @@ import { CommitteeTableComponent } from '../components/committee-table/committee
 
 @Component({
   selector: 'lfx-committee-dashboard',
-  imports: [DecimalPipe, NgClass, ButtonComponent, CardComponent, CommitteeTableComponent, TooltipModule],
+  imports: [DecimalPipe, NgClass, ButtonComponent, CardComponent, CommitteeTableComponent, RoleBadgeClassPipe, TooltipModule],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',
 })
@@ -42,8 +43,6 @@ export class CommitteeDashboardComponent {
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading: WritableSignal<boolean>;
   public myCommitteesLoading: WritableSignal<boolean>;
-  public categoryFilter: WritableSignal<string | null>;
-  public votingStatusFilter: WritableSignal<string | null>;
   public refresh: BehaviorSubject<void>;
 
   // ── Forms ─────────────────────────────────────────────────────────────────
@@ -57,6 +56,8 @@ export class CommitteeDashboardComponent {
   public categories: Signal<{ label: string; value: string | null }[]>;
   public votingStatusOptions: Signal<{ label: string; value: string | null }[]>;
   public filteredCommittees: Signal<Committee[]>;
+  public categoryFilter: Signal<string | null>;
+  public votingStatusFilter: Signal<string | null>;
 
   // Permission signals
   public isMaintainer: Signal<boolean>;
@@ -104,9 +105,9 @@ export class CommitteeDashboardComponent {
 
     // Initialize search form
     this.searchForm = this.initializeSearchForm();
-    this.categoryFilter = signal<string | null>(null);
-    this.votingStatusFilter = signal<string | null>(null);
     this.searchTerm = this.initializeSearchTerm();
+    this.categoryFilter = this.initializeCategoryFilter();
+    this.votingStatusFilter = this.initializeVotingStatusFilter();
 
     // Initialize filters
     this.categories = this.initializeCategories();
@@ -143,21 +144,6 @@ export class CommitteeDashboardComponent {
     this.router.navigate(['/groups', committee.uid]);
   }
 
-  public getRoleBadgeClass(role: string): string {
-    switch (role?.toLowerCase()) {
-      case 'chair':
-        return 'bg-blue-100 text-blue-800';
-      case 'vice chair':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'member':
-        return 'bg-green-100 text-green-800';
-      case 'lead':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-600';
-    }
-  }
-
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     const project$ = toObservable(this.project);
 
@@ -188,6 +174,14 @@ export class CommitteeDashboardComponent {
 
   private initializeSearchTerm(): Signal<string> {
     return toSignal(this.searchForm.get('search')!.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), { initialValue: '' });
+  }
+
+  private initializeCategoryFilter(): Signal<string | null> {
+    return toSignal(this.searchForm.get('category')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
+  }
+
+  private initializeVotingStatusFilter(): Signal<string | null> {
+    return toSignal(this.searchForm.get('votingStatus')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
   }
 
   private initializeCommittees(): Signal<Committee[]> {
