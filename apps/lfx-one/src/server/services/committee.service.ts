@@ -677,6 +677,7 @@ export class CommitteeService {
    */
   public async getCommitteeMeetings(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<PaginatedResponse<Meeting>> {
     try {
+      // TODO: Verify upstream meeting service accepts committee_uid as query param vs tags pattern
       const params = {
         ...query,
         committee_uid: committeeId,
@@ -697,9 +698,10 @@ export class CommitteeService {
       });
 
       return result;
-    } catch {
+    } catch (error) {
       logger.warning(req, 'get_committee_meetings', 'Failed to fetch committee meetings, returning empty', {
         committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       return { data: [], page_token: undefined };
     }

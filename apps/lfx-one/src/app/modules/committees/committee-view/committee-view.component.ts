@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -95,6 +95,7 @@ export class CommitteeViewComponent {
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // -- Label constants --
   protected readonly committeeLabel = COMMITTEE_LABEL;
@@ -375,7 +376,8 @@ export class CommitteeViewComponent {
       .getCommitteeMeetings(committeeId)
       .pipe(
         take(1),
-        catchError(() => of([]))
+        catchError(() => of([])),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((meetings) => {
         this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
