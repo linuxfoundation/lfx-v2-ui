@@ -10,8 +10,8 @@
       </div>
     </div>
   } @else {
-    <div class="mb-8">
-      <div class="mb-8">
+    <div class="flex flex-col gap-8">
+      <div class="flex flex-col gap-6">
         <!-- Page Title with Create Group Button -->
         <div class="flex justify-between items-center w-full gap-4">
           <h1>{{ committeeLabel.plural }}</h1>
@@ -33,7 +33,7 @@
 
       <!-- Statistics Bar -->
       @if (committees().length > 0) {
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-testid="dashboard-stats-bar">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="dashboard-stats-bar">
           <lfx-card>
             <div class="text-center py-2">
               <p class="text-2xl font-semibold text-gray-900">{{ totalCommittees() | number }}</p>
@@ -64,7 +64,7 @@
 
     <!-- My Groups Section -->
     @if (myCommittees().length > 0) {
-      <div class="mb-8">
+      <div>
         <div class="flex items-center gap-2 mb-4">
           <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
           <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ myCommittees().length }}</span>
@@ -150,7 +150,7 @@
         </div>
       </div>
     } @else if (myCommitteesLoading()) {
-      <div class="mb-8">
+      <div>
         <div class="flex items-center gap-2 mb-4">
           <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
         </div>
@@ -163,7 +163,7 @@
 
     <!-- All Groups Section -->
     @if (committees().length > 0) {
-      <div class="flex items-center gap-2 mb-4">
+      <div class="flex items-center gap-2">
         <h2 class="text-lg font-semibold text-gray-900">All {{ committeeLabel.plural }}</h2>
         <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ totalCommittees() }}</span>
       </div>
