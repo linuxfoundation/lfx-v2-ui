@@ -7,21 +7,22 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
-import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+
+import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
+
+type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
 @Component({
   selector: 'lfx-committee-view',
   imports: [
     BreadcrumbComponent,
-    CardComponent,
     ButtonComponent,
     TagComponent,
     ConfirmDialogModule,
@@ -29,7 +30,7 @@ import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap } f
     RouteLoadingComponent,
     DatePipe,
     NgClass,
-    JoinModeLabelPipe,
+    CommitteeOverviewComponent,
   ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
@@ -42,11 +43,12 @@ export class CommitteeViewComponent {
   private readonly messageService = inject(MessageService);
 
   // -- Tab state --
-  public activeTab = signal<string>('overview');
+  public activeTab = signal<CommitteeTab>('overview');
 
   // -- Writable signals --
   public loading = signal<boolean>(true);
   public error = signal<boolean>(false);
+  public errorType = signal<'not-found' | 'server-error' | null>(null);
   public refresh = new BehaviorSubject<void>(undefined);
 
   // -- Computed / toSignal --
@@ -82,21 +84,29 @@ export class CommitteeViewComponent {
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
+            this.errorType.set('not-found');
             this.error.set(true);
             this.loading.set(false);
             return of(null);
           }
 
           this.error.set(false);
+          this.errorType.set(null);
           this.loading.set(true);
 
           return this.committeeService.getCommittee(committeeId).pipe(
-            catchError(() => {
+            catchError((err) => {
+              const status = err?.status;
+              if (status === 404 || status === 403) {
+                this.errorType.set('not-found');
+              } else {
+                this.errorType.set('server-error');
+              }
               this.error.set(true);
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Failed to load group details',
+                detail: status === 404 ? 'Group not found' : 'Failed to load group details',
               });
               return of(null);
             }),
