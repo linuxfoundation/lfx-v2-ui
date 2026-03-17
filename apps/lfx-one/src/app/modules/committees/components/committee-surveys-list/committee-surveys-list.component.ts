@@ -86,15 +86,16 @@ export class CommitteeSurveysListComponent {
           this.loading.set(true);
           this.loadError.set(false);
           return this.refresh$.pipe(
-            switchMap(() =>
-              this.surveyService.getSurveysByCommittee(committeeUid).pipe(
+            switchMap(() => {
+              this.loading.set(true);
+              return this.surveyService.getSurveysByCommittee(committeeUid).pipe(
                 catchError(() => {
                   this.loadError.set(true);
                   return of([]);
                 }),
                 finalize(() => this.loading.set(false))
-              )
-            )
+              );
+            })
           );
         })
       ),
