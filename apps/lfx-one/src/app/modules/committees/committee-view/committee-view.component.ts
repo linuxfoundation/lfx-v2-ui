@@ -377,11 +377,11 @@ export class CommitteeViewComponent {
       .pipe(
         take(1),
         catchError(() => of([])),
+        finalize(() => this.meetingsLoading.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((meetings) => {
         this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
-        this.meetingsLoading.set(false);
       });
   }
 
