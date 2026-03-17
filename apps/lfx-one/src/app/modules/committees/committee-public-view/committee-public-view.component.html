@@ -147,14 +147,38 @@
         <!-- Join CTA Card -->
         <lfx-card data-testid="public-group-cta-card">
           @if (!authenticated()) {
-            <div class="flex flex-col items-center gap-3 py-4">
-              <p class="text-sm text-gray-600">Sign in to join this {{ committeeLabel.singular.toLowerCase() }}</p>
-              <lfx-button
-                label="Sign in to join"
-                icon="fa-light fa-arrow-right-to-bracket"
-                (clicked)="signIn()"
-                data-testid="public-group-signin-btn"></lfx-button>
-            </div>
+            @if (committee()?.join_mode === 'open') {
+              <div class="flex flex-col items-center gap-3 py-4">
+                <p class="text-sm text-gray-600">Sign in to join this {{ committeeLabel.singular.toLowerCase() }}</p>
+                <lfx-button
+                  label="Sign in to join"
+                  icon="fa-light fa-arrow-right-to-bracket"
+                  (clicked)="signIn('join')"
+                  data-testid="public-group-signin-join-btn"></lfx-button>
+              </div>
+            } @else if (committee()?.join_mode === 'application') {
+              <div class="flex flex-col items-center gap-3 py-4">
+                <p class="text-sm text-gray-600">Sign in to apply to this {{ committeeLabel.singular.toLowerCase() }}</p>
+                <lfx-button
+                  label="Sign in to apply"
+                  icon="fa-light fa-arrow-right-to-bracket"
+                  (clicked)="signIn('apply')"
+                  data-testid="public-group-signin-apply-btn"></lfx-button>
+              </div>
+            } @else if (isInviteOnly()) {
+              <div class="flex flex-col items-center gap-3 py-4">
+                <p class="text-sm text-gray-500">This {{ committeeLabel.singular.toLowerCase() }} is invite only.</p>
+                <lfx-tag value="Invite Only" severity="info" icon="fa-light fa-envelope" data-testid="public-group-invite-badge"></lfx-tag>
+                @if (committee()?.chairs?.length) {
+                  <p class="text-xs text-gray-400 mt-2">Contact a chair to request an invitation.</p>
+                }
+              </div>
+            } @else {
+              <div class="flex flex-col items-center gap-3 py-4">
+                <p class="text-sm text-gray-500">This {{ committeeLabel.singular.toLowerCase() }} is closed to new members.</p>
+                <lfx-tag value="Closed" severity="secondary" icon="fa-light fa-lock" data-testid="public-group-closed-badge"></lfx-tag>
+              </div>
+            }
           } @else if (canJoin()) {
             <div class="flex flex-col items-center gap-3 py-4">
               <p class="text-sm text-gray-600">This {{ committeeLabel.singular.toLowerCase() }} is open for anyone to join.</p>
@@ -173,6 +197,9 @@
             <div class="flex flex-col items-center gap-3 py-4">
               <p class="text-sm text-gray-500">This {{ committeeLabel.singular.toLowerCase() }} is invite only.</p>
               <lfx-tag value="Invite Only" severity="info" icon="fa-light fa-envelope" data-testid="public-group-invite-badge"></lfx-tag>
+              @if (committee()?.chairs?.length) {
+                <p class="text-xs text-gray-400 mt-2">Contact a chair to request an invitation.</p>
+              }
             </div>
           } @else if (isClosed()) {
             <div class="flex flex-col items-center gap-3 py-4">

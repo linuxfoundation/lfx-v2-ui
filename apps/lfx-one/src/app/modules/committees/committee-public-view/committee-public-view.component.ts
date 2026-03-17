@@ -71,12 +71,23 @@ export class CommitteePublicViewComponent {
     this.canApply = computed(() => this.committee()?.join_mode === 'apply' && this.authenticated());
     this.isInviteOnly = computed(() => this.committee()?.join_mode === 'invite-only');
     this.isClosed = computed(() => this.committee()?.join_mode === 'closed' || !this.committee()?.join_mode);
+
+    // Auto-trigger action from returnTo query param (after sign-in redirect)
+    const queryAction = this.route.snapshot.queryParamMap.get('action');
+    if (queryAction === 'join' && this.authenticated()) {
+      this.joinGroup();
+    } else if (queryAction === 'apply' && this.authenticated()) {
+      this.applyToJoin();
+    }
   }
 
-  public signIn(): void {
+  public signIn(action?: 'join' | 'apply'): void {
     const committeeId = this.committee()?.uid;
     const slug = this.slugify(this.committee()?.name || '');
-    const returnTo = committeeId ? `/public/groups/${committeeId}${slug ? '/' + slug : ''}` : '/';
+    let returnTo = committeeId ? `/public/groups/${committeeId}${slug ? '/' + slug : ''}` : '/';
+    if (action) {
+      returnTo += `?action=${action}`;
+    }
     window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
