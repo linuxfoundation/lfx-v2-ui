@@ -12,7 +12,7 @@ import { PublicCommittee, getCommitteeCategorySeverity, TagSeverity } from '@lfx
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { CommitteeService } from '@services/committee.service';
 import { UserService } from '@services/user.service';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { catchError, map, of, startWith, switchMap } from 'rxjs';
 
 interface CommitteeLoadResult {
   committee: PublicCommittee | null;
@@ -146,7 +146,10 @@ export class CommitteePublicViewComponent {
             const currentSlug = params.get('slug');
             const expectedSlug = this.slugify(committee.name || '');
             if (expectedSlug && !currentSlug) {
-              this.router.navigate(['/public/groups', id, expectedSlug], { replaceUrl: true });
+              this.router.navigate(['/public/groups', id, expectedSlug], {
+                replaceUrl: true,
+                queryParamsHandling: 'preserve',
+              });
             }
             return { committee, error: null };
           }),
@@ -156,7 +159,8 @@ export class CommitteePublicViewComponent {
               return of<CommitteeLoadResult>({ committee: null, error: `${this.committeeLabel.singular} not found` });
             }
             return of<CommitteeLoadResult>({ committee: null, error: `Failed to load ${this.committeeLabel.singular.toLowerCase()}` });
-          })
+          }),
+          startWith<CommitteeLoadResult>({ committee: null, error: null })
         );
       })
     );
