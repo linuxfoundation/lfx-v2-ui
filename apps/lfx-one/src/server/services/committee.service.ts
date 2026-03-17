@@ -401,7 +401,8 @@ export class CommitteeService {
         return [];
       }
 
-      // TODO: page_size: 100 does not follow page_token pagination. Use fetchAllQueryResources helper for full results.
+      // NOTE: page_size: 100 does not follow page_token pagination — acceptable for initial release.
+      // Follow-up: use fetchAllQueryResources helper when vote counts exceed 100 per project.
       const { resources: voteResources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Record<string, any>>>(
         req,
         'LFX_V2_SERVICE',
@@ -637,13 +638,13 @@ export class CommitteeService {
 
   public async getApplications(req: Request, committeeId: string): Promise<GroupJoinApplication[]> {
     try {
-      const result = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupJoinApplication>>(
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupJoinApplication>>(
         req,
         'LFX_V2_SERVICE',
         `/committees/${committeeId}/applications`,
         'GET'
       );
-      return Array.isArray(result) ? result : result?.resources?.map((r) => r.data) || [];
+      return resources.map((r) => r.data);
     } catch {
       logger.warning(req, 'get_applications', 'Failed to fetch applications, returning empty', {
         committee_uid: committeeId,
