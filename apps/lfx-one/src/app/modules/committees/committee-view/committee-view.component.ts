@@ -192,7 +192,7 @@ export class CommitteeViewComponent {
     if (!committee) return;
 
     this.settingsSaving.set(true);
-    const payload = this.settingsForm.value;
+    const payload = this.settingsForm.getRawValue();
 
     this.committeeService
       .updateCommittee(committee.uid, payload)
