@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, effect, inject, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -74,10 +74,17 @@ export class CommitteePublicViewComponent {
 
     // Auto-trigger action from returnTo query param (after sign-in redirect)
     const queryAction = this.route.snapshot.queryParamMap.get('action');
-    if (queryAction === 'join' && this.authenticated()) {
-      this.joinGroup();
-    } else if (queryAction === 'apply' && this.authenticated()) {
-      this.applyToJoin();
+    if (queryAction) {
+      effect(() => {
+        const committee = this.committee();
+        if (committee && this.authenticated()) {
+          if (queryAction === 'join') {
+            this.joinGroup();
+          } else if (queryAction === 'apply') {
+            this.applyToJoin();
+          }
+        }
+      });
     }
   }
 
