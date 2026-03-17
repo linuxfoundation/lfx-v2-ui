@@ -36,9 +36,7 @@ export class SurveyService {
   }
 
   public getSurveysByCommittee(committeeUid: string): Observable<Survey[]> {
-    return this.http.get<Survey[]>(`/api/committees/${committeeUid}/surveys`).pipe(
-      catchError(() => of([])),
-    );
+    return this.http.get<Survey[]>(`/api/committees/${committeeUid}/surveys`);
   }
 
   public getSurvey(surveyUid: string, projectId?: string): Observable<Survey> {
