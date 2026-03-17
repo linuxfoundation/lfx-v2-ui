@@ -14,6 +14,7 @@ const DEFAULT_BADGE_CLASS = 'bg-gray-100 text-gray-600';
 
 @Pipe({
   name: 'roleBadgeClass',
+  standalone: true,
 })
 export class RoleBadgeClassPipe implements PipeTransform {
   public transform(role: string): string {

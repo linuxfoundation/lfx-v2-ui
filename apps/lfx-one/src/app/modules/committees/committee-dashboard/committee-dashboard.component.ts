@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DecimalPipe, NgClass } from '@angular/common';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -18,7 +18,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
 
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, EMPTY, finalize, of, startWith, switchMap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
 
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
 
@@ -41,9 +41,9 @@ export class CommitteeDashboardComponent {
   protected readonly committeeLabel = COMMITTEE_LABEL;
 
   // ── Writable Signals ──────────────────────────────────────────────────────
-  public committeesLoading: WritableSignal<boolean>;
-  public myCommitteesLoading: WritableSignal<boolean>;
-  public refresh: BehaviorSubject<void>;
+  public committeesLoading = signal<boolean>(true);
+  public myCommitteesLoading = signal<boolean>(true);
+  public refresh = signal(0);
 
   // ── Forms ─────────────────────────────────────────────────────────────────
   public searchForm: FormGroup;
@@ -93,11 +93,6 @@ export class CommitteeDashboardComponent {
       return isMaintainerAndNotFoundation || hasFeatureFlag;
     });
 
-    // Initialize state
-    this.committeesLoading = signal<boolean>(true);
-    this.myCommitteesLoading = signal<boolean>(true);
-    this.refresh = new BehaviorSubject<void>(undefined);
-
     // Initialize data
     this.committees = this.initializeCommittees();
     this.myCommittees = this.initializeMyCommittees();
@@ -137,7 +132,7 @@ export class CommitteeDashboardComponent {
 
   public refreshCommittees(): void {
     this.committeesLoading.set(true);
-    this.refresh.next();
+    this.refresh.update((v) => v + 1);
   }
 
   public onCommitteeClick(committee: Committee): void {
@@ -146,15 +141,17 @@ export class CommitteeDashboardComponent {
 
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     const project$ = toObservable(this.project);
+    const refresh$ = toObservable(this.refresh);
 
     return toSignal(
-      combineLatest([project$, this.refresh]).pipe(
+      combineLatest([project$, refresh$]).pipe(
         switchMap(([project]) => {
           this.myCommitteesLoading.set(true);
           return this.committeeService.getMyCommittees(project?.uid).pipe(
-            catchError(() => {
+            catchError((error) => {
+              console.error('Failed to load my committees:', error);
               this.myCommitteesLoading.set(false);
-              return EMPTY;
+              return of([] as MyCommittee[]);
             }),
             finalize(() => this.myCommitteesLoading.set(false))
           );
@@ -187,9 +184,10 @@ export class CommitteeDashboardComponent {
   private initializeCommittees(): Signal<Committee[]> {
     // Convert project signal to observable to react to project changes
     const project$ = toObservable(this.project);
+    const refresh$ = toObservable(this.refresh);
 
     return toSignal(
-      combineLatest([project$, this.refresh]).pipe(
+      combineLatest([project$, refresh$]).pipe(
         switchMap(([project]) => {
           if (!project?.uid) {
             this.committeesLoading.set(false);
@@ -198,7 +196,10 @@ export class CommitteeDashboardComponent {
 
           this.committeesLoading.set(true);
           return this.committeeService.getCommitteesByProject(project.uid).pipe(
-            catchError(() => of([])),
+            catchError((error) => {
+              console.error('Failed to load committees:', error);
+              return of([]);
+            }),
             finalize(() => this.committeesLoading.set(false))
           );
         })
