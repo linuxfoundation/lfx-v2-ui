@@ -85,6 +85,9 @@ export class CommitteeSurveysListComponent {
 
           this.loading.set(true);
           this.loadError.set(false);
+          this.resultsDrawerVisible.set(false);
+          this.selectedSurveyId.set(null);
+          this.selectedListSurvey.set(null);
           return this.refresh$.pipe(
             switchMap(() => {
               this.loading.set(true);
