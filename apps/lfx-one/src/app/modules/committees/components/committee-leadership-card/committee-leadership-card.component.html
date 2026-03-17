@@ -33,8 +33,8 @@
             @if (c.organization) {
               <p class="text-xs text-gray-500 truncate">{{ c.organization }}</p>
             }
-            @if (chairElectedDate()) {
-              <p class="text-xs text-gray-400">Since {{ chairElectedDate() }}</p>
+            @if (c.elected_date) {
+              <p class="text-xs text-gray-400">Since {{ c.elected_date | date: 'MMM y' }}</p>
             }
           </div>
           @if (canManage()) {
@@ -86,8 +86,8 @@
             @if (cc.organization) {
               <p class="text-xs text-gray-500 truncate">{{ cc.organization }}</p>
             }
-            @if (coChairElectedDate()) {
-              <p class="text-xs text-gray-400">Since {{ coChairElectedDate() }}</p>
+            @if (cc.elected_date) {
+              <p class="text-xs text-gray-400">Since {{ cc.elected_date | date: 'MMM y' }}</p>
             }
           </div>
           @if (canManage()) {

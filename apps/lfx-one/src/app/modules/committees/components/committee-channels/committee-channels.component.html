@@ -28,7 +28,7 @@
             } @else {
               <p class="text-sm font-medium text-gray-900 truncate">{{ mailingList.name }}</p>
             }
-            @if (mailingList.subscriber_count) {
+            @if (mailingList.subscriber_count !== null && mailingList.subscriber_count !== undefined) {
               <p class="text-xs text-gray-500">{{ mailingList.subscriber_count }} subscribers</p>
             }
           </div>

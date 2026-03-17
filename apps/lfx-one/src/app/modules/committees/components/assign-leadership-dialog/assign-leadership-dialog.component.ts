@@ -111,7 +111,8 @@ export class AssignLeadershipDialogComponent {
           });
           this.dialogRef.close({ role: this.role, leadership });
         },
-        error: () => {
+        error: (error) => {
+          console.error('Failed to assign ' + this.roleLabel.toLowerCase() + ':', error);
           this.submitting.set(false);
           this.messageService.add({
             severity: 'error',
@@ -137,7 +138,8 @@ export class AssignLeadershipDialogComponent {
         });
         this.dialogRef.close({ role: this.role, leadership: null });
       },
-      error: () => {
+      error: (error) => {
+        console.error('Failed to remove ' + this.roleLabel.toLowerCase() + ':', error);
         this.removing.set(false);
         this.messageService.add({
           severity: 'error',

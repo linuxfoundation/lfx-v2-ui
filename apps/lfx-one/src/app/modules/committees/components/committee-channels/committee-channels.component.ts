@@ -4,7 +4,7 @@
 import { NgClass } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { CardComponent } from '@components/card/card.component';
-import { Committee } from '@lfx-one/shared';
+import { Committee } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-committee-channels',

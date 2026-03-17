@@ -3,14 +3,16 @@
 
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CommitteeLeadership, CommitteeMember, getCommitteeCategorySeverity, LeadershipRole, TagSeverity } from '@lfx-one/shared';
+import { Committee, CommitteeLeadership, CommitteeMember, LeadershipRole } from '@lfx-one/shared/interfaces';
+import { TagSeverity } from '@lfx-one/shared/interfaces';
+import { getCommitteeCategorySeverity } from '@lfx-one/shared/constants';
 import { CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
@@ -19,7 +21,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeChannelsComponent } from '../components/committee-channels/committee-channels.component';
@@ -65,7 +67,8 @@ export class CommitteeViewComponent {
   // -- Writable signals --
   public loading = signal<boolean>(true);
   public error = signal<boolean>(false);
-  public refresh = new BehaviorSubject<void>(undefined);
+  public errorType = signal<'not-found' | 'server-error' | null>(null);
+  public refresh = signal(0);
 
   // -- Reactive data (toSignal) --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -139,16 +142,6 @@ export class CommitteeViewComponent {
     if (override && 'co_chair' in override) return override.co_chair;
     return this.committee()?.co_chair;
   });
-  public chairElectedDate: Signal<string> = computed(() => {
-    const c = this.chair();
-    if (!c?.elected_date) return '';
-    return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-  });
-  public coChairElectedDate: Signal<string> = computed(() => {
-    const c = this.coChair();
-    if (!c?.elected_date) return '';
-    return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-  });
 
   // -- Configuration label signals --
   public joinModeLabel: Signal<string> = computed(() => {
@@ -174,7 +167,7 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.leadershipOverride.set(null);
-    this.refresh.next();
+    this.refresh.update((v) => v + 1);
   }
 
   public openAssignLeadership(role: LeadershipRole): void {
@@ -210,26 +203,38 @@ export class CommitteeViewComponent {
 
   // -- Private initializer functions --
   private initializeCommittee(): Signal<Committee | null> {
+    const refresh$ = toObservable(this.refresh);
+
     return toSignal(
-      combineLatest([this.route.paramMap, this.refresh]).pipe(
+      combineLatest([this.route.paramMap, refresh$]).pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
+            this.errorType.set('not-found');
             this.error.set(true);
             this.loading.set(false);
             return of(null);
           }
 
           this.error.set(false);
+          this.errorType.set(null);
+          this.activeTab.set('overview');
+          this.leadershipOverride.set(null);
           this.loading.set(true);
 
           return this.committeeService.getCommittee(committeeId).pipe(
-            catchError(() => {
+            catchError((err) => {
+              const status = err?.status;
+              if (status === 404 || status === 403) {
+                this.errorType.set('not-found');
+              } else {
+                this.errorType.set('server-error');
+              }
               this.error.set(true);
               this.messageService.add({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Failed to load group details',
+                detail: status === 404 ? 'Group not found' : 'Failed to load group details',
               });
               return of(null);
             }),
@@ -242,12 +247,19 @@ export class CommitteeViewComponent {
   }
 
   private initializeMembers(): Signal<CommitteeMember[]> {
+    const refresh$ = toObservable(this.refresh);
+
     return toSignal(
-      combineLatest([this.route.paramMap, this.refresh]).pipe(
+      combineLatest([this.route.paramMap, refresh$]).pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) return of([]);
-          return this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
+          return this.committeeService.getCommitteeMembers(committeeId).pipe(
+            catchError((error) => {
+              console.error('Failed to load committee members:', error);
+              return of([]);
+            })
+          );
         })
       ),
       { initialValue: [] }

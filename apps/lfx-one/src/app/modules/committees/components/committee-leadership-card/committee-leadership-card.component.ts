@@ -1,15 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DatePipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { Committee, CommitteeLeadership, LeadershipRole } from '@lfx-one/shared';
+import { Committee, CommitteeLeadership, LeadershipRole } from '@lfx-one/shared/interfaces';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-committee-leadership-card',
-  imports: [CardComponent, ButtonComponent, TooltipModule],
+  imports: [DatePipe, CardComponent, ButtonComponent, TooltipModule],
   templateUrl: './committee-leadership-card.component.html',
   styleUrl: './committee-leadership-card.component.scss',
 })
@@ -19,8 +20,6 @@ export class CommitteeLeadershipCardComponent {
   public canManage = input<boolean>(false);
   public chair = input<CommitteeLeadership | null | undefined>(null);
   public coChair = input<CommitteeLeadership | null | undefined>(null);
-  public chairElectedDate = input<string>('');
-  public coChairElectedDate = input<string>('');
 
   // Outputs
   public readonly assignLeadership = output<LeadershipRole>();
