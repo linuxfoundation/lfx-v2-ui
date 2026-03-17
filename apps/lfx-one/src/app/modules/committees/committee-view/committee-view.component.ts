@@ -144,20 +144,14 @@ export class CommitteeViewComponent {
   });
 
   // -- Configuration label signals --
-  public joinModeLabel: Signal<string> = computed(() => {
-    switch (this.committee()?.join_mode) {
-      case 'open':
-        return 'Open';
-      case 'invite_only':
-        return 'Invite Only';
-      case 'application':
-        return 'Apply to Join';
-      case 'closed':
-        return 'Closed';
-      default:
-        return 'Closed';
-    }
-  });
+  // TODO: Replace with JoinModeLabelPipe or JOIN_MODE_LABELS constant after PR #294 merges
+  private static readonly joinModeMap: Record<string, string> = {
+    open: 'Open',
+    invite_only: 'Invite Only',
+    application: 'Apply to Join',
+    closed: 'Closed',
+  };
+  public joinModeLabel: Signal<string> = computed(() => CommitteeViewComponent.joinModeMap[this.committee()?.join_mode ?? 'closed'] ?? 'Closed');
 
   // -- Public methods --
   public goBack(): void {

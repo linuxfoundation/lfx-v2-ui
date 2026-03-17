@@ -272,7 +272,7 @@
                 <!-- Configurations Card (admin only) -->
                 @if (canManageConfigurations()) {
                   <lfx-card data-testid="committee-view-configurations">
-                    <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-gear text-gray-400 mr-2"></i>Configurations</h3>
+                    <h3 class="text-sm font-medium"><i class="fa-light fa-gear text-gray-400 mr-2"></i>Configurations</h3>
                     <div class="flex flex-col gap-3">
                       <div class="flex items-center justify-between" data-testid="committee-view-config-public">
                         <span class="text-sm text-gray-600">Public</span>
@@ -323,7 +323,7 @@
                 <!-- Organizations Breakdown Card -->
                 @if (uniqueOrganizations().length > 0) {
                   <lfx-card data-testid="committee-view-org-breakdown">
-                    <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-building text-gray-400 mr-2"></i>Organizations</h3>
+                    <h3 class="text-sm font-medium"><i class="fa-light fa-building text-gray-400 mr-2"></i>Organizations</h3>
                     <div class="flex flex-col gap-2">
                       @for (org of uniqueOrganizations().slice(0, 8); track org) {
                         <div class="flex items-center justify-between">
@@ -344,7 +344,7 @@
                 <!-- Role Breakdown Card (for voting groups) -->
                 @if (committee()?.enable_voting && roleBreakdown().length > 0) {
                   <lfx-card data-testid="committee-view-role-breakdown">
-                    <h3 class="text-sm font-medium mb-4"><i class="fa-light fa-id-badge text-gray-400 mr-2"></i>Roles</h3>
+                    <h3 class="text-sm font-medium"><i class="fa-light fa-id-badge text-gray-400 mr-2"></i>Roles</h3>
                     <div class="flex flex-col gap-2">
                       @for (role of roleBreakdown(); track role.name) {
                         <div class="flex items-center justify-between">
