@@ -75,7 +75,8 @@ export class CommitteePublicViewComponent {
 
   public signIn(): void {
     const committeeId = this.committee()?.uid;
-    const returnTo = committeeId ? `/public/groups/${committeeId}` : '/';
+    const slug = this.slugify(this.committee()?.name || '');
+    const returnTo = committeeId ? `/public/groups/${committeeId}${slug ? '/' + slug : ''}` : '/';
     window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
   }
 
@@ -101,6 +102,13 @@ export class CommitteePublicViewComponent {
     }
   }
 
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
   private initializeCommittee(): {
     committee: Signal<PublicCommittee | null>;
     error: Signal<string | null>;
@@ -115,7 +123,15 @@ export class CommitteePublicViewComponent {
           return of<CommitteeLoadResult>({ committee: null, error: 'No committee ID provided' });
         }
         return this.committeeService.getPublicCommitteeById(id).pipe(
-          map((committee): CommitteeLoadResult => ({ committee, error: null })),
+          map((committee): CommitteeLoadResult => {
+            // Redirect to readable URL if slug is missing
+            const currentSlug = params.get('slug');
+            const expectedSlug = this.slugify(committee.name || '');
+            if (expectedSlug && !currentSlug) {
+              this.router.navigate(['/public/groups', id, expectedSlug], { replaceUrl: true });
+            }
+            return { committee, error: null };
+          }),
           catchError((err) => {
             const status = err?.status;
             if (status === 404) {

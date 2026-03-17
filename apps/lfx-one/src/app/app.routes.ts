@@ -58,6 +58,10 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/meetings/meeting-join/meeting-join.component').then((m) => m.MeetingJoinComponent),
   },
   {
+    path: 'public/groups/:id/:slug',
+    loadComponent: () => import('./modules/committees/committee-public-view/committee-public-view.component').then((m) => m.CommitteePublicViewComponent),
+  },
+  {
     path: 'public/groups/:id',
     loadComponent: () => import('./modules/committees/committee-public-view/committee-public-view.component').then((m) => m.CommitteePublicViewComponent),
   },
