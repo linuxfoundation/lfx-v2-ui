@@ -214,18 +214,6 @@
                   tooltipPosition="top">
                 </lfx-button>
               </a>
-              <lfx-button
-                icon="fa-light fa-trash-can"
-                severity="secondary"
-                size="small"
-                [text]="true"
-                styleClass="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                (onClick)="onDeleteCommittee(committee)"
-                [disabled]="isDeleting()"
-                [attr.data-testid]="'committee-delete-' + committee.uid"
-                [pTooltip]="'Delete ' + committeeLabel.singular"
-                tooltipPosition="top">
-              </lfx-button>
             </div>
           </td>
         }
@@ -241,6 +229,3 @@
     </ng-template>
   </lfx-table>
 </lfx-card>
-
-<!-- Confirmation Dialog -->
-<p-confirmDialog></p-confirmDialog>
