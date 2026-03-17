@@ -374,7 +374,10 @@ export class CommitteeMembersManagerComponent implements OnInit {
       .getCommittee(committeeId)
       .pipe(
         take(1),
-        catchError(() => of(null))
+        catchError((error) => {
+          console.error('Failed to load committee:', error);
+          return of(null);
+        })
       )
       .subscribe((committee) => {
         this.committee.set(committee);
