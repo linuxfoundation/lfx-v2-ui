@@ -55,7 +55,7 @@
   @if (activeTab() === 'mailing-lists') {
     <lfx-mailing-list-import
       [committeeId]="committeeId()"
-      [projectUid]="projectUid()"
+      [projectUid]="projectUid() || committee()?.project_uid || null"
       (membersToImport)="onMailingListImport($event)"
       data-testid="mailing-list-import">
     </lfx-mailing-list-import>
@@ -125,7 +125,7 @@
       <!-- Members list -->
       @if (!loading() && filteredMembers().length > 0) {
         <div class="flex flex-col gap-2" data-testid="members-list">
-          @for (member of filteredMembers(); track member.uid ?? member.tempId) {
+          @for (member of filteredMembers(); track member.uid || member.tempId) {
             <div
               class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
               data-testid="member-card">
