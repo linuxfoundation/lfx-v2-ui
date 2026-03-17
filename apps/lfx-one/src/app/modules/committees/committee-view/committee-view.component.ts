@@ -1,9 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DatePipe, NgClass } from '@angular/common';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -22,10 +22,27 @@ import { TooltipModule } from 'primeng/tooltip';
 import { BehaviorSubject, catchError, combineLatest, finalize, of, switchMap, take } from 'rxjs';
 
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
+import { CommitteeChannelsComponent } from '../components/committee-channels/committee-channels.component';
+import { CommitteeLeadershipCardComponent } from '../components/committee-leadership-card/committee-leadership-card.component';
+
+type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [NgClass, BreadcrumbComponent, CardComponent, ButtonComponent, TagComponent, RouterLink, ConfirmDialogModule, DynamicDialogModule, TooltipModule],
+  imports: [
+    DatePipe,
+    NgClass,
+    BreadcrumbComponent,
+    CardComponent,
+    ButtonComponent,
+    TagComponent,
+    RouterLink,
+    ConfirmDialogModule,
+    DynamicDialogModule,
+    TooltipModule,
+    CommitteeChannelsComponent,
+    CommitteeLeadershipCardComponent,
+  ],
   providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
@@ -43,23 +60,21 @@ export class CommitteeViewComponent {
   protected readonly committeeLabel = COMMITTEE_LABEL;
 
   // -- Tab state --
-  public activeTab = signal<string>('overview');
+  public activeTab = signal<CommitteeTab>('overview');
 
   // -- Writable signals --
   public loading = signal<boolean>(true);
   public error = signal<boolean>(false);
   public refresh = new BehaviorSubject<void>(undefined);
 
-  public members: WritableSignal<CommitteeMember[]> = signal([]);
+  // -- Reactive data (toSignal) --
+  public committee: Signal<Committee | null> = this.initializeCommittee();
+  public members: Signal<CommitteeMember[]> = this.initializeMembers();
 
-  // -- Committee (writable so leadership updates apply instantly) --
-  public committeeSignal: WritableSignal<Committee | null> = signal(null);
-  public committee: Signal<Committee | null> = this.committeeSignal.asReadonly();
+  // -- Leadership override for instant UI updates after dialog --
+  private leadershipOverride = signal<{ chair?: CommitteeLeadership | null; co_chair?: CommitteeLeadership | null } | null>(null);
 
   // -- Computed / toSignal --
-  public formattedCreatedDate: Signal<string> = this.initializeFormattedCreatedDate();
-  public formattedUpdatedDate: Signal<string> = this.initializeFormattedUpdatedDate();
-
   public categorySeverity: Signal<TagSeverity> = computed(() => {
     const category = this.committee()?.category;
     return getCommitteeCategorySeverity(category || '');
@@ -113,13 +128,27 @@ export class CommitteeViewComponent {
       .sort((a, b) => b.count - a.count);
   });
 
-  // -- Leadership signals --
-  public chair: Signal<Committee['chair']> = computed(() => this.committee()?.chair || null);
-  public coChair: Signal<Committee['co_chair']> = computed(() => this.committee()?.co_chair || null);
-  public hasChair: Signal<boolean> = computed(() => !!this.chair());
-  public hasCoChair: Signal<boolean> = computed(() => !!this.coChair());
-  public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
-  public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
+  // -- Leadership signals (with override support) --
+  public chair: Signal<CommitteeLeadership | null | undefined> = computed(() => {
+    const override = this.leadershipOverride();
+    if (override && 'chair' in override) return override.chair;
+    return this.committee()?.chair;
+  });
+  public coChair: Signal<CommitteeLeadership | null | undefined> = computed(() => {
+    const override = this.leadershipOverride();
+    if (override && 'co_chair' in override) return override.co_chair;
+    return this.committee()?.co_chair;
+  });
+  public chairElectedDate: Signal<string> = computed(() => {
+    const c = this.chair();
+    if (!c?.elected_date) return '';
+    return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  });
+  public coChairElectedDate: Signal<string> = computed(() => {
+    const c = this.coChair();
+    if (!c?.elected_date) return '';
+    return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  });
 
   // -- Configuration label signals --
   public joinModeLabel: Signal<string> = computed(() => {
@@ -137,10 +166,6 @@ export class CommitteeViewComponent {
     }
   });
 
-  public constructor() {
-    this.initializeCommittee();
-  }
-
   // -- Public methods --
   public goBack(): void {
     this.router.navigate(['/', 'groups']);
@@ -148,6 +173,7 @@ export class CommitteeViewComponent {
 
   public refreshCommittee(): void {
     this.loading.set(true);
+    this.leadershipOverride.set(null);
     this.refresh.next();
   }
 
@@ -173,24 +199,19 @@ export class CommitteeViewComponent {
 
     dialogRef.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
       if (result) {
-        const current = this.committee();
-        if (current) {
-          const updated = { ...current };
-          if (result.role === 'chair') {
-            updated.chair = result.leadership;
-          } else {
-            updated.co_chair = result.leadership;
-          }
-          this.committeeSignal.set(updated);
+        if (result.role === 'chair') {
+          this.leadershipOverride.set({ ...this.leadershipOverride(), chair: result.leadership });
+        } else {
+          this.leadershipOverride.set({ ...this.leadershipOverride(), co_chair: result.leadership });
         }
       }
     });
   }
 
   // -- Private initializer functions --
-  private initializeCommittee(): void {
-    combineLatest([this.route.paramMap, this.refresh])
-      .pipe(
+  private initializeCommittee(): Signal<Committee | null> {
+    return toSignal(
+      combineLatest([this.route.paramMap, this.refresh]).pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
@@ -202,7 +223,7 @@ export class CommitteeViewComponent {
           this.error.set(false);
           this.loading.set(true);
 
-          const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
+          return this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
               this.error.set(true);
               this.messageService.add({
@@ -211,64 +232,25 @@ export class CommitteeViewComponent {
                 detail: 'Failed to load group details',
               });
               return of(null);
-            })
-          );
-
-          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
-
-          return combineLatest([committeeQuery, membersQuery]).pipe(
-            switchMap(([committee, members]) => {
-              this.members.set(Array.isArray(members) ? members : []);
-              this.committeeSignal.set(committee);
-              return of(null);
             }),
             finalize(() => this.loading.set(false))
           );
-        }),
-        takeUntilDestroyed()
-      )
-      .subscribe();
+        })
+      ),
+      { initialValue: null }
+    );
   }
 
-  private initializeFormattedCreatedDate(): Signal<string> {
-    return computed(() => {
-      const committee = this.committee();
-      if (!committee?.created_at) return '-';
-      const date = new Date(committee.created_at);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    });
-  }
-
-  private initializeFormattedUpdatedDate(): Signal<string> {
-    return computed(() => {
-      const committee = this.committee();
-      if (!committee?.updated_at) return '-';
-      const date = new Date(committee.updated_at);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    });
-  }
-
-  private initializeChairElectedDate(): Signal<string> {
-    return computed(() => {
-      const c = this.chair();
-      if (!c?.elected_date) return '';
-      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-    });
-  }
-
-  private initializeCoChairElectedDate(): Signal<string> {
-    return computed(() => {
-      const c = this.coChair();
-      if (!c?.elected_date) return '';
-      return new Date(c.elected_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-    });
+  private initializeMembers(): Signal<CommitteeMember[]> {
+    return toSignal(
+      combineLatest([this.route.paramMap, this.refresh]).pipe(
+        switchMap(([params]) => {
+          const committeeId = params?.get('id');
+          if (!committeeId) return of([]);
+          return this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }
