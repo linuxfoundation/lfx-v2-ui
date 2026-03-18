@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeCreateData,
+  CommitteeUpdateData,
+  CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupJoinApplicationRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -628,24 +634,180 @@ export class CommitteeController {
     }
   }
 
+  /**
+   * POST /committees/:id/invites
+   */
+  public async createInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    if (!committeeId) {
+      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'create_invites', service: 'committee_controller', path: req.path }));
+      return;
+    }
+    const payload = req.body;
+    if (!payload?.emails || !Array.isArray(payload.emails) || payload.emails.length === 0) {
+      next(
+        ServiceValidationError.forField('emails', 'At least one email address is required', {
+          operation: 'create_invites',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
+      return;
+    }
+    const startTime = logger.startOperation(req, 'create_invites', { committee_id: committeeId });
+    try {
+      const invites = await this.committeeService.createInvites(req, committeeId, payload as CreateGroupInviteRequest);
+      logger.success(req, 'create_invites', startTime, { committee_id: committeeId, invite_count: invites.length });
+      res.status(201).json(invites);
+    } catch (error) {
+      logger.error(req, 'create_invites', startTime, error, { committee_id: committeeId });
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/invites
+   */
+  public async getInvites(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    if (!committeeId) {
+      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'get_invites', service: 'committee_controller', path: req.path }));
+      return;
+    }
+    const startTime = logger.startOperation(req, 'get_invites', { committee_id: committeeId });
+    try {
+      const invites = await this.committeeService.getInvites(req, committeeId);
+      logger.success(req, 'get_invites', startTime, { committee_id: committeeId, invite_count: invites.length });
+      res.json(invites);
+    } catch (error) {
+      logger.error(req, 'get_invites', startTime, error, { committee_id: committeeId });
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications
+   */
+  public async applyToJoin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    if (!committeeId) {
+      next(ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'apply_to_join', service: 'committee_controller', path: req.path }));
+      return;
+    }
+    const payload = req.body;
+    if (payload?.reason !== undefined && typeof payload.reason !== 'string') {
+      next(ServiceValidationError.forField('reason', 'Reason must be a string', { operation: 'apply_to_join', service: 'committee_controller', path: req.path }));
+      return;
+    }
+    const startTime = logger.startOperation(req, 'apply_to_join', { committee_id: committeeId });
+    try {
+      const application = await this.committeeService.applyToJoin(req, committeeId, payload as GroupJoinApplicationRequest);
+      logger.success(req, 'apply_to_join', startTime, { committee_id: committeeId });
+      res.status(201).json(application);
+    } catch (error) {
+      logger.error(req, 'apply_to_join', startTime, error, { committee_id: committeeId });
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/applications
+   */
+  public async getApplications(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    if (!committeeId) {
+      next(
+        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'get_applications', service: 'committee_controller', path: req.path })
+      );
+      return;
+    }
+    const startTime = logger.startOperation(req, 'get_applications', { committee_id: committeeId });
+    try {
+      const applications = await this.committeeService.getApplications(req, committeeId);
+      logger.success(req, 'get_applications', startTime, { committee_id: committeeId, application_count: applications.length });
+      res.json(applications);
+    } catch (error) {
+      logger.error(req, 'get_applications', startTime, error, { committee_id: committeeId });
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications/:applicationId/approve
+   */
+  public async approveApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    const applicationId = req.params['applicationId'];
+    if (!committeeId) {
+      next(
+        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'approve_application', service: 'committee_controller', path: req.path })
+      );
+      return;
+    }
+    if (!applicationId) {
+      next(
+        ServiceValidationError.forField('applicationId', 'Application ID is required', {
+          operation: 'approve_application',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
+      return;
+    }
+    const startTime = logger.startOperation(req, 'approve_application', { committee_id: committeeId, application_id: applicationId });
+    try {
+      const application = await this.committeeService.approveApplication(req, committeeId, applicationId);
+      logger.success(req, 'approve_application', startTime, { committee_id: committeeId, application_id: applicationId });
+      res.json(application);
+    } catch (error) {
+      logger.error(req, 'approve_application', startTime, error, { committee_id: committeeId, application_id: applicationId });
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications/:applicationId/reject
+   */
+  public async rejectApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const committeeId = req.params['id'];
+    const applicationId = req.params['applicationId'];
+    if (!committeeId) {
+      next(
+        ServiceValidationError.forField('id', 'Committee ID is required', { operation: 'reject_application', service: 'committee_controller', path: req.path })
+      );
+      return;
+    }
+    if (!applicationId) {
+      next(
+        ServiceValidationError.forField('applicationId', 'Application ID is required', {
+          operation: 'reject_application',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
+      return;
+    }
+    const startTime = logger.startOperation(req, 'reject_application', { committee_id: committeeId, application_id: applicationId });
+    try {
+      const application = await this.committeeService.rejectApplication(req, committeeId, applicationId);
+      logger.success(req, 'reject_application', startTime, { committee_id: committeeId, application_id: applicationId });
+      res.json(application);
+    } catch (error) {
+      logger.error(req, 'reject_application', startTime, error, { committee_id: committeeId, application_id: applicationId });
+      next(error);
+    }
+  }
+
   // ── Private helpers ──────────────────────────────────────────────────────
 
   /**
    * Factory that produces a standard sub-resource handler.
-   * Validates the committee ID, starts an operation, calls the service,
-   * logs success, and delegates errors to Express error middleware.
    */
   private subResourceHandler(operation: string, serviceFn: (req: Request, id: string) => Promise<unknown>, countKey: string) {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       const committeeId = req.params['id'];
       if (!committeeId) {
-        next(
-          ServiceValidationError.forField('id', 'Committee ID is required', {
-            operation,
-            service: 'committee_controller',
-            path: req.path,
-          })
-        );
+        next(ServiceValidationError.forField('id', 'Committee ID is required', { operation, service: 'committee_controller', path: req.path }));
         return;
       }
 

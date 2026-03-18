@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,11 +9,13 @@ import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
-import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
+import { ApplicationReviewComponent } from '../components/application-review/application-review.component';
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
 import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 
@@ -31,6 +33,8 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     NgClass,
     CommitteeOverviewComponent,
     CommitteeSurveysListComponent,
+    ApplicationReviewComponent,
+    CommitteeMembersComponent,
   ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
@@ -50,6 +54,8 @@ export class CommitteeViewComponent {
   public error = signal<boolean>(false);
   public errorType = signal<'not-found' | 'server-error' | null>(null);
   public refresh = signal(0);
+  public membersLoading = signal<boolean>(true);
+  public members: WritableSignal<CommitteeMember[]> = signal([]);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -104,8 +110,9 @@ export class CommitteeViewComponent {
           this.error.set(false);
           this.errorType.set(null);
           this.loading.set(true);
+          this.membersLoading.set(true);
 
-          return this.committeeService.getCommittee(committeeId).pipe(
+          const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError((err) => {
               const status = err?.status;
               if (status === 404 || status === 403) {
@@ -120,6 +127,16 @@ export class CommitteeViewComponent {
                 detail: status === 404 ? 'Group not found' : 'Failed to load group details',
               });
               return of(null);
+            })
+          );
+
+          const membersQuery = this.committeeService.getCommitteeMembers(committeeId).pipe(catchError(() => of([])));
+
+          return combineLatest([committeeQuery, membersQuery]).pipe(
+            switchMap(([committee, fetchedMembers]) => {
+              this.members.set(Array.isArray(fetchedMembers) ? fetchedMembers : []);
+              this.membersLoading.set(false);
+              return of(committee);
             }),
             finalize(() => this.loading.set(false))
           );

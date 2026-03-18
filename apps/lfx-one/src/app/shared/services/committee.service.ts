@@ -17,6 +17,10 @@ import {
   CommitteeResolution,
   CommitteeVote,
   CreateCommitteeMemberRequest,
+  CreateGroupInviteRequest,
+  GroupInvite,
+  GroupJoinApplication,
+  GroupJoinApplicationRequest,
   Meeting,
   MyCommittee,
   PaginatedResponse,
@@ -168,5 +172,27 @@ export class CommitteeService {
         return of([]);
       })
     );
+  }
+
+  // Invite methods
+  public createInvites(committeeId: string, payload: CreateGroupInviteRequest): Observable<GroupInvite[]> {
+    return this.http.post<GroupInvite[]>(`/api/committees/${committeeId}/invites`, payload).pipe(take(1));
+  }
+
+  // Application methods
+  public applyToJoin(committeeId: string, payload: GroupJoinApplicationRequest): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications`, payload).pipe(take(1));
+  }
+
+  public getApplications(committeeId: string): Observable<GroupJoinApplication[]> {
+    return this.http.get<GroupJoinApplication[]>(`/api/committees/${committeeId}/applications`).pipe(catchError(() => of([])));
+  }
+
+  public approveApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/approve`, {}).pipe(take(1));
+  }
+
+  public rejectApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
+    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
   }
 }
