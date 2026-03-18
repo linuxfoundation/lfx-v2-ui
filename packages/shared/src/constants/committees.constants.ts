@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommitteeMemberAppointedBy, CommitteeMemberRole, CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
-import { GroupBehavioralClass } from '../interfaces/committee.interface';
+import { GroupBehavioralClass, JoinMode } from '../interfaces/committee.interface';
 import { lfxColors } from './colors.constants';
 
 // Re-export helper functions from utils for backward compatibility
@@ -480,6 +480,17 @@ export const JOIN_MODE_OPTIONS = [
   { label: 'Apply & Review — admin approves', value: 'application' },
   { label: 'Closed — admin adds members', value: 'closed' },
 ];
+
+/**
+ * Human-readable labels for each join mode value.
+ * @description Type-safe mapping from JoinMode to display label.
+ */
+export const JOIN_MODE_LABELS: Record<JoinMode, string> = {
+  open: 'Open',
+  invite_only: 'Invite Only',
+  application: 'Apply to Join',
+  closed: 'Closed',
+};
 
 // ============================================================================
 // Group-Type Behavioral Classification (6-Type Taxonomy v1.1)
