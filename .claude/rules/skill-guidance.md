@@ -5,44 +5,72 @@ globs: '*'
 
 # Available Skills
 
-This project has guided skills for common workflows. **Proactively suggest the relevant skill** when a user's request matches one of these:
+This project has two sets of skills — one for `apps/lfx` (new app, primary focus) and one for `apps/lfx-one` (existing app, maintenance only). **Proactively suggest the relevant skill** based on which app the user is working in.
 
-| Skill        | When to Suggest                                                                                                               |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `/setup`     | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app     |
-| `/develop`   | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change |
-| `/preflight` | Before submitting a PR, check if code is ready, validate changes, verify a branch, finished development, review readiness     |
+---
 
-## Trigger Phrases
+## Skills for `apps/lfx` (new app — primary focus)
 
-**`/setup`** — match any of these intents:
+| Skill              | When to Suggest                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| `/lfx-setup`       | Getting started with `apps/lfx`, first-time setup, broken environment, install failures |
+| `/lfx-coordinator` | Add a feature, fix a bug, modify code, implement anything in `apps/lfx`                 |
+| `/lfx-design`      | Create a new base UI component, add a variant, work with Tailwind v4 design tokens      |
+| `/lfx-research`    | Validate an upstream API, explore what endpoints exist before building                  |
+| `/lfx-preflight`   | Before submitting a PR for `apps/lfx` — lint, build, license headers                    |
 
-- "How do I set up?", "Getting started", "First time here"
-- "yarn install fails", "corepack error", "node version"
-- "env vars", "1Password", "app won't start"
-- "broken environment", "fresh install", "missing dependencies"
+### Trigger Phrases (apps/lfx)
 
-**`/develop`** — match any of these intents:
+**`/lfx-coordinator`** — any code change in `apps/lfx`:
 
 - "Add a feature", "Create a component", "Build an endpoint"
 - "Fix this bug", "Modify the service", "Update the page"
-- "Refactor", "Implement", "Change the behavior"
-- "New interface", "Add a filter", "Create a form"
-- Describes any code change, feature request, or bug fix
+- Any feature request, bug fix, or code change in the new app
 
-**`/preflight`** — match any of these intents:
+**`/lfx-design`** — new base UI components:
 
-- "Ready for PR", "Check my code", "Validate changes"
-- "Before I submit", "Is my branch ready?", "Review my work"
-- "Run checks", "Lint and build", "Pre-PR validation"
-- Any indication that development work is finished
+- "Create a button/input/card/modal/badge"
+- "Add a variant to the component"
+- "Build a design system component"
+- "Tailwind v4 component"
+
+**`/lfx-research`** — upstream API exploration before building:
+
+- "Does the upstream API support X?"
+- "What endpoints does the committee service have?"
+- "What fields are in the meeting response?"
+
+**`/lfx-preflight`** — after work in `apps/lfx`:
+
+- "Ready for PR", "Check my code", "Validate changes", "Lint and build"
+
+---
+
+## Skills for `apps/lfx-one` (existing app — maintenance only)
+
+| Skill        | When to Suggest                                         |
+| ------------ | ------------------------------------------------------- |
+| `/setup`     | Getting started with `apps/lfx-one`, broken environment |
+| `/develop`   | Feature or bug fix work in `apps/lfx-one`               |
+| `/preflight` | Before submitting a PR for `apps/lfx-one`               |
+
+---
+
+## Skill Relationships (apps/lfx)
+
+```text
+/lfx-coordinator  ──delegates──▶  /lfx-research
+                                  /lfx-backend-builder
+                                  /lfx-ui-builder
+                                  /lfx-design
+```
+
+The coordinator is the entry point for all feature work in `apps/lfx`. For anything spanning more than one layer, always use `/lfx-coordinator`.
 
 ## For Cowork Sessions
 
-Non-developer contributors use these skills as guided workflows. Follow these rules:
-
-- If the user describes a feature they want to build, suggest `/develop` — it walks them through the full process step-by-step
-- If the user asks about setup or getting started, suggest `/setup`
-- After any development work is complete, remind them to run `/preflight` before creating a PR
-- If you are unsure which skill applies, ask the user what they're trying to accomplish
-- When a skill references architecture docs in `docs/`, read those docs before generating code — they are the source of truth
+- Contributor describes a feature for `apps/lfx` → suggest `/lfx-coordinator`
+- Setup questions for the new app → suggest `/lfx-setup`
+- After development work in `apps/lfx` → remind to run `/lfx-preflight`
+- If unsure which app → ask "Are you working in the new `lfx` app or the existing `lfx-one`?"
+- When a skill references architecture docs in `docs/`, read those docs before generating code
