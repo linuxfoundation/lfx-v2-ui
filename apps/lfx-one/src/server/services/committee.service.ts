@@ -8,10 +8,6 @@ import {
   CommitteeSettingsData,
   CommitteeUpdateData,
   CreateCommitteeMemberRequest,
-  CreateGroupInviteRequest,
-  GroupInvite,
-  GroupJoinApplication,
-  GroupJoinApplicationRequest,
   Meeting,
   PaginatedResponse,
   QueryServiceCountResponse,
@@ -551,78 +547,6 @@ export class CommitteeService {
       });
       return null;
     }
-  }
-
-  // ── Invite Methods ──────────────────────────────────────────────────────────
-
-  public async createInvites(req: Request, committeeId: string, payload: CreateGroupInviteRequest): Promise<GroupInvite[]> {
-    const result = await this.microserviceProxy.proxyRequest<GroupInvite | GroupInvite[]>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/invites`,
-      'POST',
-      {},
-      payload
-    );
-    return Array.isArray(result) ? result : [result];
-  }
-
-  public async getInvites(req: Request, committeeId: string): Promise<GroupInvite[]> {
-    try {
-      const result = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupInvite>>(
-        req,
-        'LFX_V2_SERVICE',
-        `/committees/${committeeId}/invites`,
-        'GET'
-      );
-      return Array.isArray(result) ? result : result?.resources?.map((r) => r.data) || [];
-    } catch {
-      logger.warning(req, 'get_invites', 'Failed to fetch invites, returning empty', {
-        committee_uid: committeeId,
-      });
-      return [];
-    }
-  }
-
-  // ── Application Methods ─────────────────────────────────────────────────────
-
-  public async applyToJoin(req: Request, committeeId: string, payload: GroupJoinApplicationRequest): Promise<GroupJoinApplication> {
-    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, payload);
-  }
-
-  public async getApplications(req: Request, committeeId: string): Promise<GroupJoinApplication[]> {
-    try {
-      const result = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupJoinApplication>>(
-        req,
-        'LFX_V2_SERVICE',
-        `/committees/${committeeId}/applications`,
-        'GET'
-      );
-      return Array.isArray(result) ? result : result?.resources?.map((r) => r.data) || [];
-    } catch {
-      logger.warning(req, 'get_applications', 'Failed to fetch applications, returning empty', {
-        committee_uid: committeeId,
-      });
-      return [];
-    }
-  }
-
-  public async approveApplication(req: Request, committeeId: string, applicationId: string): Promise<GroupJoinApplication> {
-    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/applications/${applicationId}/approve`,
-      'POST'
-    );
-  }
-
-  public async rejectApplication(req: Request, committeeId: string, applicationId: string): Promise<GroupJoinApplication> {
-    return this.microserviceProxy.proxyRequest<GroupJoinApplication>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/applications/${applicationId}/reject`,
-      'POST'
-    );
   }
 
   /**

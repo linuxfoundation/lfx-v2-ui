@@ -39,17 +39,4 @@ router.get('/:id/campaigns', (req, res, next) => committeeController.getCommitte
 router.get('/:id/engagement', (req, res, next) => committeeController.getCommitteeEngagement(req, res, next));
 router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBudget(req, res, next));
 
-// Survey routes
-router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
-
-// Invite routes
-router.post('/:id/invites', (req, res, next) => committeeController.createInvites(req, res, next));
-router.get('/:id/invites', (req, res, next) => committeeController.getInvites(req, res, next));
-
-// Application routes
-router.post('/:id/applications', (req, res, next) => committeeController.applyToJoin(req, res, next));
-router.get('/:id/applications', (req, res, next) => committeeController.getApplications(req, res, next));
-router.post('/:id/applications/:applicationId/approve', (req, res, next) => committeeController.approveApplication(req, res, next));
-router.post('/:id/applications/:applicationId/reject', (req, res, next) => committeeController.rejectApplication(req, res, next));
-
 export default router;

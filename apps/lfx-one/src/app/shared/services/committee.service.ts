@@ -19,10 +19,6 @@ import {
   CreateCommitteeMemberRequest,
   Meeting,
   PaginatedResponse,
-  CreateGroupInviteRequest,
-  GroupInvite,
-  GroupJoinApplication,
-  GroupJoinApplicationRequest,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
@@ -157,27 +153,5 @@ export class CommitteeService {
 
   public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
     return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`).pipe(catchError(() => of(null)));
-  }
-
-  // Invite methods
-  public createInvites(committeeId: string, payload: CreateGroupInviteRequest): Observable<GroupInvite[]> {
-    return this.http.post<GroupInvite[]>(`/api/committees/${committeeId}/invites`, payload).pipe(take(1));
-  }
-
-  // Application methods
-  public applyToJoin(committeeId: string, payload: GroupJoinApplicationRequest): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications`, payload).pipe(take(1));
-  }
-
-  public getApplications(committeeId: string): Observable<GroupJoinApplication[]> {
-    return this.http.get<GroupJoinApplication[]>(`/api/committees/${committeeId}/applications`).pipe(catchError(() => of([])));
-  }
-
-  public approveApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/approve`, {}).pipe(take(1));
-  }
-
-  public rejectApplication(committeeId: string, applicationId: string): Observable<GroupJoinApplication> {
-    return this.http.post<GroupJoinApplication>(`/api/committees/${committeeId}/applications/${applicationId}/reject`, {}).pipe(take(1));
   }
 }

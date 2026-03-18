@@ -72,10 +72,6 @@ export class SurveyManageComponent {
   public currentStep: Signal<number> = this.initCurrentStep();
   public readonly submitButtonLabel: Signal<string> = this.initSubmitButtonLabel();
 
-  constructor() {
-    this.preselectCommitteeFromQueryParams();
-  }
-
   public nextStep(): void {
     const next = this.currentStep() + 1;
     if (next <= this.totalSteps && this.canNavigateToStep(next)) {
@@ -385,15 +381,6 @@ Thank you,
         return true;
       default:
         return false;
-    }
-  }
-
-  private preselectCommitteeFromQueryParams(): void {
-    const params = this.route.snapshot.queryParams;
-    const uid = params['committee_uid'];
-    const name = params['committee_name'];
-    if (uid && name) {
-      this.form().get('committees')?.setValue([{ uid, name }]);
     }
   }
 
