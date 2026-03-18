@@ -133,7 +133,6 @@
             <p-tab value="votes"><i class="fa-light fa-check-to-slot mr-2"></i>Votes</p-tab>
           }
           <p-tab value="meetings"><i class="fa-light fa-calendar mr-2"></i>Meetings</p-tab>
-          <p-tab value="surveys"><i class="fa-light fa-chart-simple mr-2"></i>Surveys</p-tab>
           <p-tab value="documents"><i class="fa-light fa-folder-open mr-2"></i>Documents</p-tab>
           @if (canManageConfigurations()) {
             <p-tab value="settings"><i class="fa-light fa-gear mr-2"></i>Settings</p-tab>
@@ -803,19 +802,6 @@
                   <lfx-card data-testid="committee-view-leadership">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-sm font-medium"><i class="fa-light fa-crown text-gray-400 mr-2"></i>Leadership</h3>
-                      @if (canManageConfigurations() && !hasChair() && !hasCoChair()) {
-                        <lfx-button
-                          icon="fa-light fa-pen-to-square"
-                          size="small"
-                          [text]="true"
-                          severity="secondary"
-                          styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
-                          pTooltip="Assign Chair / Co-Chair"
-                          tooltipPosition="top"
-                          (onClick)="openAssignLeadership('chair')"
-                          data-testid="committee-view-leadership-edit-btn">
-                        </lfx-button>
-                      }
                     </div>
                     <div class="flex flex-col gap-4">
                       <!-- Chair -->
@@ -835,16 +821,6 @@
                                 <p class="text-xs text-gray-400">Since {{ chairElectedDate() }}</p>
                               }
                             </div>
-                            @if (canManageConfigurations()) {
-                              <button
-                                class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
-                                pTooltip="Update Chair"
-                                tooltipPosition="top"
-                                (click)="openAssignLeadership('chair')"
-                                data-testid="committee-view-update-chair-btn">
-                                <i class="fa-light fa-pen-to-square text-sm"></i>
-                              </button>
-                            }
                           </div>
                         } @else {
                           <div class="flex items-center gap-3">
@@ -853,14 +829,6 @@
                             </div>
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
-                              @if (canManageConfigurations()) {
-                                <button
-                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                  (click)="openAssignLeadership('chair')"
-                                  data-testid="committee-view-assign-chair-btn">
-                                  Assign Chair
-                                </button>
-                              }
                             </div>
                           </div>
                         }
@@ -883,16 +851,6 @@
                                 <p class="text-xs text-gray-400">Since {{ coChairElectedDate() }}</p>
                               }
                             </div>
-                            @if (canManageConfigurations()) {
-                              <button
-                                class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
-                                pTooltip="Update Co-Chair"
-                                tooltipPosition="top"
-                                (click)="openAssignLeadership('co_chair')"
-                                data-testid="committee-view-update-co-chair-btn">
-                                <i class="fa-light fa-pen-to-square text-sm"></i>
-                              </button>
-                            }
                           </div>
                         } @else {
                           <div class="flex items-center gap-3">
@@ -901,14 +859,6 @@
                             </div>
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
-                              @if (canManageConfigurations()) {
-                                <button
-                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                  (click)="openAssignLeadership('co_chair')"
-                                  data-testid="committee-view-assign-co-chair-btn">
-                                  Assign Co-Chair
-                                </button>
-                              }
                             </div>
                           </div>
                         }
@@ -960,11 +910,6 @@
           @if (isMembersTabVisible()) {
             <p-tabpanel value="members">
               <div class="flex flex-col gap-6 pt-4">
-                <!-- Join Request Review -->
-                @if (committee()?.uid) {
-                  <lfx-application-review [committee]="committee()" (memberAdded)="refreshMembers()"></lfx-application-review>
-                }
-
                 <!-- Members -->
                 @if (committee()?.uid) {
                   <lfx-committee-members
@@ -1078,27 +1023,6 @@
                 </lfx-card>
               }
             </div>
-          </p-tabpanel>
-
-          <!-- Surveys Tab (placeholder) -->
-          <p-tabpanel value="surveys">
-            @if (committee(); as c) {
-              <div class="flex items-center justify-end mb-4" data-testid="committee-view-surveys-tab">
-                @if (!isBoardMember()) {
-                  <lfx-button
-                    icon="fa-light fa-plus"
-                    label="Create Survey"
-                    size="small"
-                    severity="secondary"
-                    styleClass="p-button-outlined"
-                    (onClick)="createSurvey()"
-                    data-testid="committee-view-create-survey-btn">
-                  </lfx-button>
-                }
-              </div>
-              <lfx-committee-surveys-list [committeeUid]="c.uid" [committeeName]="c.name" [hasPMOAccess]="!isBoardMember()">
-              </lfx-committee-surveys-list>
-            }
           </p-tabpanel>
 
           <!-- Documents Tab (placeholder) -->
