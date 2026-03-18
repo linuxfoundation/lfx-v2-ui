@@ -5,7 +5,7 @@ globs: '*'
 
 # Available Skills
 
-This project has two sets of skills — one for `apps/lfx` (new app, primary focus) and one for `apps/lfx-one` (existing app, maintenance only). **Proactively suggest the relevant skill** based on which app the user is working in.
+This project has guided skills for `apps/lfx` (the primary app). **Proactively suggest the relevant skill** when a user's request matches one of these.
 
 ---
 
@@ -46,16 +46,6 @@ This project has two sets of skills — one for `apps/lfx` (new app, primary foc
 
 ---
 
-## Skills for `apps/lfx-one` (existing app — maintenance only)
-
-| Skill        | When to Suggest                                         |
-| ------------ | ------------------------------------------------------- |
-| `/setup`     | Getting started with `apps/lfx-one`, broken environment |
-| `/develop`   | Feature or bug fix work in `apps/lfx-one`               |
-| `/preflight` | Before submitting a PR for `apps/lfx-one`               |
-
----
-
 ## Skill Relationships (apps/lfx)
 
 ```text
@@ -69,8 +59,7 @@ The coordinator is the entry point for all feature work in `apps/lfx`. For anyth
 
 ## For Cowork Sessions
 
-- Contributor describes a feature for `apps/lfx` → suggest `/lfx-coordinator`
-- Setup questions for the new app → suggest `/lfx-setup`
-- After development work in `apps/lfx` → remind to run `/lfx-preflight`
-- If unsure which app → ask "Are you working in the new `lfx` app or the existing `lfx-one`?"
+- Contributor describes a feature → suggest `/lfx-coordinator`
+- Setup questions → suggest `/lfx-setup`
+- After development work → remind to run `/lfx-preflight`
 - When a skill references architecture docs in `docs/`, read those docs before generating code

@@ -4,14 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LFX One is a Turborepo monorepo containing an Angular 20 SSR application with stable zoneless change detection and Express.js server.
+LFX One is a Turborepo monorepo containing two Angular 20 SSR applications and an Express.js server:
+
+- **`apps/lfx`** — New application (primary focus). Angular 20 SSR with Tailwind v4, custom UI components (no PrimeNG).
+- **`apps/lfx-one`** — Existing application (being replaced). Angular 20 SSR with PrimeNG wrapper components and Tailwind v3.
 
 ## Monorepo Structure
 
 ```text
 lfx-v2-ui/
 ├── apps/
-│   └── lfx-one/              # Angular 20 SSR application with stable zoneless change detection
+│   ├── lfx/                  # New Angular 20 SSR app — Tailwind v4, custom components (no PrimeNG)
+│   └── lfx-one/              # Existing Angular 20 SSR app — PrimeNG wrappers, Tailwind v3 (being replaced)
 │       ├── src/app/
 │       │   ├── layouts/      # Layout components
 │       │   ├── modules/      # 9 Feature modules (see Feature Modules section)
@@ -77,8 +81,8 @@ import { buildUrl, parseQueryParams } from '@lfx-one/shared/utils';
 
 ## Development Memories
 
-- Always reference PrimeNG's component interface when trying to define types
-- All PrimeNG components are wrapped in LFX components for UI library independence
+- **`apps/lfx`** uses custom Tailwind v4 components — no PrimeNG dependency
+- **`apps/lfx-one`** — reference PrimeNG's component interface when defining types; all PrimeNG components are wrapped in LFX components for UI library independence
 - Always use direct imports for standalone components - no barrel exports
 - **Authentication uses selective pattern** - public routes bypass auth, protected routes require authentication
 - **Public routes include** `/meeting` and `/public/api` endpoints
@@ -90,13 +94,13 @@ import { buildUrl, parseQueryParams } from '@lfx-one/shared/utils';
 
 Detailed patterns are in `.claude/rules/` and loaded contextually based on file globs:
 
-| Rule File                   | Glob                | Topics                                                                      |
-| --------------------------- | ------------------- | --------------------------------------------------------------------------- |
-| `component-organization.md` | `**/*.component.ts` | Signal initialization, component structure order, model signals, interfaces |
-| `logging-patterns.md`       | `**/server/**`      | Logger service API, layer responsibilities, log levels, code examples       |
-| `development-rules.md`      | `*`                 | Shared package, license headers, testing, formatting, doc maintenance       |
-| `commit-workflow.md`        | `*`                 | Commit conventions, branch naming, PR format, PR sizing, JIRA tracking      |
-| `skill-guidance.md`         | `*`                 | Guides Claude to suggest `/setup`, `/develop`, `/preflight` skills          |
+| Rule File                   | Glob                | Topics                                                                                           |
+| --------------------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
+| `component-organization.md` | `**/*.component.ts` | Signal initialization, component structure order, model signals, interfaces                      |
+| `logging-patterns.md`       | `**/server/**`      | Logger service API, layer responsibilities, log levels, code examples                            |
+| `development-rules.md`      | `*`                 | Shared package, license headers, testing, formatting, doc maintenance                            |
+| `commit-workflow.md`        | `*`                 | Commit conventions, branch naming, PR format, PR sizing, JIRA tracking                           |
+| `skill-guidance.md`         | `*`                 | Guides Claude to suggest `/lfx-setup`, `/lfx-coordinator`, `/lfx-preflight` and other lfx skills |
 
 ## Architecture Documentation
 

@@ -80,8 +80,9 @@ All UI components are custom-built with Tailwind v4. No PrimeNG dependency. Comp
 Same controller-service-route pattern as `lfx-one`, simplified:
 
 - **Auth**: `express-openid-connect` only (no Authelia)
-- **Logging**: Same Pino-based logger service pattern
-- **Proxy**: `MicroserviceProxyService` for all upstream Go microservice calls
+- **Logging**: Pino-based logger service, but only error-handler middleware logs errors — controllers and domain services do NOT log
+- **Upstream calls**: `LfxService` — flat fetch client replacing `MicroserviceProxyService` + `ApiClientService`
+- **Errors**: Single `ApiError` class with factory methods (replaces 5-class error hierarchy)
 
 ### 5. App Scaffolding via Angular CLI
 
@@ -108,16 +109,16 @@ Post-generation modifications replace the generated server entry with full Expre
 
 **Deliverables:**
 
-- [ ] `/lfx-coordinator` — Orchestrates multi-step features. Delegates to specialists. Never writes code.
-- [ ] `/lfx-research` — Read-only. Validates upstream APIs and explores codebase. Returns structured findings.
-- [ ] `/lfx-ui-builder` — Generates Angular frontend code for both `lfx-one` and `lfx`.
-- [ ] `/lfx-backend-builder` — Generates Express proxy endpoints and shared TypeScript types.
-- [ ] `/lfx-design` — Custom Tailwind v4 component builder for `apps/lfx` design system only.
-- [ ] `/lfx-preflight` — Pre-PR validation (replaces old `/preflight`).
-- [ ] `/lfx-setup` — Environment setup (replaces old `/setup`).
-- [ ] `.claude/rules/skill-guidance.md` updated to reference new skill names.
-- [ ] `CLAUDE.md` updated to reference both apps and new skill names.
-- [ ] Old skills (`develop`, `preflight`, `setup`) removed.
+- [x] `/lfx-coordinator` — Orchestrates multi-step features. Delegates to specialists. Never writes code.
+- [x] `/lfx-research` — Read-only. Validates upstream APIs and explores codebase. Returns structured findings.
+- [x] `/lfx-ui-builder` — Generates Angular frontend code for both `lfx-one` and `lfx`.
+- [x] `/lfx-backend-builder` — Generates Express proxy endpoints and shared TypeScript types.
+- [x] `/lfx-design` — Custom Tailwind v4 component builder for `apps/lfx` design system only.
+- [x] `/lfx-preflight` — Pre-PR validation (replaces old `/preflight`).
+- [x] `/lfx-setup` — Environment setup (replaces old `/setup`).
+- [x] `.claude/rules/skill-guidance.md` updated to reference new skill names.
+- [x] `CLAUDE.md` updated to reference both apps and new skill names.
+- [x] Old skills (`develop`, `preflight`, `setup`) removed.
 
 **Definition of Done:** A contributor can run `/lfx-coordinator` and have it plan, research, and delegate code generation without manual guidance.
 
@@ -138,24 +139,24 @@ ng new lfx --ssr --style css --zoneless --prefix lfx --skip-tests
 
 **Step 2 — Post-generation modifications:**
 
-- [ ] `src/styles.css` — Tailwind v4 `@import "tailwindcss"` + `@theme` block with LFX design tokens (skeleton)
-- [ ] `src/app/app.config.ts` — zoneless, hydration, HTTP client, auth interceptor
-- [ ] `src/app/app.config.server.ts` — server rendering config
-- [ ] `src/app/app.routes.ts` — shell routes (layout + wildcard)
-- [ ] `src/app/app.routes.server.ts` — all routes `RenderMode.Server`
-- [ ] `src/server/server.ts` — Express: compression, static files, Pino HTTP, Auth0 OIDC, auth middleware, error handler, SSR handler
-- [ ] `src/server/server-logger.ts` — Pino base instance (port from `lfx-one`)
-- [ ] `src/server/services/logger.service.ts` — singleton logger (port from `lfx-one`)
-- [ ] `src/server/middleware/auth.middleware.ts` — AuthContext (user, persona, orgs)
-- [ ] `src/server/middleware/error-handler.middleware.ts` — API error handler
-- [ ] `src/server/errors/` — base, authentication, microservice, validation errors
-- [ ] `src/server/services/microservice-proxy.service.ts` — upstream proxy
-- [ ] `src/server/helpers/` — error-serializer, url-validation, validation, http-status
-- [ ] `src/types/express.d.ts` — Express request type augmentation
-- [ ] `tsconfig.json` — strict mode + `@lfx-one/shared` path aliases
-- [ ] `ecosystem.config.js` — PM2 config
-- [ ] `turbo.json` — `apps/lfx` added to pipeline
-- [ ] License headers on all source files
+- [x] `src/styles.css` — Tailwind v4 `@import "tailwindcss"` + `@theme` block with LFX design tokens (skeleton)
+- [x] `src/app/app.config.ts` — zoneless, hydration, HTTP client
+- [x] `src/app/app.config.server.ts` — server rendering config
+- [x] `src/app/app.routes.ts` — shell routes (empty)
+- [x] `src/app/app.routes.server.ts` — all routes `RenderMode.Server`
+- [x] `src/server/server.ts` — Express: compression, static files, Pino HTTP, Auth0 OIDC, auth middleware, error handler, SSR handler
+- [x] `src/server/helpers/server-logger.ts` — Pino base instance (port from `lfx-one`)
+- [x] `src/server/services/logger.service.ts` — singleton logger (port from `lfx-one`)
+- [x] `src/server/middleware/auth.middleware.ts` — Auth0 selective auth
+- [x] `src/server/middleware/error-handler.middleware.ts` — centralized error logging (single place for all error logging)
+- [x] `src/server/helpers/api-error.ts` — single `ApiError` class with factory methods (replaces `errors/` hierarchy)
+- [x] `src/server/services/lfx.service.ts` — flat fetch client for upstream Go services (replaces `microservice-proxy.service.ts`)
+- [x] `src/server/helpers/` — error-serializer, url-validation
+- [x] `src/types/express.d.ts` — Express request type augmentation
+- [x] `tsconfig.json` — strict mode + `@lfx-one/shared` path aliases
+- [x] `ecosystem.config.js` — PM2 config
+- [x] `turbo.json` — auto-discovered via workspaces
+- [x] License headers on all source files
 
 **Definition of Done:**
 
