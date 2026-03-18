@@ -52,6 +52,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 
 @Component({
@@ -71,6 +72,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     TabPanel,
     DatePipe,
     DecimalPipe,
+    CommitteeMembersComponent,
     CommitteeSettingsComponent,
     MeetingCardComponent,
     ReactiveFormsModule,
@@ -147,6 +149,10 @@ export class CommitteeViewComponent {
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
 
+  // -- Tab visibility signals --
+  // -- Tab visibility signals --
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
+
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
   public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
@@ -215,6 +221,10 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  public refreshMembers(): void {
+    this.refresh.next();
   }
 
   public getMembersCountByOrg(org: string): number {
