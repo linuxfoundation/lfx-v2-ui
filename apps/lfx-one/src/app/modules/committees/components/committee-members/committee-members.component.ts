@@ -20,7 +20,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
-import { InviteMemberDialogComponent } from '../invite-member-dialog/invite-member-dialog.component';
 import { MemberFormComponent } from '../member-form/member-form.component';
 
 @Component({
@@ -66,7 +65,6 @@ export class CommitteeMembersComponent implements OnInit {
   public isBoardMember: Signal<boolean>;
   public isMaintainer: Signal<boolean>;
   public canManageMembers: Signal<boolean>;
-  public canInviteMembers: Signal<boolean>;
   public isMembersVisible: Signal<boolean>;
 
   // Filter-related variables
@@ -92,12 +90,6 @@ export class CommitteeMembersComponent implements OnInit {
     this.isMembersVisible = computed(() => {
       const visibility = this.committee()?.member_visibility;
       return visibility !== 'hidden' || this.canManageMembers();
-    });
-    // Invite requires both a compatible join_mode and management permission
-    this.canInviteMembers = computed(() => {
-      const committee = this.committee();
-      const hasInviteMode = committee?.join_mode === 'invite_only' || committee?.join_mode === 'open';
-      return hasInviteMode && this.canManageMembers();
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
@@ -134,25 +126,6 @@ export class CommitteeMembersComponent implements OnInit {
         onCancel: () => {
           // Dialog will close itself
         },
-      },
-    });
-
-    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
-      if (result) {
-        this.refreshMembers();
-      }
-    });
-  }
-
-  public openInviteMemberDialog(): void {
-    const dialogRef = this.dialogService.open(InviteMemberDialogComponent, {
-      header: 'Invite Members',
-      width: '550px',
-      modal: true,
-      closable: true,
-      duplicate: true,
-      data: {
-        committee: this.committee(),
       },
     });
 
