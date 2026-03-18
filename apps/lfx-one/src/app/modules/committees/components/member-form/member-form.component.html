@@ -8,14 +8,7 @@
       <!-- First Name -->
       <div>
         <label for="first-name" class="block text-sm font-medium text-gray-700 mb-1"> First Name <span class="text-red-500">*</span> </label>
-        <lfx-input-text
-          size="small"
-          [form]="form()"
-          control="first_name"
-          id="first-name"
-          placeholder="Enter first name"
-          styleClass="w-full"
-          data-testid="member-form-first-name"></lfx-input-text>
+        <lfx-input-text size="small" [form]="form()" control="first_name" id="first-name" placeholder="Enter first name" styleClass="w-full"></lfx-input-text>
         @if (form().get('first_name')?.errors?.['required'] && form().get('first_name')?.touched) {
           <p class="mt-1 text-xs text-red-600">First name is required</p>
         }
@@ -24,14 +17,7 @@
       <!-- Last Name -->
       <div>
         <label for="last-name" class="block text-sm font-medium text-gray-700 mb-1"> Last Name <span class="text-red-500">*</span> </label>
-        <lfx-input-text
-          size="small"
-          [form]="form()"
-          control="last_name"
-          id="last-name"
-          placeholder="Enter last name"
-          styleClass="w-full"
-          data-testid="member-form-last-name"></lfx-input-text>
+        <lfx-input-text size="small" [form]="form()" control="last_name" id="last-name" placeholder="Enter last name" styleClass="w-full"></lfx-input-text>
         @if (form().get('last_name')?.errors?.['required'] && form().get('last_name')?.touched) {
           <p class="mt-1 text-xs text-red-600">Last name is required</p>
         }
@@ -41,14 +27,7 @@
     <!-- Email Address -->
     <div>
       <label for="email" class="block text-sm font-medium text-gray-700 mb-1"> Email Address <span class="text-red-500">*</span> </label>
-      <lfx-input-text
-        size="small"
-        [form]="form()"
-        control="email"
-        id="email"
-        placeholder="Enter email address"
-        styleClass="w-full"
-        data-testid="member-form-email"></lfx-input-text>
+      <lfx-input-text size="small" [form]="form()" control="email" id="email" placeholder="Enter email address" styleClass="w-full"></lfx-input-text>
       @if (form().get('email')?.errors?.['required'] && form().get('email')?.touched) {
         <p class="mt-1 text-xs text-red-600">Email address is required</p>
       }
@@ -63,14 +42,7 @@
     <!-- Job Title -->
     <div>
       <label for="job-title" class="block text-sm font-medium text-gray-700 mb-1"> Job Title </label>
-      <lfx-input-text
-        size="small"
-        [form]="form()"
-        control="job_title"
-        id="job-title"
-        placeholder="Enter job title"
-        styleClass="w-full"
-        data-testid="member-form-job-title"></lfx-input-text>
+      <lfx-input-text size="small" [form]="form()" control="job_title" id="job-title" placeholder="Enter job title" styleClass="w-full"></lfx-input-text>
     </div>
 
     <!-- LinkedIn Profile -->
@@ -86,19 +58,9 @@
         data-testid="member-form-linkedin-profile"></lfx-input-text>
     </div>
 
-    <!-- Individual Toggle -->
-    <div data-testid="member-form-individual-toggle">
-      <lfx-checkbox [form]="form()" control="is_individual" label="Individual (no org affiliation)"></lfx-checkbox>
-    </div>
-
     <!-- Organization Search -->
     <div>
-      <label for="organization-search" class="block text-sm font-medium text-gray-700 mb-1">
-        Organization
-        @if (!form().get('is_individual')?.value) {
-          <span class="text-red-500">*</span>
-        }
-      </label>
+      <label for="organization-search" class="block text-sm font-medium text-gray-700 mb-1"> Organization </label>
       <lfx-organization-search
         [form]="form()"
         nameControl="organization"
@@ -109,134 +71,85 @@
         panelStyleClass="text-sm w-full"
         dataTestId="member-form-organization-search">
       </lfx-organization-search>
-      @if (form().get('organization')?.errors?.['required'] && form().get('organization')?.touched && !form().get('is_individual')?.value) {
-        <p class="mt-1 text-xs text-red-600">Organization is required</p>
-      }
     </div>
   </div>
 
-  <!-- Governance Section -->
-  <div class="flex flex-col gap-3">
-    <div class="grid grid-cols-2 gap-4">
-      <!-- Role -->
+  @if (committee?.enable_voting) {
+    <!-- Committee Role Section -->
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Role -->
+        <div>
+          <label for="role" class="block text-sm font-medium text-gray-700 mb-1"> Role </label>
+          <lfx-select
+            size="small"
+            [form]="form()"
+            control="role"
+            appendTo="body"
+            [options]="roleOptions"
+            placeholder="Select role"
+            styleClass="w-full"
+            id="role"></lfx-select>
+        </div>
+
+        <!-- Role Start and End Dates -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Role Start Date -->
+          <div>
+            <label for="role-start" class="block text-sm font-medium text-gray-700 mb-1"> Role Start Date </label>
+            <lfx-calendar [form]="form()" control="role_start" placeholder="Select start date" [showButtonBar]="true" appendTo="body"></lfx-calendar>
+          </div>
+
+          <!-- Role End Date -->
+          <div>
+            <label for="role-end" class="block text-sm font-medium text-gray-700 mb-1"> Role End Date </label>
+            <lfx-calendar [form]="form()" control="role_end" placeholder="Select end date" [showButtonBar]="true" appendTo="body"></lfx-calendar>
+          </div>
+        </div>
+
+        <!-- Voting Status -->
+        <div>
+          <label for="voting-status" class="block text-sm font-medium text-gray-700 mb-1"> Voting Status </label>
+          <lfx-select
+            size="small"
+            [form]="form()"
+            control="voting_status"
+            [options]="votingStatusOptions"
+            placeholder="Select voting status"
+            styleClass="w-full"
+            appendTo="body"
+            id="voting-status"></lfx-select>
+        </div>
+
+        <!-- Voting Status Start and End Dates -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Voting Status Start Date -->
+          <div>
+            <label for="voting-status-start" class="block text-sm font-medium text-gray-700 mb-1"> Voting Status Start Date </label>
+            <lfx-calendar [form]="form()" control="voting_status_start" placeholder="Select start date" [showButtonBar]="true" appendTo="body"></lfx-calendar>
+          </div>
+
+          <!-- Voting Status End Date -->
+          <div>
+            <label for="voting-status-end" class="block text-sm font-medium text-gray-700 mb-1"> Voting Status End Date </label>
+            <lfx-calendar [form]="form()" control="voting_status_end" placeholder="Select end date" [showButtonBar]="true" appendTo="body"></lfx-calendar>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appointed By -->
       <div>
-        <label for="role" class="block text-sm font-medium text-gray-700 mb-1"> Role <span class="text-red-500">*</span> </label>
-        <lfx-select
+        <label for="appointed-by" class="block text-sm font-medium text-gray-700 mb-1"> Appointed By </label>
+        <lfx-input-text
           size="small"
           [form]="form()"
-          control="role"
-          appendTo="body"
-          [options]="roleOptions"
-          placeholder="Select role"
-          styleClass="w-full"
-          id="role"
-          data-testid="member-form-role"></lfx-select>
-        @if (form().get('role')?.errors?.['required'] && form().get('role')?.touched) {
-          <p class="mt-1 text-xs text-red-600">Role is required</p>
-        }
-      </div>
-
-      <!-- Role Start and End Dates -->
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-sm font-medium text-gray-700">Role Date Range</label>
-          @if (form().get('role_start')?.value || form().get('role_end')?.value) {
-            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" (click)="clearRoleDates()" data-testid="member-form-clear-role-dates">
-              Clear
-            </button>
-          }
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <lfx-calendar
-            [form]="form()"
-            control="role_start"
-            placeholder="Start date"
-            [showButtonBar]="true"
-            appendTo="body"
-            (onSelect)="onDateChange()"
-            data-testid="member-form-role-start"></lfx-calendar>
-          <lfx-calendar
-            [form]="form()"
-            control="role_end"
-            placeholder="End date"
-            [showButtonBar]="true"
-            appendTo="body"
-            (onSelect)="onDateChange()"
-            data-testid="member-form-role-end"></lfx-calendar>
-        </div>
-        @if (form().errors?.['role_start_after_role_end']) {
-          <p class="mt-1 text-xs text-red-600">Role end date must be after start date</p>
-        }
-      </div>
-
-      <!-- Voting Status -->
-      <div>
-        <label for="voting-status" class="block text-sm font-medium text-gray-700 mb-1"> Voting Status <span class="text-red-500">*</span> </label>
-        <lfx-select
-          size="small"
-          [form]="form()"
-          control="voting_status"
-          [options]="votingStatusOptions"
-          placeholder="Select voting status"
-          styleClass="w-full"
-          appendTo="body"
-          id="voting-status"
-          data-testid="member-form-voting-status"></lfx-select>
-        @if (form().get('voting_status')?.errors?.['required'] && form().get('voting_status')?.touched) {
-          <p class="mt-1 text-xs text-red-600">Voting status is required</p>
-        }
-      </div>
-
-      <!-- Voting Status Start and End Dates -->
-      <div>
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-sm font-medium text-gray-700">Voting Status Date Range</label>
-          @if (form().get('voting_status_start')?.value || form().get('voting_status_end')?.value) {
-            <button type="button" class="text-xs text-blue-600 hover:text-blue-800" (click)="clearVotingDates()" data-testid="member-form-clear-voting-dates">
-              Clear
-            </button>
-          }
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <lfx-calendar
-            [form]="form()"
-            control="voting_status_start"
-            placeholder="Start date"
-            [showButtonBar]="true"
-            appendTo="body"
-            (onSelect)="onDateChange()"
-            data-testid="member-form-voting-start"></lfx-calendar>
-          <lfx-calendar
-            [form]="form()"
-            control="voting_status_end"
-            placeholder="End date"
-            [showButtonBar]="true"
-            appendTo="body"
-            (onSelect)="onDateChange()"
-            data-testid="member-form-voting-end"></lfx-calendar>
-        </div>
-        @if (form().errors?.['voting_status_start_after_voting_status_end']) {
-          <p class="mt-1 text-xs text-red-600">Voting end date must be after start date</p>
-        }
+          control="appointed_by"
+          id="appointed-by"
+          placeholder="Enter who appointed this member"
+          styleClass="w-full"></lfx-input-text>
       </div>
     </div>
-
-    <!-- Appointed By -->
-    <div>
-      <label for="appointed-by" class="block text-sm font-medium text-gray-700 mb-1"> Appointed By </label>
-      <lfx-select
-        size="small"
-        [form]="form()"
-        control="appointed_by"
-        [options]="appointedByOptions"
-        [filter]="true"
-        placeholder="Select appointment source"
-        styleClass="w-full"
-        appendTo="body"
-        id="appointed-by"
-        data-testid="member-form-appointed-by"></lfx-select>
-    </div>
-  </div>
+  }
 
   <!-- Form Actions -->
   <div class="flex justify-end gap-3 pt-6 border-t">
