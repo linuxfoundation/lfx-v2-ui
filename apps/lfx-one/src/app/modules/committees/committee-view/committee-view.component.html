@@ -516,9 +516,7 @@
             <p-tabpanel value="members">
               <div class="flex flex-col gap-6 pt-4">
                 @if (committee()?.uid) {
-                  <lfx-application-review [committee]="committee()" (memberAdded)="refreshMembers()"></lfx-application-review>
-                }
-                @if (committee()?.uid) {
+                  <lfx-application-review [committee]="committee()" (memberAdded)="refreshCommittee()"></lfx-application-review>
                   <lfx-committee-members
                     [committee]="committee()"
                     [members]="members()"

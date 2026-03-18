@@ -2,20 +2,26 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, UpperCasePipe } from '@angular/common';
-import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { Committee, GroupJoinApplication } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { Skeleton } from 'primeng/skeleton';
+import { catchError, filter, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-application-review',
-  imports: [DatePipe, UpperCasePipe, CardComponent, ButtonComponent],
+  imports: [DatePipe, UpperCasePipe, CardComponent, ButtonComponent, ConfirmDialogModule, Skeleton],
+  providers: [ConfirmationService],
   templateUrl: './application-review.component.html',
 })
 export class ApplicationReviewComponent {
   private readonly committeeService = inject(CommitteeService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
   // Inputs
@@ -46,42 +52,24 @@ export class ApplicationReviewComponent {
   });
 
   public constructor() {
-    effect(() => {
-      const c = this.committee();
-      if (!c?.uid) {
-        this.applications.set([]);
-        this.loading.set(false);
-        return;
-      }
-      if (c.join_mode !== 'application') {
-        this.applications.set([]);
-        this.loading.set(false);
-        return;
-      }
-      if (!c.writer) {
-        this.applications.set([]);
-        this.loading.set(false);
-        return;
-      }
-      this.loadApplications(c.uid);
-    });
-  }
-
-  public loadApplications(committeeUid: string): void {
-    this.applications.set([]);
-    this.loading.set(true);
-    this.committeeService.getApplications(committeeUid).subscribe({
-      next: (apps) => {
-        if (this.committee()?.uid !== committeeUid) return;
+    toObservable(this.committee)
+      .pipe(
+        switchMap((c) => {
+          if (!c?.uid || c.join_mode !== 'application' || !c.writer) {
+            this.applications.set([]);
+            this.loading.set(false);
+            return of(null);
+          }
+          this.loading.set(true);
+          return this.committeeService.getApplications(c.uid).pipe(catchError(() => of([] as GroupJoinApplication[])));
+        }),
+        filter((apps): apps is GroupJoinApplication[] => apps !== null),
+        takeUntilDestroyed()
+      )
+      .subscribe((apps) => {
         this.applications.set(apps);
         this.loading.set(false);
-      },
-      error: () => {
-        if (this.committee()?.uid !== committeeUid) return;
-        this.applications.set([]);
-        this.loading.set(false);
-      },
-    });
+      });
   }
 
   public approve(application: GroupJoinApplication): void {
@@ -115,6 +103,15 @@ export class ApplicationReviewComponent {
   }
 
   public reject(application: GroupJoinApplication): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to decline the request from ${application.applicant_name || application.applicant_email}?`,
+      header: 'Decline Application',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.doReject(application),
+    });
+  }
+
+  private doReject(application: GroupJoinApplication): void {
     const c = this.committee();
     if (!c?.uid) return;
 

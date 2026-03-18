@@ -96,7 +96,7 @@ export class CommitteeMembersComponent implements OnInit {
     // Invite requires both a compatible join_mode and management permission
     this.canInviteMembers = computed(() => {
       const committee = this.committee();
-      const hasInviteMode = committee?.join_mode === 'invite_only' || committee?.join_mode === 'open';
+      const hasInviteMode = committee?.join_mode === 'invite_only';
       return hasInviteMode && this.canManageMembers();
     });
     // Initialize filter form
@@ -161,6 +161,16 @@ export class CommitteeMembersComponent implements OnInit {
         this.refreshMembers();
       }
     });
+  }
+
+  protected sanitizeUrl(url: string | undefined): string | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      return ['http:', 'https:', 'mailto:'].includes(parsed.protocol) ? url : null;
+    } catch {
+      return null;
+    }
   }
 
   private editMember(): void {

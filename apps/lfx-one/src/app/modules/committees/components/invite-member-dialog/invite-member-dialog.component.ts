@@ -38,9 +38,7 @@ export class InviteMemberDialogComponent {
 
   public onSubmit(): void {
     if (!this.form.valid || !this.committee) {
-      Object.keys(this.form.controls).forEach((key) => {
-        this.form.get(key)?.markAsTouched();
-      });
+      this.form.markAllAsTouched();
       return;
     }
 

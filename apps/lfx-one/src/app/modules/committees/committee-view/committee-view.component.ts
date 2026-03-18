@@ -185,10 +185,6 @@ export class CommitteeViewComponent {
     this.refresh.next();
   }
 
-  public refreshMembers(): void {
-    this.refresh.next();
-  }
-
   public getMembersCountByOrg(org: string): number {
     return this.members().filter((m) => m.organization?.name === org).length;
   }
