@@ -15,20 +15,18 @@
           data-testid="votes-search-input"></lfx-input-text>
       </div>
 
-      @if (!hideGroupFilter()) {
-        <div class="w-full sm:w-auto sm:shrink-0">
-          <lfx-select
-            [form]="searchForm"
-            control="group"
-            size="small"
-            [options]="groupOptions()"
-            placeholder="All Groups"
-            [showClear]="true"
-            [filter]="true"
-            filterPlaceholder="Search groups..."
-            data-testid="votes-group-filter"></lfx-select>
-        </div>
-      }
+      <div class="w-full sm:w-auto sm:shrink-0">
+        <lfx-select
+          [form]="searchForm"
+          control="group"
+          size="small"
+          [options]="groupOptions()"
+          placeholder="All Groups"
+          [showClear]="true"
+          [filter]="true"
+          filterPlaceholder="Search groups..."
+          data-testid="votes-group-filter"></lfx-select>
+      </div>
 
       <div class="w-full sm:w-auto sm:shrink-0">
         <lfx-select

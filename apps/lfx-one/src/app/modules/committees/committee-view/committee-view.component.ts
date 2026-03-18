@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, effect, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -52,9 +52,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
-import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
-import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -73,12 +71,10 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     TabPanel,
     DatePipe,
     DecimalPipe,
-    CommitteeMembersComponent,
     CommitteeSettingsComponent,
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
-    CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './committee-view.component.html',
@@ -151,10 +147,6 @@ export class CommitteeViewComponent {
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
 
-  // -- Tab visibility signals --
-  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
-  public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
-
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
   public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
@@ -223,13 +215,6 @@ export class CommitteeViewComponent {
 
   public constructor() {
     this.initializeCommittee();
-
-    // Redirect away from votes tab when voting is disabled
-    effect(() => {
-      if (!this.isVotesTabVisible() && this.activeTab() === 'votes') {
-        this.activeTab.set('overview');
-      }
-    });
   }
 
   // -- Public methods --
@@ -239,10 +224,6 @@ export class CommitteeViewComponent {
 
   public refreshCommittee(): void {
     this.loading.set(true);
-    this.refresh.next();
-  }
-
-  public refreshMembers(): void {
     this.refresh.next();
   }
 
