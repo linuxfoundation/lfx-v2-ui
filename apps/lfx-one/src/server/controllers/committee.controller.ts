@@ -992,18 +992,6 @@ export class CommitteeController {
 
     const originalToken = req.bearerToken;
 
-    if (!id) {
-      const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
-        operation: 'get_public_committee_by_id',
-        service: 'committee_controller',
-        path: req.path,
-      });
-      next(validationError);
-      return;
-    }
-
-    const originalToken = req.bearerToken;
-
     try {
       const m2mToken = await generateM2MToken(req);
       req.bearerToken = m2mToken;
