@@ -44,4 +44,6 @@ router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBu
 router.post('/:id/join', (req, res, next) => committeeController.joinCommittee(req, res, next));
 router.delete('/:id/leave', (req, res, next) => committeeController.leaveCommittee(req, res, next));
 
+// Survey routes
+router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
 export default router;
