@@ -31,12 +31,14 @@ import {
   CommitteeDiscussionThread,
   CommitteeEngagementMetrics,
   CommitteeEvent,
+  CommitteeLeadership,
   CommitteeMember,
   CommitteeOutreachCampaign,
   CommitteeResolution,
   CommitteeVote,
   getCommitteeCategorySeverity,
   GroupBehavioralClass,
+  LeadershipRole,
   TagSeverity,
 } from '@lfx-one/shared';
 import { Meeting, PastMeeting, PastMeetingSummary } from '@lfx-one/shared/interfaces';
@@ -47,11 +49,12 @@ import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-
+import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 
 @Component({
@@ -63,6 +66,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     TagComponent,
     RouterLink,
     ConfirmDialogModule,
+    DynamicDialogModule,
     TooltipModule,
     Tabs,
     TabList,
@@ -76,7 +80,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     ReactiveFormsModule,
     NgClass,
   ],
-  providers: [ConfirmationService],
+  providers: [ConfirmationService, DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -86,6 +90,7 @@ export class CommitteeViewComponent {
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
   private readonly meetingService = inject(MeetingService);
+  private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
 
@@ -258,6 +263,42 @@ export class CommitteeViewComponent {
     if (!committee) return;
     this.router.navigate(['/meetings/create'], {
       queryParams: { committee_uid: committee.uid, committee_name: committee.name, project_uid: committee.project_uid },
+    });
+  }
+
+  public openAssignLeadership(role: LeadershipRole): void {
+    const committee = this.committee();
+    if (!committee) return;
+
+    const currentLeader = role === 'chair' ? this.chair() : this.coChair();
+    const roleLabel = role === 'chair' ? 'Assign Chair' : 'Assign Co-Chair';
+
+    const dialogRef = this.dialogService.open(AssignLeadershipDialogComponent, {
+      header: roleLabel,
+      width: '500px',
+      modal: true,
+      closable: true,
+      data: {
+        role,
+        committee,
+        members: this.members(),
+        currentLeader: currentLeader ?? null,
+      },
+    }) as DynamicDialogRef;
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
+      if (result) {
+        const current = this.committee();
+        if (current) {
+          const updated = { ...current };
+          if (result.role === 'chair') {
+            updated.chair = result.leadership;
+          } else {
+            updated.co_chair = result.leadership;
+          }
+          this.committeeSignal.set(updated);
+        }
+      }
     });
   }
 

@@ -804,6 +804,19 @@
                   <lfx-card data-testid="committee-view-leadership">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-sm font-medium"><i class="fa-light fa-crown text-gray-400 mr-2"></i>Leadership</h3>
+                      @if (canManageConfigurations() && !hasChair() && !hasCoChair()) {
+                        <lfx-button
+                          icon="fa-light fa-pen-to-square"
+                          size="small"
+                          [text]="true"
+                          severity="secondary"
+                          styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
+                          pTooltip="Assign Chair / Co-Chair"
+                          tooltipPosition="top"
+                          (onClick)="openAssignLeadership('chair')"
+                          data-testid="committee-view-leadership-edit-btn">
+                        </lfx-button>
+                      }
                     </div>
                     <div class="flex flex-col gap-4">
                       <!-- Chair -->
@@ -823,6 +836,16 @@
                                 <p class="text-xs text-gray-400">Since {{ chairElectedDate() }}</p>
                               }
                             </div>
+                            @if (canManageConfigurations()) {
+                              <button
+                                class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
+                                pTooltip="Update Chair"
+                                tooltipPosition="top"
+                                (click)="openAssignLeadership('chair')"
+                                data-testid="committee-view-update-chair-btn">
+                                <i class="fa-light fa-pen-to-square text-sm"></i>
+                              </button>
+                            }
                           </div>
                         } @else {
                           <div class="flex items-center gap-3">
@@ -831,6 +854,14 @@
                             </div>
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
+                              @if (canManageConfigurations()) {
+                                <button
+                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  (click)="openAssignLeadership('chair')"
+                                  data-testid="committee-view-assign-chair-btn">
+                                  Assign Chair
+                                </button>
+                              }
                             </div>
                           </div>
                         }
@@ -853,6 +884,16 @@
                                 <p class="text-xs text-gray-400">Since {{ coChairElectedDate() }}</p>
                               }
                             </div>
+                            @if (canManageConfigurations()) {
+                              <button
+                                class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
+                                pTooltip="Update Co-Chair"
+                                tooltipPosition="top"
+                                (click)="openAssignLeadership('co_chair')"
+                                data-testid="committee-view-update-co-chair-btn">
+                                <i class="fa-light fa-pen-to-square text-sm"></i>
+                              </button>
+                            }
                           </div>
                         } @else {
                           <div class="flex items-center gap-3">
@@ -861,6 +902,14 @@
                             </div>
                             <div>
                               <p class="text-sm text-gray-400 italic">Vacant</p>
+                              @if (canManageConfigurations()) {
+                                <button
+                                  class="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  (click)="openAssignLeadership('co_chair')"
+                                  data-testid="committee-view-assign-co-chair-btn">
+                                  Assign Co-Chair
+                                </button>
+                              }
                             </div>
                           </div>
                         }
