@@ -4,13 +4,13 @@
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
+import { COMMITTEE_LABEL, JOIN_MODE_LABELS } from '@lfx-one/shared/constants';
 import {
   getGroupBehavioralClass,
   isGovernanceClass,
@@ -50,7 +50,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { BehaviorSubject, catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 
@@ -98,7 +98,7 @@ export class CommitteeViewComponent {
   // -- Writable signals --
   public loading = signal<boolean>(true);
   public error = signal<boolean>(false);
-  public refresh = new BehaviorSubject<void>(undefined);
+  public refresh = signal(0);
 
   // Sub-resource writable signals
   public membersLoading = signal<boolean>(true);
@@ -199,18 +199,8 @@ export class CommitteeViewComponent {
 
   // -- Configuration label signals --
   public joinModeLabel: Signal<string> = computed(() => {
-    switch (this.committee()?.join_mode) {
-      case 'open':
-        return 'Open';
-      case 'invite_only':
-        return 'Invite Only';
-      case 'application':
-        return 'Apply to Join';
-      case 'closed':
-        return 'Closed';
-      default:
-        return 'Closed';
-    }
+    const mode = this.committee()?.join_mode;
+    return mode ? JOIN_MODE_LABELS[mode] : 'Closed';
   });
 
   public constructor() {
@@ -224,7 +214,7 @@ export class CommitteeViewComponent {
 
   public refreshCommittee(): void {
     this.loading.set(true);
-    this.refresh.next();
+    this.refresh.update((v) => v + 1);
   }
 
   public getMembersCountByOrg(org: string): number {
@@ -273,7 +263,7 @@ export class CommitteeViewComponent {
 
   // -- Private initializer functions --
   private initializeCommittee(): void {
-    combineLatest([this.route.paramMap, this.refresh])
+    combineLatest([this.route.paramMap, toObservable(this.refresh)])
       .pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
