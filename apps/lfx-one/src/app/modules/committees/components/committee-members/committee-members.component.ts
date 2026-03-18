@@ -18,6 +18,7 @@ import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+import { Skeleton } from 'primeng/skeleton';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
 import { MemberFormComponent } from '../member-form/member-form.component';
@@ -35,6 +36,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
     TableComponent,
     ConfirmDialogModule,
     DynamicDialogModule,
+    Skeleton,
   ],
   providers: [DialogService],
   templateUrl: './committee-members.component.html',
@@ -86,10 +88,11 @@ export class CommitteeMembersComponent {
     this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
     this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
     this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
-    // Members visible when visibility is not 'hidden' OR user has management access
+    // Members visible when visibility is not 'hidden' OR user has management access.
+    // This mirrors the parent's canManageConfigurations gate: isMaintainer() || (writer && !isBoardMember())
     this.isMembersVisible = computed(() => {
       const visibility = this.committee()?.member_visibility;
-      return visibility !== 'hidden' || this.canManageMembers();
+      return visibility !== 'hidden' || this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember());
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();

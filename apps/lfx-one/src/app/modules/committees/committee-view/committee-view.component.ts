@@ -98,14 +98,25 @@ export class CommitteeViewComponent {
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
 
+  // Exact category-to-behavioral-class map to avoid false matches from substring matching
+  private static readonly CATEGORY_BEHAVIORAL_MAP: Record<string, GroupBehavioralClass> = {
+    'board of directors': 'governing-board',
+    'governing board': 'governing-board',
+    'technical oversight committee': 'oversight-committee',
+    tsc: 'oversight-committee',
+    toc: 'oversight-committee',
+    'technical steering committee': 'oversight-committee',
+    'technical advisory council': 'oversight-committee',
+    'working group': 'working-group',
+    'special interest group': 'special-interest-group',
+    sig: 'special-interest-group',
+    'ambassador program': 'ambassador-program',
+    ambassadors: 'ambassador-program',
+  };
+
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => {
-    const cat = this.committee()?.category?.toLowerCase() ?? '';
-    if (cat.includes('board')) return 'governing-board';
-    if (cat.includes('oversight') || cat.includes('tsc') || cat.includes('toc')) return 'oversight-committee';
-    if (cat.includes('working')) return 'working-group';
-    if (cat.includes('sig') || cat.includes('special')) return 'special-interest-group';
-    if (cat.includes('ambassador')) return 'ambassador-program';
-    return 'other';
+    const cat = this.committee()?.category?.toLowerCase().trim() ?? '';
+    return CommitteeViewComponent.CATEGORY_BEHAVIORAL_MAP[cat] ?? 'other';
   });
 
   // -- Tab visibility signals --
