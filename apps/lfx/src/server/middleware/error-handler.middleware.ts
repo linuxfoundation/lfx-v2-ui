@@ -33,7 +33,7 @@ export function apiErrorHandler(error: Error | ApiError, req: Request, res: Resp
   }
 
   const operation = getOperationFromPath(req.path);
-  const now = Date.now();
+  const now = (req as Request & { _startTime?: number })._startTime || Date.now();
 
   if (isApiError(error)) {
     const logContext = {

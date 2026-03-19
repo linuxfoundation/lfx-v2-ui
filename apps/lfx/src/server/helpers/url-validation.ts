@@ -68,7 +68,7 @@ export const validateAndSanitizeUrl = (url: string, allowedDomains?: string[]): 
  * Domain allowlist for each environment
  */
 const DOMAIN_ALLOWLIST = {
-  development: ['auth0.InaRygxwVLWCKf6k6rmOc25mTPvvBrDy.is.authenticated', 'auth-linuxfoundation-dev.auth0.com'],
+  development: [`auth0.${process.env['PCC_AUTH0_CLIENT_ID'] || ''}.is.authenticated`, 'auth-linuxfoundation-dev.auth0.com'],
   staging: ['auth-linuxfoundation-staging.auth0.com'],
   production: ['auth-sso.linuxfoundation.org'],
 };
@@ -119,8 +119,8 @@ const extractDomainFromCookie = (cookie: string): string | null => {
         const match = cookieName.match(auth0Pattern);
         if (match) {
           const clientId = match[1];
-          // Only accept if it matches our specific client ID
-          if (clientId === 'jStGXyf3nwTswv8goh6FcbU4EaWUZBNP') {
+          // Only accept if it matches our configured client ID
+          if (clientId === process.env['PCC_AUTH0_CLIENT_ID']) {
             return cookieName;
           }
         }

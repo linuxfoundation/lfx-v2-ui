@@ -5,6 +5,7 @@ import { APP_BASE_HREF } from '@angular/common';
 import { REQUEST } from '@angular/core';
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { attemptSilentLogin, auth, ConfigParams } from 'express-openid-connect';
@@ -38,9 +39,6 @@ const app = express();
  * - 1KB threshold to avoid compressing small responses
  * - Uses default filter for text-based content types
  */
-// Use require to avoid TypeScript type conflicts with @types/compression
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const compression = require('compression');
 app.use(
   compression({
     level: 6, // Balanced compression level (1=fastest, 9=best compression)
@@ -97,15 +95,15 @@ const authConfig: ConfigParams = {
   authRequired: false, // Disable global auth requirement to handle it in selective middleware
   auth0Logout: true,
   baseURL: process.env['PCC_BASE_URL'] || 'http://localhost:4200',
-  clientID: process.env['PCC_AUTH0_CLIENT_ID'] || '1234',
+  clientID: process.env['PCC_AUTH0_CLIENT_ID'] || 'local-dev-placeholder',
   issuerBaseURL: process.env['PCC_AUTH0_ISSUER_BASE_URL'] || 'https://example.com',
-  secret: process.env['PCC_AUTH0_SECRET'] || 'sufficiently-long-string',
+  secret: process.env['PCC_AUTH0_SECRET'] || 'local-dev-secret-minimum-32-chars-long',
   authorizationParams: {
     response_type: 'code',
     audience: process.env['PCC_AUTH0_AUDIENCE'] || 'https://example.com',
     scope: 'openid email profile access:api offline_access',
   },
-  clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'bar',
+  clientSecret: process.env['PCC_AUTH0_CLIENT_SECRET'] || 'local-dev-placeholder',
   routes: {
     login: false,
   },
@@ -151,6 +149,7 @@ app.use('/api/*', apiErrorHandler);
  * Require authentication for all non-API routes.
  */
 app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
+  const ssrStartTime = Date.now();
   const authContext: AuthContext = {
     authenticated: false,
     user: null,
@@ -194,14 +193,14 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     })
     .catch((error: unknown) => {
       const err = error instanceof Error ? error : new Error(String(error));
-      const code = (error as { code?: string })?.code;
+      const code = error instanceof Error ? (error as Error & { code?: string }).code : undefined;
 
       if (code === 'NOT_FOUND') {
         res.status(404).send('Not Found');
       } else if (code === 'UNAUTHORIZED') {
         res.status(401).send('Unauthorized');
       } else {
-        logger.error(req, 'ssr_render', Date.now(), err, {
+        logger.error(req, 'ssr_render', ssrStartTime, err, {
           url: req.url,
           method: req.method,
         });

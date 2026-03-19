@@ -290,11 +290,7 @@ async function executeAuthDecision(decision: AuthDecision, req: Request, res: Re
       break;
 
     case 'redirect':
-      if (decision.redirectUrl) {
-        res.redirect(decision.redirectUrl);
-      } else {
-        res.oidc.login({ returnTo: req.originalUrl });
-      }
+      res.oidc.login({ returnTo: decision.redirectUrl || req.originalUrl });
       break;
 
     case 'logout':
@@ -319,8 +315,8 @@ async function executeAuthDecision(decision: AuthDecision, req: Request, res: Re
 }
 
 /**
- *  authentication middleware that handles all authentication scenarios
- * for both SSR routes and API endpoints
+ * Authentication middleware that handles all authentication scenarios
+ * for both SSR routes and API endpoints.
  */
 export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
