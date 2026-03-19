@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -59,6 +59,7 @@ import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMa
 import { AssignLeadershipDialogComponent } from '../components/assign-leadership-dialog/assign-leadership-dialog.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
+import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
 import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
@@ -94,6 +95,7 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     MeetingCardComponent,
     ReactiveFormsModule,
     NgClass,
+    CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService, DialogService],
   providers: [ConfirmationService],
@@ -186,6 +188,9 @@ export class CommitteeViewComponent {
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageMembers());
 
+  // -- Tab visibility signals --
+  public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
+
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
   public isGovernanceClass: Signal<boolean> = computed(() => isGovernanceClass(this.committee()?.category));
@@ -252,6 +257,13 @@ export class CommitteeViewComponent {
 
   public constructor() {
     this.initializeCommittee();
+
+    // Redirect away from votes tab when voting is disabled
+    effect(() => {
+      if (!this.isVotesTabVisible() && this.activeTab() === 'votes') {
+        this.activeTab.set('overview');
+      }
+    });
   }
 
 
