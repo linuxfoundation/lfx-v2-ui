@@ -148,8 +148,8 @@ export interface Committee {
   updated_at: string;
   /** Total number of committee members */
   total_members: number;
-  /** Total number of voting representatives */
-  total_voting_reps: number;
+  /** Total number of voting representatives (upstream field name is total_voting_repos) */
+  total_voting_repos: number;
   /** Associated project UID */
   project_uid: string;
   /** Associated project name (populated from project data) */
