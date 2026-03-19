@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CommitteeMemberAppointedBy, CommitteeMemberRole, CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
-import { GroupBehavioralClass } from '../interfaces/committee.interface';
+import { GroupBehavioralClass, JoinMode } from '../interfaces/committee.interface';
 import { lfxColors } from './colors.constants';
 
 // Re-export helper functions from utils for backward compatibility
@@ -437,6 +437,15 @@ export const COMMITTEE_SETTINGS_FEATURES = [
     description: `Track and log all ${COMMITTEE_LABEL.singular.toLowerCase()} activity for compliance`,
     color: lfxColors.emerald[500],
   },
+  // TODO(LFXV2-1255): Remove joinable once join_mode is fully wired backend-side.
+  // TODO(LFXV2-1255): wire join_mode dropdown in settings form
+  {
+    key: 'join_mode',
+    icon: 'fa-light fa-door-open',
+    title: `${COMMITTEE_LABEL.singular} Join Mode`,
+    description: `Controls how members join this ${COMMITTEE_LABEL.singular.toLowerCase()}.`,
+    color: lfxColors.amber[500],
+  },
   {
     key: 'public',
     icon: 'fa-light fa-eye',
@@ -469,6 +478,17 @@ export const MEMBER_VISIBILITY_OPTIONS = [
   { label: 'Hidden', value: 'hidden' },
   { label: 'Basic Profile', value: 'basic_profile' },
 ];
+
+/**
+ * Human-readable labels for JoinMode enum values.
+ * Used by JoinModeLabelPipe for template display.
+ */
+export const JOIN_MODE_LABELS: Record<JoinMode, string> = {
+  open: 'Open',
+  invite_only: 'Invite Only',
+  application: 'Apply to Join',
+  closed: 'Closed',
+};
 
 /**
  * Join-mode options for the Group settings form (Step 3).
