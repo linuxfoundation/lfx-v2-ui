@@ -109,6 +109,8 @@ export class CommitteeMembersComponent implements OnInit {
   public toggleMemberActionMenu(event: Event, member: CommitteeMember, menuComponent: MenuComponent): void {
     event.stopPropagation();
     this.selectedMember.set(member);
+    // Rebuild menu items so MenuItem.url reflects the selected member's email
+    this.memberActionMenuItems = this.initializeMemberActionMenuItems(member);
     menuComponent.toggle(event);
   }
 
@@ -252,17 +254,12 @@ export class CommitteeMembersComponent implements OnInit {
     return toSignal(this.filterForm.get('organization')!.valueChanges.pipe(startWith(null), distinctUntilChanged()), { initialValue: null });
   }
 
-  private initializeMemberActionMenuItems(): MenuItem[] {
+  private initializeMemberActionMenuItems(member?: CommitteeMember): MenuItem[] {
     return [
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
-        command: () => {
-          const email = this.selectedMember()?.email;
-          if (email) {
-            window.location.href = `mailto:${email}`;
-          }
-        },
+        url: member?.email ? `mailto:${member.email}` : undefined,
       },
       {
         separator: true,
