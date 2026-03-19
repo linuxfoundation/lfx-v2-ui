@@ -3,6 +3,9 @@
 
 import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, input, OnInit, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
+import { TitleCasePipe } from '@angular/common';
+import { FullNamePipe } from '@pipes/full-name.pipe';
+import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
@@ -14,7 +17,6 @@ import { TableComponent } from '@components/table/table.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, CommitteeMember, GroupBehavioralClass } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
-import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
@@ -28,6 +30,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
     TitleCasePipe,
     ReactiveFormsModule,
     CardComponent,
+    FullNamePipe,
     MenuComponent,
     ButtonComponent,
     InputTextComponent,
@@ -91,6 +94,7 @@ export class CommitteeMembersComponent implements OnInit {
       const visibility = this.committee()?.member_visibility;
       return visibility !== 'hidden' || this.canManageMembers();
     });
+    this.canManageMembers = computed(() => !!this.committee()?.writer);
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
     this.searchTerm = this.initializeSearchTerm();
@@ -167,7 +171,7 @@ export class CommitteeMembersComponent implements OnInit {
     if (!member) return;
 
     this.confirmationService.confirm({
-      message: `Are you sure you want to remove ${member.first_name || ''} ${member.last_name || ''} from this committee? ` + 'This action cannot be undone.',
+      message: `Are you sure you want to remove ${this.getMemberDisplayName(member)} from this committee? This action cannot be undone.`,
       header: 'Remove Member',
       acceptLabel: 'Remove',
       rejectLabel: 'Cancel',
@@ -194,7 +198,7 @@ export class CommitteeMembersComponent implements OnInit {
       next: () => {
         this.isDeleting.set(false);
 
-        const memberName = member.first_name && member.last_name ? `${member.first_name} ${member.last_name}` : member.email || 'Member';
+        const memberName = this.getMemberDisplayName(member);
 
         this.messageService.add({
           severity: 'success',
@@ -219,6 +223,11 @@ export class CommitteeMembersComponent implements OnInit {
 
   private refreshMembers(): void {
     this.refresh.emit();
+  }
+
+  private getMemberDisplayName(member: CommitteeMember): string {
+    const parts = [member.first_name, member.last_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : member.email || 'Member';
   }
 
   // Private initialization methods
