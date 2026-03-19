@@ -148,10 +148,12 @@ export class CommitteeViewComponent {
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+  // Note: canManageMembers is logically equivalent to canManageConfigurations (De Morgan's law),
+  // kept separate to align with the child component's permission check.
+  public canManageMembers: Signal<boolean> = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
 
   // -- Tab visibility signals --
-  // -- Tab visibility signals --
-  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageConfigurations());
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageMembers());
 
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
@@ -221,10 +223,6 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
-  }
-
-  public refreshMembers(): void {
-    this.refresh.next();
   }
 
   public getMembersCountByOrg(org: string): number {
