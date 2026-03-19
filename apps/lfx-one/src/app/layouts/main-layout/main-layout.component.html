@@ -5,9 +5,61 @@
 <lfx-dev-toolbar></lfx-dev-toolbar>
 
 <div class="flex min-h-screen" [ngClass]="{ 'pt-12': showDevToolbar() }">
-  <!-- Sidebar - Desktop -->
-  <div class="hidden lg:block w-64 flex-shrink-0 fixed left-0 bottom-0" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
-    <lfx-sidebar [items]="sidebarItems()" [footerItems]="sidebarFooterItems()" [showProjectSelector]="true"></lfx-sidebar>
+  <!-- Nav - Desktop: Navy rail + white sidebar panel -->
+  <div class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 w-[272px]" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
+
+    <!-- Navy Lens Rail -->
+    <div class="flex flex-col bg-[#1E293B] w-14 h-full items-center py-5 gap-1 flex-shrink-0">
+      <!-- LFX Logo -->
+      <div class="flex items-center justify-center w-10 mb-5">
+        <a [routerLink]="['/']">
+          <img src="/images/logo_lfx.svg" alt="LFX" class="w-8 h-auto brightness-0 invert opacity-90" />
+        </a>
+      </div>
+
+      <!-- Me Lens -->
+      <button
+        type="button"
+        (click)="setActiveLens('me')"
+        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
+        [ngClass]="activeLens() === 'me' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
+        title="Me">
+        <i class="fa-light fa-user text-base leading-none"></i>
+        <span class="text-[9px] font-semibold leading-none tracking-wide">Me</span>
+      </button>
+
+      <!-- Project Lens -->
+      <button
+        type="button"
+        (click)="setActiveLens('foundation')"
+        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
+        [ngClass]="activeLens() === 'foundation' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
+        title="Project">
+        <i class="fa-light fa-layer-group text-base leading-none"></i>
+        <span class="text-[9px] font-semibold leading-none tracking-wide">Project</span>
+      </button>
+
+      <!-- Org Lens -->
+      <button
+        type="button"
+        (click)="setActiveLens('organization')"
+        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
+        [ngClass]="activeLens() === 'organization' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
+        title="Organization">
+        <i class="fa-light fa-building text-base leading-none"></i>
+        <span class="text-[9px] font-semibold leading-none tracking-wide">Org</span>
+      </button>
+    </div>
+
+    <!-- White Sidebar Panel -->
+    <div class="flex-1 h-full border-r border-gray-200">
+      <lfx-sidebar
+        [items]="sidebarItems()"
+        [footerItems]="sidebarFooterItems()"
+        [showProjectSelector]="activeLens() === 'foundation'"
+        [showLogo]="false">
+      </lfx-sidebar>
+    </div>
   </div>
 
   <!-- Sidebar - Mobile Drawer -->
@@ -27,11 +79,11 @@
         </a>
       </div>
     </ng-template>
-    <lfx-sidebar [items]="sidebarItems()" [footerItems]="sidebarFooterItems()" [showProjectSelector]="true" [mobile]="true"></lfx-sidebar>
+    <lfx-sidebar [items]="sidebarItems()" [footerItems]="sidebarFooterItems()" [showProjectSelector]="activeLens() === 'foundation'" [mobile]="true"></lfx-sidebar>
   </p-drawer>
 
   <!-- Main Content Area -->
-  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-64 flex flex-col" data-testid="main-content">
+  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[272px] flex flex-col" data-testid="main-content">
     <!-- Mobile Menu Button -->
     <div class="lg:hidden sticky z-30 bg-white border-b border-gray-200 px-5 py-3" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
       <button
