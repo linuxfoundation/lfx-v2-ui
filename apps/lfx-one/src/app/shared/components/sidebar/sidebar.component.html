@@ -36,9 +36,6 @@
           @if (item.isSection) {
             <!-- Section Header (static, non-collapsible) -->
             <div class="w-full" [attr.data-testid]="item.testId">
-              <!-- Divider -->
-              <div class="h-px bg-gray-200 my-2"></div>
-
               <!-- Section Label -->
               <div class="px-2 py-1">
                 <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">{{ item.label }}</span>
@@ -81,8 +78,9 @@
       [routerLink]="item.routerLink"
       routerLinkActive="bg-blue-100 font-medium text-gray-950"
       [routerLinkActiveOptions]="{ exact: true }"
-      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base font-normal hover:bg-gray-50"
       [ngClass]="{
+        '!text-gray-950': !item.disabled,
         '!text-gray-300 pointer-events-none cursor-not-allowed': item.disabled,
       }"
       [attr.data-testid]="item.testId"
@@ -103,8 +101,9 @@
       [href]="item.url"
       [target]="item.target || '_blank'"
       [rel]="item.rel || 'noopener noreferrer'"
-      class="flex items-center justify-between gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center justify-between gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base font-normal hover:bg-gray-50"
       [ngClass]="{
+        '!text-gray-950': !item.disabled,
         '!text-gray-300 pointer-events-none cursor-not-allowed': item.disabled,
       }"
       [attr.data-testid]="item.testId"
@@ -128,8 +127,9 @@
     <button
       type="button"
       (click)="item.command()"
-      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-left text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-left text-base font-normal hover:bg-gray-50"
       [ngClass]="{
+        '!text-gray-950': !item.disabled,
         '!text-gray-300 pointer-events-none cursor-not-allowed': item.disabled,
       }"
       [disabled]="item.disabled"
