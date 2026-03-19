@@ -156,7 +156,10 @@ export class MeetingManageComponent {
       { initialValue: 1 }
     );
 
-    // Read group context from query params (when navigating from Groups page)
+    // Read group context from query params (when navigating from Groups page).
+    // The committee UID is validated downstream: MeetingCommitteeManagerComponent's
+    // lock effect checks that the UID exists in committeeOptions() before locking
+    // the dropdown. If invalid, the dropdown is left unlocked and editable.
     this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
       const committeeUid = params.get('committee_uid');
       const committeeName = params.get('committee_name');

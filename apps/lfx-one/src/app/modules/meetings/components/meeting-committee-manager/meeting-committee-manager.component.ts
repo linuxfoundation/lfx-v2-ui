@@ -110,16 +110,28 @@ export class MeetingCommitteeManagerComponent {
       )
       .subscribe(([committees]) => this.initializeFromSelectedCommittees(committees));
 
-    // When a locked committee is provided, ensure it's always selected and dropdown is disabled
+    // When a locked committee is provided, validate it exists, pre-select, and disable dropdown
     effect(() => {
       const lockedUid = this.lockedCommitteeUid();
+      const committeesControl = this.committeeForm.get('committees');
+      if (!committeesControl) return;
+
       if (lockedUid) {
+        // Only lock if the committee exists in available options
+        const options = this.committeeOptions();
+        if (options.length > 0 && !options.some((c) => c.uid === lockedUid)) {
+          committeesControl.enable({ emitEvent: false });
+          return;
+        }
+
         const currentIds = this.selectedCommitteeIds();
         if (!currentIds.includes(lockedUid)) {
           this.selectedCommitteeIds.set([...currentIds, lockedUid]);
-          this.committeeForm.get('committees')?.setValue([...currentIds, lockedUid]);
+          committeesControl.setValue([...currentIds, lockedUid]);
         }
-        this.committeeForm.get('committees')?.disable();
+        committeesControl.disable({ emitEvent: false });
+      } else {
+        committeesControl.enable({ emitEvent: false });
       }
     });
 
