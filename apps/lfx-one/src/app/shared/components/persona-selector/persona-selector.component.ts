@@ -42,8 +42,19 @@ export class PersonaSelectorComponent {
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
         // TODO: DEMO - Remove when proper permissions are implemented
-        // Set foundation before persona so navigation in setPersona() has correct context
-        if (value === 'board-member' || value === 'executive-director') {
+        // Set project/foundation before persona so navigation in setPersona() has correct context
+        if (value === 'board-member') {
+          // TODO: DEMO - Remove when proper permissions are implemented
+          // Board member: foundation = TLF (home context), project = LFX One Dev (overview page)
+          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+          const lfxOneDevProject = this.projectContextService.availableProjects.find((p) => p.slug === 'lfx-one-dev');
+          if (tlfProject) {
+            this.projectContextService.setFoundation({ uid: tlfProject.uid, name: tlfProject.name, slug: tlfProject.slug });
+          }
+          if (lfxOneDevProject) {
+            this.projectContextService.setProject({ uid: lfxOneDevProject.uid, name: lfxOneDevProject.name, slug: lfxOneDevProject.slug });
+          }
+        } else if (value === 'executive-director') {
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {
             this.projectContextService.setFoundation({

@@ -429,7 +429,7 @@ export const MAINTAINER_PROGRESS_METRICS: DashboardMetricCard[] = [
     value: '0',
     subtitle: 'Active contributors',
     chartType: 'bar',
-    category: 'code',
+    category: 'projectHealth',
     testId: 'maintainer-progress-card-unique-contributors',
     chartData: EMPTY_CHART_DATA,
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,

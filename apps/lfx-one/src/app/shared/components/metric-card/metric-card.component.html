@@ -2,7 +2,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div
-  class="p-4 bg-white border border-gray-200 hover:border-blue-500 rounded-lg flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full"
+  [ngClass]="grow()
+    ? 'p-4 bg-white border border-gray-200 hover:border-blue-500 rounded-lg h-full w-full'
+    : 'p-4 bg-white border border-gray-200 hover:border-blue-500 rounded-lg flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full'"
   [class.cursor-pointer]="clickable()"
   [attr.data-testid]="testId()"
   (click)="handleClick()">

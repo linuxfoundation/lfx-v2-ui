@@ -4,6 +4,7 @@
 import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
+import { ActiveLensService } from '@services/active-lens.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -25,9 +26,15 @@ export class BoardMemberDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
+  private readonly activeLensService = inject(ActiveLensService);
 
   public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
   public readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+
+  public readonly pageTitle = computed(() => {
+    if (this.activeLensService.isMeLens()) return 'Home';
+    return this.selectedProject()?.name ? `${this.selectedProject()!.name} Overview` : 'Overview';
+  });
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
   private readonly rawBoardMemberActions: Signal<PendingActionItem[]>;
   public readonly boardMemberActions: Signal<PendingActionItem[]>;

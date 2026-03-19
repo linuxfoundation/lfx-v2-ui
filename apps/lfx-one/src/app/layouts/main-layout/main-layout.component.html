@@ -12,7 +12,7 @@
     <div class="flex flex-col bg-blue-800 w-20 h-full items-center py-6 gap-4 flex-shrink-0">
       <!-- LFX Logo mark (white) -->
       <div class="flex items-center justify-center w-9 h-9">
-        <a [routerLink]="['/']">
+        <a [routerLink]="['/']" (click)="setActiveLens('me')">
           <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="white"/>
             <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="white"/>

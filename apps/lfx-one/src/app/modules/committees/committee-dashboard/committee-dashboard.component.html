@@ -14,7 +14,11 @@
       <div class="flex flex-col gap-6">
         <!-- Page Title with Create Group Button -->
         <div class="flex justify-between items-center w-full gap-4">
+<<<<<<< HEAD
           <h1>{{ committeeLabel.plural }}</h1>
+=======
+          <h1>{{ pageTitle() }}</h1>
+>>>>>>> 6614ede (feat(ui): three-lens nav, persona-specific dashboards, and chart layout)
           @if (canCreateGroup()) {
             <lfx-button
               [label]="'Create ' + committeeLabel.singular"

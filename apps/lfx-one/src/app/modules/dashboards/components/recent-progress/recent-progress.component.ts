@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, input, signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { FilterPillOption } from '@lfx-one/shared/interfaces';
@@ -17,6 +17,7 @@ import {
 } from '@lfx-one/shared/constants';
 import { hexToRgba, parseLocalDateString } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
+import { ActiveLensService } from '@services/active-lens.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
@@ -46,9 +47,18 @@ import type {
 export class RecentProgressComponent {
   @ViewChild(ScrollShadowDirective) protected scrollShadowDirective!: ScrollShadowDirective;
 
+  // Optional title override — defaults to 'Recent Progress' if not provided
+  public readonly title = input<string>('Recent Progress');
+  // Optional icon override — defaults to fa-chart-line if not provided
+  public readonly icon = input<string>('fa-light fa-chart-line');
+  // Optional filter lock — when set, pins the component to a specific category
+  // and hides the filter pills. Useful for rendering two side-by-side panels.
+  public readonly filter = input<string | null>(null);
+
   private readonly personaService = inject(PersonaService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly activeLensService = inject(ActiveLensService);
 
   // Get project ID from context service
 
@@ -98,7 +108,7 @@ export class RecentProgressComponent {
   protected readonly filteredProgressItems = this.initializeFilteredProgressItems();
 
   protected readonly currentPersona = computed(() => this.personaService.currentPersona());
-  protected readonly showFilterPills = computed(() => this.currentPersona() === 'maintainer');
+  protected readonly showFilterPills = computed(() => this.currentPersona() === 'maintainer' && !this.activeLensService.isMeLens() && !this.filter());
   protected readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'code', label: 'Code' },
@@ -1059,7 +1069,8 @@ export class RecentProgressComponent {
   private initializeFilteredProgressItems() {
     return computed<DashboardMetricCard[]>(() => {
       const persona = this.personaService.currentPersona();
-      const filter = this.selectedFilter();
+      // If a locked filter is provided via input, use it; otherwise use the pill selection
+      const filter = this.filter() ?? this.selectedFilter();
 
       if (persona === 'maintainer') {
         // Materialize maintainer card values
@@ -1073,13 +1084,18 @@ export class RecentProgressComponent {
         ];
 
         if (filter === 'all') {
-          return allCards.map((item) => item.card);
+          // On the Me lens, project-level metrics are not meaningful for personal activity
+          const isMeLens = this.activeLensService.isMeLens();
+          const meLensExcludedTitles = ['Health Score', 'Unique Contributors per Week'];
+          return allCards.filter((item) => !isMeLens || !meLensExcludedTitles.includes(item.card.title)).map((item) => item.card);
         }
         return allCards.filter((item) => item.category === filter).map((item) => item.card);
       }
 
-      // Core developer - no filtering, just materialize card values
-      return [this.activeWeeksStreakCard(), this.pullRequestsMergedCard(), this.codeCommitsCard()];
+      // Core developer — all metrics are code contributions; no project health cards
+      const coreCards = [this.activeWeeksStreakCard(), this.pullRequestsMergedCard(), this.codeCommitsCard()];
+      if (filter === 'projectHealth') return [];
+      return coreCards;
     });
   }
 }

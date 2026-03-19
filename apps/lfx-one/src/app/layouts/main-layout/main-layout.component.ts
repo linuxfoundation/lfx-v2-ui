@@ -9,6 +9,7 @@ import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { environment } from '@environments/environment';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { ActiveLensService } from '@services/active-lens.service';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -29,6 +30,7 @@ export class MainLayoutComponent {
   private readonly appService = inject(AppService);
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly personaService = inject(PersonaService);
+  private readonly activeLensService = inject(ActiveLensService);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
@@ -43,8 +45,10 @@ export class MainLayoutComponent {
   // Support URL for rail link
   protected readonly supportUrl = environment.urls.support;
 
-  // ED persona — gets org picker in Org lens
+  // ED persona — gets org picker in Org lens; no Overview in Foundation lens
   protected readonly isEDPersona = computed(() => this.personaService.currentPersona() === 'executive-director');
+  // Board member — no Overview in Foundation lens (lands on Meetings like ED)
+  protected readonly isBoardMemberPersona = computed(() => this.personaService.currentPersona() === 'board-member');
 
   // Foundation lens project picker — shown for all users in the Foundation lens
   // (every user needs to know which project/foundation context they're in)
@@ -59,36 +63,42 @@ export class MainLayoutComponent {
 
   protected setActiveLens(lens: 'me' | 'foundation' | 'organization'): void {
     this.activeLens.set(lens);
+    this.activeLensService.setLens(lens);
+    // ED and Board Member have no Overview page in Foundation lens — land on Meetings instead
+    if (lens === 'foundation' && (this.isEDPersona() || this.isBoardMemberPersona())) {
+      void this.router.navigate(['/meetings']);
+    }
   }
 
   // Sidebar items — per-lens structure per Manish v1 PDF.
   // Disabled items = page does not exist yet; lighter grey, not clickable.
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
-    // isTlfOnlyPersona proxies for multi-context: board members span multiple
-    // foundations and get an Overview aggregation page. Maintainers also get
-    // Overview so they can navigate back to the dashboard from sub-pages.
-    const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
+    // Maintainers and TLF-only personas (Board Member, ED) get an Overview item
+    // in the Foundation lens. Maintainers use it to navigate back to the dashboard;
+    // Board Members and EDs use it to see the foundation-level project overview.
     const isMaintainer = this.personaService.currentPersona() === 'maintainer';
-    const isMultiContext = isTlfOnlyPersona || isMaintainer;
+    const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
+    // Only maintainers get an Overview item — board members and EDs land directly on Meetings
+    const isMultiContext = isMaintainer;
 
     switch (this.activeLens()) {
       // ── Me lens ──────────────────────────────────────────────────────────
       case 'me':
         return [
-          { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
+          { label: 'Home', icon: 'fa-light fa-house', routerLink: '/' },
           {
-            label: 'My Engagement',
+            label: 'Engagement',
             isSection: true,
             expanded: true,
             items: [
-              { label: 'Actions', icon: 'fa-light fa-bolt', command: () => {}, disabled: true },
-              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-              { label: 'Events', icon: 'fa-light fa-ticket', routerLink: '/events' },
+              { label: 'My Actions', icon: 'fa-light fa-bolt', command: () => {}, disabled: true },
+              { label: 'My Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+              { label: `My ${COMMITTEE_LABEL.plural}`, icon: 'fa-light fa-users', routerLink: '/groups' },
+              { label: 'My Events', icon: 'fa-light fa-ticket', routerLink: '/events' },
             ],
           },
           {
-            label: 'My Account',
+            label: 'Account',
             isSection: true,
             expanded: true,
             items: [

@@ -62,7 +62,21 @@ export class DevToolbarComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member' || value === 'executive-director') {
+        if (value === 'board-member') {
+          // TODO: DEMO - Remove when proper permissions are implemented
+          // Board member: foundation = TLF (home context), project = LFX One Dev (overview page)
+          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+          const lfxOneDevProject = this.projectContextService.availableProjects.find((p) => p.slug === 'lfx-one-dev');
+          if (tlfProject) {
+            this.projectContextService.setFoundation({ uid: tlfProject.uid, name: tlfProject.name, slug: tlfProject.slug });
+          }
+          if (lfxOneDevProject) {
+            this.projectContextService.setProject({ uid: lfxOneDevProject.uid, name: lfxOneDevProject.name, slug: lfxOneDevProject.slug });
+            this.form.get('selectedProjectUid')?.setValue(lfxOneDevProject.uid, { emitEvent: false });
+          } else if (tlfProject) {
+            this.form.get('selectedProjectUid')?.setValue(tlfProject.uid, { emitEvent: false });
+          }
+        } else if (value === 'executive-director') {
           // TODO: DEMO - Remove when proper permissions are implemented
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {

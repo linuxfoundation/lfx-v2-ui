@@ -9,6 +9,7 @@ import { CardComponent } from '@components/card/card.component';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
 import { Meeting, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
 import { getCurrentOrNextOccurrence, hasMeetingEnded } from '@lfx-one/shared/utils';
+import { ActiveLensService } from '@services/active-lens.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
@@ -29,6 +30,10 @@ export class MeetingsDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly personaService = inject(PersonaService);
   private readonly featureFlagService = inject(FeatureFlagService);
+  private readonly activeLensService = inject(ActiveLensService);
+
+  public readonly isMeLens = this.activeLensService.isMeLens;
+  public readonly pageTitle = computed(() => this.isMeLens() ? 'My Meetings' : 'Meetings');
 
   public meetingsLoading: WritableSignal<boolean>;
   public pastMeetingsLoading: WritableSignal<boolean>;

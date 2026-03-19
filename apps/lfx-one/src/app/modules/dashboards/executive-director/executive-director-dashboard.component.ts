@@ -4,6 +4,7 @@
 import { Component, computed, inject, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { PendingActionItem } from '@lfx-one/shared/interfaces';
+import { ActiveLensService } from '@services/active-lens.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -25,6 +26,7 @@ export class ExecutiveDirectorDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
+  private readonly activeLensService = inject(ActiveLensService);
 
   // === Configuration ===
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
@@ -32,6 +34,12 @@ export class ExecutiveDirectorDashboardComponent {
   // === Computed Signals ===
   protected readonly selectedFoundation = this.projectContextService.selectedFoundation;
   protected readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+
+  public readonly pageTitle = computed(() => {
+    if (this.activeLensService.isMeLens()) return 'Home';
+    const name = this.selectedFoundation()?.name;
+    return name ? `${name} Overview` : 'Overview';
+  });
   private readonly rawPendingActions: Signal<PendingActionItem[]>;
   public readonly pendingActions: Signal<PendingActionItem[]>;
 

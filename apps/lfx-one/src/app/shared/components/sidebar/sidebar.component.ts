@@ -42,10 +42,7 @@ export class SidebarComponent {
   // shareReplay(1) in ProjectService deduplicates within the client runtime.
   protected readonly projects: Signal<Project[]> = this.initProjects();
 
-  // TODO: DEMO - Remove this once we have proper project permissions
-  protected readonly foundationProjects = computed(() =>
-    this.projects().filter((p: Project) => (this.personaService.isTlfOnlyPersona() ? p.slug === 'tlf' : true))
-  );
+  protected readonly foundationProjects = computed(() => this.projects());
 
   protected readonly selectedProject = computed(() => {
     // First check if a specific project is selected (child project)
