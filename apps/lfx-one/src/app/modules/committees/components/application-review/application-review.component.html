@@ -78,7 +78,7 @@
                   severity="secondary"
                   size="small"
                   [outlined]="true"
-                  [loading]="processingId() === app.uid"
+                  [loading]="processingId() === app.uid && processingAction() === 'reject'"
                   [disabled]="processingId() !== null"
                   (onClick)="reject(app)">
                 </lfx-button>
@@ -87,7 +87,7 @@
                   icon="fa-light fa-check"
                   severity="success"
                   size="small"
-                  [loading]="processingId() === app.uid"
+                  [loading]="processingId() === app.uid && processingAction() === 'approve'"
                   [disabled]="processingId() !== null"
                   (onClick)="approve(app)">
                 </lfx-button>

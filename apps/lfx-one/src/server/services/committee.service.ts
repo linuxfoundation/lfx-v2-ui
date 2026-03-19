@@ -560,7 +560,11 @@ export class CommitteeService {
     try {
       const result = await this.microserviceProxy.proxyRequest<GroupInvite[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/invites`, 'GET');
       return Array.isArray(result) ? result : [];
-    } catch {
+    } catch (error: unknown) {
+      const statusCode = (error as { statusCode?: number })?.statusCode;
+      if (statusCode && statusCode >= 500) {
+        throw error;
+      }
       logger.warning(req, 'get_invites', 'Failed to fetch invites, returning empty', {
         committee_uid: committeeId,
       });
@@ -578,7 +582,11 @@ export class CommitteeService {
     try {
       const result = await this.microserviceProxy.proxyRequest<GroupJoinApplication[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'GET');
       return Array.isArray(result) ? result : [];
-    } catch {
+    } catch (error: unknown) {
+      const statusCode = (error as { statusCode?: number })?.statusCode;
+      if (statusCode && statusCode >= 500) {
+        throw error;
+      }
       logger.warning(req, 'get_applications', 'Failed to fetch applications, returning empty', {
         committee_uid: committeeId,
       });

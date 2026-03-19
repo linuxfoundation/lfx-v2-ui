@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, UpperCasePipe } from '@angular/common';
-import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { Committee, GroupJoinApplication } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
+import { catchError, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-application-review',
@@ -17,6 +19,7 @@ import { MessageService } from 'primeng/api';
 export class ApplicationReviewComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
   public committee = input.required<Committee | null>();
@@ -28,6 +31,7 @@ export class ApplicationReviewComponent {
   public applications = signal<GroupJoinApplication[]>([]);
   public loading = signal<boolean>(true);
   public processingId = signal<string | null>(null);
+  public processingAction = signal<'approve' | 'reject' | null>(null);
 
   // Permissions — only writers can review applications
   public canReview: Signal<boolean> = computed(() => !!this.committee()?.writer);
@@ -46,42 +50,26 @@ export class ApplicationReviewComponent {
   });
 
   public constructor() {
-    effect(() => {
-      const c = this.committee();
-      if (!c?.uid) {
-        this.applications.set([]);
+    toObservable(this.committee)
+      .pipe(
+        switchMap((c) => {
+          if (!c?.uid || c.join_mode !== 'application' || !c.writer) {
+            this.applications.set([]);
+            this.loading.set(false);
+            return of(null);
+          }
+          this.applications.set([]);
+          this.loading.set(true);
+          return this.committeeService.getApplications(c.uid).pipe(catchError(() => of([] as GroupJoinApplication[])));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((apps) => {
+        if (apps !== null) {
+          this.applications.set(apps);
+        }
         this.loading.set(false);
-        return;
-      }
-      if (c.join_mode !== 'application') {
-        this.applications.set([]);
-        this.loading.set(false);
-        return;
-      }
-      if (!c.writer) {
-        this.applications.set([]);
-        this.loading.set(false);
-        return;
-      }
-      this.loadApplications(c.uid);
-    });
-  }
-
-  public loadApplications(committeeUid: string): void {
-    this.applications.set([]);
-    this.loading.set(true);
-    this.committeeService.getApplications(committeeUid).subscribe({
-      next: (apps) => {
-        if (this.committee()?.uid !== committeeUid) return;
-        this.applications.set(apps);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (this.committee()?.uid !== committeeUid) return;
-        this.applications.set([]);
-        this.loading.set(false);
-      },
-    });
+      });
   }
 
   public approve(application: GroupJoinApplication): void {
@@ -89,10 +77,12 @@ export class ApplicationReviewComponent {
     if (!c?.uid) return;
 
     this.processingId.set(application.uid);
+    this.processingAction.set('approve');
 
     this.committeeService.approveApplication(c.uid, application.uid).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.processingAction.set(null);
         this.messageService.add({
           severity: 'success',
           summary: 'Application Approved',
@@ -105,6 +95,7 @@ export class ApplicationReviewComponent {
       },
       error: () => {
         this.processingId.set(null);
+        this.processingAction.set(null);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -119,10 +110,12 @@ export class ApplicationReviewComponent {
     if (!c?.uid) return;
 
     this.processingId.set(application.uid);
+    this.processingAction.set('reject');
 
     this.committeeService.rejectApplication(c.uid, application.uid).subscribe({
       next: () => {
         this.processingId.set(null);
+        this.processingAction.set(null);
         this.messageService.add({
           severity: 'info',
           summary: 'Application Declined',
@@ -133,6 +126,7 @@ export class ApplicationReviewComponent {
       },
       error: () => {
         this.processingId.set(null);
+        this.processingAction.set(null);
         this.messageService.add({
           severity: 'error',
           summary: 'Error',

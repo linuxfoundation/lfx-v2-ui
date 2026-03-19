@@ -654,6 +654,17 @@ export class CommitteeController {
       );
       return;
     }
+    const payload = req.body;
+    if (!payload?.emails || !Array.isArray(payload.emails) || payload.emails.length === 0) {
+      next(
+        ServiceValidationError.forField('emails', 'At least one email address is required', {
+          operation: 'create_invites',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
+      return;
+    }
     const startTime = logger.startOperation(req, 'create_invites', { committee_id: committeeId });
     try {
       const invites = await this.committeeService.createInvites(req, committeeId, payload as CreateGroupInviteRequest);
@@ -697,6 +708,17 @@ export class CommitteeController {
     const payload = req.body;
     if (payload?.reason !== undefined && typeof payload.reason !== 'string') {
       next(ServiceValidationError.forField('reason', 'Reason must be a string', { operation: 'apply_to_join', service: 'committee_controller', path: req.path }));
+      return;
+    }
+    const payload = req.body;
+    if (payload?.reason !== undefined && typeof payload.reason !== 'string') {
+      next(
+        ServiceValidationError.forField('reason', 'Reason must be a string', {
+          operation: 'apply_to_join',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
       return;
     }
     const startTime = logger.startOperation(req, 'apply_to_join', { committee_id: committeeId });
