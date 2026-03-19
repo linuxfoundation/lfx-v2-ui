@@ -125,6 +125,15 @@ async function latestStatus(deploymentId) {
   return statuses[0] ?? null;
 }
 
+async function checkUrl(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return (res.ok || (res.status >= 300 && res.status < 400)) ? 'success' : null;
+  } catch {
+    return null;
+  }
+}
+
 function relativeTime(iso) {
   const mins = Math.floor((Date.now() - new Date(iso)) / 60000);
   if (mins < 1)  return 'just now';
@@ -144,7 +153,7 @@ function renderTable(rows, isPrTable) {
   if (!rows.length) return `<p class="empty">No active deployments.</p>`;
   const trs = rows.map(d => {
     const s      = d.latestStatus;
-    const state  = s?.state ?? 'pending';
+    const state  = d.liveStatus ?? s?.state ?? 'pending';
     const envUrl = d.envUrl ?? s?.environment_url ?? '';
     const logUrl = s?.log_url ?? '';
 
@@ -257,9 +266,13 @@ async function load() {
     });
 
     const prRows = await Promise.all(
-      prRowsRaw.map(async d =>
-        d.id ? { ...d, latestStatus: await latestStatus(d.id) } : { ...d, latestStatus: null }
-      )
+      prRowsRaw.map(async d => {
+        const [latestSt, liveStatus] = await Promise.all([
+          d.id ? latestStatus(d.id) : Promise.resolve(null),
+          checkUrl(d.envUrl),
+        ]);
+        return { ...d, latestStatus: latestSt, liveStatus };
+      })
     );
 
     const featRows = await withStatus(feats);
