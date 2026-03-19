@@ -119,7 +119,6 @@ export class CommitteeMembersComponent implements OnInit {
       width: '700px',
       modal: true,
       closable: true,
-      duplicate: true,
       data: {
         isEditing: false,
         committee: this.committee(),
@@ -144,7 +143,6 @@ export class CommitteeMembersComponent implements OnInit {
         width: '700px',
         modal: true,
         closable: true,
-        duplicate: true,
         data: {
           isEditing: true,
           memberId: member.uid,
