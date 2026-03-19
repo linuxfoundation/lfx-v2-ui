@@ -67,7 +67,8 @@
       <lfx-sidebar
         [items]="sidebarItems()"
         [footerItems]="sidebarFooterItems()"
-        [showProjectSelector]="activeLens() === 'foundation'"
+        [showProjectSelector]="showFoundationProjectSelector()"
+        [showOrgSelector]="showOrgSelector()"
         [showLogo]="false">
       </lfx-sidebar>
     </div>

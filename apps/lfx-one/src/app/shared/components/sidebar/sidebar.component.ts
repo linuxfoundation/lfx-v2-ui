@@ -33,6 +33,7 @@ export class SidebarComponent {
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
   public readonly showProjectSelector = input<boolean>(false);
+  public readonly showOrgSelector = input<boolean>(false);
   public readonly showLogo = input<boolean>(true);
   public readonly mobile = input<boolean>(false);
 

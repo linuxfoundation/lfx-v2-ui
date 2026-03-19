@@ -43,6 +43,19 @@ export class MainLayoutComponent {
   // Support URL for rail link
   protected readonly supportUrl = environment.urls.support;
 
+  // ED persona — gets org picker in Org lens
+  protected readonly isEDPersona = computed(() => this.personaService.currentPersona() === 'executive-director');
+
+  // Foundation lens project picker — only for multi-context users (board-member, ED)
+  protected readonly showFoundationProjectSelector = computed(
+    () => this.activeLens() === 'foundation' && this.personaService.isTlfOnlyPersona()
+  );
+
+  // Org lens org picker — only for ED (manages multiple orgs/foundations)
+  protected readonly showOrgSelector = computed(
+    () => this.activeLens() === 'organization' && this.isEDPersona()
+  );
+
   protected setActiveLens(lens: 'me' | 'foundation' | 'organization'): void {
     this.activeLens.set(lens);
   }
