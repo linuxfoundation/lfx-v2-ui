@@ -21,7 +21,17 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, ButtonComponent, TagComponent, RouterLink, RouteLoadingComponent, DatePipe, NgClass, CommitteeOverviewComponent, CommitteeSurveysListComponent],
+  imports: [
+    BreadcrumbComponent,
+    ButtonComponent,
+    TagComponent,
+    RouterLink,
+    RouteLoadingComponent,
+    DatePipe,
+    NgClass,
+    CommitteeOverviewComponent,
+    CommitteeSurveysListComponent,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
