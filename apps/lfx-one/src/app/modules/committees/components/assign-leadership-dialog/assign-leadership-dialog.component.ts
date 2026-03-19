@@ -44,6 +44,15 @@ export class AssignLeadershipDialogComponent {
     this.members = this.config.data?.members ?? [];
     this.currentLeader = this.config.data?.currentLeader ?? null;
 
+    if (!this.committee) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Committee data is missing. Please try again.',
+      });
+      this.dialogRef.close();
+    }
+
     this.roleLabel = this.role === 'chair' ? 'Chair' : 'Co-Chair';
 
     this.form = new FormGroup({
@@ -84,6 +93,9 @@ export class AssignLeadershipDialogComponent {
       },
     };
 
+    // Note: Sequential updates can partially fail — the new member may be assigned but the
+    // previous leader's role may not be cleared. The caller refreshes members on dialog close
+    // to ensure the UI reflects the actual backend state regardless of partial failure.
     this.committeeService
       .updateCommitteeMember(this.committee.uid, memberUid, roleUpdate)
       .pipe(
@@ -113,6 +125,8 @@ export class AssignLeadershipDialogComponent {
             summary: 'Error',
             detail: `Failed to assign ${this.roleLabel.toLowerCase()}`,
           });
+          // Close with result to trigger a member refresh even on partial failure
+          this.dialogRef.close({ role: this.role, leadership: null });
         },
       });
   }

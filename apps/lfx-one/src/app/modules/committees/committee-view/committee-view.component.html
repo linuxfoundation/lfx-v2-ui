@@ -811,8 +811,10 @@
                           [text]="true"
                           severity="secondary"
                           styleClass="h-6 w-6 text-gray-400 hover:text-gray-600"
-                          pTooltip="Assign Chair / Co-Chair"
+                          pTooltip="Assign Chair"
                           tooltipPosition="top"
+                          ariaLabel="Assign Chair"
+                          type="button"
                           (onClick)="openAssignLeadership('chair')"
                           data-testid="committee-view-leadership-edit-btn">
                         </lfx-button>
@@ -838,9 +840,11 @@
                             </div>
                             @if (canManageConfigurations()) {
                               <button
+                                type="button"
                                 class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
                                 pTooltip="Update Chair"
                                 tooltipPosition="top"
+                                aria-label="Update Chair"
                                 (click)="openAssignLeadership('chair')"
                                 data-testid="committee-view-update-chair-btn">
                                 <i class="fa-light fa-pen-to-square text-sm"></i>
@@ -886,9 +890,11 @@
                             </div>
                             @if (canManageConfigurations()) {
                               <button
+                                type="button"
                                 class="flex-shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
                                 pTooltip="Update Co-Chair"
                                 tooltipPosition="top"
+                                aria-label="Update Co-Chair"
                                 (click)="openAssignLeadership('co_chair')"
                                 data-testid="committee-view-update-co-chair-btn">
                                 <i class="fa-light fa-pen-to-square text-sm"></i>
