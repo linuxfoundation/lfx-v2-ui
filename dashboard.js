@@ -44,9 +44,9 @@ async function latestStatus(deploymentId) {
 
 async function checkUrl(url) {
   try {
-    // no-cors + manual redirect: resolves on any HTTP response (incl. 302),
-    // throws only if the domain itself fails to resolve.
-    await fetch(url, { method: 'HEAD', mode: 'no-cors', redirect: 'manual' });
+    // no-cors follows the 302 and returns an opaque response (status 0).
+    // Resolves if the domain is reachable; throws only on DNS/network failure.
+    await fetch(url, { method: 'GET', mode: 'no-cors' });
     return 'success';
   } catch {
     return null;
