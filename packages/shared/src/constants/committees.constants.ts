@@ -501,17 +501,6 @@ export const JOIN_MODE_OPTIONS = [
   { label: 'Closed — admin adds members', value: 'closed' },
 ];
 
-/**
- * Human-readable labels for each join mode value.
- * @description Type-safe mapping from JoinMode to display label.
- */
-export const JOIN_MODE_LABELS: Record<JoinMode, string> = {
-  open: 'Open',
-  invite_only: 'Invite Only',
-  application: 'Apply to Join',
-  closed: 'Closed',
-};
-
 // ============================================================================
 // Group-Type Behavioral Classification (6-Type Taxonomy v1.1)
 // ============================================================================

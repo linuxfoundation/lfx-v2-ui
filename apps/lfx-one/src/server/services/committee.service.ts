@@ -29,7 +29,7 @@ import { Request } from 'express';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 
 import { ResourceNotFoundError } from '../errors';
-import { logger } from '../services/logger.service';
+import { logger } from './logger.service';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -449,6 +449,7 @@ export class CommitteeService {
       >(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote',
         parent: `project:${projectUid}`,
+        // TODO: Implement pagination for complete vote results
         page_size: 100,
       });
 
@@ -459,15 +460,17 @@ export class CommitteeService {
           title: r.data.name,
           status: getVoteStatus(r.data.status),
           deadline: r.data.end_time,
+          // Note: num_response_received is total responses received, not a for/against breakdown
           votes_for: r.data.num_response_received ?? 0,
           votes_against: 0,
           votes_abstain: 0,
           total_eligible: r.data.total_voting_request_invitations ?? 0,
           created_by: '',
         }));
-    } catch {
+    } catch (error) {
       logger.warning(req, 'get_committee_votes', 'Failed to fetch committee votes, returning empty', {
         committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       return [];
     }
@@ -650,7 +653,7 @@ export class CommitteeService {
         committee_uid: committeeId,
       });
 
-      // Lazy import to avoid circular dependency (MeetingService imports CommitteeService)
+      // Lazy import to avoid circular dependency — instance is cached
       if (!this.cachedMeetingService) {
         const { MeetingService } = await import('./meeting.service');
         this.cachedMeetingService = new MeetingService();
@@ -669,6 +672,8 @@ export class CommitteeService {
       });
       return { data: [], page_token: undefined };
     }
+  }
+
   // ── My Committees ─────────────────────────────────────────────────────────
 
   public async getMyCommittees(req: Request, projectUid?: string): Promise<MyCommittee[]> {

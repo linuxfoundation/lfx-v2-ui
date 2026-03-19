@@ -18,10 +18,10 @@ import {
   CommitteeVote,
   CreateCommitteeMemberRequest,
   Meeting,
+  MyCommittee,
   PaginatedResponse,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -143,6 +143,8 @@ export class CommitteeService {
 
   public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
     return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`);
+  }
+
   // ── Join / Leave Methods ──────────────────────────────────────────────────
 
   /** Self-join an open group */
