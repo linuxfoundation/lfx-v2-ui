@@ -28,7 +28,7 @@ export class CommitteeSurveysListComponent {
 
   // === Inputs ===
   public readonly committeeUid = input.required<string>();
-  public readonly committeeName = input.required<string>();
+  public readonly committeeName = input<string>('');
   public readonly hasPMOAccess = input<boolean>(false);
 
   // === Subjects ===
@@ -61,13 +61,11 @@ export class CommitteeSurveysListComponent {
     this.refresh$.next();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected onDuplicateSurvey(surveyId: string): void {
+  protected onDuplicateSurvey(): void {
     this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Survey duplication is not yet available' });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected onCloseSurvey(surveyId: string): void {
+  protected onCloseSurvey(): void {
     this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Survey close is not yet available' });
   }
 
