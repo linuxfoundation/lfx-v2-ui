@@ -145,7 +145,7 @@ function renderTable(rows, isPrTable) {
   const trs = rows.map(d => {
     const s      = d.latestStatus;
     const state  = s?.state ?? 'pending';
-    const envUrl = s?.environment_url ?? '';
+    const envUrl = d.envUrl ?? s?.environment_url ?? '';
     const logUrl = s?.log_url ?? '';
 
     const envName = d.environment ?? `ui-pr-${d.prNumber}`;
@@ -162,7 +162,7 @@ function renderTable(rows, isPrTable) {
       logUrl && `<a class="link" href="${logUrl}" target="_blank" style="font-size:12px">ArgoCD ↗</a>`,
     ].filter(Boolean).join('');
 
-    const ref  = d.ref  ?? d.prHead ?? '';
+    const ref  = d.ref  ?? '';
     const sha  = d.sha  ? d.sha.slice(0, 7) : '';
     const time = d.updated_at ? `<span class="time" title="${d.updated_at}">${relativeTime(d.updated_at)}</span>` : '—';
 
@@ -241,17 +241,27 @@ async function load() {
       );
     }
 
-    // Build PR rows from labeled PRs (issues with pull_request field)
+    // Build PR rows from labeled PRs — fetch each PR for branch/SHA
     const labeledPRs = labeledIssues.filter(i => i.pull_request);
-    const prRowsRaw = labeledPRs.map(pr => {
-      const envName = `ui-pr-${pr.number}`;
+    const prDetails = await Promise.all(
+      labeledPRs.map(pr => ghFetch(`/repos/${OWNER}/${REPO}/pulls/${pr.number}`))
+    );
+
+    const prRowsRaw = prDetails.map(pr => {
+      const envName    = `ui-pr-${pr.number}`;
+      const envUrl     = `https://${envName}.dev.v2.cluster.linuxfound.info`;
       const deployment = deployByEnv.get(envName) ?? null;
-      return deployment
-        ? { ...deployment, prNumber: pr.number, prHead: pr.pull_request?.url ?? '' }
-        : { prNumber: pr.number, prHead: pr.head?.ref ?? '', environment: envName, ref: null, sha: null, updated_at: null, id: null };
+      return {
+        prNumber:   pr.number,
+        ref:        pr.head.ref,
+        sha:        pr.head.sha,
+        environment: envName,
+        envUrl,
+        updated_at: deployment?.updated_at ?? pr.updated_at,
+        id:         deployment?.id ?? null,
+      };
     });
 
-    // Fetch statuses only for rows that have a real deployment
     const prRows = await Promise.all(
       prRowsRaw.map(async d =>
         d.id ? { ...d, latestStatus: await latestStatus(d.id) } : { ...d, latestStatus: null }
