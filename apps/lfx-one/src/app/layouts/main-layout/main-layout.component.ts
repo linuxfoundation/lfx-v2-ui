@@ -40,11 +40,14 @@ export class MainLayoutComponent {
   // Active lens — drives rail selection and sidebar items
   protected readonly activeLens = signal<'me' | 'foundation' | 'organization'>('me');
 
+  // Support URL for rail link
+  protected readonly supportUrl = environment.urls.support;
+
   protected setActiveLens(lens: 'me' | 'foundation' | 'organization'): void {
     this.activeLens.set(lens);
   }
 
-  // Sidebar items — flat list for the active lens only (no section wrappers)
+  // Sidebar items — per-lens structure with section headers per spec
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
 
@@ -52,55 +55,133 @@ export class MainLayoutComponent {
       case 'me':
         return [
           { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
-          { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-          { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-          { label: MY_ACTIVITY_LABEL.singular, icon: 'fa-light fa-clipboard-list', routerLink: '/my-activity' },
-          { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', disabled: !this.enableProfileClick() },
+          {
+            label: MY_ACTIVITY_LABEL.singular,
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+              { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
+              { label: 'Mentorships', icon: 'fa-light fa-graduation-cap', command: () => {} },
+              { label: 'Badges', icon: 'fa-light fa-medal', command: () => {} },
+              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
+              { label: 'Transactions', icon: 'fa-light fa-receipt', command: () => {} },
+            ],
+          },
+          {
+            label: 'My Account',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', disabled: !this.enableProfileClick() },
+              { label: 'Contributor Agreements', icon: 'fa-light fa-file-signature', command: () => {} },
+              { label: 'Subscription Preferences', icon: 'fa-light fa-bell', command: () => {} },
+              { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
+            ],
+          },
         ];
 
       case 'foundation': {
-        const items: SidebarMenuItem[] = [
+        const sections: SidebarMenuItem[] = [
           { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
-          { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-          { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
-          { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-          { label: 'Insights', icon: 'fa-light fa-chart-column', url: 'https://insights.linuxfoundation.org/', target: '_blank', rel: 'noopener noreferrer' },
+          {
+            label: 'Community',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+              { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
+              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+              { label: 'Drive', icon: 'fa-light fa-folder-open', command: () => {} },
+              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
+            ],
+          },
+          {
+            label: 'Data Intelligence',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Engineering Health', icon: 'fa-light fa-heart-pulse', url: 'https://insights.linuxfoundation.org/', target: '_blank', rel: 'noopener noreferrer' },
+              { label: 'Community Engagement', icon: 'fa-light fa-comments', command: () => {} },
+              { label: 'Contributor Health', icon: 'fa-light fa-user-check', command: () => {} },
+              { label: 'Participating Organizations', icon: 'fa-light fa-building-columns', command: () => {} },
+              { label: 'Community Sentiment', icon: 'fa-light fa-face-smile', command: () => {} },
+              { label: 'Contributing Individuals', icon: 'fa-light fa-person-circle-check', command: () => {} },
+              { label: 'Events Analytics', icon: 'fa-light fa-chart-bar', command: () => {} },
+              { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
+            ],
+          },
         ];
 
         if (!isTlfOnlyPersona) {
-          items.push(
-            { label: VOTE_LABEL.plural, icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
-            { label: SURVEY_LABEL.plural, icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
-            { label: 'Permissions', icon: 'fa-light fa-shield', routerLink: '/settings' }
-          );
+          sections.push({
+            label: 'Governance',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: VOTE_LABEL.plural, icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
+              { label: SURVEY_LABEL.plural, icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
+              { label: 'Permissions', icon: 'fa-light fa-shield', routerLink: '/settings' },
+            ],
+          });
         }
 
-        return items;
+        return sections;
       }
 
       case 'organization':
       default:
-        return [];
+        return [
+          { label: 'Overview', icon: 'fa-light fa-grid-2', command: () => {} },
+          {
+            label: 'Portfolio',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Key Projects', icon: 'fa-light fa-star', command: () => {} },
+              { label: 'Code Contributions', icon: 'fa-light fa-code', command: () => {} },
+            ],
+          },
+          {
+            label: 'Community',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+              { label: 'Training & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
+              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
+            ],
+          },
+          {
+            label: 'Membership',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: 'Membership', icon: 'fa-light fa-id-card', command: () => {} },
+              { label: 'Member Benefits', icon: 'fa-light fa-gift', command: () => {} },
+              { label: 'OSPO Resources', icon: 'fa-light fa-book', command: () => {} },
+            ],
+          },
+          {
+            label: 'Administration',
+            isSection: true,
+            expanded: true,
+            items: [
+              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
+              { label: 'CLA Management', icon: 'fa-light fa-file-signature', command: () => {} },
+              { label: 'Software Inventory', icon: 'fa-light fa-boxes-stacked', command: () => {} },
+              { label: 'Access', icon: 'fa-light fa-key', command: () => {} },
+              { label: 'Profile', icon: 'fa-light fa-building', routerLink: '/profile' },
+            ],
+          },
+        ];
     }
   });
 
-  // Sidebar footer — Support and Logout
-  protected readonly sidebarFooterItems = computed(() => [
-    {
-      label: 'Support',
-      icon: 'fa-light fa-question-circle',
-      url: environment.urls.support,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    },
-    {
-      label: 'Logout',
-      icon: 'fa-light fa-sign-out',
-      url: '/logout',
-      target: '_self',
-      rel: '',
-    },
-  ]);
+  // Footer items moved to rail — sidebar footer is empty
+  protected readonly sidebarFooterItems = computed((): SidebarMenuItem[] => []);
 
   public constructor() {
     // Close mobile sidebar on navigation

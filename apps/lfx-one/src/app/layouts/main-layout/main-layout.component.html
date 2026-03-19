@@ -6,49 +6,60 @@
 
 <div class="flex min-h-screen" [ngClass]="{ 'pt-12': showDevToolbar() }">
   <!-- Nav - Desktop: Navy rail + white sidebar panel -->
-  <div class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 w-[272px]" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
+  <div class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 w-[296px]" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
 
-    <!-- Navy Lens Rail -->
-    <div class="flex flex-col bg-[#1E293B] w-14 h-full items-center py-5 gap-1 flex-shrink-0">
-      <!-- LFX Logo -->
-      <div class="flex items-center justify-center w-10 mb-5">
+    <!-- Lens Rail -->
+    <div class="flex flex-col bg-blue-800 w-20 h-full items-center py-5 gap-1 flex-shrink-0">
+      <!-- LFX Logo mark (white) -->
+      <div class="flex items-center justify-center w-14 mb-6">
         <a [routerLink]="['/']">
-          <img src="/images/logo_lfx.svg" alt="LFX" class="w-8 h-auto brightness-0 invert opacity-90" />
+          <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="white"/>
+            <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="white"/>
+          </svg>
         </a>
       </div>
 
       <!-- Me Lens -->
-      <button
-        type="button"
-        (click)="setActiveLens('me')"
-        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
-        [ngClass]="activeLens() === 'me' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
-        title="Me">
-        <i class="fa-light fa-user text-base leading-none"></i>
-        <span class="text-[9px] font-semibold leading-none tracking-wide">Me</span>
+      <button type="button" (click)="setActiveLens('me')"
+        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        [ngClass]="activeLens() === 'me' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
+        data-tooltip="Me">
+        <i class="fa-solid fa-user text-3xl"></i>
       </button>
 
-      <!-- Project Lens -->
-      <button
-        type="button"
-        (click)="setActiveLens('foundation')"
-        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
-        [ngClass]="activeLens() === 'foundation' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
-        title="Project">
-        <i class="fa-light fa-layer-group text-base leading-none"></i>
-        <span class="text-[9px] font-semibold leading-none tracking-wide">Project</span>
+      <!-- Projects Lens -->
+      <button type="button" (click)="setActiveLens('foundation')"
+        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        [ngClass]="activeLens() === 'foundation' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
+        data-tooltip="Projects">
+        <i class="fa-solid fa-layer-group text-3xl"></i>
       </button>
 
-      <!-- Org Lens -->
-      <button
-        type="button"
-        (click)="setActiveLens('organization')"
-        class="flex flex-col items-center justify-center w-10 h-11 rounded-lg transition-colors gap-0.5"
-        [ngClass]="activeLens() === 'organization' ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'"
-        title="Organization">
-        <i class="fa-light fa-building text-base leading-none"></i>
-        <span class="text-[9px] font-semibold leading-none tracking-wide">Org</span>
+      <!-- Organization Lens -->
+      <button type="button" (click)="setActiveLens('organization')"
+        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        [ngClass]="activeLens() === 'organization' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
+        data-tooltip="Organization">
+        <i class="fa-solid fa-building text-3xl"></i>
       </button>
+
+      <!-- Spacer -->
+      <div class="flex-1"></div>
+
+      <!-- Support -->
+      <a [href]="supportUrl" target="_blank" rel="noopener noreferrer"
+        class="rail-btn flex items-center justify-center w-14 h-12 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
+        data-tooltip="Support">
+        <i class="fa-solid fa-circle-question text-xl"></i>
+      </a>
+
+      <!-- Log out -->
+      <a href="/logout"
+        class="rail-btn flex items-center justify-center w-14 h-12 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
+        data-tooltip="Log out">
+        <i class="fa-solid fa-right-from-bracket text-xl"></i>
+      </a>
     </div>
 
     <!-- White Sidebar Panel -->
@@ -83,7 +94,7 @@
   </p-drawer>
 
   <!-- Main Content Area -->
-  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[272px] flex flex-col" data-testid="main-content">
+  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[296px] flex flex-col" data-testid="main-content">
     <!-- Mobile Menu Button -->
     <div class="lg:hidden sticky z-30 bg-white border-b border-gray-200 px-5 py-3" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
       <button
