@@ -3,8 +3,12 @@
 
 <button
   type="button"
+  role="tab"
+  [attr.aria-selected]="selected()"
+  [attr.tabindex]="selected() ? 0 : -1"
   class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap transition-colors"
   [class]="itemClasses()"
+  (click)="onSelect()"
   data-testid="tab-item-button">
   @if (icon()) {
     <i class="fa-light" [class]="'fa-' + icon() + ' ' + iconClasses()" data-testid="tab-item-icon"></i>

@@ -8,9 +8,8 @@
       [value]="tab.value"
       [icon]="tab.icon ?? ''"
       [selected]="isSelected(tab.value)"
-      [style]="style()"
+      [tabStyle]="tabStyle()"
       [size]="size()"
-      (selectTab)="onTabSelect($event)"
-      data-testid="tabs-tab" />
+      (selectTab)="onTabSelect($event)" />
   }
 </div>

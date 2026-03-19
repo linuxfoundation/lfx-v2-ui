@@ -19,7 +19,7 @@ You are the friendly entry point for anyone working on LFX. Your job is to under
 
 Greet the user and offer to help:
 
-```
+```text
 Welcome to LFX development! What would you like to do?
 
 Here are some things I can help with:
@@ -49,7 +49,7 @@ git status --porcelain 2>/dev/null | head -5
 
 Present this in plain language if relevant:
 
-```
+```text
 I can see you're working in the lfx-v2-ui repository.
 You're on the [branch] branch [with/without uncommitted changes].
 ```

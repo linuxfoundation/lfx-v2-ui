@@ -13,12 +13,6 @@ export type TabSize = 'sm' | 'lg';
   styleUrl: './tab-item.css',
   host: {
     '[attr.data-testid]': '"tab-item"',
-    '[attr.role]': '"tab"',
-    '[attr.aria-selected]': 'selected()',
-    '[attr.tabindex]': 'selected() ? 0 : -1',
-    '(click)': 'onSelect()',
-    '(keydown.enter)': 'onSelect()',
-    '(keydown.space)': 'onSelect(); $event.preventDefault()',
   },
 })
 export class TabItem {
@@ -26,13 +20,13 @@ export class TabItem {
   public value = input.required<string>();
   public icon = input<string>();
   public selected = input(false);
-  public style = input<TabStyle>('switch');
+  public tabStyle = input<TabStyle>('switch');
   public size = input<TabSize>('lg');
 
   public readonly selectTab = output<string>();
 
   public itemClasses = computed(() => {
-    const style = this.style();
+    const style = this.tabStyle();
     const size = this.size();
     const selected = this.selected();
 

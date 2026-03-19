@@ -13,8 +13,13 @@
   }
   <span data-testid="chip-label">{{ label() }}</span>
   @if (dismissable()) {
-    <button type="button" class="inline-flex cursor-pointer items-center justify-center text-neutral-400" (click)="onDismiss()" data-testid="chip-dismiss">
-      <i class="fa-solid fa-circle-xmark"></i>
+    <button
+      type="button"
+      class="inline-flex cursor-pointer items-center justify-center text-neutral-400"
+      (click)="onDismiss()"
+      aria-label="Dismiss"
+      data-testid="chip-dismiss">
+      <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
     </button>
   }
 </span>

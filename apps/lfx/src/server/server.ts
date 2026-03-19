@@ -12,6 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pinoHttp from 'pino-http';
 
+import { ApiError } from './helpers/api-error';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { reqSerializer, resSerializer, serverLogger } from './helpers/server-logger';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
@@ -142,8 +143,13 @@ app.use(authMiddleware);
 
 // API routes will be mounted here
 
+// Catch unmatched API routes and return 404 before falling through to SSR
+app.use(['/api/*', '/public/api/*'], (req: Request, _res: Response, next: NextFunction) => {
+  next(ApiError.notFound(`No API route matches ${req.method} ${req.path}`));
+});
+
 // Add API error handler middleware
-app.use('/api/*', apiErrorHandler);
+app.use(['/api/*', '/public/api/*'], apiErrorHandler);
 
 /**
  * Handle all other requests by rendering the Angular application.
@@ -167,13 +173,11 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       }
     } catch (error) {
       // If userinfo fetch fails, fall back to basic user info from token
-      logger.warning(req, 'ssr_user_info', 'Failed to fetch user info, using basic user data', {
+      // Do NOT logout — a transient Auth0/userinfo failure should not sign out valid sessions
+      logger.warning(req, 'ssr_user_info', 'Failed to fetch user info, using basic user data from token', {
         err: error,
         path: req.path,
       });
-
-      res.oidc.logout();
-      return;
     }
   }
 

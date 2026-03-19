@@ -22,7 +22,7 @@ export interface TabDefinition {
 })
 export class Tabs {
   public tabs = input.required<TabDefinition[]>();
-  public style = input<TabStyle>('switch');
+  public tabStyle = input<TabStyle>('switch');
   public size = input<TabSize>('lg');
 
   public activeTab = model<string>('');
@@ -30,7 +30,7 @@ export class Tabs {
   public readonly tabChange = output<string>();
 
   public containerClasses = computed(() => {
-    const style = this.style();
+    const style = this.tabStyle();
     const size = this.size();
 
     if (style === 'switch') {

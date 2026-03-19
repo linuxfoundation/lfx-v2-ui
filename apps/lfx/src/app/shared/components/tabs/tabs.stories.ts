@@ -27,7 +27,7 @@ const meta: Meta<Tabs> = {
   component: Tabs,
   tags: ['autodocs'],
   argTypes: {
-    style: {
+    tabStyle: {
       control: 'select',
       options: ['switch', 'bordered'],
     },
@@ -41,7 +41,7 @@ const meta: Meta<Tabs> = {
       ...args,
       activeTab: 'overview',
     },
-    template: `<lfx-tabs [tabs]="tabs" [style]="style" [size]="size" [(activeTab)]="activeTab" />`,
+    template: `<lfx-tabs [tabs]="tabs" [tabStyle]="tabStyle" [size]="size" [(activeTab)]="activeTab" />`,
   }),
 };
 
@@ -49,27 +49,27 @@ export default meta;
 type Story = StoryObj<Tabs>;
 
 export const SwitchDefault: Story = {
-  args: { tabs: sampleTabs, style: 'switch', size: 'lg' },
+  args: { tabs: sampleTabs, tabStyle: 'switch', size: 'lg' },
 };
 
 export const SwitchSmall: Story = {
-  args: { tabs: sampleTabs, style: 'switch', size: 'sm' },
+  args: { tabs: sampleTabs, tabStyle: 'switch', size: 'sm' },
 };
 
 export const BorderedDefault: Story = {
-  args: { tabs: sampleTabs, style: 'bordered', size: 'lg' },
+  args: { tabs: sampleTabs, tabStyle: 'bordered', size: 'lg' },
 };
 
 export const BorderedSmall: Story = {
-  args: { tabs: sampleTabs, style: 'bordered', size: 'sm' },
+  args: { tabs: sampleTabs, tabStyle: 'bordered', size: 'sm' },
 };
 
 export const SwitchNoIcons: Story = {
-  args: { tabs: sampleTabsNoIcons, style: 'switch', size: 'lg' },
+  args: { tabs: sampleTabsNoIcons, tabStyle: 'switch', size: 'lg' },
 };
 
 export const BorderedNoIcons: Story = {
-  args: { tabs: sampleTabsNoIcons, style: 'bordered', size: 'lg' },
+  args: { tabs: sampleTabsNoIcons, tabStyle: 'bordered', size: 'lg' },
 };
 
 export const AllVariants: Story = {
@@ -83,27 +83,27 @@ export const AllVariants: Story = {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Switch — Default Size</span>
-          <lfx-tabs [tabs]="sampleTabs" style="switch" size="lg" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabs" tabStyle="switch" size="lg" [(activeTab)]="activeTab" />
         </div>
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Switch — Small Size</span>
-          <lfx-tabs [tabs]="sampleTabs" style="switch" size="sm" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabs" tabStyle="switch" size="sm" [(activeTab)]="activeTab" />
         </div>
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Bordered — Default Size</span>
-          <lfx-tabs [tabs]="sampleTabs" style="bordered" size="lg" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabs" tabStyle="bordered" size="lg" [(activeTab)]="activeTab" />
         </div>
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Bordered — Small Size</span>
-          <lfx-tabs [tabs]="sampleTabs" style="bordered" size="sm" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabs" tabStyle="bordered" size="sm" [(activeTab)]="activeTab" />
         </div>
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Switch — No Icons</span>
-          <lfx-tabs [tabs]="sampleTabsNoIcons" style="switch" size="lg" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabsNoIcons" tabStyle="switch" size="lg" [(activeTab)]="activeTab" />
         </div>
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Bordered — No Icons</span>
-          <lfx-tabs [tabs]="sampleTabsNoIcons" style="bordered" size="lg" [(activeTab)]="activeTab" />
+          <lfx-tabs [tabs]="sampleTabsNoIcons" tabStyle="bordered" size="lg" [(activeTab)]="activeTab" />
         </div>
       </div>
     `,

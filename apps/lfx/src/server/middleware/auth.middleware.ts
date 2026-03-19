@@ -45,7 +45,10 @@ const DEFAULT_CONFIG: AuthConfig = {
 function classifyRoute(path: string, config: AuthConfig): RouteAuthConfig {
   for (const routeConfig of config.routes) {
     if (typeof routeConfig.pattern === 'string') {
-      if (path.startsWith(routeConfig.pattern)) {
+      const pattern = routeConfig.pattern;
+      // Exact match, or prefix match at a path-segment boundary
+      // Prevents '/health' matching '/healthz' or '/api' matching '/api-docs'
+      if (path === pattern || path.startsWith(pattern.endsWith('/') ? pattern : pattern + '/')) {
         return routeConfig;
       }
     } else if (routeConfig.pattern.test(path)) {

@@ -54,8 +54,13 @@ export function apiErrorHandler(error: Error | ApiError, req: Request, res: Resp
       logger.debug(req, operation, `API error: ${error.message}`, { ...logContext, err: error });
     }
 
+    const response = error.toResponse();
+    // Strip details from 5xx and upstream errors to avoid leaking internal payloads
+    if (error.statusCode >= 500 || error.code === 'UPSTREAM_ERROR' || error.code === 'UPSTREAM_CLIENT_ERROR') {
+      delete response['details'];
+    }
     res.status(error.statusCode).json({
-      ...error.toResponse(),
+      ...response,
       path: req.path,
     });
     return;

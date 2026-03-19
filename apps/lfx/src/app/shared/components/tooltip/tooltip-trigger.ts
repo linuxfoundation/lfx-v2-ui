@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DOCUMENT } from '@angular/common';
-import { ComponentRef, DestroyRef, Directive, ElementRef, Renderer2, ViewContainerRef, inject, input } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { ComponentRef, DestroyRef, Directive, ElementRef, PLATFORM_ID, Renderer2, ViewContainerRef, inject, input } from '@angular/core';
 import { Tooltip } from './tooltip';
 
 type TooltipPosition = 'top' | 'bottom';
@@ -26,6 +26,7 @@ export class TooltipTrigger {
   private readonly renderer = inject(Renderer2);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
 
   public lfxTooltip = input.required<string>();
   public lfxTooltipDescription = input<string>();
@@ -39,7 +40,7 @@ export class TooltipTrigger {
   }
 
   public show(): void {
-    if (this.tooltipRef) {
+    if (!isPlatformBrowser(this.platformId) || this.tooltipRef) {
       return;
     }
 

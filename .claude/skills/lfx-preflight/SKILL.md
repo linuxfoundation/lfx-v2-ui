@@ -88,7 +88,7 @@ Flag any changes to these files — they require code owner review:
 - `apps/lfx/src/server/helpers/server-logger.ts`
 - `apps/lfx/src/server/middleware/*`
 - `apps/lfx/src/server/services/logger.service.ts`
-- `apps/lfx/src/server/services/microservice-proxy.service.ts`
+- `apps/lfx/src/server/services/lfx.service.ts`
 - `apps/lfx/src/app/app.routes.ts`
 - `turbo.json`
 - `CLAUDE.md`

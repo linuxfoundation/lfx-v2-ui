@@ -23,7 +23,7 @@ All components in this design system are built from the **Coherence UI Kit** in 
 
 ### Step 1 — Fetch the design context
 
-```
+```text
 mcp__plugin_figma_figma__get_design_context(
   fileKey: "<extracted-from-url>",
   nodeId: "<extracted-from-url>",

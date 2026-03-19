@@ -57,7 +57,7 @@ export const AllVariants: Story = {
         <div class="flex flex-col gap-3">
           <span class="text-xs font-semibold text-neutral-500 uppercase">Padding Sizes</span>
           <div class="flex flex-wrap items-start gap-4">
-            <lfx-card padding="none"><div class="p-4 text-sm text-neutral-600">None</div></lfx-card>
+            <lfx-card padding="none"><p class="text-sm text-neutral-600">None</p></lfx-card>
             <lfx-card padding="sm"><p class="text-sm text-neutral-600">Small padding</p></lfx-card>
             <lfx-card padding="md"><p class="text-sm text-neutral-600">Medium padding</p></lfx-card>
             <lfx-card padding="lg"><p class="text-sm text-neutral-600">Large padding</p></lfx-card>
