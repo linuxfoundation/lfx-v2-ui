@@ -5,10 +5,12 @@ import { Component, computed, effect, inject, signal, Signal, WritableSignal } f
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL, JOIN_MODE_LABELS } from '@lfx-one/shared/constants';
 import {
@@ -52,8 +54,19 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 import { CommitteeVotesListComponent } from '../components/committee-votes-list/committee-votes-list.component';
+import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { CommitteeService } from '@services/committee.service';
+import { RouteLoadingComponent } from '@components/loading/route-loading.component';
+import { MenuItem, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+
+import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
+
+type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -63,6 +76,7 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     ButtonComponent,
     TagComponent,
     RouterLink,
+    // TODO: No LFX wrapper exists for ConfirmDialog or Tabs — use PrimeNG directly
     ConfirmDialogModule,
     TooltipModule,
     Tabs,
@@ -72,6 +86,7 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     TabPanel,
     DatePipe,
     DecimalPipe,
+    CommitteeMembersComponent,
     CommitteeSettingsComponent,
     MeetingCardComponent,
     ReactiveFormsModule,
@@ -79,6 +94,15 @@ import { CommitteeVotesListComponent } from '../components/committee-votes-list/
     CommitteeVotesListComponent,
   ],
   providers: [ConfirmationService],
+    ButtonComponent,
+    TagComponent,
+    ConfirmDialogModule,
+    RouterLink,
+    RouteLoadingComponent,
+    DatePipe,
+    NgClass,
+    CommitteeOverviewComponent,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -93,6 +117,9 @@ export class CommitteeViewComponent {
 
   // -- Label constants --
   protected readonly committeeLabel = COMMITTEE_LABEL;
+
+  // -- Settings form --
+  public settingsForm: FormGroup = this.createSettingsForm();
 
   // -- Tab state --
   public activeTab = signal<string>('overview');
@@ -148,6 +175,12 @@ export class CommitteeViewComponent {
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+  // Note: canManageMembers is logically equivalent to canManageConfigurations (De Morgan's law),
+  // kept separate to align with the child component's permission check.
+  public canManageMembers: Signal<boolean> = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
+
+  // -- Tab visibility signals --
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageMembers());
 
   // -- Tab visibility signals --
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
@@ -178,6 +211,16 @@ export class CommitteeViewComponent {
     return [...new Set(orgs)];
   });
   public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public memberCountByOrg: Signal<Map<string, number>> = computed(() => {
+    const counts = new Map<string, number>();
+    this.members().forEach((m) => {
+      const org = m.organization?.name;
+      if (org) {
+        counts.set(org, (counts.get(org) || 0) + 1);
+      }
+    });
+    return counts;
+  });
   public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
   public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
     const roleCounts: Record<string, number> = {};
@@ -198,8 +241,6 @@ export class CommitteeViewComponent {
   public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
   public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
 
-  // -- Settings form --
-  public settingsForm: FormGroup = this.createSettingsForm();
   public settingsSaving = signal<boolean>(false);
 
   // -- Configuration label signals --
@@ -219,6 +260,32 @@ export class CommitteeViewComponent {
     });
   }
 
+
+  // -- Tab state --
+  public activeTab = signal<CommitteeTab>('overview');
+
+  // -- Writable signals --
+  public loading = signal<boolean>(true);
+  public error = signal<boolean>(false);
+  public errorType = signal<'not-found' | 'server-error' | null>(null);
+  public refresh = signal(0);
+
+  // -- Computed / toSignal --
+  public committee: Signal<Committee | null> = this.initializeCommittee();
+
+  public categorySeverity: Signal<TagSeverity> = computed(() => {
+    const category = this.committee()?.category;
+    return getCommitteeCategorySeverity(category || '');
+  });
+
+  public breadcrumbItems: Signal<MenuItem[]> = computed(() => [{ label: 'Groups', routerLink: ['/groups'] }, { label: this.committee()?.name || '' }]);
+
+  public canEdit: Signal<boolean> = computed(() => !!this.committee()?.writer);
+
+  // -- Tab visibility signals --
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
+  public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
+
   // -- Public methods --
   public goBack(): void {
     this.router.navigate(['/', 'groups']);
@@ -227,10 +294,6 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
-  }
-
-  public getMembersCountByOrg(org: string): number {
-    return this.members().filter((m) => m.organization?.name === org).length;
   }
 
   public saveSettings(): void {
@@ -277,9 +340,14 @@ export class CommitteeViewComponent {
   private initializeCommittee(): void {
     combineLatest([this.route.paramMap, toObservable(this.refresh)])
       .pipe(
+  // -- Private initializer functions --
+  private initializeCommittee(): Signal<Committee | null> {
+    return toSignal(
+      combineLatest([this.route.paramMap, toObservable(this.refresh)]).pipe(
         switchMap(([params]) => {
           const committeeId = params?.get('id');
           if (!committeeId) {
+            this.errorType.set('not-found');
             this.error.set(true);
             this.loading.set(false);
             return of(null);
@@ -291,6 +359,17 @@ export class CommitteeViewComponent {
 
           const committeeQuery = this.committeeService.getCommittee(committeeId).pipe(
             catchError(() => {
+          this.errorType.set(null);
+          this.loading.set(true);
+
+          return this.committeeService.getCommittee(committeeId).pipe(
+            catchError((err) => {
+              const status = err?.status;
+              if (status === 404 || status === 403) {
+                this.errorType.set('not-found');
+              } else {
+                this.errorType.set('server-error');
+              }
               this.error.set(true);
               this.messageService.add({
                 severity: 'error',
@@ -312,11 +391,16 @@ export class CommitteeViewComponent {
 
               if (committee) {
                 this.populateSettingsForm(committee);
-                this.loadMeetings(committeeId);
-                this.loadPastMeetingSummary(committee.project_uid);
-                return this.loadGroupTypeData$(committeeId, committee);
+                return forkJoin([
+                  this.loadGroupTypeData$(committeeId, committee),
+                  this.loadMeetings$(committeeId),
+                  this.loadPastMeetingSummary$(committee.project_uid),
+                ]);
               }
 
+              return of(null);
+                detail: status === 404 ? 'Group not found' : 'Failed to load group details',
+              });
               return of(null);
             }),
             finalize(() => this.loading.set(false))
@@ -327,30 +411,29 @@ export class CommitteeViewComponent {
       .subscribe();
   }
 
-  private loadMeetings(committeeId: string): void {
+  private loadMeetings$(committeeId: string): Observable<Meeting[]> {
     this.meetingsLoading.set(true);
-    this.committeeService
-      .getCommitteeMeetings(committeeId)
-      .pipe(
-        take(1),
-        catchError(() => of([]))
-      )
-      .subscribe((meetings) => {
+    return this.committeeService.getCommitteeMeetings(committeeId).pipe(
+      take(1),
+      catchError(() => of([])),
+      tap((meetings) => {
         this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
         this.meetingsLoading.set(false);
-      });
+      })
+    );
   }
 
-  private loadPastMeetingSummary(projectUid: string | undefined): void {
-    if (!projectUid) return;
-    this.meetingService
-      .getPastMeetingsByProject(projectUid, 1)
-      .pipe(
-        take(1),
-        catchError(() => of([])),
-        switchMap((pastMeetings) => this.loadLastMeetingSummary$(pastMeetings))
-      )
-      .subscribe();
+  private loadPastMeetingSummary$(projectUid: string | undefined): Observable<PastMeetingSummary | null> {
+    if (!projectUid) {
+      this.lastPastMeeting.set(null);
+      this.lastMeetingSummary.set(null);
+      return of(null);
+    }
+    return this.meetingService.getPastMeetingsByProject(projectUid, 1).pipe(
+      take(1),
+      catchError(() => of([])),
+      switchMap((pastMeetings) => this.loadLastMeetingSummary$(pastMeetings))
+    );
   }
 
   private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {
