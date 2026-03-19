@@ -149,18 +149,15 @@ function renderTable(rows, isPrTable) {
     const logUrl = s?.log_url ?? '';
 
     const envName = d.environment ?? `ui-pr-${d.prNumber}`;
-    const nameCell = envUrl
-      ? `<a class="link env-name" href="${envUrl}" target="_blank">${envName}</a>`
-      : `<span class="env-name">${envName}</span>`;
+    const linkCell = [
+      envUrl ? `<a class="link env-name" href="${envUrl}" target="_blank">${envName}</a>`
+             : `<span class="env-name">${envName}</span>`,
+      logUrl && `<a class="link" href="${logUrl}" target="_blank" style="font-size:12px">ArgoCD ↗</a>`,
+    ].filter(Boolean).join(' ');
 
     const prCell = d.prNumber
       ? `<a class="link" href="https://github.com/${OWNER}/${REPO}/pull/${d.prNumber}" target="_blank">#${d.prNumber}</a>`
       : '';
-
-    const linksCell = [
-      envUrl && `<a class="link" href="${envUrl}" target="_blank" style="font-size:12px">Open ↗</a>`,
-      logUrl && `<a class="link" href="${logUrl}" target="_blank" style="font-size:12px">ArgoCD ↗</a>`,
-    ].filter(Boolean).join('');
 
     const ref  = d.ref  ?? '';
     const sha  = d.sha  ? d.sha.slice(0, 7) : '';
@@ -168,31 +165,29 @@ function renderTable(rows, isPrTable) {
 
     if (isPrTable) {
       return `<tr>
+        <td><span class="badge ${badgeClass(state)}">${state}</span></td>
+        <td>${linkCell}</td>
         <td>${prCell}</td>
-        <td>${nameCell}</td>
         <td><span class="branch-ref">${ref}</span></td>
         <td><span class="sha">${sha}</span></td>
-        <td><span class="badge ${badgeClass(state)}">${state}</span></td>
         <td>${time}</td>
-        <td><div class="actions">${linksCell}</div></td>
       </tr>`;
     }
 
     return `<tr>
-      <td>${nameCell}</td>
+      <td><span class="badge ${badgeClass(state)}">${state}</span></td>
+      <td>${linkCell}</td>
       <td><span class="branch-ref">${ref}</span></td>
       <td><span class="sha">${sha}</span></td>
-      <td><span class="badge ${badgeClass(state)}">${state}</span></td>
       <td>${time}</td>
-      <td><div class="actions">${linksCell}</div></td>
     </tr>`;
   }).join('');
 
   if (isPrTable) {
     return `<table>
       <thead><tr>
-        <th>PR</th><th>Environment</th><th>Branch / Ref</th><th>SHA</th>
-        <th>Status</th><th>Last Updated</th><th>Links</th>
+        <th>Status</th><th>Link</th><th>PR</th>
+        <th>Branch / Ref</th><th>SHA</th><th>Last Updated</th>
       </tr></thead>
       <tbody>${trs}</tbody>
     </table>`;
@@ -200,8 +195,7 @@ function renderTable(rows, isPrTable) {
 
   return `<table>
     <thead><tr>
-      <th>Environment</th><th>Branch / Ref</th><th>SHA</th>
-      <th>Status</th><th>Last Updated</th><th>Links</th>
+      <th>Status</th><th>Link</th><th>Branch / Ref</th><th>SHA</th><th>Last Updated</th>
     </tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
