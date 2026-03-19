@@ -12,6 +12,7 @@ const committeeController = new CommitteeController();
 // Committee CRUD routes - using new controller pattern
 router.get('/', (req, res, next) => committeeController.getCommittees(req, res, next));
 router.get('/count', (req, res, next) => committeeController.getCommitteesCount(req, res, next));
+router.get('/my-committees', (req, res, next) => committeeController.getMyCommittees(req, res, next));
 router.get('/:id', (req, res, next) => committeeController.getCommitteeById(req, res, next));
 router.post('/', (req, res, next) => committeeController.createCommittee(req, res, next));
 router.put('/:id', (req, res, next) => committeeController.updateCommittee(req, res, next));
@@ -38,5 +39,8 @@ router.get('/:id/events', (req, res, next) => committeeController.getCommitteeEv
 router.get('/:id/campaigns', (req, res, next) => committeeController.getCommitteeCampaigns(req, res, next));
 router.get('/:id/engagement', (req, res, next) => committeeController.getCommitteeEngagement(req, res, next));
 router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBudget(req, res, next));
+// ── Join / Leave routes ────────────────────────────────────────────────────
+router.post('/:id/join', (req, res, next) => committeeController.joinCommittee(req, res, next));
+router.delete('/:id/leave', (req, res, next) => committeeController.leaveCommittee(req, res, next));
 
 export default router;
