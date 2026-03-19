@@ -129,7 +129,6 @@ export interface MemberFormValue {
   email: string;
   job_title: string;
   linkedin_profile: string;
-  is_individual: boolean;
   organization: string;
   organization_url: string;
   role: CommitteeMemberRole | '';

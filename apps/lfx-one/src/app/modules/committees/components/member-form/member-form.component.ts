@@ -3,11 +3,9 @@
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
-import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -20,7 +18,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'lfx-member-form',
-  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent, InputTextComponent, CalendarComponent, OrganizationSearchComponent, CheckboxComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, SelectComponent, InputTextComponent, CalendarComponent, OrganizationSearchComponent],
   templateUrl: './member-form.component.html',
   styleUrl: './member-form.component.scss',
 })
@@ -63,31 +61,6 @@ export class MemberFormComponent {
 
     // Initialize form with data when component is created
     this.initializeForm();
-
-    // Listen to individual toggle changes (fixes click-before-value-update timing)
-    this.form()
-      .get('is_individual')
-      ?.valueChanges.pipe(takeUntilDestroyed())
-      .subscribe(() => this.onIndividualToggle());
-  }
-
-  public onIndividualToggle(): void {
-    const isIndividual = this.form().get('is_individual')?.value;
-    const orgControl = this.form().get('organization');
-    const orgUrlControl = this.form().get('organization_url');
-
-    if (isIndividual) {
-      orgControl?.setValue('');
-      orgUrlControl?.setValue('');
-      orgControl?.disable();
-      orgUrlControl?.disable();
-      orgControl?.clearValidators();
-    } else {
-      orgControl?.enable();
-      orgUrlControl?.enable();
-      orgControl?.setValidators([Validators.required]);
-    }
-    orgControl?.updateValueAndValidity();
   }
 
   public clearRoleDates(): void {
@@ -99,10 +72,6 @@ export class MemberFormComponent {
   public clearVotingDates(): void {
     this.form().get('voting_status_start')?.reset();
     this.form().get('voting_status_end')?.reset();
-    this.form().updateValueAndValidity();
-  }
-
-  public onDateChange(): void {
     this.form().updateValueAndValidity();
   }
 
@@ -199,14 +168,12 @@ export class MemberFormComponent {
   private initializeForm(): void {
     if (this.isEditing && this.member) {
       const member = this.member;
-      const hasOrg = !!member.organization?.name || !!member.organization?.website;
       this.form().patchValue({
         first_name: member.first_name,
         last_name: member.last_name,
         email: member.email,
         job_title: member.job_title,
         linkedin_profile: member.linkedin_profile,
-        is_individual: !hasOrg,
         organization: member.organization?.name,
         organization_url: member.organization?.website,
         role: member.role?.name,
@@ -217,18 +184,10 @@ export class MemberFormComponent {
         voting_status_start: parseISODateString(member.voting?.start_date),
         voting_status_end: parseISODateString(member.voting?.end_date),
       });
-
-      // Apply individual toggle state after patching
-      if (!hasOrg) {
-        this.onIndividualToggle();
-      }
     }
   }
 
   private buildOrganizationPayload(formValue: MemberFormValue): CreateCommitteeMemberRequest['organization'] {
-    if (formValue.is_individual) {
-      return null;
-    }
     if (formValue.organization || formValue.organization_url) {
       return {
         name: formValue.organization || null,
@@ -246,8 +205,7 @@ export class MemberFormComponent {
         email: new FormControl('', [Validators.required, Validators.email]),
         job_title: new FormControl(''),
         linkedin_profile: new FormControl('', [Validators.pattern(LINKEDIN_PROFILE_PATTERN)]),
-        is_individual: new FormControl(false),
-        organization: new FormControl('', [Validators.required]),
+        organization: new FormControl(''),
         organization_url: new FormControl(''),
         role: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         voting_status: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),

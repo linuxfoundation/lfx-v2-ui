@@ -170,14 +170,13 @@
           @if (membersLoading()) {
             <tr>
               <td [attr.colspan]="committee()?.enable_voting ? 6 : 4" class="text-center py-8">
-                <!-- Loading skeleton rows -->
-                <div class="flex flex-col gap-3 animate-pulse px-4">
+                <div class="flex flex-col gap-4 px-4">
                   @for (_ of [1, 2, 3]; track _) {
                     <div class="flex items-center gap-4">
-                      <div class="w-8 h-8 rounded-full bg-gray-200"></div>
-                      <div class="h-4 bg-gray-200 rounded w-32"></div>
-                      <div class="h-4 bg-gray-200 rounded w-40"></div>
-                      <div class="h-4 bg-gray-200 rounded w-24"></div>
+                      <p-skeleton shape="circle" size="2rem" />
+                      <p-skeleton width="8rem" height="0.875rem" />
+                      <p-skeleton width="10rem" height="0.875rem" />
+                      <p-skeleton width="6rem" height="0.875rem" />
                     </div>
                   }
                 </div>

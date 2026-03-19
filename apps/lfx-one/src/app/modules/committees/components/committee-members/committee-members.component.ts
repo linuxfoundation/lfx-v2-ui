@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
+import { TitleCasePipe } from '@angular/common';
+import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
 import { FullNamePipe } from '@pipes/full-name.pipe';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -19,6 +19,7 @@ import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+import { Skeleton } from 'primeng/skeleton';
 import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
 
 import { MemberFormComponent } from '../member-form/member-form.component';
@@ -37,6 +38,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
     TableComponent,
     ConfirmDialogModule,
     DynamicDialogModule,
+    Skeleton,
   ],
   providers: [DialogService],
   templateUrl: './committee-members.component.html',
@@ -49,7 +51,6 @@ export class CommitteeMembersComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
-  private readonly platformId = inject(PLATFORM_ID);
 
   // Input signals
   public committee = input.required<Committee | null>();
@@ -261,11 +262,8 @@ export class CommitteeMembersComponent implements OnInit {
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
-        command: () => {
-          if (isPlatformBrowser(this.platformId)) {
-            window.open(`mailto:${this.selectedMember()?.email}`, '_blank');
-          }
-        },
+        url: `mailto:${this.selectedMember()?.email}`,
+        target: '_blank',
       },
       {
         separator: true,
