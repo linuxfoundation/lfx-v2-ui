@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CardComponent } from '@components/card/card.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
 import { PaginatedResponse, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { VoteService } from '@services/vote.service';
-import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 
 import { VoteResultsDrawerComponent } from '@app/modules/votes/components/vote-results-drawer/vote-results-drawer.component';
 import { VotesTableComponent } from '@app/modules/votes/components/votes-table/votes-table.component';
@@ -18,22 +18,22 @@ import { VotesTableComponent } from '@app/modules/votes/components/votes-table/v
   templateUrl: './committee-votes-list.component.html',
 })
 export class CommitteeVotesListComponent {
-  // === Services ===
+  // -- Services --
   private readonly voteService = inject(VoteService);
 
-  // === Constants ===
+  // -- Constants --
   protected readonly voteLabelPlural = VOTE_LABEL.plural;
 
-  // === Inputs ===
+  // -- Inputs --
   public readonly projectUid = input.required<string>();
   public readonly committeeName = input.required<string>();
   public readonly hasPMOAccess = input<boolean>(false);
 
-  // === Subjects ===
-  private readonly fetch$ = new BehaviorSubject<void>(undefined);
-  private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  // -- Trigger signals --
+  private readonly fetchTrigger = signal(0);
+  private readonly refreshTrigger = signal(0);
 
-  // === Writable Signals ===
+  // -- Writable Signals --
   protected readonly loading = signal<boolean>(true);
   protected readonly resultsDrawerVisible = signal<boolean>(false);
   protected readonly selectedVoteId = signal<string | null>(null);
@@ -41,18 +41,21 @@ export class CommitteeVotesListComponent {
   protected readonly currentFirst = signal<number>(0);
   protected readonly totalRecords = signal<number>(0);
 
-  // === Filter State ===
+  // -- Filter State --
   protected readonly filters = signal<VoteFilterState>({ search: '', status: null, group: null });
 
-  // === Page Tokens ===
+  // -- Page Tokens --
   private pageTokens: string[] = [];
 
-  // === Computed Signals ===
+  // -- Computed Signals --
   protected readonly votes: Signal<Vote[]> = this.initVotes();
   protected readonly selectedListVote: Signal<Vote | null> = this.initSelectedListVote();
-  protected readonly totalCount: Signal<number> = this.initTotalCount();
 
-  // === Protected Methods ===
+  public constructor() {
+    this.initTotalCountSubscription();
+  }
+
+  // -- Protected Methods --
   protected onViewVote(voteId: string): void {
     this.selectedVoteId.set(voteId);
     this.resultsDrawerVisible.set(true);
@@ -62,8 +65,8 @@ export class CommitteeVotesListComponent {
     this.loading.set(true);
     this.pageTokens = [];
     this.currentFirst.set(0);
-    this.fetch$.next();
-    this.refresh$.next();
+    this.fetchTrigger.update((v) => v + 1);
+    this.refreshTrigger.update((v) => v + 1);
   }
 
   protected onPageChange(event: { first: number; rows: number }): void {
@@ -71,12 +74,12 @@ export class CommitteeVotesListComponent {
       this.pageTokens = [];
       this.rowsPerPage.set(event.rows);
       this.currentFirst.set(0);
-      this.fetch$.next();
+      this.fetchTrigger.update((v) => v + 1);
       return;
     }
 
     this.currentFirst.set(event.first);
-    this.fetch$.next();
+    this.fetchTrigger.update((v) => v + 1);
   }
 
   protected onFiltersChange(state: VoteFilterState): void {
@@ -85,7 +88,7 @@ export class CommitteeVotesListComponent {
     this.filters.set(state);
   }
 
-  // === Private Helpers ===
+  // -- Private Helpers --
   private buildFilters(): string[] {
     const queryFilters: string[] = [`committee_name:${this.committeeName()}`];
     const { status } = this.filters();
@@ -95,38 +98,35 @@ export class CommitteeVotesListComponent {
     return queryFilters;
   }
 
-  // === Private Initializers ===
-  private initTotalCount(): Signal<number> {
+  // -- Private Initializers --
+  private initTotalCountSubscription(): void {
     const filters$ = toObservable(this.filters);
     const projectUid$ = toObservable(this.projectUid);
     const committeeName$ = toObservable(this.committeeName);
+    const refresh$ = toObservable(this.refreshTrigger);
 
-    return toSignal(
-      combineLatest([projectUid$, committeeName$, filters$, this.refresh$]).pipe(
+    combineLatest([projectUid$, committeeName$, filters$, refresh$])
+      .pipe(
         switchMap(([projectUid]) => {
           if (!projectUid) return of(0);
           const searchName = this.filters().search;
           const queryFilters = this.buildFilters();
-          return this.voteService.getVotesCountByProject(projectUid, searchName || undefined, queryFilters).pipe(
-            tap((count) => this.totalRecords.set(count)),
-            catchError(() => {
-              this.totalRecords.set(0);
-              return of(0);
-            })
-          );
-        })
-      ),
-      { initialValue: 0 }
-    );
+          return this.voteService.getVotesCountByProject(projectUid, searchName || undefined, queryFilters).pipe(catchError(() => of(0)));
+        }),
+        tap((count) => this.totalRecords.set(count)),
+        takeUntilDestroyed()
+      )
+      .subscribe();
   }
 
   private initVotes(): Signal<Vote[]> {
     const filters$ = toObservable(this.filters);
     const projectUid$ = toObservable(this.projectUid);
     const committeeName$ = toObservable(this.committeeName);
+    const fetch$ = toObservable(this.fetchTrigger);
 
     return toSignal(
-      combineLatest([projectUid$, committeeName$, filters$, this.fetch$]).pipe(
+      combineLatest([projectUid$, committeeName$, filters$, fetch$]).pipe(
         tap(() => this.loading.set(true)),
         switchMap(([projectUid]) => {
           if (!projectUid) {
