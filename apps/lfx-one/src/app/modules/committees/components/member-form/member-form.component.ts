@@ -33,8 +33,8 @@ export class MemberFormComponent {
   // Loading state for form submissions
   public submitting = signal<boolean>(false);
 
-  // Create form group internally
-  public form = signal<FormGroup>(this.createMemberFormGroup());
+  // Form group created in constructor after committee is assigned from config
+  public form!: ReturnType<typeof signal<FormGroup>>;
   public loading = signal<boolean>(false);
 
   // Config-based properties (static, set once on dialog open)
@@ -57,6 +57,9 @@ export class MemberFormComponent {
     this.member = this.config.data?.member;
     this.committee = this.config.data?.committee;
     this.wizardMode = this.config.data?.wizardMode || false;
+
+    // Create form group after committee is assigned so enable_voting validators work
+    this.form = signal<FormGroup>(this.createMemberFormGroup());
 
     // Initialize form with data when component is created
     this.initializeForm();

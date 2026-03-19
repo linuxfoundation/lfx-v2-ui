@@ -89,9 +89,11 @@ export class CommitteeMembersComponent implements OnInit {
     this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
     this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
     // Members visible when visibility is not 'hidden' OR user has management access
+    // Default to hidden while committee is loading (fail closed for privacy)
     this.isMembersVisible = computed(() => {
-      const visibility = this.committee()?.member_visibility;
-      return visibility !== 'hidden' || this.canManageMembers();
+      const committee = this.committee();
+      if (!committee) return false;
+      return committee.member_visibility !== 'hidden' || this.canManageMembers();
     });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
