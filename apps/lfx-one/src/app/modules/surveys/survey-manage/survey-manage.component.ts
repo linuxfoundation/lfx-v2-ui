@@ -393,7 +393,9 @@ Thank you,
     const uid = params['committee_uid'];
     const name = params['committee_name'];
     if (uid && name) {
-      this.form().get('committees')?.setValue([{ uid, name }]);
+      this.form()
+        .get('committees')
+        ?.setValue([{ uid, name, allowed_voting_statuses: [] }]);
     }
   }
 
