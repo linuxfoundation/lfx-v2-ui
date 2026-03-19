@@ -34,109 +34,124 @@ export class MainLayoutComponent {
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
 
   // Feature flags
-  private readonly showProjectsInSidebar = this.featureFlagService.getBooleanFlag('sidebar-projects', false);
   private readonly enableProfileClick = this.featureFlagService.getBooleanFlag('sidebar-profile', false);
   protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
 
-  // Governance section items - Votes, Surveys, Permissions only
-  private readonly governanceSectionItems: SidebarMenuItem[] = [
-    {
-      label: VOTE_LABEL.plural,
-      icon: 'fa-light fa-check-to-slot',
-      routerLink: '/votes',
-    },
-    {
-      label: SURVEY_LABEL.plural,
-      icon: 'fa-light fa-clipboard-list',
-      routerLink: '/surveys',
-    },
-    {
-      label: 'Permissions',
-      icon: 'fa-light fa-shield',
-      routerLink: '/settings',
-    },
-  ];
-
-  // Computed sidebar items based on feature flags and persona
-  // Order: Overview, Meetings, Mailing Lists, Groups, Projects, My Activity, Insights, Governance
+  // Computed sidebar items — three-lens nav structure (v1)
+  // Me: personal activity context
+  // Foundation: project/community context
+  // Organization: employer/org context (placeholder)
   protected readonly sidebarItems = computed(() => {
     const items: SidebarMenuItem[] = [];
     const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
 
-    // Overview (Dashboard)
+    // Me Lens
     items.push({
-      label: 'Overview',
-      icon: 'fa-light fa-grid-2',
-      routerLink: '/',
+      label: 'Me',
+      isSection: true,
+      expanded: true,
+      items: [
+        {
+          label: 'Overview',
+          icon: 'fa-light fa-grid-2',
+          routerLink: '/',
+        },
+        {
+          label: 'Meetings',
+          icon: 'fa-light fa-calendar',
+          routerLink: '/meetings',
+        },
+        {
+          label: COMMITTEE_LABEL.plural,
+          icon: 'fa-light fa-users',
+          routerLink: '/groups',
+        },
+        {
+          label: MY_ACTIVITY_LABEL.singular,
+          icon: 'fa-light fa-clipboard-list',
+          routerLink: '/my-activity',
+        },
+        {
+          label: 'My Profile',
+          icon: 'fa-light fa-user',
+          routerLink: '/profile',
+          disabled: !this.enableProfileClick(),
+        },
+      ],
     });
 
-    // Meetings
-    items.push({
-      label: 'Meetings',
-      icon: 'fa-light fa-calendar',
-      routerLink: '/meetings',
-    });
+    // Foundation Lens
+    const foundationItems: SidebarMenuItem[] = [
+      {
+        label: 'Overview',
+        icon: 'fa-light fa-grid-2',
+        routerLink: '/',
+      },
+      {
+        label: 'Meetings',
+        icon: 'fa-light fa-calendar',
+        routerLink: '/meetings',
+      },
+      {
+        label: MAILING_LIST_LABEL.plural,
+        icon: 'fa-light fa-envelope',
+        routerLink: '/mailing-lists',
+      },
+      {
+        label: COMMITTEE_LABEL.plural,
+        icon: 'fa-light fa-users',
+        routerLink: '/groups',
+      },
+      {
+        label: 'Insights',
+        icon: 'fa-light fa-chart-column',
+        url: 'https://insights.linuxfoundation.org/',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      },
+    ];
 
-    // Mailing Lists
-    items.push({
-      label: MAILING_LIST_LABEL.plural,
-      icon: 'fa-light fa-envelope',
-      routerLink: '/mailing-lists',
-    });
-
-    // Groups
-    items.push({
-      label: COMMITTEE_LABEL.plural,
-      icon: 'fa-light fa-users',
-      routerLink: '/groups',
-    });
-
-    // Projects (conditionally shown based on feature flag)
-    if (this.showProjectsInSidebar()) {
-      items.push({
-        label: 'Projects',
-        icon: 'fa-light fa-folder-open',
-        routerLink: '/projects',
-      });
-    }
-
-    // My Activity
-    items.push({
-      label: MY_ACTIVITY_LABEL.singular,
-      icon: 'fa-light fa-clipboard-list',
-      routerLink: '/my-activity',
-    });
-
-    // Insights URL
-    items.push({
-      label: 'Insights',
-      icon: 'fa-light fa-chart-column',
-      url: 'https://insights.linuxfoundation.org/',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    });
-
-    // Governance section (Votes, Surveys, Permissions) - only for non-board-members
+    // Governance items — only for non-board-member personas
     if (!isTlfOnlyPersona) {
-      items.push({
-        label: 'Governance',
-        isSection: true,
-        expanded: true,
-        items: this.governanceSectionItems,
-      });
+      foundationItems.push(
+        {
+          label: VOTE_LABEL.plural,
+          icon: 'fa-light fa-check-to-slot',
+          routerLink: '/votes',
+        },
+        {
+          label: SURVEY_LABEL.plural,
+          icon: 'fa-light fa-clipboard-list',
+          routerLink: '/surveys',
+        },
+        {
+          label: 'Permissions',
+          icon: 'fa-light fa-shield',
+          routerLink: '/settings',
+        }
+      );
     }
+
+    items.push({
+      label: 'Foundation',
+      isSection: true,
+      expanded: true,
+      items: foundationItems,
+    });
+
+    // Organization Lens (placeholder — collapsed by default)
+    items.push({
+      label: 'Organization',
+      isSection: true,
+      expanded: false,
+      items: [],
+    });
 
     return items;
   });
 
-  // Sidebar footer items - matching React NavigationSidebar design
+  // Sidebar footer items — Profile moved into Me section
   protected readonly sidebarFooterItems = computed(() => [
-    {
-      label: 'Profile',
-      icon: 'fa-light fa-user',
-      routerLink: '/profile',
-      disabled: !this.enableProfileClick(), // Disable when feature flag is false
-    },
     {
       label: 'Support',
       icon: 'fa-light fa-question-circle',
