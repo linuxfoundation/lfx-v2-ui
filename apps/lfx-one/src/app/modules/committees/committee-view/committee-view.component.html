@@ -157,6 +157,9 @@
       <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))" scrollable data-testid="committee-view-tabs">
         <p-tablist>
           <p-tab value="overview"><i class="fa-light fa-gauge mr-2"></i>Overview</p-tab>
+          @if (isMembersTabVisible()) {
+            <p-tab value="members"><i class="fa-light fa-users mr-2"></i>Members</p-tab>
+          }
           <p-tab value="meetings"><i class="fa-light fa-calendar mr-2"></i>Meetings</p-tab>
           <p-tab value="documents"><i class="fa-light fa-folder-open mr-2"></i>Documents</p-tab>
           @if (canManageConfigurations()) {
@@ -942,6 +945,24 @@
               </div>
             </div>
           </p-tabpanel>
+
+          <!-- Members Tab -->
+          @if (isMembersTabVisible()) {
+            <p-tabpanel value="members">
+              <div class="flex flex-col gap-6 pt-4">
+                <!-- Members -->
+                @if (committee()?.uid) {
+                  <lfx-committee-members
+                    [committee]="committee()"
+                    [members]="members()"
+                    [membersLoading]="membersLoading()"
+                    [groupBehavioralClass]="behavioralClass()"
+                    (refresh)="refreshCommittee()">
+                  </lfx-committee-members>
+                }
+              </div>
+            </p-tabpanel>
+          }
 
           <!-- Meetings Tab -->
           <p-tabpanel value="meetings">
