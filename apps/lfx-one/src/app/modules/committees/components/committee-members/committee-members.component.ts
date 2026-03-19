@@ -130,10 +130,7 @@ export class CommitteeMembersComponent implements OnInit {
       },
     });
 
-    // dialogService.open should always return a ref; guard against null to satisfy strict types
-    if (!dialogRef) return;
-
-    dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
       if (result) {
         this.refreshMembers();
       }
@@ -159,10 +156,7 @@ export class CommitteeMembersComponent implements OnInit {
         },
       });
 
-      // dialogService.open should always return a ref; guard against null to satisfy strict types
-      if (!dialogRef) return;
-
-      dialogRef.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
         if (result) {
           this.refreshMembers();
         }

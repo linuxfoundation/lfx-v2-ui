@@ -132,9 +132,9 @@ export interface MemberFormValue {
   is_individual: boolean;
   organization: string;
   organization_url: string;
-  role: CommitteeMemberRole;
-  voting_status: CommitteeMemberVotingStatus;
-  appointed_by: CommitteeMemberAppointedBy;
+  role: CommitteeMemberRole | '';
+  voting_status: CommitteeMemberVotingStatus | '';
+  appointed_by: CommitteeMemberAppointedBy | '';
   role_start: Date | null;
   role_end: Date | null;
   voting_status_start: Date | null;

@@ -45,8 +45,8 @@ export class CommitteeService {
   private accessCheckService: AccessCheckService;
   private etagService: ETagService;
   private microserviceProxy: MicroserviceProxyService;
-  // Cached lazy-loaded MeetingService to avoid creating a new instance per request
-  private cachedMeetingService?: MeetingServiceType;
+  // Promise-based lazy initializer to avoid concurrent imports creating duplicate instances
+  private meetingServicePromise?: Promise<MeetingServiceType>;
 
   public constructor() {
     this.accessCheckService = new AccessCheckService();
@@ -451,6 +451,14 @@ export class CommitteeService {
         page_size: 100,
       });
 
+      if (voteResources.length >= 100) {
+        logger.warning(req, 'get_committee_votes', 'Vote results may be truncated — page_size limit reached', {
+          committee_uid: committeeId,
+          project_uid: projectUid,
+          fetched_count: voteResources.length,
+        });
+      }
+
       return voteResources
         .filter((r) => r.data.committee_uid === committeeId)
         .map((r) => {
@@ -551,12 +559,12 @@ export class CommitteeService {
         committee_uid: committeeId,
       });
 
-      // Lazy import to avoid circular dependency — instance is cached
-      if (!this.cachedMeetingService) {
-        const { MeetingService } = await import('./meeting.service');
-        this.cachedMeetingService = new MeetingService();
+      // Lazy import to avoid circular dependency — Promise ensures only one instance is created
+      if (!this.meetingServicePromise) {
+        this.meetingServicePromise = import('./meeting.service').then((m) => new m.MeetingService());
       }
-      const result = await this.cachedMeetingService.getMeetings(req, params);
+      const meetingService = await this.meetingServicePromise;
+      const result = await meetingService.getMeetings(req, params);
 
       logger.debug(req, 'get_committee_meetings', 'Fetched committee meetings', {
         committee_uid: committeeId,
