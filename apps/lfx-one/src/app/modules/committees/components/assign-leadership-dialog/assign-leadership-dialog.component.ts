@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CalendarComponent } from '@components/calendar/calendar.component';
@@ -36,7 +36,7 @@ export class AssignLeadershipDialogComponent {
   public submitting = signal(false);
   public removing = signal(false);
 
-  public memberOptions: Signal<{ label: string; value: string }[]>;
+  public memberOptions: { label: string; value: string }[];
 
   public constructor() {
     this.role = this.config.data?.role ?? 'chair';
@@ -157,12 +157,10 @@ export class AssignLeadershipDialogComponent {
     });
   }
 
-  private initializeMemberOptions(): Signal<{ label: string; value: string }[]> {
-    return computed(() =>
-      this.members.map((m) => ({
-        label: `${m.first_name} ${m.last_name}${m.organization?.name ? ` — ${m.organization.name}` : ''}`,
-        value: m.uid,
-      }))
-    );
+  private initializeMemberOptions(): { label: string; value: string }[] {
+    return this.members.map((m) => ({
+      label: `${m.first_name} ${m.last_name}${m.organization?.name ? ` — ${m.organization.name}` : ''}`,
+      value: m.uid,
+    }));
   }
 }

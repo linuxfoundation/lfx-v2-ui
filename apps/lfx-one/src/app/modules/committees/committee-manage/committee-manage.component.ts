@@ -208,13 +208,13 @@ export class CommitteeManageComponent {
       // Update existing committee
       this.committeeService.updateCommittee(this.committeeId()!, committeeData).subscribe({
         next: () => this.handleCommitteeSuccess('updated'),
-        error: (error) => this.handleCommitteeError(error, 'update'),
+        error: () => this.handleCommitteeError('update'),
       });
     } else {
       // Create new committee
       this.committeeService.createCommittee(committeeData).subscribe({
         next: (committee) => this.handleCreateSuccess(committee),
-        error: (error) => this.handleCommitteeError(error, 'create'),
+        error: () => this.handleCommitteeError('create'),
       });
     }
   }
@@ -453,7 +453,7 @@ export class CommitteeManageComponent {
     }
   }
 
-  private handleCommitteeError(_: unknown, operation: 'create' | 'update'): void {
+  private handleCommitteeError(operation: 'create' | 'update'): void {
     this.submitting.set(false);
 
     this.messageService.add({
