@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { TitleCasePipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, signal, Signal, WritableSignal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, input, OnInit, output, signal, Signal } from '@angular/core';
 import { FullNamePipe } from '@pipes/full-name.pipe';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -60,15 +61,22 @@ export class CommitteeMembersComponent implements OnInit {
 
   public readonly refresh = output<void>();
 
-  // Class variables with types
-  public selectedMember: WritableSignal<CommitteeMember | null>;
-  public isDeleting: WritableSignal<boolean>;
+  // Simple writable signals
+  public selectedMember = signal<CommitteeMember | null>(null);
+  public isDeleting = signal<boolean>(false);
   public memberActionMenuItems: MenuItem[] = [];
   public committeeLabel = COMMITTEE_LABEL;
-  public isBoardMember: Signal<boolean>;
-  public isMaintainer: Signal<boolean>;
-  public canManageMembers: Signal<boolean>;
-  public isMembersVisible: Signal<boolean>;
+
+  // Computed signals — inline per component-organization.md
+  public readonly isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
+  public readonly isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
+  public readonly canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
+  // Default to hidden while committee is loading (fail closed for privacy)
+  public readonly isMembersVisible = computed(() => {
+    const committee = this.committee();
+    if (!committee) return false;
+    return committee.member_visibility !== 'hidden' || this.canManageMembers();
+  });
 
   // Filter-related variables
   public filterForm: FormGroup;
@@ -82,20 +90,6 @@ export class CommitteeMembersComponent implements OnInit {
   public organizationOptions: Signal<{ label: string; value: string | null }[]>;
 
   public constructor() {
-    // Initialize all class variables
-    this.selectedMember = signal<CommitteeMember | null>(null);
-    this.isDeleting = signal<boolean>(false);
-    // Initialize permission signals
-    this.isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
-    this.isMaintainer = computed(() => this.personaService.currentPersona() === 'maintainer');
-    this.canManageMembers = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
-    // Members visible when visibility is not 'hidden' OR user has management access
-    // Default to hidden while committee is loading (fail closed for privacy)
-    this.isMembersVisible = computed(() => {
-      const committee = this.committee();
-      if (!committee) return false;
-      return committee.member_visibility !== 'hidden' || this.canManageMembers();
-    });
     // Initialize filter form
     this.filterForm = this.initializeFilterForm();
     this.searchTerm = this.initializeSearchTerm();
@@ -210,8 +204,9 @@ export class CommitteeMembersComponent implements OnInit {
         // Refresh members list by re-fetching
         this.refreshMembers();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.isDeleting.set(false);
+        console.error('Failed to delete member:', err);
 
         this.messageService.add({
           severity: 'error',
