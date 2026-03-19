@@ -49,7 +49,7 @@ import { MeetingService } from '@services/meeting.service';
 import { PersonaService } from '@services/persona.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
@@ -284,9 +284,9 @@ export class CommitteeViewComponent {
         members: this.members(),
         currentLeader: currentLeader ?? null,
       },
-    }) as DynamicDialogRef;
+    });
 
-    dialogRef.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: { role: LeadershipRole; leadership: CommitteeLeadership | null } | undefined) => {
       if (result) {
         const current = this.committee();
         if (current) {
@@ -297,9 +297,22 @@ export class CommitteeViewComponent {
             updated.co_chair = result.leadership;
           }
           this.committeeSignal.set(updated);
+          this.refreshMembers(current.uid);
         }
       }
     });
+  }
+
+  private refreshMembers(committeeId: string): void {
+    this.committeeService
+      .getCommitteeMembers(committeeId)
+      .pipe(
+        take(1),
+        catchError(() => of([]))
+      )
+      .subscribe((members) => {
+        this.members.set(Array.isArray(members) ? members : []);
+      });
   }
 
   // -- Private initializer functions --
