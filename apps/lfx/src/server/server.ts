@@ -5,7 +5,6 @@ import { APP_BASE_HREF } from '@angular/common';
 import { REQUEST } from '@angular/core';
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import { AuthContext, User } from '@lfx-one/shared/interfaces';
-import compression from 'compression';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { attemptSilentLogin, auth, ConfigParams } from 'express-openid-connect';
@@ -39,6 +38,8 @@ const app = express();
  * - 1KB threshold to avoid compressing small responses
  * - Uses default filter for text-based content types
  */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require('compression');
 app.use(
   compression({
     level: 6, // Balanced compression level (1=fastest, 9=best compression)
