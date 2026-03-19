@@ -127,8 +127,10 @@ async function latestStatus(deploymentId) {
 
 async function checkUrl(url) {
   try {
-    const res = await fetch(url, { method: 'HEAD' });
-    return (res.ok || (res.status >= 300 && res.status < 400)) ? 'success' : null;
+    // no-cors + manual redirect: resolves on any HTTP response (incl. 302),
+    // throws only if the domain itself fails to resolve.
+    await fetch(url, { method: 'HEAD', mode: 'no-cors', redirect: 'manual' });
+    return 'success';
   } catch {
     return null;
   }
