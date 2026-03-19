@@ -54,15 +54,14 @@ export class MeetingCommitteeManagerComponent {
   public readonly votingStatusOptions = VOTING_STATUSES;
   public readonly committeeLabel = COMMITTEE_LABEL;
 
-  // Validated locked state — only true when lockedCommitteeUid exists in available options
-  public validatedLockedUid: Signal<string | null> = computed(() => {
+  // Validated locked state — only true when lockedCommitteeUid exists in loaded options
+  public isLocked: Signal<boolean> = computed(() => {
     const uid = this.lockedCommitteeUid();
-    if (!uid) return null;
+    if (!uid) return false;
     const options = this.committeeOptions();
-    if (options.length === 0) return uid; // Options not loaded yet — assume valid
-    return options.some((c) => c.uid === uid) ? uid : null;
+    if (options.length === 0) return true; // Options not loaded yet — assume locked
+    return options.some((c) => c.uid === uid);
   });
-  public isLocked: Signal<boolean> = computed(() => !!this.validatedLockedUid());
 
   // Computed signals
   public hasVotingEnabledCommittee = computed(() => {
@@ -120,21 +119,38 @@ export class MeetingCommitteeManagerComponent {
     // Lock/unlock dropdown based on validated locked UID.
     // Selection is handled here only — parent just sets groupContext for the banner.
     effect(() => {
-      const validUid = this.validatedLockedUid();
+      const lockedUid = this.lockedCommitteeUid();
       const committeesControl = this.committeeForm.get('committees');
       if (!committeesControl) return;
 
-      if (validUid) {
-        const currentIds = this.selectedCommitteeIds();
-        if (!currentIds.includes(validUid)) {
-          this.selectedCommitteeIds.set([...currentIds, validUid]);
-          committeesControl.setValue([...currentIds, validUid]);
-        }
-        committeesControl.disable({ emitEvent: false });
-      } else if (!this.lockedCommitteeUid()) {
-        // Only re-enable if there's no locked UID at all (not just invalid/loading)
+      if (!lockedUid) {
+        // No lock requested — ensure control is editable
         committeesControl.enable({ emitEvent: false });
+        return;
       }
+
+      // Lock requested — wait for options to load before deciding
+      const options = this.committeeOptions();
+      if (options.length === 0) {
+        // Options not loaded yet — keep control disabled to prevent brief editable flash
+        committeesControl.disable({ emitEvent: false });
+        return;
+      }
+
+      // Options loaded — validate the locked UID exists
+      if (!options.some((c) => c.uid === lockedUid)) {
+        // Invalid UID — enable control so user can select manually
+        committeesControl.enable({ emitEvent: false });
+        return;
+      }
+
+      // Valid lock — pre-select and disable
+      const currentIds = this.selectedCommitteeIds();
+      if (!currentIds.includes(lockedUid)) {
+        this.selectedCommitteeIds.set([...currentIds, lockedUid]);
+        committeesControl.setValue([...currentIds, lockedUid]);
+      }
+      committeesControl.disable({ emitEvent: false });
     });
 
     // Emit committee members whenever they change
