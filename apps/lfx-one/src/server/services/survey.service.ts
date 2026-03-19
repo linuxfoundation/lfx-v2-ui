@@ -97,16 +97,16 @@ export class SurveyService {
       committee_uid: committeeId,
     });
 
-    // Note: query params are passed through — downstream service validates/sanitizes
+    // Use tags parameter for server-side filtering — committee_uid is not a supported query param
     const params = {
       ...query,
-      committee_uid: committeeId,
       type: 'survey',
+      tags: `committee_uid:${committeeId}`,
     };
 
     const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Survey>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
 
-    const surveys: Survey[] = (resources ?? []).map((resource) => resource.data).filter((s) => s?.committees?.some((c) => c.committee_uid === committeeId));
+    const surveys: Survey[] = (resources ?? []).map((resource) => resource.data);
 
     logger.debug(req, 'get_committee_surveys', 'Completed committee survey fetch', {
       committee_uid: committeeId,
