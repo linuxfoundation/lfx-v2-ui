@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="300">
+  <title>LFX v2 Branch Deployments</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      background: #f6f8fa;
+      color: #24292f;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    h1 { font-size: 20px; }
+    .refresh-btn {
+      font-size: 12px;
+      color: #0969da;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .refresh-btn:hover { text-decoration: underline; }
+    .subtitle { color: #57606a; margin-bottom: 24px; }
+
+    .section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #d0d7de;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f6f8fa;
+      border-bottom: 1px solid #d0d7de;
+      font-weight: 600;
+      color: #57606a;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { padding: 10px 14px; border-bottom: 1px solid #d0d7de; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f6f8fa; }
+
+    .env-name { font-weight: 600; font-family: monospace; font-size: 13px; }
+    .branch-ref, .sha { font-family: monospace; font-size: 12px; color: #57606a; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge::before { content: "●"; font-size: 10px; }
+    .badge-success  { background: #dafbe1; color: #1a7f37; }
+    .badge-failure  { background: #ffebe9; color: #cf222e; }
+    .badge-pending  { background: #fff8c5; color: #9a6700; }
+    .badge-inactive { background: #f6f8fa; color: #57606a; }
+
+    .link { color: #0969da; text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+
+    .actions { display: flex; gap: 10px; }
+    .time { color: #57606a; font-size: 12px; }
+
+    .empty   { padding: 24px; text-align: center; color: #57606a; background: white; border: 1px solid #d0d7de; border-radius: 6px; }
+    .error   { padding: 12px 16px; background: #ffebe9; border: 1px solid #ff818266; border-radius: 6px; color: #cf222e; margin-bottom: 16px; }
+    .loading { padding: 24px; text-align: center; color: #57606a; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>LFX v2 Branch Deployments</h1>
+  <button class="refresh-btn" onclick="load()">↻ Refresh</button>
+</header>
+<p class="subtitle">Active preview deployments for <code>lfx-v2-ui</code></p>
+
+<div id="error"></div>
+<div id="content"><p class="loading">Loading…</p></div>
+
+<script>
+const OWNER = 'linuxfoundation';
+const REPO  = 'lfx-v2-ui';
+
+async function ghFetch(path) {
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: { 'Accept': 'application/vnd.github+json' }
+  });
+  if (!res.ok) throw new Error(`GitHub API ${res.status}: ${res.statusText}`);
+  return res.json();
+}
+
+async function latestStatus(deploymentId) {
+  const statuses = await ghFetch(
+    `/repos/${OWNER}/${REPO}/deployments/${deploymentId}/statuses?per_page=1`
+  );
+  return statuses[0] ?? null;
+}
+
+function relativeTime(iso) {
+  const mins = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if (mins < 1)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function badgeClass(state) {
+  return { success: 'badge-success', failure: 'badge-failure',
+           error: 'badge-failure',   pending: 'badge-pending',
+           in_progress: 'badge-pending' }[state] ?? 'badge-inactive';
+}
+
+function renderTable(rows) {
+  if (!rows.length) return `<p class="empty">No active deployments.</p>`;
+  const trs = rows.map(d => {
+    const s      = d.latestStatus;
+    const state  = s?.state ?? 'unknown';
+    const envUrl = s?.environment_url ?? '';
+    const logUrl = s?.log_url ?? '';
+
+    const nameCell = envUrl
+      ? `<a class="link env-name" href="${envUrl}" target="_blank">${d.environment}</a>`
+      : `<span class="env-name">${d.environment}</span>`;
+
+    const linksCell = [
+      envUrl && `<a class="link" href="${envUrl}" target="_blank" style="font-size:12px">Open ↗</a>`,
+      logUrl && `<a class="link" href="${logUrl}" target="_blank" style="font-size:12px">ArgoCD ↗</a>`,
+    ].filter(Boolean).join('');
+
+    return `<tr>
+      <td>${nameCell}</td>
+      <td><span class="branch-ref">${d.ref}</span></td>
+      <td><span class="sha">${d.sha.slice(0, 7)}</span></td>
+      <td><span class="badge ${badgeClass(state)}">${state}</span></td>
+      <td><span class="time" title="${d.updated_at}">${relativeTime(d.updated_at)}</span></td>
+      <td><div class="actions">${linksCell}</div></td>
+    </tr>`;
+  }).join('');
+
+  return `<table>
+    <thead><tr>
+      <th>Environment</th><th>Branch / Ref</th><th>SHA</th>
+      <th>Status</th><th>Last Updated</th><th>Links</th>
+    </tr></thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+}
+
+async function load() {
+  document.getElementById('error').innerHTML = '';
+  document.getElementById('content').innerHTML = '<p class="loading">Loading…</p>';
+
+  try {
+    const all = await ghFetch(
+      `/repos/${OWNER}/${REPO}/deployments?per_page=100`
+    );
+
+    // Filter to our environments; dedupe by name, keeping the most recent deployment
+    function collect(pattern) {
+      const seen = new Map();
+      for (const d of all) {
+        if (pattern.test(d.environment) && !seen.has(d.environment))
+          seen.set(d.environment, d);
+      }
+      return [...seen.values()];
+    }
+
+    const prs   = collect(/^ui-pr-\d+$/);
+    const feats = collect(/^ui-feat-/);
+
+    async function withStatus(list) {
+      return Promise.all(
+        list.map(async d => ({ ...d, latestStatus: await latestStatus(d.id) }))
+      );
+    }
+
+    const [prRows, featRows] = await Promise.all([
+      withStatus(prs),
+      withStatus(feats),
+    ]);
+
+    const byTime = (a, b) => new Date(b.updated_at) - new Date(a.updated_at);
+    prRows.sort(byTime);
+    featRows.sort(byTime);
+
+    document.getElementById('content').innerHTML = `
+      <div class="section">
+        <div class="section-title">Pull Request Previews (${prRows.length})</div>
+        ${renderTable(prRows)}
+      </div>
+      <div class="section">
+        <div class="section-title">Feature Branch Previews (${featRows.length})</div>
+        ${renderTable(featRows)}
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('error').innerHTML = `<div class="error">${e.message}</div>`;
+    document.getElementById('content').innerHTML = '';
+  }
+}
+
+load();
+</script>
+</body>
+</html>
