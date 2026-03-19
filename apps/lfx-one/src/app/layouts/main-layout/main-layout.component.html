@@ -11,7 +11,7 @@
     <!-- Lens Rail -->
     <div class="flex flex-col bg-blue-800 w-20 h-full items-center py-5 gap-2 flex-shrink-0">
       <!-- LFX Logo mark (white) -->
-      <div class="flex items-center justify-center w-14 mb-2">
+      <div class="flex items-center justify-center w-9 h-9">
         <a [routerLink]="['/']">
           <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="white"/>
@@ -22,7 +22,7 @@
 
       <!-- Me Lens -->
       <button type="button" (click)="setActiveLens('me')"
-        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        class="rail-btn flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
         [ngClass]="activeLens() === 'me' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
         data-tooltip="Me">
         <i class="fa-solid fa-user text-xl"></i>
@@ -30,7 +30,7 @@
 
       <!-- Projects Lens -->
       <button type="button" (click)="setActiveLens('foundation')"
-        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        class="rail-btn flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
         [ngClass]="activeLens() === 'foundation' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
         data-tooltip="Projects">
         <i class="fa-solid fa-laptop-code text-xl"></i>
@@ -38,7 +38,7 @@
 
       <!-- Organization Lens -->
       <button type="button" (click)="setActiveLens('organization')"
-        class="rail-btn flex items-center justify-center w-14 h-14 rounded-lg transition-colors"
+        class="rail-btn flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
         [ngClass]="activeLens() === 'organization' ? 'bg-white/20 text-white' : 'text-blue-200 hover:text-white hover:bg-white/10'"
         data-tooltip="Organization">
         <i class="fa-solid fa-building text-xl"></i>
@@ -49,16 +49,16 @@
 
       <!-- Support -->
       <a [href]="supportUrl" target="_blank" rel="noopener noreferrer"
-        class="rail-btn flex items-center justify-center w-14 h-12 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
+        class="rail-btn flex items-center justify-center w-9 h-9 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
         data-tooltip="Support">
-        <i class="fa-solid fa-circle-question text-xl"></i>
+        <i class="fa-light fa-circle-question text-xl"></i>
       </a>
 
       <!-- Log out -->
       <a href="/logout"
-        class="rail-btn flex items-center justify-center w-14 h-12 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
+        class="rail-btn flex items-center justify-center w-9 h-9 rounded-lg transition-colors text-blue-200 hover:text-white hover:bg-white/10"
         data-tooltip="Log out">
-        <i class="fa-solid fa-right-from-bracket text-xl"></i>
+        <i class="fa-light fa-right-from-bracket text-xl"></i>
       </a>
     </div>
 
