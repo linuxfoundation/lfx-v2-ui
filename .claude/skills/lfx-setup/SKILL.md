@@ -71,7 +71,7 @@ Validate critical vars:
 
 ```bash
 echo "=== apps/lfx Env Var Check ==="
-for key in AUTH0_CLIENT_ID AUTH0_CLIENT_SECRET AUTH0_ISSUER_BASE_URL AUTH0_AUDIENCE AUTH0_SECRET BASE_URL LFX_V2_SERVICE; do
+for key in PCC_AUTH0_CLIENT_ID PCC_AUTH0_CLIENT_SECRET PCC_AUTH0_ISSUER_BASE_URL PCC_AUTH0_AUDIENCE PCC_AUTH0_SECRET PCC_BASE_URL LFX_V2_SERVICE; do
   if grep -qE "^${key}=.+" apps/lfx/.env 2>/dev/null; then
     echo "✓ $key"
   else
@@ -86,21 +86,70 @@ done
 yarn start --filter=lfx
 ```
 
-The app should be available at `http://localhost:4200` (or the port configured in `.env`).
+The app should be available at `http://localhost:4201` (or the port configured in `.env`).
 
 Verify:
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:4200
+curl -s -o /dev/null -w "%{http_code}" http://localhost:4201
 # Expected: 200 or 302 (redirect to Auth0 login)
 ```
 
 **If the server fails to start:**
 
-- Port in use → `lsof -i :4200` then `kill <PID>`
+- Port in use → `lsof -i :4201` then `kill <PID>`
 - Auth errors → Verify `.env` values from 1Password
 - Build errors → Run `yarn build --filter=lfx` to see detailed errors
 - Node version → Confirm Node v22+: `node --version`
+
+## Step 5: Figma MCP (for design system work)
+
+The Figma MCP server allows Claude Code to pull design specs directly from Figma. This is **required** for building design system components with `/lfx-design`.
+
+**Check if already configured:**
+
+```bash
+# Look for Figma MCP in Claude Code settings
+cat ~/.claude/plugins.json 2>/dev/null | grep -c figma || echo "0"
+```
+
+**If not configured**, install the official Figma plugin:
+
+```bash
+claude plugin install figma@claude-plugins-official
+```
+
+This will prompt the user to authenticate with their Figma account via OAuth. Follow the browser prompts to authorize access.
+
+**Verify it works:**
+
+After setup, the tool `mcp__plugin_figma_figma__get_design_context` should be available. If the user reports it's not working, check:
+
+- Token hasn't expired
+- Token has the correct scopes
+- Claude Code was restarted after adding the MCP
+
+## Step 6: Storybook (design system preview)
+
+Storybook provides a visual catalog of all design system components. Use it to preview and verify components in isolation.
+
+```bash
+# From repo root
+yarn storybook
+
+# Or from the app directory
+cd apps/lfx && yarn storybook
+```
+
+Storybook opens at `http://localhost:6006`. Components are listed alphabetically under **Components/** in the sidebar.
+
+**First run:** Storybook requires a Compodoc build for autodocs. If you see a missing `documentation.json` error:
+
+```bash
+cd apps/lfx
+npx compodoc -p tsconfig.json -e json -d .
+yarn storybook
+```
 
 ## Done
 
@@ -109,7 +158,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:4200
 SETUP COMPLETE ✓
 ═══════════════════════════════════════════
 App:      apps/lfx
-Running:  http://localhost:4200
+Running:  http://localhost:4201
 ═══════════════════════════════════════════
 ```
 

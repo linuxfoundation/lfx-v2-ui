@@ -1,0 +1,27 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<button
+  [type]="type()"
+  class="focus-visible:ring-info-500 inline-flex items-center justify-center rounded-full font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+  [class]="buttonClasses()"
+  [disabled]="isDisabled()"
+  (click)="onClick($event)"
+  data-testid="button-element">
+  <span class="inline-flex items-center justify-center" [class]="size() === 'sm' ? 'gap-1' : 'gap-1.5'" [class.opacity-50]="loading()">
+    @if (leftIcon()) {
+      <i [class]="'fa-light fa-' + leftIcon()" data-testid="button-left-icon"></i>
+    }
+    @if (!iconOnly()) {
+      <ng-content />
+    }
+    @if (rightIcon()) {
+      <i [class]="'fa-light fa-' + rightIcon()" data-testid="button-right-icon"></i>
+    }
+  </span>
+  @if (loading()) {
+    <span class="absolute">
+      <lfx-spinner size="sm" />
+    </span>
+  }
+</button>

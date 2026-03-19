@@ -63,6 +63,10 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*", "e2e/**", "playwright.config.ts"],
       "outputs": ["playwright-report/**", "test-results/**"],
       "cache": false
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

@@ -91,7 +91,7 @@ const extractDomainFromCookie = (cookie: string): string | null => {
     }
 
     // Check for suspicious cookie patterns
-    if (cookie.includes(';') && cookie.includes('=') && cookie.includes('domain=')) {
+    if (cookie.includes(';') && cookie.includes('=') && cookie.toLowerCase().includes('domain=')) {
       // Parse the cookie to extract domain
       const cookieParts = cookie.split(';');
       const domainPart = cookieParts.find((part) => part.trim().toLowerCase().startsWith('domain='));

@@ -1,0 +1,13 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<button
+  type="button"
+  class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap transition-colors"
+  [class]="itemClasses()"
+  data-testid="tab-item-button">
+  @if (icon()) {
+    <i class="fa-light" [class]="'fa-' + icon() + ' ' + iconClasses()" data-testid="tab-item-icon"></i>
+  }
+  <span [class]="textClasses()" data-testid="tab-item-label">{{ label() }}</span>
+</button>

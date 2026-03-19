@@ -5,61 +5,62 @@ globs: '*'
 
 # Available Skills
 
-This project has guided skills for `apps/lfx` (the primary app). **Proactively suggest the relevant skill** when a user's request matches one of these.
+This project has guided skills for `apps/lfx` (the primary app). **Always route through `/lfx` as the entry point** — it classifies intent and delegates to the right specialist skill.
 
 ---
 
-## Skills for `apps/lfx` (new app — primary focus)
+## Entry Point
 
-| Skill              | When to Suggest                                                                         |
-| ------------------ | --------------------------------------------------------------------------------------- |
-| `/lfx-setup`       | Getting started with `apps/lfx`, first-time setup, broken environment, install failures |
-| `/lfx-coordinator` | Add a feature, fix a bug, modify code, implement anything in `apps/lfx`                 |
-| `/lfx-design`      | Create a new base UI component, add a variant, work with Tailwind v4 design tokens      |
-| `/lfx-research`    | Validate an upstream API, explore what endpoints exist before building                  |
-| `/lfx-preflight`   | Before submitting a PR for `apps/lfx` — lint, build, license headers                    |
+| Skill  | When to Suggest                                                                            |
+| ------ | ------------------------------------------------------------------------------------------ |
+| `/lfx` | **Always** — any request related to `apps/lfx` development, research, setup, or validation |
 
-### Trigger Phrases (apps/lfx)
+**`/lfx` is the default entry point for ALL work.** It auto-detects what the user needs and routes to the right specialist skill. Users never need to know about the specialist skills below.
 
-**`/lfx-coordinator`** — any code change in `apps/lfx`:
+### Trigger Phrases
 
-- "Add a feature", "Create a component", "Build an endpoint"
-- "Fix this bug", "Modify the service", "Update the page"
-- Any feature request, bug fix, or code change in the new app
-
-**`/lfx-design`** — new base UI components:
-
-- "Create a button/input/card/modal/badge"
-- "Add a variant to the component"
-- "Build a design system component"
-- "Tailwind v4 component"
-
-**`/lfx-research`** — upstream API exploration before building:
-
-- "Does the upstream API support X?"
-- "What endpoints does the committee service have?"
-- "What fields are in the meeting response?"
-
-**`/lfx-preflight`** — after work in `apps/lfx`:
-
-- "Ready for PR", "Check my code", "Validate changes", "Lint and build"
+- Any code change: "Add a feature", "Fix this bug", "Build a component", "Implement this Figma URL"
+- Research: "What endpoints exist?", "How does X work?", "Does the API support Y?"
+- Validation: "Ready for PR", "Check my code", "Preflight"
+- Setup: "Set up my environment", "Install", "Getting started"
 
 ---
 
-## Skill Relationships (apps/lfx)
+## Specialist Skills (routed by `/lfx` — rarely invoked directly)
+
+| Skill                  | Purpose                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `/lfx-coordinator`     | Plans and delegates code changes — routes to builder skills                    |
+| `/lfx-design`          | Builds base UI components (buttons, inputs, cards) from Figma                  |
+| `/lfx-research`        | Read-only exploration — upstream API validation, codebase discovery            |
+| `/lfx-backend-builder` | Generates Express proxy endpoints, services, controllers, routes, shared types |
+| `/lfx-ui-builder`      | Generates Angular frontend components, services, pages                         |
+| `/lfx-preflight`       | Pre-PR validation — lint, build, license headers                               |
+| `/lfx-setup`           | Environment setup — prerequisites, install, env vars, dev server               |
+
+## Skill Hierarchy
 
 ```text
-/lfx-coordinator  ──delegates──▶  /lfx-research
-                                  /lfx-backend-builder
-                                  /lfx-ui-builder
-                                  /lfx-design
+/lfx (entry point — classifies intent, routes)
+  ├── /lfx-coordinator (plans + delegates code changes)
+  │     ├── /lfx-research    (read-only exploration)
+  │     ├── /lfx-design      (base UI components)
+  │     ├── /lfx-ui-builder  (feature components)
+  │     └── /lfx-backend-builder (Express proxy code)
+  ├── /lfx-research   (direct research without building)
+  ├── /lfx-preflight   (pre-PR validation)
+  └── /lfx-setup       (environment setup)
 ```
 
-The coordinator is the entry point for all feature work in `apps/lfx`. For anything spanning more than one layer, always use `/lfx-coordinator`.
+**Key rules:**
+
+- `/lfx` routes via Agent subagents — never inline Skill calls
+- `/lfx-coordinator` delegates via Agent subagents — never writes code itself
+- Builder skills (`/lfx-design`, `/lfx-ui-builder`, `/lfx-backend-builder`) are the only skills that write code
+- No skill should call Figma MCP tools inline — only `/lfx-design` calls them within its Agent subprocess
 
 ## For Cowork Sessions
 
-- Contributor describes a feature → suggest `/lfx-coordinator`
-- Setup questions → suggest `/lfx-setup`
-- After development work → remind to run `/lfx-preflight`
+- Contributor describes any task → suggest `/lfx`
+- After development work → remind to run `/lfx-preflight` (or let `/lfx` suggest it)
 - When a skill references architecture docs in `docs/`, read those docs before generating code

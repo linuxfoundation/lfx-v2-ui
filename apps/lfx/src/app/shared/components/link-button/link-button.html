@@ -1,0 +1,18 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<button
+  type="button"
+  class="focus-visible:ring-info-500 inline-flex items-center rounded-lg font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+  [class]="buttonClasses()"
+  [disabled]="disabled()"
+  (click)="onClick($event)"
+  data-testid="link-button-element">
+  @if (leftIcon()) {
+    <i [class]="'fa-light fa-' + leftIcon()" data-testid="link-button-left-icon"></i>
+  }
+  <ng-content />
+  @if (rightIcon()) {
+    <i [class]="'fa-light fa-' + rightIcon()" data-testid="link-button-right-icon"></i>
+  }
+</button>

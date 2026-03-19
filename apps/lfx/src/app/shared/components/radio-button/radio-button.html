@@ -1,0 +1,23 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<label class="inline-flex items-center gap-1.5" [class.cursor-not-allowed]="disabled()" [class.cursor-pointer]="!disabled()" data-testid="radio-button-label">
+  <input
+    type="radio"
+    class="peer sr-only"
+    [name]="name()"
+    [value]="value()"
+    [checked]="checked()"
+    [disabled]="disabled()"
+    (change)="onSelect()"
+    data-testid="radio-button-input" />
+  <span
+    class="inline-flex shrink-0 items-center justify-center rounded-full border transition-colors"
+    [class]="circleClasses()"
+    data-testid="radio-button-circle">
+    <span [class]="dotClasses()" [class.invisible]="!checked()" data-testid="radio-button-dot"></span>
+  </span>
+  @if (label()) {
+    <span [class]="labelClasses()" data-testid="radio-button-text">{{ label() }}</span>
+  }
+</label>

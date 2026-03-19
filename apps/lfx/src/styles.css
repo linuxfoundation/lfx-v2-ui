@@ -3,21 +3,122 @@
 
 @import 'tailwindcss';
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
+  /* ─── Brand Color Scale (based on #0068fa) ─── */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #0068fa;
+  --color-brand-600: #0052cc;
+  --color-brand-700: #003d99;
+  --color-brand-800: #002b6b;
+  --color-brand-900: #001a42;
+
+  /* ─── Neutral Color Scale (from Figma Coherence UI Kit) ─── */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cad5e2;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #62748e;
+  --color-neutral-600: #45556c;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* ─── Primary & Secondary ─── */
   --color-primary: #0068fa;
   --color-primary-dark: #0052cc;
   --color-secondary: #6b7280;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
+
+  /* ─── Canvas Hierarchy ─── */
+  --color-canvas: #ffffff;
+  --color-canvas-subtle: #f9fafb;
+  --color-canvas-overlay: rgba(0, 0, 0, 0.5);
+
+  /* ─── Surface Hierarchy ─── */
   --color-surface: #ffffff;
   --color-surface-secondary: #f9fafb;
+  --color-surface-hover: #f3f4f6;
+  --color-surface-active: #e5e7eb;
+
+  /* ─── Border Tokens ─── */
   --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-border-subtle: #f3f4f6;
+
+  /* ─── Text Tokens ─── */
   --color-text: #111827;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
+  --color-text-inverse: #ffffff;
+  --color-text-on-primary: #ffffff;
 
+  /* ─── Semantic: Success (from Figma Coherence UI Kit) ─── */
+  --color-success-50: #edfcf5;
+  --color-success-100: #d0fae5;
+  --color-success-200: #a5f3cf;
+  --color-success-300: #6de8b5;
+  --color-success-400: #33d597;
+  --color-success-500: #00bc7d;
+  --color-success-600: #009966;
+  --color-success-700: #007a53;
+  --color-success-800: #006043;
+  --color-success-900: #004f37;
+
+  /* ─── Semantic: Warning (from Figma Coherence UI Kit) ─── */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c6;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #fe9a00;
+  --color-warning-600: #e17100;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* ─── Semantic: Danger (from Figma Coherence UI Kit) ─── */
+  --color-danger-50: #fff5f5;
+  --color-danger-100: #ffe2e2;
+  --color-danger-200: #ffc9c9;
+  --color-danger-300: #ffa3a3;
+  --color-danger-400: #ff6b6b;
+  --color-danger-500: #fb2c36;
+  --color-danger-600: #e7000b;
+  --color-danger-700: #c10007;
+  --color-danger-800: #a1000a;
+  --color-danger-900: #840010;
+
+  /* ─── Semantic: Info / Accent (from Figma Coherence UI Kit) ─── */
+  --color-info-50: #f0f8ff;
+  --color-info-100: #ecf4ff;
+  --color-info-200: #c7e2ff;
+  --color-info-300: #93c5ff;
+  --color-info-400: #52a8ff;
+  --color-info-500: #009aff;
+  --color-info-600: #0077cc;
+  --color-info-700: #005fa3;
+  --color-info-800: #004a80;
+  --color-info-900: #003866;
+
+  /* ─── Semantic: Discovery (from Figma Coherence UI Kit) ─── */
+  --color-discovery-50: #f5f0ff;
+  --color-discovery-100: #ede9fe;
+  --color-discovery-200: #ddd6fe;
+  --color-discovery-300: #c4b5fd;
+  --color-discovery-400: #a78bfa;
+  --color-discovery-500: #8e51ff;
+  --color-discovery-600: #7f22fe;
+  --color-discovery-700: #6d28d9;
+  --color-discovery-800: #5b21b6;
+  --color-discovery-900: #4c1d95;
+
+  /* ─── Typography ─── */
   --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -25,4 +126,89 @@
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ─── Spacing ─── */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* ─── Border Radius ─── */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ─── Shadows ─── */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* ─── Dark Mode ─── */
+.dark {
+  /* Canvas */
+  --color-canvas: #0f172a;
+  --color-canvas-subtle: #1e293b;
+  --color-canvas-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Surface */
+  --color-surface: #1e293b;
+  --color-surface-secondary: #334155;
+  --color-surface-hover: #334155;
+  --color-surface-active: #475569;
+
+  /* Border */
+  --color-border: #334155;
+  --color-border-strong: #475569;
+  --color-border-subtle: #1e293b;
+
+  /* Text */
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #0f172a;
+  --color-text-on-primary: #ffffff;
+
+  /* Brand */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-secondary: #94a3b8;
+
+  /* Semantic */
+  --color-success-100: #064e3b;
+  --color-success-500: #34d399;
+  --color-success-600: #6ee7b7;
+  --color-warning-100: #78350f;
+  --color-warning-500: #fbbf24;
+  --color-warning-600: #fcd34d;
+  --color-danger-100: #7f1d1d;
+  --color-danger-500: #f87171;
+  --color-danger-600: #fca5a5;
+  --color-info-100: #1e3a5f;
+  --color-info-500: #60a5fa;
+  --color-info-600: #93c5fd;
+  --color-discovery-100: #3b1d6e;
+  --color-discovery-500: #a78bfa;
+  --color-discovery-600: #c4b5fd;
+
+  /* Shadows (darker for dark mode) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
 }

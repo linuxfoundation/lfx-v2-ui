@@ -1,0 +1,16 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<label class="inline-flex items-center gap-1.5" [class.cursor-not-allowed]="disabled()" [class.cursor-pointer]="!disabled()" data-testid="toggle-switch-label">
+  <input type="checkbox" class="peer sr-only" [checked]="checked()" [disabled]="disabled()" (change)="onToggle()" data-testid="toggle-switch-input" />
+  <span
+    class="inline-flex shrink-0 items-center overflow-hidden rounded-full p-0.5 transition-all duration-150"
+    [class]="trackClasses()"
+    [class.justify-end]="checked()"
+    data-testid="toggle-switch-track">
+    <span class="rounded-full shadow-sm" [class]="knobClasses()" data-testid="toggle-switch-knob"></span>
+  </span>
+  @if (label()) {
+    <span [class]="labelClasses()" data-testid="toggle-switch-text">{{ label() }}</span>
+  }
+</label>

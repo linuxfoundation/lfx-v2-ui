@@ -1,0 +1,15 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<label class="inline-flex items-center gap-1.5" [class.cursor-not-allowed]="disabled()" [class.cursor-pointer]="!disabled()" data-testid="checkbox-label">
+  <input type="checkbox" class="peer sr-only" [checked]="checked()" [disabled]="disabled()" (change)="onToggle()" data-testid="checkbox-input" />
+  <span class="inline-flex shrink-0 items-center justify-center overflow-hidden border transition-colors" [class]="boxClasses()" data-testid="checkbox-box">
+    <i
+      [class]="'fa-solid ' + (indeterminate() ? 'fa-minus' : 'fa-check') + ' ' + iconClasses()"
+      [class.invisible]="!checked() && !indeterminate()"
+      data-testid="checkbox-icon"></i>
+  </span>
+  @if (label()) {
+    <span [class]="labelClasses()" data-testid="checkbox-text">{{ label() }}</span>
+  }
+</label>

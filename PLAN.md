@@ -89,7 +89,7 @@ Same controller-service-route pattern as `lfx-one`, simplified:
 The app is generated with the Angular CLI, not hand-crafted:
 
 ```bash
-cd /Users/asithadesilva/Sites/lfx-v2-ui/apps
+cd apps
 ng new lfx --ssr --style css --zoneless --prefix lfx --skip-tests
 ```
 
@@ -133,7 +133,7 @@ Post-generation modifications replace the generated server entry with full Expre
 **Step 1 — Generate with Angular CLI:**
 
 ```bash
-cd /Users/asithadesilva/Sites/lfx-v2-ui/apps
+cd apps
 ng new lfx --ssr --style css --zoneless --prefix lfx --skip-tests
 ```
 
@@ -169,37 +169,50 @@ ng new lfx --ssr --style css --zoneless --prefix lfx --skip-tests
 
 ### Phase 3 — Design System Foundation
 
-**Goal:** Base UI component library for `apps/lfx` built with Tailwind v4. Use `/lfx-design` for all component generation.
+**Goal:** Base UI component library for `apps/lfx` built with Tailwind v4. All components are built from the **Coherence UI Kit** in Figma using `/lfx-design` with the Figma MCP.
+
+**Workflow:** Each component is built by providing a Figma node URL to `/lfx-design`, which fetches the design context via MCP, extracts tokens/variants, and generates the component with Storybook stories. Components are NOT built speculatively — they are added as needed from Figma designs.
 
 **Step 1 — Finalize `@theme` tokens in `styles.css`:**
 
-- Canvas / surface / overlay hierarchy
-- Border tokens
-- Text hierarchy (primary, secondary, muted, inverse)
-- Brand colors, semantic colors (success, warning, error, info)
-- Typography scale, spacing, radius, shadow tokens
-- Dark mode variant
+- [x] Color scales: neutral, info, success, warning, danger, discovery (50–950)
+- [x] Semantic tokens: surface, border, text, text-secondary, text-muted
+- [x] Typography: Inter font family, standard Tailwind scale
+- [x] Spacing, radius, shadow tokens
 
-**Step 2 — Build base components** (all custom Tailwind, no PrimeNG):
+**Step 2 — Build base components from Figma** (all custom Tailwind, no PrimeNG):
 
-- [ ] `ButtonComponent` — variants: primary, secondary, ghost, danger; sizes: sm/md/lg; loading state
-- [ ] `InputComponent` — text, email, password; error state; label slot
-- [ ] `SelectComponent` — custom dropdown with keyboard navigation
-- [ ] `TextareaComponent`
-- [ ] `BadgeComponent` — status variants
-- [ ] `CardComponent` — surface wrapper
-- [ ] `AvatarComponent` — image + initials fallback
-- [ ] `SpinnerComponent` / `SkeletonComponent`
-- [ ] `ToastComponent`
-- [ ] `ModalComponent` — dialog with backdrop
-- [ ] `TooltipComponent`
-- [ ] `TableComponent` — sorting support
-- [ ] `PaginationComponent`
-- [ ] `TabsComponent`
-- [ ] `DropdownMenuComponent`
-- [ ] `SidebarNavComponent`
-- [ ] `TopbarComponent`
-- [ ] `MainLayoutComponent`
+Built:
+
+- [x] `Badge` — variants: neutral, info, success, warning, danger, discovery; sizes: sm/lg; icon slot
+- [x] `Button` — variants: primary, secondary, ghost, danger; sizes: sm/lg; loading/disabled states; icon-only mode
+- [x] `Spinner` — sizes: sm/md/lg; color variants
+- [x] `Avatar` — types: photo/logo/initials; sizes: xs/sm/md/lg/xl
+- [x] `Card` — padding variants; hoverable state
+- [x] `Checkbox` — model() for checked; [class.invisible] pattern
+- [x] `RadioButton` — CSS-only dot indicator; model() binding
+- [x] `ToggleSwitch` — flexbox justify for knob positioning
+- [x] `Chip` — styles: bordered/neutral; types: label/icon/avatar-photo/avatar-logo; dismissable
+- [x] `Tooltip` — simple (centered label) and with-description variants
+
+Remaining (build from Figma when needed):
+
+- [ ] `Input` — text, email, password; error state; label slot
+- [ ] `Select` — custom dropdown with keyboard navigation
+- [ ] `Textarea`
+- [ ] `Modal` — dialog with backdrop
+- [ ] `Table` — sorting support
+- [ ] `Tabs`
+- [ ] `Toast` — notification system
+- [ ] `Pagination`
+- [ ] `DropdownMenu`
+- [ ] `SidebarNav`
+- [ ] `Topbar`
+- [ ] `MainLayout`
+
+**Storybook:** All components have `.stories.ts` files with individual variant stories + `AllVariants` story. Run `yarn storybook` from root to preview at `http://localhost:6006`.
+
+**Definition of Done:** Core interaction components (Badge, Button, Checkbox, RadioButton, ToggleSwitch, Chip, Tooltip, Card, Avatar, Spinner) available in Storybook. Remaining components built on-demand as features require them.
 
 ---
 

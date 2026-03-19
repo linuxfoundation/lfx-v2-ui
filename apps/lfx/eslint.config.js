@@ -18,6 +18,8 @@ module.exports = defineConfig([
       '**/.angular/**',
       '**/coverage/**',
       '**/*.min.js',
+      '**/*.stories.ts',
+      '.storybook/**',
       'e2e/**/*',
       'playwright.config.ts',
     ],

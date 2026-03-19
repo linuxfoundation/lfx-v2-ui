@@ -40,7 +40,7 @@ Every source file (`.ts`, `.html`, `.css`) must have the license header.
 
 - `.ts`: `// Copyright The Linux Foundation and each contributor to LFX.\n// SPDX-License-Identifier: MIT\n\n`
 - `.html`: `<!-- Copyright The Linux Foundation and each contributor to LFX. -->\n<!-- SPDX-License-Identifier: MIT -->\n\n`
-- `.css`: same as `.ts` format
+- `.css`: `/* Copyright The Linux Foundation and each contributor to LFX. */\n/* SPDX-License-Identifier: MIT */\n\n`
 
 ## Check 2: Formatting
 
@@ -85,7 +85,7 @@ git diff --name-only origin/main...HEAD
 Flag any changes to these files — they require code owner review:
 
 - `apps/lfx/src/server/server.ts`
-- `apps/lfx/src/server/server-logger.ts`
+- `apps/lfx/src/server/helpers/server-logger.ts`
 - `apps/lfx/src/server/middleware/*`
 - `apps/lfx/src/server/services/logger.service.ts`
 - `apps/lfx/src/server/services/microservice-proxy.service.ts`

@@ -33,7 +33,7 @@ export function apiErrorHandler(error: Error | ApiError, req: Request, res: Resp
   }
 
   const operation = getOperationFromPath(req.path);
-  const startTime = Date.now();
+  const now = Date.now();
 
   if (isApiError(error)) {
     const logContext = {
@@ -47,7 +47,7 @@ export function apiErrorHandler(error: Error | ApiError, req: Request, res: Resp
     };
 
     if (error.statusCode >= 500) {
-      logger.error(req, operation, startTime, error, logContext);
+      logger.error(req, operation, now, error, logContext);
     } else if (error.statusCode >= 400) {
       logger.warning(req, operation, `API error: ${error.message}`, { ...logContext, err: error });
     } else {
@@ -62,7 +62,7 @@ export function apiErrorHandler(error: Error | ApiError, req: Request, res: Resp
   }
 
   // Unhandled errors
-  logger.error(req, operation, startTime, error, {
+  logger.error(req, operation, now, error, {
     error_type: 'unhandled',
     path: req.path,
     method: req.method,

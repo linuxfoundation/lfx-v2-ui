@@ -1,0 +1,20 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<span class="inline-flex items-center gap-1 overflow-hidden rounded-full font-normal text-neutral-900" [class]="chipClasses()" data-testid="chip-container">
+  @if (type() === 'icon' && icon()) {
+    <i [class]="'fa-light fa-' + icon()" data-testid="chip-icon"></i>
+  }
+  @if (type() === 'avatar-photo' && avatarSrc()) {
+    <lfx-avatar [src]="avatarSrc()!" type="photo" size="xs" data-testid="chip-avatar" />
+  }
+  @if (type() === 'avatar-logo' && avatarSrc()) {
+    <lfx-avatar [src]="avatarSrc()!" type="org-logo" size="xs" data-testid="chip-avatar" />
+  }
+  <span data-testid="chip-label">{{ label() }}</span>
+  @if (dismissable()) {
+    <button type="button" class="inline-flex cursor-pointer items-center justify-center text-neutral-400" (click)="onDismiss()" data-testid="chip-dismiss">
+      <i class="fa-solid fa-circle-xmark"></i>
+    </button>
+  }
+</span>

@@ -3,7 +3,7 @@ name: lfx-backend-builder
 description: >
   Generate Express proxy code for apps/lfx — services, controllers, routes, and
   shared TypeScript types. Encodes the controller-service-route pattern, logger
-  service usage, MicroserviceProxyService conventions, and shared package structure.
+  service usage, LfxService conventions, and shared package structure.
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
@@ -76,24 +76,19 @@ export interface MyItem {
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { QueryServiceResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
-import { MicroserviceProxyService } from './microservice-proxy.service';
+import { lfxService } from './lfx.service';
 
 class MyService {
-  private microserviceProxy = new MicroserviceProxyService();
-
   public async getItems(req: Request): Promise<MyItem[]> {
     logger.debug(req, 'get_items', 'Fetching items from upstream', {});
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MyItem>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-      resource_type: 'my_items',
-    });
+    const items = await lfxService.get<MyItem[]>(req, '/my-items');
 
-    logger.debug(req, 'get_items', 'Fetched items', { count: resources.length });
-    return resources.map((r: any) => r.data);
+    logger.debug(req, 'get_items', 'Fetched items', { count: items.length });
+    return items;
   }
 }
 
@@ -102,7 +97,7 @@ export const myService = new MyService();
 
 Service rules:
 
-- `MicroserviceProxyService` for ALL external API calls — never raw `fetch` or `axios`
+- `LfxService` (via `lfxService` singleton) for ALL external API calls — never raw `fetch` or `axios`
 - Default to user bearer token (`req.bearerToken`) — M2M tokens only for `/public/api/` endpoints
 - `logger.debug()` for step-by-step tracing
 - `logger.info()` for significant operations (transformations, enrichments)
@@ -175,7 +170,7 @@ export default router;
 
 - [ ] Shared types created/updated in `packages/shared/src/interfaces/`
 - [ ] Shared types exported from barrel `index.ts`
-- [ ] Service uses `MicroserviceProxyService` (not raw fetch/axios)
+- [ ] Service uses `LfxService` (not raw fetch/axios)
 - [ ] Service uses `logger` (not `serverLogger`)
 - [ ] Controller uses `logger.startOperation()` / `logger.success()` / `logger.error()`
 - [ ] Controller passes errors to `next(error)` (never `res.status(500)`)

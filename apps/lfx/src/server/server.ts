@@ -151,7 +151,6 @@ app.use('/api/*', apiErrorHandler);
  * Require authentication for all non-API routes.
  */
 app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
-  const ssrStartTime = Date.now();
   const authContext: AuthContext = {
     authenticated: false,
     user: null,
@@ -193,20 +192,19 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
 
       return next();
     })
-    .catch((error) => {
-      logger.error(req, 'ssr_render', ssrStartTime, error, {
-        error_message: error.message,
-        code: error.code,
-        url: req.url,
-        method: req.method,
-        user_agent: req.get('User-Agent'),
-      });
+    .catch((error: unknown) => {
+      const err = error instanceof Error ? error : new Error(String(error));
+      const code = (error as { code?: string })?.code;
 
-      if (error.code === 'NOT_FOUND') {
+      if (code === 'NOT_FOUND') {
         res.status(404).send('Not Found');
-      } else if (error.code === 'UNAUTHORIZED') {
+      } else if (code === 'UNAUTHORIZED') {
         res.status(401).send('Unauthorized');
       } else {
+        logger.error(req, 'ssr_render', Date.now(), err, {
+          url: req.url,
+          method: req.method,
+        });
         res.status(500).send('Internal Server Error');
       }
     });
@@ -229,7 +227,7 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4200.
  */
 export function startServer() {
-  const port = process.env['PORT'] || 4200;
+  const port = process.env['PORT'] || 4201;
   app.listen(port, () => {
     logger.debug(undefined, 'server_startup', 'Node Express server started', {
       port,

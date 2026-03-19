@@ -291,10 +291,9 @@ async function executeAuthDecision(decision: AuthDecision, req: Request, res: Re
 
     case 'redirect':
       if (decision.redirectUrl) {
-        // Use OIDC login method which handles the redirect properly
-        res.oidc.login({ returnTo: req.originalUrl });
+        res.redirect(decision.redirectUrl);
       } else {
-        res.redirect('/');
+        res.oidc.login({ returnTo: req.originalUrl });
       }
       break;
 
