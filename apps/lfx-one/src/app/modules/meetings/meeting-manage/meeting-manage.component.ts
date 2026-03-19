@@ -164,7 +164,7 @@ export class MeetingManageComponent {
         this.groupContext.set({ uid: committeeUid, name: committeeName });
         this.form()
           .get('committees')
-          ?.setValue([{ uid: committeeUid, name: committeeName }]);
+          ?.setValue([{ uid: committeeUid, name: committeeName, allowed_voting_statuses: [] }]);
       }
     });
 
