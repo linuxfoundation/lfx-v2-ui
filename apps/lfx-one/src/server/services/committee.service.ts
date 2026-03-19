@@ -458,10 +458,12 @@ export class CommitteeService {
           title: r.data.name,
           status: CommitteeService.getVoteStatus(r.data.status),
           deadline: r.data.end_time,
-          // Note: num_response_received is total responses received, not a for/against breakdown
-          votes_for: r.data.num_response_received ?? 0,
+          // Per-option breakdown not available from the vote resource; set to 0
+          votes_for: 0,
           votes_against: 0,
           votes_abstain: 0,
+          // Carry the real response count separately so the UI can display it accurately
+          total_responses: r.data.num_response_received ?? 0,
           total_eligible: r.data.total_voting_request_invitations ?? 0,
           created_by: '',
         }));
@@ -529,10 +531,15 @@ export class CommitteeService {
    */
   public async getCommitteeMeetings(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<PaginatedResponse<Meeting>> {
     try {
-      // Note: req.query is passed through from the controller. The downstream MeetingService
-      // validates and sanitizes parameters before forwarding to the meeting microservice.
+      // Whitelist allowed query params to prevent unexpected parameters from reaching downstream
+      const allowedParams = ['page_size', 'page_token', 'order_by', 'committee_uid'];
+      const sanitizedQuery: Record<string, string> = {};
+      for (const key of allowedParams) {
+        if (query[key]) sanitizedQuery[key] = String(query[key]);
+      }
+
       const params = {
-        ...query,
+        ...sanitizedQuery,
         committee_uid: committeeId,
       };
 
