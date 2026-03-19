@@ -22,61 +22,6 @@ export class CommitteeController {
   /** GET /committees/:id/votes */
   public getCommitteeVotes = this.subResourceHandler('get_committee_votes', (req, id) => this.committeeService.getCommitteeVotes(req, id), 'vote_count');
 
-  /** GET /committees/:id/resolutions */
-  public getCommitteeResolutions = this.subResourceHandler(
-    'get_committee_resolutions',
-    (req, id) => this.committeeService.getCommitteeResolutions(req, id),
-    'resolution_count'
-  );
-
-  /** GET /committees/:id/activity */
-  public getCommitteeActivity = this.subResourceHandler(
-    'get_committee_activity',
-    (req, id) => this.committeeService.getCommitteeActivity(req, id),
-    'activity_count'
-  );
-
-  /** GET /committees/:id/contributors */
-  public getCommitteeContributors = this.subResourceHandler(
-    'get_committee_contributors',
-    (req, id) => this.committeeService.getCommitteeContributors(req, id),
-    'contributor_count'
-  );
-
-  /** GET /committees/:id/deliverables */
-  public getCommitteeDeliverables = this.subResourceHandler(
-    'get_committee_deliverables',
-    (req, id) => this.committeeService.getCommitteeDeliverables(req, id),
-    'deliverable_count'
-  );
-
-  /** GET /committees/:id/discussions */
-  public getCommitteeDiscussions = this.subResourceHandler(
-    'get_committee_discussions',
-    (req, id) => this.committeeService.getCommitteeDiscussions(req, id),
-    'discussion_count'
-  );
-
-  /** GET /committees/:id/events */
-  public getCommitteeEvents = this.subResourceHandler('get_committee_events', (req, id) => this.committeeService.getCommitteeEvents(req, id), 'event_count');
-
-  /** GET /committees/:id/campaigns */
-  public getCommitteeCampaigns = this.subResourceHandler(
-    'get_committee_campaigns',
-    (req, id) => this.committeeService.getCommitteeCampaigns(req, id),
-    'campaign_count'
-  );
-
-  /** GET /committees/:id/engagement */
-  public getCommitteeEngagement = this.subResourceHandler(
-    'get_committee_engagement',
-    (req, id) => this.committeeService.getCommitteeEngagement(req, id),
-    'has_engagement'
-  );
-
-  /** GET /committees/:id/budget */
-  public getCommitteeBudget = this.subResourceHandler('get_committee_budget', (req, id) => this.committeeService.getCommitteeBudget(req, id), 'has_budget');
-
   /** GET /committees/:id/meetings */
   public getCommitteeMeetings = this.subResourceHandler(
     'get_committee_meetings',

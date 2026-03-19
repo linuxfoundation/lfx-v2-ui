@@ -5,16 +5,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
   Committee,
-  CommitteeActivity,
-  CommitteeBudgetSummary,
-  CommitteeContributor,
-  CommitteeDeliverable,
-  CommitteeDiscussionThread,
-  CommitteeEngagementMetrics,
-  CommitteeEvent,
   CommitteeMember,
-  CommitteeOutreachCampaign,
-  CommitteeResolution,
   CommitteeVote,
   CreateCommitteeMemberRequest,
   Meeting,
@@ -104,42 +95,6 @@ export class CommitteeService {
   // Dashboard sub-resource methods — error handling is done at the component layer
   public getCommitteeVotes(committeeId: string): Observable<CommitteeVote[]> {
     return this.http.get<CommitteeVote[]>(`/api/committees/${committeeId}/votes`);
-  }
-
-  public getCommitteeResolutions(committeeId: string): Observable<CommitteeResolution[]> {
-    return this.http.get<CommitteeResolution[]>(`/api/committees/${committeeId}/resolutions`);
-  }
-
-  public getCommitteeActivity(committeeId: string): Observable<CommitteeActivity[]> {
-    return this.http.get<CommitteeActivity[]>(`/api/committees/${committeeId}/activity`);
-  }
-
-  public getCommitteeContributors(committeeId: string): Observable<CommitteeContributor[]> {
-    return this.http.get<CommitteeContributor[]>(`/api/committees/${committeeId}/contributors`);
-  }
-
-  public getCommitteeDeliverables(committeeId: string): Observable<CommitteeDeliverable[]> {
-    return this.http.get<CommitteeDeliverable[]>(`/api/committees/${committeeId}/deliverables`);
-  }
-
-  public getCommitteeDiscussions(committeeId: string): Observable<CommitteeDiscussionThread[]> {
-    return this.http.get<CommitteeDiscussionThread[]>(`/api/committees/${committeeId}/discussions`);
-  }
-
-  public getCommitteeEvents(committeeId: string): Observable<CommitteeEvent[]> {
-    return this.http.get<CommitteeEvent[]>(`/api/committees/${committeeId}/events`);
-  }
-
-  public getCommitteeCampaigns(committeeId: string): Observable<CommitteeOutreachCampaign[]> {
-    return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`);
-  }
-
-  public getCommitteeEngagement(committeeId: string): Observable<CommitteeEngagementMetrics | null> {
-    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`);
-  }
-
-  public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
-    return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`);
   }
 
   // ── Join / Leave Methods ──────────────────────────────────────────────────
