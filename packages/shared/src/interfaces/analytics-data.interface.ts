@@ -2794,6 +2794,7 @@ export interface EmailCtrCampaignRow {
  */
 export interface EmailCtrCampaignGroup {
   campaignName: string;
+  classification: string;
   avgCtr: number;
   totalSends: number;
   totalClicks: number;
