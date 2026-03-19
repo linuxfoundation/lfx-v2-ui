@@ -1,0 +1,6 @@
+{
+  "buildCommand": "yarn turbo run build --filter=lfx-one -- --configuration development",
+  "outputDirectory": "apps/lfx-one/dist/lfx-one/browser",
+  "installCommand": "yarn install",
+  "framework": "angular"
+}
