@@ -7,7 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { environment } from '@environments/environment';
-import { COMMITTEE_LABEL, MAILING_LIST_LABEL, MY_ACTIVITY_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
+import { COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
@@ -47,26 +47,35 @@ export class MainLayoutComponent {
     this.activeLens.set(lens);
   }
 
-  // Sidebar items — per-lens structure with section headers per spec
+  // Sidebar items — per-lens structure per Manish v1 PDF
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
 
     switch (this.activeLens()) {
+      // ── Me lens ──────────────────────────────────────────────────────────
       case 'me':
         return [
           { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
           {
-            label: MY_ACTIVITY_LABEL.singular,
+            label: 'My Engagement',
             isSection: true,
             expanded: true,
             items: [
+              { label: 'My Foundations', icon: 'fa-light fa-layer-group', command: () => {} },
+              { label: 'Actions', icon: 'fa-light fa-bolt', command: () => {} },
               { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
               { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+            ],
+          },
+          {
+            label: 'My Growth',
+            isSection: true,
+            expanded: true,
+            items: [
               { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
-              { label: 'Mentorships', icon: 'fa-light fa-graduation-cap', command: () => {} },
               { label: 'Badges', icon: 'fa-light fa-medal', command: () => {} },
-              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
-              { label: 'Transactions', icon: 'fa-light fa-receipt', command: () => {} },
+              { label: 'EasyCLA', icon: 'fa-light fa-file-signature', command: () => {} },
             ],
           },
           {
@@ -75,13 +84,13 @@ export class MainLayoutComponent {
             expanded: true,
             items: [
               { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', disabled: !this.enableProfileClick() },
-              { label: 'Contributor Agreements', icon: 'fa-light fa-file-signature', command: () => {} },
-              { label: 'Subscription Preferences', icon: 'fa-light fa-bell', command: () => {} },
+              { label: 'Transactions', icon: 'fa-light fa-receipt', command: () => {} },
               { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
             ],
           },
         ];
 
+      // ── Foundation / Projects lens ────────────────────────────────────────
       case 'foundation': {
         const sections: SidebarMenuItem[] = [
           { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
@@ -90,27 +99,11 @@ export class MainLayoutComponent {
             isSection: true,
             expanded: true,
             items: [
+              { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {} },
               { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
               { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
               { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
               { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
-              { label: 'Drive', icon: 'fa-light fa-folder-open', command: () => {} },
-              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
-            ],
-          },
-          {
-            label: 'Data Intelligence',
-            isSection: true,
-            expanded: true,
-            items: [
-              { label: 'Engineering Health', icon: 'fa-light fa-heart-pulse', url: 'https://insights.linuxfoundation.org/', target: '_blank', rel: 'noopener noreferrer' },
-              { label: 'Community Engagement', icon: 'fa-light fa-comments', command: () => {} },
-              { label: 'Contributor Health', icon: 'fa-light fa-user-check', command: () => {} },
-              { label: 'Participating Organizations', icon: 'fa-light fa-building-columns', command: () => {} },
-              { label: 'Community Sentiment', icon: 'fa-light fa-face-smile', command: () => {} },
-              { label: 'Contributing Individuals', icon: 'fa-light fa-person-circle-check', command: () => {} },
-              { label: 'Events Analytics', icon: 'fa-light fa-chart-bar', command: () => {} },
-              { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
             ],
           },
         ];
@@ -128,52 +121,40 @@ export class MainLayoutComponent {
           });
         }
 
+        sections.push({
+          label: 'Insights',
+          icon: 'fa-light fa-chart-column',
+          url: 'https://insights.linuxfoundation.org/',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        });
+
         return sections;
       }
 
+      // ── Organization lens ─────────────────────────────────────────────────
       case 'organization':
       default:
         return [
           { label: 'Overview', icon: 'fa-light fa-grid-2', command: () => {} },
           {
-            label: 'Portfolio',
-            isSection: true,
-            expanded: true,
-            items: [
-              { label: 'Key Projects', icon: 'fa-light fa-star', command: () => {} },
-              { label: 'Code Contributions', icon: 'fa-light fa-code', command: () => {} },
-            ],
-          },
-          {
-            label: 'Community',
-            isSection: true,
-            expanded: true,
-            items: [
-              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
-              { label: 'Training & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
-              { label: 'Crowdfunding', icon: 'fa-light fa-hand-holding-heart', command: () => {} },
-            ],
-          },
-          {
-            label: 'Membership',
+            label: 'Org Details',
             isSection: true,
             expanded: true,
             items: [
               { label: 'Membership', icon: 'fa-light fa-id-card', command: () => {} },
-              { label: 'Member Benefits', icon: 'fa-light fa-gift', command: () => {} },
-              { label: 'OSPO Resources', icon: 'fa-light fa-book', command: () => {} },
+              { label: 'Employees', icon: 'fa-light fa-user-group', command: () => {} },
             ],
           },
           {
-            label: 'Administration',
+            label: 'Engagement',
             isSection: true,
             expanded: true,
             items: [
-              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-              { label: 'CLA Management', icon: 'fa-light fa-file-signature', command: () => {} },
-              { label: 'Software Inventory', icon: 'fa-light fa-boxes-stacked', command: () => {} },
-              { label: 'Access', icon: 'fa-light fa-key', command: () => {} },
-              { label: 'Profile', icon: 'fa-light fa-building', routerLink: '/profile' },
+              { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {} },
+              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+              { label: 'Reports', icon: 'fa-light fa-chart-bar', command: () => {} },
             ],
           },
         ];
