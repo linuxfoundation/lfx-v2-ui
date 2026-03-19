@@ -14,6 +14,7 @@ import { SurveyService } from '../services/survey.service';
  */
 export class CommitteeController {
   private committeeService: CommitteeService = new CommitteeService();
+  // Cross-domain: surveys are accessed via committee context for the surveys tab
   private readonly surveyService = new SurveyService();
 
   // ── Dashboard Sub-Resource Handlers (via factory) ─────────────────────────
@@ -629,6 +630,7 @@ export class CommitteeController {
 
   /**
    * GET /committees/:id/surveys
+   * Manual handler (not using subResourceHandler) because this endpoint needs req.query passthrough for survey filtering
    */
   public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;

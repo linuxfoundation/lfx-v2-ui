@@ -97,6 +97,7 @@ export class SurveyService {
       committee_uid: committeeId,
     });
 
+    // Note: query params are passed through — downstream service validates/sanitizes
     const params = {
       ...query,
       committee_uid: committeeId,
