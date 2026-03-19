@@ -7,12 +7,15 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
+import { SurveyService } from '../services/survey.service';
 
 /**
  * Controller for handling committee HTTP requests
  */
 export class CommitteeController {
   private committeeService: CommitteeService = new CommitteeService();
+  // Cross-domain: surveys are accessed via committee context for the surveys tab
+  private readonly surveyService = new SurveyService();
 
   // ── Dashboard Sub-Resource Handlers (via factory) ─────────────────────────
 
@@ -585,6 +588,42 @@ export class CommitteeController {
       logger.success(req, 'leave_committee', startTime, { committee_id: id });
       res.status(204).send();
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/surveys
+   * Manual handler (not using subResourceHandler) because this endpoint needs req.query passthrough for survey filtering
+   */
+  public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_surveys', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'get_committee_surveys',
+          service: 'committee_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      const surveys = await this.surveyService.getCommitteeSurveys(req, id, req.query as Record<string, any>);
+
+      logger.success(req, 'get_committee_surveys', startTime, {
+        committee_id: id,
+        survey_count: surveys.length,
+      });
+
+      res.json(surveys);
+    } catch (error) {
+      logger.error(req, 'get_committee_surveys', startTime, error, { committee_id: id });
       next(error);
     }
   }
