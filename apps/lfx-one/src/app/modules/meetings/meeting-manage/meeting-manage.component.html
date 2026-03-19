@@ -15,6 +15,15 @@
     {{ isEditMode() ? 'Edit Meeting' : 'Create Meeting' }}
   </h1>
 
+  <!-- Group Context Banner -->
+  @if (isFromGroup()) {
+    <div class="flex items-center gap-2 mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg" data-testid="meeting-group-context">
+      <i class="fa-light fa-users-rectangle text-blue-600"></i>
+      <span class="text-sm text-blue-800">Creating meeting for</span>
+      <span class="text-sm font-semibold text-blue-900">{{ groupContext()?.name }}</span>
+    </div>
+  }
+
   @if (meetingLoading()) {
     <!-- Loading skeleton while meeting data is being fetched -->
     <div class="flex flex-col gap-6" data-testid="meeting-manage-loading">
@@ -190,6 +199,7 @@
                   <lfx-meeting-registrants-manager
                     [meetingUid]="meetingId()!"
                     [form]="form()"
+                    [lockedCommitteeUid]="groupContext()?.uid ?? null"
                     [(registrantUpdates)]="registrantUpdates"
                     [refresh]="registrantUpdatesRefresh$">
                   </lfx-meeting-registrants-manager>

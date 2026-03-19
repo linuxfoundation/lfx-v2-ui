@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, inject, input, InputSignal, output, OutputEmitterRef, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, input, InputSignal, output, OutputEmitterRef, signal, Signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MultiSelectComponent } from '@components/multi-select/multi-select.component';
@@ -31,6 +31,7 @@ export class MeetingCommitteeManagerComponent {
   // Inputs
   public readonly selectedCommittees: InputSignal<MeetingCommittee[]> = input<MeetingCommittee[]>([]);
   public readonly form: InputSignal<FormGroup> = input.required<FormGroup>();
+  public readonly lockedCommitteeUid = input<string | null>(null);
 
   // Outputs
   public readonly committeesChange: OutputEmitterRef<MeetingCommittee[]> = output<MeetingCommittee[]>();
@@ -52,6 +53,9 @@ export class MeetingCommitteeManagerComponent {
   // Voting status options for dropdown
   public readonly votingStatusOptions = VOTING_STATUSES;
   public readonly committeeLabel = COMMITTEE_LABEL;
+
+  // Locked state — when pre-selected from a group page
+  public isLocked: Signal<boolean> = computed(() => !!this.lockedCommitteeUid());
 
   // Computed signals
   public hasVotingEnabledCommittee = computed(() => {
@@ -105,6 +109,19 @@ export class MeetingCommitteeManagerComponent {
         filter(([, options]) => options.length > 0) // Only proceed when options are loaded
       )
       .subscribe(([committees]) => this.initializeFromSelectedCommittees(committees));
+
+    // When a locked committee is provided, ensure it's always selected and dropdown is disabled
+    effect(() => {
+      const lockedUid = this.lockedCommitteeUid();
+      if (lockedUid) {
+        const currentIds = this.selectedCommitteeIds();
+        if (!currentIds.includes(lockedUid)) {
+          this.selectedCommitteeIds.set([...currentIds, lockedUid]);
+          this.committeeForm.get('committees')?.setValue([...currentIds, lockedUid]);
+        }
+        this.committeeForm.get('committees')?.disable();
+      }
+    });
 
     // Emit committee members whenever they change
     toObservable(this.filteredCommitteeMembers)

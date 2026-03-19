@@ -45,6 +45,7 @@ export class MeetingRegistrantsManagerComponent implements OnInit {
   // Input signals
   public meetingUid = input.required<string>();
   public form = input.required<FormGroup>();
+  public lockedCommitteeUid = input<string | null>(null);
   public registrantUpdates = input.required<RegistrantPendingChanges>();
   public refresh = input.required<BehaviorSubject<void>>();
 

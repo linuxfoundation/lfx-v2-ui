@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -81,6 +81,10 @@ export class MeetingManageComponent {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectContextService = inject(ProjectContextService);
+  // Group context — when creating a meeting from a committee/group page
+  public groupContext = signal<{ uid: string; name: string } | null>(null);
+  public isFromGroup: Signal<boolean> = computed(() => !!this.groupContext());
+
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
   public meetingId = signal<string | null>(null);
@@ -151,6 +155,18 @@ export class MeetingManageComponent {
       ),
       { initialValue: 1 }
     );
+
+    // Read group context from query params (when navigating from Groups page)
+    this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
+      const committeeUid = params.get('committee_uid');
+      const committeeName = params.get('committee_name');
+      if (committeeUid && committeeName) {
+        this.groupContext.set({ uid: committeeUid, name: committeeName });
+        this.form()
+          .get('committees')
+          ?.setValue([{ uid: committeeUid, name: committeeName }]);
+      }
+    });
 
     // Subscribe to form value changes and update validation signals
     this.form()

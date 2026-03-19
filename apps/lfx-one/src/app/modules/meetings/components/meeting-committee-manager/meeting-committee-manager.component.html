@@ -20,10 +20,13 @@
         [placeholder]="'Select one or more ' + committeeLabel.plural.toLowerCase()"
         [filter]="true"
         [filterPlaceHolder]="'Search ' + committeeLabel.plural.toLowerCase()"
-        [showToggleAll]="true"
+        [showToggleAll]="!isLocked()"
         class="w-full"
         appendTo="body"
         data-testid="meeting-committee-multi-select"></lfx-multi-select>
+      @if (isLocked()) {
+        <p class="text-xs text-blue-600 mt-1"><i class="fa-light fa-lock text-[10px] mr-1"></i>Pre-selected from group page</p>
+      }
     </div>
     @if (selectedCommitteeIds().length === 0) {
       <p class="text-xs text-gray-500">
