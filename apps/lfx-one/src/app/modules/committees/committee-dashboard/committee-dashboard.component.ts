@@ -9,13 +9,9 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-<<<<<<< HEAD
 import { Committee, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
-import { RoleBadgeClassPipe } from '@pipes/role-badge-class.pipe';
-=======
-import { Committee, ProjectContext } from '@lfx-one/shared/interfaces';
 import { ActiveLensService } from '@services/active-lens.service';
->>>>>>> 6614ede (feat(ui): three-lens nav, persona-specific dashboards, and chart layout)
+import { RoleBadgeClassPipe } from '@pipes/role-badge-class.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -46,22 +42,17 @@ export class CommitteeDashboardComponent {
   // Use the configurable label constants
   protected readonly committeeLabel = COMMITTEE_LABEL;
 
-<<<<<<< HEAD
+  // Page title adapts to lens context
+  public readonly pageTitle = computed(() =>
+    this.activeLensService.isMeLens() ? `My ${COMMITTEE_LABEL.plural}` : COMMITTEE_LABEL.plural
+  );
+
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading = signal<boolean>(true);
   public myCommitteesLoading = signal<boolean>(true);
   public refresh = signal(0);
 
   // ── Forms ─────────────────────────────────────────────────────────────────
-=======
-  // Page title adapts to lens context
-  public readonly pageTitle = computed(() =>
-    this.activeLensService.isMeLens() ? `My ${COMMITTEE_LABEL.plural}` : COMMITTEE_LABEL.plural
-  );
-
-  // State signals
-  public project: Signal<ProjectContext | null>;
->>>>>>> 6614ede (feat(ui): three-lens nav, persona-specific dashboards, and chart layout)
   public searchForm: FormGroup;
 
   // ── Computed / Read-only Signals ──────────────────────────────────────────
