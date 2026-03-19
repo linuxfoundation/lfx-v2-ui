@@ -140,32 +140,63 @@ function badgeClass(state) {
            in_progress: 'badge-pending' }[state] ?? 'badge-inactive';
 }
 
-function renderTable(rows) {
+function renderTable(rows, isPrTable) {
   if (!rows.length) return `<p class="empty">No active deployments.</p>`;
   const trs = rows.map(d => {
     const s      = d.latestStatus;
-    const state  = s?.state ?? 'unknown';
+    const state  = s?.state ?? 'pending';
     const envUrl = s?.environment_url ?? '';
     const logUrl = s?.log_url ?? '';
 
+    const envName = d.environment ?? `ui-pr-${d.prNumber}`;
     const nameCell = envUrl
-      ? `<a class="link env-name" href="${envUrl}" target="_blank">${d.environment}</a>`
-      : `<span class="env-name">${d.environment}</span>`;
+      ? `<a class="link env-name" href="${envUrl}" target="_blank">${envName}</a>`
+      : `<span class="env-name">${envName}</span>`;
+
+    const prCell = d.prNumber
+      ? `<a class="link" href="https://github.com/${OWNER}/${REPO}/pull/${d.prNumber}" target="_blank">#${d.prNumber}</a>`
+      : '';
 
     const linksCell = [
       envUrl && `<a class="link" href="${envUrl}" target="_blank" style="font-size:12px">Open ↗</a>`,
       logUrl && `<a class="link" href="${logUrl}" target="_blank" style="font-size:12px">ArgoCD ↗</a>`,
     ].filter(Boolean).join('');
 
+    const ref  = d.ref  ?? d.prHead ?? '';
+    const sha  = d.sha  ? d.sha.slice(0, 7) : '';
+    const time = d.updated_at ? `<span class="time" title="${d.updated_at}">${relativeTime(d.updated_at)}</span>` : '—';
+
+    if (isPrTable) {
+      return `<tr>
+        <td>${prCell}</td>
+        <td>${nameCell}</td>
+        <td><span class="branch-ref">${ref}</span></td>
+        <td><span class="sha">${sha}</span></td>
+        <td><span class="badge ${badgeClass(state)}">${state}</span></td>
+        <td>${time}</td>
+        <td><div class="actions">${linksCell}</div></td>
+      </tr>`;
+    }
+
     return `<tr>
       <td>${nameCell}</td>
-      <td><span class="branch-ref">${d.ref}</span></td>
-      <td><span class="sha">${d.sha.slice(0, 7)}</span></td>
+      <td><span class="branch-ref">${ref}</span></td>
+      <td><span class="sha">${sha}</span></td>
       <td><span class="badge ${badgeClass(state)}">${state}</span></td>
-      <td><span class="time" title="${d.updated_at}">${relativeTime(d.updated_at)}</span></td>
+      <td>${time}</td>
       <td><div class="actions">${linksCell}</div></td>
     </tr>`;
   }).join('');
+
+  if (isPrTable) {
+    return `<table>
+      <thead><tr>
+        <th>PR</th><th>Environment</th><th>Branch / Ref</th><th>SHA</th>
+        <th>Status</th><th>Last Updated</th><th>Links</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+  }
 
   return `<table>
     <thead><tr>
@@ -181,11 +212,18 @@ async function load() {
   document.getElementById('content').innerHTML = '<p class="loading">Loading…</p>';
 
   try {
-    const all = await ghFetch(
-      `/repos/${OWNER}/${REPO}/deployments?per_page=100`
-    );
+    const [all, labeledIssues] = await Promise.all([
+      ghFetch(`/repos/${OWNER}/${REPO}/deployments?per_page=100`),
+      ghFetch(`/repos/${OWNER}/${REPO}/issues?labels=deploy-preview&state=open&per_page=100`),
+    ]);
 
-    // Filter to our environments; dedupe by name, keeping the most recent deployment
+    // Build a map of environment name -> most recent deployment
+    const deployByEnv = new Map();
+    for (const d of all) {
+      if (!deployByEnv.has(d.environment)) deployByEnv.set(d.environment, d);
+    }
+
+    // Collect feature branch deployments
     function collect(pattern) {
       const seen = new Map();
       for (const d of all) {
@@ -195,7 +233,6 @@ async function load() {
       return [...seen.values()];
     }
 
-    const prs   = collect(/^ui-pr-\d+$/);
     const feats = collect(/^ui-feat-/);
 
     async function withStatus(list) {
@@ -204,23 +241,41 @@ async function load() {
       );
     }
 
-    const [prRows, featRows] = await Promise.all([
-      withStatus(prs),
-      withStatus(feats),
-    ]);
+    // Build PR rows from labeled PRs (issues with pull_request field)
+    const labeledPRs = labeledIssues.filter(i => i.pull_request);
+    const prRowsRaw = labeledPRs.map(pr => {
+      const envName = `ui-pr-${pr.number}`;
+      const deployment = deployByEnv.get(envName) ?? null;
+      return deployment
+        ? { ...deployment, prNumber: pr.number, prHead: pr.pull_request?.url ?? '' }
+        : { prNumber: pr.number, prHead: pr.head?.ref ?? '', environment: envName, ref: null, sha: null, updated_at: null, id: null };
+    });
 
-    const byTime = (a, b) => new Date(b.updated_at) - new Date(a.updated_at);
+    // Fetch statuses only for rows that have a real deployment
+    const prRows = await Promise.all(
+      prRowsRaw.map(async d =>
+        d.id ? { ...d, latestStatus: await latestStatus(d.id) } : { ...d, latestStatus: null }
+      )
+    );
+
+    const featRows = await withStatus(feats);
+
+    const byTime = (a, b) => {
+      if (!a.updated_at) return 1;
+      if (!b.updated_at) return -1;
+      return new Date(b.updated_at) - new Date(a.updated_at);
+    };
     prRows.sort(byTime);
     featRows.sort(byTime);
 
     document.getElementById('content').innerHTML = `
       <div class="section">
         <div class="section-title">Pull Request Previews (${prRows.length})</div>
-        ${renderTable(prRows)}
+        ${renderTable(prRows, true)}
       </div>
       <div class="section">
         <div class="section-title">Feature Branch Previews (${featRows.length})</div>
-        ${renderTable(featRows)}
+        ${renderTable(featRows, false)}
       </div>
     `;
   } catch (e) {
