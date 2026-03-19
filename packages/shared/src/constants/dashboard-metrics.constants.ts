@@ -207,6 +207,58 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
 ];
 
 // ============================================
+// North Star Metrics (Executive Director)
+// ============================================
+
+/**
+ * North Star KPI metrics for executive director dashboard
+ * NOTE: These are currently configured with mock data values.
+ * Data will be populated from live API once Snowflake tables for membership/financial data are available.
+ */
+export const NORTH_STAR_METRICS: DashboardMetricCard[] = [
+  {
+    title: 'Engaged Community',
+    icon: 'fa-light fa-users',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'north-star-card-engaged-community',
+    chartData: EMPTY_CHART_DATA,
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    drawerType: DashboardDrawerType.NorthStarEngagedCommunity,
+  },
+  {
+    title: 'Member Acq. Rate & CAC',
+    icon: 'fa-light fa-user-plus',
+    chartType: 'bar',
+    category: 'memberships',
+    testId: 'north-star-card-member-acquisition',
+    chartData: EMPTY_CHART_DATA,
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
+  },
+  {
+    title: 'Member Retention & NRR',
+    icon: 'fa-light fa-arrow-rotate-right',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'north-star-card-member-retention',
+    chartData: EMPTY_CHART_DATA,
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    drawerType: DashboardDrawerType.NorthStarMemberRetention,
+  },
+  {
+    title: 'Flywheel Conv. Rate',
+    icon: 'fa-light fa-rotate',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'north-star-card-flywheel-conversion',
+    chartData: EMPTY_CHART_DATA,
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
+  },
+];
+
+// ============================================
 // Progress Metrics (Core Developer & Maintainer)
 // ============================================
 

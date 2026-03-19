@@ -2812,3 +2812,77 @@ export interface EmailCtrResponse {
   monthlySends: number[];
   monthlyOpens: number[];
 }
+
+// ============================================
+// North Star Metrics (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Monthly data point for North Star metric trend charts
+ */
+export interface NorthStarMonthlyDataPoint {
+  month: string;
+  value: number;
+}
+
+/**
+ * API response for Engaged Community Size metric
+ * Newsletter + community + WG members (deduplicated)
+ */
+export interface EngagedCommunitySizeResponse {
+  totalMembers: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  breakdown: {
+    newsletterSubscribers: number;
+    communityMembers: number;
+    workingGroupMembers: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Member Acquisition Rate & CAC metric
+ * New paying members/quarter + cost per acquisition
+ */
+export interface MemberAcquisitionResponse {
+  newMembersThisQuarter: number;
+  costPerAcquisition: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  quarterlyData: {
+    quarter: string;
+    newMembers: number;
+    cac: number;
+  }[];
+}
+
+/**
+ * API response for Member Retention / NRR metric
+ * Annual renewal rate + net revenue retention
+ */
+export interface MemberRetentionResponse {
+  renewalRate: number;
+  netRevenueRetention: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  target: number;
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Flywheel Conversion Rate metric
+ * % of event attendees → newsletter/community/WG within 90 days
+ */
+export interface FlywheelConversionResponse {
+  conversionRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  funnel: {
+    eventAttendees: number;
+    convertedToNewsletter: number;
+    convertedToCommunity: number;
+    convertedToWorkingGroup: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
+}

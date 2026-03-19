@@ -209,6 +209,10 @@ export enum DashboardDrawerType {
   MarketingEmailCtr = 'marketing-email-ctr',
   MarketingPaidSocialReach = 'marketing-paid-social-reach',
   MarketingSocialMedia = 'marketing-social-media',
+  NorthStarEngagedCommunity = 'north-star-engaged-community',
+  NorthStarMemberAcquisition = 'north-star-member-acquisition',
+  NorthStarMemberRetention = 'north-star-member-retention',
+  NorthStarFlywheelConversion = 'north-star-flywheel-conversion',
 }
 
 /** Lifecycle stage of a foundation project */
