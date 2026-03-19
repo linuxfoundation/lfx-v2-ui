@@ -12,7 +12,7 @@ import { formatDateToISOString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { of, switchMap } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-assign-leadership-dialog',
@@ -93,17 +93,27 @@ export class AssignLeadershipDialogComponent {
       },
     };
 
-    // Note: Sequential updates can partially fail — the new member may be assigned but the
-    // previous leader's role may not be cleared. The caller refreshes members on dialog close
-    // to ensure the UI reflects the actual backend state regardless of partial failure.
     this.committeeService
       .updateCommitteeMember(this.committee.uid, memberUid, roleUpdate)
       .pipe(
         switchMap(() => {
           if (this.currentLeader && this.currentLeader.uid !== memberUid) {
-            return this.committeeService.updateCommitteeMember(this.committee.uid, this.currentLeader.uid, {
-              role: { name: CommitteeMemberRole.NONE },
-            });
+            return this.committeeService
+              .updateCommitteeMember(this.committee.uid, this.currentLeader.uid, {
+                role: { name: CommitteeMemberRole.NONE },
+              })
+              .pipe(
+                catchError(() => {
+                  // Assignment succeeded but clearing the previous leader's role failed.
+                  // Warn the user so they can resolve the duplicate manually.
+                  this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Partial Update',
+                    detail: `New ${this.roleLabel.toLowerCase()} assigned, but the previous leader's role could not be cleared automatically.`,
+                  });
+                  return of(null);
+                })
+              );
           }
           return of(null);
         })
@@ -125,8 +135,7 @@ export class AssignLeadershipDialogComponent {
             summary: 'Error',
             detail: `Failed to assign ${this.roleLabel.toLowerCase()}`,
           });
-          // Close with result to trigger a member refresh even on partial failure
-          this.dialogRef.close({ role: this.role, leadership: null });
+          this.dialogRef.close();
         },
       });
   }

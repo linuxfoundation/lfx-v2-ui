@@ -39,6 +39,7 @@ router.get('/:id/events', (req, res, next) => committeeController.getCommitteeEv
 router.get('/:id/campaigns', (req, res, next) => committeeController.getCommitteeCampaigns(req, res, next));
 router.get('/:id/engagement', (req, res, next) => committeeController.getCommitteeEngagement(req, res, next));
 router.get('/:id/budget', (req, res, next) => committeeController.getCommitteeBudget(req, res, next));
+
 // ── Join / Leave routes ────────────────────────────────────────────────────
 router.post('/:id/join', (req, res, next) => committeeController.joinCommittee(req, res, next));
 router.delete('/:id/leave', (req, res, next) => committeeController.leaveCommittee(req, res, next));
