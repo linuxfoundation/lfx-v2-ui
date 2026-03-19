@@ -536,7 +536,7 @@ export class CommitteeController {
 
   /**
    * GET /committees/:id/surveys
-   * Manual handler (not using subResourceHandler) because this endpoint needs req.query passthrough for survey filtering
+   * Manual handler (not using subResourceHandler) because surveys need custom query param passthrough for filtering by status
    */
   public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
@@ -554,7 +554,7 @@ export class CommitteeController {
 
     const startTime = logger.startOperation(req, 'get_committee_surveys', {
       committee_id: id,
-      query_params: logger.sanitize(req.query as Record<string, any>),
+      query_params: logger.sanitize(req.query as Record<string, unknown>),
     });
 
     try {
@@ -595,13 +595,20 @@ export class CommitteeController {
       const startTime = logger.startOperation(req, operation, { committee_id: committeeId });
       try {
         const result = await serviceFn(req, committeeId);
+        let count: number | boolean;
+        if (Array.isArray(result)) {
+          count = result.length;
+        } else if (result && typeof result === 'object' && 'data' in result && Array.isArray((result as { data: unknown[] }).data)) {
+          count = (result as { data: unknown[] }).data.length;
+        } else {
+          count = !!result;
+        }
         logger.success(req, operation, startTime, {
           committee_id: committeeId,
-          [countKey]: Array.isArray(result) ? result.length : !!result,
+          [countKey]: count,
         });
         res.json(result);
       } catch (error) {
-        logger.error(req, operation, startTime, error, { committee_id: committeeId });
         next(error);
       }
     };

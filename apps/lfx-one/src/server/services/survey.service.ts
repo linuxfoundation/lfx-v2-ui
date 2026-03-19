@@ -101,7 +101,7 @@ export class SurveyService {
     const allowedParams = ['page_size', 'page_token', 'order_by', 'status'];
     const sanitizedQuery: Record<string, string> = {};
     for (const key of allowedParams) {
-      if (query[key]) sanitizedQuery[key] = String(query[key]);
+      if (query[key] !== undefined) sanitizedQuery[key] = String(query[key]);
     }
 
     // Use tags parameter for server-side filtering — committee_uid is not a supported query param

@@ -146,8 +146,10 @@ export class CommitteeService {
    * Updates an existing committee using ETag for concurrency control
    */
   public async updateCommittee(req: Request, committeeId: string, data: CommitteeUpdateData): Promise<Committee> {
-    // Extract settings fields from core committee data
-    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, ...committeeData } = data;
+    // Extract settings and channel fields from core committee data
+    // mailing_list/chat_channel are stripped because upstream PUT does not accept them
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, mailing_list, chat_channel, ...committeeData } = data;
 
     const hasSettingsUpdate =
       business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined;
@@ -383,7 +385,7 @@ export class CommitteeService {
       const allowedParams = ['page_size', 'page_token', 'order_by', 'committee_uid'];
       const sanitizedQuery: Record<string, string> = {};
       for (const key of allowedParams) {
-        if (query[key]) sanitizedQuery[key] = String(query[key]);
+        if (query[key] !== undefined) sanitizedQuery[key] = String(query[key]);
       }
 
       const params = {
@@ -408,9 +410,12 @@ export class CommitteeService {
       });
 
       return result;
-    } catch {
+    } catch (error) {
+      // Reset cached promise so a transient import failure doesn't stick forever
+      this.meetingServicePromise = undefined;
       logger.warning(req, 'get_committee_meetings', 'Failed to fetch committee meetings, returning empty', {
         committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       return { data: [], page_token: undefined };
     }
