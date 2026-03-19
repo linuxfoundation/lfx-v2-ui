@@ -11,9 +11,7 @@ import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
-// TODO: Replace with LFX wrappers when available
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
+import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
@@ -22,18 +20,7 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [
-    BreadcrumbComponent,
-    ButtonComponent,
-    TagComponent,
-    ConfirmDialogModule,
-    RouterLink,
-    RouteLoadingComponent,
-    DatePipe,
-    NgClass,
-    CommitteeOverviewComponent,
-  ],
-  providers: [ConfirmationService],
+  imports: [BreadcrumbComponent, ButtonComponent, TagComponent, RouterLink, RouteLoadingComponent, DatePipe, NgClass, CommitteeOverviewComponent],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })

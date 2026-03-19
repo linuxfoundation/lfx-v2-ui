@@ -98,10 +98,7 @@ export class CommitteeService {
   }
 
   public getCommitteeMeetings(committeeId: string): Observable<Meeting[]> {
-    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(
-      map((response) => response.data),
-      take(1)
-    );
+    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(map((response) => response.data));
   }
 
   // Dashboard sub-resource methods — error handling is done at the component layer

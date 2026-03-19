@@ -318,6 +318,8 @@ export interface CommitteeVote {
   votes_for: number;
   votes_against: number;
   votes_abstain: number;
+  /** Total responses received (used when per-option breakdown is unavailable) */
+  total_responses?: number;
   total_eligible: number;
   created_by: string;
 }

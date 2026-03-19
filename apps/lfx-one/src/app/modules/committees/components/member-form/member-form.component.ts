@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -170,10 +171,9 @@ export class MemberFormComponent {
           });
           this.dialogRef.close(true);
         },
-        error: (error) => {
+        error: (err: HttpErrorResponse) => {
           this.submitting.set(false);
-
-          if (error.status === 409) {
+          if (err.status === 409) {
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
