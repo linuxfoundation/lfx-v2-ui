@@ -54,6 +54,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { catchError, combineLatest, finalize, forkJoin, Observable, of, switchMap, take, tap } from 'rxjs';
 
+import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeSettingsComponent } from '../components/committee-settings/committee-settings.component';
 import { Committee, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { CommitteeService } from '@services/committee.service';
@@ -84,6 +85,7 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     TabPanel,
     DatePipe,
     DecimalPipe,
+    CommitteeMembersComponent,
     CommitteeSettingsComponent,
     MeetingCardComponent,
     ReactiveFormsModule,
@@ -171,6 +173,12 @@ export class CommitteeViewComponent {
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
   public isMaintainer: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'maintainer');
   public canManageConfigurations: Signal<boolean> = computed(() => this.isMaintainer() || (!!this.committee()?.writer && !this.isBoardMember()));
+  // Note: canManageMembers is logically equivalent to canManageConfigurations (De Morgan's law),
+  // kept separate to align with the child component's permission check.
+  public canManageMembers: Signal<boolean> = computed(() => !this.isBoardMember() && (!!this.committee()?.writer || this.isMaintainer()));
+
+  // -- Tab visibility signals --
+  public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== 'hidden' || this.canManageMembers());
 
   // -- Behavioral class signals --
   public behavioralClass: Signal<GroupBehavioralClass> = computed(() => getGroupBehavioralClass(this.committee()?.category));
