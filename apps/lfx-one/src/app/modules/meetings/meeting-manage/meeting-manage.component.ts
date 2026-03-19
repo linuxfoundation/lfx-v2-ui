@@ -55,6 +55,11 @@ import { MeetingRegistrantsManagerComponent } from '../components/meeting-regist
 import { MeetingResourcesSummaryComponent } from '../components/meeting-resources-summary/meeting-resources-summary.component';
 import { MeetingTypeSelectionComponent } from '../components/meeting-type-selection/meeting-type-selection.component';
 
+interface GroupContext {
+  uid: string;
+  name: string;
+}
+
 @Component({
   selector: 'lfx-meeting-manage',
   imports: [
@@ -82,7 +87,7 @@ export class MeetingManageComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectContextService = inject(ProjectContextService);
   // Group context — when creating a meeting from a committee/group page
-  public groupContext = signal<{ uid: string; name: string } | null>(null);
+  public groupContext = signal<GroupContext | null>(null);
   public isFromGroup: Signal<boolean> = computed(() => !!this.groupContext());
 
   // Mode and state signals
@@ -157,17 +162,14 @@ export class MeetingManageComponent {
     );
 
     // Read group context from query params (when navigating from Groups page).
-    // The committee UID is validated downstream: MeetingCommitteeManagerComponent's
-    // lock effect checks that the UID exists in committeeOptions() before locking
-    // the dropdown. If invalid, the dropdown is left unlocked and editable.
+    // Only sets groupContext for the banner display. Committee pre-selection and
+    // locking are handled by MeetingCommitteeManagerComponent's effect via the
+    // lockedCommitteeUid input — single source of truth for form state.
     this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
       const committeeUid = params.get('committee_uid');
       const committeeName = params.get('committee_name');
       if (committeeUid && committeeName) {
         this.groupContext.set({ uid: committeeUid, name: committeeName });
-        this.form()
-          .get('committees')
-          ?.setValue([{ uid: committeeUid, name: committeeName, allowed_voting_statuses: [] }]);
       }
     });
 
