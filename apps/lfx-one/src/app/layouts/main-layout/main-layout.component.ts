@@ -46,9 +46,10 @@ export class MainLayoutComponent {
   // ED persona — gets org picker in Org lens
   protected readonly isEDPersona = computed(() => this.personaService.currentPersona() === 'executive-director');
 
-  // Foundation lens project picker — only for multi-context users (board-member, ED)
+  // Foundation lens project picker — shown for all users in the Foundation lens
+  // (every user needs to know which project/foundation context they're in)
   protected readonly showFoundationProjectSelector = computed(
-    () => this.activeLens() === 'foundation' && this.personaService.isTlfOnlyPersona()
+    () => this.activeLens() === 'foundation'
   );
 
   // Org lens org picker — only for ED (manages multiple orgs/foundations)
