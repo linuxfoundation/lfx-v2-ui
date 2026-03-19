@@ -21,6 +21,7 @@ import {
   PaginatedResponse,
   QueryServiceCountResponse,
 } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -50,24 +51,14 @@ export class CommitteeService {
     const params = new HttpParams().set('tags', `project_uid:${uid}`);
     return this.http
       .get<QueryServiceCountResponse>('/api/committees/count', { params })
-      .pipe(
-        catchError((error) => {
-          console.error('Failed to load committees count:', error);
-          return of({ count: 0 });
-        })
-      )
+      .pipe(catchError(() => of({ count: 0 })))
       .pipe(map((response) => response.count));
-  }
-
-  public getRecentCommitteesByProject(uid: string): Observable<Committee[]> {
-    return this.getCommitteesByProject(uid);
   }
 
   public getCommittee(id: string): Observable<Committee> {
     return this.http.get<Committee>(`/api/committees/${id}`).pipe(
       catchError((error) => {
-        console.error(`Failed to load committee ${id}:`, error);
-        return throwError(() => new Error(`Failed to load committee ${id}`));
+        return throwError(() => error);
       }),
       tap((committee) => this.committee.set(committee ?? null))
     );
@@ -109,49 +100,74 @@ export class CommitteeService {
   public getCommitteeMeetings(committeeId: string): Observable<Meeting[]> {
     return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(
       map((response) => response.data),
-      catchError(() => of([])),
       take(1)
     );
   }
 
-  // Dashboard sub-resource methods
+  // Dashboard sub-resource methods — error handling is done at the component layer
   public getCommitteeVotes(committeeId: string): Observable<CommitteeVote[]> {
-    return this.http.get<CommitteeVote[]>(`/api/committees/${committeeId}/votes`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeVote[]>(`/api/committees/${committeeId}/votes`);
   }
 
   public getCommitteeResolutions(committeeId: string): Observable<CommitteeResolution[]> {
-    return this.http.get<CommitteeResolution[]>(`/api/committees/${committeeId}/resolutions`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeResolution[]>(`/api/committees/${committeeId}/resolutions`);
   }
 
   public getCommitteeActivity(committeeId: string): Observable<CommitteeActivity[]> {
-    return this.http.get<CommitteeActivity[]>(`/api/committees/${committeeId}/activity`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeActivity[]>(`/api/committees/${committeeId}/activity`);
   }
 
   public getCommitteeContributors(committeeId: string): Observable<CommitteeContributor[]> {
-    return this.http.get<CommitteeContributor[]>(`/api/committees/${committeeId}/contributors`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeContributor[]>(`/api/committees/${committeeId}/contributors`);
   }
 
   public getCommitteeDeliverables(committeeId: string): Observable<CommitteeDeliverable[]> {
-    return this.http.get<CommitteeDeliverable[]>(`/api/committees/${committeeId}/deliverables`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeDeliverable[]>(`/api/committees/${committeeId}/deliverables`);
   }
 
   public getCommitteeDiscussions(committeeId: string): Observable<CommitteeDiscussionThread[]> {
-    return this.http.get<CommitteeDiscussionThread[]>(`/api/committees/${committeeId}/discussions`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeDiscussionThread[]>(`/api/committees/${committeeId}/discussions`);
   }
 
   public getCommitteeEvents(committeeId: string): Observable<CommitteeEvent[]> {
-    return this.http.get<CommitteeEvent[]>(`/api/committees/${committeeId}/events`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeEvent[]>(`/api/committees/${committeeId}/events`);
   }
 
   public getCommitteeCampaigns(committeeId: string): Observable<CommitteeOutreachCampaign[]> {
-    return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`);
   }
 
   public getCommitteeEngagement(committeeId: string): Observable<CommitteeEngagementMetrics | null> {
-    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`).pipe(catchError(() => of(null)));
+    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`);
   }
 
   public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
-    return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`).pipe(catchError(() => of(null)));
+    return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`);
+  // ── Join / Leave Methods ──────────────────────────────────────────────────
+
+  /** Self-join an open group */
+  public joinCommittee(committeeId: string): Observable<CommitteeMember> {
+    return this.http.post<CommitteeMember>(`/api/committees/${committeeId}/join`, {}).pipe(take(1));
+  }
+
+  /** Leave a group */
+  public leaveCommittee(committeeId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
+  }
+
+  // ── My Committees ─────────────────────────────────────────────────────────
+
+  /** Get committees for the current user, optionally scoped to a project */
+  public getMyCommittees(projectUid?: string): Observable<MyCommittee[]> {
+    let params = new HttpParams();
+    if (projectUid) {
+      params = params.set('project_uid', projectUid);
+    }
+    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load my committees:', error);
+        return of([]);
+      })
+    );
   }
 }
