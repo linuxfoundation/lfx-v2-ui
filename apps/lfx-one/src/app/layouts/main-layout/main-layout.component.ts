@@ -47,9 +47,14 @@ export class MainLayoutComponent {
     this.activeLens.set(lens);
   }
 
-  // Sidebar items — per-lens structure per Manish v1 PDF
+  // Sidebar items — per-lens structure per Manish v1 PDF.
+  // Disabled items = page does not exist yet; lighter grey, not clickable.
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
+    // isTlfOnlyPersona proxies for multi-context: board members span multiple
+    // foundations and get an Overview aggregation page. Single-project users
+    // (contributors, maintainers) don't need it — the lens IS their context.
     const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
+    const isMultiContext = isTlfOnlyPersona;
 
     switch (this.activeLens()) {
       // ── Me lens ──────────────────────────────────────────────────────────
@@ -61,11 +66,11 @@ export class MainLayoutComponent {
             isSection: true,
             expanded: true,
             items: [
-              { label: 'My Foundations', icon: 'fa-light fa-layer-group', command: () => {} },
-              { label: 'Actions', icon: 'fa-light fa-bolt', command: () => {} },
+              { label: 'My Foundations', icon: 'fa-light fa-layer-group', command: () => {}, disabled: true },
+              { label: 'Actions', icon: 'fa-light fa-bolt', command: () => {}, disabled: true },
               { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
               { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {}, disabled: true },
             ],
           },
           {
@@ -73,9 +78,9 @@ export class MainLayoutComponent {
             isSection: true,
             expanded: true,
             items: [
-              { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {} },
-              { label: 'Badges', icon: 'fa-light fa-medal', command: () => {} },
-              { label: 'EasyCLA', icon: 'fa-light fa-file-signature', command: () => {} },
+              { label: 'Trainings & Certifications', icon: 'fa-light fa-certificate', command: () => {}, disabled: true },
+              { label: 'Badges', icon: 'fa-light fa-medal', command: () => {}, disabled: true },
+              { label: 'EasyCLA', icon: 'fa-light fa-file-signature', command: () => {}, disabled: true },
             ],
           },
           {
@@ -84,7 +89,7 @@ export class MainLayoutComponent {
             expanded: true,
             items: [
               { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', disabled: !this.enableProfileClick() },
-              { label: 'Transactions', icon: 'fa-light fa-receipt', command: () => {} },
+              { label: 'Transactions', icon: 'fa-light fa-receipt', command: () => {}, disabled: true },
               { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
             ],
           },
@@ -92,21 +97,26 @@ export class MainLayoutComponent {
 
       // ── Foundation / Projects lens ────────────────────────────────────────
       case 'foundation': {
-        const sections: SidebarMenuItem[] = [
-          { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' },
-          {
-            label: 'Community',
-            isSection: true,
-            expanded: true,
-            items: [
-              { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {} },
-              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-              { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
-              { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
-            ],
-          },
-        ];
+        const sections: SidebarMenuItem[] = [];
+
+        // Overview only for multi-context users (board members spanning multiple foundations).
+        // Single-project contributors land here directly — no aggregation page needed.
+        if (isMultiContext) {
+          sections.push({ label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/' });
+        }
+
+        sections.push({
+          label: 'Community',
+          isSection: true,
+          expanded: true,
+          items: [
+            { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {}, disabled: true },
+            { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
+            { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
+            { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
+            { label: 'Events', icon: 'fa-light fa-ticket', command: () => {}, disabled: true },
+          ],
+        });
 
         if (!isTlfOnlyPersona) {
           sections.push({
@@ -133,17 +143,18 @@ export class MainLayoutComponent {
       }
 
       // ── Organization lens ─────────────────────────────────────────────────
+      // All pages are new — disabled until built.
       case 'organization':
       default:
         return [
-          { label: 'Overview', icon: 'fa-light fa-grid-2', command: () => {} },
+          { label: 'Overview', icon: 'fa-light fa-grid-2', command: () => {}, disabled: true },
           {
             label: 'Org Details',
             isSection: true,
             expanded: true,
             items: [
-              { label: 'Membership', icon: 'fa-light fa-id-card', command: () => {} },
-              { label: 'Employees', icon: 'fa-light fa-user-group', command: () => {} },
+              { label: 'Membership', icon: 'fa-light fa-id-card', command: () => {}, disabled: true },
+              { label: 'Employees', icon: 'fa-light fa-user-group', command: () => {}, disabled: true },
             ],
           },
           {
@@ -151,10 +162,11 @@ export class MainLayoutComponent {
             isSection: true,
             expanded: true,
             items: [
-              { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {} },
-              { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {} },
-              { label: 'Reports', icon: 'fa-light fa-chart-bar', command: () => {} },
+              { label: 'Projects', icon: 'fa-light fa-diagram-project', command: () => {}, disabled: true },
+              // Org Meetings is a different page from Foundation Meetings — not yet built
+              { label: 'Meetings', icon: 'fa-light fa-calendar', command: () => {}, disabled: true },
+              { label: 'Events', icon: 'fa-light fa-ticket', command: () => {}, disabled: true },
+              { label: 'Reports', icon: 'fa-light fa-chart-bar', command: () => {}, disabled: true },
             ],
           },
         ];
