@@ -63,9 +63,8 @@ import {
   UniqueContributorsWeeklyResponse,
   UniqueContributorsWeeklyRow,
   WebActivitiesSummaryResponse,
-  EmailCtrCampaignRow,
   EmailCtrResponse,
-  EmailCtrRow,
+  SocialMediaResponse,
   SocialReachResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
@@ -1728,80 +1727,69 @@ export class ProjectService {
    * @param foundationSlug - Foundation slug used to filter metrics to the foundation and its related projects
    * @returns Email CTR response with monthly trend and change percentage
    */
-  public async getEmailCtr(foundationSlug: string): Promise<EmailCtrResponse> {
-    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake', { foundation_slug: foundationSlug });
+  public async getEmailCtr(foundationName: string): Promise<EmailCtrResponse> {
+    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake Platinum tables', { foundation_name: foundationName });
 
-    const foundationCte = `
-      WITH foundation_projects AS (
-        SELECT NAME FROM ANALYTICS.SILVER_DIM.PROJECTS WHERE SLUG = ?
-        UNION ALL
-        SELECT c.NAME FROM ANALYTICS.SILVER_DIM.PROJECTS c
-        INNER JOIN ANALYTICS.SILVER_DIM.PROJECTS p ON c.PARENT_PROJECT_SLUG = p.SLUG
-        WHERE p.SLUG = ? OR p.PARENT_PROJECT_SLUG = ?
-      )
+    // Query 1: KPI card — current CTR + MoM change from email_ctr_summary
+    const summaryQuery = `
+      SELECT
+        PROJECT_NAME,
+        CTR_LAST_COMPLETED_MONTH,
+        CTR_MOM_CHANGE
+      FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
+      WHERE PROJECT_NAME = ?
     `;
 
+    // Query 2: Monthly CTR trend (bar chart, last 6 months) from email_ctr_by_month
     const monthlyQuery = `
-      ${foundationCte}
       SELECT
-        em.CREATED_MONTH_DATE,
-        SUM(em.TOTAL_CLICKS)::FLOAT / NULLIF(SUM(em.TOTAL_SENDS), 0) as OVERALL_CTR,
-        SUM(em.TOTAL_SENDS) as TOTAL_SENDS,
-        SUM(em.TOTAL_CLICKS) as TOTAL_CLICKS,
-        SUM(em.TOTAL_OPENS) as TOTAL_OPENS
-      FROM ANALYTICS.PLATINUM.EMAIL_MARKETING_OVERALL_KPIS em
-      WHERE em.PROJECT_NAME != 'All Projects'
-        AND EXISTS (
-          SELECT 1 FROM foundation_projects fp
-          WHERE fp.NAME ILIKE '%' || em.PROJECT_NAME || '%'
-             OR em.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
-        )
-        AND em.CREATED_MONTH_DATE >= DATEADD('month', -6, CURRENT_DATE())
-      GROUP BY em.CREATED_MONTH_DATE
-      ORDER BY em.CREATED_MONTH_DATE ASC
+        PUBLISHED_MONTH,
+        PUBLISHED_MONTH_DATE,
+        MONTHLY_CTR,
+        TOTAL_SENDS,
+        TOTAL_OPENS
+      FROM ANALYTICS.PLATINUM.EMAIL_CTR_BY_MONTH
+      WHERE PROJECT_NAME = ?
+      ORDER BY PUBLISHED_MONTH_DATE ASC
     `;
 
+    // Query 3: CTR by campaign/project (horizontal bar) from email_ctr_summary
     const campaignQuery = `
-      ${foundationCte}
       SELECT
-        em.PROJECT_NAME,
-        SUM(em.TOTAL_CLICKS)::FLOAT / NULLIF(SUM(em.TOTAL_SENDS), 0) * 100 AS AVG_CTR,
-        SUM(em.TOTAL_SENDS) as TOTAL_SENDS,
-        SUM(em.TOTAL_CLICKS) as TOTAL_CLICKS
-      FROM ANALYTICS.PLATINUM.EMAIL_MARKETING_OVERALL_KPIS em
-      WHERE em.PROJECT_NAME != 'All Projects'
-        AND EXISTS (
-          SELECT 1 FROM foundation_projects fp
-          WHERE fp.NAME ILIKE '%' || em.PROJECT_NAME || '%'
-             OR em.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
-        )
-        AND em.CREATED_MONTH_DATE >= DATEADD('month', -6, CURRENT_DATE())
-      GROUP BY em.PROJECT_NAME
-      ORDER BY TOTAL_SENDS DESC
+        PROJECT_NAME,
+        CTR_LAST_6_MONTHS AS AVG_CTR,
+        TOTAL_SENDS_LAST_6_MONTHS AS TOTAL_SENDS,
+        TOTAL_CLICKS_LAST_6_MONTHS AS TOTAL_CLICKS
+      FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
+      WHERE PROJECT_NAME = ?
+      ORDER BY CTR_LAST_6_MONTHS DESC
     `;
 
-    const params = [foundationSlug, foundationSlug, foundationSlug];
-
-    const [monthlyResult, campaignResult] = await Promise.all([
-      this.snowflakeService.execute<EmailCtrRow>(monthlyQuery, params),
-      this.snowflakeService.execute<EmailCtrCampaignRow>(campaignQuery, params),
+    const [summaryResult, monthlyResult, campaignResult] = await Promise.all([
+      this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationName]),
+      this.snowflakeService.execute<{ PUBLISHED_MONTH: string; PUBLISHED_MONTH_DATE: string; MONTHLY_CTR: number; TOTAL_SENDS: number; TOTAL_OPENS: number }>(
+        monthlyQuery,
+        [foundationName]
+      ),
+      this.snowflakeService.execute<{ PROJECT_NAME: string; AVG_CTR: number; TOTAL_SENDS: number; TOTAL_CLICKS: number }>(campaignQuery, [foundationName]),
     ]);
 
-    if (monthlyResult.rows.length === 0) {
+    if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
       return { currentCtr: 0, changePercentage: 0, trend: 'up', monthlyData: [], monthlyLabels: [], campaignGroups: [], monthlySends: [], monthlyOpens: [] };
     }
 
-    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.OVERALL_CTR * 10000) / 100);
+    // Use summary row for KPI card values
+    const summaryRow = summaryResult.rows[0];
+    const currentCtr = summaryRow ? Math.round(summaryRow.CTR_LAST_COMPLETED_MONTH * 10000) / 100 : 0;
+    const changePercentage = summaryRow ? Math.round(summaryRow.CTR_MOM_CHANGE * 100) : 0;
+
+    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.MONTHLY_CTR * 10000) / 100);
     const monthlySends = monthlyResult.rows.map((row) => row.TOTAL_SENDS);
     const monthlyOpens = monthlyResult.rows.map((row) => row.TOTAL_OPENS);
     const monthlyLabels = monthlyResult.rows.map((row) => {
-      const date = new Date(row.CREATED_MONTH_DATE);
+      const date = new Date(row.PUBLISHED_MONTH_DATE);
       return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     });
-
-    const currentCtr = monthlyData[monthlyData.length - 1];
-    const previousCtr = monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2] : currentCtr;
-    const changePercentage = previousCtr > 0 ? Math.round(((currentCtr - previousCtr) / previousCtr) * 100) : 0;
 
     const campaignGroups = campaignResult.rows.map((row) => ({
       campaignName: row.PROJECT_NAME,
@@ -2021,5 +2009,110 @@ export class ProjectService {
 
       throw error;
     }
+  }
+
+  /**
+   * Get social media metrics from Snowflake Platinum tables
+   * Queries social_media_overview, social_media_platform_breakdown, and social_media_follower_trend
+   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @returns Social media response with followers, platform breakdown, and trend data
+   */
+  public async getSocialMedia(foundationName: string): Promise<SocialMediaResponse> {
+    logger.debug(undefined, 'get_social_media', 'Fetching social media data from Snowflake Platinum tables', { foundation_name: foundationName });
+
+    // Query 1: KPI cards — total followers, platforms, growth
+    const overviewQuery = `
+      SELECT
+        TOTAL_FOLLOWERS,
+        PLATFORMS_ACTIVE,
+        PRIOR_TOTAL_FOLLOWERS
+      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_OVERVIEW
+      WHERE FOUNDATION_NAME = ?
+    `;
+
+    // Query 2: Platform breakdown table + insights
+    const platformQuery = `
+      SELECT
+        PLATFORM_NAME,
+        FOLLOWERS,
+        ENGAGEMENTS,
+        IMPRESSIONS,
+        POSTS_30D,
+        PRIOR_FOLLOWERS
+      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+      WHERE FOUNDATION_NAME = ?
+    `;
+
+    // Query 3: Follower growth trend (6 months)
+    const trendQuery = `
+      SELECT
+        SNAPSHOT_MONTH,
+        TOTAL_FOLLOWERS
+      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_FOLLOWER_TREND
+      WHERE FOUNDATION_NAME = ?
+      ORDER BY SNAPSHOT_MONTH ASC
+    `;
+
+    const [overviewResult, platformResult, trendResult] = await Promise.all([
+      this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number; PRIOR_TOTAL_FOLLOWERS: number }>(overviewQuery, [foundationName]),
+      this.snowflakeService.execute<{
+        PLATFORM_NAME: string;
+        FOLLOWERS: number;
+        ENGAGEMENTS: number;
+        IMPRESSIONS: number;
+        POSTS_30D: number;
+        PRIOR_FOLLOWERS: number;
+      }>(platformQuery, [foundationName]),
+      this.snowflakeService.execute<{ SNAPSHOT_MONTH: string; TOTAL_FOLLOWERS: number }>(trendQuery, [foundationName]),
+    ]);
+
+    if (overviewResult.rows.length === 0) {
+      return { totalFollowers: 0, totalPlatforms: 0, changePercentage: 0, trend: 'up', platforms: [], monthlyData: [] };
+    }
+
+    const overview = overviewResult.rows[0];
+    const totalFollowers = overview.TOTAL_FOLLOWERS;
+    const totalPlatforms = overview.PLATFORMS_ACTIVE;
+    const priorFollowers = overview.PRIOR_TOTAL_FOLLOWERS;
+    const changePercentage = priorFollowers > 0 ? Math.round(((totalFollowers - priorFollowers) / priorFollowers) * 1000) / 10 : 0;
+
+    const platformIconMap: Record<string, string> = {
+      Twitter: 'fa-brands fa-x-twitter',
+      'Twitter/X': 'fa-brands fa-x-twitter',
+      X: 'fa-brands fa-x-twitter',
+      LinkedIn: 'fa-brands fa-linkedin',
+      YouTube: 'fa-brands fa-youtube',
+      Mastodon: 'fa-brands fa-mastodon',
+      Bluesky: 'fa-brands fa-bluesky',
+      Facebook: 'fa-brands fa-facebook',
+      Instagram: 'fa-brands fa-instagram',
+    };
+
+    const platforms = platformResult.rows.map((row) => ({
+      platform: row.PLATFORM_NAME,
+      followers: row.FOLLOWERS,
+      engagementRate: row.IMPRESSIONS > 0 ? Math.round((row.ENGAGEMENTS / row.IMPRESSIONS) * 1000) / 10 : 0,
+      postsLast30Days: row.POSTS_30D,
+      impressions: row.IMPRESSIONS,
+      iconClass: platformIconMap[row.PLATFORM_NAME] || 'fa-light fa-globe',
+    }));
+
+    const monthlyData = trendResult.rows.map((row) => {
+      const date = new Date(row.SNAPSHOT_MONTH);
+      return {
+        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        totalFollowers: row.TOTAL_FOLLOWERS,
+        totalEngagements: 0,
+      };
+    });
+
+    return {
+      totalFollowers,
+      totalPlatforms,
+      changePercentage,
+      trend: changePercentage >= 0 ? 'up' : 'down',
+      platforms,
+      monthlyData,
+    };
   }
 }

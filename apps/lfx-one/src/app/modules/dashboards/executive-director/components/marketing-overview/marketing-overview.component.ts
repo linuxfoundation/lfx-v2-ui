@@ -50,7 +50,9 @@ export class MarketingOverviewComponent {
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
 
   // === Observables ===
-  private readonly selectedFoundationSlug$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((foundation) => foundation?.slug || ''));
+  private readonly selectedFoundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(
+    map((foundation) => ({ slug: foundation?.slug || '', name: foundation?.name || '' }))
+  );
 
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
@@ -62,31 +64,13 @@ export class MarketingOverviewComponent {
     'Social reach growth aligns with major product announcements in February',
   ];
 
-  protected readonly socialMediaData: SocialMediaResponse = {
-    totalFollowers: 284_500,
-    totalPlatforms: 5,
-    changePercentage: 8.3,
-    trend: 'up',
-    platforms: [
-      { platform: 'Twitter/X', followers: 125_000, engagementRate: 3.2, postsLast30Days: 45, impressions: 1_250_000, iconClass: 'fa-brands fa-x-twitter' },
-      { platform: 'LinkedIn', followers: 89_000, engagementRate: 4.8, postsLast30Days: 28, impressions: 890_000, iconClass: 'fa-brands fa-linkedin' },
-      { platform: 'YouTube', followers: 42_000, engagementRate: 2.1, postsLast30Days: 8, impressions: 520_000, iconClass: 'fa-brands fa-youtube' },
-      { platform: 'Mastodon', followers: 18_500, engagementRate: 5.4, postsLast30Days: 32, impressions: 185_000, iconClass: 'fa-brands fa-mastodon' },
-      { platform: 'Bluesky', followers: 10_000, engagementRate: 6.1, postsLast30Days: 22, impressions: 95_000, iconClass: 'fa-brands fa-bluesky' },
-    ],
-    monthlyData: [
-      { month: 'Oct 2025', totalFollowers: 248_000, totalEngagements: 42_000 },
-      { month: 'Nov 2025', totalFollowers: 256_000, totalEngagements: 45_500 },
-      { month: 'Dec 2025', totalFollowers: 261_000, totalEngagements: 38_000 },
-      { month: 'Jan 2026', totalFollowers: 270_000, totalEngagements: 48_200 },
-      { month: 'Feb 2026', totalFollowers: 278_000, totalEngagements: 51_000 },
-      { month: 'Mar 2026', totalFollowers: 284_500, totalEngagements: 53_400 },
-    ],
-  };
-
   // === Computed Signals ===
-  protected readonly marketingData: Signal<{ webActivities: WebActivitiesSummaryResponse; emailCtr: EmailCtrResponse; socialReach: SocialReachResponse }> =
-    this.initMarketingData();
+  protected readonly marketingData: Signal<{
+    webActivities: WebActivitiesSummaryResponse;
+    emailCtr: EmailCtrResponse;
+    socialReach: SocialReachResponse;
+    socialMedia: SocialMediaResponse;
+  }> = this.initMarketingData();
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
 
   public constructor() {
@@ -107,7 +91,7 @@ export class MarketingOverviewComponent {
   // === Private Initializers ===
   private initMarketingCards(): Signal<DashboardMetricCard[]> {
     return computed(() => {
-      const { webActivities, emailCtr, socialReach } = this.marketingData();
+      const { webActivities, emailCtr, socialReach, socialMedia } = this.marketingData();
       const loading = this.marketingDataLoading();
 
       return MARKETING_OVERVIEW_METRICS.map((card) => {
@@ -121,14 +105,19 @@ export class MarketingOverviewComponent {
           return this.transformSocialReach(card, socialReach, loading);
         }
         if (card.title === 'Social Media') {
-          return this.transformSocialMedia(card);
+          return this.transformSocialMedia(card, socialMedia, loading);
         }
         return card;
       });
     });
   }
 
-  private initMarketingData(): Signal<{ webActivities: WebActivitiesSummaryResponse; emailCtr: EmailCtrResponse; socialReach: SocialReachResponse }> {
+  private initMarketingData(): Signal<{
+    webActivities: WebActivitiesSummaryResponse;
+    emailCtr: EmailCtrResponse;
+    socialReach: SocialReachResponse;
+    socialMedia: SocialMediaResponse;
+  }> {
     const defaultWebActivities: WebActivitiesSummaryResponse = {
       totalSessions: 0,
       totalPageViews: 0,
@@ -161,21 +150,36 @@ export class MarketingOverviewComponent {
       channelGroups: [],
     };
 
-    const defaultValue = { webActivities: defaultWebActivities, emailCtr: defaultEmailCtr, socialReach: defaultSocialReach };
+    const defaultSocialMedia: SocialMediaResponse = {
+      totalFollowers: 0,
+      totalPlatforms: 0,
+      changePercentage: 0,
+      trend: 'up',
+      platforms: [],
+      monthlyData: [],
+    };
+
+    const defaultValue = {
+      webActivities: defaultWebActivities,
+      emailCtr: defaultEmailCtr,
+      socialReach: defaultSocialReach,
+      socialMedia: defaultSocialMedia,
+    };
 
     return toSignal(
-      combineLatest([toObservable(this.browserReady), this.selectedFoundationSlug$]).pipe(
-        filter(([ready, slug]) => ready && !!slug),
-        map(([, slug]) => slug),
+      combineLatest([toObservable(this.browserReady), this.selectedFoundation$]).pipe(
+        filter(([ready, foundation]) => ready && !!foundation.slug),
+        map(([, foundation]) => foundation),
         tap(() => {
           this.marketingDataLoading.set(true);
           this.activeDrawer.set(null);
         }),
-        switchMap((foundationSlug) =>
+        switchMap((foundation) =>
           forkJoin({
-            webActivities: this.analyticsService.getWebActivitiesSummary(foundationSlug),
-            emailCtr: this.analyticsService.getEmailCtr(foundationSlug),
-            socialReach: this.analyticsService.getSocialReach(foundationSlug),
+            webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug),
+            emailCtr: this.analyticsService.getEmailCtr(foundation.name),
+            socialReach: this.analyticsService.getSocialReach(foundation.slug),
+            socialMedia: this.analyticsService.getSocialMedia(foundation.name),
           }).pipe(
             tap(() => this.marketingDataLoading.set(false)),
             catchError(() => {
@@ -275,29 +279,31 @@ export class MarketingOverviewComponent {
     };
   }
 
-  private transformSocialMedia(card: DashboardMetricCard): DashboardMetricCard {
-    const data = this.socialMediaData;
+  private transformSocialMedia(card: DashboardMetricCard, data: SocialMediaResponse, loading: boolean): DashboardMetricCard {
     return {
       ...card,
-      loading: false,
-      value: this.formatNumber(data.totalFollowers),
-      subtitle: `${data.totalPlatforms} platforms · Last 6 months`,
+      loading,
+      value: data.totalFollowers > 0 ? this.formatNumber(data.totalFollowers) : undefined,
+      subtitle: data.totalFollowers > 0 ? `${data.totalPlatforms} platforms · Last 6 months` : undefined,
       changePercentage: data.changePercentage !== 0 ? `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%` : undefined,
       trend: data.trend,
-      chartData: {
-        labels: data.monthlyData.map((d) => d.month),
-        datasets: [
-          {
-            data: data.monthlyData.map((d) => d.totalFollowers),
-            borderColor: lfxColors.blue[500],
-            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
+      chartData:
+        data.monthlyData.length > 0
+          ? {
+              labels: data.monthlyData.map((d) => d.month),
+              datasets: [
+                {
+                  data: data.monthlyData.map((d) => d.totalFollowers),
+                  borderColor: lfxColors.blue[500],
+                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+                  fill: true,
+                  tension: 0.4,
+                  borderWidth: 2,
+                  pointRadius: 0,
+                },
+              ],
+            }
+          : card.chartData,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
     };
   }

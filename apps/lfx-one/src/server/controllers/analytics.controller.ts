@@ -1709,18 +1709,18 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_email_ctr');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationName = req.query['foundationName'] as string | undefined;
 
-      if (!foundationSlug) {
-        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+      if (!foundationName) {
+        throw ServiceValidationError.forField('foundationName', 'foundationName query parameter is required', {
           operation: 'get_email_ctr',
         });
       }
 
-      const response = await this.projectService.getEmailCtr(foundationSlug);
+      const response = await this.projectService.getEmailCtr(foundationName);
 
       logger.success(req, 'get_email_ctr', startTime, {
-        foundation_slug: foundationSlug,
+        foundation_name: foundationName,
         current_ctr: response.currentCtr,
         monthly_data_points: response.monthlyData.length,
       });
@@ -1755,6 +1755,37 @@ export class AnalyticsController {
       res.json(response);
     } catch (error) {
       logger.error(req, 'get_social_reach', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/social-media
+   * Get social media metrics from Snowflake Platinum tables
+   */
+  public async getSocialMedia(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_social_media');
+
+    try {
+      const foundationName = req.query['foundationName'] as string | undefined;
+
+      if (!foundationName) {
+        throw ServiceValidationError.forField('foundationName', 'foundationName query parameter is required', {
+          operation: 'get_social_media',
+        });
+      }
+
+      const response = await this.projectService.getSocialMedia(foundationName);
+
+      logger.success(req, 'get_social_media', startTime, {
+        foundation_name: foundationName,
+        total_followers: response.totalFollowers,
+        platforms_count: response.platforms.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_social_media', startTime, error);
       next(error);
     }
   }

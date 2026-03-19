@@ -49,6 +49,7 @@ import {
   UserProjectsResponse,
   UserPullRequestsResponse,
   EmailCtrResponse,
+  SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
@@ -820,8 +821,8 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug to filter by
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -832,6 +833,21 @@ export class AnalyticsService {
           campaignGroups: [],
           monthlySends: [],
           monthlyOpens: [],
+        });
+      })
+    );
+  }
+
+  public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
+    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
+      catchError(() => {
+        return of({
+          totalFollowers: 0,
+          totalPlatforms: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          platforms: [],
+          monthlyData: [],
         });
       })
     );
