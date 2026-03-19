@@ -552,39 +552,6 @@ export class CommitteeController {
     }
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────────
-
-  /**
-   * Factory that produces a standard sub-resource handler.
-   * Validates the committee ID, starts an operation, calls the service,
-   * logs success, and delegates errors to Express error middleware.
-   */
-  private subResourceHandler(operation: string, serviceFn: (req: Request, id: string) => Promise<unknown>, countKey: string) {
-    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-      const committeeId = req.params['id'];
-      if (!committeeId) {
-        next(
-          ServiceValidationError.forField('id', 'Committee ID is required', {
-            operation,
-            service: 'committee_controller',
-            path: req.path,
-          })
-        );
-        return;
-      }
-
-      const startTime = logger.startOperation(req, operation, { committee_id: committeeId });
-      try {
-        const result = await serviceFn(req, committeeId);
-        logger.success(req, operation, startTime, {
-          committee_id: committeeId,
-          [countKey]: Array.isArray(result) ? result.length : !!result,
-        });
-        res.json(result);
-      } catch (error) {
-        next(error);
-      }
-    };
   // ── Join / Leave Endpoints ───────────────────────────────────────────────
 
   /**
@@ -620,5 +587,40 @@ export class CommitteeController {
     } catch (error) {
       next(error);
     }
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Factory that produces a standard sub-resource handler.
+   * Validates the committee ID, starts an operation, calls the service,
+   * logs success, and delegates errors to Express error middleware.
+   */
+  private subResourceHandler(operation: string, serviceFn: (req: Request, id: string) => Promise<unknown>, countKey: string) {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      const committeeId = req.params['id'];
+      if (!committeeId) {
+        next(
+          ServiceValidationError.forField('id', 'Committee ID is required', {
+            operation,
+            service: 'committee_controller',
+            path: req.path,
+          })
+        );
+        return;
+      }
+
+      const startTime = logger.startOperation(req, operation, { committee_id: committeeId });
+      try {
+        const result = await serviceFn(req, committeeId);
+        logger.success(req, operation, startTime, {
+          committee_id: committeeId,
+          [countKey]: Array.isArray(result) ? result.length : !!result,
+        });
+        res.json(result);
+      } catch (error) {
+        next(error);
+      }
+    };
   }
 }
