@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="300">
   <title>LFX v2 Branch Deployments</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -92,6 +91,7 @@
 
     .empty   { padding: 24px; text-align: center; color: #57606a; background: white; border: 1px solid #d0d7de; border-radius: 6px; }
     .error   { padding: 12px 16px; background: #ffebe9; border: 1px solid #ff818266; border-radius: 6px; color: #cf222e; margin-bottom: 16px; }
+    .warning { padding: 12px 16px; background: #fff8c5; border: 1px solid #d4a72c66; border-radius: 6px; color: #9a6700; margin-bottom: 16px; }
     .loading { padding: 24px; text-align: center; color: #57606a; }
   </style>
 </head>
@@ -110,12 +110,38 @@
 const OWNER = 'linuxfoundation';
 const REPO  = 'lfx-v2-ui';
 
+class RateLimitError extends Error {
+  constructor(resetUnix) {
+    super('GitHub API rate limit exceeded');
+    this.resetAt = resetUnix ? new Date(resetUnix * 1000) : null;
+  }
+}
+
 async function ghFetch(path) {
-  const res = await fetch(`https://api.github.com${path}`, {
-    headers: { 'Accept': 'application/vnd.github+json' }
-  });
+  const cacheKey = 'gh:' + path;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(cacheKey)); } catch {}
+
+  const headers = { 'Accept': 'application/vnd.github+json' };
+  if (cached?.etag) headers['If-None-Match'] = cached.etag;
+
+  const res = await fetch(`https://api.github.com${path}`, { headers });
+
+  if (res.status === 304) return cached.data;
+
+  if (res.status === 403 || res.status === 429) {
+    const reset = res.headers.get('X-RateLimit-Reset');
+    throw new RateLimitError(reset ? parseInt(reset, 10) : null);
+  }
+
   if (!res.ok) throw new Error(`GitHub API ${res.status}: ${res.statusText}`);
-  return res.json();
+
+  const data = await res.json();
+  const etag = res.headers.get('ETag');
+  if (etag) {
+    try { localStorage.setItem(cacheKey, JSON.stringify({ etag, data })); } catch {}
+  }
+  return data;
 }
 
 async function latestStatus(deploymentId) {
@@ -212,7 +238,15 @@ function renderTable(rows, isPrTable) {
   </table>`;
 }
 
+let refreshTimer = null;
+
+function scheduleRefresh(delayMs) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(load, delayMs);
+}
+
 async function load() {
+  clearTimeout(refreshTimer);
   document.getElementById('error').innerHTML = '';
   document.getElementById('content').innerHTML = '<p class="loading">Loading…</p>';
 
@@ -297,9 +331,23 @@ async function load() {
         ${renderTable(featRows, false)}
       </div>
     `;
+    scheduleRefresh(300_000);
   } catch (e) {
-    document.getElementById('error').innerHTML = `<div class="error">${e.message}</div>`;
-    document.getElementById('content').innerHTML = '';
+    if (e instanceof RateLimitError) {
+      const resetAt   = e.resetAt;
+      const timeStr   = resetAt ? resetAt.toLocaleTimeString() : 'unknown';
+      const minsUntil = resetAt ? Math.ceil((resetAt - Date.now()) / 60000) : null;
+      const delay     = resetAt ? Math.max(0, resetAt - Date.now()) + 5000 : 300_000;
+      document.getElementById('error').innerHTML = `<div class="warning">
+        GitHub API rate limit exceeded. Resets at <strong>${timeStr}</strong>${minsUntil !== null ? ` (in ${minsUntil} minute${minsUntil !== 1 ? 's' : ''})` : ''}.
+        Page will auto-refresh at that time.
+      </div>`;
+      document.getElementById('content').innerHTML = '';
+      scheduleRefresh(delay);
+    } else {
+      document.getElementById('error').innerHTML = `<div class="error">${e.message}</div>`;
+      document.getElementById('content').innerHTML = '';
+    }
   }
 }
 
