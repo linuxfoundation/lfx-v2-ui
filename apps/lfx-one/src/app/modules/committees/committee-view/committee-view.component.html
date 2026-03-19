@@ -157,6 +157,8 @@
       <p-tabs [value]="activeTab()" (valueChange)="activeTab.set($any($event))" scrollable data-testid="committee-view-tabs">
         <p-tablist>
           <p-tab value="overview"><i class="fa-light fa-gauge mr-2"></i>Overview</p-tab>
+          @if (isVotesTabVisible()) {
+            <p-tab value="votes"><i class="fa-light fa-check-to-slot mr-2"></i>Votes</p-tab>
           @if (isMembersTabVisible()) {
             <p-tab value="members"><i class="fa-light fa-users mr-2"></i>Members</p-tab>
           }
@@ -1001,6 +1003,13 @@
             </div>
           </p-tabpanel>
 
+          <!-- Votes Tab -->
+          @if (isVotesTabVisible()) {
+            <p-tabpanel value="votes">
+              <div class="pt-4" data-testid="committee-view-votes-tab">
+                @if (committee(); as c) {
+                  <lfx-committee-votes-list [projectUid]="c.project_uid" [committeeName]="c.name" [hasPMOAccess]="canManageConfigurations()">
+                  </lfx-committee-votes-list>
           <!-- Members Tab -->
           @if (isMembersTabVisible()) {
             <p-tabpanel value="members">
