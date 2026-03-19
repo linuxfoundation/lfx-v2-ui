@@ -62,6 +62,7 @@ import { CommitteeSettingsComponent } from '../components/committee-settings/com
     ButtonComponent,
     TagComponent,
     RouterLink,
+    // TODO: No LFX wrapper exists for ConfirmDialog or Tabs — use PrimeNG directly
     ConfirmDialogModule,
     TooltipModule,
     Tabs,
@@ -91,6 +92,9 @@ export class CommitteeViewComponent {
 
   // -- Label constants --
   protected readonly committeeLabel = COMMITTEE_LABEL;
+
+  // -- Settings form --
+  public settingsForm: FormGroup = this.createSettingsForm();
 
   // -- Tab state --
   public activeTab = signal<string>('overview');
@@ -173,6 +177,16 @@ export class CommitteeViewComponent {
     return [...new Set(orgs)];
   });
   public orgCount: Signal<number> = computed(() => this.uniqueOrganizations().length);
+  public memberCountByOrg: Signal<Map<string, number>> = computed(() => {
+    const counts = new Map<string, number>();
+    this.members().forEach((m) => {
+      const org = m.organization?.name;
+      if (org) {
+        counts.set(org, (counts.get(org) || 0) + 1);
+      }
+    });
+    return counts;
+  });
   public observerCount: Signal<number> = computed(() => this.members().filter((m) => m.voting?.status === CommitteeMemberVotingStatus.OBSERVER).length);
   public roleBreakdown: Signal<{ name: string; count: number }[]> = computed(() => {
     const roleCounts: Record<string, number> = {};
@@ -193,8 +207,6 @@ export class CommitteeViewComponent {
   public chairElectedDate: Signal<string> = this.initializeChairElectedDate();
   public coChairElectedDate: Signal<string> = this.initializeCoChairElectedDate();
 
-  // -- Settings form --
-  public settingsForm: FormGroup = this.createSettingsForm();
   public settingsSaving = signal<boolean>(false);
 
   // -- Configuration label signals --
@@ -215,10 +227,6 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
-  }
-
-  public getMembersCountByOrg(org: string): number {
-    return this.members().filter((m) => m.organization?.name === org).length;
   }
 
   public saveSettings(): void {
@@ -300,9 +308,11 @@ export class CommitteeViewComponent {
 
               if (committee) {
                 this.populateSettingsForm(committee);
-                this.loadMeetings(committeeId);
-                this.loadPastMeetingSummary(committee.project_uid);
-                return this.loadGroupTypeData$(committeeId, committee);
+                return forkJoin([
+                  this.loadGroupTypeData$(committeeId, committee),
+                  this.loadMeetings$(committeeId),
+                  this.loadPastMeetingSummary$(committee.project_uid),
+                ]);
               }
 
               return of(null);
@@ -315,30 +325,29 @@ export class CommitteeViewComponent {
       .subscribe();
   }
 
-  private loadMeetings(committeeId: string): void {
+  private loadMeetings$(committeeId: string): Observable<Meeting[]> {
     this.meetingsLoading.set(true);
-    this.committeeService
-      .getCommitteeMeetings(committeeId)
-      .pipe(
-        take(1),
-        catchError(() => of([]))
-      )
-      .subscribe((meetings) => {
+    return this.committeeService.getCommitteeMeetings(committeeId).pipe(
+      take(1),
+      catchError(() => of([])),
+      tap((meetings) => {
         this.committeeMeetings.set(Array.isArray(meetings) ? meetings : []);
         this.meetingsLoading.set(false);
-      });
+      })
+    );
   }
 
-  private loadPastMeetingSummary(projectUid: string | undefined): void {
-    if (!projectUid) return;
-    this.meetingService
-      .getPastMeetingsByProject(projectUid, 1)
-      .pipe(
-        take(1),
-        catchError(() => of([])),
-        switchMap((pastMeetings) => this.loadLastMeetingSummary$(pastMeetings))
-      )
-      .subscribe();
+  private loadPastMeetingSummary$(projectUid: string | undefined): Observable<PastMeetingSummary | null> {
+    if (!projectUid) {
+      this.lastPastMeeting.set(null);
+      this.lastMeetingSummary.set(null);
+      return of(null);
+    }
+    return this.meetingService.getPastMeetingsByProject(projectUid, 1).pipe(
+      take(1),
+      catchError(() => of([])),
+      switchMap((pastMeetings) => this.loadLastMeetingSummary$(pastMeetings))
+    );
   }
 
   private loadGroupTypeData$(committeeId: string, committee: Committee): Observable<unknown> {

@@ -109,49 +109,48 @@ export class CommitteeService {
   public getCommitteeMeetings(committeeId: string): Observable<Meeting[]> {
     return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(
       map((response) => response.data),
-      catchError(() => of([])),
       take(1)
     );
   }
 
-  // Dashboard sub-resource methods
+  // Dashboard sub-resource methods — error handling is done at the component layer
   public getCommitteeVotes(committeeId: string): Observable<CommitteeVote[]> {
-    return this.http.get<CommitteeVote[]>(`/api/committees/${committeeId}/votes`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeVote[]>(`/api/committees/${committeeId}/votes`);
   }
 
   public getCommitteeResolutions(committeeId: string): Observable<CommitteeResolution[]> {
-    return this.http.get<CommitteeResolution[]>(`/api/committees/${committeeId}/resolutions`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeResolution[]>(`/api/committees/${committeeId}/resolutions`);
   }
 
   public getCommitteeActivity(committeeId: string): Observable<CommitteeActivity[]> {
-    return this.http.get<CommitteeActivity[]>(`/api/committees/${committeeId}/activity`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeActivity[]>(`/api/committees/${committeeId}/activity`);
   }
 
   public getCommitteeContributors(committeeId: string): Observable<CommitteeContributor[]> {
-    return this.http.get<CommitteeContributor[]>(`/api/committees/${committeeId}/contributors`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeContributor[]>(`/api/committees/${committeeId}/contributors`);
   }
 
   public getCommitteeDeliverables(committeeId: string): Observable<CommitteeDeliverable[]> {
-    return this.http.get<CommitteeDeliverable[]>(`/api/committees/${committeeId}/deliverables`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeDeliverable[]>(`/api/committees/${committeeId}/deliverables`);
   }
 
   public getCommitteeDiscussions(committeeId: string): Observable<CommitteeDiscussionThread[]> {
-    return this.http.get<CommitteeDiscussionThread[]>(`/api/committees/${committeeId}/discussions`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeDiscussionThread[]>(`/api/committees/${committeeId}/discussions`);
   }
 
   public getCommitteeEvents(committeeId: string): Observable<CommitteeEvent[]> {
-    return this.http.get<CommitteeEvent[]>(`/api/committees/${committeeId}/events`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeEvent[]>(`/api/committees/${committeeId}/events`);
   }
 
   public getCommitteeCampaigns(committeeId: string): Observable<CommitteeOutreachCampaign[]> {
-    return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`).pipe(catchError(() => of([])));
+    return this.http.get<CommitteeOutreachCampaign[]>(`/api/committees/${committeeId}/campaigns`);
   }
 
   public getCommitteeEngagement(committeeId: string): Observable<CommitteeEngagementMetrics | null> {
-    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`).pipe(catchError(() => of(null)));
+    return this.http.get<CommitteeEngagementMetrics>(`/api/committees/${committeeId}/engagement`);
   }
 
   public getCommitteeBudget(committeeId: string): Observable<CommitteeBudgetSummary | null> {
-    return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`).pipe(catchError(() => of(null)));
+    return this.http.get<CommitteeBudgetSummary>(`/api/committees/${committeeId}/budget`);
   }
 }
