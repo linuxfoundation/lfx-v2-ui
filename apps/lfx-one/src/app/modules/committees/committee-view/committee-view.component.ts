@@ -15,7 +15,6 @@ import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
-import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 
 type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
@@ -30,7 +29,6 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     DatePipe,
     NgClass,
     CommitteeOverviewComponent,
-    CommitteeSurveysListComponent,
   ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
