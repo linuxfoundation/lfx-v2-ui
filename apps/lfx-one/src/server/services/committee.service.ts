@@ -447,11 +447,11 @@ export class CommitteeService {
       >(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote',
         parent: `project:${projectUid}`,
-        // TODO: Implement pagination for complete vote results
-        page_size: 100,
+        // TODO(LFXV2-1218): Implement cursor-based pagination for complete vote results
+        page_size: 500,
       });
 
-      if (voteResources.length >= 100) {
+      if (voteResources.length >= 500) {
         logger.warning(req, 'get_committee_votes', 'Vote results may be truncated — page_size limit reached', {
           committee_uid: committeeId,
           project_uid: projectUid,
