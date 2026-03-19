@@ -90,6 +90,33 @@ export class SurveyService {
   }
 
   /**
+   * Fetches surveys for a specific committee by committee_uid
+   */
+  public async getCommitteeSurveys(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<Survey[]> {
+    logger.debug(req, 'get_committee_surveys', 'Fetching surveys for committee', {
+      committee_uid: committeeId,
+    });
+
+    // Use tags parameter for server-side filtering — committee_uid is not a supported query param
+    const params = {
+      ...query,
+      type: 'survey',
+      tags: `committee_uid:${committeeId}`,
+    };
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Survey>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+
+    const surveys: Survey[] = (resources ?? []).map((resource) => resource.data);
+
+    logger.debug(req, 'get_committee_surveys', 'Completed committee survey fetch', {
+      committee_uid: committeeId,
+      count: surveys.length,
+    });
+
+    return surveys;
+  }
+
+  /**
    * Deletes a survey using ETag for concurrency control
    */
   public async deleteSurvey(req: Request, surveyUid: string): Promise<void> {

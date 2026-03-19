@@ -15,12 +15,23 @@ import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
+import { CommitteeSurveysListComponent } from '../components/committee-surveys-list/committee-surveys-list.component';
 
 type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, ButtonComponent, TagComponent, RouterLink, RouteLoadingComponent, DatePipe, NgClass, CommitteeOverviewComponent],
+  imports: [
+    BreadcrumbComponent,
+    ButtonComponent,
+    TagComponent,
+    RouterLink,
+    RouteLoadingComponent,
+    DatePipe,
+    NgClass,
+    CommitteeOverviewComponent,
+    CommitteeSurveysListComponent,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -64,6 +75,17 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  public createSurvey(): void {
+    const committee = this.committee();
+    if (!committee) return;
+    this.router.navigate(['/surveys/create'], {
+      queryParams: {
+        committee_uid: committee.uid,
+        committee_name: committee.name,
+      },
+    });
   }
 
   // -- Private initializer functions --
