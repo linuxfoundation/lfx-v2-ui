@@ -3,7 +3,15 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CreateCommitteeMemberRequest,
+  Meeting,
+  MyCommittee,
+  PaginatedResponse,
+  QueryServiceCountResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -77,6 +85,10 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  public getCommitteeMeetings(committeeId: string): Observable<Meeting[]> {
+    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`).pipe(map((response) => response.data));
   }
 
   // ── Join / Leave Methods ──────────────────────────────────────────────────

@@ -7,12 +7,24 @@ import { NextFunction, Request, Response } from 'express';
 import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
+import { SurveyService } from '../services/survey.service';
 
 /**
  * Controller for handling committee HTTP requests
  */
 export class CommitteeController {
   private committeeService: CommitteeService = new CommitteeService();
+  // Cross-domain: surveys are accessed via committee context for the surveys tab
+  private readonly surveyService = new SurveyService();
+
+  // ── Dashboard Sub-Resource Handlers (via factory) ─────────────────────────
+
+  /** GET /committees/:id/meetings */
+  public getCommitteeMeetings = this.subResourceHandler(
+    'get_committee_meetings',
+    (req, id) => this.committeeService.getCommitteeMeetings(req, id, req.query as Record<string, string>),
+    'meeting_count'
+  );
 
   /**
    * GET /committees
@@ -520,5 +532,78 @@ export class CommitteeController {
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * GET /committees/:id/surveys
+   * Manual handler (not using subResourceHandler) because this endpoint needs req.query passthrough for survey filtering
+   */
+  public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+
+    if (!id) {
+      next(
+        ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'get_committee_surveys',
+          service: 'committee_controller',
+          path: req.path,
+        })
+      );
+      return;
+    }
+
+    const startTime = logger.startOperation(req, 'get_committee_surveys', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      const surveys = await this.surveyService.getCommitteeSurveys(req, id, req.query as Record<string, string>);
+
+      logger.success(req, 'get_committee_surveys', startTime, {
+        committee_id: id,
+        survey_count: surveys.length,
+      });
+
+      res.json(surveys);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Factory that produces a standard sub-resource handler.
+   * Validates the committee ID, starts an operation, calls the service,
+   * logs success, and delegates errors to Express error middleware.
+   */
+  private subResourceHandler(operation: string, serviceFn: (req: Request, id: string) => Promise<unknown>, countKey: string) {
+    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      const committeeId = req.params['id'];
+      if (!committeeId) {
+        next(
+          ServiceValidationError.forField('id', 'Committee ID is required', {
+            operation,
+            service: 'committee_controller',
+            path: req.path,
+          })
+        );
+        return;
+      }
+
+      const startTime = logger.startOperation(req, operation, { committee_id: committeeId });
+      try {
+        const result = await serviceFn(req, committeeId);
+        logger.success(req, operation, startTime, {
+          committee_id: committeeId,
+          [countKey]: Array.isArray(result) ? result.length : !!result,
+        });
+        res.json(result);
+      } catch (error) {
+        logger.error(req, operation, startTime, error, { committee_id: committeeId });
+        next(error);
+      }
+    };
   }
 }

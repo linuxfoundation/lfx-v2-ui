@@ -8,6 +8,8 @@ import {
   CommitteeSettingsData,
   CommitteeUpdateData,
   CreateCommitteeMemberRequest,
+  Meeting,
+  PaginatedResponse,
   MyCommittee,
   QueryServiceCountResponse,
   QueryServiceResponse,
@@ -17,10 +19,14 @@ import { Request } from 'express';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 
 import { ResourceNotFoundError } from '../errors';
-import { logger } from '../services/logger.service';
+import { logger } from './logger.service';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+
+// MeetingService is dynamically imported to avoid circular dependency.
+// Use import('...') type to reference the class without a static import.
+type MeetingServiceType = InstanceType<typeof import('./meeting.service').MeetingService>;
 
 /**
  * Service for handling committee business logic
@@ -29,6 +35,8 @@ export class CommitteeService {
   private accessCheckService: AccessCheckService;
   private etagService: ETagService;
   private microserviceProxy: MicroserviceProxyService;
+  // Promise-based lazy initializer to avoid concurrent imports creating duplicate instances
+  private meetingServicePromise?: Promise<MeetingServiceType>;
 
   public constructor() {
     this.accessCheckService = new AccessCheckService();
@@ -138,12 +146,11 @@ export class CommitteeService {
    * Updates an existing committee using ETag for concurrency control
    */
   public async updateCommittee(req: Request, committeeId: string, data: CommitteeUpdateData): Promise<Committee> {
-    // Extract settings and channel fields from core committee data
-    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, mailing_list, chat_channel, ...committeeData } = data;
+    // Extract settings fields from core committee data
+    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, ...committeeData } = data;
 
     const hasSettingsUpdate =
       business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined;
-    const hasChannelsUpdate = mailing_list !== undefined || chat_channel !== undefined;
     const hasCoreUpdate = Object.keys(committeeData).length > 0;
 
     let updatedCommittee: Committee;
@@ -166,30 +173,7 @@ export class CommitteeService {
       updatedCommittee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
     }
 
-    // Step 3: Update channels via PATCH (mailing_list/chat_channel are not accepted by PUT)
-    if (hasChannelsUpdate) {
-      try {
-        const channelsPayload: Record<string, any> = {};
-        if (mailing_list !== undefined) channelsPayload['mailing_list'] = mailing_list;
-        if (chat_channel !== undefined) channelsPayload['chat_channel'] = chat_channel;
-
-        logger.debug(req, 'update_committee_channels', 'Updating committee channels via PATCH', {
-          committee_uid: committeeId,
-          fields: Object.keys(channelsPayload),
-        });
-
-        const patched = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'PATCH', {}, channelsPayload);
-
-        updatedCommittee = { ...updatedCommittee, ...patched };
-      } catch (error) {
-        logger.warning(req, 'update_committee_channels', 'PATCH failed for channels, returning current committee data', {
-          committee_uid: committeeId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    // Step 5: Update settings if provided
+    // Step 3: Update settings if provided
     if (hasSettingsUpdate) {
       try {
         await this.updateCommitteeSettings(req, committeeId, {
@@ -388,6 +372,48 @@ export class CommitteeService {
     });
 
     return userMemberships;
+  }
+
+  /**
+   * Fetches meetings associated with a committee.
+   */
+  public async getCommitteeMeetings(req: Request, committeeId: string, query: Record<string, string> = {}): Promise<PaginatedResponse<Meeting>> {
+    try {
+      // Whitelist allowed query params to prevent unexpected parameters from reaching downstream
+      const allowedParams = ['page_size', 'page_token', 'order_by', 'committee_uid'];
+      const sanitizedQuery: Record<string, string> = {};
+      for (const key of allowedParams) {
+        if (query[key]) sanitizedQuery[key] = String(query[key]);
+      }
+
+      const params = {
+        ...sanitizedQuery,
+        committee_uid: committeeId,
+      };
+
+      logger.debug(req, 'get_committee_meetings', 'Fetching meetings for committee', {
+        committee_uid: committeeId,
+      });
+
+      // Lazy import to avoid circular dependency — Promise ensures only one instance is created
+      if (!this.meetingServicePromise) {
+        this.meetingServicePromise = import('./meeting.service').then((m) => new m.MeetingService());
+      }
+      const meetingService = await this.meetingServicePromise;
+      const result = await meetingService.getMeetings(req, params);
+
+      logger.debug(req, 'get_committee_meetings', 'Fetched committee meetings', {
+        committee_uid: committeeId,
+        count: result.data.length,
+      });
+
+      return result;
+    } catch {
+      logger.warning(req, 'get_committee_meetings', 'Failed to fetch committee meetings, returning empty', {
+        committee_uid: committeeId,
+      });
+      return { data: [], page_token: undefined };
+    }
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────
