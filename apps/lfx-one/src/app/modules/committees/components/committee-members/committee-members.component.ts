@@ -257,8 +257,12 @@ export class CommitteeMembersComponent implements OnInit {
       {
         label: 'Send Message',
         icon: 'fa-light fa-envelope',
-        url: `mailto:${this.selectedMember()?.email}`,
-        target: '_blank',
+        command: () => {
+          const email = this.selectedMember()?.email;
+          if (email) {
+            window.location.href = `mailto:${email}`;
+          }
+        },
       },
       {
         separator: true,
