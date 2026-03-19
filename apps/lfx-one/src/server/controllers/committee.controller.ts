@@ -619,6 +619,7 @@ export class CommitteeController {
         });
         res.json(result);
       } catch (error) {
+        logger.error(req, operation, startTime, error, { committee_id: committeeId });
         next(error);
       }
     };

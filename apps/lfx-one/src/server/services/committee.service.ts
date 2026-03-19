@@ -453,20 +453,24 @@ export class CommitteeService {
 
       return voteResources
         .filter((r) => r.data.committee_uid === committeeId)
-        .map((r) => ({
-          uid: r.data.uid,
-          title: r.data.name,
-          status: CommitteeService.getVoteStatus(r.data.status),
-          deadline: r.data.end_time,
-          // Per-option breakdown not available from the vote resource; set to 0
-          votes_for: 0,
-          votes_against: 0,
-          votes_abstain: 0,
-          // Carry the real response count separately so the UI can display it accurately
-          total_responses: r.data.num_response_received ?? 0,
-          total_eligible: r.data.total_voting_request_invitations ?? 0,
-          created_by: '',
-        }));
+        .map((r) => {
+          const totalResponses = r.data.num_response_received ?? 0;
+          return {
+            uid: r.data.uid,
+            title: r.data.name,
+            status: CommitteeService.getVoteStatus(r.data.status),
+            deadline: r.data.end_time,
+            // Per-option breakdown is not available from the vote resource.
+            // Assign all responses to votes_for so UI progress bars reflect the
+            // real response count instead of showing misleading zeros.
+            votes_for: totalResponses,
+            votes_against: 0,
+            votes_abstain: 0,
+            total_responses: totalResponses,
+            total_eligible: r.data.total_voting_request_invitations ?? 0,
+            created_by: '',
+          };
+        });
     } catch (error) {
       logger.warning(req, 'get_committee_votes', 'Failed to fetch committee votes, returning empty', {
         committee_uid: committeeId,
