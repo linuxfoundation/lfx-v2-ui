@@ -36,16 +36,20 @@
       </div>
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Event Attendees</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().funnel.eventAttendees) }}</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ formattedEventAttendees() }}</span>
       </div>
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Growth</span>
-        <div class="flex items-center gap-2">
-          <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-            {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
-          </span>
-          <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
-        </div>
+        @if (data().changePercentage !== 0) {
+          <div class="flex items-center gap-2">
+            <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+              {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+            </span>
+            <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
+          </div>
+        } @else {
+          <span class="text-2xl font-semibold text-gray-500">0%</span>
+        }
       </div>
     </div>
 

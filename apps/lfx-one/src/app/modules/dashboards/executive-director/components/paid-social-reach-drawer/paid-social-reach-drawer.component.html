@@ -30,38 +30,26 @@
   <div class="flex flex-col gap-6 pb-2" data-testid="paid-social-reach-drawer-content">
     <!-- Summary Stats -->
     <div class="flex gap-4" data-testid="paid-social-reach-drawer-stats">
-      @if (data().roas > 0) {
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">ROAS</span>
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-semibold text-gray-900">{{ data().roas.toFixed(2) }}x</span>
-            @if (data().changePercentage !== 0) {
-              <span class="text-sm font-medium" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                <i [class]="data().trend === 'up' ? 'fa-light fa-arrow-up' : 'fa-light fa-arrow-down'"></i>
-                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
-              </span>
-            }
-          </div>
-        </div>
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Total Impressions</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalReach) }}</span>
-        </div>
-      } @else {
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Total Impressions</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalReach) }}</span>
-        </div>
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Month-over-Month</span>
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-              {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
+        <span class="text-sm text-gray-500">ROAS</span>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl font-semibold text-gray-900">{{ drawerData().roas.toFixed(2) }}x</span>
+          @if (drawerData().changePercentage !== 0) {
+            <span class="text-sm font-medium" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+              <i [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up' : 'fa-light fa-arrow-down'"></i>
+              {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
             </span>
-            <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
-          </div>
+          }
         </div>
-      }
+      </div>
+      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
+        <span class="text-sm text-gray-500">Total Impressions</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalReach() }}</span>
+      </div>
+      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
+        <span class="text-sm text-gray-500">Revenue</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalRevenue() }}</span>
+      </div>
     </div>
 
     <!-- Recommended Actions -->
@@ -127,7 +115,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Monthly ROAS Trend</h3>
         <p class="text-sm text-gray-600">Return on ad spend across all channels over the last 6 months</p>
       </div>
-      @if (data().monthlyRoas && data().monthlyRoas.length > 0) {
+      @if (drawerData().monthlyRoas && drawerData().monthlyRoas.length > 0) {
         <div class="h-[240px]" data-testid="paid-social-reach-drawer-roas-chart">
           <lfx-chart type="bar" [data]="roasChartData()" [options]="roasChartOptions" height="100%"></lfx-chart>
         </div>
@@ -145,7 +133,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Monthly Paid Impressions</h3>
         <p class="text-sm text-gray-600">Paid ad impressions across all channels over the last 6 months</p>
       </div>
-      @if (data().monthlyData.length > 0) {
+      @if (drawerData().monthlyData.length > 0) {
         <div class="h-[240px]" data-testid="paid-social-reach-drawer-chart">
           <lfx-chart type="bar" [data]="chartData()" [options]="chartOptions" height="100%"></lfx-chart>
         </div>
@@ -163,7 +151,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Impressions by Channel</h3>
         <p class="text-sm text-gray-600">Paid ad distribution across channels over the last 6 months</p>
       </div>
-      @if (data().channelGroups.length > 1) {
+      @if (drawerData().channelGroups.length > 1) {
         <div class="h-[240px]" data-testid="paid-social-reach-drawer-channels-chart">
           <lfx-chart type="bar" [data]="channelChartData()" [options]="channelChartOptions" height="100%"></lfx-chart>
         </div>

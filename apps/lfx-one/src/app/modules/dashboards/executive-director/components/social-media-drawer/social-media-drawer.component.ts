@@ -1,34 +1,38 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { AnalyticsService } from '@services/analytics.service';
+import { ProjectContextService } from '@services/project-context.service';
+import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-social-media-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [DrawerModule, ChartComponent, SkeletonModule],
   templateUrl: './social-media-drawer.component.html',
 })
 export class SocialMediaDrawerComponent {
+  // === Services ===
+  private readonly analyticsService = inject(AnalyticsService);
+  private readonly projectContextService = inject(ProjectContextService);
+
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
-  // === Inputs ===
-  public readonly data = input<SocialMediaResponse>({
-    totalFollowers: 0,
-    totalPlatforms: 0,
-    changePercentage: 0,
-    trend: 'up',
-    platforms: [],
-    monthlyData: [],
-  });
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
 
-  // === Computed Signals ===
+  // === Computed Signals (lazy-loaded data) ===
+  protected readonly drawerData: Signal<SocialMediaResponse> = this.initDrawerData();
+  protected readonly formattedTotalFollowers: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalFollowers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
@@ -142,9 +146,43 @@ export class SocialMediaDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initDrawerData(): Signal<SocialMediaResponse> {
+    const defaultValue: SocialMediaResponse = {
+      totalFollowers: 0,
+      totalPlatforms: 0,
+      changePercentage: 0,
+      trend: 'up',
+      platforms: [],
+      monthlyData: [],
+    };
+
+    return toSignal(
+      toObservable(this.visible).pipe(
+        skip(1),
+        filter((isVisible) => isVisible),
+        tap(() => this.drawerLoading.set(true)),
+        switchMap(() => {
+          const foundation = this.projectContextService.selectedFoundation();
+          if (!foundation?.name) {
+            this.drawerLoading.set(false);
+            return of(defaultValue);
+          }
+          return this.analyticsService.getSocialMedia(foundation.name).pipe(
+            tap(() => this.drawerLoading.set(false)),
+            catchError(() => {
+              this.drawerLoading.set(false);
+              return of(defaultValue);
+            })
+          );
+        })
+      ),
+      { initialValue: defaultValue }
+    );
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { platforms, changePercentage, totalFollowers } = this.data();
+      const { platforms, changePercentage, totalFollowers } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (platforms.length === 0 && totalFollowers === 0) {
@@ -211,7 +249,7 @@ export class SocialMediaDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { totalFollowers, changePercentage, platforms, monthlyData } = this.data();
+      const { totalFollowers, changePercentage, platforms, monthlyData } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
       if (totalFollowers === 0 && platforms.length === 0) {
@@ -264,7 +302,7 @@ export class SocialMediaDrawerComponent {
 
   private initFollowerTrendChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
-      const { monthlyData } = this.data();
+      const { monthlyData } = this.drawerData();
       return {
         labels: monthlyData.map((d) => d.month),
         datasets: [
@@ -285,7 +323,7 @@ export class SocialMediaDrawerComponent {
 
   private initPlatformChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { platforms } = this.data();
+      const { platforms } = this.drawerData();
       const sorted = [...platforms].sort((a, b) => b.followers - a.followers);
       return {
         labels: sorted.map((p) => p.platform),

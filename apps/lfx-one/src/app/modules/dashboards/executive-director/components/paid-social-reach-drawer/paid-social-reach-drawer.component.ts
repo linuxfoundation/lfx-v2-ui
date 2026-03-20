@@ -1,38 +1,39 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { AnalyticsService } from '@services/analytics.service';
+import { ProjectContextService } from '@services/project-context.service';
+import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-paid-social-reach-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [DrawerModule, ChartComponent, SkeletonModule],
   templateUrl: './paid-social-reach-drawer.component.html',
 })
 export class PaidSocialReachDrawerComponent {
+  // === Services ===
+  private readonly analyticsService = inject(AnalyticsService);
+  private readonly projectContextService = inject(ProjectContextService);
+
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
-  // === Inputs ===
-  public readonly data = input<SocialReachResponse>({
-    totalReach: 0,
-    roas: 0,
-    totalSpend: 0,
-    totalRevenue: 0,
-    changePercentage: 0,
-    trend: 'up',
-    monthlyData: [],
-    monthlyLabels: [],
-    monthlyRoas: [],
-    channelGroups: [],
-  });
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
 
-  // === Computed Signals ===
+  // === Computed Signals (lazy-loaded data) ===
+  protected readonly drawerData: Signal<SocialReachResponse> = this.initDrawerData();
+  protected readonly formattedTotalReach: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalReach));
+  protected readonly formattedTotalRevenue: Signal<string> = computed(() => this.formatCurrency(this.drawerData().totalRevenue));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
@@ -208,9 +209,47 @@ export class PaidSocialReachDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initDrawerData(): Signal<SocialReachResponse> {
+    const defaultValue: SocialReachResponse = {
+      totalReach: 0,
+      roas: 0,
+      totalSpend: 0,
+      totalRevenue: 0,
+      changePercentage: 0,
+      trend: 'up',
+      monthlyData: [],
+      monthlyLabels: [],
+      monthlyRoas: [],
+      channelGroups: [],
+    };
+
+    return toSignal(
+      toObservable(this.visible).pipe(
+        skip(1),
+        filter((isVisible) => isVisible),
+        tap(() => this.drawerLoading.set(true)),
+        switchMap(() => {
+          const foundation = this.projectContextService.selectedFoundation();
+          if (!foundation?.name) {
+            this.drawerLoading.set(false);
+            return of(defaultValue);
+          }
+          return this.analyticsService.getSocialReach(foundation.name).pipe(
+            tap(() => this.drawerLoading.set(false)),
+            catchError(() => {
+              this.drawerLoading.set(false);
+              return of(defaultValue);
+            })
+          );
+        })
+      ),
+      { initialValue: defaultValue }
+    );
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { roas, changePercentage, channelGroups, totalSpend, totalRevenue } = this.data();
+      const { roas, changePercentage, channelGroups, totalSpend, totalRevenue } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (roas > 0 && roas < 1) {
@@ -258,7 +297,7 @@ export class PaidSocialReachDrawerComponent {
         } else {
           actions.push({
             title: 'Monitor campaign performance',
-            description: `${this.formatNumber(this.data().totalReach)} impressions across ${channelGroups.length} channels`,
+            description: `${this.formatNumber(this.drawerData().totalReach)} impressions across ${channelGroups.length} channels`,
             priority: 'low',
             dueLabel: 'Ongoing',
             iconClass: 'fa-light fa-chart-line-up',
@@ -272,7 +311,7 @@ export class PaidSocialReachDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { roas, totalReach, totalSpend, totalRevenue, changePercentage, channelGroups, monthlyRoas } = this.data();
+      const { roas, totalReach, totalSpend, totalRevenue, changePercentage, channelGroups, monthlyRoas } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
       if (totalReach === 0 && channelGroups.length === 0) {
@@ -280,20 +319,18 @@ export class PaidSocialReachDrawerComponent {
       }
 
       // ROAS insight
-      if (roas > 0) {
-        if (roas >= 3) {
-          insights.push({
-            text: `Strong ROAS at ${roas.toFixed(2)}x — ${this.formatCurrency(totalRevenue)} revenue on ${this.formatCurrency(totalSpend)} spend`,
-            type: 'driver',
-          });
-        } else if (roas >= 1) {
-          insights.push({ text: `ROAS at ${roas.toFixed(2)}x — profitable but room for optimization`, type: 'info' });
-        } else {
-          insights.push({
-            text: `ROAS below break-even at ${roas.toFixed(2)}x — spending ${this.formatCurrency(totalSpend)} for ${this.formatCurrency(totalRevenue)} revenue`,
-            type: 'warning',
-          });
-        }
+      if (roas >= 3) {
+        insights.push({
+          text: `Strong ROAS at ${roas.toFixed(2)}x — ${this.formatCurrency(totalRevenue)} revenue on ${this.formatCurrency(totalSpend)} spend`,
+          type: 'driver',
+        });
+      } else if (roas >= 1) {
+        insights.push({ text: `ROAS at ${roas.toFixed(2)}x — profitable but room for optimization`, type: 'info' });
+      } else if (totalSpend > 0) {
+        insights.push({
+          text: `ROAS below break-even at ${roas.toFixed(2)}x — spending ${this.formatCurrency(totalSpend)} for ${this.formatCurrency(totalRevenue)} revenue`,
+          type: 'warning',
+        });
       }
 
       // Impression trend
@@ -333,7 +370,7 @@ export class PaidSocialReachDrawerComponent {
 
   private initChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { monthlyData, monthlyLabels } = this.data();
+      const { monthlyData, monthlyLabels } = this.drawerData();
       return {
         labels: monthlyLabels,
         datasets: [
@@ -349,7 +386,7 @@ export class PaidSocialReachDrawerComponent {
 
   private initRoasChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { monthlyRoas, monthlyLabels } = this.data();
+      const { monthlyRoas, monthlyLabels } = this.drawerData();
       return {
         labels: monthlyLabels,
         datasets: [
@@ -365,7 +402,7 @@ export class PaidSocialReachDrawerComponent {
 
   private initChannelChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { channelGroups } = this.data();
+      const { channelGroups } = this.drawerData();
       const sorted = [...channelGroups].sort((a, b) => b.totalImpressions - a.totalImpressions);
       return {
         labels: sorted.map((c) => this.formatChannelName(c.channel)),

@@ -838,6 +838,12 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get social media metrics from Snowflake Platinum tables
+   * Queries ANALYTICS.PLATINUM.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @returns Social media response with followers, platforms, engagement, and trend data
+   */
   public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
     return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
       catchError(() => {
@@ -853,6 +859,12 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get paid social reach metrics from Snowflake Platinum tables
+   * Queries ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @returns Social reach response with ROAS, impressions, spend, revenue, and channel breakdown
+   */
   public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
     return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
       catchError(() => {

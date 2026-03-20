@@ -28,6 +28,7 @@ export class FlywheelConversionDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly formattedEventAttendees: Signal<string> = computed(() => this.formatNumber(this.data().funnel.eventAttendees));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();

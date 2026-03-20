@@ -1,36 +1,37 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { AnalyticsService } from '@services/analytics.service';
+import { ProjectContextService } from '@services/project-context.service';
+import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [DrawerModule, ChartComponent, SkeletonModule],
   templateUrl: './email-ctr-drawer.component.html',
 })
 export class EmailCtrDrawerComponent {
+  // === Services ===
+  private readonly analyticsService = inject(AnalyticsService);
+  private readonly projectContextService = inject(ProjectContextService);
+
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
-  // === Inputs ===
-  public readonly data = input<EmailCtrResponse>({
-    currentCtr: 0,
-    changePercentage: 0,
-    trend: 'up',
-    monthlyData: [],
-    monthlyLabels: [],
-    campaignGroups: [],
-    monthlySends: [],
-    monthlyOpens: [],
-  });
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
 
-  // === Computed Signals ===
+  // === Computed Signals (lazy-loaded data) ===
+  protected readonly drawerData: Signal<EmailCtrResponse> = this.initDrawerData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
@@ -176,9 +177,45 @@ export class EmailCtrDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initDrawerData(): Signal<EmailCtrResponse> {
+    const defaultValue: EmailCtrResponse = {
+      currentCtr: 0,
+      changePercentage: 0,
+      trend: 'up',
+      monthlyData: [],
+      monthlyLabels: [],
+      campaignGroups: [],
+      monthlySends: [],
+      monthlyOpens: [],
+    };
+
+    return toSignal(
+      toObservable(this.visible).pipe(
+        skip(1),
+        filter((isVisible) => isVisible),
+        tap(() => this.drawerLoading.set(true)),
+        switchMap(() => {
+          const foundation = this.projectContextService.selectedFoundation();
+          if (!foundation?.name) {
+            this.drawerLoading.set(false);
+            return of(defaultValue);
+          }
+          return this.analyticsService.getEmailCtr(foundation.name).pipe(
+            tap(() => this.drawerLoading.set(false)),
+            catchError(() => {
+              this.drawerLoading.set(false);
+              return of(defaultValue);
+            })
+          );
+        })
+      ),
+      { initialValue: defaultValue }
+    );
+  }
+
   private initChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { monthlyData, monthlyLabels } = this.data();
+      const { monthlyData, monthlyLabels } = this.drawerData();
       return {
         labels: monthlyLabels,
         datasets: [
@@ -194,7 +231,7 @@ export class EmailCtrDrawerComponent {
 
   private initCampaignChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { campaignGroups } = this.data();
+      const { campaignGroups } = this.drawerData();
       const sorted = [...campaignGroups].sort((a, b) => b.avgCtr - a.avgCtr);
       return {
         labels: sorted.map((c) => c.campaignName),
@@ -212,7 +249,7 @@ export class EmailCtrDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { changePercentage, campaignGroups, monthlySends, monthlyOpens } = this.data();
+      const { changePercentage, campaignGroups, monthlySends, monthlyOpens } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (changePercentage < 0) {
@@ -272,7 +309,7 @@ export class EmailCtrDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { currentCtr, changePercentage, monthlyData, campaignGroups, monthlySends, monthlyOpens } = this.data();
+      const { currentCtr, changePercentage, monthlyData, campaignGroups, monthlySends, monthlyOpens } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
       if (currentCtr === 0 && monthlyData.length === 0) {
@@ -330,7 +367,7 @@ export class EmailCtrDrawerComponent {
 
   private initReachVsOpensChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { monthlySends, monthlyOpens, monthlyLabels } = this.data();
+      const { monthlySends, monthlyOpens, monthlyLabels } = this.drawerData();
       return {
         labels: monthlyLabels,
         datasets: [

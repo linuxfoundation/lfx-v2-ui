@@ -32,16 +32,20 @@
     <div class="flex gap-4" data-testid="email-ctr-drawer-stats">
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Current CTR</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ data().currentCtr.toFixed(2) }}%</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ drawerData().currentCtr.toFixed(2) }}%</span>
       </div>
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Month-over-Month</span>
-        <div class="flex items-center gap-2">
-          <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-            {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
-          </span>
-          <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
-        </div>
+        @if (drawerData().changePercentage !== 0) {
+          <div class="flex items-center gap-2">
+            <span class="text-2xl font-semibold" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+              {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
+            </span>
+            <i class="text-sm" [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
+          </div>
+        } @else {
+          <span class="text-2xl font-semibold text-gray-500">0%</span>
+        }
       </div>
     </div>
 
@@ -108,7 +112,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Monthly CTR Trend</h3>
         <p class="text-sm text-gray-600">Email click-through rate over the last 6 months</p>
       </div>
-      @if (data().monthlyData.length > 0) {
+      @if (drawerData().monthlyData.length > 0) {
         <div class="h-[240px]" data-testid="email-ctr-drawer-chart">
           <lfx-chart type="bar" [data]="chartData()" [options]="chartOptions" height="100%"></lfx-chart>
         </div>
@@ -126,7 +130,7 @@
         <h3 class="text-sm font-semibold text-gray-900">CTR by Campaign</h3>
         <p class="text-sm text-gray-600">Average click-through rate per campaign over the last 6 months</p>
       </div>
-      @if (data().campaignGroups.length > 1) {
+      @if (drawerData().campaignGroups.length > 1) {
         <div class="h-[240px]" data-testid="email-ctr-drawer-campaigns-chart">
           <lfx-chart type="bar" [data]="campaignChartData()" [options]="campaignChartOptions" height="100%"></lfx-chart>
         </div>
@@ -144,7 +148,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Campaign Reach vs Opens</h3>
         <p class="text-sm text-gray-600">Monthly email sends compared to opens over the last 6 months</p>
       </div>
-      @if (data().monthlySends.length > 0) {
+      @if (drawerData().monthlySends.length > 0) {
         <div class="h-[240px]" data-testid="email-ctr-drawer-reach-chart">
           <lfx-chart type="bar" [data]="reachVsOpensChartData()" [options]="reachVsOpensChartOptions" height="100%"></lfx-chart>
         </div>

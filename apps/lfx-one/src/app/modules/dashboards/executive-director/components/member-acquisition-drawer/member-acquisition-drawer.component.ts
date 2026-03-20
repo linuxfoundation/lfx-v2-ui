@@ -28,6 +28,7 @@ export class MemberAcquisitionDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly formattedCostPerAcquisition: Signal<string> = computed(() => this.formatNumber(this.data().costPerAcquisition));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();

@@ -32,11 +32,11 @@
     <div class="flex gap-4" data-testid="website-visits-drawer-stats">
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Total Sessions</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalSessions) }}</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalSessions() }}</span>
       </div>
       <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
         <span class="text-sm text-gray-500">Page Views</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalPageViews) }}</span>
+        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalPageViews() }}</span>
       </div>
     </div>
 
@@ -103,7 +103,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Daily Sessions</h3>
         <p class="text-sm text-gray-600">Web activity over the last 30 days</p>
       </div>
-      @if (data().dailyData.length > 0) {
+      @if (drawerData().dailyData.length > 0) {
         <div class="h-[200px]" data-testid="website-visits-drawer-trend-chart">
           <lfx-chart type="line" [data]="trendChartData()" [options]="trendChartOptions" height="100%"></lfx-chart>
         </div>
@@ -121,7 +121,7 @@
         <h3 class="text-sm font-semibold text-gray-900">Sessions by Domain</h3>
         <p class="text-sm text-gray-600">Web traffic distribution across project domains</p>
       </div>
-      @if (data().domainGroups.length > 1) {
+      @if (drawerData().domainGroups.length > 1) {
         <div class="h-[240px]" data-testid="website-visits-drawer-domains-chart">
           <lfx-chart type="bar" [data]="domainChartData()" [options]="domainChartOptions" height="100%"></lfx-chart>
         </div>

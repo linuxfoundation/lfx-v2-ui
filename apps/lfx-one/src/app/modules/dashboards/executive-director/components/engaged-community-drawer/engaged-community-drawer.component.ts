@@ -28,6 +28,8 @@ export class EngagedCommunityDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly formattedTotalMembers: Signal<string> = computed(() => this.formatNumber(this.data().totalMembers));
+  protected readonly formattedNewsletterSubscribers: Signal<string> = computed(() => this.formatNumber(this.data().breakdown.newsletterSubscribers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();

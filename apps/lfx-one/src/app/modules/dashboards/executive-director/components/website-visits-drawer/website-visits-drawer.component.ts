@@ -1,33 +1,39 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { AnalyticsService } from '@services/analytics.service';
+import { ProjectContextService } from '@services/project-context.service';
+import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
 import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-website-visits-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [DrawerModule, ChartComponent, SkeletonModule],
   templateUrl: './website-visits-drawer.component.html',
 })
 export class WebsiteVisitsDrawerComponent {
+  // === Services ===
+  private readonly analyticsService = inject(AnalyticsService);
+  private readonly projectContextService = inject(ProjectContextService);
+
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
-  // === Inputs ===
-  public readonly data = input<WebActivitiesSummaryResponse>({
-    totalSessions: 0,
-    totalPageViews: 0,
-    domainGroups: [],
-    dailyData: [],
-    dailyLabels: [],
-  });
+  // === WritableSignals ===
+  protected readonly drawerLoading = signal(false);
 
-  // === Computed Signals ===
+  // === Computed Signals (lazy-loaded data) ===
+  protected readonly drawerData: Signal<WebActivitiesSummaryResponse> = this.initDrawerData();
+  protected readonly formattedTotalSessions: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalSessions));
+  protected readonly formattedTotalPageViews: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalPageViews));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
@@ -135,9 +141,42 @@ export class WebsiteVisitsDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initDrawerData(): Signal<WebActivitiesSummaryResponse> {
+    const defaultValue: WebActivitiesSummaryResponse = {
+      totalSessions: 0,
+      totalPageViews: 0,
+      domainGroups: [],
+      dailyData: [],
+      dailyLabels: [],
+    };
+
+    return toSignal(
+      toObservable(this.visible).pipe(
+        skip(1),
+        filter((isVisible) => isVisible),
+        tap(() => this.drawerLoading.set(true)),
+        switchMap(() => {
+          const foundation = this.projectContextService.selectedFoundation();
+          if (!foundation?.slug) {
+            this.drawerLoading.set(false);
+            return of(defaultValue);
+          }
+          return this.analyticsService.getWebActivitiesSummary(foundation.slug).pipe(
+            tap(() => this.drawerLoading.set(false)),
+            catchError(() => {
+              this.drawerLoading.set(false);
+              return of(defaultValue);
+            })
+          );
+        })
+      ),
+      { initialValue: defaultValue }
+    );
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.data();
+      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (totalSessions === 0 && dailyData.length === 0) {
@@ -207,7 +246,7 @@ export class WebsiteVisitsDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.data();
+      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
       if (totalSessions === 0 && dailyData.length === 0) {
@@ -257,7 +296,7 @@ export class WebsiteVisitsDrawerComponent {
 
   private initTrendChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
-      const { dailyData, dailyLabels } = this.data();
+      const { dailyData, dailyLabels } = this.drawerData();
       return {
         labels: dailyLabels,
         datasets: [
@@ -278,7 +317,7 @@ export class WebsiteVisitsDrawerComponent {
 
   private initDomainChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { domainGroups } = this.data();
+      const { domainGroups } = this.drawerData();
       const sorted = [...domainGroups].sort((a, b) => b.totalSessions - a.totalSessions);
       return {
         labels: sorted.map((d) => d.domainGroup),
