@@ -30,7 +30,7 @@ export class EmailCtrDrawerComponent {
     monthlyOpens: [],
   });
 
-  // === Dummy Data ===
+  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
   protected readonly recommendedActions: MarketingRecommendedAction[] = [
     {
       title: 'Improve call-to-action clarity',
