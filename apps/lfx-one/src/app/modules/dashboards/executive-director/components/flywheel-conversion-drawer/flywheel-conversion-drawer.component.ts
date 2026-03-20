@@ -27,7 +27,7 @@ export class FlywheelConversionDrawerComponent {
     monthlyData: [],
   });
 
-  // === Dummy Data ===
+  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
   protected readonly recommendedActions: MarketingRecommendedAction[] = [
     {
       title: 'Add post-event newsletter CTA to all event follow-ups',
