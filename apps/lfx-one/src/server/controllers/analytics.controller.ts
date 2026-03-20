@@ -1709,18 +1709,18 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_email_ctr');
 
     try {
-      const foundationName = req.query['foundationName'] as string | undefined;
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
 
-      if (!foundationName) {
-        throw ServiceValidationError.forField('foundationName', 'foundationName query parameter is required', {
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
           operation: 'get_email_ctr',
         });
       }
 
-      const response = await this.projectService.getEmailCtr(foundationName);
+      const response = await this.projectService.getEmailCtr(foundationSlug);
 
       logger.success(req, 'get_email_ctr', startTime, {
-        foundation_name: foundationName,
+        foundation_slug: foundationSlug,
         current_ctr: response.currentCtr,
         monthly_data_points: response.monthlyData.length,
       });
