@@ -1736,18 +1736,18 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_social_reach');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationName = req.query['foundationName'] as string | undefined;
 
-      if (!foundationSlug) {
-        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+      if (!foundationName) {
+        throw ServiceValidationError.forField('foundationName', 'foundationName query parameter is required', {
           operation: 'get_social_reach',
         });
       }
 
-      const response = await this.projectService.getSocialReach(foundationSlug);
+      const response = await this.projectService.getSocialReach(foundationName);
 
       logger.success(req, 'get_social_reach', startTime, {
-        foundation_slug: foundationSlug,
+        foundation_name: foundationName,
         total_reach: response.totalReach,
         monthly_data_points: response.monthlyData.length,
       });

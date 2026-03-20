@@ -1753,15 +1753,13 @@ export class ProjectService {
       ORDER BY PUBLISHED_MONTH_DATE ASC
     `;
 
-    // Query 3: CTR by campaign/project (horizontal bar) from email_ctr_summary
+    // Query 3: CTR by campaign/project (horizontal bar) from email_ctr_summary — all projects
     const campaignQuery = `
       SELECT
         PROJECT_NAME,
-        CTR_LAST_6_MONTHS AS AVG_CTR,
-        TOTAL_SENDS_LAST_6_MONTHS AS TOTAL_SENDS,
-        TOTAL_CLICKS_LAST_6_MONTHS AS TOTAL_CLICKS
+        LF_SUB_DOMAIN_CLASSIFICATION,
+        CTR_LAST_6_MONTHS AS AVG_CTR
       FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
-      WHERE PROJECT_NAME = ?
       ORDER BY CTR_LAST_6_MONTHS DESC
     `;
 
@@ -1771,7 +1769,7 @@ export class ProjectService {
         monthlyQuery,
         [foundationName]
       ),
-      this.snowflakeService.execute<{ PROJECT_NAME: string; AVG_CTR: number; TOTAL_SENDS: number; TOTAL_CLICKS: number }>(campaignQuery, [foundationName]),
+      this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, []),
     ]);
 
     if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -1793,9 +1791,10 @@ export class ProjectService {
 
     const campaignGroups = campaignResult.rows.map((row) => ({
       campaignName: row.PROJECT_NAME,
-      avgCtr: Math.round(row.AVG_CTR * 100) / 100,
-      totalSends: row.TOTAL_SENDS,
-      totalClicks: row.TOTAL_CLICKS,
+      classification: row.LF_SUB_DOMAIN_CLASSIFICATION,
+      avgCtr: Math.round(row.AVG_CTR * 10000) / 100,
+      totalSends: 0,
+      totalClicks: 0,
     }));
 
     return {
@@ -1810,80 +1809,78 @@ export class ProjectService {
     };
   }
 
-  public async getSocialReach(foundationSlug: string): Promise<SocialReachResponse> {
-    logger.debug(undefined, 'get_social_reach', 'Fetching paid social ROAS from Snowflake', { foundation_slug: foundationSlug });
+  public async getSocialReach(foundationName: string): Promise<SocialReachResponse> {
+    logger.debug(undefined, 'get_social_reach', 'Fetching paid social reach from Snowflake', { foundation_name: foundationName });
 
-    const foundationCte = `
-      WITH foundation_projects AS (
-        SELECT NAME FROM ANALYTICS.SILVER_DIM.PROJECTS WHERE SLUG = ?
-        UNION ALL
-        SELECT c.NAME FROM ANALYTICS.SILVER_DIM.PROJECTS c
-        INNER JOIN ANALYTICS.SILVER_DIM.PROJECTS p ON c.PARENT_PROJECT_SLUG = p.SLUG
-        WHERE p.SLUG = ? OR p.PARENT_PROJECT_SLUG = ?
-      )
+    // Block 1: Total impressions (last 6 months)
+    const impressionsQuery = `
+      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS
+      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        AND FOUNDATION_NAME = ?
     `;
 
-    // Monthly ROAS, spend, revenue, and impressions for trend chart
-    const monthlyQuery = `
-      ${foundationCte}
-      SELECT
-        TO_CHAR(pa.CAMPAIGN_MONTH, 'YYYY-MM') as MONTH,
-        SUM(pa.SPEND) as TOTAL_SPEND,
-        SUM(pa.REVENUE) as TOTAL_REVENUE,
-        CASE WHEN SUM(pa.SPEND) > 0 THEN SUM(pa.REVENUE) / SUM(pa.SPEND) ELSE 0 END as MONTHLY_ROAS,
-        SUM(pa.IMPRESSIONS) as TOTAL_IMPRESSIONS
-      FROM ANALYTICS.PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH pa
-      WHERE EXISTS (
-        SELECT 1 FROM foundation_projects fp
-        WHERE fp.NAME ILIKE '%' || pa.PROJECT_NAME || '%'
-           OR pa.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
+    // Block 2: ROAS KPI — latest completed month
+    const roasKpiQuery = `
+      SELECT ROAS, ROAS_MOM_PCT
+      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      WHERE CAMPAIGN_MONTH = (
+        SELECT MAX(CAMPAIGN_MONTH)
+        FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+        WHERE CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
+          AND FOUNDATION_NAME = ?
       )
-      AND pa.CAMPAIGN_MONTH >= DATEADD('month', -6, CURRENT_DATE())
-      GROUP BY pa.CAMPAIGN_MONTH
-      ORDER BY pa.CAMPAIGN_MONTH ASC
+        AND FOUNDATION_NAME = ?
     `;
 
-    // Channel breakdown with ROAS per channel
+    // Block 3: Monthly ROAS trend (bar chart, last 6 months)
+    const monthlyRoasQuery = `
+      SELECT CAMPAIGN_MONTH, ROAS
+      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        AND FOUNDATION_NAME = ?
+      ORDER BY CAMPAIGN_MONTH
+    `;
+
+    // Block 4: Monthly impressions (bar chart, last 6 months)
+    const monthlyImpressionsQuery = `
+      SELECT CAMPAIGN_MONTH, IMPRESSIONS
+      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        AND FOUNDATION_NAME = ?
+      ORDER BY CAMPAIGN_MONTH
+    `;
+
+    // Block 5: Impressions by channel (horizontal bar chart, last 6 months)
     const channelQuery = `
-      ${foundationCte}
-      SELECT
-        pa.CHANNEL,
-        SUM(pa.SPEND) as TOTAL_SPEND,
-        SUM(pa.REVENUE) as TOTAL_REVENUE,
-        CASE WHEN SUM(pa.SPEND) > 0 THEN SUM(pa.REVENUE) / SUM(pa.SPEND) ELSE 0 END as CHANNEL_ROAS,
-        SUM(pa.IMPRESSIONS) as TOTAL_IMPRESSIONS
-      FROM ANALYTICS.PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH pa
-      WHERE EXISTS (
-        SELECT 1 FROM foundation_projects fp
-        WHERE fp.NAME ILIKE '%' || pa.PROJECT_NAME || '%'
-           OR pa.PROJECT_NAME ILIKE '%' || fp.NAME || '%'
-      )
-      AND pa.CAMPAIGN_MONTH >= DATEADD('month', -6, CURRENT_DATE())
-      GROUP BY pa.CHANNEL
-      ORDER BY TOTAL_IMPRESSIONS DESC
+      SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        AND FOUNDATION_NAME = ?
+      GROUP BY CHANNEL
+      ORDER BY IMPRESSIONS DESC
     `;
 
-    const params = [foundationSlug, foundationSlug, foundationSlug];
-
-    const [monthlyResult, channelResult] = await Promise.all([
-      this.snowflakeService.execute<{ MONTH: string; TOTAL_SPEND: number; TOTAL_REVENUE: number; MONTHLY_ROAS: number; TOTAL_IMPRESSIONS: number }>(
-        monthlyQuery,
-        params
-      ),
-      this.snowflakeService.execute<{ CHANNEL: string; TOTAL_SPEND: number; TOTAL_REVENUE: number; CHANNEL_ROAS: number; TOTAL_IMPRESSIONS: number }>(
-        channelQuery,
-        params
-      ),
+    const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult] = await Promise.all([
+      this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number }>(impressionsQuery, [foundationName]),
+      this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName, foundationName]),
+      this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationName]),
+      this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationName]),
+      this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationName]),
     ]);
 
-    if (monthlyResult.rows.length === 0) {
+    const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS || 0;
+    const roas = roasKpiResult.rows[0]?.ROAS || 0;
+    const roasMomPct = roasKpiResult.rows[0]?.ROAS_MOM_PCT || 0;
+
+    if (monthlyImpressionsResult.rows.length === 0) {
       return {
-        totalReach: 0,
-        roas: 0,
+        totalReach,
+        roas: Math.round(roas * 100) / 100,
         totalSpend: 0,
         totalRevenue: 0,
-        changePercentage: 0,
-        trend: 'up',
+        changePercentage: Math.round(roasMomPct * 10) / 10,
+        trend: roasMomPct >= 0 ? 'up' : 'down',
         monthlyData: [],
         monthlyLabels: [],
         monthlyRoas: [],
@@ -1891,39 +1888,28 @@ export class ProjectService {
       };
     }
 
-    const monthlyData = monthlyResult.rows.map((row) => row.TOTAL_IMPRESSIONS);
-    const monthlyRoas = monthlyResult.rows.map((row) => Math.round(row.MONTHLY_ROAS * 100) / 100);
-    const monthlyLabels = monthlyResult.rows.map((row) => {
-      const [year, month] = row.MONTH.split('-');
-      const date = new Date(Number(year), Number(month) - 1);
+    const monthlyData = monthlyImpressionsResult.rows.map((row) => row.IMPRESSIONS);
+    const monthlyRoas = monthlyRoasResult.rows.map((row) => Math.round(row.ROAS * 100) / 100);
+    const monthlyLabels = monthlyImpressionsResult.rows.map((row) => {
+      const date = new Date(row.CAMPAIGN_MONTH);
       return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     });
 
-    // Current ROAS = last month, previous = month before
-    const currentRoas = monthlyRoas[monthlyRoas.length - 1];
-    const previousRoas = monthlyRoas.length >= 2 ? monthlyRoas[monthlyRoas.length - 2] : currentRoas;
-    const changePercentage = previousRoas > 0 ? Math.round(((currentRoas - previousRoas) / previousRoas) * 1000) / 10 : 0;
-
-    const totalSpend = monthlyResult.rows.reduce((sum, row) => sum + row.TOTAL_SPEND, 0);
-    const totalRevenue = monthlyResult.rows.reduce((sum, row) => sum + row.TOTAL_REVENUE, 0);
-    const roas = totalSpend > 0 ? Math.round((totalRevenue / totalSpend) * 100) / 100 : 0;
-    const totalReach = monthlyData.reduce((sum, val) => sum + val, 0);
-
     const channelGroups = channelResult.rows.map((row) => ({
       channel: row.CHANNEL,
-      totalImpressions: row.TOTAL_IMPRESSIONS,
-      totalSpend: Math.round(row.TOTAL_SPEND * 100) / 100,
-      totalRevenue: Math.round(row.TOTAL_REVENUE * 100) / 100,
-      roas: Math.round(row.CHANNEL_ROAS * 100) / 100,
+      totalImpressions: row.IMPRESSIONS,
+      totalSpend: 0,
+      totalRevenue: 0,
+      roas: 0,
     }));
 
     return {
       totalReach,
-      roas,
-      totalSpend: Math.round(totalSpend * 100) / 100,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      changePercentage,
-      trend: changePercentage >= 0 ? 'up' : 'down',
+      roas: Math.round(roas * 100) / 100,
+      totalSpend: 0,
+      totalRevenue: 0,
+      changePercentage: Math.round(roasMomPct * 10) / 10,
+      trend: roasMomPct >= 0 ? 'up' : 'down',
       monthlyData,
       monthlyLabels,
       monthlyRoas,
@@ -2020,47 +2006,59 @@ export class ProjectService {
   public async getSocialMedia(foundationName: string): Promise<SocialMediaResponse> {
     logger.debug(undefined, 'get_social_media', 'Fetching social media data from Snowflake Platinum tables', { foundation_name: foundationName });
 
-    // Query 1: KPI cards — total followers, platforms, growth
+    // Query 1: KPI cards — total followers, platforms, growth (aggregated)
     const overviewQuery = `
       SELECT
-        TOTAL_FOLLOWERS,
-        PLATFORMS_ACTIVE,
-        PRIOR_TOTAL_FOLLOWERS
+        SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS,
+        SUM(PLATFORMS_ACTIVE) AS PLATFORMS_ACTIVE,
+        CASE
+          WHEN SUM(PRIOR_TOTAL_FOLLOWERS) > 0
+            THEN ROUND(
+              (SUM(TOTAL_FOLLOWERS) - SUM(PRIOR_TOTAL_FOLLOWERS))
+              / SUM(PRIOR_TOTAL_FOLLOWERS) * 100, 1
+            )
+        END AS FOLLOWER_GROWTH_PCT
       FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_OVERVIEW
       WHERE FOUNDATION_NAME = ?
     `;
 
-    // Query 2: Platform breakdown table + insights
+    // Query 2: Platform breakdown table (aggregated per platform)
     const platformQuery = `
       SELECT
         PLATFORM_NAME,
-        FOLLOWERS,
-        ENGAGEMENTS,
-        IMPRESSIONS,
-        POSTS_30D,
-        PRIOR_FOLLOWERS
+        SUM(FOLLOWERS) AS FOLLOWERS,
+        CASE
+          WHEN SUM(IMPRESSIONS) > 0
+            THEN ROUND(SUM(ENGAGEMENTS) / SUM(IMPRESSIONS) * 100, 1)
+        END AS ENGAGEMENT_RATE_PCT,
+        SUM(POSTS_30D) AS POSTS_30D,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        SUM(PRIOR_FOLLOWERS) AS PRIOR_FOLLOWERS
       FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
       WHERE FOUNDATION_NAME = ?
+      GROUP BY PLATFORM_NAME
+      ORDER BY FOLLOWERS DESC
     `;
 
-    // Query 3: Follower growth trend (6 months)
+    // Query 3: Follower growth trend (aggregated per month)
     const trendQuery = `
       SELECT
         SNAPSHOT_MONTH,
-        TOTAL_FOLLOWERS
+        SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
       FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_FOLLOWER_TREND
       WHERE FOUNDATION_NAME = ?
+      GROUP BY SNAPSHOT_MONTH
       ORDER BY SNAPSHOT_MONTH ASC
     `;
 
     const [overviewResult, platformResult, trendResult] = await Promise.all([
-      this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number; PRIOR_TOTAL_FOLLOWERS: number }>(overviewQuery, [foundationName]),
+      this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number; FOLLOWER_GROWTH_PCT: number | null }>(overviewQuery, [foundationName]),
       this.snowflakeService.execute<{
         PLATFORM_NAME: string;
         FOLLOWERS: number;
-        ENGAGEMENTS: number;
-        IMPRESSIONS: number;
+        ENGAGEMENT_RATE_PCT: number | null;
         POSTS_30D: number;
+        IMPRESSIONS: number;
         PRIOR_FOLLOWERS: number;
       }>(platformQuery, [foundationName]),
       this.snowflakeService.execute<{ SNAPSHOT_MONTH: string; TOTAL_FOLLOWERS: number }>(trendQuery, [foundationName]),
@@ -2073,8 +2071,7 @@ export class ProjectService {
     const overview = overviewResult.rows[0];
     const totalFollowers = overview.TOTAL_FOLLOWERS;
     const totalPlatforms = overview.PLATFORMS_ACTIVE;
-    const priorFollowers = overview.PRIOR_TOTAL_FOLLOWERS;
-    const changePercentage = priorFollowers > 0 ? Math.round(((totalFollowers - priorFollowers) / priorFollowers) * 1000) / 10 : 0;
+    const changePercentage = overview.FOLLOWER_GROWTH_PCT ?? 0;
 
     const platformIconMap: Record<string, string> = {
       Twitter: 'fa-brands fa-x-twitter',
@@ -2091,7 +2088,7 @@ export class ProjectService {
     const platforms = platformResult.rows.map((row) => ({
       platform: row.PLATFORM_NAME,
       followers: row.FOLLOWERS,
-      engagementRate: row.IMPRESSIONS > 0 ? Math.round((row.ENGAGEMENTS / row.IMPRESSIONS) * 1000) / 10 : 0,
+      engagementRate: row.ENGAGEMENT_RATE_PCT ?? 0,
       postsLast30Days: row.POSTS_30D,
       impressions: row.IMPRESSIONS,
       iconClass: platformIconMap[row.PLATFORM_NAME] || 'fa-light fa-globe',
