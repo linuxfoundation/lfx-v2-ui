@@ -41,7 +41,7 @@ export class MarketingOverviewComponent {
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
-  // === Dummy Data ===
+  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
   protected readonly marketingInsights: string[] = [
     'Primary driver: Email CTR declined due to weaker newsletter engagement',
     'Event registrations increased 18% vs last month driven by KubeCon promotion',
