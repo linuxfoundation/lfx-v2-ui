@@ -20,6 +20,7 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
   selector: 'lfx-marketing-overview',
   imports: [MetricCardComponent, ScrollShadowDirective, WebsiteVisitsDrawerComponent, EmailCtrDrawerComponent],
   templateUrl: './marketing-overview.component.html',
+  styleUrl: './marketing-overview.component.scss',
 })
 export class MarketingOverviewComponent {
   @ViewChild(ScrollShadowDirective) public scrollShadowDirective!: ScrollShadowDirective;
