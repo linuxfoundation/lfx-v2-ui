@@ -7,7 +7,7 @@ import { lfxColors } from '@lfx-one/shared/constants';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EmailCtrResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
@@ -30,31 +30,9 @@ export class EmailCtrDrawerComponent {
     monthlyOpens: [],
   });
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly recommendedActions: MarketingRecommendedAction[] = [
-    {
-      title: 'Improve call-to-action clarity',
-      description: 'Test prominent, action-oriented CTAs in next campaign',
-      priority: 'high',
-      dueLabel: 'Next send',
-      iconClass: 'fa-light fa-bullseye-pointer',
-    },
-    {
-      title: 'Segment by audience type',
-      description: 'Personalize content for different member tiers',
-      priority: 'medium',
-      dueLabel: 'This month',
-      iconClass: 'fa-light fa-users',
-    },
-  ];
-
-  protected readonly keyInsights: MarketingKeyInsight[] = [
-    { text: 'Driver: Newsletter engagement ↓', type: 'driver' },
-    { text: 'CTR ↓12% vs last period', type: 'warning' },
-    { text: 'Clicks concentrated on 2–3 primary links', type: 'info' },
-  ];
-
   // === Computed Signals ===
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly campaignChartData: Signal<ChartData<'bar'>> = this.initCampaignChartData();
   protected readonly reachVsOpensChartData: Signal<ChartData<'bar'>> = this.initReachVsOpensChartData();
@@ -229,6 +207,124 @@ export class EmailCtrDrawerComponent {
           },
         ],
       };
+    });
+  }
+
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { changePercentage, campaignGroups, monthlySends, monthlyOpens } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (changePercentage < 0) {
+        actions.push({
+          title: 'Test new call-to-action formats',
+          description: `CTR dropped ${Math.abs(changePercentage)}% — experiment with button placement and copy in the next send`,
+          priority: 'high',
+          dueLabel: 'Next send',
+          iconClass: 'fa-light fa-bullseye-pointer',
+        });
+      }
+
+      if (monthlySends.length >= 2 && monthlyOpens.length >= 2) {
+        const latestOpenRate =
+          monthlySends[monthlySends.length - 1] > 0 ? (monthlyOpens[monthlyOpens.length - 1] / monthlySends[monthlySends.length - 1]) * 100 : 0;
+        const prevOpenRate =
+          monthlySends[monthlySends.length - 2] > 0 ? (monthlyOpens[monthlyOpens.length - 2] / monthlySends[monthlySends.length - 2]) * 100 : 0;
+        if (latestOpenRate < prevOpenRate) {
+          actions.push({
+            title: 'Optimize email subject lines',
+            description: `Open rate declined from ${prevOpenRate.toFixed(1)}% to ${latestOpenRate.toFixed(1)}% — A/B test subject lines`,
+            priority: latestOpenRate < prevOpenRate * 0.9 ? 'high' : 'medium',
+            dueLabel: 'Next send',
+            iconClass: 'fa-light fa-envelope-open-text',
+          });
+        }
+      }
+
+      if (campaignGroups.length > 1) {
+        const sorted = [...campaignGroups].sort((a, b) => b.avgCtr - a.avgCtr);
+        const best = sorted[0];
+        const worst = sorted[sorted.length - 1];
+        if (best.avgCtr > worst.avgCtr * 1.5) {
+          actions.push({
+            title: `Replicate "${best.campaignName}" approach`,
+            description: `Top campaign has ${best.avgCtr.toFixed(1)}% CTR vs ${worst.avgCtr.toFixed(1)}% for "${worst.campaignName}" — apply winning format`,
+            priority: 'medium',
+            dueLabel: 'This month',
+            iconClass: 'fa-light fa-copy',
+          });
+        }
+      }
+
+      if (changePercentage >= 0 && actions.length === 0) {
+        actions.push({
+          title: 'Maintain current momentum',
+          description: `CTR is trending up (+${changePercentage}%) — continue current content strategy`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          iconClass: 'fa-light fa-chart-line-up',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { currentCtr, changePercentage, monthlyData, campaignGroups, monthlySends, monthlyOpens } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (currentCtr === 0 && monthlyData.length === 0) {
+        return insights;
+      }
+
+      // CTR trend insight
+      if (changePercentage < -10) {
+        insights.push({ text: `CTR dropped ${Math.abs(changePercentage)}% vs last month — significant decline`, type: 'warning' });
+      } else if (changePercentage < 0) {
+        insights.push({ text: `CTR declined ${Math.abs(changePercentage)}% vs last month`, type: 'warning' });
+      } else if (changePercentage > 10) {
+        insights.push({ text: `CTR grew ${changePercentage}% vs last month — strong improvement`, type: 'driver' });
+      } else if (changePercentage > 0) {
+        insights.push({ text: `CTR up ${changePercentage}% vs last month`, type: 'info' });
+      }
+
+      // Open rate insight
+      if (monthlySends.length > 0 && monthlyOpens.length > 0) {
+        const totalSends = monthlySends.reduce((sum, v) => sum + v, 0);
+        const totalOpens = monthlyOpens.reduce((sum, v) => sum + v, 0);
+        if (totalSends > 0) {
+          const avgOpenRate = (totalOpens / totalSends) * 100;
+          insights.push({ text: `Average open rate: ${avgOpenRate.toFixed(1)}% across ${totalSends.toLocaleString()} sends`, type: 'info' });
+        }
+      }
+
+      // Campaign spread insight
+      if (campaignGroups.length > 1) {
+        const ctrs = campaignGroups.map((c) => c.avgCtr);
+        const max = Math.max(...ctrs);
+        const min = Math.min(...ctrs);
+        if (max > min * 2) {
+          insights.push({ text: `Wide CTR spread across campaigns (${min.toFixed(1)}%–${max.toFixed(1)}%)`, type: 'warning' });
+        } else {
+          insights.push({ text: `CTR consistent across campaigns (${min.toFixed(1)}%–${max.toFixed(1)}%)`, type: 'info' });
+        }
+      }
+
+      // Monthly trend consistency
+      if (monthlyData.length >= 3) {
+        const recent3 = monthlyData.slice(-3);
+        const isConsistentlyDecreasing = recent3[0] > recent3[1] && recent3[1] > recent3[2];
+        const isConsistentlyIncreasing = recent3[0] < recent3[1] && recent3[1] < recent3[2];
+        if (isConsistentlyDecreasing) {
+          insights.push({ text: 'CTR declining for 3 consecutive months', type: 'warning' });
+        } else if (isConsistentlyIncreasing) {
+          insights.push({ text: 'CTR improving for 3 consecutive months', type: 'driver' });
+        }
+      }
+
+      return insights;
     });
   }
 

@@ -27,31 +27,9 @@ export class WebsiteVisitsDrawerComponent {
     dailyLabels: [],
   });
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly recommendedActions: MarketingRecommendedAction[] = [
-    {
-      title: 'Optimize top landing pages',
-      description: 'Improve load time and CTAs on the 5 highest-traffic pages',
-      priority: 'high',
-      dueLabel: 'This week',
-      iconClass: 'fa-light fa-gauge-high',
-    },
-    {
-      title: 'Add UTM tracking to campaigns',
-      description: 'Ensure all marketing links have proper UTM parameters',
-      priority: 'medium',
-      dueLabel: 'This month',
-      iconClass: 'fa-light fa-link',
-    },
-  ];
-
-  protected readonly keyInsights: MarketingKeyInsight[] = [
-    { text: 'Driver: Organic search traffic up 18%', type: 'driver' },
-    { text: 'Bounce rate increased on mobile devices', type: 'warning' },
-    { text: '65% of traffic from 3 primary domains', type: 'info' },
-  ];
-
   // === Computed Signals ===
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly domainChartData: Signal<ChartData<'bar'>> = this.initDomainChartData();
 
@@ -157,6 +135,126 @@ export class WebsiteVisitsDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (totalSessions === 0 && dailyData.length === 0) {
+        return actions;
+      }
+
+      // Check for declining trend in recent days
+      if (dailyData.length >= 14) {
+        const firstHalf = dailyData.slice(0, Math.floor(dailyData.length / 2));
+        const secondHalf = dailyData.slice(Math.floor(dailyData.length / 2));
+        const firstAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
+        const secondAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
+        if (secondAvg < firstAvg * 0.9) {
+          const decline = Math.round(((firstAvg - secondAvg) / firstAvg) * 100);
+          actions.push({
+            title: 'Investigate traffic decline',
+            description: `Sessions dropped ~${decline}% in the recent period — review traffic sources and content changes`,
+            priority: 'high',
+            dueLabel: 'This week',
+            iconClass: 'fa-light fa-chart-line-down',
+          });
+        }
+      }
+
+      // Concentration in top domain
+      if (domainGroups.length > 1 && totalSessions > 0) {
+        const sorted = [...domainGroups].sort((a, b) => b.totalSessions - a.totalSessions);
+        const topShare = (sorted[0].totalSessions / totalSessions) * 100;
+        if (topShare > 70) {
+          actions.push({
+            title: `Diversify traffic beyond ${sorted[0].domainGroup}`,
+            description: `${topShare.toFixed(0)}% of sessions come from a single domain — expand content across other properties`,
+            priority: 'medium',
+            dueLabel: 'This month',
+            iconClass: 'fa-light fa-diagram-project',
+          });
+        }
+      }
+
+      // Pages per session ratio
+      if (totalSessions > 0 && totalPageViews > 0) {
+        const pagesPerSession = totalPageViews / totalSessions;
+        if (pagesPerSession < 1.5) {
+          actions.push({
+            title: 'Improve internal linking',
+            description: `Only ${pagesPerSession.toFixed(1)} pages per session — add cross-links to increase engagement`,
+            priority: 'medium',
+            dueLabel: 'This month',
+            iconClass: 'fa-light fa-link',
+          });
+        }
+      }
+
+      if (actions.length === 0) {
+        actions.push({
+          title: 'Continue current strategy',
+          description: `${this.formatNumber(totalSessions)} sessions with healthy traffic distribution`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          iconClass: 'fa-light fa-chart-line-up',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { totalSessions, totalPageViews, domainGroups, dailyData } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (totalSessions === 0 && dailyData.length === 0) {
+        return insights;
+      }
+
+      // Pages per session
+      if (totalSessions > 0) {
+        const pagesPerSession = totalPageViews / totalSessions;
+        insights.push({
+          text: `${pagesPerSession.toFixed(1)} pages per session across ${this.formatNumber(totalSessions)} visits`,
+          type: pagesPerSession >= 2 ? 'driver' : 'info',
+        });
+      }
+
+      // Domain distribution
+      if (domainGroups.length > 0 && totalSessions > 0) {
+        const sorted = [...domainGroups].sort((a, b) => b.totalSessions - a.totalSessions);
+        const topShare = (sorted[0].totalSessions / totalSessions) * 100;
+        if (domainGroups.length >= 3) {
+          const top3 = sorted.slice(0, 3).reduce((s, d) => s + d.totalSessions, 0);
+          const top3Share = (top3 / totalSessions) * 100;
+          insights.push({ text: `${top3Share.toFixed(0)}% of traffic from top 3 domains`, type: topShare > 70 ? 'warning' : 'info' });
+        }
+      }
+
+      // Daily trend
+      if (dailyData.length >= 14) {
+        const firstHalf = dailyData.slice(0, Math.floor(dailyData.length / 2));
+        const secondHalf = dailyData.slice(Math.floor(dailyData.length / 2));
+        const firstAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
+        const secondAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
+        if (secondAvg > firstAvg * 1.1) {
+          const growth = Math.round(((secondAvg - firstAvg) / firstAvg) * 100);
+          insights.push({ text: `Sessions trending up ~${growth}% in recent days`, type: 'driver' });
+        } else if (secondAvg < firstAvg * 0.9) {
+          const decline = Math.round(((firstAvg - secondAvg) / firstAvg) * 100);
+          insights.push({ text: `Sessions trending down ~${decline}% in recent days`, type: 'warning' });
+        } else {
+          insights.push({ text: 'Session volume stable over the last 30 days', type: 'info' });
+        }
+      }
+
+      return insights;
+    });
+  }
+
   private initTrendChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
       const { dailyData, dailyLabels } = this.data();

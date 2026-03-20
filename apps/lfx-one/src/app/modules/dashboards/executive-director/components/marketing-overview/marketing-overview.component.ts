@@ -41,14 +41,8 @@ export class MarketingOverviewComponent {
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly marketingInsights: string[] = [
-    'Primary driver: Email CTR declined due to weaker newsletter engagement',
-    'Event registrations increased 18% vs last month driven by KubeCon promotion',
-    'Social reach growth aligns with major product announcements in February',
-  ];
-
   // === Computed Signals ===
+  protected readonly marketingInsights: Signal<string[]> = this.initMarketingInsights();
   protected readonly marketingData: Signal<{
     webActivities: WebActivitiesSummaryResponse;
     emailCtr: EmailCtrResponse;
@@ -139,6 +133,45 @@ export class MarketingOverviewComponent {
       ),
       { initialValue: defaultValue }
     );
+  }
+
+  private initMarketingInsights(): Signal<string[]> {
+    return computed(() => {
+      const { webActivities, emailCtr } = this.marketingData();
+      const loading = this.marketingDataLoading();
+      const insights: string[] = [];
+
+      if (loading) {
+        return insights;
+      }
+
+      // Email CTR insight
+      if (emailCtr.currentCtr > 0) {
+        if (emailCtr.changePercentage < 0) {
+          insights.push(`Email CTR declined ${Math.abs(emailCtr.changePercentage)}% to ${emailCtr.currentCtr.toFixed(1)}% — review newsletter engagement`);
+        } else if (emailCtr.changePercentage > 0) {
+          insights.push(`Email CTR grew ${emailCtr.changePercentage}% to ${emailCtr.currentCtr.toFixed(1)}% — content strategy is working`);
+        } else {
+          insights.push(`Email CTR steady at ${emailCtr.currentCtr.toFixed(1)}%`);
+        }
+      }
+
+      // Website visits insight
+      if (webActivities.totalSessions > 0) {
+        const pagesPerSession = webActivities.totalPageViews / webActivities.totalSessions;
+        insights.push(`${this.formatNumber(webActivities.totalSessions)} website sessions with ${pagesPerSession.toFixed(1)} pages per visit`);
+      }
+
+      // Domain concentration insight
+      if (webActivities.domainGroups.length > 1 && webActivities.totalSessions > 0) {
+        const sorted = [...webActivities.domainGroups].sort((a, b) => b.totalSessions - a.totalSessions);
+        const topDomain = sorted[0];
+        const topShare = (topDomain.totalSessions / webActivities.totalSessions) * 100;
+        insights.push(`${topDomain.domainGroup} drives ${topShare.toFixed(0)}% of web traffic`);
+      }
+
+      return insights;
+    });
   }
 
   // === Private Helpers ===
