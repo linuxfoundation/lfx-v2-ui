@@ -1851,9 +1851,13 @@ export class ProjectService {
       ORDER BY CAMPAIGN_MONTH
     `;
 
-    // Block 5: Impressions by channel (horizontal bar chart, last 6 months)
+    // Block 5: Impressions by channel with spend/revenue (horizontal bar chart, last 6 months)
     const channelQuery = `
-      SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+      SELECT CHANNEL,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        SUM(SPEND) AS SPEND,
+        SUM(REVENUE) AS REVENUE,
+        CASE WHEN SUM(SPEND) > 0 THEN ROUND(SUM(REVENUE) / SUM(SPEND), 2) ELSE 0 END AS ROAS
       FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
@@ -1866,7 +1870,7 @@ export class ProjectService {
       this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName, foundationName]),
       this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationName]),
       this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationName]),
-      this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationName]),
+      this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number; SPEND: number; REVENUE: number; ROAS: number }>(channelQuery, [foundationName]),
     ]);
 
     const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS || 0;
@@ -1900,10 +1904,13 @@ export class ProjectService {
     const channelGroups = channelResult.rows.map((row) => ({
       channel: row.CHANNEL,
       totalImpressions: row.IMPRESSIONS,
-      totalSpend: 0,
-      totalRevenue: 0,
-      roas: 0,
+      totalSpend: row.SPEND || 0,
+      totalRevenue: row.REVENUE || 0,
+      roas: row.ROAS || 0,
     }));
+
+    const totalSpend = channelGroups.reduce((sum, c) => sum + c.totalSpend, 0);
+    const totalRevenue = channelGroups.reduce((sum, c) => sum + c.totalRevenue, 0);
 
     return {
       totalReach,
@@ -2009,10 +2016,11 @@ export class ProjectService {
     logger.debug(undefined, 'get_social_media', 'Fetching social media data from Snowflake Platinum tables', { foundation_name: foundationName });
 
     // Query 1: KPI cards — total followers, platforms, growth (aggregated)
+    // Use MAX for PLATFORMS_ACTIVE to avoid double-counting across sub-project rows
     const overviewQuery = `
       SELECT
         SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS,
-        SUM(PLATFORMS_ACTIVE) AS PLATFORMS_ACTIVE,
+        MAX(PLATFORMS_ACTIVE) AS PLATFORMS_ACTIVE,
         CASE
           WHEN SUM(PRIOR_TOTAL_FOLLOWERS) > 0
             THEN ROUND(
