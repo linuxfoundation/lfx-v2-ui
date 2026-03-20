@@ -10,6 +10,10 @@ import {
   DashboardDrawerType,
   DashboardMetricCard,
   EmailCtrResponse,
+  EngagedCommunitySizeResponse,
+  FlywheelConversionResponse,
+  MemberAcquisitionResponse,
+  MemberRetentionResponse,
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
@@ -21,6 +25,9 @@ import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directiv
 import { catchError, combineLatest, filter, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { EmailCtrDrawerComponent } from '../email-ctr-drawer/email-ctr-drawer.component';
+import { EngagedCommunityDrawerComponent } from '../engaged-community-drawer/engaged-community-drawer.component';
+import { FlywheelConversionDrawerComponent } from '../flywheel-conversion-drawer/flywheel-conversion-drawer.component';
+import { MemberAcquisitionDrawerComponent } from '../member-acquisition-drawer/member-acquisition-drawer.component';
 import { PaidSocialReachDrawerComponent } from '../paid-social-reach-drawer/paid-social-reach-drawer.component';
 import { SocialMediaDrawerComponent } from '../social-media-drawer/social-media-drawer.component';
 import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-visits-drawer.component';
@@ -34,6 +41,9 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
     EmailCtrDrawerComponent,
     PaidSocialReachDrawerComponent,
     SocialMediaDrawerComponent,
+    EngagedCommunityDrawerComponent,
+    MemberAcquisitionDrawerComponent,
+    FlywheelConversionDrawerComponent,
   ],
   templateUrl: './marketing-overview.component.html',
   styleUrl: './marketing-overview.component.scss',
@@ -57,6 +67,75 @@ export class MarketingOverviewComponent {
 
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
+
+  // === Mock Data — TODO: Replace with real Snowflake API data (no endpoints yet) ===
+  protected readonly engagedCommunityData: EngagedCommunitySizeResponse = {
+    totalMembers: 47_200,
+    changePercentage: 12.4,
+    trend: 'up',
+    breakdown: {
+      newsletterSubscribers: 28_500,
+      communityMembers: 14_200,
+      workingGroupMembers: 8_300,
+    },
+    monthlyData: [
+      { month: 'Oct 2025', value: 38_000 },
+      { month: 'Nov 2025', value: 40_100 },
+      { month: 'Dec 2025', value: 41_800 },
+      { month: 'Jan 2026', value: 43_500 },
+      { month: 'Feb 2026', value: 45_200 },
+      { month: 'Mar 2026', value: 47_200 },
+    ],
+  };
+
+  protected readonly memberAcquisitionData: MemberAcquisitionResponse = {
+    newMembersThisQuarter: 34,
+    costPerAcquisition: 2_450,
+    changePercentage: 8.2,
+    trend: 'up',
+    quarterlyData: [
+      { quarter: 'Q2 2025', newMembers: 22, cac: 3_100 },
+      { quarter: 'Q3 2025', newMembers: 28, cac: 2_800 },
+      { quarter: 'Q4 2025', newMembers: 31, cac: 2_650 },
+      { quarter: 'Q1 2026', newMembers: 34, cac: 2_450 },
+    ],
+  };
+
+  protected readonly memberRetentionData: MemberRetentionResponse = {
+    renewalRate: 88.5,
+    netRevenueRetention: 104.2,
+    changePercentage: 2.1,
+    trend: 'up',
+    target: 85,
+    monthlyData: [
+      { month: 'Oct 2025', value: 85.2 },
+      { month: 'Nov 2025', value: 86.1 },
+      { month: 'Dec 2025', value: 86.8 },
+      { month: 'Jan 2026', value: 87.4 },
+      { month: 'Feb 2026', value: 88.0 },
+      { month: 'Mar 2026', value: 88.5 },
+    ],
+  };
+
+  protected readonly flywheelConversionData: FlywheelConversionResponse = {
+    conversionRate: 23.4,
+    changePercentage: 5.7,
+    trend: 'up',
+    funnel: {
+      eventAttendees: 4_200,
+      convertedToNewsletter: 680,
+      convertedToCommunity: 310,
+      convertedToWorkingGroup: 120,
+    },
+    monthlyData: [
+      { month: 'Oct 2025', value: 18.2 },
+      { month: 'Nov 2025', value: 19.8 },
+      { month: 'Dec 2025', value: 20.5 },
+      { month: 'Jan 2026', value: 21.3 },
+      { month: 'Feb 2026', value: 22.1 },
+      { month: 'Mar 2026', value: 23.4 },
+    ],
+  };
 
   // === Computed Signals ===
   protected readonly marketingInsights: Signal<string[]> = this.initMarketingInsights();
@@ -83,6 +162,16 @@ export class MarketingOverviewComponent {
     this.activeDrawer.set(null);
   }
 
+  protected formatNumber(num: number): string {
+    if (num >= 999_950) {
+      return `${(num / 1_000_000).toFixed(1)}M`;
+    }
+    if (num >= 1_000) {
+      return `${(num / 1_000).toFixed(1)}K`;
+    }
+    return num.toLocaleString();
+  }
+
   // === Private Initializers ===
   private initMarketingCards(): Signal<DashboardMetricCard[]> {
     return computed(() => {
@@ -90,19 +179,18 @@ export class MarketingOverviewComponent {
       const loading = this.marketingDataLoading();
 
       return MARKETING_OVERVIEW_METRICS.map((card) => {
-        if (card.title === 'Website Visits') {
-          return this.transformWebsiteVisits(card, webActivities, loading);
+        switch (card.drawerType) {
+          case DashboardDrawerType.MarketingWebsiteVisits:
+            return this.transformWebsiteVisits(card, webActivities, loading);
+          case DashboardDrawerType.MarketingEmailCtr:
+            return this.transformEmailCtr(card, emailCtr, loading);
+          case DashboardDrawerType.MarketingPaidSocialReach:
+            return this.transformSocialReach(card, socialReach, loading);
+          case DashboardDrawerType.MarketingSocialMedia:
+            return this.transformSocialMedia(card, socialMedia, loading);
+          default:
+            return card;
         }
-        if (card.title === 'Email CTR') {
-          return this.transformEmailCtr(card, emailCtr, loading);
-        }
-        if (card.title === 'Paid Social Reach') {
-          return this.transformSocialReach(card, socialReach, loading);
-        }
-        if (card.title === 'Social Media') {
-          return this.transformSocialMedia(card, socialMedia, loading);
-        }
-        return card;
       });
     });
   }
@@ -352,15 +440,5 @@ export class MarketingOverviewComponent {
     if (data.roas > 0) return 'ROAS · Last 6 months';
     if (data.totalReach > 0) return 'Last 6 months';
     return undefined;
-  }
-
-  private formatNumber(num: number): string {
-    if (num >= 999_950) {
-      return `${(num / 1_000_000).toFixed(1)}M`;
-    }
-    if (num >= 1_000) {
-      return `${(num / 1_000).toFixed(1)}K`;
-    }
-    return num.toLocaleString();
   }
 }

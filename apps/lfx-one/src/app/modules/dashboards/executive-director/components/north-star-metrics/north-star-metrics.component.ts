@@ -123,19 +123,18 @@ export class NorthStarMetricsComponent {
   private initNorthStarCards(): Signal<DashboardMetricCard[]> {
     return computed(() =>
       NORTH_STAR_METRICS.map((card) => {
-        if (card.title === 'Engaged Community') {
-          return this.transformEngagedCommunity(card);
+        switch (card.drawerType) {
+          case DashboardDrawerType.NorthStarEngagedCommunity:
+            return this.transformEngagedCommunity(card);
+          case DashboardDrawerType.NorthStarMemberAcquisition:
+            return this.transformMemberAcquisition(card);
+          case DashboardDrawerType.NorthStarMemberRetention:
+            return this.transformMemberRetention(card);
+          case DashboardDrawerType.NorthStarFlywheelConversion:
+            return this.transformFlywheelConversion(card);
+          default:
+            return card;
         }
-        if (card.title === 'Member Acq. Rate & CAC') {
-          return this.transformMemberAcquisition(card);
-        }
-        if (card.title === 'Member Retention & NRR') {
-          return this.transformMemberRetention(card);
-        }
-        if (card.title === 'Flywheel Conv. Rate') {
-          return this.transformFlywheelConversion(card);
-        }
-        return card;
       })
     );
   }

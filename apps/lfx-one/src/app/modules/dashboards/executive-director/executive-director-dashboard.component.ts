@@ -14,11 +14,10 @@ import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.compo
 import { PendingActionsComponent } from '../components/pending-actions/pending-actions.component';
 
 import { MarketingOverviewComponent } from './components/marketing-overview/marketing-overview.component';
-import { NorthStarMetricsComponent } from './components/north-star-metrics/north-star-metrics.component';
 
 @Component({
   selector: 'lfx-executive-director-dashboard',
-  imports: [PendingActionsComponent, MyMeetingsComponent, MarketingOverviewComponent, NorthStarMetricsComponent, SkeletonModule],
+  imports: [PendingActionsComponent, MyMeetingsComponent, MarketingOverviewComponent, SkeletonModule],
   templateUrl: './executive-director-dashboard.component.html',
 })
 export class ExecutiveDirectorDashboardComponent {

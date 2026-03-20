@@ -211,7 +211,7 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
 
 /**
  * North Star KPI metrics for executive director dashboard
- * UI configuration templates (icons, categories, drawer types). Data values populated at runtime from mock data
+ * UI configuration templates (icons, categories, drawer types). Data values populated at runtime
  * until Snowflake tables for membership/financial data are available.
  */
 export const NORTH_STAR_METRICS: DashboardMetricCard[] = [
