@@ -44,7 +44,8 @@
 <lfx-member-acquisition-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"
   (visibleChange)="handleDrawerClose()"
-  [data]="memberAcquisitionData"></lfx-member-acquisition-drawer>
+  [data]="memberAcquisitionData"
+  [retentionData]="memberRetentionData"></lfx-member-acquisition-drawer>
 
 <lfx-member-retention-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberRetention"
