@@ -349,7 +349,7 @@ export class MarketingOverviewComponent {
   }
 
   private getSocialReachSubtitle(data: SocialReachResponse): string | undefined {
-    if (data.roas > 0) return 'ROAS · Last 30 days';
+    if (data.roas > 0) return 'ROAS · Last 6 months';
     if (data.totalReach > 0) return 'Last 6 months';
     return undefined;
   }
