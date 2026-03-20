@@ -821,8 +821,8 @@ export class AnalyticsService {
    * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
+  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
