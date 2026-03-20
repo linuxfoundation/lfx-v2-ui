@@ -13,23 +13,25 @@
   </div>
 
   <!-- Cards Grid - Always visible, no carousel -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="north-star-metrics-grid">
-    @for (card of northStarCards(); track card.testId) {
-      <lfx-metric-card
-        [title]="card.title"
-        [icon]="card.icon"
-        [testId]="card.testId"
-        [chartType]="card.chartType"
-        [chartData]="card.chartData"
-        [chartOptions]="card.chartOptions"
-        [value]="card.value"
-        [subtitle]="card.subtitle"
-        [trend]="card.trend"
-        [changePercentage]="card.changePercentage"
-        [loading]="card.loading"
-        [clickable]="!!card.drawerType"
-        (cardClick)="handleCardClick(card.drawerType!)"></lfx-metric-card>
-    }
+  <div class="border-2 border-dashed border-amber-300 rounded-lg p-4 bg-amber-50/30" data-testid="north-star-metrics-grid-wrapper">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="north-star-metrics-grid">
+      @for (card of northStarCards(); track card.testId) {
+        <lfx-metric-card
+          [title]="card.title"
+          [icon]="card.icon"
+          [testId]="card.testId"
+          [chartType]="card.chartType"
+          [chartData]="card.chartData"
+          [chartOptions]="card.chartOptions"
+          [value]="card.value"
+          [subtitle]="card.subtitle"
+          [trend]="card.trend"
+          [changePercentage]="card.changePercentage"
+          [loading]="card.loading"
+          [clickable]="!!card.drawerType"
+          (cardClick)="handleCardClick(card.drawerType!)"></lfx-metric-card>
+      }
+    </div>
   </div>
 </section>
 
