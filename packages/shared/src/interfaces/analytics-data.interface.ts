@@ -2747,7 +2747,6 @@ export interface SocialMediaPlatform {
 export interface SocialMediaMonthlyData {
   month: string;
   totalFollowers: number;
-  totalEngagements: number;
 }
 
 /**
@@ -2796,8 +2795,6 @@ export interface EmailCtrCampaignGroup {
   campaignName: string;
   classification: string;
   avgCtr: number;
-  totalSends: number;
-  totalClicks: number;
 }
 
 /**
