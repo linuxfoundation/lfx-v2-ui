@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PersonaType } from '@lfx-one/shared/interfaces';
 
@@ -17,12 +17,6 @@ export class PersonaService {
   public readonly currentPersona: WritableSignal<PersonaType>;
   public readonly isAutoDetected: WritableSignal<boolean> = signal(false);
 
-  // Centralized check for personas that require TLF-only context
-  public readonly isTlfOnlyPersona = computed(() => {
-    const persona = this.currentPersona();
-    return persona === 'board-member' || persona === 'executive-director';
-  });
-
   public constructor() {
     // Default persona - will be overridden by initializeFromAuth if backend provides one
     this.currentPersona = signal<PersonaType>('maintainer');
@@ -37,8 +31,10 @@ export class PersonaService {
       this.currentPersona.set(persona);
       this.isAutoDetected.set(true);
 
-      if (this.isBoardScopedPersona(persona)) {
-        this.enforceTlfOnlyContext();
+      // When auto-detected as board-member or executive-director, clear child project selection
+      if (persona === 'board-member' || persona === 'executive-director') {
+        this.projectContextService.clearProject();
+        this.router.navigate(['/']);
       }
     } else {
       // No auto-detected persona, allow manual selection
@@ -49,41 +45,19 @@ export class PersonaService {
 
   /**
    * Set the current persona
-   * When switching to a board-scoped persona, enforce TLF-only context
+   * When switching to board-member or executive-director, clear child project selection
    * Cannot change persona if it was auto-detected from committee membership
    */
   public setPersona(persona: PersonaType): void {
     if (persona !== this.currentPersona()) {
       this.currentPersona.set(persona);
 
-      if (this.isBoardScopedPersona(persona)) {
-        this.enforceTlfOnlyContext();
+      // When switching to board-member or executive-director persona, clear any child project selection
+      // Board-level personas should only work at the foundation level
+      if (persona === 'board-member' || persona === 'executive-director') {
+        this.projectContextService.clearProject();
+        this.router.navigate(['/']);
       }
     }
-  }
-
-  /**
-   * Check if a persona is board-scoped (requires TLF-only context)
-   */
-  public isBoardScopedPersona(persona: PersonaType): boolean {
-    return persona === 'board-member' || persona === 'executive-director';
-  }
-
-  /**
-   * Enforce TLF-only context for board-scoped personas
-   * Clears child project selection and sets TLF as the active foundation.
-   * Note: availableProjects may not be populated yet during early initialization.
-   * The sidebar component also filters to TLF for board-level personas,
-   * ensuring correct state once projects load.
-   */
-  private enforceTlfOnlyContext(): void {
-    this.projectContextService.clearProject();
-
-    const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
-    if (tlfProject) {
-      this.projectContextService.setFoundation(tlfProject);
-    }
-
-    this.router.navigate(['/']);
   }
 }
