@@ -27,31 +27,9 @@ export class EngagedCommunityDrawerComponent {
     monthlyData: [],
   });
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly recommendedActions: MarketingRecommendedAction[] = [
-    {
-      title: 'Launch cross-platform deduplication audit',
-      description: 'Ensure member counts are accurate across newsletter, community, and WG lists',
-      priority: 'high',
-      dueLabel: 'This quarter',
-      iconClass: 'fa-light fa-magnifying-glass-chart',
-    },
-    {
-      title: 'Increase WG onboarding conversion',
-      description: 'Newsletter subscribers who attend events are prime WG candidates',
-      priority: 'medium',
-      dueLabel: 'Next month',
-      iconClass: 'fa-light fa-user-group',
-    },
-  ];
-
-  protected readonly keyInsights: MarketingKeyInsight[] = [
-    { text: 'Newsletter subscribers are the largest segment at 60% of total', type: 'driver' },
-    { text: 'Working group membership growing fastest at 15% MoM', type: 'info' },
-    { text: 'Community members have highest retention at 92%', type: 'info' },
-  ];
-
   // === Computed Signals ===
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly breakdownChartData: Signal<ChartData<'bar'>> = this.initBreakdownChartData();
 
@@ -155,6 +133,107 @@ export class EngagedCommunityDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { totalMembers, changePercentage, breakdown, monthlyData } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (totalMembers === 0 && monthlyData.length === 0) {
+        return actions;
+      }
+
+      // Check if working groups are underrepresented
+      if (totalMembers > 0 && breakdown.workingGroupMembers < totalMembers * 0.1) {
+        actions.push({
+          title: 'Increase working group participation',
+          description: `Working group members are only ${((breakdown.workingGroupMembers / totalMembers) * 100).toFixed(0)}% of total — convert newsletter subscribers through targeted outreach`,
+          priority: 'high',
+          dueLabel: 'This quarter',
+          iconClass: 'fa-light fa-user-group',
+        });
+      }
+
+      // Check for declining community
+      if (changePercentage < -5) {
+        actions.push({
+          title: 'Address community decline',
+          description: `Community size dropped ${Math.abs(changePercentage)}% — review engagement programs and onboarding flow`,
+          priority: 'high',
+          dueLabel: 'This month',
+          iconClass: 'fa-light fa-chart-line-down',
+        });
+      }
+
+      // Check if newsletter dominates (concentration risk)
+      if (totalMembers > 0 && breakdown.newsletterSubscribers > totalMembers * 0.7) {
+        actions.push({
+          title: 'Diversify engagement beyond newsletter',
+          description: `${((breakdown.newsletterSubscribers / totalMembers) * 100).toFixed(0)}% of community is newsletter-only — create pathways to deeper participation`,
+          priority: 'medium',
+          dueLabel: 'Next quarter',
+          iconClass: 'fa-light fa-arrows-split-up-and-left',
+        });
+      }
+
+      if (actions.length === 0) {
+        actions.push({
+          title: 'Continue community growth strategy',
+          description: `${this.formatNumber(totalMembers)} engaged members${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          iconClass: 'fa-light fa-chart-line-up',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { totalMembers, changePercentage, breakdown, monthlyData } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (totalMembers === 0 && monthlyData.length === 0) {
+        return insights;
+      }
+
+      // Growth trend
+      if (changePercentage > 5) {
+        insights.push({ text: `Community grew ${changePercentage}% month-over-month`, type: 'driver' });
+      } else if (changePercentage < -5) {
+        insights.push({ text: `Community declined ${Math.abs(changePercentage)}% month-over-month`, type: 'warning' });
+      } else if (changePercentage !== 0) {
+        insights.push({ text: `Community ${changePercentage > 0 ? 'up' : 'down'} ${Math.abs(changePercentage)}% — relatively stable`, type: 'info' });
+      }
+
+      // Largest segment
+      if (totalMembers > 0) {
+        const segments = [
+          { name: 'Newsletter subscribers', value: breakdown.newsletterSubscribers },
+          { name: 'Community members', value: breakdown.communityMembers },
+          { name: 'Working group members', value: breakdown.workingGroupMembers },
+        ].sort((a, b) => b.value - a.value);
+        const topShare = (segments[0].value / totalMembers) * 100;
+        insights.push({ text: `${segments[0].name} are the largest segment at ${topShare.toFixed(0)}% of total`, type: topShare > 70 ? 'warning' : 'info' });
+      }
+
+      // Monthly trend consistency
+      if (monthlyData.length >= 3) {
+        const recent3 = monthlyData.slice(-3);
+        const isGrowing = recent3[0].value < recent3[1].value && recent3[1].value < recent3[2].value;
+        const isShrinking = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
+        if (isGrowing) {
+          insights.push({ text: 'Community growing for 3 consecutive months', type: 'driver' });
+        } else if (isShrinking) {
+          insights.push({ text: 'Community declining for 3 consecutive months', type: 'warning' });
+        }
+      }
+
+      return insights;
+    });
+  }
+
   private initTrendChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
       const { monthlyData } = this.data();

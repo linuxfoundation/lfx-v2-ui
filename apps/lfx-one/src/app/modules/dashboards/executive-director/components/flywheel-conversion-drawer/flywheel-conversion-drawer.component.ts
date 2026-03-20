@@ -27,31 +27,9 @@ export class FlywheelConversionDrawerComponent {
     monthlyData: [],
   });
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly recommendedActions: MarketingRecommendedAction[] = [
-    {
-      title: 'Add post-event newsletter CTA to all event follow-ups',
-      description: 'Only 16% of attendees currently receive a newsletter signup prompt',
-      priority: 'high',
-      dueLabel: 'This month',
-      iconClass: 'fa-light fa-envelope-circle-check',
-    },
-    {
-      title: 'Create WG landing pages for top 5 events',
-      description: 'Direct attendees to relevant working groups based on event topic',
-      priority: 'medium',
-      dueLabel: 'Next quarter',
-      iconClass: 'fa-light fa-browser',
-    },
-  ];
-
-  protected readonly keyInsights: MarketingKeyInsight[] = [
-    { text: 'Newsletter is the highest conversion path at 16.2% of attendees', type: 'driver' },
-    { text: 'WG conversion lowest — attendees need clearer path to participate', type: 'warning' },
-    { text: 'Conversion rate trending up 5.7% — flywheel is accelerating', type: 'info' },
-  ];
-
   // === Computed Signals ===
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly funnelChartData: Signal<ChartData<'bar'>> = this.initFunnelChartData();
 
@@ -151,6 +129,120 @@ export class FlywheelConversionDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { conversionRate, changePercentage, funnel, monthlyData } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
+        return actions;
+      }
+
+      // Low WG conversion
+      if (funnel.eventAttendees > 0 && funnel.convertedToWorkingGroup > 0) {
+        const wgRate = (funnel.convertedToWorkingGroup / funnel.eventAttendees) * 100;
+        const nlRate = funnel.convertedToNewsletter > 0 ? (funnel.convertedToNewsletter / funnel.eventAttendees) * 100 : 0;
+        if (wgRate < nlRate * 0.5 && nlRate > 0) {
+          actions.push({
+            title: 'Improve working group conversion path',
+            description: `WG conversion at ${wgRate.toFixed(1)}% vs ${nlRate.toFixed(1)}% for newsletter — attendees need clearer path to participate`,
+            priority: 'high',
+            dueLabel: 'This quarter',
+            iconClass: 'fa-light fa-arrow-progress',
+          });
+        }
+      }
+
+      // Declining conversion rate
+      if (changePercentage < -5) {
+        actions.push({
+          title: 'Address conversion rate decline',
+          description: `Flywheel conversion dropped ${Math.abs(changePercentage)}% — review post-event follow-up effectiveness`,
+          priority: 'high',
+          dueLabel: 'This month',
+          iconClass: 'fa-light fa-chart-line-down',
+        });
+      }
+
+      // Low overall conversion
+      if (conversionRate > 0 && conversionRate < 10 && funnel.eventAttendees > 0) {
+        actions.push({
+          title: 'Add post-event engagement CTAs',
+          description: `Only ${conversionRate}% overall conversion — add newsletter signup and community join prompts to event follow-ups`,
+          priority: 'medium',
+          dueLabel: 'Next event',
+          iconClass: 'fa-light fa-envelope-circle-check',
+        });
+      }
+
+      if (actions.length === 0) {
+        actions.push({
+          title: 'Continue flywheel optimization',
+          description: `${conversionRate}% conversion rate${changePercentage > 0 ? ` — improving ${changePercentage}%` : ''} across ${this.formatNumber(funnel.eventAttendees)} attendees`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          iconClass: 'fa-light fa-chart-line-up',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { conversionRate, changePercentage, funnel, monthlyData } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
+        return insights;
+      }
+
+      // Best conversion path
+      if (funnel.eventAttendees > 0) {
+        const paths = [
+          { name: 'Newsletter', value: funnel.convertedToNewsletter },
+          { name: 'Community', value: funnel.convertedToCommunity },
+          { name: 'Working group', value: funnel.convertedToWorkingGroup },
+        ]
+          .filter((p) => p.value > 0)
+          .sort((a, b) => b.value - a.value);
+
+        if (paths.length > 0) {
+          const bestRate = (paths[0].value / funnel.eventAttendees) * 100;
+          insights.push({ text: `${paths[0].name} is the highest conversion path at ${bestRate.toFixed(1)}% of attendees`, type: 'driver' });
+        }
+
+        // Weakest path
+        if (paths.length > 1) {
+          const worstRate = (paths[paths.length - 1].value / funnel.eventAttendees) * 100;
+          insights.push({ text: `${paths[paths.length - 1].name} conversion lowest at ${worstRate.toFixed(1)}%`, type: 'warning' });
+        }
+      }
+
+      // Conversion trend
+      if (changePercentage > 3) {
+        insights.push({ text: `Conversion rate trending up ${changePercentage}% — flywheel is accelerating`, type: 'driver' });
+      } else if (changePercentage < -3) {
+        insights.push({ text: `Conversion rate dropped ${Math.abs(changePercentage)}% — flywheel is slowing`, type: 'warning' });
+      }
+
+      // Monthly trend consistency
+      if (monthlyData.length >= 3) {
+        const recent3 = monthlyData.slice(-3);
+        const isGrowing = recent3[0].value < recent3[1].value && recent3[1].value < recent3[2].value;
+        const isShrinking = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
+        if (isGrowing) {
+          insights.push({ text: 'Conversion rate growing for 3 consecutive months', type: 'driver' });
+        } else if (isShrinking) {
+          insights.push({ text: 'Conversion rate declining for 3 consecutive months', type: 'warning' });
+        }
+      }
+
+      return insights;
+    });
+  }
+
   private initTrendChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
       const { monthlyData } = this.data();

@@ -27,31 +27,9 @@ export class MemberAcquisitionDrawerComponent {
     quarterlyData: [],
   });
 
-  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
-  protected readonly recommendedActions: MarketingRecommendedAction[] = [
-    {
-      title: 'Optimize event-to-member conversion funnel',
-      description: 'Event attendees convert at 3x the rate of website visitors — double down on event follow-ups',
-      priority: 'high',
-      dueLabel: 'This quarter',
-      iconClass: 'fa-light fa-chart-line-up',
-    },
-    {
-      title: 'Reduce CAC through referral program',
-      description: 'Launch member referral incentives to lower cost per acquisition',
-      priority: 'medium',
-      dueLabel: 'Next quarter',
-      iconClass: 'fa-light fa-handshake',
-    },
-  ];
-
-  protected readonly keyInsights: MarketingKeyInsight[] = [
-    { text: 'CAC decreased 21% over 4 quarters — marketing efficiency improving', type: 'driver' },
-    { text: 'Q1 2026 is strongest acquisition quarter in 12 months', type: 'info' },
-    { text: 'Events channel drives 45% of new member conversions', type: 'info' },
-  ];
-
   // === Computed Signals ===
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
   protected readonly cacChartData: Signal<ChartData<'line'>> = this.initCacChartData();
 
@@ -139,6 +117,124 @@ export class MemberAcquisitionDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { newMembersThisQuarter, costPerAcquisition, changePercentage, quarterlyData } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
+        return actions;
+      }
+
+      // Check if CAC is increasing
+      if (quarterlyData.length >= 2) {
+        const recent = quarterlyData[quarterlyData.length - 1];
+        const previous = quarterlyData[quarterlyData.length - 2];
+        if (recent.cac > previous.cac && recent.cac > 0) {
+          const cacIncrease = (((recent.cac - previous.cac) / previous.cac) * 100).toFixed(0);
+          actions.push({
+            title: 'Reduce cost per acquisition',
+            description: `CAC increased ${cacIncrease}% to $${this.formatNumber(recent.cac)} — review channel efficiency and referral programs`,
+            priority: 'high',
+            dueLabel: 'This quarter',
+            iconClass: 'fa-light fa-money-bill-trend-up',
+          });
+        }
+      }
+
+      // Check if acquisition is declining
+      if (changePercentage < -10) {
+        actions.push({
+          title: 'Address acquisition decline',
+          description: `New member signups dropped ${Math.abs(changePercentage)}% — review marketing funnel and conversion paths`,
+          priority: 'high',
+          dueLabel: 'This month',
+          iconClass: 'fa-light fa-chart-line-down',
+        });
+      }
+
+      // Check CAC trend over 3+ quarters
+      if (quarterlyData.length >= 3) {
+        const recent3 = quarterlyData.slice(-3);
+        const cacDecreasing = recent3[0].cac > recent3[1].cac && recent3[1].cac > recent3[2].cac;
+        if (cacDecreasing && recent3[2].cac > 0) {
+          const totalDrop = (((recent3[0].cac - recent3[2].cac) / recent3[0].cac) * 100).toFixed(0);
+          actions.push({
+            title: 'Scale current acquisition channels',
+            description: `CAC decreased ${totalDrop}% over 3 quarters — room to increase spend in efficient channels`,
+            priority: 'medium',
+            dueLabel: 'Next quarter',
+            iconClass: 'fa-light fa-chart-line-up',
+          });
+        }
+      }
+
+      if (actions.length === 0) {
+        actions.push({
+          title: 'Monitor acquisition performance',
+          description: `${newMembersThisQuarter} new members this quarter at $${this.formatNumber(costPerAcquisition)} CAC`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          iconClass: 'fa-light fa-chart-line-up',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { newMembersThisQuarter, changePercentage, quarterlyData } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
+        return insights;
+      }
+
+      // Acquisition trend
+      if (changePercentage > 10) {
+        insights.push({ text: `New member acquisition up ${changePercentage}% quarter-over-quarter`, type: 'driver' });
+      } else if (changePercentage < -10) {
+        insights.push({ text: `New member acquisition down ${Math.abs(changePercentage)}% quarter-over-quarter`, type: 'warning' });
+      } else if (changePercentage !== 0) {
+        insights.push({ text: `Acquisition ${changePercentage > 0 ? 'up' : 'down'} ${Math.abs(changePercentage)}% — relatively stable`, type: 'info' });
+      }
+
+      // CAC trend
+      if (quarterlyData.length >= 2) {
+        const recent = quarterlyData[quarterlyData.length - 1];
+        const previous = quarterlyData[quarterlyData.length - 2];
+        if (previous.cac > 0 && recent.cac < previous.cac) {
+          const improvement = (((previous.cac - recent.cac) / previous.cac) * 100).toFixed(0);
+          insights.push({ text: `CAC improved ${improvement}% to $${this.formatNumber(recent.cac)} — marketing efficiency increasing`, type: 'driver' });
+        } else if (previous.cac > 0 && recent.cac > previous.cac) {
+          insights.push({ text: `CAC rose to $${this.formatNumber(recent.cac)} — acquisition becoming more expensive`, type: 'warning' });
+        }
+      }
+
+      // Best quarter check
+      if (quarterlyData.length >= 4) {
+        const max = Math.max(...quarterlyData.map((q) => q.newMembers));
+        const current = quarterlyData[quarterlyData.length - 1];
+        if (current.newMembers === max) {
+          insights.push({ text: `${current.quarter} is the strongest acquisition quarter in the dataset`, type: 'driver' });
+        }
+      }
+
+      // Consecutive growth
+      if (quarterlyData.length >= 3) {
+        const recent3 = quarterlyData.slice(-3);
+        const isGrowing = recent3[0].newMembers < recent3[1].newMembers && recent3[1].newMembers < recent3[2].newMembers;
+        if (isGrowing) {
+          insights.push({ text: 'Acquisition growing for 3 consecutive quarters', type: 'driver' });
+        }
+      }
+
+      return insights;
+    });
+  }
+
   private initAcquisitionChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
       const { quarterlyData } = this.data();
