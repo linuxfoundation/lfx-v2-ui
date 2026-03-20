@@ -32,7 +32,7 @@ export class PaidSocialReachDrawerComponent {
     channelGroups: [],
   });
 
-  // === Dummy Data ===
+  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
   protected readonly recommendedActions: MarketingRecommendedAction[] = [
     {
       title: 'Reallocate budget to top channels',
