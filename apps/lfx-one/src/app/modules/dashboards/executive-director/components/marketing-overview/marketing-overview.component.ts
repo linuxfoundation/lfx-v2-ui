@@ -127,7 +127,7 @@ export class MarketingOverviewComponent {
         switchMap((foundation) =>
           forkJoin({
             webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug),
-            emailCtr: this.analyticsService.getEmailCtr(foundation.slug),
+            emailCtr: this.analyticsService.getEmailCtr(foundation.name),
           }).pipe(
             tap(() => this.marketingDataLoading.set(false)),
             catchError(() => {
