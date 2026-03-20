@@ -1,0 +1,50 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex flex-col gap-4 pt-4" data-testid="committee-meetings-tab">
+  <!-- Toolbar -->
+  <div class="flex items-center gap-3">
+    <input
+      type="text"
+      [formControl]="searchControl"
+      placeholder="Search meetings..."
+      aria-label="Search meetings"
+      class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+      data-testid="committee-meetings-search" />
+    <div class="flex gap-1">
+      @for (option of timeOptions; track option.value) {
+        <button
+          class="px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+          [class.bg-gray-100]="timeFilter() === option.value"
+          [class.text-gray-900]="timeFilter() === option.value"
+          [class.border-gray-300]="timeFilter() === option.value"
+          [class.text-gray-500]="timeFilter() !== option.value"
+          [class.border-gray-200]="timeFilter() !== option.value"
+          [class.bg-white]="timeFilter() !== option.value"
+          [attr.data-testid]="'committee-meetings-filter-' + option.value"
+          (click)="setTimeFilter(option.value)">
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Meeting Cards -->
+  @if (filteredMeetings().length > 0) {
+    <div class="flex flex-col gap-4">
+      @for (meeting of filteredMeetings(); track meeting.id) {
+        <lfx-meeting-card [meetingInput]="meeting" [pastMeeting]="timeFilter() === 'past'" [showBorder]="true"></lfx-meeting-card>
+      }
+    </div>
+  } @else {
+    <lfx-card>
+      <div class="flex flex-col items-center py-12">
+        <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
+        <p class="text-sm font-medium text-gray-600">No {{ timeFilter() === 'upcoming' ? 'upcoming' : 'past' }} meetings</p>
+        <p class="text-xs text-gray-400 mt-1">
+          {{ timeFilter() === 'upcoming' ? 'Meetings for this group will appear here when scheduled.' : 'No past meetings found for this group.' }}
+        </p>
+      </div>
+    </lfx-card>
+  }
+</div>

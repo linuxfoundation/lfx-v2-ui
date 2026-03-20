@@ -2,207 +2,332 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="flex flex-col gap-6 pt-4">
-  <!-- Stats Row -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="committee-view-stats">
-    <!-- Total Members -->
+  <!-- Stats Strip -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="committee-overview-stats">
+    <!-- Members -->
     <lfx-card>
-      <div class="flex items-center gap-3 py-1">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-          <i class="fa-light fa-users text-blue-600"></i>
-        </div>
-        <div>
-          <p class="text-2xl font-semibold text-gray-900">{{ committee().total_members || 0 }}</p>
-          <p class="text-xs text-gray-500">Members</p>
-        </div>
+      <div class="flex flex-col items-center gap-1 py-1">
+        <p class="text-2xl font-bold text-gray-900">{{ committee().total_members || 0 }}</p>
+        <p class="text-xs text-gray-500">Members</p>
       </div>
     </lfx-card>
 
-    <!-- Voting Reps -->
-    @if (committee().enable_voting) {
-      <lfx-card>
-        <div class="flex items-center gap-3 py-1">
-          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <i class="fa-light fa-check-to-slot text-emerald-600"></i>
-          </div>
-          <div>
-            <p class="text-2xl font-semibold text-emerald-600">{{ committee().total_voting_repos || 0 }}</p>
-            <p class="text-xs text-gray-500">Voting Reps</p>
-          </div>
-        </div>
-      </lfx-card>
-    }
-
-    <!-- Visibility -->
+    <!-- Organizations -->
     <lfx-card>
-      <div class="flex items-center gap-3 py-1">
-        <div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-          <i class="fa-light fa-eye text-purple-600"></i>
-        </div>
-        <div>
-          <p class="text-2xl font-semibold text-gray-900">{{ committee().public ? 'Public' : 'Private' }}</p>
-          <p class="text-xs text-gray-500">Visibility</p>
-        </div>
+      <div class="flex flex-col items-center gap-1 py-1">
+        @if (membersLoading()) {
+          <p class="text-2xl font-bold text-gray-400">&mdash;</p>
+        } @else {
+          <p class="text-2xl font-bold text-gray-900">{{ orgCount() }}</p>
+        }
+        <p class="text-xs text-gray-500">Organizations</p>
       </div>
     </lfx-card>
 
-    <!-- Join Mode -->
+    <!-- Meetings YTD -->
     <lfx-card>
-      <div class="flex items-center gap-3 py-1">
-        <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-          <i class="fa-light fa-door-open text-amber-600"></i>
-        </div>
-        <div>
-          <p class="text-2xl font-semibold text-gray-900">{{ committee().join_mode | joinModeLabel }}</p>
-          <p class="text-xs text-gray-500">Join Mode</p>
-        </div>
+      <div class="flex flex-col items-center gap-1 py-1">
+        <p class="text-2xl font-bold text-gray-900">{{ meetings().length }}</p>
+        <p class="text-xs text-gray-500">Meetings (YTD)</p>
+      </div>
+    </lfx-card>
+
+    <!-- Active Votes -->
+    <lfx-card>
+      <div class="flex flex-col items-center gap-1 py-1">
+        <p class="text-2xl font-bold text-gray-900">{{ activeVotesCount() }}</p>
+        <p class="text-xs text-gray-500">Active Votes</p>
+      </div>
+    </lfx-card>
+
+    <!-- Open Surveys -->
+    <lfx-card>
+      <div class="flex flex-col items-center gap-1 py-1">
+        <p class="text-2xl font-bold text-gray-900">{{ openSurveysCount() }}</p>
+        <p class="text-xs text-gray-500">Open Surveys</p>
       </div>
     </lfx-card>
   </div>
 
-  <!-- Two-Column Layout -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Left Column: Channels & Configurations -->
-    <div class="lg:col-span-2 flex flex-col gap-6">
-      <!-- Channels Card -->
-      <lfx-card data-testid="committee-view-channels">
-        <div class="flex flex-col gap-4">
-          <h3 class="text-sm font-medium"><i class="fa-light fa-comments text-gray-400 mr-2"></i>Channels</h3>
-          <div class="flex flex-col gap-4">
-            <!-- Mailing List -->
-            @if (committee().mailing_list; as mailingList) {
-              <div class="flex flex-col gap-2">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Mailing List</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-envelope text-blue-600 text-sm"></i>
-                  </div>
-                  <div class="min-w-0">
-                    <a [href]="'mailto:' + mailingList" class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                      {{ mailingList }}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            } @else {
-              <div class="flex flex-col gap-2 opacity-40">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Mailing List</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-envelope text-gray-400 text-sm"></i>
-                  </div>
-                  <p class="text-sm text-gray-400">No mailing list connected</p>
-                </div>
-              </div>
-            }
-
-            <!-- Chat Channel -->
-            @if (committee().chat_channel; as chatChannel) {
-              <div class="flex flex-col gap-2">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Chat Channel</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-comment text-purple-600 text-sm"></i>
-                  </div>
-                  <div class="min-w-0">
-                    <a
-                      [href]="chatChannel"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate block">
-                      {{ chatChannel }}
-                      <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            } @else {
-              <div class="flex flex-col gap-2 opacity-40">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Chat Channel</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-comment text-gray-400 text-sm"></i>
-                  </div>
-                  <p class="text-sm text-gray-400">No chat channel connected</p>
-                </div>
-              </div>
-            }
-
-            <!-- Website -->
-            @if (committee().website) {
-              <div class="flex flex-col gap-2">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Website</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-globe text-gray-600 text-sm"></i>
-                  </div>
-                  <a
-                    [href]="committee().website"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-sm font-medium text-blue-600 hover:text-blue-700 truncate">
-                    {{ committee().website }}
-                    <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
-                  </a>
-                </div>
-              </div>
-            } @else {
-              <div class="flex flex-col gap-2">
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Website</p>
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <i class="fa-light fa-globe text-gray-400 text-sm"></i>
-                  </div>
-                  <p class="text-sm text-gray-400">No website configured</p>
-                </div>
-              </div>
-            }
-          </div>
+  <!-- Two-Column: Pending Actions + Upcoming Meetings -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Left: My Pending Actions (blocked — needs per-user vote/survey status) -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-normal text-gray-900 flex items-center gap-2">
+          <i class="fa-light fa-list-check text-gray-400"></i>
+          My Pending Actions
+        </h2>
+      </div>
+      <p class="text-[11px] text-gray-500">Decisions that require your review or action.</p>
+      <lfx-card>
+        <div class="flex flex-col items-center py-6">
+          <i class="fa-light fa-circle-check text-2xl text-gray-300 mb-2"></i>
+          <p class="text-sm font-medium text-gray-500">You're all caught up!</p>
+          <p class="text-xs text-gray-400 mt-1">Pending actions will appear here when per-user status is available.</p>
         </div>
       </lfx-card>
+    </div>
 
-      <!-- Configurations Card (admin only) -->
-      @if (canEdit()) {
-        <lfx-card data-testid="committee-view-configurations">
-          <div class="flex flex-col gap-4">
-            <h3 class="text-sm font-medium"><i class="fa-light fa-gear text-gray-400 mr-2"></i>Configurations</h3>
-            <div class="flex flex-col gap-3">
-              <div class="flex items-center justify-between" data-testid="committee-view-config-public">
-                <span class="text-sm text-gray-600">Public</span>
-                <lfx-tag [value]="committee().public ? 'Yes' : 'No'" [severity]="committee().public ? 'success' : 'danger'"></lfx-tag>
+    <!-- Right: Upcoming Meetings -->
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-normal text-gray-900 flex items-center gap-2">
+          <i class="fa-light fa-calendar text-gray-400"></i>
+          Upcoming Meetings
+        </h2>
+      </div>
+      <p class="text-[11px] text-gray-500">Scheduled meetings where your participation is expected.</p>
+      @if (upcomingMeetings().length > 0) {
+        <div class="flex flex-col gap-3">
+          @for (meeting of upcomingMeetings(); track meeting.id) {
+            <lfx-card>
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  @if (meeting.meeting_type) {
+                    <lfx-tag [value]="meeting.meeting_type" severity="secondary"></lfx-tag>
+                  }
+                </div>
+                <p class="text-sm font-medium text-gray-900">{{ meeting.title }}</p>
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                  <i class="fa-light fa-clock"></i>
+                  <span>{{ meeting.start_time | date: 'MMM d, y · h:mm a' }}</span>
+                  <span class="text-gray-300">·</span>
+                  <span>{{ meeting.duration }} min</span>
+                </div>
               </div>
-              <div class="flex items-center justify-between" data-testid="committee-view-config-voting">
-                <span class="text-sm text-gray-600">Voting</span>
-                <lfx-tag [value]="committee().enable_voting ? 'Enabled' : 'Disabled'" [severity]="committee().enable_voting ? 'success' : 'danger'"></lfx-tag>
-              </div>
-              <div class="flex items-center justify-between" data-testid="committee-view-config-business-email">
-                <span class="text-sm text-gray-600">Business Email</span>
-                <lfx-tag
-                  [value]="committee().business_email_required ? 'Required' : 'Optional'"
-                  [severity]="committee().business_email_required ? 'info' : 'secondary'"></lfx-tag>
-              </div>
-              <div class="flex items-center justify-between" data-testid="committee-view-config-audit">
-                <span class="text-sm text-gray-600">Audit</span>
-                <lfx-tag
-                  [value]="committee().is_audit_enabled ? 'Enabled' : 'Disabled'"
-                  [severity]="committee().is_audit_enabled ? 'success' : 'danger'"></lfx-tag>
-              </div>
-              <div class="flex items-center justify-between" data-testid="committee-view-config-join-mode">
-                <span class="text-sm text-gray-600">Join Mode</span>
-                <lfx-tag [value]="committee().join_mode | joinModeLabel" [severity]="committee().join_mode === 'open' ? 'success' : 'secondary'"></lfx-tag>
-              </div>
-              <div class="flex items-center justify-between" data-testid="committee-view-config-sso">
-                <span class="text-sm text-gray-600">SSO Group</span>
-                <lfx-tag
-                  [value]="committee().sso_group_enabled ? 'Enabled' : 'Disabled'"
-                  [severity]="committee().sso_group_enabled ? 'success' : 'danger'"></lfx-tag>
-              </div>
-            </div>
+            </lfx-card>
+          }
+        </div>
+      } @else {
+        <lfx-card>
+          <div class="flex flex-col items-center py-6">
+            <i class="fa-light fa-calendar-xmark text-2xl text-gray-300 mb-2"></i>
+            <p class="text-sm font-medium text-gray-500">No upcoming meetings</p>
+            <p class="text-xs text-gray-400 mt-1">Meetings for this group will appear here.</p>
           </div>
         </lfx-card>
       }
     </div>
+  </div>
 
-    <!-- Leadership card removed: chair/co_chair are not returned by GET /committees/{uid}.
-             Member-role-based derivation will be added in a follow-up PR. -->
+  <!-- Two-Column: Activity Feed + Chairs/Channels -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Left: Recent Activity (blocked — needs activity/event model) -->
+    <lfx-card data-testid="committee-overview-activity">
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-gray-900">Recent Activity</h3>
+        </div>
+        <div class="flex flex-col items-center py-6">
+          <i class="fa-light fa-clock-rotate-left text-2xl text-gray-300 mb-2"></i>
+          <p class="text-sm font-medium text-gray-500">No recent activity</p>
+          <p class="text-xs text-gray-400 mt-1">Activity feed will be available in a future update.</p>
+        </div>
+      </div>
+    </lfx-card>
+
+    <!-- Right: Chairs + Channels stacked -->
+    <div class="flex flex-col gap-6">
+      <!-- Chairs Card -->
+      <lfx-card data-testid="committee-overview-chairs">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-900">Chairs</h3>
+            @if (canEdit() && !editingChairs() && !membersLoading()) {
+              <button
+                class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                title="Edit chairs"
+                aria-label="Edit chairs"
+                data-testid="committee-overview-edit-chairs-btn"
+                (click)="startEditChairs()">
+                <i class="fa-light fa-pen-to-square text-xs"></i>
+              </button>
+            }
+          </div>
+
+          @if (editingChairs()) {
+            <!-- Edit mode -->
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Chair</label>
+                <select
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  [ngModel]="editChairUid()"
+                  (ngModelChange)="editChairUid.set($event)"
+                  data-testid="committee-overview-chair-select">
+                  <option [ngValue]="null">— None —</option>
+                  @for (member of members(); track member.uid) {
+                    <option [ngValue]="member.uid">{{ member.first_name }} {{ member.last_name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Vice Chair</label>
+                <select
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  [ngModel]="editViceChairUid()"
+                  (ngModelChange)="editViceChairUid.set($event)"
+                  data-testid="committee-overview-vice-chair-select">
+                  <option [ngValue]="null">— None —</option>
+                  @for (member of members(); track member.uid) {
+                    <option [ngValue]="member.uid">{{ member.first_name }} {{ member.last_name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="flex justify-end gap-2">
+                <lfx-button
+                  label="Cancel"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  (onClick)="cancelEditChairs()"
+                  [disabled]="savingChairs()"></lfx-button>
+                <lfx-button label="Save" severity="info" size="small" (onClick)="saveChairs()" [loading]="savingChairs()"></lfx-button>
+              </div>
+            </div>
+          } @else if (membersLoading()) {
+            <div class="flex flex-col gap-3">
+              <div class="h-10 bg-gray-100 rounded animate-pulse"></div>
+              <div class="h-10 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          } @else if (chairs().length > 0) {
+            <div class="flex flex-col gap-0">
+              @for (chair of chairs(); track chair.uid) {
+                <div class="flex items-center gap-3 py-2 border-b border-gray-50 last:border-b-0">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                    [style.background-color]="chair.role?.name === 'Chair' ? '#6366f1' : '#f59e0b'">
+                    {{ (chair.first_name?.[0] || '') + (chair.last_name?.[0] || '') }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ chair.first_name }} {{ chair.last_name }}</p>
+                    @if (chair.organization?.name; as orgName) {
+                      <p class="text-xs text-gray-500">{{ orgName }}</p>
+                    }
+                  </div>
+                  <lfx-tag [value]="chair.role!.name" severity="info"></lfx-tag>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="flex flex-col items-center py-4">
+              <i class="fa-light fa-user-crown text-xl text-gray-300 mb-2"></i>
+              <p class="text-xs text-gray-400">No chairs assigned</p>
+            </div>
+          }
+        </div>
+      </lfx-card>
+
+      <!-- Channels Card -->
+      <lfx-card data-testid="committee-overview-channels">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-900">Channels</h3>
+            @if (canEdit() && !editingChannels()) {
+              <button
+                class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                title="Edit channels"
+                aria-label="Edit channels"
+                data-testid="committee-overview-edit-channels-btn"
+                (click)="startEditChannels()">
+                <i class="fa-light fa-pen-to-square text-xs"></i>
+              </button>
+            }
+          </div>
+
+          @if (editingChannels()) {
+            <!-- Edit mode -->
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Mailing List</label>
+                <input
+                  type="text"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  [ngModel]="editMailingList()"
+                  (ngModelChange)="editMailingList.set($event)"
+                  placeholder="Email address" />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Chat Channel</label>
+                <input
+                  type="text"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  [ngModel]="editChatChannel()"
+                  (ngModelChange)="editChatChannel.set($event)"
+                  placeholder="Channel name, invite link, or URL" />
+              </div>
+              <div class="flex justify-end gap-2">
+                <lfx-button
+                  label="Cancel"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  (onClick)="cancelEditChannels()"
+                  [disabled]="savingChannels()"></lfx-button>
+                <lfx-button label="Save" severity="info" size="small" (onClick)="saveChannels()" [loading]="savingChannels()"></lfx-button>
+              </div>
+            </div>
+          } @else {
+            <!-- View mode -->
+            <div class="flex flex-col gap-0">
+              <!-- Mailing List -->
+              <div class="flex items-center gap-3 py-2 border-b border-gray-50">
+                <i class="fa-light fa-envelope text-gray-400 w-4 text-center"></i>
+                @if (committee().mailing_list; as mailingList) {
+                  <div class="min-w-0">
+                    <a [href]="'mailto:' + mailingList" class="text-sm text-blue-600 hover:text-blue-700 truncate block">{{ mailingList }}</a>
+                    <p class="text-[11px] text-gray-400">Mailing List</p>
+                  </div>
+                } @else {
+                  <div>
+                    <p class="text-sm text-gray-400">No mailing list connected</p>
+                    <p class="text-[11px] text-gray-400">Mailing List</p>
+                  </div>
+                }
+              </div>
+
+              <!-- Chat Channel -->
+              <div class="flex items-center gap-3 py-2 border-b border-gray-50">
+                <i class="fa-light fa-comment text-gray-400 w-4 text-center"></i>
+                @if (committee().chat_channel; as chatChannel) {
+                  <div class="min-w-0">
+                    <a [href]="chatChannel" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:text-blue-700 truncate block">
+                      {{ chatChannel }}
+                      <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                    </a>
+                    <p class="text-[11px] text-gray-400">Chat Channel</p>
+                  </div>
+                } @else {
+                  <div>
+                    <p class="text-sm text-gray-400">No chat channel connected</p>
+                    <p class="text-[11px] text-gray-400">Chat Channel</p>
+                  </div>
+                }
+              </div>
+
+              <!-- Website -->
+              <div class="flex items-center gap-3 py-2">
+                <i class="fa-light fa-globe text-gray-400 w-4 text-center"></i>
+                @if (committee().website; as website) {
+                  <div class="min-w-0">
+                    <a [href]="website" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:text-blue-700 truncate block">
+                      {{ website }}
+                      <i class="fa-light fa-arrow-up-right-from-square text-[10px] ml-1"></i>
+                    </a>
+                    <p class="text-[11px] text-gray-400">Website</p>
+                  </div>
+                } @else {
+                  <div>
+                    <p class="text-sm text-gray-400">No website configured</p>
+                    <p class="text-[11px] text-gray-400">Website</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </lfx-card>
+    </div>
   </div>
 </div>

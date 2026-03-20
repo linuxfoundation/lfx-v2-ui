@@ -52,6 +52,9 @@
             @if (committee()?.enable_voting) {
               <lfx-tag value="Voting Enabled" severity="success"></lfx-tag>
             }
+            @if (committee()?.join_mode) {
+              <lfx-tag [value]="committee()!.join_mode! | joinModeLabel" severity="secondary"></lfx-tag>
+            }
             <span class="text-xs text-gray-400">Created {{ committee()?.created_at | date: 'MMM d, y' }}</span>
             @if (committee()?.updated_at) {
               <span class="text-xs text-gray-400">&middot; Updated {{ committee()?.updated_at | date: 'MMM d, y' }}</span>
@@ -78,6 +81,15 @@
           }">
           <i class="fa-light fa-gauge mr-2"></i>Overview
         </button>
+        <button
+          (click)="activeTab.set('about')"
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [ngClass]="{
+            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'about',
+            'text-gray-500': activeTab() !== 'about',
+          }">
+          <i class="fa-light fa-circle-info mr-2"></i>About
+        </button>
         @if (isMembersTabVisible()) {
           <button
             (click)="activeTab.set('members')"
@@ -87,6 +99,16 @@
               'text-gray-500': activeTab() !== 'members',
             }">
             <i class="fa-light fa-users mr-2"></i>Members
+            @if (committee()?.total_members) {
+              <span
+                class="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                [ngClass]="{
+                  'bg-blue-50 text-blue-700': activeTab() === 'members',
+                  'bg-gray-100 text-gray-600': activeTab() !== 'members',
+                }">
+                {{ committee()!.total_members }}
+              </span>
+            }
           </button>
         }
         @if (isVotesTabVisible()) {
@@ -127,52 +149,47 @@
           }">
           <i class="fa-light fa-folder-open mr-2"></i>Documents
         </button>
+        @if (canEdit()) {
+          <button
+            (click)="activeTab.set('settings')"
+            class="px-4 py-2 text-sm font-medium transition-colors"
+            [ngClass]="{
+              'border-b-2 border-blue-600 text-blue-600': activeTab() === 'settings',
+              'text-gray-500': activeTab() !== 'settings',
+            }">
+            <i class="fa-light fa-gear mr-2"></i>Settings
+          </button>
+        }
       </div>
 
       <!-- Tab Panels -->
       @switch (activeTab()) {
         @case ('overview') {
-          <lfx-committee-overview [committee]="committee()!" [canEdit]="canEdit()" />
+          <lfx-committee-overview
+            [committee]="committee()!"
+            [members]="members()"
+            [membersLoading]="membersLoading()"
+            [canEdit]="canEdit()"
+            (committeeUpdated)="refreshCommittee()" />
+        }
+        @case ('about') {
+          <lfx-committee-about [committee]="committee()!" [canEdit]="canEdit()" (committeeUpdated)="refreshCommittee()" />
         }
         @case ('members') {
           @if (isMembersTabVisible()) {
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-users text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Members</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-              </div>
-            </div>
+            <lfx-committee-members [committee]="committee()" [members]="members()" [membersLoading]="membersLoading()" (refresh)="refreshMembers()" />
           }
         }
         @case ('votes') {
           @if (isVotesTabVisible()) {
-            <div class="flex items-center justify-center py-16">
-              <div class="text-center">
-                <i class="fa-light fa-check-to-slot text-3xl text-gray-300 mb-3"></i>
-                <p class="text-sm font-medium text-gray-600">Votes</p>
-                <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-              </div>
-            </div>
+            <lfx-committee-votes [committee]="committee()!" [canEdit]="canEdit()" />
           }
         }
         @case ('meetings') {
-          <div class="flex items-center justify-center py-16">
-            <div class="text-center">
-              <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3"></i>
-              <p class="text-sm font-medium text-gray-600">Meetings</p>
-              <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-            </div>
-          </div>
+          <lfx-committee-meetings [committee]="committee()!" [canEdit]="canEdit()" />
         }
         @case ('surveys') {
-          <div class="flex items-center justify-center py-16">
-            <div class="text-center">
-              <i class="fa-light fa-chart-simple text-3xl text-gray-300 mb-3"></i>
-              <p class="text-sm font-medium text-gray-600">Surveys</p>
-              <p class="text-xs text-gray-400 mt-1">Coming in a future PR</p>
-            </div>
-          </div>
+          <lfx-committee-surveys [committee]="committee()!" [canEdit]="canEdit()" />
         }
         @case ('documents') {
           <div class="flex items-center justify-center py-16">
@@ -183,8 +200,12 @@
             </div>
           </div>
         }
+        @case ('settings') {
+          @if (canEdit()) {
+            <lfx-committee-settings-tab [committee]="committee()!" (committeeUpdated)="refreshCommittee()" />
+          }
+        }
       }
     </div>
   }
-
 </div>
