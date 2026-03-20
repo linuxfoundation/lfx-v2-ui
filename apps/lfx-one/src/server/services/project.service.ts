@@ -1760,6 +1760,7 @@ export class ProjectService {
         LF_SUB_DOMAIN_CLASSIFICATION,
         CTR_LAST_6_MONTHS AS AVG_CTR
       FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
+      WHERE PROJECT_NAME = ?
       ORDER BY CTR_LAST_6_MONTHS DESC
     `;
 
@@ -1769,7 +1770,7 @@ export class ProjectService {
         monthlyQuery,
         [foundationName]
       ),
-      this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, []),
+      this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationName]),
     ]);
 
     if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -1779,10 +1780,10 @@ export class ProjectService {
     // Use summary row for KPI card values
     // Note: Snowflake values are already percentages (e.g., 2.32 = 2.32%), no conversion needed
     const summaryRow = summaryResult.rows[0];
-    const currentCtr = summaryRow ? Math.round(summaryRow.CTR_LAST_COMPLETED_MONTH * 10) / 10 : 0;
-    const changePercentage = summaryRow ? Math.round(summaryRow.CTR_MOM_CHANGE * 10) / 10 : 0;
+    const currentCtr = summaryRow ? Math.round((summaryRow.CTR_LAST_COMPLETED_MONTH ?? 0) * 10) / 10 : 0;
+    const changePercentage = summaryRow ? Math.round((summaryRow.CTR_MOM_CHANGE ?? 0) * 10) / 10 : 0;
 
-    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.MONTHLY_CTR * 10) / 10);
+    const monthlyData = monthlyResult.rows.map((row) => Math.round((row.MONTHLY_CTR ?? 0) * 10) / 10);
     const monthlySends = monthlyResult.rows.map((row) => row.TOTAL_SENDS);
     const monthlyOpens = monthlyResult.rows.map((row) => row.TOTAL_OPENS);
     const monthlyLabels = monthlyResult.rows.map((row) => {
