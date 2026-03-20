@@ -1793,8 +1793,6 @@ export class ProjectService {
       campaignName: row.PROJECT_NAME,
       classification: row.LF_SUB_DOMAIN_CLASSIFICATION,
       avgCtr: Math.round(row.AVG_CTR * 10000) / 100,
-      totalSends: 0,
-      totalClicks: 0,
     }));
 
     return {
@@ -2099,7 +2097,6 @@ export class ProjectService {
       return {
         month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         totalFollowers: row.TOTAL_FOLLOWERS,
-        totalEngagements: 0,
       };
     });
 
