@@ -1777,11 +1777,12 @@ export class ProjectService {
     }
 
     // Use summary row for KPI card values
+    // Note: Snowflake values are already percentages (e.g., 2.32 = 2.32%), no conversion needed
     const summaryRow = summaryResult.rows[0];
-    const currentCtr = summaryRow ? Math.round(summaryRow.CTR_LAST_COMPLETED_MONTH * 10000) / 100 : 0;
-    const changePercentage = summaryRow ? Math.round(summaryRow.CTR_MOM_CHANGE * 100) : 0;
+    const currentCtr = summaryRow ? Math.round(summaryRow.CTR_LAST_COMPLETED_MONTH * 10) / 10 : 0;
+    const changePercentage = summaryRow ? Math.round(summaryRow.CTR_MOM_CHANGE * 10) / 10 : 0;
 
-    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.MONTHLY_CTR * 10000) / 100);
+    const monthlyData = monthlyResult.rows.map((row) => Math.round(row.MONTHLY_CTR * 10) / 10);
     const monthlySends = monthlyResult.rows.map((row) => row.TOTAL_SENDS);
     const monthlyOpens = monthlyResult.rows.map((row) => row.TOTAL_OPENS);
     const monthlyLabels = monthlyResult.rows.map((row) => {
@@ -1792,7 +1793,7 @@ export class ProjectService {
     const campaignGroups = campaignResult.rows.map((row) => ({
       campaignName: row.PROJECT_NAME,
       classification: row.LF_SUB_DOMAIN_CLASSIFICATION,
-      avgCtr: Math.round(row.AVG_CTR * 10000) / 100,
+      avgCtr: Math.round(row.AVG_CTR * 10) / 10,
     }));
 
     return {
@@ -1810,9 +1811,9 @@ export class ProjectService {
   public async getSocialReach(foundationName: string): Promise<SocialReachResponse> {
     logger.debug(undefined, 'get_social_reach', 'Fetching paid social reach from Snowflake', { foundation_name: foundationName });
 
-    // Block 1: Total impressions (last 6 months)
+    // Block 1: Total impressions, spend, revenue (last 6 months)
     const impressionsQuery = `
-      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS
+      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(REVENUE) AS TOTAL_REVENUE
       FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
@@ -1860,7 +1861,7 @@ export class ProjectService {
     `;
 
     const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult] = await Promise.all([
-      this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number }>(impressionsQuery, [foundationName]),
+      this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationName]),
       this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName, foundationName]),
       this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationName]),
       this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationName]),
@@ -1868,6 +1869,8 @@ export class ProjectService {
     ]);
 
     const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS || 0;
+    const totalSpend = impressionsResult.rows[0]?.TOTAL_SPEND || 0;
+    const totalRevenue = impressionsResult.rows[0]?.TOTAL_REVENUE || 0;
     const roas = roasKpiResult.rows[0]?.ROAS || 0;
     const roasMomPct = roasKpiResult.rows[0]?.ROAS_MOM_PCT || 0;
 
@@ -1875,8 +1878,8 @@ export class ProjectService {
       return {
         totalReach,
         roas: Math.round(roas * 100) / 100,
-        totalSpend: 0,
-        totalRevenue: 0,
+        totalSpend,
+        totalRevenue,
         changePercentage: Math.round(roasMomPct * 10) / 10,
         trend: roasMomPct >= 0 ? 'up' : 'down',
         monthlyData: [],
@@ -1904,8 +1907,8 @@ export class ProjectService {
     return {
       totalReach,
       roas: Math.round(roas * 100) / 100,
-      totalSpend: 0,
-      totalRevenue: 0,
+      totalSpend,
+      totalRevenue,
       changePercentage: Math.round(roasMomPct * 10) / 10,
       trend: roasMomPct >= 0 ? 'up' : 'down',
       monthlyData,
