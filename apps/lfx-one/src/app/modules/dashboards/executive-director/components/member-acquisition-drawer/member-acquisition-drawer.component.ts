@@ -40,6 +40,8 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly formattedCostPerAcquisition: Signal<string> = computed(() => this.formatNumber(this.data().costPerAcquisition));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
+  protected readonly retentionInsights: Signal<MarketingKeyInsight[]> = this.initRetentionInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => [
     ...this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium'),
     ...this.retentionActions().filter((a) => a.priority === 'high' || a.priority === 'medium'),
@@ -59,8 +61,6 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
   protected readonly cacChartData: Signal<ChartData<'line'>> = this.initCacChartData();
   protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
-  protected readonly retentionInsights: Signal<MarketingKeyInsight[]> = this.initRetentionInsights();
-  protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = {
     responsive: true,
