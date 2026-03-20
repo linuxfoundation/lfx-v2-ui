@@ -160,8 +160,7 @@ export const PRIMARY_INVOLVEMENT_METRICS: DashboardMetricCard[] = [
 
 /**
  * Marketing overview metrics for executive director dashboard
- * NOTE: These are currently configured with mock data values.
- * Data will be populated from live API once marketing analytics endpoints are available.
+ * UI configuration templates (icons, categories, drawer types). Data values are populated at runtime.
  */
 export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
   {
@@ -212,8 +211,8 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
 
 /**
  * North Star KPI metrics for executive director dashboard
- * NOTE: These are currently configured with mock data values.
- * Data will be populated from live API once Snowflake tables for membership/financial data are available.
+ * UI configuration templates (icons, categories, drawer types). Data values populated at runtime from mock data
+ * until Snowflake tables for membership/financial data are available.
  */
 export const NORTH_STAR_METRICS: DashboardMetricCard[] = [
   {
