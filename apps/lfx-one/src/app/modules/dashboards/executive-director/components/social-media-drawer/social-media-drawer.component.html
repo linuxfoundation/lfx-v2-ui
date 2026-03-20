@@ -50,16 +50,15 @@
     </div>
 
     <!-- Recommended Actions -->
-    @if (recommendedActions.length > 0) {
+    @if (recommendedActions().length > 0) {
       <div class="flex flex-col gap-3" data-testid="social-media-drawer-actions">
         <div class="flex items-center gap-2">
           <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <i class="fa-light fa-lightbulb text-amber-500"></i>
             Recommended Actions
           </h3>
-          <span class="px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full">Sample</span>
         </div>
-        @for (action of recommendedActions; track action.title) {
+        @for (action of recommendedActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 flex-shrink-0 mt-0.5">
               <i [class]="action.iconClass + ' text-gray-600'"></i>
@@ -84,16 +83,15 @@
     }
 
     <!-- Key Insights -->
-    @if (keyInsights.length > 0) {
+    @if (keyInsights().length > 0) {
       <div class="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg" data-testid="social-media-drawer-insights">
         <div class="flex items-center gap-2">
           <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900">
             <i class="fa-light fa-triangle-exclamation text-amber-500"></i>
             Key Insights
           </h3>
-          <span class="px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full">Sample</span>
         </div>
-        @for (insight of keyInsights; track insight.text) {
+        @for (insight of keyInsights(); track insight.text) {
           <div class="flex items-center gap-2 text-sm">
             @if (insight.type === 'driver') {
               <i class="fa-light fa-bullseye text-gray-500"></i>
