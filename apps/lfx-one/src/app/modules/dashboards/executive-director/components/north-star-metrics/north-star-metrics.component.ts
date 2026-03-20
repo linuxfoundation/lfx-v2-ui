@@ -148,7 +148,7 @@ export class NorthStarMetricsComponent {
       loading: false,
       value: this.formatNumber(data.totalMembers),
       subtitle: 'Deduplicated · Newsletter + Community + WG',
-      changePercentage: `+${data.changePercentage}%`,
+      changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
       chartData: {
         labels: data.monthlyData.map((d) => d.month),
@@ -175,7 +175,7 @@ export class NorthStarMetricsComponent {
       loading: false,
       value: `${data.newMembersThisQuarter}`,
       subtitle: `This quarter · $${this.formatNumber(data.costPerAcquisition)} CAC`,
-      changePercentage: `+${data.changePercentage}%`,
+      changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
       chartData: {
         labels: data.quarterlyData.map((d) => d.quarter),
@@ -199,7 +199,7 @@ export class NorthStarMetricsComponent {
       loading: false,
       value: `${data.renewalRate}%`,
       subtitle: `Target >${data.target}% · ${data.netRevenueRetention}% NRR`,
-      changePercentage: `+${data.changePercentage}%`,
+      changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
       chartData: {
         labels: data.monthlyData.map((d) => d.month),
@@ -226,7 +226,7 @@ export class NorthStarMetricsComponent {
       loading: false,
       value: `${data.conversionRate}%`,
       subtitle: 'Event → Newsletter/Community/WG (90d)',
-      changePercentage: `+${data.changePercentage}%`,
+      changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
       chartData: {
         labels: data.monthlyData.map((d) => d.month),
@@ -247,7 +247,7 @@ export class NorthStarMetricsComponent {
   }
 
   private formatNumber(num: number): string {
-    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
     if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
     return num.toLocaleString();
   }
