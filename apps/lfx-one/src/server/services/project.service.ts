@@ -1670,7 +1670,7 @@ export class ProjectService {
 
   /**
    * Get web activities summary grouped by domain category
-   * Queries SILVER_FACT.WEB_ACTIVITIES and groups by LF domain categories
+   * Queries ANALYTICS.PLATINUM.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM.WEB_ACTIVITIES_BY_PROJECT
    */
   public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
     logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
@@ -1723,8 +1723,8 @@ export class ProjectService {
 
   /**
    * Get email click-through rate data from Snowflake
-   * Queries PLATINUM.EMAIL_MARKETING_OVERALL_KPIS for monthly CTR trend
-   * @param foundationSlug - Foundation slug used to filter metrics to the foundation and its related projects
+   * Queries ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY and ANALYTICS.PLATINUM.EMAIL_CTR_BY_MONTH
+   * @param foundationName - Foundation name used to filter metrics
    * @returns Email CTR response with monthly trend and change percentage
    */
   public async getEmailCtr(foundationName: string): Promise<EmailCtrResponse> {
