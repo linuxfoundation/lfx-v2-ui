@@ -816,11 +816,11 @@ export class AnalyticsService {
 
   /**
    * Get email click-through rate data
-   * @param foundationSlug - Foundation slug to filter by
+   * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
+  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
