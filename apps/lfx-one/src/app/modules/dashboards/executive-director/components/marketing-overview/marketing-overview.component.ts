@@ -173,7 +173,7 @@ export class MarketingOverviewComponent {
           forkJoin({
             webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug),
             emailCtr: this.analyticsService.getEmailCtr(foundation.slug),
-            socialReach: this.analyticsService.getSocialReach(foundation.slug),
+            socialReach: this.analyticsService.getSocialReach(foundation.name),
             socialMedia: this.analyticsService.getSocialMedia(foundation.name),
           }).pipe(
             tap(() => this.marketingDataLoading.set(false)),

@@ -853,8 +853,8 @@ export class AnalyticsService {
     );
   }
 
-  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
+  public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
