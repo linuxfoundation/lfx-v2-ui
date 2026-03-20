@@ -28,7 +28,7 @@ export class SocialMediaDrawerComponent {
     monthlyData: [],
   });
 
-  // === Dummy Data ===
+  // === Dummy Data — TODO: Replace with AI-generated insights from Snowflake data ===
   protected readonly recommendedActions: MarketingRecommendedAction[] = [
     {
       title: 'Increase posting frequency on Bluesky',
