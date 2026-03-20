@@ -38,7 +38,7 @@ export class NorthStarMetricsComponent {
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
-  // === Mock Data ===
+  // === Mock Data — TODO: Replace with real Snowflake API data (no endpoints yet) ===
   protected readonly engagedCommunityData: EngagedCommunitySizeResponse = {
     totalMembers: 47_200,
     changePercentage: 12.4,
