@@ -1695,6 +1695,7 @@ export class ProjectService {
           SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
         FROM ANALYTICS.PLATINUM.WEB_ACTIVITIES_BY_PROJECT
         WHERE PROJECT_SLUG = ?
+          AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
         GROUP BY ACTIVITY_DATE
         ORDER BY ACTIVITY_DATE ASC
       `;
@@ -1761,6 +1762,7 @@ export class ProjectService {
           TOTAL_OPENS
         FROM ANALYTICS.PLATINUM.EMAIL_CTR_BY_MONTH
         WHERE PROJECT_NAME = ?
+          AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         ORDER BY PUBLISHED_MONTH_DATE ASC
       `;
 
@@ -2080,8 +2082,7 @@ export class ProjectService {
             THEN ROUND(SUM(ENGAGEMENTS) / SUM(IMPRESSIONS) * 100, 1)
         END AS ENGAGEMENT_RATE_PCT,
         SUM(POSTS_30D) AS POSTS_30D,
-        SUM(IMPRESSIONS) AS IMPRESSIONS,
-        SUM(PRIOR_FOLLOWERS) AS PRIOR_FOLLOWERS
+        SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
       WHERE FOUNDATION_NAME = ?
       GROUP BY PLATFORM_NAME
@@ -2095,6 +2096,7 @@ export class ProjectService {
         SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
       FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_FOLLOWER_TREND
       WHERE FOUNDATION_NAME = ?
+        AND SNAPSHOT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY SNAPSHOT_MONTH
       ORDER BY SNAPSHOT_MONTH ASC
     `;
@@ -2109,7 +2111,6 @@ export class ProjectService {
           ENGAGEMENT_RATE_PCT: number | null;
           POSTS_30D: number;
           IMPRESSIONS: number;
-          PRIOR_FOLLOWERS: number;
         }>(platformQuery, [foundationName]),
         this.snowflakeService.execute<{ SNAPSHOT_MONTH: string; TOTAL_FOLLOWERS: number }>(trendQuery, [foundationName]),
       ]);
