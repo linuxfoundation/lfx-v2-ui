@@ -17,6 +17,7 @@ import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
 import { CommitteeSurveysComponent } from '../components/committee-surveys/committee-surveys.component';
+import { CommitteeVotesComponent } from '../components/committee-votes/committee-votes.component';
 
 type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
 
@@ -32,6 +33,7 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     CommitteeMeetingsComponent,
     CommitteeOverviewComponent,
     CommitteeSurveysComponent,
+    CommitteeVotesComponent,
   ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
