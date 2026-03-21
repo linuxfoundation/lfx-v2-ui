@@ -14,13 +14,24 @@ import { CommitteeService } from '@services/committee.service';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
 
+import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
 
 type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents';
 
 @Component({
   selector: 'lfx-committee-view',
-  imports: [BreadcrumbComponent, ButtonComponent, TagComponent, RouterLink, RouteLoadingComponent, DatePipe, NgClass, CommitteeOverviewComponent],
+  imports: [
+    BreadcrumbComponent,
+    ButtonComponent,
+    TagComponent,
+    RouterLink,
+    RouteLoadingComponent,
+    DatePipe,
+    NgClass,
+    CommitteeMeetingsComponent,
+    CommitteeOverviewComponent,
+  ],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -33,6 +44,7 @@ export class CommitteeViewComponent {
 
   // -- Tab state --
   public activeTab = signal<CommitteeTab>('overview');
+  public meetingsTimeFilter = signal<'upcoming' | 'past'>('upcoming');
 
   // -- Writable signals --
   public loading = signal<boolean>(true);
@@ -64,6 +76,14 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  public handleTabNavigation(tabWithContext: string): void {
+    const [tab, context] = tabWithContext.split(':');
+    this.activeTab.set(tab as CommitteeTab);
+    if (tab === 'meetings' && (context === 'past' || context === 'upcoming')) {
+      this.meetingsTimeFilter.set(context);
+    }
   }
 
   // -- Private initializer functions --
