@@ -283,6 +283,11 @@
             <lfx-committee-settings-tab [committee]="committee()!" (committeeUpdated)="refreshCommittee()" />
           }
         }
+        @case ('settings') {
+          @if (canEdit()) {
+            <lfx-committee-settings-tab [committee]="committee()!" (committeeUpdated)="refreshCommittee()" />
+          }
+        }
       }
     </div>
   }
