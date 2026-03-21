@@ -4,6 +4,7 @@
 import { Component, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CardComponent } from '@components/card/card.component';
+import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, Survey } from '@lfx-one/shared/interfaces';
 import { SurveysTableComponent } from '@app/modules/surveys/components/surveys-table/surveys-table.component';
 import { SurveyResultsDrawerComponent } from '@app/modules/surveys/components/survey-results-drawer/survey-results-drawer.component';
@@ -12,7 +13,7 @@ import { catchError, filter, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-surveys',
-  imports: [CardComponent, SurveysTableComponent, SurveyResultsDrawerComponent],
+  imports: [CardComponent, RouteLoadingComponent, SurveysTableComponent, SurveyResultsDrawerComponent],
   templateUrl: './committee-surveys.component.html',
   styleUrl: './committee-surveys.component.scss',
 })

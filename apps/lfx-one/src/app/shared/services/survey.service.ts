@@ -25,7 +25,7 @@ export class SurveyService {
     let params = new HttpParams().set('parent', `committee:${committeeId}`);
 
     if (limit) {
-      params = params.set('page_size', limit);
+      params = params.set('page_size', limit.toString());
     }
 
     if (orderBy) {
@@ -39,7 +39,7 @@ export class SurveyService {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
 
     if (limit) {
-      params = params.set('page_size', limit);
+      params = params.set('page_size', limit.toString());
     }
 
     if (orderBy) {

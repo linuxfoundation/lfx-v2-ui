@@ -21,14 +21,13 @@
           }
         </div>
         @if (editingDescription()) {
-          <textarea
-            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
-            rows="6"
-            [ngModel]="editDescription()"
-            (ngModelChange)="editDescription.set($event)"
+          <lfx-textarea
+            [form]="descriptionForm"
+            control="description"
+            [rows]="6"
             placeholder="Enter a description for this group..."
-            aria-label="Group description"
-            data-testid="committee-about-description-textarea"></textarea>
+            [autoResize]="true"
+            dataTest="committee-about-description-textarea"></lfx-textarea>
           <div class="flex justify-end gap-2">
             <lfx-button
               label="Cancel"
@@ -49,43 +48,14 @@
       </div>
     </lfx-card>
 
-    <!-- Charter & Scope Card (field not in data model yet — edit UI ready to wire) -->
+    <!-- Charter & Scope Card (read-only placeholder — field not in data model yet) -->
     <lfx-card data-testid="committee-about-charter">
       <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-gray-900">Charter &amp; Scope</h3>
-          @if (canEdit() && !editingCharter()) {
-            <button
-              class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-              title="Edit charter"
-              aria-label="Edit charter"
-              data-testid="committee-about-edit-charter-btn"
-              (click)="startEditCharter()">
-              <i class="fa-light fa-pen-to-square text-xs"></i>
-            </button>
-          }
+        <h3 class="text-sm font-semibold text-gray-900">Charter &amp; Scope</h3>
+        <div class="flex flex-col gap-2 items-center py-4">
+          <i class="fa-light fa-scroll text-xl text-gray-300"></i>
+          <p class="text-xs text-gray-400">Charter and scope will be available in a future update.</p>
         </div>
-        @if (editingCharter()) {
-          <textarea
-            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-y"
-            rows="5"
-            [ngModel]="editCharter()"
-            (ngModelChange)="editCharter.set($event)"
-            placeholder="Enter charter scope items, one per line..."
-            aria-label="Charter and scope"
-            data-testid="committee-about-charter-textarea"></textarea>
-          <p class="text-[11px] text-gray-400">
-            The charter field is not yet available in the upstream data model. This UI is ready to wire once the field is added.
-          </p>
-          <div class="flex justify-end gap-2">
-            <lfx-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="cancelEditCharter()"></lfx-button>
-          </div>
-        } @else {
-          <div class="flex flex-col gap-2 items-center py-4">
-            <i class="fa-light fa-scroll text-xl text-gray-300"></i>
-            <p class="text-xs text-gray-400">Charter and scope will be available in a future update.</p>
-          </div>
-        }
       </div>
     </lfx-card>
   </div>

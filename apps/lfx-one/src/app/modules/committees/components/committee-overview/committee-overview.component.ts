@@ -1,13 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Dialog } from 'primeng/dialog';
+import { SkeletonModule } from 'primeng/skeleton';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { TagComponent } from '@components/tag/tag.component';
+import { SelectComponent } from '@components/select/select.component';
+import { DashboardMeetingCardComponent } from '../../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 import { Committee, CommitteeMember, Meeting, Survey, Vote } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberRole, PollStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -15,11 +18,11 @@ import { MeetingService } from '@services/meeting.service';
 import { VoteService } from '@services/vote.service';
 import { SurveyService } from '@services/survey.service';
 import { MessageService } from 'primeng/api';
-import { catchError, filter, forkJoin, of, switchMap, take } from 'rxjs';
+import { catchError, filter, forkJoin, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-overview',
-  imports: [CardComponent, TagComponent, DatePipe, FormsModule, ButtonComponent],
+  imports: [CardComponent, ReactiveFormsModule, ButtonComponent, Dialog, DashboardMeetingCardComponent, DatePipe, SkeletonModule, SelectComponent],
   templateUrl: './committee-overview.component.html',
   styleUrl: './committee-overview.component.scss',
 })
@@ -36,24 +39,35 @@ export class CommitteeOverviewComponent {
   public members = input<CommitteeMember[]>([]);
   public membersLoading = input<boolean>(true);
   public canEdit = input<boolean>(false);
+  public myRole = input<string | null>(null);
+  public myMemberUid = input<string | null>(null);
+  public myRoleLoading = input<boolean>(true);
 
   // Outputs
   public readonly committeeUpdated = output<void>();
+  public readonly joinRequested = output<void>();
+  public readonly leaveRequested = output<void>();
 
-  // Chairs edit state
-  public editingChairs = signal(false);
-  public editChairUid = signal<string | null>(null);
-  public editViceChairUid = signal<string | null>(null);
+  // Chairs modal state
+  public showChairsModal = model(false);
   public savingChairs = signal(false);
+  public chairsForm = new FormGroup({
+    chairUid: new FormControl<string | null>(null),
+    viceChairUid: new FormControl<string | null>(null),
+  });
 
-  // Channels edit state
-  public editingChannels = signal(false);
-  public editMailingList = signal('');
-  public editChatChannel = signal('');
-  public savingChannels = signal(false);
+  // Loading states for stats
+  public meetingsLoading = signal(true);
+  public votesLoading = signal(true);
+  public surveysLoading = signal(true);
 
   // Computed: chairs derived from members
   public chairs: Signal<CommitteeMember[]> = this.initChairs();
+
+  // Computed: member options for select dropdowns
+  public memberOptions: Signal<{ label: string; value: string }[]> = computed(() =>
+    this.members().map((m) => ({ label: `${m.first_name} ${m.last_name}`, value: m.uid }))
+  );
 
   // Computed: distinct organization count from members
   public orgCount: Signal<number> = computed(() => {
@@ -63,6 +77,7 @@ export class CommitteeOverviewComponent {
   });
 
   // Committee-scoped data fetches
+  public meetingsCount: Signal<number> = this.initMeetingsCount();
   public meetings: Signal<Meeting[]> = this.initMeetings();
   public votes: Signal<Vote[]> = this.initVotes();
   public surveys: Signal<Survey[]> = this.initSurveys();
@@ -70,27 +85,69 @@ export class CommitteeOverviewComponent {
   // Computed stats from fetched data
   public activeVotesCount: Signal<number> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE).length);
 
-  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => s.survey_status === 'active' || s.survey_status === 'open').length);
+  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent').length);
 
-  public upcomingMeetings: Signal<Meeting[]> = computed(() => {
-    const now = new Date().toISOString();
-    return this.meetings()
-      .filter((m) => m.start_time > now)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
-      .slice(0, 2);
+  // Role-based computed signals
+  public isVisitor: Signal<boolean> = computed(() => this.myRole() === null && !this.myRoleLoading());
+  public isChairOrAbove: Signal<boolean> = computed(() => this.myRole() === 'Chair' || this.myRole() === 'Vice Chair');
+
+  public bannerType: Signal<'visitor' | 'member' | 'chair' | null> = computed(() => {
+    if (this.myRoleLoading()) {
+      return null;
+    }
+    if (this.myRole() === null) {
+      return 'visitor';
+    }
+    if (this.isChairOrAbove()) {
+      return 'chair';
+    }
+    return 'member';
   });
+
+  public canJoin: Signal<boolean> = computed(() => this.isVisitor() && this.committee().join_mode !== 'closed');
+
+  public joinButtonLabel: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    if (mode === 'open') {
+      return 'Join';
+    }
+    if (mode === 'application') {
+      return 'Request to Join';
+    }
+    return 'Request Invite';
+  });
+
+  public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
+  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent'));
+  public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
+  public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
+
+  public nextMeeting: Signal<Meeting | null> = computed(() => {
+    const now = new Date().toISOString();
+    const upcoming = this.meetings()
+      .filter((m) => m.start_time > now)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    return upcoming[0] ?? null;
+  });
+
+  // Action methods
+  public onJoinClick(): void {
+    this.joinRequested.emit();
+  }
 
   // Chairs edit methods
   public startEditChairs(): void {
     const currentChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.CHAIR);
     const currentViceChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.VICE_CHAIR);
-    this.editChairUid.set(currentChair?.uid || null);
-    this.editViceChairUid.set(currentViceChair?.uid || null);
-    this.editingChairs.set(true);
+    this.chairsForm.patchValue({
+      chairUid: currentChair?.uid || null,
+      viceChairUid: currentViceChair?.uid || null,
+    });
+    this.showChairsModal.set(true);
   }
 
   public cancelEditChairs(): void {
-    this.editingChairs.set(false);
+    this.showChairsModal.set(false);
   }
 
   public saveChairs(): void {
@@ -98,40 +155,46 @@ export class CommitteeOverviewComponent {
     const committeeId = this.committee().uid;
     const currentChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.CHAIR);
     const currentViceChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.VICE_CHAIR);
-    const newChairUid = this.editChairUid();
-    const newViceChairUid = this.editViceChairUid();
+    const newChairUid = this.chairsForm.get('chairUid')?.value;
+    const newViceChairUid = this.chairsForm.get('viceChairUid')?.value;
 
-    const updates: ReturnType<typeof this.committeeService.updateCommitteeMember>[] = [];
+    // Serialize: removals first, then assignments to avoid race conditions
+    const removals: ReturnType<typeof this.committeeService.updateCommitteeMember>[] = [];
+    const assignments: ReturnType<typeof this.committeeService.updateCommitteeMember>[] = [];
 
     // Remove old chair role if changed
     if (currentChair && currentChair.uid !== newChairUid) {
-      updates.push(this.committeeService.updateCommitteeMember(committeeId, currentChair.uid, { role: null }));
+      removals.push(this.committeeService.updateCommitteeMember(committeeId, currentChair.uid, { role: null }));
     }
     // Remove old vice chair role if changed
     if (currentViceChair && currentViceChair.uid !== newViceChairUid) {
-      updates.push(this.committeeService.updateCommitteeMember(committeeId, currentViceChair.uid, { role: null }));
+      removals.push(this.committeeService.updateCommitteeMember(committeeId, currentViceChair.uid, { role: null }));
     }
     // Assign new chair
     if (newChairUid && newChairUid !== currentChair?.uid) {
-      updates.push(this.committeeService.updateCommitteeMember(committeeId, newChairUid, { role: { name: CommitteeMemberRole.CHAIR } }));
+      assignments.push(this.committeeService.updateCommitteeMember(committeeId, newChairUid, { role: { name: CommitteeMemberRole.CHAIR } }));
     }
     // Assign new vice chair
     if (newViceChairUid && newViceChairUid !== currentViceChair?.uid) {
-      updates.push(this.committeeService.updateCommitteeMember(committeeId, newViceChairUid, { role: { name: CommitteeMemberRole.VICE_CHAIR } }));
+      assignments.push(this.committeeService.updateCommitteeMember(committeeId, newViceChairUid, { role: { name: CommitteeMemberRole.VICE_CHAIR } }));
     }
 
-    if (updates.length === 0) {
-      this.editingChairs.set(false);
+    if (removals.length === 0 && assignments.length === 0) {
+      this.showChairsModal.set(false);
       this.savingChairs.set(false);
       return;
     }
 
-    forkJoin(updates)
-      .pipe(take(1))
+    // Execute removals first, then assignments
+    (removals.length > 0 ? forkJoin(removals) : of(null as unknown))
+      .pipe(
+        switchMap(() => (assignments.length > 0 ? forkJoin(assignments) : of(null as unknown))),
+        take(1)
+      )
       .subscribe({
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Chairs updated' });
-          this.editingChairs.set(false);
+          this.showChairsModal.set(false);
           this.savingChairs.set(false);
           this.committeeUpdated.emit();
         },
@@ -142,52 +205,40 @@ export class CommitteeOverviewComponent {
       });
   }
 
-  // Channels edit methods
-  public startEditChannels(): void {
-    this.editMailingList.set(this.committee().mailing_list || '');
-    this.editChatChannel.set(this.committee().chat_channel || '');
-    this.editingChannels.set(true);
-  }
-
-  public cancelEditChannels(): void {
-    this.editingChannels.set(false);
-  }
-
-  public saveChannels(): void {
-    this.savingChannels.set(true);
-    this.committeeService
-      .updateCommittee(this.committee().uid, {
-        mailing_list: this.editMailingList() || undefined,
-        chat_channel: this.editChatChannel() || undefined,
-      })
-      .pipe(take(1))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Channels updated' });
-          this.editingChannels.set(false);
-          this.savingChannels.set(false);
-          this.committeeUpdated.emit();
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update channels' });
-          this.savingChannels.set(false);
-        },
-      });
-  }
-
   // Private initializer functions
   private initChairs(): Signal<CommitteeMember[]> {
     return computed(() => {
       const allMembers = this.members();
-      return allMembers.filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR);
+      return allMembers
+        .filter((m) => m.role?.name === CommitteeMemberRole.CHAIR || m.role?.name === CommitteeMemberRole.VICE_CHAIR)
+        .sort((a, b) => (a.role?.name === CommitteeMemberRole.CHAIR ? -1 : 1) - (b.role?.name === CommitteeMemberRole.CHAIR ? -1 : 1));
     });
+  }
+
+  private initMeetingsCount(): Signal<number> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c) => !!c?.uid),
+        tap(() => this.meetingsLoading.set(true)),
+        switchMap((c) =>
+          this.meetingService.getMeetingsCountByCommittee(c.uid).pipe(
+            tap(() => this.meetingsLoading.set(false)),
+            catchError(() => {
+              this.meetingsLoading.set(false);
+              return of(0);
+            })
+          )
+        )
+      ),
+      { initialValue: 0 }
+    );
   }
 
   private initMeetings(): Signal<Meeting[]> {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.meetingService.getMeetingsByCommittee(c.uid).pipe(catchError(() => of([]))))
+        switchMap((c) => this.meetingService.getUpcomingMeetingsByCommittee(c.uid).pipe(catchError(() => of([]))))
       ),
       { initialValue: [] }
     );
@@ -197,7 +248,16 @@ export class CommitteeOverviewComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.voteService.getVotesByCommittee(c.uid).pipe(catchError(() => of([]))))
+        tap(() => this.votesLoading.set(true)),
+        switchMap((c) =>
+          this.voteService.getVotesByCommittee(c.uid).pipe(
+            tap(() => this.votesLoading.set(false)),
+            catchError(() => {
+              this.votesLoading.set(false);
+              return of([]);
+            })
+          )
+        )
       ),
       { initialValue: [] }
     );
@@ -207,7 +267,16 @@ export class CommitteeOverviewComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.surveyService.getSurveysByCommittee(c.uid).pipe(catchError(() => of([]))))
+        tap(() => this.surveysLoading.set(true)),
+        switchMap((c) =>
+          this.surveyService.getSurveysByCommittee(c.uid).pipe(
+            tap(() => this.surveysLoading.set(false)),
+            catchError(() => {
+              this.surveysLoading.set(false);
+              return of([]);
+            })
+          )
+        )
       ),
       { initialValue: [] }
     );

@@ -2,15 +2,20 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="flex flex-col gap-4 pt-4" data-testid="committee-meetings-tab">
+  <!-- Info banner: committee-scoped meetings pending upstream confirmation -->
+  <div class="rounded-lg bg-blue-50 border border-blue-100 px-4 py-2.5 flex items-center gap-2 text-sm text-blue-700">
+    <i class="fa-light fa-circle-info"></i>
+    <span>Committee-scoped meetings are being set up. Data may be incomplete.</span>
+  </div>
   <!-- Toolbar -->
   <div class="flex items-center gap-3">
-    <input
-      type="text"
-      [formControl]="searchControl"
+    <lfx-input-text
+      [form]="searchForm"
+      control="search"
       placeholder="Search meetings..."
-      aria-label="Search meetings"
-      class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-      data-testid="committee-meetings-search" />
+      icon="fa-light fa-magnifying-glass"
+      styleClass="flex-1"
+      dataTest="committee-meetings-search"></lfx-input-text>
     <div class="flex gap-1">
       @for (option of timeOptions; track option.value) {
         <button
@@ -30,7 +35,17 @@
   </div>
 
   <!-- Meeting Cards -->
-  @if (filteredMeetings().length > 0) {
+  @if (loading()) {
+    <div class="flex flex-col gap-4">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+          <p-skeleton width="6rem" height="1.25rem" />
+          <p-skeleton width="75%" height="1rem" />
+          <p-skeleton width="50%" height="0.75rem" />
+        </div>
+      }
+    </div>
+  } @else if (filteredMeetings().length > 0) {
     <div class="flex flex-col gap-4">
       @for (meeting of filteredMeetings(); track meeting.id) {
         <lfx-meeting-card [meetingInput]="meeting" [pastMeeting]="timeFilter() === 'past'" [showBorder]="true"></lfx-meeting-card>

@@ -3,11 +3,12 @@
 
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { Committee, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { take } from 'rxjs';
 
 import { CommitteeSettingsComponent } from '../committee-settings/committee-settings.component';
@@ -21,6 +22,8 @@ import { CommitteeSettingsComponent } from '../committee-settings/committee-sett
 export class CommitteeSettingsTabComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   // Inputs
   public committee = input.required<Committee>();
@@ -30,6 +33,7 @@ export class CommitteeSettingsTabComponent {
 
   // State
   public saving = signal(false);
+  public deleting = signal(false);
 
   // Form
   public form = new FormGroup({
@@ -44,20 +48,52 @@ export class CommitteeSettingsTabComponent {
   });
 
   constructor() {
-    effect(() => {
-      const c = this.committee();
-      if (c) {
-        this.form.patchValue({
-          member_visibility: c.member_visibility || 'hidden',
-          join_mode: c.join_mode || 'invite_only',
-          business_email_required: c.business_email_required || false,
-          enable_voting: c.enable_voting || false,
-          is_audit_enabled: c.is_audit_enabled || false,
-          public: c.public || false,
-          sso_group_enabled: c.sso_group_enabled || false,
-          show_meeting_attendees: c.show_meeting_attendees || false,
-        });
-      }
+    effect(
+      () => {
+        const c = this.committee();
+        if (c) {
+          this.form.patchValue({
+            member_visibility: c.member_visibility || 'hidden',
+            join_mode: c.join_mode || 'invite_only',
+            business_email_required: c.business_email_required || false,
+            enable_voting: c.enable_voting || false,
+            is_audit_enabled: c.is_audit_enabled || false,
+            public: c.public || false,
+            sso_group_enabled: c.sso_group_enabled || false,
+            show_meeting_attendees: c.show_meeting_attendees || false,
+          });
+        }
+      },
+      { allowSignalWrites: true }
+    );
+  }
+
+  public confirmDelete(): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to permanently delete "${this.committee().name}"? This will remove all associated meetings, votes, surveys, and member records. This action cannot be undone.`,
+      header: 'Delete Group',
+      icon: 'fa-light fa-triangle-exclamation',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined p-button-sm',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      accept: () => {
+        this.deleting.set(true);
+        this.committeeService
+          .deleteCommittee(this.committee().uid)
+          .pipe(take(1))
+          .subscribe({
+            next: () => {
+              this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${this.committee().name}" has been deleted` });
+              this.deleting.set(false);
+              this.router.navigate(['/groups']);
+            },
+            error: () => {
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete group' });
+              this.deleting.set(false);
+            },
+          });
+      },
     });
   }
 

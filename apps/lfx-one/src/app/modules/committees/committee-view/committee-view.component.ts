@@ -1,19 +1,22 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Dialog } from 'primeng/dialog';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { MyCommittee } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, switchMap, take } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
 import { CommitteeAboutComponent } from '../components/committee-about/committee-about.component';
@@ -35,6 +38,8 @@ type CommitteeTab = 'overview' | 'about' | 'members' | 'votes' | 'meetings' | 's
     RouteLoadingComponent,
     DatePipe,
     NgClass,
+    FormsModule,
+    Dialog,
     JoinModeLabelPipe,
     CommitteeOverviewComponent,
     CommitteeAboutComponent,
@@ -64,9 +69,26 @@ export class CommitteeViewComponent {
   public refresh = signal(0);
   public membersLoading = signal<boolean>(true);
 
+  // -- Channels edit state --
+  public showChannelsModal = model(false);
+  public editMailingList = signal('');
+  public editChatChannel = signal('');
+  public editChatPlatform = signal('Slack');
+  public savingChannels = signal(false);
+
+  // -- Platform options --
+  public readonly chatPlatformOptions = ['Slack', 'Discord', 'Microsoft Teams', 'Google Chat', 'Zulip', 'Matrix / Element', 'IRC', 'Other'] as const;
+
+  // -- My membership state --
+  public myRoleLoading = signal(true);
+
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
   public members: Signal<CommitteeMember[]> = this.initializeMembers();
+  public myMembership: Signal<MyCommittee | null> = this.initMyMembership();
+  public myRole: Signal<string | null> = computed(() => this.myMembership()?.my_role ?? null);
+  public myMemberUid: Signal<string | null> = computed(() => this.myMembership()?.my_member_uid ?? null);
+  public isVisitor: Signal<boolean> = computed(() => this.myRole() === null && !this.myRoleLoading());
 
   public categorySeverity: Signal<TagSeverity> = computed(() => {
     const category = this.committee()?.category;
@@ -77,9 +99,31 @@ export class CommitteeViewComponent {
 
   public canEdit: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
+  public hasChannels: Signal<boolean> = computed(() => {
+    const c = this.committee();
+    return !!(c?.mailing_list || c?.chat_channel || c?.website) || this.canEdit();
+  });
+
+  public chatPlatformLabel: Signal<string> = this.initChatPlatformLabel();
+  public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
+
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
+
+  // -- Tab config --
+  public readonly tabConfig: { key: CommitteeTab; label: string; icon: string; visible: () => boolean; badge?: () => number | null }[] = [
+    { key: 'overview', label: 'Overview', icon: 'fa-gauge', visible: () => true },
+    { key: 'about', label: 'About', icon: 'fa-circle-info', visible: () => true },
+    { key: 'members', label: 'Members', icon: 'fa-users', visible: () => this.isMembersTabVisible(), badge: () => this.committee()?.total_members || null },
+    { key: 'votes', label: 'Votes', icon: 'fa-check-to-slot', visible: () => this.isVotesTabVisible() },
+    { key: 'meetings', label: 'Meetings', icon: 'fa-calendar', visible: () => true },
+    { key: 'surveys', label: 'Surveys', icon: 'fa-chart-simple', visible: () => true },
+    { key: 'documents', label: 'Documents', icon: 'fa-folder-open', visible: () => true },
+    { key: 'settings', label: 'Settings', icon: 'fa-gear', visible: () => this.canEdit() },
+  ];
+
+  public visibleTabs: Signal<typeof this.tabConfig> = computed(() => this.tabConfig.filter((tab) => tab.visible()));
 
   // -- Public methods --
   public goBack(): void {
@@ -93,6 +137,86 @@ export class CommitteeViewComponent {
   public refreshMembers(): void {
     this.membersLoading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  public openEditChannels(): void {
+    this.editMailingList.set(this.committee()?.mailing_list || '');
+    this.editChatChannel.set(this.committee()?.chat_channel || '');
+    this.editChatPlatform.set(this.chatPlatformLabel());
+    this.showChannelsModal.set(true);
+  }
+
+  public cancelEditChannels(): void {
+    this.showChannelsModal.set(false);
+  }
+
+  public saveChannels(): void {
+    this.savingChannels.set(true);
+    const committee = this.committee();
+    if (!committee?.uid) {
+      return;
+    }
+
+    this.committeeService
+      .updateCommittee(committee.uid, {
+        mailing_list: this.editMailingList() || undefined,
+        chat_channel: this.editChatChannel() || undefined,
+      })
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Channels updated' });
+          this.showChannelsModal.set(false);
+          this.savingChannels.set(false);
+          this.refreshCommittee();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update channels' });
+          this.savingChannels.set(false);
+        },
+      });
+  }
+
+  public handleJoinRequest(): void {
+    const committee = this.committee();
+    if (!committee) {
+      return;
+    }
+    if (committee.join_mode === 'open') {
+      this.committeeService
+        .joinCommittee(committee.uid)
+        .pipe(take(1))
+        .subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Joined', detail: `You have joined "${committee.name}"` });
+            this.refreshCommittee();
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to join "${committee.name}"` });
+          },
+        });
+    } else {
+      this.messageService.add({ severity: 'info', summary: 'Request Required', detail: 'Contact a group admin to request membership.' });
+    }
+  }
+
+  public handleLeaveRequest(): void {
+    const committee = this.committee();
+    if (!committee) {
+      return;
+    }
+    this.committeeService
+      .leaveCommittee(committee.uid)
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Left', detail: `You have left "${committee.name}"` });
+          this.refreshCommittee();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
+        },
+      });
   }
 
   // -- Private initializer functions --
@@ -158,6 +282,49 @@ export class CommitteeViewComponent {
         })
       ),
       { initialValue: [] }
+    );
+  }
+
+  private initChatPlatformLabel(): Signal<string> {
+    return computed(() => {
+      const url = this.committee()?.chat_channel?.toLowerCase() || '';
+      if (url.includes('slack')) return 'Slack';
+      if (url.includes('discord')) return 'Discord';
+      if (url.includes('teams.microsoft') || url.includes('teams.live')) return 'Teams';
+      if (url.includes('chat.google')) return 'Google Chat';
+      if (url.includes('zulip')) return 'Zulip';
+      if (url.includes('matrix') || url.includes('element')) return 'Matrix';
+      return 'Slack';
+    });
+  }
+
+  private initRepoPlatformLabel(): Signal<string> {
+    return computed(() => {
+      const url = this.committee()?.website?.toLowerCase() || '';
+      if (url.includes('github')) return 'GitHub';
+      if (url.includes('gitlab')) return 'GitLab';
+      if (url.includes('bitbucket')) return 'Bitbucket';
+      return 'Website';
+    });
+  }
+
+  private initMyMembership(): Signal<MyCommittee | null> {
+    return toSignal(
+      combineLatest([toObservable(this.committee), toObservable(this.refresh)]).pipe(
+        switchMap(([committee]) => {
+          if (!committee?.uid) {
+            this.myRoleLoading.set(false);
+            return of(null);
+          }
+          this.myRoleLoading.set(true);
+          return this.committeeService.getMyCommittees().pipe(
+            map((list) => list.find((c) => c.uid === committee.uid) ?? null),
+            catchError(() => of(null)),
+            finalize(() => this.myRoleLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: null }
     );
   }
 }

@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, input, output, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { Committee } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
@@ -15,7 +16,7 @@ import { take } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-about',
-  imports: [CardComponent, TagComponent, DatePipe, JoinModeLabelPipe, FormsModule, ButtonComponent],
+  imports: [CardComponent, TagComponent, DatePipe, JoinModeLabelPipe, ReactiveFormsModule, ButtonComponent, TextareaComponent],
   templateUrl: './committee-about.component.html',
   styleUrl: './committee-about.component.scss',
 })
@@ -32,15 +33,13 @@ export class CommitteeAboutComponent {
 
   // Description edit state
   public editingDescription = signal(false);
-  public editDescription = signal('');
   public saving = signal(false);
-
-  // Charter edit state (UI-ready, no backend field yet)
-  public editingCharter = signal(false);
-  public editCharter = signal('');
+  public descriptionForm = new FormGroup({
+    description: new FormControl(''),
+  });
 
   public startEditDescription(): void {
-    this.editDescription.set(this.committee().description || '');
+    this.descriptionForm.patchValue({ description: this.committee().description || '' });
     this.editingDescription.set(true);
   }
 
@@ -48,19 +47,11 @@ export class CommitteeAboutComponent {
     this.editingDescription.set(false);
   }
 
-  public startEditCharter(): void {
-    this.editCharter.set('');
-    this.editingCharter.set(true);
-  }
-
-  public cancelEditCharter(): void {
-    this.editingCharter.set(false);
-  }
-
   public saveDescription(): void {
     this.saving.set(true);
+    const description = this.descriptionForm.get('description')?.value || '';
     this.committeeService
-      .updateCommittee(this.committee().uid, { description: this.editDescription() })
+      .updateCommittee(this.committee().uid, { description })
       .pipe(take(1))
       .subscribe({
         next: () => {

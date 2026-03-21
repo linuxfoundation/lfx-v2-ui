@@ -3,20 +3,20 @@
 
 import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CardComponent } from '@components/card/card.component';
+import { InputTextComponent } from '@components/input-text/input-text.component';
 import { Committee, Meeting, PastMeeting } from '@lfx-one/shared/interfaces';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { MeetingService } from '@services/meeting.service';
-import { DialogService } from 'primeng/dynamicdialog';
-import { catchError, debounceTime, distinctUntilChanged, filter, of, startWith, switchMap } from 'rxjs';
+import { SkeletonModule } from 'primeng/skeleton';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize, of, startWith, switchMap, tap } from 'rxjs';
 
 type TimeFilter = 'upcoming' | 'past';
 
 @Component({
   selector: 'lfx-committee-meetings',
-  imports: [ReactiveFormsModule, CardComponent, MeetingCardComponent],
-  providers: [DialogService],
+  imports: [ReactiveFormsModule, CardComponent, InputTextComponent, MeetingCardComponent, SkeletonModule],
   templateUrl: './committee-meetings.component.html',
   styleUrl: './committee-meetings.component.scss',
 })
@@ -28,7 +28,8 @@ export class CommitteeMeetingsComponent {
   public canEdit = input<boolean>(false);
 
   // Filter state
-  public searchControl = new FormControl('');
+  public searchForm = new FormGroup({ search: new FormControl('') });
+  public searchControl = this.searchForm.get('search') as FormControl;
   public timeFilter = signal<TimeFilter>('upcoming');
 
   // Time filter options
@@ -37,9 +38,16 @@ export class CommitteeMeetingsComponent {
     { label: 'Past', value: 'past' },
   ];
 
+  // Loading state
+  public meetingsLoading = signal(true);
+  public pastMeetingsLoading = signal(true);
+
   // Data
   public meetings: Signal<Meeting[]> = this.initMeetings();
   public pastMeetings: Signal<PastMeeting[]> = this.initPastMeetings();
+
+  // Loading computed: true when active tab's data is loading
+  public loading: Signal<boolean> = computed(() => (this.timeFilter() === 'upcoming' ? this.meetingsLoading() : this.pastMeetingsLoading()));
 
   // Filtered data
   public filteredMeetings: Signal<(Meeting | PastMeeting)[]> = this.initFilteredMeetings();
@@ -53,7 +61,13 @@ export class CommitteeMeetingsComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.meetingService.getMeetingsByCommittee(c.uid, undefined, 'start_time.asc').pipe(catchError(() => of([]))))
+        tap(() => this.meetingsLoading.set(true)),
+        switchMap((c) =>
+          this.meetingService.getMeetingsByCommittee(c.uid, undefined, 'start_time.asc').pipe(
+            catchError(() => of([])),
+            finalize(() => this.meetingsLoading.set(false))
+          )
+        )
       ),
       { initialValue: [] }
     );
@@ -63,7 +77,13 @@ export class CommitteeMeetingsComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.meetingService.getPastMeetingsByCommittee(c.uid).pipe(catchError(() => of([]))))
+        tap(() => this.pastMeetingsLoading.set(true)),
+        switchMap((c) =>
+          this.meetingService.getPastMeetingsByCommittee(c.uid).pipe(
+            catchError(() => of([])),
+            finalize(() => this.pastMeetingsLoading.set(false))
+          )
+        )
       ),
       { initialValue: [] }
     );

@@ -55,6 +55,8 @@
             @if (committee()?.join_mode) {
               <lfx-tag [value]="committee()!.join_mode! | joinModeLabel" severity="secondary"></lfx-tag>
             }
+          </div>
+          <div class="flex items-center gap-1">
             <span class="text-xs text-gray-400">Created {{ committee()?.created_at | date: 'MMM d, y' }}</span>
             @if (committee()?.updated_at) {
               <span class="text-xs text-gray-400">&middot; Updated {{ committee()?.updated_at | date: 'MMM d, y' }}</span>
@@ -63,101 +65,82 @@
         </div>
 
         <!-- Action Buttons -->
-        @if (canEdit()) {
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <lfx-button icon="fa-light fa-pen-to-square" label="Edit" size="small" [routerLink]="['/groups', committee()?.uid || '', 'edit']"></lfx-button>
-          </div>
-        }
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Inline Channels card -->
+          @if (hasChannels()) {
+            <div
+              class="relative bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3.5 pr-9 text-right text-[12.5px] leading-[1.7] text-gray-600 max-w-[360px] overflow-hidden"
+              data-testid="committee-view-channels-card">
+              <!-- Channel values -->
+              <div>
+                @if (committee()?.mailing_list; as mailingList) {
+                  <div class="whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span class="font-medium text-gray-500">Mailing List :</span>
+                    <a [href]="'mailto:' + mailingList" class="text-gray-900 no-underline" [title]="mailingList">{{ mailingList }}</a>
+                  </div>
+                }
+                @if (committee()?.chat_channel; as chatChannel) {
+                  <div class="whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span class="font-medium text-gray-500">{{ chatPlatformLabel() }} :</span>
+                    <a [href]="chatChannel" target="_blank" rel="noopener noreferrer" class="text-gray-900 no-underline" [title]="chatChannel">{{
+                      chatChannel
+                    }}</a>
+                  </div>
+                }
+                @if (committee()?.website; as website) {
+                  <div class="whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span class="font-medium text-gray-500">{{ repoPlatformLabel() }} :</span>
+                    <a [href]="website" target="_blank" rel="noopener noreferrer" class="text-gray-900 no-underline" [title]="website">{{ website }}</a>
+                  </div>
+                }
+                @if (!committee()?.mailing_list && !committee()?.chat_channel && !committee()?.website) {
+                  <div class="text-gray-400">No channels configured</div>
+                }
+              </div>
+              <!-- Visitor blur mask -->
+              @if (isVisitor()) {
+                <div class="absolute inset-0 bg-gray-50/60 backdrop-blur-sm rounded-lg z-[5] flex items-center justify-center">
+                  <div class="text-center">
+                    <i class="fa-light fa-lock text-gray-400 mb-1"></i>
+                    <div class="text-[11px] font-medium text-gray-500">Join to view channels</div>
+                  </div>
+                </div>
+              }
+              <!-- Edit button (admin only) -->
+              @if (canEdit()) {
+                <button
+                  class="absolute top-1.5 right-1.5 z-[6] w-[22px] h-[22px] flex items-center justify-center rounded-md text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors border-0 bg-transparent cursor-pointer"
+                  title="Edit Channels"
+                  (click)="openEditChannels()">
+                  <i class="fa-light fa-pen-to-square text-[11px]"></i>
+                </button>
+              }
+            </div>
+          }
+        </div>
       </div>
 
       <!-- Tabs -->
       <div class="flex gap-1 border-b" data-testid="committee-view-tabs">
-        <button
-          (click)="activeTab.set('overview')"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          [ngClass]="{
-            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'overview',
-            'text-gray-500': activeTab() !== 'overview',
-          }">
-          <i class="fa-light fa-gauge mr-2"></i>Overview
-        </button>
-        <button
-          (click)="activeTab.set('about')"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          [ngClass]="{
-            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'about',
-            'text-gray-500': activeTab() !== 'about',
-          }">
-          <i class="fa-light fa-circle-info mr-2"></i>About
-        </button>
-        @if (isMembersTabVisible()) {
+        @for (tab of visibleTabs(); track tab.key) {
           <button
-            (click)="activeTab.set('members')"
+            (click)="activeTab.set(tab.key)"
             class="px-4 py-2 text-sm font-medium transition-colors"
             [ngClass]="{
-              'border-b-2 border-blue-600 text-blue-600': activeTab() === 'members',
-              'text-gray-500': activeTab() !== 'members',
+              'border-b-2 border-blue-600 text-blue-600': activeTab() === tab.key,
+              'text-gray-500': activeTab() !== tab.key,
             }">
-            <i class="fa-light fa-users mr-2"></i>Members
-            @if (committee()?.total_members) {
+            <i class="fa-light {{ tab.icon }} mr-2"></i>{{ tab.label }}
+            @if (tab.badge) {
               <span
                 class="ml-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                 [ngClass]="{
-                  'bg-blue-50 text-blue-700': activeTab() === 'members',
-                  'bg-gray-100 text-gray-600': activeTab() !== 'members',
+                  'bg-blue-50 text-blue-700': activeTab() === tab.key,
+                  'bg-gray-100 text-gray-600': activeTab() !== tab.key,
                 }">
-                {{ committee()!.total_members }}
+                {{ tab.badge() }}
               </span>
             }
-          </button>
-        }
-        @if (isVotesTabVisible()) {
-          <button
-            (click)="activeTab.set('votes')"
-            class="px-4 py-2 text-sm font-medium transition-colors"
-            [ngClass]="{
-              'border-b-2 border-blue-600 text-blue-600': activeTab() === 'votes',
-              'text-gray-500': activeTab() !== 'votes',
-            }">
-            <i class="fa-light fa-check-to-slot mr-2"></i>Votes
-          </button>
-        }
-        <button
-          (click)="activeTab.set('meetings')"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          [ngClass]="{
-            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'meetings',
-            'text-gray-500': activeTab() !== 'meetings',
-          }">
-          <i class="fa-light fa-calendar mr-2"></i>Meetings
-        </button>
-        <button
-          (click)="activeTab.set('surveys')"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          [ngClass]="{
-            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'surveys',
-            'text-gray-500': activeTab() !== 'surveys',
-          }">
-          <i class="fa-light fa-chart-simple mr-2"></i>Surveys
-        </button>
-        <button
-          (click)="activeTab.set('documents')"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          [ngClass]="{
-            'border-b-2 border-blue-600 text-blue-600': activeTab() === 'documents',
-            'text-gray-500': activeTab() !== 'documents',
-          }">
-          <i class="fa-light fa-folder-open mr-2"></i>Documents
-        </button>
-        @if (canEdit()) {
-          <button
-            (click)="activeTab.set('settings')"
-            class="px-4 py-2 text-sm font-medium transition-colors"
-            [ngClass]="{
-              'border-b-2 border-blue-600 text-blue-600': activeTab() === 'settings',
-              'text-gray-500': activeTab() !== 'settings',
-            }">
-            <i class="fa-light fa-gear mr-2"></i>Settings
           </button>
         }
       </div>
@@ -170,7 +153,12 @@
             [members]="members()"
             [membersLoading]="membersLoading()"
             [canEdit]="canEdit()"
-            (committeeUpdated)="refreshCommittee()" />
+            [myRole]="myRole()"
+            [myMemberUid]="myMemberUid()"
+            [myRoleLoading]="myRoleLoading()"
+            (committeeUpdated)="refreshCommittee()"
+            (joinRequested)="handleJoinRequest()"
+            (leaveRequested)="handleLeaveRequest()" />
         }
         @case ('about') {
           <lfx-committee-about [committee]="committee()!" [canEdit]="canEdit()" (committeeUpdated)="refreshCommittee()" />
@@ -209,3 +197,58 @@
     </div>
   }
 </div>
+
+<!-- Edit Channels Modal -->
+<p-dialog
+  header="Edit Channels"
+  [(visible)]="showChannelsModal"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+  data-testid="committee-view-channels-modal">
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Mailing List</label>
+      <input
+        type="text"
+        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        [ngModel]="editMailingList()"
+        (ngModelChange)="editMailingList.set($event)"
+        placeholder="Email address" />
+    </div>
+    <div class="flex flex-col gap-1">
+      <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Chat Platform</label>
+      <div class="flex gap-2">
+        <select
+          class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          style="width: 160px"
+          [ngModel]="editChatPlatform()"
+          (ngModelChange)="editChatPlatform.set($event)">
+          @for (opt of chatPlatformOptions; track opt) {
+            <option [value]="opt">{{ opt }}</option>
+          }
+        </select>
+        <input
+          type="text"
+          class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          [ngModel]="editChatChannel()"
+          (ngModelChange)="editChatChannel.set($event)"
+          placeholder="Channel name, invite link, or URL" />
+      </div>
+      <p class="text-[11px] text-gray-400 mt-0.5">Each group uses one chat platform. Select the platform your group communicates on.</p>
+    </div>
+  </div>
+  <ng-template #footer>
+    <div class="flex justify-end gap-2">
+      <lfx-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="cancelEditChannels()"
+        [disabled]="savingChannels()"></lfx-button>
+      <lfx-button label="Save Changes" severity="info" size="small" (onClick)="saveChannels()" [loading]="savingChannels()"></lfx-button>
+    </div>
+  </ng-template>
+</p-dialog>
