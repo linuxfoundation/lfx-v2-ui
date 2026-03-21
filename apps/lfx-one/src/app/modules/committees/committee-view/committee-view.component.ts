@@ -158,8 +158,8 @@ export class CommitteeViewComponent {
 
     this.committeeService
       .updateCommittee(committee.uid, {
-        mailing_list: this.channelsForm.get('mailingList')?.value || undefined,
-        chat_channel: this.channelsForm.get('chatChannel')?.value || undefined,
+        mailing_list: this.channelsForm.get('mailingList')?.value || null,
+        chat_channel: this.channelsForm.get('chatChannel')?.value || null,
       })
       .pipe(take(1))
       .subscribe({
