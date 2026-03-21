@@ -10,7 +10,6 @@ import { Dialog } from 'primeng/dialog';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
-import { SelectComponent } from '@components/select/select.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
@@ -35,7 +34,6 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     NgClass,
     ReactiveFormsModule,
     InputTextComponent,
-    SelectComponent,
     Dialog,
     JoinModeLabelPipe,
     CommitteeOverviewComponent,
@@ -65,22 +63,9 @@ export class CommitteeViewComponent {
   public showChannelsModal = model(false);
   public channelsForm = new FormGroup({
     mailingList: new FormControl(''),
-    chatPlatform: new FormControl('Slack'),
     chatChannel: new FormControl(''),
   });
   public savingChannels = signal(false);
-
-  // -- Platform options --
-  public readonly chatPlatformOptions = [
-    { label: 'Slack', value: 'Slack' },
-    { label: 'Discord', value: 'Discord' },
-    { label: 'Microsoft Teams', value: 'Microsoft Teams' },
-    { label: 'Google Chat', value: 'Google Chat' },
-    { label: 'Zulip', value: 'Zulip' },
-    { label: 'Matrix / Element', value: 'Matrix / Element' },
-    { label: 'IRC', value: 'IRC' },
-    { label: 'Other', value: 'Other' },
-  ];
 
   // -- My membership state --
   public myRoleLoading = signal(true);
@@ -130,6 +115,10 @@ export class CommitteeViewComponent {
 
   public handleTabNavigation(tabWithContext: string): void {
     const [tab, context] = tabWithContext.split(':');
+    const validTabs: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 'surveys', 'documents', 'settings'];
+    if (!validTabs.includes(tab as CommitteeTab)) {
+      return;
+    }
     this.activeTab.set(tab as CommitteeTab);
     if (tab === 'meetings' && (context === 'past' || context === 'upcoming')) {
       this.meetingsTimeFilter.set(context);
@@ -140,7 +129,6 @@ export class CommitteeViewComponent {
     this.channelsForm.patchValue({
       mailingList: this.committee()?.mailing_list || '',
       chatChannel: this.committee()?.chat_channel || '',
-      chatPlatform: this.chatPlatformLabel(),
     });
     this.showChannelsModal.set(true);
   }
