@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, signal, Signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CardComponent } from '@components/card/card.component';
@@ -27,6 +27,9 @@ export class CommitteeMeetingsComponent {
   public committee = input.required<Committee>();
   public canEdit = input<boolean>(false);
 
+  // Inputs
+  public initialTimeFilter = input<TimeFilter>('upcoming');
+
   // Filter state
   public searchForm = new FormGroup({ search: new FormControl('') });
   public searchControl = this.searchForm.get('search') as FormControl;
@@ -37,6 +40,11 @@ export class CommitteeMeetingsComponent {
     { label: 'Upcoming', value: 'upcoming' },
     { label: 'Past', value: 'past' },
   ];
+
+  // Sync timeFilter with initialTimeFilter input changes
+  private readonly syncTimeFilter = effect(() => {
+    this.timeFilter.set(this.initialTimeFilter());
+  });
 
   // Loading state
   public meetingsLoading = signal(true);

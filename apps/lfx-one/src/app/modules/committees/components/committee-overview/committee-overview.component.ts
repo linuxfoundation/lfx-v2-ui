@@ -3,26 +3,47 @@
 
 import { Component, computed, inject, input, model, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { SelectComponent } from '@components/select/select.component';
+import { TagComponent } from '@components/tag/tag.component';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { DashboardMeetingCardComponent } from '../../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
-import { Committee, CommitteeMember, Meeting, Survey, Vote } from '@lfx-one/shared/interfaces';
+import { VoteResultsDrawerComponent } from '../../../votes/components/vote-results-drawer/vote-results-drawer.component';
+
+import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberRole, PollStatus } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { VoteService } from '@services/vote.service';
 import { SurveyService } from '@services/survey.service';
+import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
+import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MessageService } from 'primeng/api';
 import { catchError, filter, forkJoin, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-overview',
-  imports: [CardComponent, ReactiveFormsModule, ButtonComponent, Dialog, DashboardMeetingCardComponent, DatePipe, SkeletonModule, SelectComponent],
+  imports: [
+    CardComponent,
+    ReactiveFormsModule,
+    ButtonComponent,
+    Dialog,
+    DashboardMeetingCardComponent,
+    NgClass,
+    DatePipe,
+    SkeletonModule,
+    SelectComponent,
+    TagComponent,
+    TextareaComponent,
+    JoinModeLabelPipe,
+    LinkifyPipe,
+    VoteResultsDrawerComponent,
+  ],
   templateUrl: './committee-overview.component.html',
   styleUrl: './committee-overview.component.scss',
 })
@@ -47,6 +68,7 @@ export class CommitteeOverviewComponent {
   public readonly committeeUpdated = output<void>();
   public readonly joinRequested = output<void>();
   public readonly leaveRequested = output<void>();
+  public readonly tabNavigated = output<string>();
 
   // Chairs modal state
   public showChairsModal = model(false);
@@ -55,6 +77,18 @@ export class CommitteeOverviewComponent {
     chairUid: new FormControl<string | null>(null),
     viceChairUid: new FormControl<string | null>(null),
   });
+
+  // Description edit state (merged from about component)
+  public editingDescription = signal(false);
+  public savingDescription = signal(false);
+  public descriptionForm = new FormGroup({
+    description: new FormControl(''),
+  });
+
+  // Vote drawer state
+  public voteDrawerVisible = model(false);
+  public selectedVoteId = signal<string | null>(null);
+  public selectedVote = signal<Vote | null>(null);
 
   // Loading states for stats
   public meetingsLoading = signal(true);
@@ -79,6 +113,7 @@ export class CommitteeOverviewComponent {
   // Committee-scoped data fetches
   public meetingsCount: Signal<number> = this.initMeetingsCount();
   public meetings: Signal<Meeting[]> = this.initMeetings();
+  public pastMeetings: Signal<PastMeeting[]> = this.initPastMeetings();
   public votes: Signal<Vote[]> = this.initVotes();
   public surveys: Signal<Survey[]> = this.initSurveys();
 
@@ -120,6 +155,30 @@ export class CommitteeOverviewComponent {
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
   public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent'));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
+
+  public pendingActionItems: Signal<PendingActionItem[]> = computed(() => {
+    const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
+      type: 'Cast Vote',
+      badge: this.committee().name,
+      text: vote.name,
+      icon: 'fa-light fa-check-to-slot',
+      severity: 'warn' as const,
+      buttonText: 'Review and Vote',
+      date: vote.end_time ? `Deadline: ${new Date(vote.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : undefined,
+    }));
+    const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
+      type: 'Submit Feedback',
+      badge: this.committee().name,
+      text: survey.survey_title,
+      icon: 'fa-light fa-chart-simple',
+      severity: 'warn' as const,
+      buttonText: 'Submit Survey',
+      date: survey.survey_cutoff_date
+        ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+        : undefined,
+    }));
+    return [...voteItems, ...surveyItems];
+  });
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
   public nextMeeting: Signal<Meeting | null> = computed(() => {
@@ -130,9 +189,69 @@ export class CommitteeOverviewComponent {
     return upcoming[0] ?? null;
   });
 
+  public lastMeeting: Signal<PastMeeting | null> = computed(() => {
+    const past = this.pastMeetings();
+    return past[0] ?? null;
+  });
+
   // Action methods
   public onJoinClick(): void {
     this.joinRequested.emit();
+  }
+
+  public navigateToTab(tab: string): void {
+    this.tabNavigated.emit(tab);
+  }
+
+  public handlePendingActionClick(item: PendingActionItem): void {
+    if (item.type === 'Cast Vote') {
+      const vote = this.pendingVotes().find((v) => v.name === item.text);
+      if (vote) {
+        // Reset first to ensure toObservable emits on re-set
+        this.selectedVoteId.set(null);
+        this.selectedVote.set(null);
+        this.voteDrawerVisible.set(false);
+
+        // Set on next tick so the signal change is detected
+        setTimeout(() => {
+          this.selectedVoteId.set(vote.uid);
+          this.selectedVote.set(vote);
+          this.voteDrawerVisible.set(true);
+        });
+      }
+    } else {
+      this.tabNavigated.emit('surveys');
+    }
+  }
+
+  // Description edit methods (merged from about component)
+  public startEditDescription(): void {
+    this.descriptionForm.patchValue({ description: this.committee().description || '' });
+    this.editingDescription.set(true);
+  }
+
+  public cancelEditDescription(): void {
+    this.editingDescription.set(false);
+  }
+
+  public saveDescription(): void {
+    this.savingDescription.set(true);
+    const description = this.descriptionForm.get('description')?.value || '';
+    this.committeeService
+      .updateCommittee(this.committee().uid, { description })
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Description updated' });
+          this.editingDescription.set(false);
+          this.savingDescription.set(false);
+          this.committeeUpdated.emit();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update description' });
+          this.savingDescription.set(false);
+        },
+      });
   }
 
   // Chairs edit methods
@@ -239,6 +358,16 @@ export class CommitteeOverviewComponent {
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
         switchMap((c) => this.meetingService.getUpcomingMeetingsByCommittee(c.uid).pipe(catchError(() => of([]))))
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initPastMeetings(): Signal<PastMeeting[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c) => !!c?.uid),
+        switchMap((c) => this.meetingService.getPastMeetingsByCommittee(c.uid, 1).pipe(catchError(() => of([]))))
       ),
       { initialValue: [] }
     );

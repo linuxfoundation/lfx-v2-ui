@@ -19,14 +19,13 @@ import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, map, of, switchMap, take } from 'rxjs';
 
 import { CommitteeOverviewComponent } from '../components/committee-overview/committee-overview.component';
-import { CommitteeAboutComponent } from '../components/committee-about/committee-about.component';
 import { CommitteeMembersComponent } from '../components/committee-members/committee-members.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
 import { CommitteeVotesComponent } from '../components/committee-votes/committee-votes.component';
 import { CommitteeSurveysComponent } from '../components/committee-surveys/committee-surveys.component';
 import { CommitteeSettingsTabComponent } from '../components/committee-settings-tab/committee-settings-tab.component';
 
-type CommitteeTab = 'overview' | 'about' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
+type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
 
 @Component({
   selector: 'lfx-committee-view',
@@ -42,7 +41,6 @@ type CommitteeTab = 'overview' | 'about' | 'members' | 'votes' | 'meetings' | 's
     Dialog,
     JoinModeLabelPipe,
     CommitteeOverviewComponent,
-    CommitteeAboutComponent,
     CommitteeMembersComponent,
     CommitteeMeetingsComponent,
     CommitteeVotesComponent,
@@ -61,6 +59,7 @@ export class CommitteeViewComponent {
 
   // -- Tab state --
   public activeTab = signal<CommitteeTab>('overview');
+  public meetingsTimeFilter = signal<'upcoming' | 'past'>('upcoming');
 
   // -- Writable signals --
   public loading = signal<boolean>(true);
@@ -114,7 +113,6 @@ export class CommitteeViewComponent {
   // -- Tab config --
   public readonly tabConfig: { key: CommitteeTab; label: string; icon: string; visible: () => boolean; badge?: () => number | null }[] = [
     { key: 'overview', label: 'Overview', icon: 'fa-gauge', visible: () => true },
-    { key: 'about', label: 'About', icon: 'fa-circle-info', visible: () => true },
     { key: 'members', label: 'Members', icon: 'fa-users', visible: () => this.isMembersTabVisible(), badge: () => this.committee()?.total_members || null },
     { key: 'votes', label: 'Votes', icon: 'fa-check-to-slot', visible: () => this.isVotesTabVisible() },
     { key: 'meetings', label: 'Meetings', icon: 'fa-calendar', visible: () => true },
@@ -137,6 +135,14 @@ export class CommitteeViewComponent {
   public refreshMembers(): void {
     this.membersLoading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  public handleTabNavigation(tabWithContext: string): void {
+    const [tab, context] = tabWithContext.split(':');
+    this.activeTab.set(tab as CommitteeTab);
+    if (tab === 'meetings' && (context === 'past' || context === 'upcoming')) {
+      this.meetingsTimeFilter.set(context);
+    }
   }
 
   public openEditChannels(): void {
