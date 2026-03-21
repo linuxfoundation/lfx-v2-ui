@@ -57,6 +57,7 @@ export class CommitteeViewComponent {
   public error = signal<boolean>(false);
   public errorType = signal<'not-found' | 'server-error' | null>(null);
   public refresh = signal(0);
+  public membersRefresh = signal(0);
   public membersLoading = signal<boolean>(true);
 
   // -- Channels edit state --
@@ -110,7 +111,7 @@ export class CommitteeViewComponent {
 
   public refreshMembers(): void {
     this.membersLoading.set(true);
-    this.refresh.update((v) => v + 1);
+    this.membersRefresh.update((v) => v + 1);
   }
 
   public handleTabNavigation(tabWithContext: string): void {
@@ -177,6 +178,7 @@ export class CommitteeViewComponent {
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Joined', detail: `You have joined "${committee.name}"` });
             this.refreshCommittee();
+            this.membersRefresh.update((v) => v + 1);
           },
           error: () => {
             this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to join "${committee.name}"` });
@@ -199,6 +201,7 @@ export class CommitteeViewComponent {
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Left', detail: `You have left "${committee.name}"` });
           this.refreshCommittee();
+          this.membersRefresh.update((v) => v + 1);
         },
         error: () => {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
@@ -253,7 +256,7 @@ export class CommitteeViewComponent {
 
   private initializeMembers(): Signal<CommitteeMember[]> {
     return toSignal(
-      combineLatest([toObservable(this.committee), toObservable(this.refresh)]).pipe(
+      combineLatest([toObservable(this.committee), toObservable(this.membersRefresh)]).pipe(
         switchMap(([committee]) => {
           if (!committee?.uid) {
             this.membersLoading.set(false);
@@ -297,7 +300,7 @@ export class CommitteeViewComponent {
 
   private initMyMembership(): Signal<MyCommittee | null> {
     return toSignal(
-      combineLatest([toObservable(this.committee), toObservable(this.refresh)]).pipe(
+      combineLatest([toObservable(this.committee), toObservable(this.membersRefresh)]).pipe(
         switchMap(([committee]) => {
           if (!committee?.uid) {
             this.myRoleLoading.set(false);
