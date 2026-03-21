@@ -1668,6 +1668,11 @@ export class ProjectService {
     };
   }
 
+  // Marketing Analytics Queries (ANALYTICS.PLATINUM.* schema)
+  // Note: Marketing/HubSpot tables use ANALYTICS.PLATINUM.* schema,
+  // while LFX-curated views (foundation-health, board-member) use ANALYTICS.PLATINUM_LFX_ONE.*.
+  // Both are valid production schemas — the split reflects different data pipelines.
+
   /**
    * Get web activities summary grouped by domain category
    * Queries ANALYTICS.PLATINUM.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM.WEB_ACTIVITIES_BY_PROJECT
@@ -1851,13 +1856,9 @@ export class ProjectService {
       const roasKpiQuery = `
       SELECT ROAS, ROAS_MOM_PCT
       FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
-      WHERE CAMPAIGN_MONTH = (
-        SELECT MAX(CAMPAIGN_MONTH)
-        FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
-        WHERE CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
-          AND FOUNDATION_NAME = ?
-      )
-        AND FOUNDATION_NAME = ?
+      WHERE FOUNDATION_NAME = ?
+        AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
+      QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
     `;
 
       // Block 3: Monthly ROAS trend (bar chart, last 6 months)
@@ -1891,7 +1892,7 @@ export class ProjectService {
 
       const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult] = await Promise.all([
         this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationName]),
-        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName, foundationName]),
+        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationName]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationName]),
         this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationName]),
@@ -1925,6 +1926,9 @@ export class ProjectService {
         return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       });
 
+      // Channel-level spend, revenue, and ROAS data is not available in
+      // PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH — only impressions per channel.
+      // Hardcoded to 0 until the analytics team adds these columns.
       const channelGroups = channelResult.rows.map((row) => ({
         channel: row.CHANNEL,
         totalImpressions: row.IMPRESSIONS,
@@ -2124,25 +2128,12 @@ export class ProjectService {
       const totalPlatforms = overview.PLATFORMS_ACTIVE ?? 0;
       const changePercentage = Math.round((overview.FOLLOWER_GROWTH_PCT ?? 0) * 10) / 10;
 
-      const platformIconMap: Record<string, string> = {
-        Twitter: 'fa-brands fa-x-twitter',
-        'Twitter/X': 'fa-brands fa-x-twitter',
-        X: 'fa-brands fa-x-twitter',
-        LinkedIn: 'fa-brands fa-linkedin',
-        YouTube: 'fa-brands fa-youtube',
-        Mastodon: 'fa-brands fa-mastodon',
-        Bluesky: 'fa-brands fa-bluesky',
-        Facebook: 'fa-brands fa-facebook',
-        Instagram: 'fa-brands fa-instagram',
-      };
-
       const platforms = platformResult.rows.map((row) => ({
         platform: row.PLATFORM_NAME,
         followers: row.FOLLOWERS ?? 0,
         engagementRate: row.ENGAGEMENT_RATE_PCT ?? 0,
         postsLast30Days: row.POSTS_30D ?? 0,
         impressions: row.IMPRESSIONS ?? 0,
-        iconClass: platformIconMap[row.PLATFORM_NAME] || 'fa-light fa-globe',
       }));
 
       const monthlyData = trendResult.rows.map((row) => {

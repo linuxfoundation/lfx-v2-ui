@@ -3,7 +3,9 @@
 
 import { afterNextRender, Component, computed, inject, signal, Signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { CardComponent } from '@components/card/card.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
+import { TagComponent } from '@components/tag/tag.component';
 import { MARKETING_OVERVIEW_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
 import { lfxColors } from '@lfx-one/shared/constants';
 import {
@@ -18,7 +20,7 @@ import {
   SocialReachResponse,
   WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
@@ -35,8 +37,10 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
 @Component({
   selector: 'lfx-marketing-overview',
   imports: [
+    CardComponent,
     MetricCardComponent,
     ScrollShadowDirective,
+    TagComponent,
     WebsiteVisitsDrawerComponent,
     EmailCtrDrawerComponent,
     PaidSocialReachDrawerComponent,
@@ -146,6 +150,7 @@ export class MarketingOverviewComponent {
     socialMedia: SocialMediaResponse;
   }> = this.initMarketingData();
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
+  protected readonly formatNumber = formatNumber;
 
   public constructor() {
     afterNextRender(() => {
@@ -160,16 +165,6 @@ export class MarketingOverviewComponent {
 
   public handleDrawerClose(): void {
     this.activeDrawer.set(null);
-  }
-
-  protected formatNumber(num: number): string {
-    if (num >= 999_950) {
-      return `${(num / 1_000_000).toFixed(1)}M`;
-    }
-    if (num >= 1_000) {
-      return `${(num / 1_000).toFixed(1)}K`;
-    }
-    return num.toLocaleString();
   }
 
   // === Private Initializers ===
@@ -300,7 +295,7 @@ export class MarketingOverviewComponent {
       // Website visits insight
       if (webActivities.totalSessions > 0) {
         const pagesPerSession = webActivities.totalPageViews / webActivities.totalSessions;
-        insights.push(`${this.formatNumber(webActivities.totalSessions)} website sessions with ${pagesPerSession.toFixed(1)} pages per visit`);
+        insights.push(`${formatNumber(webActivities.totalSessions)} website sessions with ${pagesPerSession.toFixed(1)} pages per visit`);
       }
 
       // Domain concentration insight
@@ -320,8 +315,8 @@ export class MarketingOverviewComponent {
     return {
       ...card,
       loading,
-      value: data.totalSessions > 0 ? this.formatNumber(data.totalSessions) : undefined,
-      subtitle: data.totalSessions > 0 ? `Last 30 days · ${this.formatNumber(data.totalPageViews)} page views` : undefined,
+      value: data.totalSessions > 0 ? formatNumber(data.totalSessions) : undefined,
+      subtitle: data.totalSessions > 0 ? `Last 30 days · ${formatNumber(data.totalPageViews)} page views` : undefined,
       chartData:
         data.dailyData.length > 0
           ? {
@@ -405,7 +400,7 @@ export class MarketingOverviewComponent {
     return {
       ...card,
       loading,
-      value: data.totalFollowers > 0 ? this.formatNumber(data.totalFollowers) : undefined,
+      value: data.totalFollowers > 0 ? formatNumber(data.totalFollowers) : undefined,
       subtitle: data.totalFollowers > 0 ? `${data.totalPlatforms} platforms · Last 6 months` : undefined,
       changePercentage: data.changePercentage !== 0 ? `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%` : undefined,
       trend: data.trend,
@@ -432,7 +427,7 @@ export class MarketingOverviewComponent {
 
   private getSocialReachValue(data: SocialReachResponse): string | undefined {
     if (data.roas > 0) return `${data.roas.toFixed(2)}x`;
-    if (data.totalReach > 0) return this.formatNumber(data.totalReach);
+    if (data.totalReach > 0) return formatNumber(data.totalReach);
     return undefined;
   }
 

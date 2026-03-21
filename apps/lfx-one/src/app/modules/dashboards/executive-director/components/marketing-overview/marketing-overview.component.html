@@ -36,109 +36,80 @@
       <div class="flex-shrink-0 border-2 border-dashed border-amber-300 rounded-lg p-4 bg-amber-50/30" data-testid="north-star-metrics-box">
         <div class="flex items-center gap-2 mb-3">
           <h5 class="text-sm font-semibold text-gray-900 mb-0">Flywheel Pulse</h5>
-          <span class="px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full">Sample Data</span>
+          <lfx-tag value="Sample Data" severity="warn" [rounded]="true" />
         </div>
         <div class="flex gap-4">
           <!-- Flywheel Conversion -->
-          <button
-            type="button"
-            class="w-64 bg-white rounded-lg border border-gray-200 overflow-hidden text-left hover:shadow-md transition-shadow cursor-pointer"
-            (click)="handleCardClick(DashboardDrawerType.NorthStarFlywheelConversion)"
-            data-testid="flywheel-pulse-conversion">
-            <div class="h-1 bg-red-500"></div>
-            <div class="p-4 flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <i class="fa-light fa-arrows-spin text-gray-500 text-sm"></i>
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Flywheel Conversion</span>
-              </div>
-              <span class="text-3xl font-bold text-gray-900">{{ flywheelConversionData.conversionRate }}%</span>
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium" [class]="flywheelConversionData.trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                  {{ flywheelConversionData.changePercentage > 0 ? '+' : '' }}{{ flywheelConversionData.changePercentage }}%
-                </span>
-                <span class="text-xs text-gray-500">Event attendee → community/WG within 90 days</span>
-              </div>
-            </div>
-          </button>
+          <lfx-metric-card
+            title="Flywheel Conversion"
+            icon="fa-light fa-arrows-spin"
+            chartType="line"
+            [value]="flywheelConversionData.conversionRate + '%'"
+            [changePercentage]="(flywheelConversionData.changePercentage > 0 ? '+' : '') + flywheelConversionData.changePercentage + '%'"
+            [trend]="flywheelConversionData.trend"
+            subtitle="Event attendee → community/WG within 90 days"
+            testId="flywheel-pulse-conversion"
+            [clickable]="true"
+            (cardClick)="handleCardClick(DashboardDrawerType.NorthStarFlywheelConversion)"></lfx-metric-card>
 
           <!-- Member Growth -->
-          <button
-            type="button"
-            class="w-64 bg-white rounded-lg border border-gray-200 overflow-hidden text-left hover:shadow-md transition-shadow cursor-pointer"
-            (click)="handleCardClick(DashboardDrawerType.NorthStarMemberAcquisition)"
-            data-testid="flywheel-pulse-member-growth">
-            <div class="h-1 bg-green-500"></div>
-            <div class="p-4 flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <i class="fa-light fa-user-group text-gray-500 text-sm"></i>
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Member Growth</span>
-              </div>
-              <span class="text-3xl font-bold text-gray-900">{{ memberAcquisitionData.newMembersThisQuarter }}</span>
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium text-green-600">
-                  {{ memberRetentionData.renewalRate }}% retention · NRR {{ memberRetentionData.netRevenueRetention }}%
-                </span>
-                <span class="text-xs text-gray-500"
-                  >+{{ memberAcquisitionData.newMembersThisQuarter }}/q · CAC ${{ formatNumber(memberAcquisitionData.costPerAcquisition) }}</span
-                >
-              </div>
-            </div>
-          </button>
+          <lfx-metric-card
+            title="Member Growth"
+            icon="fa-light fa-user-group"
+            chartType="line"
+            [value]="'' + memberAcquisitionData.newMembersThisQuarter"
+            [changePercentage]="memberRetentionData.renewalRate + '% retention · NRR ' + memberRetentionData.netRevenueRetention + '%'"
+            trend="up"
+            [subtitle]="'+' + memberAcquisitionData.newMembersThisQuarter + '/q · CAC $' + formatNumber(memberAcquisitionData.costPerAcquisition)"
+            testId="flywheel-pulse-member-growth"
+            [clickable]="true"
+            (cardClick)="handleCardClick(DashboardDrawerType.NorthStarMemberAcquisition)"></lfx-metric-card>
 
           <!-- Share of Voice (Engaged Community) -->
-          <button
-            type="button"
-            class="w-64 bg-white rounded-lg border border-gray-200 overflow-hidden text-left hover:shadow-md transition-shadow cursor-pointer"
-            (click)="handleCardClick(DashboardDrawerType.NorthStarEngagedCommunity)"
-            data-testid="flywheel-pulse-share-of-voice">
-            <div class="h-1 bg-blue-500"></div>
-            <div class="p-4 flex flex-col gap-2">
-              <div class="flex items-center gap-2">
-                <i class="fa-light fa-people-group text-gray-500 text-sm"></i>
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Engaged Community</span>
-              </div>
-              <span class="text-3xl font-bold text-gray-900">{{ formatNumber(engagedCommunityData.totalMembers) }}</span>
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium text-green-600">
-                  {{ engagedCommunityData.changePercentage > 0 ? '↑' : '↓' }} {{ engagedCommunityData.changePercentage }}% growth
-                </span>
-                <span class="text-xs text-gray-500">Newsletter + Community + Working Groups</span>
-              </div>
-            </div>
-          </button>
+          <lfx-metric-card
+            title="Engaged Community"
+            icon="fa-light fa-people-group"
+            chartType="line"
+            [value]="formatNumber(engagedCommunityData.totalMembers)"
+            [changePercentage]="(engagedCommunityData.changePercentage > 0 ? '↑' : '↓') + ' ' + engagedCommunityData.changePercentage + '% growth'"
+            trend="up"
+            subtitle="Newsletter + Community + Working Groups"
+            testId="flywheel-pulse-share-of-voice"
+            [clickable]="true"
+            (cardClick)="handleCardClick(DashboardDrawerType.NorthStarEngagedCommunity)"></lfx-metric-card>
         </div>
       </div>
 
       <!-- Marketing Metrics Key Insights Card -->
-      <div
-        class="p-4 bg-white border border-gray-200 rounded-lg flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full flex flex-col"
-        data-testid="marketing-overview-key-insights">
-        <div class="flex items-center gap-2 mb-3">
-          <i class="fa-light fa-lightbulb w-4 h-4 text-gray-500 flex-shrink-0"></i>
-          <h5 class="text-sm font-medium">Marketing Metrics</h5>
+      <lfx-card styleClass="flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full" data-testid="marketing-overview-key-insights">
+        <div class="flex flex-col h-full">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="fa-light fa-lightbulb w-4 h-4 text-gray-500 flex-shrink-0"></i>
+            <h5 class="text-sm font-medium">Marketing Metrics</h5>
+          </div>
+          <div class="flex-1 flex flex-col gap-1.5 p-3 bg-gray-50 rounded-lg">
+            <h6 class="flex items-center gap-1.5 text-xs font-semibold text-gray-900 mb-1">
+              <i class="fa-light fa-lightbulb text-gray-400"></i>
+              Key Insights
+            </h6>
+            @for (insight of marketingInsights(); track insight) {
+              <div class="flex items-start gap-1.5 text-xs text-gray-700 leading-snug">
+                <span class="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0"></span>
+                <span>{{ insight }}</span>
+              </div>
+            }
+          </div>
+          <div class="mt-2 text-right">
+            <button
+              type="button"
+              class="text-xs text-blue-500 hover:text-blue-600 font-medium"
+              (click)="handleCardClick(DashboardDrawerType.MarketingEmailCtr)"
+              data-testid="marketing-overview-insights-view-details">
+              View details
+            </button>
+          </div>
         </div>
-        <div class="flex-1 flex flex-col gap-1.5 p-3 bg-gray-50 rounded-lg">
-          <h6 class="flex items-center gap-1.5 text-xs font-semibold text-gray-900 mb-1">
-            <i class="fa-light fa-lightbulb text-gray-400"></i>
-            Key Insights
-          </h6>
-          @for (insight of marketingInsights(); track insight) {
-            <div class="flex items-start gap-1.5 text-xs text-gray-700 leading-snug">
-              <span class="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0"></span>
-              <span>{{ insight }}</span>
-            </div>
-          }
-        </div>
-        <div class="mt-2 text-right">
-          <button
-            type="button"
-            class="text-xs text-blue-500 hover:text-blue-600 font-medium"
-            (click)="handleCardClick(DashboardDrawerType.MarketingEmailCtr)"
-            data-testid="marketing-overview-insights-view-details">
-            View details
-          </button>
-        </div>
-      </div>
+      </lfx-card>
 
       <!-- Marketing Cards -->
       @for (card of marketingCards(); track card.testId) {
@@ -177,7 +148,11 @@
   </div>
 </section>
 
-<!-- Drill-Down Drawers -->
+<!-- Drill-Down Drawers
+  Note: [visible] uses a computed expression from activeDrawer() signal.
+  This matches the established pattern in foundation-health and organization-involvement drawers.
+  Signal updates are synchronous — handleDrawerClose() sets activeDrawer(null) in the same
+  change detection cycle, so no flicker occurs on backdrop dismiss. -->
 <lfx-website-visits-drawer
   [visible]="activeDrawer() === DashboardDrawerType.MarketingWebsiteVisits"
   (visibleChange)="handleDrawerClose()"></lfx-website-visits-drawer>

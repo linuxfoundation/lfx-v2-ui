@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, model, Signal } from '@angular/core';
+import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { TagComponent } from '@components/tag/tag.component';
+import { createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -11,7 +15,7 @@ import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyI
 
 @Component({
   selector: 'lfx-member-retention-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-retention-drawer.component.html',
 })
 export class MemberRetentionDrawerComponent {
@@ -41,19 +45,11 @@ export class MemberRetentionDrawerComponent {
   );
   protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
 
-  protected readonly retentionChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly retentionChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)}% renewal rate`,
         },
@@ -77,7 +73,7 @@ export class MemberRetentionDrawerComponent {
         },
       },
     },
-  };
+  });
 
   // === Protected Methods ===
   protected onClose(): void {
@@ -193,7 +189,7 @@ export class MemberRetentionDrawerComponent {
             label: 'Renewal Rate',
             data: monthlyData.map((d) => d.value),
             borderColor: lfxColors.blue[500],
-            backgroundColor: `${lfxColors.blue[500]}1A`,
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
             tension: 0.4,
             borderWidth: 2,

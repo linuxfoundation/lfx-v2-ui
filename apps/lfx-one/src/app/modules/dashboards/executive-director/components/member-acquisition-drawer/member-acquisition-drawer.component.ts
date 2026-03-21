@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, model, Signal } from '@angular/core';
+import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { TagComponent } from '@components/tag/tag.component';
+import { createBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -11,7 +15,7 @@ import type { MemberAcquisitionResponse, MemberRetentionResponse, MarketingRecom
 
 @Component({
   selector: 'lfx-member-acquisition-drawer',
-  imports: [DrawerModule, ChartComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-acquisition-drawer.component.html',
 })
 export class MemberAcquisitionDrawerComponent {
@@ -37,7 +41,7 @@ export class MemberAcquisitionDrawerComponent {
   });
 
   // === Computed Signals ===
-  protected readonly formattedCostPerAcquisition: Signal<string> = computed(() => this.formatNumber(this.data().costPerAcquisition));
+  protected readonly formattedCostPerAcquisition: Signal<string> = computed(() => formatNumber(this.data().costPerAcquisition));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
@@ -62,55 +66,25 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly cacChartData: Signal<ChartData<'line'>> = this.initCacChartData();
   protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
 
-  protected readonly acquisitionChartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${ctx.parsed.y} new members`,
         },
       },
     },
-    scales: {
-      x: {
-        display: true,
-        grid: { display: false },
-        border: { display: true, color: lfxColors.gray[300] },
-        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
-      },
-      y: {
-        display: true,
-        grid: { color: lfxColors.gray[200], lineWidth: 1 },
-        border: { display: false },
-        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
-      },
-    },
-  };
+  });
 
-  protected readonly cacChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly cacChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
-          label: (ctx) => ` $${this.formatNumber(ctx.parsed.y ?? 0)} CAC`,
+          label: (ctx) => ` $${formatNumber(ctx.parsed.y ?? 0)} CAC`,
         },
       },
     },
@@ -132,21 +106,13 @@ export class MemberAcquisitionDrawerComponent {
         },
       },
     },
-  };
+  });
 
-  protected readonly retentionChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly retentionChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)}% renewal rate`,
         },
@@ -170,17 +136,13 @@ export class MemberAcquisitionDrawerComponent {
         },
       },
     },
-  };
+  });
+
+  protected readonly formatNumber = formatNumber;
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected formatNumber(num: number): string {
-    if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-    return num.toLocaleString();
   }
 
   // === Private Initializers ===
@@ -201,7 +163,7 @@ export class MemberAcquisitionDrawerComponent {
           const cacIncrease = (((recent.cac - previous.cac) / previous.cac) * 100).toFixed(0);
           actions.push({
             title: 'Reduce cost per acquisition',
-            description: `CAC increased ${cacIncrease}% to $${this.formatNumber(recent.cac)} — review channel efficiency and referral programs`,
+            description: `CAC increased ${cacIncrease}% to $${formatNumber(recent.cac)} — review channel efficiency and referral programs`,
             priority: 'high',
             dueLabel: 'This quarter',
             iconClass: 'fa-light fa-money-bill-trend-up',
@@ -239,7 +201,7 @@ export class MemberAcquisitionDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Monitor acquisition performance',
-          description: `${newMembersThisQuarter} new members this quarter at $${this.formatNumber(costPerAcquisition)} CAC`,
+          description: `${newMembersThisQuarter} new members this quarter at $${formatNumber(costPerAcquisition)} CAC`,
           priority: 'low',
           dueLabel: 'Ongoing',
           iconClass: 'fa-light fa-chart-line-up',
@@ -274,9 +236,9 @@ export class MemberAcquisitionDrawerComponent {
         const previous = quarterlyData[quarterlyData.length - 2];
         if (previous.cac > 0 && recent.cac < previous.cac) {
           const improvement = (((previous.cac - recent.cac) / previous.cac) * 100).toFixed(0);
-          insights.push({ text: `CAC improved ${improvement}% to $${this.formatNumber(recent.cac)} — marketing efficiency increasing`, type: 'driver' });
+          insights.push({ text: `CAC improved ${improvement}% to $${formatNumber(recent.cac)} — marketing efficiency increasing`, type: 'driver' });
         } else if (previous.cac > 0 && recent.cac > previous.cac) {
-          insights.push({ text: `CAC rose to $${this.formatNumber(recent.cac)} — acquisition becoming more expensive`, type: 'warning' });
+          insights.push({ text: `CAC rose to $${formatNumber(recent.cac)} — acquisition becoming more expensive`, type: 'warning' });
         }
       }
 
@@ -328,7 +290,7 @@ export class MemberAcquisitionDrawerComponent {
           {
             data: quarterlyData.map((d) => d.cac),
             borderColor: lfxColors.blue[500],
-            backgroundColor: `${lfxColors.blue[500]}1A`,
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
             tension: 0.4,
             borderWidth: 2,
@@ -350,7 +312,7 @@ export class MemberAcquisitionDrawerComponent {
             label: 'Renewal Rate',
             data: monthlyData.map((d) => d.value),
             borderColor: lfxColors.blue[500],
-            backgroundColor: `${lfxColors.blue[500]}1A`,
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
             tension: 0.4,
             borderWidth: 2,

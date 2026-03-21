@@ -3,8 +3,12 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { TagComponent } from '@components/tag/tag.component';
+import { createBarChartOptions, createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
@@ -16,7 +20,7 @@ import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsig
 
 @Component({
   selector: 'lfx-paid-social-reach-drawer',
-  imports: [DrawerModule, ChartComponent, SkeletonModule],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './paid-social-reach-drawer.component.html',
 })
 export class PaidSocialReachDrawerComponent {
@@ -32,27 +36,19 @@ export class PaidSocialReachDrawerComponent {
 
   // === Computed Signals (lazy-loaded data) ===
   protected readonly drawerData: Signal<SocialReachResponse> = this.initDrawerData();
-  protected readonly formattedTotalReach: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalReach));
-  protected readonly formattedTotalRevenue: Signal<string> = computed(() => this.formatCurrency(this.drawerData().totalRevenue));
+  protected readonly formattedTotalReach: Signal<string> = computed(() => formatNumber(this.drawerData().totalReach));
+  protected readonly formattedTotalRevenue: Signal<string> = computed(() => formatCurrency(this.drawerData().totalRevenue));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly roasChartData: Signal<ChartData<'bar'>> = this.initRoasChartData();
   protected readonly channelChartData: Signal<ChartData<'bar'>> = this.initChannelChartData();
 
-  protected readonly chartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly chartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => {
             const val = ctx.parsed.y ?? 0;
@@ -89,21 +85,13 @@ export class PaidSocialReachDrawerComponent {
     datasets: {
       bar: { barPercentage: 0.7, categoryPercentage: 0.9 },
     },
-  };
+  });
 
-  protected readonly roasChartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly roasChartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(2)}x ROAS`,
         },
@@ -130,22 +118,13 @@ export class PaidSocialReachDrawerComponent {
     datasets: {
       bar: { barPercentage: 0.7, categoryPercentage: 0.9 },
     },
-  };
+  });
 
-  protected readonly channelChartOptions: ChartOptions<'bar'> = {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly channelChartOptions: ChartOptions<'bar'> = createHorizontalBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => {
             const val = ctx.parsed.x ?? 0;
@@ -179,26 +158,14 @@ export class PaidSocialReachDrawerComponent {
         ticks: { color: lfxColors.gray[600], font: { size: 12 } },
       },
     },
-    datasets: {
-      bar: { barPercentage: 0.8, categoryPercentage: 1.0 },
-    },
-  };
+  });
+
+  protected readonly formatNumber = formatNumber;
+  protected readonly formatCurrency = formatCurrency;
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected formatNumber(num: number): string {
-    if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-    return num.toLocaleString();
-  }
-
-  protected formatCurrency(num: number): string {
-    if (num >= 999_950) return `$${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `$${(num / 1_000).toFixed(1)}K`;
-    return `$${num.toLocaleString()}`;
   }
 
   protected formatChannelName(name: string): string {
@@ -270,7 +237,10 @@ export class PaidSocialReachDrawerComponent {
         });
       }
 
-      if (channelGroups.length > 1) {
+      // NOTE: Channel-level spend/revenue/ROAS data is not yet available from the Snowflake
+      // BY_PROJECT_CHANNEL_MONTH table. When the analytics team adds these columns, remove
+      // these guards and enable the channel ROAS comparison logic below.
+      if (channelGroups.length > 1 && channelGroups.some((c) => c.roas > 0)) {
         const sorted = [...channelGroups].sort((a, b) => b.roas - a.roas);
         const best = sorted[0];
         const worst = sorted[sorted.length - 1];
@@ -289,7 +259,7 @@ export class PaidSocialReachDrawerComponent {
         if (roas > 1) {
           actions.push({
             title: 'Scale current campaigns',
-            description: `ROAS at ${roas.toFixed(2)}x with ${this.formatCurrency(totalRevenue)} revenue on ${this.formatCurrency(totalSpend)} spend — room to grow`,
+            description: `ROAS at ${roas.toFixed(2)}x with ${formatCurrency(totalRevenue)} revenue on ${formatCurrency(totalSpend)} spend — room to grow`,
             priority: 'low',
             dueLabel: 'Ongoing',
             iconClass: 'fa-light fa-chart-line-up',
@@ -297,7 +267,7 @@ export class PaidSocialReachDrawerComponent {
         } else {
           actions.push({
             title: 'Monitor campaign performance',
-            description: `${this.formatNumber(this.drawerData().totalReach)} impressions across ${channelGroups.length} channels`,
+            description: `${formatNumber(this.drawerData().totalReach)} impressions across ${channelGroups.length} channels`,
             priority: 'low',
             dueLabel: 'Ongoing',
             iconClass: 'fa-light fa-chart-line-up',
@@ -321,14 +291,14 @@ export class PaidSocialReachDrawerComponent {
       // ROAS insight
       if (roas >= 3) {
         insights.push({
-          text: `Strong ROAS at ${roas.toFixed(2)}x — ${this.formatCurrency(totalRevenue)} revenue on ${this.formatCurrency(totalSpend)} spend`,
+          text: `Strong ROAS at ${roas.toFixed(2)}x — ${formatCurrency(totalRevenue)} revenue on ${formatCurrency(totalSpend)} spend`,
           type: 'driver',
         });
       } else if (roas >= 1) {
         insights.push({ text: `ROAS at ${roas.toFixed(2)}x — profitable but room for optimization`, type: 'info' });
       } else if (totalSpend > 0) {
         insights.push({
-          text: `ROAS below break-even at ${roas.toFixed(2)}x — spending ${this.formatCurrency(totalSpend)} for ${this.formatCurrency(totalRevenue)} revenue`,
+          text: `ROAS below break-even at ${roas.toFixed(2)}x — spending ${formatCurrency(totalSpend)} for ${formatCurrency(totalRevenue)} revenue`,
           type: 'warning',
         });
       }

@@ -3,6 +3,7 @@
 
 import { Component, computed, signal, Signal } from '@angular/core';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
+import { TagComponent } from '@components/tag/tag.component';
 import { NORTH_STAR_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
 import { lfxColors } from '@lfx-one/shared/constants';
 import {
@@ -13,7 +14,7 @@ import {
   MemberAcquisitionResponse,
   MemberRetentionResponse,
 } from '@lfx-one/shared/interfaces';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 
 import { EngagedCommunityDrawerComponent } from '../engaged-community-drawer/engaged-community-drawer.component';
 import { FlywheelConversionDrawerComponent } from '../flywheel-conversion-drawer/flywheel-conversion-drawer.component';
@@ -24,6 +25,7 @@ import { MemberRetentionDrawerComponent } from '../member-retention-drawer/membe
   selector: 'lfx-north-star-metrics',
   imports: [
     MetricCardComponent,
+    TagComponent,
     EngagedCommunityDrawerComponent,
     MemberAcquisitionDrawerComponent,
     MemberRetentionDrawerComponent,
@@ -109,6 +111,7 @@ export class NorthStarMetricsComponent {
 
   // === Computed Signals ===
   protected readonly northStarCards: Signal<DashboardMetricCard[]> = this.initNorthStarCards();
+  private readonly formatNumber = formatNumber;
 
   // === Public Methods ===
   public handleCardClick(drawerType: DashboardDrawerType): void {
@@ -145,7 +148,7 @@ export class NorthStarMetricsComponent {
     return {
       ...card,
       loading: false,
-      value: this.formatNumber(data.totalMembers),
+      value: formatNumber(data.totalMembers),
       subtitle: 'Deduplicated · Newsletter + Community + WG',
       changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
@@ -173,7 +176,7 @@ export class NorthStarMetricsComponent {
       ...card,
       loading: false,
       value: `${data.newMembersThisQuarter}`,
-      subtitle: `This quarter · $${this.formatNumber(data.costPerAcquisition)} CAC`,
+      subtitle: `This quarter · $${formatNumber(data.costPerAcquisition)} CAC`,
       changePercentage: `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%`,
       trend: data.trend,
       chartData: {
@@ -243,11 +246,5 @@ export class NorthStarMetricsComponent {
       },
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
     };
-  }
-
-  private formatNumber(num: number): string {
-    if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-    return num.toLocaleString();
   }
 }

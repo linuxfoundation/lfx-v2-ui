@@ -3,8 +3,13 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { TableComponent } from '@components/table/table.component';
+import { TagComponent } from '@components/tag/tag.component';
+import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
@@ -16,13 +21,26 @@ import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsig
 
 @Component({
   selector: 'lfx-social-media-drawer',
-  imports: [DrawerModule, ChartComponent, SkeletonModule],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TableComponent, TagComponent],
   templateUrl: './social-media-drawer.component.html',
 })
 export class SocialMediaDrawerComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+
+  // === Icon Mapping (frontend concern — maps platform names to FontAwesome classes) ===
+  private readonly platformIconMap: Record<string, string> = {
+    Twitter: 'fa-brands fa-x-twitter',
+    'Twitter/X': 'fa-brands fa-x-twitter',
+    X: 'fa-brands fa-x-twitter',
+    LinkedIn: 'fa-brands fa-linkedin',
+    YouTube: 'fa-brands fa-youtube',
+    Mastodon: 'fa-brands fa-mastodon',
+    Bluesky: 'fa-brands fa-bluesky',
+    Facebook: 'fa-brands fa-facebook',
+    Instagram: 'fa-brands fa-instagram',
+  };
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -32,29 +50,21 @@ export class SocialMediaDrawerComponent {
 
   // === Computed Signals (lazy-loaded data) ===
   protected readonly drawerData: Signal<SocialMediaResponse> = this.initDrawerData();
-  protected readonly formattedTotalFollowers: Signal<string> = computed(() => this.formatNumber(this.drawerData().totalFollowers));
+  protected readonly formattedTotalFollowers: Signal<string> = computed(() => formatNumber(this.drawerData().totalFollowers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
   protected readonly platformChartData: Signal<ChartData<'bar'>> = this.initPlatformChartData();
 
-  protected readonly followerTrendChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly followerTrendChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => {
             const val = ctx.parsed.y ?? 0;
-            return ` ${this.formatNumber(val)} followers`;
+            return ` ${formatNumber(val)} followers`;
           },
         },
       },
@@ -82,26 +92,17 @@ export class SocialMediaDrawerComponent {
         },
       },
     },
-  };
+  });
 
-  protected readonly platformChartOptions: ChartOptions<'bar'> = {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly platformChartOptions: ChartOptions<'bar'> = createHorizontalBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => {
             const val = ctx.parsed.x ?? 0;
-            return ` ${this.formatNumber(val)} followers`;
+            return ` ${formatNumber(val)} followers`;
           },
         },
       },
@@ -129,20 +130,17 @@ export class SocialMediaDrawerComponent {
         ticks: { color: lfxColors.gray[600], font: { size: 12 } },
       },
     },
-    datasets: {
-      bar: { barPercentage: 0.8, categoryPercentage: 1.0 },
-    },
-  };
+  });
+
+  protected readonly formatNumber = formatNumber;
 
   // === Protected Methods ===
-  protected onClose(): void {
-    this.visible.set(false);
+  protected getIconClass(platformName: string): string {
+    return this.platformIconMap[platformName] || 'fa-light fa-globe';
   }
 
-  protected formatNumber(num: number): string {
-    if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-    return num.toLocaleString();
+  protected onClose(): void {
+    this.visible.set(false);
   }
 
   // === Private Initializers ===
@@ -225,7 +223,7 @@ export class SocialMediaDrawerComponent {
         if (lowest.engagementRate > 0 && lowest.followers > totalFollowers * 0.2) {
           actions.push({
             title: `Boost engagement on ${lowest.platform}`,
-            description: `${this.formatNumber(lowest.followers)} followers but only ${lowest.engagementRate.toFixed(1)}% engagement — try interactive content`,
+            description: `${formatNumber(lowest.followers)} followers but only ${lowest.engagementRate.toFixed(1)}% engagement — try interactive content`,
             priority: 'medium',
             dueLabel: 'This month',
             iconClass: 'fa-light fa-comments',
@@ -236,7 +234,7 @@ export class SocialMediaDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Continue growth strategy',
-          description: `${this.formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
+          description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
           iconClass: 'fa-light fa-chart-line-up',
@@ -309,7 +307,7 @@ export class SocialMediaDrawerComponent {
           {
             data: monthlyData.map((d) => d.totalFollowers),
             borderColor: lfxColors.blue[500],
-            backgroundColor: `${lfxColors.blue[500]}1A`,
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
             tension: 0.4,
             borderWidth: 2,

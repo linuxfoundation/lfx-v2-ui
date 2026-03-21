@@ -15,14 +15,14 @@
         <h2 class="text-lg font-semibold text-gray-900" data-testid="paid-social-reach-drawer-title">Paid Social Reach</h2>
         <p class="text-sm text-gray-500">Executive Director · Marketing view</p>
       </div>
-      <button
-        type="button"
-        (click)="onClose()"
-        class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
-        aria-label="Close panel"
-        data-testid="paid-social-reach-drawer-close">
-        <i class="fa-light fa-xmark text-xl"></i>
-      </button>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="paid-social-reach-drawer-close" />
     </div>
   </ng-template>
 
@@ -30,26 +30,32 @@
   <div class="flex flex-col gap-6 pb-2" data-testid="paid-social-reach-drawer-content">
     <!-- Summary Stats -->
     <div class="flex gap-4" data-testid="paid-social-reach-drawer-stats">
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">ROAS</span>
-        <div class="flex items-center gap-2">
-          <span class="text-2xl font-semibold text-gray-900">{{ drawerData().roas.toFixed(2) }}x</span>
-          @if (drawerData().changePercentage !== 0) {
-            <span class="text-sm font-medium" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-              <i [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up' : 'fa-light fa-arrow-down'"></i>
-              {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
-            </span>
-          }
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">ROAS</span>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl font-semibold text-gray-900">{{ drawerData().roas.toFixed(2) }}x</span>
+            @if (drawerData().changePercentage !== 0) {
+              <span class="text-sm font-medium" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+                <i [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up' : 'fa-light fa-arrow-down'"></i>
+                {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
+              </span>
+            }
+          </div>
         </div>
-      </div>
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">Total Impressions</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalReach() }}</span>
-      </div>
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">Revenue</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalRevenue() }}</span>
-      </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Total Impressions</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalReach() }}</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Revenue</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalRevenue() }}</span>
+        </div>
+      </lfx-card>
     </div>
 
     <!-- Recommended Actions -->
@@ -70,11 +76,11 @@
               <div class="flex items-center justify-between gap-2">
                 <span class="text-sm font-semibold text-gray-900">{{ action.title }}</span>
                 @if (action.priority === 'high') {
-                  <span class="text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 bg-red-100 text-red-700">High Priority</span>
+                  <lfx-tag value="High Priority" severity="danger" [rounded]="true" />
                 } @else if (action.priority === 'medium') {
-                  <span class="text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 bg-gray-100 text-gray-700">Medium Priority</span>
+                  <lfx-tag value="Medium Priority" severity="warn" [rounded]="true" />
                 } @else {
-                  <span class="text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 bg-blue-100 text-blue-700">Low Priority</span>
+                  <lfx-tag value="Low Priority" severity="info" [rounded]="true" />
                 }
               </div>
               <p class="text-sm text-gray-500 mt-0.5">{{ action.description }}</p>

@@ -3,8 +3,11 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
+import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { TagComponent } from '@components/tag/tag.component';
+import { createBarChartOptions, createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
@@ -16,7 +19,7 @@ import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction 
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
-  imports: [DrawerModule, ChartComponent, SkeletonModule],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './email-ctr-drawer.component.html',
 })
 export class EmailCtrDrawerComponent {
@@ -38,19 +41,11 @@ export class EmailCtrDrawerComponent {
   protected readonly campaignChartData: Signal<ChartData<'bar'>> = this.initCampaignChartData();
   protected readonly reachVsOpensChartData: Signal<ChartData<'bar'>> = this.initReachVsOpensChartData();
 
-  protected readonly chartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly chartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(2)}% CTR`,
         },
@@ -77,22 +72,13 @@ export class EmailCtrDrawerComponent {
     datasets: {
       bar: { barPercentage: 0.7, categoryPercentage: 0.9 },
     },
-  };
+  });
 
-  protected readonly campaignChartOptions: ChartOptions<'bar'> = {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly campaignChartOptions: ChartOptions<'bar'> = createHorizontalBarChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${(ctx.parsed.x ?? 0).toFixed(2)}% CTR`,
         },
@@ -116,14 +102,9 @@ export class EmailCtrDrawerComponent {
         ticks: { color: lfxColors.gray[600], font: { size: 12 } },
       },
     },
-    datasets: {
-      bar: { barPercentage: 0.8, categoryPercentage: 1.0 },
-    },
-  };
+  });
 
-  protected readonly reachVsOpensChartOptions: ChartOptions<'bar'> = {
-    responsive: true,
-    maintainAspectRatio: false,
+  protected readonly reachVsOpensChartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
       legend: {
         display: true,
@@ -131,13 +112,7 @@ export class EmailCtrDrawerComponent {
         labels: { color: lfxColors.gray[600], font: { size: 11 }, boxWidth: 12, padding: 16 },
       },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        titleColor: lfxColors.gray[900],
-        bodyColor: lfxColors.gray[600],
-        borderColor: lfxColors.gray[200],
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 6,
+        ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString()}`,
         },
@@ -169,7 +144,7 @@ export class EmailCtrDrawerComponent {
     datasets: {
       bar: { barPercentage: 0.7, categoryPercentage: 0.9 },
     },
-  };
+  });
 
   // === Protected Methods ===
   protected onClose(): void {

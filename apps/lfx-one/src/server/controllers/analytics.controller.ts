@@ -1669,6 +1669,12 @@ export class AnalyticsController {
     }
   }
 
+  // Marketing Analytics Endpoints
+  // Note on parameter naming:
+  // - Web Activities uses `foundationSlug` (PROJECT_SLUG column in WEB_ACTIVITIES_* tables)
+  // - Email CTR, Social Reach, Social Media use `foundationName` (FOUNDATION_NAME/PROJECT_NAME columns)
+  // This reflects the different key columns in the underlying Snowflake Platinum tables.
+
   /**
    * GET /api/analytics/web-activities-summary
    * Get web activities summary grouped by domain category
@@ -1734,7 +1740,7 @@ export class AnalyticsController {
 
   /**
    * GET /api/analytics/social-reach
-   * Get paid social reach and ROAS data from Snowflake Platinum tables
+   * Get paid social reach and ROAS data
    */
   public async getSocialReach(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_social_reach');

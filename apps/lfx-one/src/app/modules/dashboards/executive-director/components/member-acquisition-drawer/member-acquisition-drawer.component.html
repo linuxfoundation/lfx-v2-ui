@@ -15,14 +15,14 @@
         <h2 class="text-lg font-semibold text-gray-900" data-testid="member-acquisition-drawer-title">Member Growth & Retention</h2>
         <p class="text-sm text-gray-500">Executive Director · North Star Metric</p>
       </div>
-      <button
-        type="button"
-        (click)="onClose()"
-        class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
-        aria-label="Close panel"
-        data-testid="member-acquisition-drawer-close">
-        <i class="fa-light fa-xmark text-xl"></i>
-      </button>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="member-acquisition-drawer-close" />
     </div>
   </ng-template>
 
@@ -30,55 +30,67 @@
   <div class="flex flex-col gap-6 pb-2" data-testid="member-acquisition-drawer-content">
     <!-- Summary Stats -->
     <div class="flex gap-4" data-testid="member-acquisition-drawer-stats">
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">New Members (Q)</span>
-        <span class="text-2xl font-semibold text-gray-900">{{ data().newMembersThisQuarter }}</span>
-      </div>
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">Cost per Acquisition</span>
-        <span class="text-2xl font-semibold text-gray-900">${{ formattedCostPerAcquisition() }}</span>
-      </div>
-      <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-        <span class="text-sm text-gray-500">Growth</span>
-        @if (data().changePercentage !== 0) {
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-              {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
-            </span>
-            <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
-          </div>
-        } @else {
-          <span class="text-2xl font-semibold text-gray-500">0%</span>
-        }
-      </div>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">New Members (Q)</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ data().newMembersThisQuarter }}</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Cost per Acquisition</span>
+          <span class="text-2xl font-semibold text-gray-900">${{ formattedCostPerAcquisition() }}</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Growth</span>
+          @if (data().changePercentage !== 0) {
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+              </span>
+              <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
+            </div>
+          } @else {
+            <span class="text-2xl font-semibold text-gray-500">0%</span>
+          }
+        </div>
+      </lfx-card>
     </div>
 
     <!-- Retention Stats (if available) -->
     @if (retentionData().renewalRate > 0) {
       <div class="flex gap-4" data-testid="member-acquisition-drawer-retention-stats">
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Renewal Rate</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ retentionData().renewalRate }}%</span>
-        </div>
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">Net Revenue Retention</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ retentionData().netRevenueRetention }}%</span>
-        </div>
-        <div class="flex-1 flex flex-col gap-1 p-4 border border-gray-200 rounded-lg">
-          <span class="text-sm text-gray-500">vs Target ({{ retentionData().target }}%)</span>
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-semibold" [class]="retentionData().renewalRate >= retentionData().target ? 'text-green-600' : 'text-red-600'">
-              {{ retentionData().renewalRate >= retentionData().target ? 'Above' : 'Below' }}
-            </span>
-            <i
-              class="text-sm"
-              [class]="
-                retentionData().renewalRate >= retentionData().target
-                  ? 'fa-light fa-check-circle text-green-600'
-                  : 'fa-light fa-circle-exclamation text-red-600'
-              "></i>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Renewal Rate</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().renewalRate }}%</span>
           </div>
-        </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Net Revenue Retention</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().netRevenueRetention }}%</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">vs Target ({{ retentionData().target }}%)</span>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-semibold" [class]="retentionData().renewalRate >= retentionData().target ? 'text-green-600' : 'text-red-600'">
+                {{ retentionData().renewalRate >= retentionData().target ? 'Above' : 'Below' }}
+              </span>
+              <i
+                class="text-sm"
+                [class]="
+                  retentionData().renewalRate >= retentionData().target
+                    ? 'fa-light fa-check-circle text-green-600'
+                    : 'fa-light fa-circle-exclamation text-red-600'
+                "></i>
+            </div>
+          </div>
+        </lfx-card>
       </div>
     }
 
@@ -101,9 +113,9 @@
               <div class="flex items-center justify-between gap-2">
                 <span class="text-sm font-semibold text-gray-900">{{ action.title }}</span>
                 @if (action.priority === 'high') {
-                  <span class="text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 bg-red-100 text-red-700">High Priority</span>
+                  <lfx-tag value="High Priority" severity="danger" [rounded]="true" />
                 } @else {
-                  <span class="text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 bg-amber-100 text-amber-700">Medium Priority</span>
+                  <lfx-tag value="Medium Priority" severity="warn" [rounded]="true" />
                 }
               </div>
               <p class="text-sm text-gray-500 mt-0.5">{{ action.description }}</p>
