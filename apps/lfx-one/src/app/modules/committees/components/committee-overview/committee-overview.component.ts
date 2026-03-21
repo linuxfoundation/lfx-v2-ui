@@ -67,7 +67,6 @@ export class CommitteeOverviewComponent {
   // Outputs
   public readonly committeeUpdated = output<void>();
   public readonly joinRequested = output<void>();
-  public readonly leaveRequested = output<void>();
   public readonly tabNavigated = output<string>();
 
   // Chairs modal state
