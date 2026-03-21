@@ -94,6 +94,10 @@ export class CommitteeOverviewComponent {
   public votesLoading = signal(true);
   public surveysLoading = signal(true);
 
+  // Loading states for meeting sections
+  public upcomingMeetingsLoading = signal(true);
+  public pastMeetingsLoading = signal(true);
+
   // Computed: chairs derived from members
   public chairs: Signal<CommitteeMember[]> = this.initChairs();
 
@@ -356,7 +360,16 @@ export class CommitteeOverviewComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.meetingService.getUpcomingMeetingsByCommittee(c.uid).pipe(catchError(() => of([]))))
+        tap(() => this.upcomingMeetingsLoading.set(true)),
+        switchMap((c) =>
+          this.meetingService.getUpcomingMeetingsByCommittee(c.uid).pipe(
+            tap(() => this.upcomingMeetingsLoading.set(false)),
+            catchError(() => {
+              this.upcomingMeetingsLoading.set(false);
+              return of([]);
+            })
+          )
+        )
       ),
       { initialValue: [] }
     );
@@ -366,7 +379,16 @@ export class CommitteeOverviewComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
-        switchMap((c) => this.meetingService.getPastMeetingsByCommittee(c.uid, 1).pipe(catchError(() => of([]))))
+        tap(() => this.pastMeetingsLoading.set(true)),
+        switchMap((c) =>
+          this.meetingService.getPastMeetingsByCommittee(c.uid, 1).pipe(
+            tap(() => this.pastMeetingsLoading.set(false)),
+            catchError(() => {
+              this.pastMeetingsLoading.set(false);
+              return of([]);
+            })
+          )
+        )
       ),
       { initialValue: [] }
     );
