@@ -249,6 +249,7 @@ export class CommitteeViewComponent {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
         },
       });
+  }
 
   // -- Private helpers --
   private isMemberOrAdmin(): boolean {
