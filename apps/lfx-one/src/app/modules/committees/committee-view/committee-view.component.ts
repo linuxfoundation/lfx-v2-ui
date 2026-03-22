@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -49,6 +49,8 @@ export class CommitteeViewComponent {
   public error = signal<boolean>(false);
   public errorType = signal<'not-found' | 'server-error' | null>(null);
   public refresh = signal(0);
+  public myRoleLoading = signal(true);
+  public myRole = signal<string | null>(null);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -66,6 +68,39 @@ export class CommitteeViewComponent {
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
   public isVotesTabVisible: Signal<boolean> = computed(() => !!this.committee()?.enable_voting);
 
+  // -- Visitor gating --
+  public isVisitor: Signal<boolean> = computed(() => this.myRole() === null && !this.myRoleLoading());
+
+  public readonly tabConfig: { key: CommitteeTab; label: string; icon: string; visible: () => boolean; badge?: () => number | null }[] = [
+    { key: 'overview', label: 'Overview', icon: 'fa-gauge', visible: () => true },
+    {
+      key: 'members',
+      label: 'Members',
+      icon: 'fa-users',
+      visible: () => this.isMemberOrAdmin() && this.isMembersTabVisible(),
+      badge: () => this.committee()?.total_members ?? null,
+    },
+    { key: 'votes', label: 'Votes', icon: 'fa-check-to-slot', visible: () => this.isMemberOrAdmin() && this.isVotesTabVisible() },
+    { key: 'meetings', label: 'Meetings', icon: 'fa-calendar', visible: () => this.isMemberOrAdmin() },
+    { key: 'surveys', label: 'Surveys', icon: 'fa-chart-simple', visible: () => this.isMemberOrAdmin() },
+    { key: 'documents', label: 'Documents', icon: 'fa-folder-open', visible: () => this.isMemberOrAdmin() },
+    { key: 'settings', label: 'Settings', icon: 'fa-gear', visible: () => this.canEdit() },
+  ];
+
+  public visibleTabs: Signal<typeof this.tabConfig> = computed(() => this.tabConfig.filter((tab) => tab.visible()));
+
+  // Reset activeTab to overview if current tab becomes hidden
+  private readonly syncActiveTab = effect(
+    () => {
+      const visible = this.visibleTabs();
+      const current = this.activeTab();
+      if (visible.length > 0 && !visible.some((t) => t.key === current)) {
+        this.activeTab.set('overview');
+      }
+    },
+    { allowSignalWrites: true }
+  );
+
   // -- Public methods --
   public goBack(): void {
     this.router.navigate(['/', 'groups']);
@@ -74,6 +109,11 @@ export class CommitteeViewComponent {
   public refreshCommittee(): void {
     this.loading.set(true);
     this.refresh.update((v) => v + 1);
+  }
+
+  // -- Private helpers --
+  private isMemberOrAdmin(): boolean {
+    return !this.isVisitor() || this.canEdit();
   }
 
   // -- Private initializer functions --
