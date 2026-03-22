@@ -3,6 +3,7 @@
 
 import { afterNextRender, Component, computed, inject, signal, Signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -37,6 +38,7 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
 @Component({
   selector: 'lfx-marketing-overview',
   imports: [
+    ButtonComponent,
     CardComponent,
     MetricCardComponent,
     ScrollShadowDirective,
