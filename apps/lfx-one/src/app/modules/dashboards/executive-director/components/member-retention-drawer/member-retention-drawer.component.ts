@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, model, Signal } from '@angular/core';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -14,9 +15,8 @@ import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyI
 
 @Component({
   selector: 'lfx-member-retention-drawer',
-  imports: [CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-retention-drawer.component.html',
-  styleUrl: './member-retention-drawer.component.scss',
 })
 export class MemberRetentionDrawerComponent {
   // === Model Signals (two-way binding) ===

@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -19,9 +20,8 @@ import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsig
 
 @Component({
   selector: 'lfx-paid-social-reach-drawer',
-  imports: [CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './paid-social-reach-drawer.component.html',
-  styleUrl: './paid-social-reach-drawer.component.scss',
 })
 export class PaidSocialReachDrawerComponent {
   // === Services ===

@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -19,9 +20,8 @@ import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, Marketin
 
 @Component({
   selector: 'lfx-website-visits-drawer',
-  imports: [CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './website-visits-drawer.component.html',
-  styleUrl: './website-visits-drawer.component.scss',
 })
 export class WebsiteVisitsDrawerComponent {
   // === Services ===

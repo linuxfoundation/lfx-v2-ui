@@ -15,14 +15,14 @@
         <h2 class="text-lg font-semibold text-gray-900" data-testid="email-ctr-drawer-title">Email Click-Through Rate</h2>
         <p class="text-sm text-gray-500">Executive Director · Marketing view</p>
       </div>
-      <button
-        type="button"
-        (click)="onClose()"
-        class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
-        aria-label="Close panel"
-        data-testid="email-ctr-drawer-close">
-        <i class="fa-light fa-xmark text-xl"></i>
-      </button>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="email-ctr-drawer-close" />
     </div>
   </ng-template>
 

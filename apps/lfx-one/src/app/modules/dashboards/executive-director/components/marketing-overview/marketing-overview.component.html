@@ -60,7 +60,7 @@
             [value]="'' + memberAcquisitionData.newMembersThisQuarter"
             [changePercentage]="memberRetentionData.renewalRate + '% retention · NRR ' + memberRetentionData.netRevenueRetention + '%'"
             trend="up"
-            [subtitle]="'+' + memberAcquisitionData.newMembersThisQuarter + '/q · CAC $' + formattedCac"
+            [subtitle]="'+' + memberAcquisitionData.newMembersThisQuarter + '/q · CAC $' + formatNumber(memberAcquisitionData.costPerAcquisition)"
             testId="flywheel-pulse-member-growth"
             [clickable]="true"
             (cardClick)="handleCardClick(DashboardDrawerType.NorthStarMemberAcquisition)"></lfx-metric-card>
@@ -70,7 +70,7 @@
             title="Engaged Community"
             icon="fa-light fa-people-group"
             chartType="line"
-            [value]="formattedEngagedTotal"
+            [value]="formatNumber(engagedCommunityData.totalMembers)"
             [changePercentage]="(engagedCommunityData.changePercentage > 0 ? '↑' : '↓') + ' ' + engagedCommunityData.changePercentage + '% growth'"
             trend="up"
             subtitle="Newsletter + Community + Working Groups"

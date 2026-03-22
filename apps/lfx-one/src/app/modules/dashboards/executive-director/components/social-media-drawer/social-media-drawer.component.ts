@@ -1,9 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TableComponent } from '@components/table/table.component';
@@ -21,9 +21,8 @@ import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsig
 
 @Component({
   selector: 'lfx-social-media-drawer',
-  imports: [DecimalPipe, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TableComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TableComponent, TagComponent],
   templateUrl: './social-media-drawer.component.html',
-  styleUrl: './social-media-drawer.component.scss',
 })
 export class SocialMediaDrawerComponent {
   // === Services ===
