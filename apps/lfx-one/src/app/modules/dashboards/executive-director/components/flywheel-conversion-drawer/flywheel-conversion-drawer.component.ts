@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, input, model, Signal } from '@angular/core';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -15,8 +14,9 @@ import type { FlywheelConversionResponse, MarketingRecommendedAction, MarketingK
 
 @Component({
   selector: 'lfx-flywheel-conversion-drawer',
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './flywheel-conversion-drawer.component.html',
+  styleUrl: './flywheel-conversion-drawer.component.scss',
 })
 export class FlywheelConversionDrawerComponent {
   // === Model Signals (two-way binding) ===

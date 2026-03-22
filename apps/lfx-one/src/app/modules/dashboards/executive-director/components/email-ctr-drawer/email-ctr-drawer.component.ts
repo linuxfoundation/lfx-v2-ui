@@ -3,7 +3,6 @@
 
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -19,8 +18,9 @@ import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction 
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
+  imports: [CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './email-ctr-drawer.component.html',
+  styleUrl: './email-ctr-drawer.component.scss',
 })
 export class EmailCtrDrawerComponent {
   // === Services ===

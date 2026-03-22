@@ -15,14 +15,14 @@
         <h2 class="text-lg font-semibold text-gray-900" data-testid="website-visits-drawer-title">Website Visits</h2>
         <p class="text-sm text-gray-500">Executive Director · Marketing view</p>
       </div>
-      <lfx-button
-        icon="fa-light fa-xmark"
-        [text]="true"
-        [rounded]="true"
-        severity="secondary"
-        ariaLabel="Close panel"
-        (onClick)="onClose()"
-        data-testid="website-visits-drawer-close" />
+      <button
+        type="button"
+        (click)="onClose()"
+        class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+        aria-label="Close panel"
+        data-testid="website-visits-drawer-close">
+        <i class="fa-light fa-xmark text-xl"></i>
+      </button>
     </div>
   </ng-template>
 
