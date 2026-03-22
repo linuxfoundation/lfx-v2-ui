@@ -22,6 +22,7 @@ import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, Marketin
   selector: 'lfx-website-visits-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './website-visits-drawer.component.html',
+  styleUrl: './website-visits-drawer.component.scss',
 })
 export class WebsiteVisitsDrawerComponent {
   // === Services ===

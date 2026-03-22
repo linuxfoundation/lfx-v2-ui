@@ -17,6 +17,7 @@ import type { EngagedCommunitySizeResponse, MarketingRecommendedAction, Marketin
   selector: 'lfx-engaged-community-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './engaged-community-drawer.component.html',
+  styleUrl: './engaged-community-drawer.component.scss',
 })
 export class EngagedCommunityDrawerComponent {
   // === Model Signals (two-way binding) ===

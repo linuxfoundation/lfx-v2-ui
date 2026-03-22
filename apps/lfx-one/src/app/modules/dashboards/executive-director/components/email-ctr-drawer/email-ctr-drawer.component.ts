@@ -21,6 +21,7 @@ import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction 
   selector: 'lfx-email-ctr-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './email-ctr-drawer.component.html',
+  styleUrl: './email-ctr-drawer.component.scss',
 })
 export class EmailCtrDrawerComponent {
   // === Services ===

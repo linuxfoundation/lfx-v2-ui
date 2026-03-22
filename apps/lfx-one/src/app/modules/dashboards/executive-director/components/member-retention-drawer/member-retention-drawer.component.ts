@@ -17,6 +17,7 @@ import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyI
   selector: 'lfx-member-retention-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-retention-drawer.component.html',
+  styleUrl: './member-retention-drawer.component.scss',
 })
 export class MemberRetentionDrawerComponent {
   // === Model Signals (two-way binding) ===

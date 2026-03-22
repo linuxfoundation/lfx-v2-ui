@@ -17,6 +17,7 @@ import type { FlywheelConversionResponse, MarketingRecommendedAction, MarketingK
   selector: 'lfx-flywheel-conversion-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './flywheel-conversion-drawer.component.html',
+  styleUrl: './flywheel-conversion-drawer.component.scss',
 })
 export class FlywheelConversionDrawerComponent {
   // === Model Signals (two-way binding) ===

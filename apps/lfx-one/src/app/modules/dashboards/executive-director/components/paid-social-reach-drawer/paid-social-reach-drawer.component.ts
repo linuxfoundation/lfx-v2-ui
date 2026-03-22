@@ -22,6 +22,7 @@ import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsig
   selector: 'lfx-paid-social-reach-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
   templateUrl: './paid-social-reach-drawer.component.html',
+  styleUrl: './paid-social-reach-drawer.component.scss',
 })
 export class PaidSocialReachDrawerComponent {
   // === Services ===

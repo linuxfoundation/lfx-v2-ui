@@ -17,6 +17,7 @@ import type { MemberAcquisitionResponse, MemberRetentionResponse, MarketingRecom
   selector: 'lfx-member-acquisition-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-acquisition-drawer.component.html',
+  styleUrl: './member-acquisition-drawer.component.scss',
 })
 export class MemberAcquisitionDrawerComponent {
   // === Model Signals (two-way binding) ===

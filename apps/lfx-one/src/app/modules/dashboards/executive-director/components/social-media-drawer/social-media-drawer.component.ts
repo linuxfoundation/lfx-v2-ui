@@ -23,6 +23,7 @@ import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsig
   selector: 'lfx-social-media-drawer',
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TableComponent, TagComponent],
   templateUrl: './social-media-drawer.component.html',
+  styleUrl: './social-media-drawer.component.scss',
 })
 export class SocialMediaDrawerComponent {
   // === Services ===
