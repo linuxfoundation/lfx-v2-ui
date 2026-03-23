@@ -32,6 +32,7 @@ import { MemberRetentionDrawerComponent } from '../member-retention-drawer/membe
     FlywheelConversionDrawerComponent,
   ],
   templateUrl: './north-star-metrics.component.html',
+  styleUrl: './north-star-metrics.component.scss',
 })
 export class NorthStarMetricsComponent {
   // === WritableSignals ===
