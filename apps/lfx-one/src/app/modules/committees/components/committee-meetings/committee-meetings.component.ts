@@ -6,20 +6,18 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
-import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
 import { Committee, Meeting, PastMeeting } from '@lfx-one/shared/interfaces';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { MeetingService } from '@services/meeting.service';
-import { SkeletonModule } from 'primeng/skeleton';
 import { debounceTime, distinctUntilChanged, filter, finalize, startWith, switchMap, tap } from 'rxjs';
 
 type TimeFilter = 'upcoming' | 'past';
 
 @Component({
   selector: 'lfx-committee-meetings',
-  imports: [ReactiveFormsModule, CardComponent, InputTextComponent, MessageComponent, SelectComponent, MeetingCardComponent, SkeletonModule],
+  imports: [ReactiveFormsModule, CardComponent, InputTextComponent, SelectComponent, MeetingCardComponent],
   templateUrl: './committee-meetings.component.html',
   styleUrl: './committee-meetings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,15 +30,15 @@ export class CommitteeMeetingsComponent {
   public canEdit = input<boolean>(false);
   public initialTimeFilter = input<TimeFilter>('upcoming');
 
-  // Form for search + filters
+  // Filter state — linkedSignal tracks initialTimeFilter but allows local overrides
+  public timeFilter = linkedSignal(() => this.initialTimeFilter());
+
+  // Form for search + filters — timeFilter synced with initialTimeFilter
   public searchForm = new FormGroup({
     search: new FormControl(''),
     meetingType: new FormControl<string | null>(null),
-    timeFilter: new FormControl<TimeFilter>('upcoming'),
+    timeFilter: new FormControl<TimeFilter>(this.initialTimeFilter()),
   });
-
-  // Filter state — linkedSignal tracks initialTimeFilter but allows local overrides
-  public timeFilter = linkedSignal(() => this.initialTimeFilter());
   public meetingTypeFilter = signal<string | null>(null);
 
   // Filter options
@@ -81,9 +79,10 @@ export class CommitteeMeetingsComponent {
   // Filtered data
   public filteredMeetings: Signal<(Meeting | PastMeeting)[]> = this.initFilteredMeetings();
 
-  /** Handles time filter change from dropdown. */
+  /** Handles time filter change from dropdown — syncs signal and form control. */
   public onTimeFilterChange(value: TimeFilter): void {
     this.timeFilter.set(value);
+    this.searchForm.get('timeFilter')?.setValue(value, { emitEvent: false });
   }
 
   /** Handles meeting type filter change from dropdown. */
