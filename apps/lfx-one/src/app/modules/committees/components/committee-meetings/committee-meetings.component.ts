@@ -1,14 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, linkedSignal, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
+import { SelectComponent } from '@components/select/select.component';
 import { Committee, Meeting, PastMeeting } from '@lfx-one/shared/interfaces';
+import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { MeetingService } from '@services/meeting.service';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -18,9 +19,10 @@ type TimeFilter = 'upcoming' | 'past';
 
 @Component({
   selector: 'lfx-committee-meetings',
-  imports: [ReactiveFormsModule, ButtonComponent, CardComponent, InputTextComponent, MessageComponent, MeetingCardComponent, SkeletonModule],
+  imports: [ReactiveFormsModule, CardComponent, InputTextComponent, MessageComponent, SelectComponent, MeetingCardComponent, SkeletonModule],
   templateUrl: './committee-meetings.component.html',
   styleUrl: './committee-meetings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommitteeMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
@@ -30,16 +32,30 @@ export class CommitteeMeetingsComponent {
   public canEdit = input<boolean>(false);
   public initialTimeFilter = input<TimeFilter>('upcoming');
 
-  // Filter state — linkedSignal tracks initialTimeFilter but allows local overrides
-  public searchForm = new FormGroup({ search: new FormControl('') });
-  public searchControl = this.searchForm.get('search') as FormControl;
-  public timeFilter = linkedSignal(() => this.initialTimeFilter());
+  // Form for search + filters
+  public searchForm = new FormGroup({
+    search: new FormControl(''),
+    meetingType: new FormControl<string | null>(null),
+    timeFilter: new FormControl<TimeFilter>('upcoming'),
+  });
 
-  // Time filter options
-  public timeOptions: { label: string; value: TimeFilter }[] = [
+  // Filter state — linkedSignal tracks initialTimeFilter but allows local overrides
+  public timeFilter = linkedSignal(() => this.initialTimeFilter());
+  public meetingTypeFilter = signal<string | null>(null);
+
+  // Filter options
+  public timeFilterOptions: { label: string; value: TimeFilter }[] = [
     { label: 'Upcoming', value: 'upcoming' },
     { label: 'Past', value: 'past' },
   ];
+
+  public meetingTypeOptions: Signal<{ label: string; value: string | null }[]> = computed(() => {
+    const types = Object.entries(MEETING_TYPE_CONFIGS).map(([, config]) => ({
+      label: config.label,
+      value: config.label,
+    }));
+    return [{ label: 'All Types', value: null }, ...types];
+  });
 
   // Loading state
   public meetingsLoading = signal(true);
@@ -65,8 +81,14 @@ export class CommitteeMeetingsComponent {
   // Filtered data
   public filteredMeetings: Signal<(Meeting | PastMeeting)[]> = this.initFilteredMeetings();
 
-  public setTimeFilter(value: TimeFilter): void {
+  /** Handles time filter change from dropdown. */
+  public onTimeFilterChange(value: TimeFilter): void {
     this.timeFilter.set(value);
+  }
+
+  /** Handles meeting type filter change from dropdown. */
+  public onMeetingTypeChange(value: string | null): void {
+    this.meetingTypeFilter.set(value);
   }
 
   // Private initializer functions
@@ -82,20 +104,24 @@ export class CommitteeMeetingsComponent {
   }
 
   private initFilteredMeetings(): Signal<(Meeting | PastMeeting)[]> {
-    const searchTerm = toSignal(this.searchControl.valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), { initialValue: '' });
+    const searchTerm = toSignal((this.searchForm.get('search') as FormControl).valueChanges.pipe(startWith(''), debounceTime(300), distinctUntilChanged()), {
+      initialValue: '',
+    });
 
     return computed(() => {
       const time = this.timeFilter();
       const term = (searchTerm() || '').toLowerCase();
+      const typeFilter = this.meetingTypeFilter();
       const items: (Meeting | PastMeeting)[] = time === 'upcoming' ? this.meetings() : this.pastMeetings();
-
-      if (!term) {
-        return items;
-      }
 
       return items.filter((m) => {
         const title = 'title' in m ? m.title : '';
-        return title.toLowerCase().includes(term);
+        const meetingType = 'meeting_type' in m ? m.meeting_type : '';
+
+        const matchesSearch = !term || title.toLowerCase().includes(term);
+        const matchesType = !typeFilter || meetingType?.toLowerCase() === typeFilter.toLowerCase();
+
+        return matchesSearch && matchesType;
       });
     });
   }
