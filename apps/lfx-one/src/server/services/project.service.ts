@@ -1668,14 +1668,12 @@ export class ProjectService {
     };
   }
 
-  // Marketing Analytics Queries (ANALYTICS.PLATINUM.* schema)
-  // Note: Marketing/HubSpot tables use ANALYTICS.PLATINUM.* schema,
-  // while LFX-curated views (foundation-health, board-member) use ANALYTICS.PLATINUM_LFX_ONE.*.
-  // Both are valid production schemas — the split reflects different data pipelines.
+  // Marketing Analytics Queries (ANALYTICS.PLATINUM_LFX_ONE.* schema)
+  // All marketing and dashboard views now use the unified ANALYTICS.PLATINUM_LFX_ONE.* schema.
 
   /**
    * Get web activities summary grouped by domain category
-   * Queries ANALYTICS.PLATINUM.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM.WEB_ACTIVITIES_BY_PROJECT
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_SUMMARY and PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
    */
   public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
     logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
@@ -1687,7 +1685,7 @@ export class ProjectService {
           LF_SUB_DOMAIN_CLASSIFICATION,
           SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS,
           SUM(TOTAL_PAGE_VIEWS_LAST_30_DAYS) AS TOTAL_PAGE_VIEWS
-        FROM ANALYTICS.PLATINUM.WEB_ACTIVITIES_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_SUMMARY
         WHERE PROJECT_SLUG = ?
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
@@ -1698,7 +1696,7 @@ export class ProjectService {
         SELECT
           ACTIVITY_DATE,
           SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
-        FROM ANALYTICS.PLATINUM.WEB_ACTIVITIES_BY_PROJECT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
         WHERE PROJECT_SLUG = ?
           AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
         GROUP BY ACTIVITY_DATE
@@ -1739,7 +1737,7 @@ export class ProjectService {
 
   /**
    * Get email click-through rate data from Snowflake
-   * Queries ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY and ANALYTICS.PLATINUM.EMAIL_CTR_BY_MONTH
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY and PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
    * @param foundationName - Foundation name used to filter metrics
    * @returns Email CTR response with monthly trend and change percentage
    */
@@ -1753,7 +1751,7 @@ export class ProjectService {
           PROJECT_NAME,
           CTR_LAST_COMPLETED_MONTH,
           CTR_MOM_CHANGE
-        FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY
         WHERE PROJECT_NAME = ?
       `;
 
@@ -1765,7 +1763,7 @@ export class ProjectService {
           MONTHLY_CTR,
           TOTAL_SENDS,
           TOTAL_OPENS
-        FROM ANALYTICS.PLATINUM.EMAIL_CTR_BY_MONTH
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
         WHERE PROJECT_NAME = ?
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         ORDER BY PUBLISHED_MONTH_DATE ASC
@@ -1777,7 +1775,7 @@ export class ProjectService {
           PROJECT_NAME,
           LF_SUB_DOMAIN_CLASSIFICATION,
           CTR_LAST_6_MONTHS AS AVG_CTR
-        FROM ANALYTICS.PLATINUM.EMAIL_CTR_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY
         WHERE PROJECT_NAME = ?
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
@@ -1836,7 +1834,7 @@ export class ProjectService {
 
   /**
    * Get paid social reach metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
    * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
    * @returns Social reach response with ROAS, impressions, spend, revenue, and channel breakdown
    */
@@ -1847,7 +1845,7 @@ export class ProjectService {
       // Block 1: Total impressions, spend, revenue (last 6 months)
       const impressionsQuery = `
       SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(REVENUE) AS TOTAL_REVENUE
-      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
     `;
@@ -1855,7 +1853,7 @@ export class ProjectService {
       // Block 2: ROAS KPI — latest completed month
       const roasKpiQuery = `
       SELECT ROAS, ROAS_MOM_PCT
-      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE FOUNDATION_NAME = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
       QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
@@ -1864,7 +1862,7 @@ export class ProjectService {
       // Block 3: Monthly ROAS trend (bar chart, last 6 months)
       const monthlyRoasQuery = `
       SELECT CAMPAIGN_MONTH, ROAS
-      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       ORDER BY CAMPAIGN_MONTH
@@ -1873,7 +1871,7 @@ export class ProjectService {
       // Block 4: Monthly impressions (bar chart, last 6 months)
       const monthlyImpressionsQuery = `
       SELECT CAMPAIGN_MONTH, IMPRESSIONS
-      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       ORDER BY CAMPAIGN_MONTH
@@ -1883,7 +1881,7 @@ export class ProjectService {
       // Note: BY_PROJECT_CHANNEL_MONTH only has IMPRESSIONS — SPEND/REVENUE are on BY_PROJECT_MONTH
       const channelQuery = `
       SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
-      FROM ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       GROUP BY CHANNEL
@@ -2051,7 +2049,7 @@ export class ProjectService {
 
   /**
    * Get social media metrics from Snowflake Platinum tables
-   * Queries social_media_overview, social_media_platform_breakdown, and social_media_follower_trend
+   * Queries PLATINUM_LFX_ONE_SOCIAL_MEDIA_OVERVIEW, PLATINUM_LFX_ONE_SOCIAL_MEDIA_PLATFORM_BREAKDOWN, and PLATINUM_LFX_ONE_SOCIAL_MEDIA_FOLLOWER_TREND
    * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
    * @returns Social media response with followers, platform breakdown, and trend data
    */
@@ -2072,7 +2070,7 @@ export class ProjectService {
               / SUM(PRIOR_TOTAL_FOLLOWERS) * 100, 1
             )
         END AS FOLLOWER_GROWTH_PCT
-      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_OVERVIEW
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_OVERVIEW
       WHERE FOUNDATION_NAME = ?
     `;
 
@@ -2087,7 +2085,7 @@ export class ProjectService {
         END AS ENGAGEMENT_RATE_PCT,
         SUM(POSTS_30D) AS POSTS_30D,
         SUM(IMPRESSIONS) AS IMPRESSIONS
-      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_PLATFORM_BREAKDOWN
       WHERE FOUNDATION_NAME = ?
       GROUP BY PLATFORM_NAME
       ORDER BY FOLLOWERS DESC
@@ -2098,7 +2096,7 @@ export class ProjectService {
       SELECT
         SNAPSHOT_MONTH,
         SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
-      FROM ANALYTICS.PLATINUM.SOCIAL_MEDIA_FOLLOWER_TREND
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_FOLLOWER_TREND
       WHERE FOUNDATION_NAME = ?
         AND SNAPSHOT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY SNAPSHOT_MONTH
