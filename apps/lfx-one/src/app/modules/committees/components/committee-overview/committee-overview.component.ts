@@ -23,7 +23,7 @@ import { VoteService } from '@services/vote.service';
 import { SurveyService } from '@services/survey.service';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { MessageService } from 'primeng/api';
-import { catchError, EMPTY, filter, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, filter, finalize, forkJoin, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-overview',
@@ -347,7 +347,7 @@ export class CommitteeOverviewComponent {
         filter((c) => !!c?.uid),
         switchMap((c) => {
           this.votesLoading.set(true);
-          return this.voteService.getVotesByCommittee(c.uid, 50).pipe(
+          return this.voteService.getVotesByCommittee(c.uid, undefined, 50).pipe(
             catchError(() => of([])),
             finalize(() => this.votesLoading.set(false))
           );
