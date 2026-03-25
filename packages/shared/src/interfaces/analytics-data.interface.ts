@@ -2704,9 +2704,6 @@ export interface SocialReachChannelRow {
 export interface SocialReachChannelGroup {
   channel: string;
   totalImpressions: number;
-  totalSpend?: number;
-  totalRevenue?: number;
-  roas?: number;
 }
 
 /**

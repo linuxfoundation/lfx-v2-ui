@@ -1678,7 +1678,8 @@ export class ProjectService {
 
   /**
    * Get web activities summary grouped by domain category
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY and PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
+   * @param foundationSlug - Foundation slug used to filter by PROJECT_SLUG
    */
   public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
     logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
@@ -1742,8 +1743,8 @@ export class ProjectService {
 
   /**
    * Get email click-through rate data from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY and PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
-   * @param foundationName - Foundation name used to filter metrics
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
+   * @param foundationName - Foundation name used to filter by PROJECT_NAME (e.g., 'The Linux Foundation')
    * @returns Email CTR response with monthly trend and change percentage
    */
   public async getEmailCtr(foundationName: string): Promise<EmailCtrResponse> {
@@ -1839,9 +1840,9 @@ export class ProjectService {
 
   /**
    * Get paid social reach metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
-   * @returns Social reach response with ROAS, impressions, spend, revenue, and channel breakdown
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * @param foundationName - Foundation name used to filter by FOUNDATION_NAME (e.g., 'The Linux Foundation')
+   * @returns Social reach response with ROAS, impressions, spend, revenue, and monthly trends
    */
   public async getSocialReach(foundationName: string): Promise<SocialReachResponse> {
     logger.debug(undefined, 'get_social_reach', 'Fetching paid social reach from Snowflake', { foundation_name: foundationName });
@@ -2048,8 +2049,8 @@ export class ProjectService {
 
   /**
    * Get social media metrics from Snowflake Platinum tables
-   * Queries PLATINUM_LFX_ONE_SOCIAL_MEDIA_OVERVIEW, PLATINUM_LFX_ONE_SOCIAL_MEDIA_PLATFORM_BREAKDOWN, and PLATINUM_LFX_ONE_SOCIAL_MEDIA_FOLLOWER_TREND
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW, ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN, and ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_FOLLOWER_TREND
+   * @param foundationName - Foundation name used to filter by FOUNDATION_NAME (e.g., 'The Linux Foundation')
    * @returns Social media response with followers, platform breakdown, and trend data
    */
   public async getSocialMedia(foundationName: string): Promise<SocialMediaResponse> {

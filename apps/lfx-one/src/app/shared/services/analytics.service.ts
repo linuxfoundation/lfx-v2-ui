@@ -864,10 +864,9 @@ export class AnalyticsService {
   }
 
   /**
-   * Get paid social reach metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * Get paid social reach metrics
    * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
-   * @returns Social reach response with ROAS, impressions, spend, revenue, and channel breakdown
+   * @returns Social reach response with ROAS, impressions, and monthly trends
    */
   public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
     return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(

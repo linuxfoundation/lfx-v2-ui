@@ -7,7 +7,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createBarChartOptions, createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { createBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
 import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -44,7 +44,6 @@ export class PaidSocialReachDrawerComponent {
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly roasChartData: Signal<ChartData<'bar'>> = this.initRoasChartData();
-  protected readonly channelChartData: Signal<ChartData<'bar'>> = this.initChannelChartData();
 
   protected readonly chartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
@@ -122,59 +121,12 @@ export class PaidSocialReachDrawerComponent {
     },
   });
 
-  protected readonly channelChartOptions: ChartOptions<'bar'> = createHorizontalBarChartOptions({
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        ...DASHBOARD_TOOLTIP_CONFIG,
-        callbacks: {
-          label: (ctx) => {
-            const val = ctx.parsed.x ?? 0;
-            if (val >= 1_000_000) return ` ${(val / 1_000_000).toFixed(1)}M impressions`;
-            if (val >= 1_000) return ` ${(val / 1_000).toFixed(1)}K impressions`;
-            return ` ${val.toLocaleString()} impressions`;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: { color: lfxColors.gray[200], lineWidth: 1 },
-        border: { display: true, color: lfxColors.gray[300] },
-        ticks: {
-          color: lfxColors.gray[500],
-          font: { size: 11 },
-          callback: (value) => {
-            const num = Number(value);
-            if (num >= 999_950) return `${(num / 1_000_000).toFixed(1)}M`;
-            if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
-            return String(num);
-          },
-        },
-      },
-      y: {
-        display: true,
-        grid: { display: false },
-        border: { display: false },
-        ticks: { color: lfxColors.gray[600], font: { size: 12 } },
-      },
-    },
-  });
-
   protected readonly formatNumber = formatNumber;
   protected readonly formatCurrency = formatCurrency;
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected formatChannelName(name: string): string {
-    return name
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   }
 
   // === Private Initializers ===
@@ -218,7 +170,7 @@ export class PaidSocialReachDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { roas, changePercentage, channelGroups, totalSpend, totalRevenue } = this.drawerData();
+      const { roas, changePercentage, totalSpend, totalRevenue } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (roas > 0 && roas < 1) {
@@ -239,24 +191,6 @@ export class PaidSocialReachDrawerComponent {
         });
       }
 
-      // NOTE: Channel-level spend/revenue/ROAS data is not yet available from the Snowflake
-      // BY_PROJECT_CHANNEL_MONTH table. When the analytics team adds these columns, remove
-      // these guards and enable the channel ROAS comparison logic below.
-      if (channelGroups.length > 1 && channelGroups.some((c) => (c.roas ?? 0) > 0)) {
-        const sorted = [...channelGroups].sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0));
-        const best = sorted[0];
-        const worst = sorted[sorted.length - 1];
-        if ((best.roas ?? 0) > (worst.roas ?? 0) * 2 && (worst.totalSpend ?? 0) > 0) {
-          actions.push({
-            title: `Shift budget to ${this.formatChannelName(best.channel)}`,
-            description: `${this.formatChannelName(best.channel)} ROAS is ${(best.roas ?? 0).toFixed(1)}x vs ${(worst.roas ?? 0).toFixed(1)}x for ${this.formatChannelName(worst.channel)}`,
-            priority: 'medium',
-            dueLabel: 'Next campaign',
-            iconClass: 'fa-light fa-chart-pie',
-          });
-        }
-      }
-
       if (actions.length === 0) {
         if (roas > 1) {
           actions.push({
@@ -269,7 +203,7 @@ export class PaidSocialReachDrawerComponent {
         } else {
           actions.push({
             title: 'Monitor campaign performance',
-            description: `${formatNumber(this.drawerData().totalReach)} impressions across ${channelGroups.length} channels`,
+            description: `${formatNumber(this.drawerData().totalReach)} total impressions — tracking performance`,
             priority: 'low',
             dueLabel: 'Ongoing',
             iconClass: 'fa-light fa-chart-line-up',
@@ -283,10 +217,10 @@ export class PaidSocialReachDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { roas, totalReach, totalSpend, totalRevenue, changePercentage, channelGroups, monthlyRoas } = this.drawerData();
+      const { roas, totalReach, totalSpend, totalRevenue, changePercentage, monthlyRoas } = this.drawerData();
       const insights: MarketingKeyInsight[] = [];
 
-      if (totalReach === 0 && channelGroups.length === 0) {
+      if (totalReach === 0) {
         return insights;
       }
 
@@ -312,16 +246,6 @@ export class PaidSocialReachDrawerComponent {
         } else {
           insights.push({ text: `Impressions declined ${Math.abs(changePercentage)}% month-over-month`, type: 'warning' });
         }
-      }
-
-      // Channel concentration
-      if (channelGroups.length > 1 && totalReach > 0) {
-        const sorted = [...channelGroups].sort((a, b) => b.totalImpressions - a.totalImpressions);
-        const topShare = (sorted[0].totalImpressions / totalReach) * 100;
-        insights.push({
-          text: `${this.formatChannelName(sorted[0].channel)} accounts for ${topShare.toFixed(0)}% of total impressions`,
-          type: topShare > 80 ? 'warning' : 'info',
-        });
       }
 
       // ROAS trend
@@ -366,24 +290,6 @@ export class PaidSocialReachDrawerComponent {
             data: monthlyRoas || [],
             backgroundColor: lfxColors.emerald[500],
             borderRadius: 4,
-          },
-        ],
-      };
-    });
-  }
-
-  private initChannelChartData(): Signal<ChartData<'bar'>> {
-    return computed(() => {
-      const { channelGroups } = this.drawerData();
-      const sorted = [...channelGroups].sort((a, b) => b.totalImpressions - a.totalImpressions);
-      return {
-        labels: sorted.map((c) => this.formatChannelName(c.channel)),
-        datasets: [
-          {
-            data: sorted.map((c) => c.totalImpressions),
-            backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300], lfxColors.blue[200]],
-            borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
-            borderSkipped: 'start',
           },
         ],
       };
