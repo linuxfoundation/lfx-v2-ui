@@ -28,7 +28,7 @@ export class EngagedCommunityDrawerComponent {
     totalMembers: 0,
     changePercentage: 0,
     trend: 'up',
-    breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0 },
+    breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
     monthlyData: [],
   });
 
@@ -204,6 +204,7 @@ export class EngagedCommunityDrawerComponent {
           { name: 'Newsletter subscribers', value: breakdown.newsletterSubscribers },
           { name: 'Community members', value: breakdown.communityMembers },
           { name: 'Working group members', value: breakdown.workingGroupMembers },
+          { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
         ].sort((a, b) => b.value - a.value);
         const topShare = (segments[0].value / totalMembers) * 100;
         insights.push({ text: `${segments[0].name} are the largest segment at ${topShare.toFixed(0)}% of total`, type: topShare > 70 ? 'warning' : 'info' });
@@ -250,11 +251,11 @@ export class EngagedCommunityDrawerComponent {
     return computed(() => {
       const { breakdown } = this.data();
       return {
-        labels: ['Newsletter', 'Community', 'Working Groups'],
+        labels: ['Newsletter', 'Community', 'Working Groups', 'Certified'],
         datasets: [
           {
-            data: [breakdown.newsletterSubscribers, breakdown.communityMembers, breakdown.workingGroupMembers],
-            backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[300]],
+            data: [breakdown.newsletterSubscribers, breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
+            backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },

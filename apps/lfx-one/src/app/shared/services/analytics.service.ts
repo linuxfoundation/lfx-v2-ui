@@ -49,6 +49,10 @@ import {
   UserProjectsResponse,
   UserPullRequestsResponse,
   EmailCtrResponse,
+  EngagedCommunitySizeResponse,
+  FlywheelConversionResponse,
+  MemberAcquisitionResponse,
+  MemberRetentionResponse,
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
@@ -879,6 +883,87 @@ export class AnalyticsService {
           monthlyLabels: [],
           monthlyRoas: [],
           channelGroups: [],
+        });
+      })
+    );
+  }
+
+  // North Star Metrics
+
+  /**
+   * Get member retention metrics from Snowflake North Star views
+   */
+  public getMemberRetention(foundationSlug: string): Observable<MemberRetentionResponse> {
+    return this.http.get<MemberRetentionResponse>('/api/analytics/member-retention', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          renewalRate: 0,
+          netRevenueRetention: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          target: 85,
+          monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get member acquisition rate metrics from Snowflake North Star views
+   */
+  public getMemberAcquisition(foundationSlug: string): Observable<MemberAcquisitionResponse> {
+    return this.http.get<MemberAcquisitionResponse>('/api/analytics/member-acquisition', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          newMembersThisQuarter: 0,
+          newMemberRevenue: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          quarterlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get engaged community size metrics from Snowflake North Star views
+   */
+  public getEngagedCommunity(foundationSlug: string): Observable<EngagedCommunitySizeResponse> {
+    return this.http.get<EngagedCommunitySizeResponse>('/api/analytics/engaged-community', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalMembers: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          breakdown: {
+            newsletterSubscribers: 0,
+            communityMembers: 0,
+            workingGroupMembers: 0,
+            certifiedIndividuals: 0,
+          },
+          monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get flywheel conversion rate metrics from Snowflake North Star views
+   */
+  public getFlywheelConversion(foundationSlug: string): Observable<FlywheelConversionResponse> {
+    return this.http.get<FlywheelConversionResponse>('/api/analytics/flywheel-conversion', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          conversionRate: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          funnel: {
+            eventAttendees: 0,
+            convertedToNewsletter: 0,
+            convertedToCommunity: 0,
+            convertedToWorkingGroup: 0,
+          },
+          monthlyData: [],
         });
       })
     );

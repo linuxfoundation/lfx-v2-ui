@@ -1799,4 +1799,131 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  // North Star Metrics Endpoints
+  // All North Star views use `foundationSlug` (FOUNDATION_SLUG column in NORTH_STAR_* tables)
+
+  /**
+   * GET /api/analytics/member-retention
+   * Get member retention and NRR metrics
+   */
+  public async getMemberRetention(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_member_retention');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_member_retention',
+        });
+      }
+
+      const response = await this.projectService.getMemberRetention(foundationSlug);
+
+      logger.success(req, 'get_member_retention', startTime, {
+        foundation_slug: foundationSlug,
+        renewal_rate: response.renewalRate,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_member_retention', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/member-acquisition
+   * Get member acquisition rate metrics
+   */
+  public async getMemberAcquisition(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_member_acquisition');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_member_acquisition',
+        });
+      }
+
+      const response = await this.projectService.getMemberAcquisition(foundationSlug);
+
+      logger.success(req, 'get_member_acquisition', startTime, {
+        foundation_slug: foundationSlug,
+        new_members: response.newMembersThisQuarter,
+        quarterly_data_points: response.quarterlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_member_acquisition', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/engaged-community
+   * Get engaged community size metrics
+   */
+  public async getEngagedCommunity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_engaged_community');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_engaged_community',
+        });
+      }
+
+      const response = await this.projectService.getEngagedCommunity(foundationSlug);
+
+      logger.success(req, 'get_engaged_community', startTime, {
+        foundation_slug: foundationSlug,
+        total_members: response.totalMembers,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_engaged_community', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/flywheel-conversion
+   * Get flywheel conversion rate metrics
+   */
+  public async getFlywheelConversion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_flywheel_conversion');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_flywheel_conversion',
+        });
+      }
+
+      const response = await this.projectService.getFlywheelConversion(foundationSlug);
+
+      logger.success(req, 'get_flywheel_conversion', startTime, {
+        foundation_slug: foundationSlug,
+        conversion_rate: response.conversionRate,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_flywheel_conversion', startTime, error);
+      next(error);
+    }
+  }
 }

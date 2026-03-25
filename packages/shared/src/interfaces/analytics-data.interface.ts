@@ -2704,9 +2704,9 @@ export interface SocialReachChannelRow {
 export interface SocialReachChannelGroup {
   channel: string;
   totalImpressions: number;
-  totalSpend: number;
-  totalRevenue: number;
-  roas: number;
+  totalSpend?: number;
+  totalRevenue?: number;
+  roas?: number;
 }
 
 /**
@@ -2825,7 +2825,7 @@ export interface NorthStarMonthlyDataPoint {
 
 /**
  * API response for Engaged Community Size metric
- * Newsletter + community + WG members (deduplicated)
+ * Newsletter + community + WG + certified individuals (deduplicated)
  */
 export interface EngagedCommunitySizeResponse {
   totalMembers: number;
@@ -2835,23 +2835,24 @@ export interface EngagedCommunitySizeResponse {
     newsletterSubscribers: number;
     communityMembers: number;
     workingGroupMembers: number;
+    certifiedIndividuals: number;
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
 
 /**
- * API response for Member Acquisition Rate & CAC metric
- * New paying members/quarter + cost per acquisition
+ * API response for Member Acquisition Rate metric
+ * New paying members/quarter + new member revenue (CAC not available in Snowflake)
  */
 export interface MemberAcquisitionResponse {
   newMembersThisQuarter: number;
-  costPerAcquisition: number;
+  newMemberRevenue: number;
   changePercentage: number;
   trend: 'up' | 'down';
   quarterlyData: {
     quarter: string;
     newMembers: number;
-    cac: number;
+    revenue: number;
   }[];
 }
 

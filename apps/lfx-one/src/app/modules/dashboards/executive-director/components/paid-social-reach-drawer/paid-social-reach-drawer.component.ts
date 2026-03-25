@@ -241,14 +241,14 @@ export class PaidSocialReachDrawerComponent {
       // NOTE: Channel-level spend/revenue/ROAS data is not yet available from the Snowflake
       // BY_PROJECT_CHANNEL_MONTH table. When the analytics team adds these columns, remove
       // these guards and enable the channel ROAS comparison logic below.
-      if (channelGroups.length > 1 && channelGroups.some((c) => c.roas > 0)) {
-        const sorted = [...channelGroups].sort((a, b) => b.roas - a.roas);
+      if (channelGroups.length > 1 && channelGroups.some((c) => (c.roas ?? 0) > 0)) {
+        const sorted = [...channelGroups].sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0));
         const best = sorted[0];
         const worst = sorted[sorted.length - 1];
-        if (best.roas > worst.roas * 2 && worst.totalSpend > 0) {
+        if ((best.roas ?? 0) > (worst.roas ?? 0) * 2 && (worst.totalSpend ?? 0) > 0) {
           actions.push({
             title: `Shift budget to ${this.formatChannelName(best.channel)}`,
-            description: `${this.formatChannelName(best.channel)} ROAS is ${best.roas.toFixed(1)}x vs ${worst.roas.toFixed(1)}x for ${this.formatChannelName(worst.channel)}`,
+            description: `${this.formatChannelName(best.channel)} ROAS is ${(best.roas ?? 0).toFixed(1)}x vs ${(worst.roas ?? 0).toFixed(1)}x for ${this.formatChannelName(worst.channel)}`,
             priority: 'medium',
             dueLabel: 'Next campaign',
             iconClass: 'fa-light fa-chart-pie',

@@ -62,7 +62,7 @@ export class MarketingOverviewComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   // === WritableSignals ===
-  private readonly marketingDataLoading = signal(true);
+  protected readonly marketingDataLoading = signal(true);
   private readonly browserReady = signal(false);
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
 
@@ -74,75 +74,6 @@ export class MarketingOverviewComponent {
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
-  // === Mock Data — TODO: Replace with real Snowflake API data (no endpoints yet) ===
-  protected readonly engagedCommunityData: EngagedCommunitySizeResponse = {
-    totalMembers: 47_200,
-    changePercentage: 12.4,
-    trend: 'up',
-    breakdown: {
-      newsletterSubscribers: 28_500,
-      communityMembers: 14_200,
-      workingGroupMembers: 8_300,
-    },
-    monthlyData: [
-      { month: 'Oct 2025', value: 38_000 },
-      { month: 'Nov 2025', value: 40_100 },
-      { month: 'Dec 2025', value: 41_800 },
-      { month: 'Jan 2026', value: 43_500 },
-      { month: 'Feb 2026', value: 45_200 },
-      { month: 'Mar 2026', value: 47_200 },
-    ],
-  };
-
-  protected readonly memberAcquisitionData: MemberAcquisitionResponse = {
-    newMembersThisQuarter: 34,
-    costPerAcquisition: 2_450,
-    changePercentage: 8.2,
-    trend: 'up',
-    quarterlyData: [
-      { quarter: 'Q2 2025', newMembers: 22, cac: 3_100 },
-      { quarter: 'Q3 2025', newMembers: 28, cac: 2_800 },
-      { quarter: 'Q4 2025', newMembers: 31, cac: 2_650 },
-      { quarter: 'Q1 2026', newMembers: 34, cac: 2_450 },
-    ],
-  };
-
-  protected readonly memberRetentionData: MemberRetentionResponse = {
-    renewalRate: 88.5,
-    netRevenueRetention: 104.2,
-    changePercentage: 2.1,
-    trend: 'up',
-    target: 85,
-    monthlyData: [
-      { month: 'Oct 2025', value: 85.2 },
-      { month: 'Nov 2025', value: 86.1 },
-      { month: 'Dec 2025', value: 86.8 },
-      { month: 'Jan 2026', value: 87.4 },
-      { month: 'Feb 2026', value: 88.0 },
-      { month: 'Mar 2026', value: 88.5 },
-    ],
-  };
-
-  protected readonly flywheelConversionData: FlywheelConversionResponse = {
-    conversionRate: 23.4,
-    changePercentage: 5.7,
-    trend: 'up',
-    funnel: {
-      eventAttendees: 4_200,
-      convertedToNewsletter: 680,
-      convertedToCommunity: 310,
-      convertedToWorkingGroup: 120,
-    },
-    monthlyData: [
-      { month: 'Oct 2025', value: 18.2 },
-      { month: 'Nov 2025', value: 19.8 },
-      { month: 'Dec 2025', value: 20.5 },
-      { month: 'Jan 2026', value: 21.3 },
-      { month: 'Feb 2026', value: 22.1 },
-      { month: 'Mar 2026', value: 23.4 },
-    ],
-  };
-
   // === Computed Signals ===
   protected readonly marketingInsights: Signal<string[]> = this.initMarketingInsights();
   protected readonly marketingData: Signal<{
@@ -150,6 +81,10 @@ export class MarketingOverviewComponent {
     emailCtr: EmailCtrResponse;
     socialReach: SocialReachResponse;
     socialMedia: SocialMediaResponse;
+    memberRetention: MemberRetentionResponse;
+    memberAcquisition: MemberAcquisitionResponse;
+    engagedCommunity: EngagedCommunitySizeResponse;
+    flywheelConversion: FlywheelConversionResponse;
   }> = this.initMarketingData();
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
   protected readonly formatNumber = formatNumber;
@@ -197,6 +132,10 @@ export class MarketingOverviewComponent {
     emailCtr: EmailCtrResponse;
     socialReach: SocialReachResponse;
     socialMedia: SocialMediaResponse;
+    memberRetention: MemberRetentionResponse;
+    memberAcquisition: MemberAcquisitionResponse;
+    engagedCommunity: EngagedCommunitySizeResponse;
+    flywheelConversion: FlywheelConversionResponse;
   }> {
     const defaultWebActivities: WebActivitiesSummaryResponse = {
       totalSessions: 0,
@@ -239,11 +178,58 @@ export class MarketingOverviewComponent {
       monthlyData: [],
     };
 
+    const defaultMemberRetention: MemberRetentionResponse = {
+      renewalRate: 0,
+      netRevenueRetention: 0,
+      changePercentage: 0,
+      trend: 'up',
+      target: 85,
+      monthlyData: [],
+    };
+
+    const defaultMemberAcquisition: MemberAcquisitionResponse = {
+      newMembersThisQuarter: 0,
+      newMemberRevenue: 0,
+      changePercentage: 0,
+      trend: 'up',
+      quarterlyData: [],
+    };
+
+    const defaultEngagedCommunity: EngagedCommunitySizeResponse = {
+      totalMembers: 0,
+      changePercentage: 0,
+      trend: 'up',
+      breakdown: {
+        newsletterSubscribers: 0,
+        communityMembers: 0,
+        workingGroupMembers: 0,
+        certifiedIndividuals: 0,
+      },
+      monthlyData: [],
+    };
+
+    const defaultFlywheelConversion: FlywheelConversionResponse = {
+      conversionRate: 0,
+      changePercentage: 0,
+      trend: 'up',
+      funnel: {
+        eventAttendees: 0,
+        convertedToNewsletter: 0,
+        convertedToCommunity: 0,
+        convertedToWorkingGroup: 0,
+      },
+      monthlyData: [],
+    };
+
     const defaultValue = {
       webActivities: defaultWebActivities,
       emailCtr: defaultEmailCtr,
       socialReach: defaultSocialReach,
       socialMedia: defaultSocialMedia,
+      memberRetention: defaultMemberRetention,
+      memberAcquisition: defaultMemberAcquisition,
+      engagedCommunity: defaultEngagedCommunity,
+      flywheelConversion: defaultFlywheelConversion,
     };
 
     return toSignal(
@@ -260,6 +246,10 @@ export class MarketingOverviewComponent {
             emailCtr: this.analyticsService.getEmailCtr(foundation.name),
             socialReach: this.analyticsService.getSocialReach(foundation.name),
             socialMedia: this.analyticsService.getSocialMedia(foundation.name),
+            memberRetention: this.analyticsService.getMemberRetention(foundation.slug),
+            memberAcquisition: this.analyticsService.getMemberAcquisition(foundation.slug),
+            engagedCommunity: this.analyticsService.getEngagedCommunity(foundation.slug),
+            flywheelConversion: this.analyticsService.getFlywheelConversion(foundation.slug),
           }).pipe(
             tap(() => this.marketingDataLoading.set(false)),
             catchError(() => {

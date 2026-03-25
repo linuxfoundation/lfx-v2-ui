@@ -66,6 +66,11 @@ import {
   EmailCtrResponse,
   SocialMediaResponse,
   SocialReachResponse,
+  MemberRetentionResponse,
+  MemberAcquisitionResponse,
+  EngagedCommunitySizeResponse,
+  FlywheelConversionResponse,
+  NorthStarMonthlyDataPoint,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -1924,15 +1929,9 @@ export class ProjectService {
         return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       });
 
-      // Channel-level spend, revenue, and ROAS data is not available in
-      // PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH — only impressions per channel.
-      // Hardcoded to 0 until the analytics team adds these columns.
       const channelGroups = channelResult.rows.map((row) => ({
         channel: row.CHANNEL,
         totalImpressions: row.IMPRESSIONS,
-        totalSpend: 0,
-        totalRevenue: 0,
-        roas: 0,
       }));
 
       return {
@@ -2161,6 +2160,333 @@ export class ProjectService {
         changePercentage: 0,
         trend: 'up',
         platforms: [],
+        monthlyData: [],
+      };
+    }
+  }
+
+  // North Star Metrics Queries (ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_* views)
+
+  /**
+   * Get member retention metrics from Snowflake
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_RETENTION
+   */
+  public async getMemberRetention(foundationSlug: string): Promise<MemberRetentionResponse> {
+    logger.debug(undefined, 'get_member_retention', 'Fetching member retention from Snowflake', { foundation_slug: foundationSlug });
+
+    try {
+      const query = `
+        SELECT
+          MONTH_START_DATE,
+          RENEWAL_RATE,
+          NET_REVENUE_RETENTION,
+          MOM_CHANGE_PERCENTAGE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_RETENTION
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 12
+      `;
+
+      const result = await this.snowflakeService.execute<{
+        MONTH_START_DATE: string;
+        RENEWAL_RATE: number;
+        NET_REVENUE_RETENTION: number;
+        MOM_CHANGE_PERCENTAGE: number;
+      }>(query, [foundationSlug]);
+
+      if (result.rows.length === 0) {
+        return {
+          renewalRate: 0,
+          netRevenueRetention: 0,
+          changePercentage: 0,
+          trend: 'up',
+          target: 85,
+          monthlyData: [],
+        };
+      }
+
+      const latest = result.rows[0];
+      const changePercentage = latest.MOM_CHANGE_PERCENTAGE ?? 0;
+
+      const monthlyData: NorthStarMonthlyDataPoint[] = [...result.rows].reverse().map((row) => {
+        const date = new Date(row.MONTH_START_DATE);
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          value: row.RENEWAL_RATE ?? 0,
+        };
+      });
+
+      return {
+        renewalRate: latest.RENEWAL_RATE ?? 0,
+        netRevenueRetention: latest.NET_REVENUE_RETENTION ?? 0,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        target: 85,
+        monthlyData,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_member_retention', 'Failed to fetch member retention from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        renewalRate: 0,
+        netRevenueRetention: 0,
+        changePercentage: 0,
+        trend: 'up',
+        target: 85,
+        monthlyData: [],
+      };
+    }
+  }
+
+  /**
+   * Get member acquisition metrics from Snowflake
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_ACQUISITION
+   */
+  public async getMemberAcquisition(foundationSlug: string): Promise<MemberAcquisitionResponse> {
+    logger.debug(undefined, 'get_member_acquisition', 'Fetching member acquisition from Snowflake', { foundation_slug: foundationSlug });
+
+    try {
+      const query = `
+        SELECT
+          QUARTER_START_DATE,
+          QUARTER_LABEL,
+          NEW_MEMBERS,
+          NEW_MEMBER_REVENUE,
+          QOQ_CHANGE_PERCENTAGE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_ACQUISITION
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY QUARTER_START_DATE DESC
+        LIMIT 8
+      `;
+
+      const result = await this.snowflakeService.execute<{
+        QUARTER_START_DATE: string;
+        QUARTER_LABEL: string;
+        NEW_MEMBERS: number;
+        NEW_MEMBER_REVENUE: number;
+        QOQ_CHANGE_PERCENTAGE: number;
+      }>(query, [foundationSlug]);
+
+      if (result.rows.length === 0) {
+        return {
+          newMembersThisQuarter: 0,
+          newMemberRevenue: 0,
+          changePercentage: 0,
+          trend: 'up',
+          quarterlyData: [],
+        };
+      }
+
+      const latest = result.rows[0];
+      const changePercentage = latest.QOQ_CHANGE_PERCENTAGE ?? 0;
+
+      const quarterlyData = [...result.rows].reverse().map((row) => ({
+        quarter: row.QUARTER_LABEL ?? '',
+        newMembers: row.NEW_MEMBERS ?? 0,
+        revenue: row.NEW_MEMBER_REVENUE ?? 0,
+      }));
+
+      return {
+        newMembersThisQuarter: latest.NEW_MEMBERS ?? 0,
+        newMemberRevenue: latest.NEW_MEMBER_REVENUE ?? 0,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        quarterlyData,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_member_acquisition', 'Failed to fetch member acquisition from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        newMembersThisQuarter: 0,
+        newMemberRevenue: 0,
+        changePercentage: 0,
+        trend: 'up',
+        quarterlyData: [],
+      };
+    }
+  }
+
+  /**
+   * Get engaged community size metrics from Snowflake
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_ENGAGED_COMMUNITY
+   */
+  public async getEngagedCommunity(foundationSlug: string): Promise<EngagedCommunitySizeResponse> {
+    logger.debug(undefined, 'get_engaged_community', 'Fetching engaged community from Snowflake', { foundation_slug: foundationSlug });
+
+    try {
+      const query = `
+        SELECT
+          MONTH_START_DATE,
+          NEWSLETTER_SUBSCRIBERS,
+          COMMUNITY_MEMBERS,
+          WORKING_GROUP_MEMBERS,
+          CERTIFIED_INDIVIDUALS,
+          TOTAL_ENGAGED_MEMBERS,
+          MOM_CHANGE_PERCENTAGE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_ENGAGED_COMMUNITY
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 12
+      `;
+
+      const result = await this.snowflakeService.execute<{
+        MONTH_START_DATE: string;
+        NEWSLETTER_SUBSCRIBERS: number;
+        COMMUNITY_MEMBERS: number;
+        WORKING_GROUP_MEMBERS: number;
+        CERTIFIED_INDIVIDUALS: number;
+        TOTAL_ENGAGED_MEMBERS: number;
+        MOM_CHANGE_PERCENTAGE: number;
+      }>(query, [foundationSlug]);
+
+      if (result.rows.length === 0) {
+        return {
+          totalMembers: 0,
+          changePercentage: 0,
+          trend: 'up',
+          breakdown: {
+            newsletterSubscribers: 0,
+            communityMembers: 0,
+            workingGroupMembers: 0,
+            certifiedIndividuals: 0,
+          },
+          monthlyData: [],
+        };
+      }
+
+      const latest = result.rows[0];
+      const changePercentage = latest.MOM_CHANGE_PERCENTAGE ?? 0;
+
+      const monthlyData: NorthStarMonthlyDataPoint[] = [...result.rows].reverse().map((row) => {
+        const date = new Date(row.MONTH_START_DATE);
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          value: row.TOTAL_ENGAGED_MEMBERS ?? 0,
+        };
+      });
+
+      return {
+        totalMembers: latest.TOTAL_ENGAGED_MEMBERS ?? 0,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        breakdown: {
+          newsletterSubscribers: latest.NEWSLETTER_SUBSCRIBERS ?? 0,
+          communityMembers: latest.COMMUNITY_MEMBERS ?? 0,
+          workingGroupMembers: latest.WORKING_GROUP_MEMBERS ?? 0,
+          certifiedIndividuals: latest.CERTIFIED_INDIVIDUALS ?? 0,
+        },
+        monthlyData,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_engaged_community', 'Failed to fetch engaged community from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        totalMembers: 0,
+        changePercentage: 0,
+        trend: 'up',
+        breakdown: {
+          newsletterSubscribers: 0,
+          communityMembers: 0,
+          workingGroupMembers: 0,
+          certifiedIndividuals: 0,
+        },
+        monthlyData: [],
+      };
+    }
+  }
+
+  /**
+   * Get flywheel conversion rate metrics from Snowflake
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_FLYWHEEL_CONVERSION
+   */
+  public async getFlywheelConversion(foundationSlug: string): Promise<FlywheelConversionResponse> {
+    logger.debug(undefined, 'get_flywheel_conversion', 'Fetching flywheel conversion from Snowflake', { foundation_slug: foundationSlug });
+
+    try {
+      const query = `
+        SELECT
+          MONTH_START_DATE,
+          EVENT_ATTENDEES,
+          CONVERTED_TO_NEWSLETTER,
+          CONVERTED_TO_COMMUNITY,
+          CONVERTED_TO_WORKING_GROUP,
+          CONVERSION_RATE,
+          MOM_CHANGE_PERCENTAGE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_FLYWHEEL_CONVERSION
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 12
+      `;
+
+      const result = await this.snowflakeService.execute<{
+        MONTH_START_DATE: string;
+        EVENT_ATTENDEES: number;
+        CONVERTED_TO_NEWSLETTER: number;
+        CONVERTED_TO_COMMUNITY: number;
+        CONVERTED_TO_WORKING_GROUP: number;
+        CONVERSION_RATE: number;
+        MOM_CHANGE_PERCENTAGE: number;
+      }>(query, [foundationSlug]);
+
+      if (result.rows.length === 0) {
+        return {
+          conversionRate: 0,
+          changePercentage: 0,
+          trend: 'up',
+          funnel: {
+            eventAttendees: 0,
+            convertedToNewsletter: 0,
+            convertedToCommunity: 0,
+            convertedToWorkingGroup: 0,
+          },
+          monthlyData: [],
+        };
+      }
+
+      const latest = result.rows[0];
+      const changePercentage = latest.MOM_CHANGE_PERCENTAGE ?? 0;
+
+      const monthlyData: NorthStarMonthlyDataPoint[] = [...result.rows].reverse().map((row) => {
+        const date = new Date(row.MONTH_START_DATE);
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          value: row.CONVERSION_RATE ?? 0,
+        };
+      });
+
+      return {
+        conversionRate: latest.CONVERSION_RATE ?? 0,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        funnel: {
+          eventAttendees: latest.EVENT_ATTENDEES ?? 0,
+          convertedToNewsletter: latest.CONVERTED_TO_NEWSLETTER ?? 0,
+          convertedToCommunity: latest.CONVERTED_TO_COMMUNITY ?? 0,
+          convertedToWorkingGroup: latest.CONVERTED_TO_WORKING_GROUP ?? 0,
+        },
+        monthlyData,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_flywheel_conversion', 'Failed to fetch flywheel conversion from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        conversionRate: 0,
+        changePercentage: 0,
+        trend: 'up',
+        funnel: {
+          eventAttendees: 0,
+          convertedToNewsletter: 0,
+          convertedToCommunity: 0,
+          convertedToWorkingGroup: 0,
+        },
         monthlyData: [],
       };
     }

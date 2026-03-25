@@ -32,11 +32,10 @@
   <!-- Carousel Container -->
   <div class="relative overflow-hidden">
     <div lfxScrollShadow [scrollDistance]="320" class="flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth" data-testid="marketing-overview-carousel">
-      <!-- Flywheel Pulse — North Star Metrics (Sample Data) -->
-      <div class="flex-shrink-0 border-2 border-dashed border-amber-300 rounded-lg p-4 bg-amber-50/30" data-testid="north-star-metrics-box">
+      <!-- Flywheel Pulse — North Star Metrics -->
+      <div class="flex-shrink-0 border border-gray-200 rounded-lg p-4 bg-white" data-testid="north-star-metrics-box">
         <div class="flex items-center gap-2 mb-3">
           <h5 class="text-sm font-semibold text-gray-900 mb-0">Flywheel Pulse</h5>
-          <lfx-tag value="Sample Data" severity="warn" [rounded]="true" />
         </div>
         <div class="flex gap-4">
           <!-- Flywheel Conversion -->
@@ -44,11 +43,16 @@
             title="Flywheel Conversion"
             icon="fa-light fa-arrows-spin"
             chartType="line"
-            [value]="flywheelConversionData.conversionRate + '%'"
-            [changePercentage]="(flywheelConversionData.changePercentage > 0 ? '+' : '') + flywheelConversionData.changePercentage + '%'"
-            [trend]="flywheelConversionData.trend"
+            [value]="marketingData().flywheelConversion.conversionRate > 0 ? marketingData().flywheelConversion.conversionRate + '%' : undefined"
+            [changePercentage]="
+              marketingData().flywheelConversion.changePercentage !== 0
+                ? (marketingData().flywheelConversion.changePercentage > 0 ? '+' : '') + marketingData().flywheelConversion.changePercentage + '%'
+                : undefined
+            "
+            [trend]="marketingData().flywheelConversion.trend"
             subtitle="Event attendee → community/WG within 90 days"
             testId="flywheel-pulse-conversion"
+            [loading]="marketingDataLoading()"
             [clickable]="true"
             (cardClick)="handleCardClick(DashboardDrawerType.NorthStarFlywheelConversion)"></lfx-metric-card>
 
@@ -57,11 +61,24 @@
             title="Member Growth"
             icon="fa-light fa-user-group"
             chartType="line"
-            [value]="'' + memberAcquisitionData.newMembersThisQuarter"
-            [changePercentage]="memberRetentionData.renewalRate + '% retention · NRR ' + memberRetentionData.netRevenueRetention + '%'"
+            [value]="marketingData().memberAcquisition.newMembersThisQuarter > 0 ? '' + marketingData().memberAcquisition.newMembersThisQuarter : undefined"
+            [changePercentage]="
+              marketingData().memberRetention.renewalRate > 0
+                ? marketingData().memberRetention.renewalRate + '% retention · NRR ' + marketingData().memberRetention.netRevenueRetention + '%'
+                : undefined
+            "
             trend="up"
-            [subtitle]="'+' + memberAcquisitionData.newMembersThisQuarter + '/q · CAC $' + formatNumber(memberAcquisitionData.costPerAcquisition)"
+            [subtitle]="
+              marketingData().memberAcquisition.newMembersThisQuarter > 0
+                ? '+' +
+                  marketingData().memberAcquisition.newMembersThisQuarter +
+                  '/q · $' +
+                  formatNumber(marketingData().memberAcquisition.newMemberRevenue) +
+                  ' revenue'
+                : undefined
+            "
             testId="flywheel-pulse-member-growth"
+            [loading]="marketingDataLoading()"
             [clickable]="true"
             (cardClick)="handleCardClick(DashboardDrawerType.NorthStarMemberAcquisition)"></lfx-metric-card>
 
@@ -70,11 +87,16 @@
             title="Engaged Community"
             icon="fa-light fa-people-group"
             chartType="line"
-            [value]="formatNumber(engagedCommunityData.totalMembers)"
-            [changePercentage]="(engagedCommunityData.changePercentage > 0 ? '↑' : '↓') + ' ' + engagedCommunityData.changePercentage + '% growth'"
+            [value]="marketingData().engagedCommunity.totalMembers > 0 ? formatNumber(marketingData().engagedCommunity.totalMembers) : undefined"
+            [changePercentage]="
+              marketingData().engagedCommunity.changePercentage !== 0
+                ? (marketingData().engagedCommunity.changePercentage > 0 ? '↑' : '↓') + ' ' + marketingData().engagedCommunity.changePercentage + '% growth'
+                : undefined
+            "
             trend="up"
             subtitle="Newsletter + Community + Working Groups"
             testId="flywheel-pulse-share-of-voice"
+            [loading]="marketingDataLoading()"
             [clickable]="true"
             (cardClick)="handleCardClick(DashboardDrawerType.NorthStarEngagedCommunity)"></lfx-metric-card>
         </div>
@@ -170,15 +192,15 @@
 <lfx-engaged-community-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
   (visibleChange)="handleDrawerClose()"
-  [data]="engagedCommunityData"></lfx-engaged-community-drawer>
+  [data]="marketingData().engagedCommunity"></lfx-engaged-community-drawer>
 
 <lfx-member-acquisition-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"
   (visibleChange)="handleDrawerClose()"
-  [data]="memberAcquisitionData"
-  [retentionData]="memberRetentionData"></lfx-member-acquisition-drawer>
+  [data]="marketingData().memberAcquisition"
+  [retentionData]="marketingData().memberRetention"></lfx-member-acquisition-drawer>
 
 <lfx-flywheel-conversion-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarFlywheelConversion"
   (visibleChange)="handleDrawerClose()"
-  [data]="flywheelConversionData"></lfx-flywheel-conversion-drawer>
+  [data]="marketingData().flywheelConversion"></lfx-flywheel-conversion-drawer>

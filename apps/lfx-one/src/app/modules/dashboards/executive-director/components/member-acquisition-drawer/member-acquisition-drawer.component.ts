@@ -26,7 +26,7 @@ export class MemberAcquisitionDrawerComponent {
   // === Inputs ===
   public readonly data = input<MemberAcquisitionResponse>({
     newMembersThisQuarter: 0,
-    costPerAcquisition: 0,
+    newMemberRevenue: 0,
     changePercentage: 0,
     trend: 'up',
     quarterlyData: [],
@@ -42,7 +42,7 @@ export class MemberAcquisitionDrawerComponent {
   });
 
   // === Computed Signals ===
-  protected readonly formattedCostPerAcquisition: Signal<string> = computed(() => formatNumber(this.data().costPerAcquisition));
+  protected readonly formattedNewMemberRevenue: Signal<string> = computed(() => '$' + formatNumber(this.data().newMemberRevenue));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
@@ -64,7 +64,7 @@ export class MemberAcquisitionDrawerComponent {
     ...this.retentionInsights().filter((i) => i.type === 'driver' || i.type === 'info'),
   ]);
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
-  protected readonly cacChartData: Signal<ChartData<'line'>> = this.initCacChartData();
+  protected readonly revenueChartData: Signal<ChartData<'line'>> = this.initRevenueChartData();
   protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
@@ -79,13 +79,13 @@ export class MemberAcquisitionDrawerComponent {
     },
   });
 
-  protected readonly cacChartOptions: ChartOptions<'line'> = createLineChartOptions({
+  protected readonly revenueChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
       tooltip: {
         ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
-          label: (ctx) => ` $${formatNumber(ctx.parsed.y ?? 0)} CAC`,
+          label: (ctx) => ` $${formatNumber(ctx.parsed.y ?? 0)} revenue`,
         },
       },
     },
@@ -149,22 +149,24 @@ export class MemberAcquisitionDrawerComponent {
   // === Private Initializers ===
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { newMembersThisQuarter, costPerAcquisition, changePercentage, quarterlyData } = this.data();
+      const { newMembersThisQuarter, newMemberRevenue, changePercentage, quarterlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
       if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
         return actions;
       }
 
-      // Check if CAC is increasing
+      // Check if revenue per new member is declining
       if (quarterlyData.length >= 2) {
         const recent = quarterlyData[quarterlyData.length - 1];
         const previous = quarterlyData[quarterlyData.length - 2];
-        if (recent.cac > previous.cac && recent.cac > 0) {
-          const cacIncrease = (((recent.cac - previous.cac) / previous.cac) * 100).toFixed(0);
+        const recentPerMember = recent.newMembers > 0 ? recent.revenue / recent.newMembers : 0;
+        const previousPerMember = previous.newMembers > 0 ? previous.revenue / previous.newMembers : 0;
+        if (previousPerMember > 0 && recentPerMember < previousPerMember) {
+          const revenueDecline = (((previousPerMember - recentPerMember) / previousPerMember) * 100).toFixed(0);
           actions.push({
-            title: 'Reduce cost per acquisition',
-            description: `CAC increased ${cacIncrease}% to $${formatNumber(recent.cac)} — review channel efficiency and referral programs`,
+            title: 'Improve revenue per new member',
+            description: `Revenue per new member declined ${revenueDecline}% — review membership tier mix and onboarding`,
             priority: 'high',
             dueLabel: 'This quarter',
             iconClass: 'fa-light fa-money-bill-trend-up',
@@ -183,15 +185,15 @@ export class MemberAcquisitionDrawerComponent {
         });
       }
 
-      // Check CAC trend over 3+ quarters
+      // Check revenue growth trend over 3+ quarters
       if (quarterlyData.length >= 3) {
         const recent3 = quarterlyData.slice(-3);
-        const cacDecreasing = recent3[0].cac > recent3[1].cac && recent3[1].cac > recent3[2].cac;
-        if (cacDecreasing && recent3[2].cac > 0) {
-          const totalDrop = (((recent3[0].cac - recent3[2].cac) / recent3[0].cac) * 100).toFixed(0);
+        const revenueGrowing = recent3[0].revenue < recent3[1].revenue && recent3[1].revenue < recent3[2].revenue;
+        if (revenueGrowing && recent3[2].revenue > 0) {
+          const totalGrowth = (((recent3[2].revenue - recent3[0].revenue) / recent3[0].revenue) * 100).toFixed(0);
           actions.push({
             title: 'Scale current acquisition channels',
-            description: `CAC decreased ${totalDrop}% over 3 quarters — room to increase spend in efficient channels`,
+            description: `New member revenue grew ${totalGrowth}% over 3 quarters — room to increase investment in efficient channels`,
             priority: 'medium',
             dueLabel: 'Next quarter',
             iconClass: 'fa-light fa-chart-line-up',
@@ -202,7 +204,7 @@ export class MemberAcquisitionDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Monitor acquisition performance',
-          description: `${newMembersThisQuarter} new members this quarter at $${formatNumber(costPerAcquisition)} CAC`,
+          description: `${newMembersThisQuarter} new members this quarter with $${formatNumber(newMemberRevenue)} in new revenue`,
           priority: 'low',
           dueLabel: 'Ongoing',
           iconClass: 'fa-light fa-chart-line-up',
@@ -231,15 +233,15 @@ export class MemberAcquisitionDrawerComponent {
         insights.push({ text: `Acquisition ${changePercentage > 0 ? 'up' : 'down'} ${Math.abs(changePercentage)}% — relatively stable`, type: 'info' });
       }
 
-      // CAC trend
+      // Revenue trend
       if (quarterlyData.length >= 2) {
         const recent = quarterlyData[quarterlyData.length - 1];
         const previous = quarterlyData[quarterlyData.length - 2];
-        if (previous.cac > 0 && recent.cac < previous.cac) {
-          const improvement = (((previous.cac - recent.cac) / previous.cac) * 100).toFixed(0);
-          insights.push({ text: `CAC improved ${improvement}% to $${formatNumber(recent.cac)} — marketing efficiency increasing`, type: 'driver' });
-        } else if (previous.cac > 0 && recent.cac > previous.cac) {
-          insights.push({ text: `CAC rose to $${formatNumber(recent.cac)} — acquisition becoming more expensive`, type: 'warning' });
+        if (previous.revenue > 0 && recent.revenue > previous.revenue) {
+          const growth = (((recent.revenue - previous.revenue) / previous.revenue) * 100).toFixed(0);
+          insights.push({ text: `New member revenue grew ${growth}% to $${formatNumber(recent.revenue)} — acquisition efficiency increasing`, type: 'driver' });
+        } else if (previous.revenue > 0 && recent.revenue < previous.revenue) {
+          insights.push({ text: `New member revenue declined to $${formatNumber(recent.revenue)} — review membership tier mix`, type: 'warning' });
         }
       }
 
@@ -282,14 +284,14 @@ export class MemberAcquisitionDrawerComponent {
     });
   }
 
-  private initCacChartData(): Signal<ChartData<'line'>> {
+  private initRevenueChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
       const { quarterlyData } = this.data();
       return {
         labels: quarterlyData.map((d) => d.quarter),
         datasets: [
           {
-            data: quarterlyData.map((d) => d.cac),
+            data: quarterlyData.map((d) => d.revenue),
             borderColor: lfxColors.blue[500],
             backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
