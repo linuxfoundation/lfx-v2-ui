@@ -41,9 +41,7 @@ export class SidebarComponent {
   protected readonly projects: Signal<Project[]> = this.initProjects();
 
   // TODO: DEMO - Remove this once we have proper project permissions
-  public readonly isBoardMember = computed(
-    () => this.personaService.currentPersona() === 'board-member' || this.personaService.currentPersona() === 'executive-director'
-  );
+  protected readonly isBoardMember = this.personaService.isBoardScoped;
   protected readonly foundationProjects = computed(() => this.projects().filter((p: Project) => (this.isBoardMember() ? p.slug === 'tlf' : true)));
 
   protected readonly selectedProject = computed(() => {

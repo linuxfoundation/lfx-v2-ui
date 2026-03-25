@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -15,6 +15,7 @@ import type { EngagedCommunitySizeResponse, MarketingRecommendedAction, Marketin
 
 @Component({
   selector: 'lfx-engaged-community-drawer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './engaged-community-drawer.component.html',
   styleUrl: './engaged-community-drawer.component.scss',

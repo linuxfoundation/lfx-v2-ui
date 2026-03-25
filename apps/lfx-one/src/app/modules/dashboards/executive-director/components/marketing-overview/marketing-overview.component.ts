@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { afterNextRender, Component, computed, inject, signal, Signal, ViewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, signal, Signal, ViewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -25,7 +25,7 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, combineLatest, filter, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
 import { EmailCtrDrawerComponent } from '../email-ctr-drawer/email-ctr-drawer.component';
 import { EngagedCommunityDrawerComponent } from '../engaged-community-drawer/engaged-community-drawer.component';
@@ -37,6 +37,7 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
 
 @Component({
   selector: 'lfx-marketing-overview',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ButtonComponent,
     CardComponent,
@@ -257,7 +258,8 @@ export class MarketingOverviewComponent {
               return of(defaultValue);
             })
           )
-        )
+        ),
+        finalize(() => this.marketingDataLoading.set(false))
       ),
       { initialValue: defaultValue }
     );
