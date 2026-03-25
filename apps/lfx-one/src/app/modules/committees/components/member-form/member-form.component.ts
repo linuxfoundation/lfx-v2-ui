@@ -9,7 +9,7 @@ import { CalendarComponent } from '@components/calendar/calendar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
-import { APPOINTED_BY_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
+import { APPOINTED_BY_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES, WEBSITE_URL_PATTERN } from '@lfx-one/shared/constants';
 import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
 import { formatDateToISOString, parseISODateString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
@@ -42,6 +42,11 @@ export class MemberFormComponent {
   public readonly committee: Committee | undefined;
   // Wizard mode: returns data instead of calling API (used when committee doesn't exist yet)
   public readonly wizardMode: boolean;
+
+  // Organization fields are required when voting is enabled OR business email is required
+  public get orgRequired(): boolean {
+    return !!(this.committee?.enable_voting || this.committee?.business_email_required);
+  }
 
   // Member options
   public roleOptions = MEMBER_ROLES;
@@ -205,8 +210,8 @@ export class MemberFormComponent {
         email: new FormControl('', [Validators.required, Validators.email]),
         job_title: new FormControl(''),
         linkedin_profile: new FormControl('', [Validators.pattern(LINKEDIN_PROFILE_PATTERN)]),
-        organization: new FormControl(''),
-        organization_url: new FormControl(''),
+        organization: new FormControl('', this.orgRequired ? [Validators.required] : []),
+        organization_url: new FormControl('', this.orgRequired ? [Validators.required, Validators.pattern(WEBSITE_URL_PATTERN)] : [Validators.pattern(WEBSITE_URL_PATTERN)]),
         role: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         voting_status: new FormControl('', this.committee?.enable_voting ? [Validators.required] : []),
         appointed_by: new FormControl(''),

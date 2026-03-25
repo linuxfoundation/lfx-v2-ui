@@ -27,3 +27,6 @@
  * - linkedin.com (missing path)
  */
 export const LINKEDIN_PROFILE_PATTERN = /^(https?:\/\/)?([a-z]{2,3}\.)?linkedin\.com\/.*$/;
+
+/** Website URL pattern matching the upstream backend validation */
+export const WEBSITE_URL_PATTERN = /^(https?:\/\/)?[^\s/$.?#].[^\s]*$/;
