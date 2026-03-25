@@ -6,7 +6,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
-import { TagComponent } from '@components/tag/tag.component';
+
 import { MARKETING_OVERVIEW_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
 import { lfxColors } from '@lfx-one/shared/constants';
 import {
@@ -42,7 +42,7 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
     CardComponent,
     MetricCardComponent,
     ScrollShadowDirective,
-    TagComponent,
+
     WebsiteVisitsDrawerComponent,
     EmailCtrDrawerComponent,
     PaidSocialReachDrawerComponent,
