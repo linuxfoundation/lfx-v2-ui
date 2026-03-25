@@ -151,22 +151,6 @@
       }
     </div>
 
-    <!-- Channel Breakdown -->
-    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="paid-social-reach-drawer-channels-section">
-      <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">Impressions by Channel</h3>
-        <p class="text-sm text-gray-600">Paid ad distribution across channels over the last 6 months</p>
-      </div>
-      @if (drawerData().channelGroups.length > 1) {
-        <div class="h-[240px]" data-testid="paid-social-reach-drawer-channels-chart">
-          <lfx-chart type="bar" [data]="channelChartData()" [options]="channelChartOptions" height="100%"></lfx-chart>
-        </div>
-      } @else {
-        <div class="text-center py-8 border border-slate-200 rounded-lg">
-          <i class="fa-light fa-eyes text-3xl text-gray-400 mb-2 block"></i>
-          <p class="text-sm text-gray-500">No channel breakdown available</p>
-        </div>
-      }
-    </div>
+    <!-- Channel Breakdown (hidden until data quality is validated) -->
   </div>
 </p-drawer>

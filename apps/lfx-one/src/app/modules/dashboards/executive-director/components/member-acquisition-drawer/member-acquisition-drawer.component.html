@@ -32,29 +32,20 @@
     <div class="flex gap-4" data-testid="member-acquisition-drawer-stats">
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">New Members (Q)</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ data().newMembersThisQuarter }}</span>
+          <span class="text-sm text-gray-500">Total Members</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalMembers() }}</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">New This Quarter</span>
+          <span class="text-2xl font-semibold text-gray-900">+{{ data().newMembersThisQuarter }}</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">New Member Revenue</span>
           <span class="text-2xl font-semibold text-gray-900">{{ formattedNewMemberRevenue() }}</span>
-        </div>
-      </lfx-card>
-      <lfx-card styleClass="flex-1">
-        <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">Growth</span>
-          @if (data().changePercentage !== 0) {
-            <div class="flex items-center gap-2">
-              <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
-              </span>
-              <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
-            </div>
-          } @else {
-            <span class="text-2xl font-semibold text-gray-500">0%</span>
-          }
         </div>
       </lfx-card>
     </div>
@@ -165,6 +156,19 @@
             <span class="text-green-800">{{ insight.text }}</span>
           </div>
         }
+      </div>
+    }
+
+    <!-- Total Members Trend -->
+    @if (data().totalMembersMonthlyData.length > 1) {
+      <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-total-members-section">
+        <div class="flex flex-col gap-1">
+          <h3 class="text-sm font-semibold text-gray-900">Total Members Over Time</h3>
+          <p class="text-sm text-gray-600">Cumulative membership growth over the last 12 months</p>
+        </div>
+        <div class="h-[200px]" data-testid="member-acquisition-drawer-total-members-chart">
+          <lfx-chart type="line" [data]="totalMembersChartData()" [options]="totalMembersChartOptions" height="100%"></lfx-chart>
+        </div>
       </div>
     }
 

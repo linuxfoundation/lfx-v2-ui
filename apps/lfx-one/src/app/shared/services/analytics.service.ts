@@ -915,6 +915,9 @@ export class AnalyticsService {
     return this.http.get<MemberAcquisitionResponse>('/api/analytics/member-acquisition', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
+          totalMembers: 0,
+          totalMembersMonthlyData: [],
+          totalMembersMonthlyLabels: [],
           newMembersThisQuarter: 0,
           newMemberRevenue: 0,
           changePercentage: 0,

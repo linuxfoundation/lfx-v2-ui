@@ -89,6 +89,65 @@ export class MarketingOverviewComponent {
   }> = this.initMarketingData();
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
   protected readonly formatNumber = formatNumber;
+  protected readonly noTooltipChartOptions = NO_TOOLTIP_CHART_OPTIONS;
+
+  // North Star sparkline chart data
+  protected readonly memberGrowthChartData = computed(() => {
+    const { totalMembersMonthlyData, totalMembersMonthlyLabels } = this.marketingData().memberAcquisition;
+    if (totalMembersMonthlyData.length === 0) return undefined;
+    return {
+      labels: totalMembersMonthlyLabels,
+      datasets: [
+        {
+          data: totalMembersMonthlyData,
+          borderColor: lfxColors.blue[500],
+          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
+  });
+
+  protected readonly flywheelChartData = computed(() => {
+    const { monthlyData } = this.marketingData().flywheelConversion;
+    if (monthlyData.length === 0) return undefined;
+    return {
+      labels: monthlyData.map((d) => d.month),
+      datasets: [
+        {
+          data: monthlyData.map((d) => d.value),
+          borderColor: lfxColors.blue[500],
+          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
+  });
+
+  protected readonly engagedCommunityChartData = computed(() => {
+    const { monthlyData } = this.marketingData().engagedCommunity;
+    if (monthlyData.length === 0) return undefined;
+    return {
+      labels: monthlyData.map((d) => d.month),
+      datasets: [
+        {
+          data: monthlyData.map((d) => d.value),
+          borderColor: lfxColors.blue[500],
+          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
+  });
 
   public constructor() {
     afterNextRender(() => {
@@ -189,6 +248,9 @@ export class MarketingOverviewComponent {
     };
 
     const defaultMemberAcquisition: MemberAcquisitionResponse = {
+      totalMembers: 0,
+      totalMembersMonthlyData: [],
+      totalMembersMonthlyLabels: [],
       newMembersThisQuarter: 0,
       newMemberRevenue: 0,
       changePercentage: 0,

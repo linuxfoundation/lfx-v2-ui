@@ -1678,7 +1678,7 @@ export class ProjectService {
 
   /**
    * Get web activities summary grouped by domain category
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_SUMMARY and PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY and PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
    */
   public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
     logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
@@ -1690,7 +1690,7 @@ export class ProjectService {
           LF_SUB_DOMAIN_CLASSIFICATION,
           SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS,
           SUM(TOTAL_PAGE_VIEWS_LAST_30_DAYS) AS TOTAL_PAGE_VIEWS
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
         WHERE PROJECT_SLUG = ?
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
@@ -1701,7 +1701,7 @@ export class ProjectService {
         SELECT
           ACTIVITY_DATE,
           SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_WEB_ACTIVITIES_BY_PROJECT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
         WHERE PROJECT_SLUG = ?
           AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
         GROUP BY ACTIVITY_DATE
@@ -1742,7 +1742,7 @@ export class ProjectService {
 
   /**
    * Get email click-through rate data from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY and PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY and PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
    * @param foundationName - Foundation name used to filter metrics
    * @returns Email CTR response with monthly trend and change percentage
    */
@@ -1756,7 +1756,7 @@ export class ProjectService {
           PROJECT_NAME,
           CTR_LAST_COMPLETED_MONTH,
           CTR_MOM_CHANGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
         WHERE PROJECT_NAME = ?
       `;
 
@@ -1768,7 +1768,7 @@ export class ProjectService {
           MONTHLY_CTR,
           TOTAL_SENDS,
           TOTAL_OPENS
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_BY_MONTH
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
         WHERE PROJECT_NAME = ?
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         ORDER BY PUBLISHED_MONTH_DATE ASC
@@ -1780,7 +1780,7 @@ export class ProjectService {
           PROJECT_NAME,
           LF_SUB_DOMAIN_CLASSIFICATION,
           CTR_LAST_6_MONTHS AS AVG_CTR
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_EMAIL_CTR_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
         WHERE PROJECT_NAME = ?
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
@@ -1813,7 +1813,7 @@ export class ProjectService {
       });
 
       const campaignGroups = campaignResult.rows.map((row) => ({
-        campaignName: row.PROJECT_NAME,
+        campaignName: row.LF_SUB_DOMAIN_CLASSIFICATION || row.PROJECT_NAME,
         classification: row.LF_SUB_DOMAIN_CLASSIFICATION,
         avgCtr: Math.round((row.AVG_CTR ?? 0) * 10) / 10,
       }));
@@ -1839,7 +1839,7 @@ export class ProjectService {
 
   /**
    * Get paid social reach metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
    * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
    * @returns Social reach response with ROAS, impressions, spend, revenue, and channel breakdown
    */
@@ -1850,7 +1850,7 @@ export class ProjectService {
       // Block 1: Total impressions, spend, revenue (last 6 months)
       const impressionsQuery = `
       SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(REVENUE) AS TOTAL_REVENUE
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
     `;
@@ -1858,7 +1858,7 @@ export class ProjectService {
       // Block 2: ROAS KPI — latest completed month
       const roasKpiQuery = `
       SELECT ROAS, ROAS_MOM_PCT
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE FOUNDATION_NAME = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
       QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
@@ -1867,7 +1867,7 @@ export class ProjectService {
       // Block 3: Monthly ROAS trend (bar chart, last 6 months)
       const monthlyRoasQuery = `
       SELECT CAMPAIGN_MONTH, ROAS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       ORDER BY CAMPAIGN_MONTH
@@ -1876,7 +1876,7 @@ export class ProjectService {
       // Block 4: Monthly impressions (bar chart, last 6 months)
       const monthlyImpressionsQuery = `
       SELECT CAMPAIGN_MONTH, IMPRESSIONS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       ORDER BY CAMPAIGN_MONTH
@@ -1886,7 +1886,7 @@ export class ProjectService {
       // Note: BY_PROJECT_CHANNEL_MONTH only has IMPRESSIONS — SPEND/REVENUE are on BY_PROJECT_MONTH
       const channelQuery = `
       SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
       GROUP BY CHANNEL
@@ -2069,7 +2069,7 @@ export class ProjectService {
               / SUM(PRIOR_TOTAL_FOLLOWERS) * 100, 1
             )
         END AS FOLLOWER_GROWTH_PCT
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_OVERVIEW
+      FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW
       WHERE FOUNDATION_NAME = ?
     `;
 
@@ -2084,7 +2084,7 @@ export class ProjectService {
         END AS ENGAGEMENT_RATE_PCT,
         SUM(POSTS_30D) AS POSTS_30D,
         SUM(IMPRESSIONS) AS IMPRESSIONS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+      FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
       WHERE FOUNDATION_NAME = ?
       GROUP BY PLATFORM_NAME
       ORDER BY FOLLOWERS DESC
@@ -2095,7 +2095,7 @@ export class ProjectService {
       SELECT
         SNAPSHOT_MONTH,
         SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
-      FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_SOCIAL_MEDIA_FOLLOWER_TREND
+      FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_FOLLOWER_TREND
       WHERE FOUNDATION_NAME = ?
         AND SNAPSHOT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY SNAPSHOT_MONTH
@@ -2165,11 +2165,11 @@ export class ProjectService {
     }
   }
 
-  // North Star Metrics Queries (ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_* views)
+  // North Star Metrics Queries (ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_* views)
 
   /**
    * Get member retention metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_RETENTION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
    */
   public async getMemberRetention(foundationSlug: string): Promise<MemberRetentionResponse> {
     logger.debug(undefined, 'get_member_retention', 'Fetching member retention from Snowflake', { foundation_slug: foundationSlug });
@@ -2181,7 +2181,7 @@ export class ProjectService {
           RENEWAL_RATE,
           NET_REVENUE_RETENTION,
           MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_RETENTION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2242,24 +2242,38 @@ export class ProjectService {
 
   /**
    * Get member acquisition metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_ACQUISITION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
    */
   public async getMemberAcquisition(foundationSlug: string): Promise<MemberAcquisitionResponse> {
     logger.debug(undefined, 'get_member_acquisition', 'Fetching member acquisition from Snowflake', { foundation_slug: foundationSlug });
 
+    const defaultResponse: MemberAcquisitionResponse = {
+      totalMembers: 0,
+      totalMembersMonthlyData: [],
+      totalMembersMonthlyLabels: [],
+      newMembersThisQuarter: 0,
+      newMemberRevenue: 0,
+      changePercentage: 0,
+      trend: 'up',
+      quarterlyData: [],
+    };
+
     try {
-      const query = `
+      const acquisitionQuery = `
         SELECT
           QUARTER_START_DATE,
           QUARTER_LABEL,
           NEW_MEMBERS,
           NEW_MEMBER_REVENUE,
           QOQ_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_MEMBER_ACQUISITION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY QUARTER_START_DATE DESC
         LIMIT 8
       `;
+
+      // Reuse the same total members query from the board-member dashboard
+      const totalMembersData = await this.getFoundationTotalMembers(foundationSlug);
 
       const result = await this.snowflakeService.execute<{
         QUARTER_START_DATE: string;
@@ -2267,15 +2281,14 @@ export class ProjectService {
         NEW_MEMBERS: number;
         NEW_MEMBER_REVENUE: number;
         QOQ_CHANGE_PERCENTAGE: number;
-      }>(query, [foundationSlug]);
+      }>(acquisitionQuery, [foundationSlug]);
 
       if (result.rows.length === 0) {
         return {
-          newMembersThisQuarter: 0,
-          newMemberRevenue: 0,
-          changePercentage: 0,
-          trend: 'up',
-          quarterlyData: [],
+          ...defaultResponse,
+          totalMembers: totalMembersData.totalMembers,
+          totalMembersMonthlyData: totalMembersData.monthlyData,
+          totalMembersMonthlyLabels: totalMembersData.monthlyLabels,
         };
       }
 
@@ -2289,6 +2302,9 @@ export class ProjectService {
       }));
 
       return {
+        totalMembers: totalMembersData.totalMembers,
+        totalMembersMonthlyData: totalMembersData.monthlyData,
+        totalMembersMonthlyLabels: totalMembersData.monthlyLabels,
         newMembersThisQuarter: latest.NEW_MEMBERS ?? 0,
         newMemberRevenue: latest.NEW_MEMBER_REVENUE ?? 0,
         changePercentage,
@@ -2300,19 +2316,13 @@ export class ProjectService {
         foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return {
-        newMembersThisQuarter: 0,
-        newMemberRevenue: 0,
-        changePercentage: 0,
-        trend: 'up',
-        quarterlyData: [],
-      };
+      return defaultResponse;
     }
   }
 
   /**
    * Get engaged community size metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_ENGAGED_COMMUNITY
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
    */
   public async getEngagedCommunity(foundationSlug: string): Promise<EngagedCommunitySizeResponse> {
     logger.debug(undefined, 'get_engaged_community', 'Fetching engaged community from Snowflake', { foundation_slug: foundationSlug });
@@ -2327,7 +2337,7 @@ export class ProjectService {
           CERTIFIED_INDIVIDUALS,
           TOTAL_ENGAGED_MEMBERS,
           MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_ENGAGED_COMMUNITY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2403,7 +2413,7 @@ export class ProjectService {
 
   /**
    * Get flywheel conversion rate metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_FLYWHEEL_CONVERSION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
    */
   public async getFlywheelConversion(foundationSlug: string): Promise<FlywheelConversionResponse> {
     logger.debug(undefined, 'get_flywheel_conversion', 'Fetching flywheel conversion from Snowflake', { foundation_slug: foundationSlug });
@@ -2418,7 +2428,7 @@ export class ProjectService {
           CONVERTED_TO_WORKING_GROUP,
           CONVERSION_RATE,
           MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.PLATINUM_LFX_ONE_NORTH_STAR_FLYWHEEL_CONVERSION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12

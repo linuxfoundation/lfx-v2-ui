@@ -2845,6 +2845,9 @@ export interface EngagedCommunitySizeResponse {
  * New paying members/quarter + new member revenue (CAC not available in Snowflake)
  */
 export interface MemberAcquisitionResponse {
+  totalMembers: number;
+  totalMembersMonthlyData: number[];
+  totalMembersMonthlyLabels: string[];
   newMembersThisQuarter: number;
   newMemberRevenue: number;
   changePercentage: number;

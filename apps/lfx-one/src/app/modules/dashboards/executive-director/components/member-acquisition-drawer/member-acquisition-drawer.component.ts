@@ -26,6 +26,9 @@ export class MemberAcquisitionDrawerComponent {
 
   // === Inputs ===
   public readonly data = input<MemberAcquisitionResponse>({
+    totalMembers: 0,
+    totalMembersMonthlyData: [],
+    totalMembersMonthlyLabels: [],
     newMembersThisQuarter: 0,
     newMemberRevenue: 0,
     changePercentage: 0,
@@ -43,7 +46,9 @@ export class MemberAcquisitionDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
   protected readonly formattedNewMemberRevenue: Signal<string> = computed(() => '$' + formatNumber(this.data().newMemberRevenue));
+  protected readonly totalMembersChartData: Signal<ChartData<'line'>> = this.initTotalMembersChartData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
@@ -110,6 +115,36 @@ export class MemberAcquisitionDrawerComponent {
     },
   });
 
+  protected readonly totalMembersChartOptions: ChartOptions<'line'> = createLineChartOptions({
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...DASHBOARD_TOOLTIP_CONFIG,
+        callbacks: {
+          label: (ctx) => ` ${formatNumber(ctx.parsed.y ?? 0)} members`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: { display: false },
+        border: { display: true, color: lfxColors.gray[300] },
+        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
+      },
+      y: {
+        display: true,
+        grid: { color: lfxColors.gray[200], lineWidth: 1 },
+        border: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          callback: (value) => formatNumber(Number(value)),
+        },
+      },
+    },
+  });
+
   protected readonly retentionChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
       legend: { display: false },
@@ -148,6 +183,27 @@ export class MemberAcquisitionDrawerComponent {
   }
 
   // === Private Initializers ===
+  private initTotalMembersChartData(): Signal<ChartData<'line'>> {
+    return computed(() => {
+      const { totalMembersMonthlyData, totalMembersMonthlyLabels } = this.data();
+      return {
+        labels: totalMembersMonthlyLabels,
+        datasets: [
+          {
+            data: totalMembersMonthlyData,
+            borderColor: lfxColors.blue[500],
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: lfxColors.blue[500],
+          },
+        ],
+      };
+    });
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
       const { newMembersThisQuarter, newMemberRevenue, changePercentage, quarterlyData } = this.data();
