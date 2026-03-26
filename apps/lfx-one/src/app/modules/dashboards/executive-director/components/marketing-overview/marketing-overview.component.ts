@@ -24,7 +24,7 @@ import {
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { MessageService } from 'primeng/api';
+
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
@@ -62,7 +62,6 @@ export class MarketingOverviewComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
-  private readonly messageService = inject(MessageService);
 
   // === WritableSignals ===
   protected readonly marketingDataLoading = signal(true);
@@ -307,26 +306,15 @@ export class MarketingOverviewComponent {
         }),
         switchMap((foundation) =>
           forkJoin({
-            webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug),
-            emailCtr: this.analyticsService.getEmailCtr(foundation.name),
-            socialReach: this.analyticsService.getSocialReach(foundation.name),
-            socialMedia: this.analyticsService.getSocialMedia(foundation.name),
-            memberRetention: this.analyticsService.getMemberRetention(foundation.slug),
-            memberAcquisition: this.analyticsService.getMemberAcquisition(foundation.slug),
-            engagedCommunity: this.analyticsService.getEngagedCommunity(foundation.slug),
-            flywheelConversion: this.analyticsService.getFlywheelConversion(foundation.slug),
-          }).pipe(
-            tap(() => this.marketingDataLoading.set(false)),
-            catchError(() => {
-              this.marketingDataLoading.set(false);
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Dashboard Error',
-                detail: 'Failed to load marketing metrics. Some data may be unavailable.',
-              });
-              return of(defaultValue);
-            })
-          )
+            webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug).pipe(catchError(() => of(defaultWebActivities))),
+            emailCtr: this.analyticsService.getEmailCtr(foundation.name).pipe(catchError(() => of(defaultEmailCtr))),
+            socialReach: this.analyticsService.getSocialReach(foundation.name).pipe(catchError(() => of(defaultSocialReach))),
+            socialMedia: this.analyticsService.getSocialMedia(foundation.name).pipe(catchError(() => of(defaultSocialMedia))),
+            memberRetention: this.analyticsService.getMemberRetention(foundation.slug).pipe(catchError(() => of(defaultMemberRetention))),
+            memberAcquisition: this.analyticsService.getMemberAcquisition(foundation.slug).pipe(catchError(() => of(defaultMemberAcquisition))),
+            engagedCommunity: this.analyticsService.getEngagedCommunity(foundation.slug).pipe(catchError(() => of(defaultEngagedCommunity))),
+            flywheelConversion: this.analyticsService.getFlywheelConversion(foundation.slug).pipe(catchError(() => of(defaultFlywheelConversion))),
+          }).pipe(tap(() => this.marketingDataLoading.set(false)))
         ),
         finalize(() => this.marketingDataLoading.set(false))
       ),

@@ -19,7 +19,7 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
-import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
@@ -168,18 +168,16 @@ export class SocialMediaDrawerComponent {
       monthlyData: [],
     };
 
+    const visible$ = toObservable(this.visible);
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.name || ''));
+
     return toSignal(
-      toObservable(this.visible).pipe(
-        skip(1),
-        filter((isVisible) => isVisible),
+      combineLatest([visible$, foundation$]).pipe(
+        filter(([isVisible, name]) => isVisible && !!name),
+        map(([, name]) => name),
         tap(() => this.drawerLoading.set(true)),
-        switchMap(() => {
-          const foundation = this.projectContextService.selectedFoundation();
-          if (!foundation?.name) {
-            this.drawerLoading.set(false);
-            return of(defaultValue);
-          }
-          return this.analyticsService.getSocialMedia(foundation.name).pipe(
+        switchMap((foundationName) =>
+          this.analyticsService.getSocialMedia(foundationName).pipe(
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
@@ -190,8 +188,8 @@ export class SocialMediaDrawerComponent {
               });
               return of(defaultValue);
             })
-          );
-        })
+          )
+        )
       ),
       { initialValue: defaultValue }
     );

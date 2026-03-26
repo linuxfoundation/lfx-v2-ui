@@ -2281,16 +2281,17 @@ export class ProjectService {
         LIMIT 8
       `;
 
-      // Reuse the same total members query from the board-member dashboard
-      const totalMembersData = await this.getFoundationTotalMembers(foundationSlug);
-
-      const result = await this.snowflakeService.execute<{
-        QUARTER_START_DATE: string;
-        QUARTER_LABEL: string;
-        NEW_MEMBERS: number;
-        NEW_MEMBER_REVENUE: number;
-        QOQ_CHANGE_PERCENTAGE: number;
-      }>(acquisitionQuery, [foundationSlug]);
+      // Run both queries in parallel since they're independent
+      const [totalMembersData, result] = await Promise.all([
+        this.getFoundationTotalMembers(foundationSlug),
+        this.snowflakeService.execute<{
+          QUARTER_START_DATE: string;
+          QUARTER_LABEL: string;
+          NEW_MEMBERS: number;
+          NEW_MEMBER_REVENUE: number;
+          QOQ_CHANGE_PERCENTAGE: number;
+        }>(acquisitionQuery, [foundationSlug]),
+      ]);
 
       if (result.rows.length === 0) {
         return {

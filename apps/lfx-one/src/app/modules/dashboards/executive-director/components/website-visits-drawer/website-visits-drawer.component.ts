@@ -17,7 +17,7 @@ import {
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -144,18 +144,16 @@ export class WebsiteVisitsDrawerComponent {
       dailyLabels: [],
     };
 
+    const visible$ = toObservable(this.visible);
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
+
     return toSignal(
-      toObservable(this.visible).pipe(
-        skip(1),
-        filter((isVisible) => isVisible),
+      combineLatest([visible$, foundation$]).pipe(
+        filter(([isVisible, slug]) => isVisible && !!slug),
+        map(([, slug]) => slug),
         tap(() => this.drawerLoading.set(true)),
-        switchMap(() => {
-          const foundation = this.projectContextService.selectedFoundation();
-          if (!foundation?.slug) {
-            this.drawerLoading.set(false);
-            return of(defaultValue);
-          }
-          return this.analyticsService.getWebActivitiesSummary(foundation.slug).pipe(
+        switchMap((foundationSlug) =>
+          this.analyticsService.getWebActivitiesSummary(foundationSlug).pipe(
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
@@ -166,8 +164,8 @@ export class WebsiteVisitsDrawerComponent {
               });
               return of(defaultValue);
             })
-          );
-        })
+          )
+        )
       ),
       { initialValue: defaultValue }
     );
