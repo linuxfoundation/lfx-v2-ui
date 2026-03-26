@@ -32,14 +32,14 @@
     <div class="flex gap-4" data-testid="engaged-community-drawer-stats">
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">Total Members</span>
+          <span class="text-sm text-gray-500">Total Engaged</span>
           <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalMembers() }}</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">Newsletter</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ formattedNewsletterSubscribers() }}</span>
+          <span class="text-sm text-gray-500">Newsletter Opens</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formattedNewsletterOpens() }}</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
@@ -72,7 +72,7 @@
         @for (action of attentionActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-red-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-red-100 flex-shrink-0 mt-0.5">
-              <i [class]="action.iconClass + ' text-red-600'"></i>
+              <i [class]="actionIcon(action.actionType) + ' text-red-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-2">
@@ -111,7 +111,7 @@
         @for (action of performingActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-green-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 flex-shrink-0 mt-0.5">
-              <i [class]="action.iconClass + ' text-green-600'"></i>
+              <i [class]="actionIcon(action.actionType) + ' text-green-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-semibold text-gray-900">{{ action.title }}</span>

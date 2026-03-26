@@ -7,15 +7,22 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createBarChartOptions, createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import {
+  createBarChartOptions,
+  createHorizontalBarChartOptions,
+  DASHBOARD_TOOLTIP_CONFIG,
+  lfxColors,
+  MARKETING_ACTION_ICON_MAP,
+} from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { MessageService } from 'primeng/api';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
+import type { EmailCtrResponse, MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
@@ -28,6 +35,7 @@ export class EmailCtrDrawerComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly messageService = inject(MessageService);
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -67,7 +75,7 @@ export class EmailCtrDrawerComponent {
         ticks: {
           color: lfxColors.gray[500],
           font: { size: 11 },
-          callback: (value) => `${value}%`,
+          callback: (value) => `${Number(value).toFixed(1)}%`,
         },
       },
     },
@@ -94,7 +102,7 @@ export class EmailCtrDrawerComponent {
         ticks: {
           color: lfxColors.gray[500],
           font: { size: 11 },
-          callback: (value) => `${value}%`,
+          callback: (value) => `${Number(value).toFixed(1)}%`,
         },
       },
       y: {
@@ -153,6 +161,10 @@ export class EmailCtrDrawerComponent {
     this.visible.set(false);
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   // === Private Initializers ===
   private initDrawerData(): Signal<EmailCtrResponse> {
     const defaultValue: EmailCtrResponse = {
@@ -181,6 +193,11 @@ export class EmailCtrDrawerComponent {
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load email CTR details.',
+              });
               return of(defaultValue);
             })
           );
@@ -235,7 +252,7 @@ export class EmailCtrDrawerComponent {
           description: `CTR dropped ${Math.abs(changePercentage)}% — experiment with button placement and copy in the next send`,
           priority: 'high',
           dueLabel: 'Next send',
-          iconClass: 'fa-light fa-bullseye-pointer',
+          actionType: 'optimize',
         });
       }
 
@@ -250,7 +267,7 @@ export class EmailCtrDrawerComponent {
             description: `Open rate declined from ${prevOpenRate.toFixed(1)}% to ${latestOpenRate.toFixed(1)}% — A/B test subject lines`,
             priority: latestOpenRate < prevOpenRate * 0.9 ? 'high' : 'medium',
             dueLabel: 'Next send',
-            iconClass: 'fa-light fa-envelope-open-text',
+            actionType: 'content',
           });
         }
       }
@@ -265,7 +282,7 @@ export class EmailCtrDrawerComponent {
             description: `Top campaign has ${best.avgCtr.toFixed(1)}% CTR vs ${worst.avgCtr.toFixed(1)}% for "${worst.campaignName}" — apply winning format`,
             priority: 'medium',
             dueLabel: 'This month',
-            iconClass: 'fa-light fa-copy',
+            actionType: 'optimize',
           });
         }
       }
@@ -276,7 +293,7 @@ export class EmailCtrDrawerComponent {
           description: `CTR is trending up (+${changePercentage}%) — continue current content strategy`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 

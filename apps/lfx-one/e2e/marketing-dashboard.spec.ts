@@ -328,4 +328,356 @@ test.describe('Engaged Community Drawer', () => {
   });
 });
 
+test.describe('API Response Validation', () => {
+  /**
+   * Validates the shape of each /api/analytics/* response intercepted during
+   * the Executive Director marketing dashboard load. Uses page.waitForResponse()
+   * to capture real API responses and asserts required fields + correct types.
+   */
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(DASHBOARD_URL);
+  });
+
+  test('web-activities-summary returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/web-activities-summary') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('totalSessions');
+    expect(body).toHaveProperty('totalPageViews');
+    expect(body).toHaveProperty('domainGroups');
+    expect(body).toHaveProperty('dailyData');
+    expect(body).toHaveProperty('dailyLabels');
+
+    // Type checks
+    expect(typeof body.totalSessions).toBe('number');
+    expect(typeof body.totalPageViews).toBe('number');
+    expect(Array.isArray(body.domainGroups)).toBe(true);
+    expect(Array.isArray(body.dailyData)).toBe(true);
+    expect(Array.isArray(body.dailyLabels)).toBe(true);
+
+    // Domain group shape validation (if data exists)
+    if (body.domainGroups.length > 0) {
+      const group = body.domainGroups[0];
+      expect(group).toHaveProperty('domainGroup');
+      expect(group).toHaveProperty('totalSessions');
+      expect(group).toHaveProperty('totalPageViews');
+      expect(typeof group.domainGroup).toBe('string');
+      expect(typeof group.totalSessions).toBe('number');
+    }
+  });
+
+  test('email-ctr returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/email-ctr') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('currentCtr');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('monthlyData');
+    expect(body).toHaveProperty('monthlyLabels');
+    expect(body).toHaveProperty('campaignGroups');
+    expect(body).toHaveProperty('monthlySends');
+    expect(body).toHaveProperty('monthlyOpens');
+
+    // Type checks
+    expect(typeof body.currentCtr).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+    expect(Array.isArray(body.monthlyLabels)).toBe(true);
+    expect(Array.isArray(body.campaignGroups)).toBe(true);
+    expect(Array.isArray(body.monthlySends)).toBe(true);
+    expect(Array.isArray(body.monthlyOpens)).toBe(true);
+
+    // Campaign group shape (if data exists)
+    if (body.campaignGroups.length > 0) {
+      const group = body.campaignGroups[0];
+      expect(group).toHaveProperty('campaignName');
+      expect(group).toHaveProperty('avgCtr');
+      expect(typeof group.campaignName).toBe('string');
+      expect(typeof group.avgCtr).toBe('number');
+    }
+  });
+
+  test('social-reach returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/social-reach') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('totalReach');
+    expect(body).toHaveProperty('roas');
+    expect(body).toHaveProperty('totalSpend');
+    expect(body).toHaveProperty('totalRevenue');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('monthlyData');
+    expect(body).toHaveProperty('monthlyLabels');
+    expect(body).toHaveProperty('monthlyRoas');
+    expect(body).toHaveProperty('channelGroups');
+
+    // Type checks
+    expect(typeof body.totalReach).toBe('number');
+    expect(typeof body.roas).toBe('number');
+    expect(typeof body.totalSpend).toBe('number');
+    expect(typeof body.totalRevenue).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+    expect(Array.isArray(body.monthlyRoas)).toBe(true);
+    expect(Array.isArray(body.channelGroups)).toBe(true);
+
+    // Channel group shape (if data exists)
+    if (body.channelGroups.length > 0) {
+      const group = body.channelGroups[0];
+      expect(group).toHaveProperty('channel');
+      expect(group).toHaveProperty('totalImpressions');
+      expect(typeof group.channel).toBe('string');
+      expect(typeof group.totalImpressions).toBe('number');
+    }
+  });
+
+  test('social-media returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/social-media') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('totalFollowers');
+    expect(body).toHaveProperty('totalPlatforms');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('platforms');
+    expect(body).toHaveProperty('monthlyData');
+
+    // Type checks
+    expect(typeof body.totalFollowers).toBe('number');
+    expect(typeof body.totalPlatforms).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.platforms)).toBe(true);
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+
+    // Platform shape (if data exists)
+    if (body.platforms.length > 0) {
+      const platform = body.platforms[0];
+      expect(platform).toHaveProperty('platform');
+      expect(platform).toHaveProperty('followers');
+      expect(platform).toHaveProperty('engagementRate');
+      expect(platform).toHaveProperty('postsLast30Days');
+      expect(platform).toHaveProperty('impressions');
+      expect(typeof platform.platform).toBe('string');
+      expect(typeof platform.followers).toBe('number');
+    }
+
+    // Monthly data shape (if data exists)
+    if (body.monthlyData.length > 0) {
+      const point = body.monthlyData[0];
+      expect(point).toHaveProperty('month');
+      expect(point).toHaveProperty('totalFollowers');
+      expect(typeof point.month).toBe('string');
+      expect(typeof point.totalFollowers).toBe('number');
+    }
+  });
+
+  test('member-retention returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/member-retention') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('renewalRate');
+    expect(body).toHaveProperty('netRevenueRetention');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('target');
+    expect(body).toHaveProperty('monthlyData');
+
+    // Type checks
+    expect(typeof body.renewalRate).toBe('number');
+    expect(typeof body.netRevenueRetention).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(typeof body.target).toBe('number');
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+
+    // Monthly data shape (if data exists)
+    if (body.monthlyData.length > 0) {
+      const point = body.monthlyData[0];
+      expect(point).toHaveProperty('month');
+      expect(point).toHaveProperty('value');
+      expect(typeof point.month).toBe('string');
+      expect(typeof point.value).toBe('number');
+    }
+  });
+
+  test('member-acquisition returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/member-acquisition') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('totalMembers');
+    expect(body).toHaveProperty('totalMembersMonthlyData');
+    expect(body).toHaveProperty('totalMembersMonthlyLabels');
+    expect(body).toHaveProperty('newMembersThisQuarter');
+    expect(body).toHaveProperty('newMemberRevenue');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('quarterlyData');
+
+    // Type checks
+    expect(typeof body.totalMembers).toBe('number');
+    expect(typeof body.newMembersThisQuarter).toBe('number');
+    expect(typeof body.newMemberRevenue).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.totalMembersMonthlyData)).toBe(true);
+    expect(Array.isArray(body.totalMembersMonthlyLabels)).toBe(true);
+    expect(Array.isArray(body.quarterlyData)).toBe(true);
+
+    // Quarterly data shape (if data exists)
+    if (body.quarterlyData.length > 0) {
+      const q = body.quarterlyData[0];
+      expect(q).toHaveProperty('quarter');
+      expect(q).toHaveProperty('newMembers');
+      expect(q).toHaveProperty('revenue');
+      expect(typeof q.quarter).toBe('string');
+      expect(typeof q.newMembers).toBe('number');
+      expect(typeof q.revenue).toBe('number');
+    }
+  });
+
+  test('engaged-community returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/engaged-community') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('totalMembers');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('breakdown');
+    expect(body).toHaveProperty('monthlyData');
+
+    // Type checks
+    expect(typeof body.totalMembers).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+
+    // Breakdown shape
+    const breakdown = body.breakdown;
+    expect(breakdown).toHaveProperty('newsletterSubscribers');
+    expect(breakdown).toHaveProperty('communityMembers');
+    expect(breakdown).toHaveProperty('workingGroupMembers');
+    expect(breakdown).toHaveProperty('certifiedIndividuals');
+    expect(typeof breakdown.newsletterSubscribers).toBe('number');
+    expect(typeof breakdown.communityMembers).toBe('number');
+    expect(typeof breakdown.workingGroupMembers).toBe('number');
+    expect(typeof breakdown.certifiedIndividuals).toBe('number');
+
+    // Monthly data shape (if data exists)
+    if (body.monthlyData.length > 0) {
+      const point = body.monthlyData[0];
+      expect(point).toHaveProperty('month');
+      expect(point).toHaveProperty('value');
+      expect(typeof point.month).toBe('string');
+      expect(typeof point.value).toBe('number');
+    }
+  });
+
+  test('flywheel-conversion returns valid response shape', async ({ page }) => {
+    const responsePromise = page.waitForResponse((resp) => resp.url().includes('/api/analytics/flywheel-conversion') && resp.status() === 200, {
+      timeout: DATA_LOAD_TIMEOUT,
+    });
+
+    await switchToExecutiveDirector(page);
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+
+    // Required top-level fields
+    expect(body).toHaveProperty('conversionRate');
+    expect(body).toHaveProperty('changePercentage');
+    expect(body).toHaveProperty('trend');
+    expect(body).toHaveProperty('funnel');
+    expect(body).toHaveProperty('monthlyData');
+
+    // Type checks
+    expect(typeof body.conversionRate).toBe('number');
+    expect(typeof body.changePercentage).toBe('number');
+    expect(['up', 'down']).toContain(body.trend);
+    expect(Array.isArray(body.monthlyData)).toBe(true);
+
+    // Funnel shape
+    const funnel = body.funnel;
+    expect(funnel).toHaveProperty('eventAttendees');
+    expect(funnel).toHaveProperty('convertedToNewsletter');
+    expect(funnel).toHaveProperty('convertedToCommunity');
+    expect(funnel).toHaveProperty('convertedToWorkingGroup');
+    expect(typeof funnel.eventAttendees).toBe('number');
+    expect(typeof funnel.convertedToNewsletter).toBe('number');
+    expect(typeof funnel.convertedToCommunity).toBe('number');
+    expect(typeof funnel.convertedToWorkingGroup).toBe('number');
+
+    // Monthly data shape (if data exists)
+    if (body.monthlyData.length > 0) {
+      const point = body.monthlyData[0];
+      expect(point).toHaveProperty('month');
+      expect(point).toHaveProperty('value');
+      expect(typeof point.month).toBe('string');
+      expect(typeof point.value).toBe('number');
+    }
+  });
+});
+
 // Generated with [Claude Code](https://claude.ai/code)

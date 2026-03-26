@@ -6,12 +6,18 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import {
+  createHorizontalBarChartOptions,
+  createLineChartOptions,
+  DASHBOARD_TOOLTIP_CONFIG,
+  lfxColors,
+  MARKETING_ACTION_ICON_MAP,
+} from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EngagedCommunitySizeResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { EngagedCommunitySizeResponse, MarketingActionType, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-engaged-community-drawer',
@@ -32,10 +38,11 @@ export class EngagedCommunityDrawerComponent {
     breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
     monthlyData: [],
   });
+  public readonly newsletterOpens = input<number>(0);
 
   // === Computed Signals ===
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
-  protected readonly formattedNewsletterSubscribers: Signal<string> = computed(() => formatNumber(this.data().breakdown.newsletterSubscribers));
+  protected readonly formattedNewsletterOpens: Signal<string> = computed(() => formatNumber(this.newsletterOpens()));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -124,6 +131,10 @@ export class EngagedCommunityDrawerComponent {
     this.visible.set(false);
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   // === Private Initializers ===
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
@@ -141,7 +152,7 @@ export class EngagedCommunityDrawerComponent {
           description: `Working group members are only ${((breakdown.workingGroupMembers / totalMembers) * 100).toFixed(0)}% of total — convert newsletter subscribers through targeted outreach`,
           priority: 'high',
           dueLabel: 'This quarter',
-          iconClass: 'fa-light fa-user-group',
+          actionType: 'engagement',
         });
       }
 
@@ -152,7 +163,7 @@ export class EngagedCommunityDrawerComponent {
           description: `Community size dropped ${Math.abs(changePercentage)}% — review engagement programs and onboarding flow`,
           priority: 'high',
           dueLabel: 'This month',
-          iconClass: 'fa-light fa-chart-line-down',
+          actionType: 'decline',
         });
       }
 
@@ -163,7 +174,7 @@ export class EngagedCommunityDrawerComponent {
           description: `${((breakdown.newsletterSubscribers / totalMembers) * 100).toFixed(0)}% of community is newsletter-only — create pathways to deeper participation`,
           priority: 'medium',
           dueLabel: 'Next quarter',
-          iconClass: 'fa-light fa-arrows-split-up-and-left',
+          actionType: 'diversify',
         });
       }
 
@@ -173,7 +184,7 @@ export class EngagedCommunityDrawerComponent {
           description: `${formatNumber(totalMembers)} engaged members${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 
@@ -208,7 +219,7 @@ export class EngagedCommunityDrawerComponent {
           { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
         ].sort((a, b) => b.value - a.value);
         const topShare = (segments[0].value / totalMembers) * 100;
-        insights.push({ text: `${segments[0].name} are the largest segment at ${topShare.toFixed(0)}% of total`, type: topShare > 70 ? 'warning' : 'info' });
+        insights.push({ text: `${segments[0].name} are the largest segment at ${topShare.toFixed(0)}% of total`, type: 'info' });
       }
 
       // Monthly trend consistency

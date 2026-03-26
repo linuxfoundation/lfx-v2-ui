@@ -6,12 +6,18 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { createBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { MemberAcquisitionResponse, MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type {
+  MemberAcquisitionResponse,
+  MemberRetentionResponse,
+  MarketingRecommendedAction,
+  MarketingKeyInsight,
+  MarketingActionType,
+} from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-member-acquisition-drawer',
@@ -70,8 +76,6 @@ export class MemberAcquisitionDrawerComponent {
     ...this.retentionInsights().filter((i) => i.type === 'driver' || i.type === 'info'),
   ]);
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
-  protected readonly revenueChartData: Signal<ChartData<'line'>> = this.initRevenueChartData();
-  protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
@@ -80,36 +84,6 @@ export class MemberAcquisitionDrawerComponent {
         ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
           label: (ctx) => ` ${ctx.parsed.y} new members`,
-        },
-      },
-    },
-  });
-
-  protected readonly revenueChartOptions: ChartOptions<'line'> = createLineChartOptions({
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        ...DASHBOARD_TOOLTIP_CONFIG,
-        callbacks: {
-          label: (ctx) => ` $${formatNumber(ctx.parsed.y ?? 0)} revenue`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: { display: false },
-        border: { display: true, color: lfxColors.gray[300] },
-        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
-      },
-      y: {
-        display: true,
-        grid: { color: lfxColors.gray[200], lineWidth: 1 },
-        border: { display: false },
-        ticks: {
-          color: lfxColors.gray[500],
-          font: { size: 11 },
-          callback: (value) => `$${Number(value).toLocaleString()}`,
         },
       },
     },
@@ -145,41 +119,15 @@ export class MemberAcquisitionDrawerComponent {
     },
   });
 
-  protected readonly retentionChartOptions: ChartOptions<'line'> = createLineChartOptions({
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        ...DASHBOARD_TOOLTIP_CONFIG,
-        callbacks: {
-          label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)}% renewal rate`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: { display: false },
-        border: { display: true, color: lfxColors.gray[300] },
-        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
-      },
-      y: {
-        display: true,
-        grid: { color: lfxColors.gray[200], lineWidth: 1 },
-        border: { display: false },
-        ticks: {
-          color: lfxColors.gray[500],
-          font: { size: 11 },
-          callback: (value) => `${value}%`,
-        },
-      },
-    },
-  });
-
   protected readonly formatNumber = formatNumber;
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
+  }
+
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   // === Private Initializers ===
@@ -226,7 +174,7 @@ export class MemberAcquisitionDrawerComponent {
             description: `Revenue per new member declined ${revenueDecline}% — review membership tier mix and onboarding`,
             priority: 'high',
             dueLabel: 'This quarter',
-            iconClass: 'fa-light fa-money-bill-trend-up',
+            actionType: 'revenue',
           });
         }
       }
@@ -238,7 +186,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `New member signups dropped ${Math.abs(changePercentage)}% — review marketing funnel and conversion paths`,
           priority: 'high',
           dueLabel: 'This month',
-          iconClass: 'fa-light fa-chart-line-down',
+          actionType: 'decline',
         });
       }
 
@@ -253,7 +201,7 @@ export class MemberAcquisitionDrawerComponent {
             description: `New member revenue grew ${totalGrowth}% over 3 quarters — room to increase investment in efficient channels`,
             priority: 'medium',
             dueLabel: 'Next quarter',
-            iconClass: 'fa-light fa-chart-line-up',
+            actionType: 'growth',
           });
         }
       }
@@ -264,7 +212,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `${newMembersThisQuarter} new members this quarter with $${formatNumber(newMemberRevenue)} in new revenue`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 
@@ -341,58 +289,6 @@ export class MemberAcquisitionDrawerComponent {
     });
   }
 
-  private initRevenueChartData(): Signal<ChartData<'line'>> {
-    return computed(() => {
-      const { quarterlyData } = this.data();
-      return {
-        labels: quarterlyData.map((d) => d.quarter),
-        datasets: [
-          {
-            data: quarterlyData.map((d) => d.revenue),
-            borderColor: lfxColors.blue[500],
-            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: lfxColors.blue[500],
-          },
-        ],
-      };
-    });
-  }
-
-  private initRetentionChartData(): Signal<ChartData<'line'>> {
-    return computed(() => {
-      const { monthlyData, target } = this.retentionData();
-      return {
-        labels: monthlyData.map((d) => d.month),
-        datasets: [
-          {
-            label: 'Renewal Rate',
-            data: monthlyData.map((d) => d.value),
-            borderColor: lfxColors.blue[500],
-            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: lfxColors.blue[500],
-          },
-          {
-            label: 'Target',
-            data: monthlyData.map(() => target),
-            borderColor: lfxColors.gray[400],
-            borderDash: [5, 5],
-            borderWidth: 1,
-            pointRadius: 0,
-            fill: false,
-          },
-        ],
-      };
-    });
-  }
-
   private initRetentionInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
       const { renewalRate, netRevenueRetention, target, monthlyData } = this.retentionData();
@@ -447,7 +343,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `Renewal rate is ${renewalRate}% vs ${target}% target — ${gap} points below. Focus on at-risk member engagement`,
           priority: 'high',
           dueLabel: 'This quarter',
-          iconClass: 'fa-light fa-bullseye-arrow',
+          actionType: 'target',
         });
       }
 
@@ -457,7 +353,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `NRR at ${netRevenueRetention}% — revenue shrinking from existing members. Explore upsell opportunities`,
           priority: 'high',
           dueLabel: 'This quarter',
-          iconClass: 'fa-light fa-money-bill-trend-up',
+          actionType: 'revenue',
         });
       }
 
@@ -467,7 +363,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `Renewal rate dropped ${Math.abs(changePercentage)}% — review member satisfaction and renewal outreach timing`,
           priority: 'high',
           dueLabel: 'This month',
-          iconClass: 'fa-light fa-chart-line-down',
+          actionType: 'decline',
         });
       }
 
@@ -477,7 +373,7 @@ export class MemberAcquisitionDrawerComponent {
           description: `${renewalRate}% renewal rate${renewalRate >= target ? ` exceeds ${target}% target` : ''}${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 

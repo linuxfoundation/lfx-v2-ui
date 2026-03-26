@@ -6,12 +6,18 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import {
+  createHorizontalBarChartOptions,
+  createLineChartOptions,
+  DASHBOARD_TOOLTIP_CONFIG,
+  lfxColors,
+  MARKETING_ACTION_ICON_MAP,
+} from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { FlywheelConversionResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { FlywheelConversionResponse, MarketingActionType, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-flywheel-conversion-drawer',
@@ -72,7 +78,7 @@ export class FlywheelConversionDrawerComponent {
         ticks: {
           color: lfxColors.gray[500],
           font: { size: 11 },
-          callback: (value) => `${value}%`,
+          callback: (value) => `${Number(value).toFixed(1)}%`,
         },
       },
     },
@@ -119,6 +125,10 @@ export class FlywheelConversionDrawerComponent {
     this.visible.set(false);
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   // === Private Initializers ===
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
@@ -139,7 +149,7 @@ export class FlywheelConversionDrawerComponent {
             description: `WG conversion at ${wgRate.toFixed(1)}% vs ${nlRate.toFixed(1)}% for newsletter — attendees need clearer path to participate`,
             priority: 'high',
             dueLabel: 'This quarter',
-            iconClass: 'fa-light fa-arrow-progress',
+            actionType: 'conversion',
           });
         }
       }
@@ -151,7 +161,7 @@ export class FlywheelConversionDrawerComponent {
           description: `Flywheel conversion dropped ${Math.abs(changePercentage)}% — review post-event follow-up effectiveness`,
           priority: 'high',
           dueLabel: 'This month',
-          iconClass: 'fa-light fa-chart-line-down',
+          actionType: 'decline',
         });
       }
 
@@ -162,7 +172,7 @@ export class FlywheelConversionDrawerComponent {
           description: `Only ${conversionRate}% overall conversion — add newsletter signup and community join prompts to event follow-ups`,
           priority: 'medium',
           dueLabel: 'Next event',
-          iconClass: 'fa-light fa-envelope-circle-check',
+          actionType: 'content',
         });
       }
 
@@ -172,7 +182,7 @@ export class FlywheelConversionDrawerComponent {
           description: `${conversionRate}% conversion rate${changePercentage > 0 ? ` — improving ${changePercentage}%` : ''} across ${formatNumber(funnel.eventAttendees)} attendees`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 

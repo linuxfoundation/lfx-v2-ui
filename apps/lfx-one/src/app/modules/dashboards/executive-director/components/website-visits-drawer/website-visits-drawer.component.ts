@@ -7,16 +7,23 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import {
+  createHorizontalBarChartOptions,
+  createLineChartOptions,
+  DASHBOARD_TOOLTIP_CONFIG,
+  lfxColors,
+  MARKETING_ACTION_ICON_MAP,
+} from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, MarketingKeyInsight, MarketingActionType } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-website-visits-drawer',
@@ -28,6 +35,7 @@ import type { WebActivitiesSummaryResponse, MarketingRecommendedAction, Marketin
 export class WebsiteVisitsDrawerComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
 
   // === Model Signals (two-way binding) ===
@@ -122,6 +130,10 @@ export class WebsiteVisitsDrawerComponent {
     this.visible.set(false);
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   // === Private Initializers ===
   private initDrawerData(): Signal<WebActivitiesSummaryResponse> {
     const defaultValue: WebActivitiesSummaryResponse = {
@@ -147,6 +159,11 @@ export class WebsiteVisitsDrawerComponent {
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load website visit details.',
+              });
               return of(defaultValue);
             })
           );
@@ -178,7 +195,7 @@ export class WebsiteVisitsDrawerComponent {
             description: `Sessions dropped ~${decline}% in the recent period — review traffic sources and content changes`,
             priority: 'high',
             dueLabel: 'This week',
-            iconClass: 'fa-light fa-chart-line-down',
+            actionType: 'decline',
           });
         }
       }
@@ -193,7 +210,7 @@ export class WebsiteVisitsDrawerComponent {
             description: `${topShare.toFixed(0)}% of sessions come from a single domain — expand content across other properties`,
             priority: 'medium',
             dueLabel: 'This month',
-            iconClass: 'fa-light fa-diagram-project',
+            actionType: 'diversify',
           });
         }
       }
@@ -207,7 +224,7 @@ export class WebsiteVisitsDrawerComponent {
             description: `Only ${pagesPerSession.toFixed(1)} pages per session — add cross-links to increase engagement`,
             priority: 'medium',
             dueLabel: 'This month',
-            iconClass: 'fa-light fa-link',
+            actionType: 'optimize',
           });
         }
       }
@@ -218,7 +235,7 @@ export class WebsiteVisitsDrawerComponent {
           description: `${formatNumber(totalSessions)} sessions with healthy traffic distribution`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 

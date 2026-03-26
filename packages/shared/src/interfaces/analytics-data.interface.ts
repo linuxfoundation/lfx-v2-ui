@@ -2660,12 +2660,25 @@ export interface WebActivitiesSummaryResponse {
 /**
  * Recommended action for marketing drawers
  */
+export type MarketingActionType =
+  | 'decline'
+  | 'growth'
+  | 'target'
+  | 'revenue'
+  | 'engagement'
+  | 'conversion'
+  | 'content'
+  | 'diversify'
+  | 'optimize'
+  | 'investigate'
+  | 'monitor';
+
 export interface MarketingRecommendedAction {
   title: string;
   description: string;
   priority: 'high' | 'medium' | 'low';
   dueLabel: string;
-  iconClass: string;
+  actionType: MarketingActionType;
 }
 
 /**

@@ -4,19 +4,16 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
-import type { ChartData, ChartOptions } from 'chart.js';
-import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import { MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
+import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyInsight, MarketingActionType } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-member-retention-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, TagComponent],
   templateUrl: './member-retention-drawer.component.html',
   styleUrl: './member-retention-drawer.component.scss',
 })
@@ -45,41 +42,14 @@ export class MemberRetentionDrawerComponent {
   protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
     this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
   );
-  protected readonly retentionChartData: Signal<ChartData<'line'>> = this.initRetentionChartData();
-
-  protected readonly retentionChartOptions: ChartOptions<'line'> = createLineChartOptions({
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        ...DASHBOARD_TOOLTIP_CONFIG,
-        callbacks: {
-          label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)}% renewal rate`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        grid: { display: false },
-        border: { display: true, color: lfxColors.gray[300] },
-        ticks: { color: lfxColors.gray[500], font: { size: 11 } },
-      },
-      y: {
-        display: true,
-        grid: { color: lfxColors.gray[200], lineWidth: 1 },
-        border: { display: false },
-        ticks: {
-          color: lfxColors.gray[500],
-          font: { size: 11 },
-          callback: (value) => `${value}%`,
-        },
-      },
-    },
-  });
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
+  }
+
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   // === Private Initializers ===
@@ -100,7 +70,7 @@ export class MemberRetentionDrawerComponent {
           description: `Renewal rate is ${renewalRate}% vs ${target}% target — ${gap} points below. Focus on at-risk member engagement`,
           priority: 'high',
           dueLabel: 'This quarter',
-          iconClass: 'fa-light fa-bullseye-arrow',
+          actionType: 'target',
         });
       }
 
@@ -111,7 +81,7 @@ export class MemberRetentionDrawerComponent {
           description: `NRR at ${netRevenueRetention}% — revenue shrinking from existing members. Explore upsell opportunities`,
           priority: 'high',
           dueLabel: 'This quarter',
-          iconClass: 'fa-light fa-money-bill-trend-up',
+          actionType: 'revenue',
         });
       }
 
@@ -122,7 +92,7 @@ export class MemberRetentionDrawerComponent {
           description: `Renewal rate dropped ${Math.abs(changePercentage)}% — review member satisfaction and renewal outreach timing`,
           priority: 'high',
           dueLabel: 'This month',
-          iconClass: 'fa-light fa-chart-line-down',
+          actionType: 'decline',
         });
       }
 
@@ -132,7 +102,7 @@ export class MemberRetentionDrawerComponent {
           description: `${renewalRate}% renewal rate${renewalRate >= target ? ` exceeds ${target}% target` : ''}${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 
@@ -178,37 +148,6 @@ export class MemberRetentionDrawerComponent {
       }
 
       return insights;
-    });
-  }
-
-  private initRetentionChartData(): Signal<ChartData<'line'>> {
-    return computed(() => {
-      const { monthlyData, target } = this.data();
-      return {
-        labels: monthlyData.map((d) => d.month),
-        datasets: [
-          {
-            label: 'Renewal Rate',
-            data: monthlyData.map((d) => d.value),
-            borderColor: lfxColors.blue[500],
-            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: lfxColors.blue[500],
-          },
-          {
-            label: 'Target',
-            data: monthlyData.map(() => target),
-            borderColor: lfxColors.gray[400],
-            borderDash: [5, 5],
-            borderWidth: 1,
-            pointRadius: 0,
-            fill: false,
-          },
-        ],
-      };
     });
   }
 }

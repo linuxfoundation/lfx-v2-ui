@@ -8,16 +8,23 @@ import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import {
+  createHorizontalBarChartOptions,
+  createLineChartOptions,
+  DASHBOARD_TOOLTIP_CONFIG,
+  lfxColors,
+  MARKETING_ACTION_ICON_MAP,
+} from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { MessageService } from 'primeng/api';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { SocialMediaResponse, MarketingRecommendedAction, MarketingKeyInsight, MarketingActionType } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-social-media-drawer',
@@ -30,6 +37,7 @@ export class SocialMediaDrawerComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly messageService = inject(MessageService);
 
   // === Icon Mapping (frontend concern — maps platform names to FontAwesome classes) ===
   private readonly platformIconMap: Record<string, string> = {
@@ -141,6 +149,10 @@ export class SocialMediaDrawerComponent {
     return this.platformIconMap[platformName] || 'fa-light fa-globe';
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   protected onClose(): void {
     this.visible.set(false);
   }
@@ -171,6 +183,11 @@ export class SocialMediaDrawerComponent {
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load social media details.',
+              });
               return of(defaultValue);
             })
           );
@@ -204,7 +221,7 @@ export class SocialMediaDrawerComponent {
           description: `${highEngageLowPost.engagementRate.toFixed(1)}% engagement rate but only ${highEngageLowPost.postsLast30Days} posts in 30 days`,
           priority: 'high',
           dueLabel: 'This week',
-          iconClass: 'fa-light fa-calendar-plus',
+          actionType: 'content',
         });
       }
 
@@ -214,7 +231,7 @@ export class SocialMediaDrawerComponent {
           description: `Followers dropped ${Math.abs(changePercentage)}% — review content strategy and posting cadence`,
           priority: 'high',
           dueLabel: 'This week',
-          iconClass: 'fa-light fa-user-minus',
+          actionType: 'decline',
         });
       }
 
@@ -228,7 +245,7 @@ export class SocialMediaDrawerComponent {
             description: `${formatNumber(lowest.followers)} followers but only ${lowest.engagementRate.toFixed(1)}% engagement — try interactive content`,
             priority: 'medium',
             dueLabel: 'This month',
-            iconClass: 'fa-light fa-comments',
+            actionType: 'engagement',
           });
         }
       }
@@ -239,7 +256,7 @@ export class SocialMediaDrawerComponent {
           description: `${formatNumber(totalFollowers)} followers across ${platforms.length} platforms${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
-          iconClass: 'fa-light fa-chart-line-up',
+          actionType: 'growth',
         });
       }
 

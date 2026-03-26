@@ -184,7 +184,8 @@
 <lfx-engaged-community-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
   (visibleChange)="handleDrawerClose()"
-  [data]="marketingData().engagedCommunity"></lfx-engaged-community-drawer>
+  [data]="marketingData().engagedCommunity"
+  [newsletterOpens]="totalNewsletterOpens()"></lfx-engaged-community-drawer>
 
 <lfx-member-acquisition-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"

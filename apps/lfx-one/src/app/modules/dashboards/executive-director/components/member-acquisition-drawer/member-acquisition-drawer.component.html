@@ -98,7 +98,7 @@
         @for (action of attentionActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-red-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-red-100 flex-shrink-0 mt-0.5">
-              <i [class]="action.iconClass + ' text-red-600'"></i>
+              <i [class]="actionIcon(action.actionType) + ' text-red-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-2">
@@ -137,7 +137,7 @@
         @for (action of performingActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-green-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 flex-shrink-0 mt-0.5">
-              <i [class]="action.iconClass + ' text-green-600'"></i>
+              <i [class]="actionIcon(action.actionType) + ' text-green-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-semibold text-gray-900">{{ action.title }}</span>
@@ -189,43 +189,5 @@
         </div>
       }
     </div>
-
-    <!-- Revenue Trend Chart -->
-    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-revenue-section">
-      <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">New Member Revenue Trend</h3>
-        <p class="text-sm text-gray-600">Revenue from new members over the last 4 quarters</p>
-      </div>
-      @if (data().quarterlyData.length > 1) {
-        <div class="h-[200px]" data-testid="member-acquisition-drawer-revenue-chart">
-          <lfx-chart type="line" [data]="revenueChartData()" [options]="revenueChartOptions" height="100%"></lfx-chart>
-        </div>
-      } @else {
-        <div class="text-center py-8 border border-slate-200 rounded-lg">
-          <i class="fa-light fa-eyes text-3xl text-gray-400 mb-2 block"></i>
-          <p class="text-sm text-gray-500">No revenue data available</p>
-        </div>
-      }
-    </div>
-
-    <!-- Retention Trend Chart -->
-    @if (retentionData().renewalRate > 0) {
-      <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-retention-chart-section">
-        <div class="flex flex-col gap-1">
-          <h3 class="text-sm font-semibold text-gray-900">Renewal Rate Trend</h3>
-          <p class="text-sm text-gray-600">Monthly renewal rate vs {{ retentionData().target }}% target over the last 6 months</p>
-        </div>
-        @if (retentionData().monthlyData.length > 1) {
-          <div class="h-[240px]" data-testid="member-acquisition-drawer-retention-chart">
-            <lfx-chart type="line" [data]="retentionChartData()" [options]="retentionChartOptions" height="100%"></lfx-chart>
-          </div>
-        } @else {
-          <div class="text-center py-8 border border-slate-200 rounded-lg">
-            <i class="fa-light fa-eyes text-3xl text-gray-400 mb-2 block"></i>
-            <p class="text-sm text-gray-500">No retention data available</p>
-          </div>
-        }
-      </div>
-    }
   </div>
 </p-drawer>

@@ -24,6 +24,7 @@ import {
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { MessageService } from 'primeng/api';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
@@ -61,6 +62,7 @@ export class MarketingOverviewComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly messageService = inject(MessageService);
 
   // === WritableSignals ===
   protected readonly marketingDataLoading = signal(true);
@@ -128,6 +130,11 @@ export class MarketingOverviewComponent {
         },
       ],
     };
+  });
+
+  protected readonly totalNewsletterOpens = computed(() => {
+    const { monthlyOpens } = this.marketingData().emailCtr;
+    return monthlyOpens.reduce((sum, v) => sum + v, 0);
   });
 
   protected readonly engagedCommunityChartData = computed(() => {
@@ -317,6 +324,11 @@ export class MarketingOverviewComponent {
             tap(() => this.marketingDataLoading.set(false)),
             catchError(() => {
               this.marketingDataLoading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Dashboard Error',
+                detail: 'Failed to load marketing metrics. Some data may be unavailable.',
+              });
               return of(defaultValue);
             })
           )

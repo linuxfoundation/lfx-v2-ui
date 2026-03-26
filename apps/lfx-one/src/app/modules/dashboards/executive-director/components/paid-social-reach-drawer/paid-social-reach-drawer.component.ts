@@ -7,16 +7,17 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { createBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
 import { formatCurrency, formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { MessageService } from 'primeng/api';
 import { catchError, filter, of, skip, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsight, MarketingActionType } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-paid-social-reach-drawer',
@@ -29,6 +30,7 @@ export class PaidSocialReachDrawerComponent {
   // === Services ===
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly messageService = inject(MessageService);
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
@@ -44,6 +46,10 @@ export class PaidSocialReachDrawerComponent {
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly roasChartData: Signal<ChartData<'bar'>> = this.initRoasChartData();
+  protected readonly hasRoasData: Signal<boolean> = computed(() => {
+    const roas = this.drawerData().monthlyRoas;
+    return !!roas && roas.some((v) => v > 0);
+  });
 
   protected readonly chartOptions: ChartOptions<'bar'> = createBarChartOptions({
     plugins: {
@@ -129,6 +135,10 @@ export class PaidSocialReachDrawerComponent {
     this.visible.set(false);
   }
 
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
   // === Private Initializers ===
   private initDrawerData(): Signal<SocialReachResponse> {
     const defaultValue: SocialReachResponse = {
@@ -159,6 +169,11 @@ export class PaidSocialReachDrawerComponent {
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load paid social reach details.',
+              });
               return of(defaultValue);
             })
           );
@@ -179,7 +194,7 @@ export class PaidSocialReachDrawerComponent {
           description: `ROAS is ${roas.toFixed(2)}x — spending more than earning. Pause underperforming campaigns`,
           priority: 'high',
           dueLabel: 'This week',
-          iconClass: 'fa-light fa-circle-exclamation',
+          actionType: 'decline',
         });
       } else if (changePercentage < -10) {
         actions.push({
@@ -187,7 +202,7 @@ export class PaidSocialReachDrawerComponent {
           description: `Impressions dropped ${Math.abs(changePercentage)}% — review targeting and bid strategy`,
           priority: 'high',
           dueLabel: 'Next campaign',
-          iconClass: 'fa-light fa-magnifying-glass-chart',
+          actionType: 'investigate',
         });
       }
 
@@ -198,7 +213,7 @@ export class PaidSocialReachDrawerComponent {
             description: `ROAS at ${roas.toFixed(2)}x with ${formatCurrency(totalRevenue)} revenue on ${formatCurrency(totalSpend)} spend — room to grow`,
             priority: 'low',
             dueLabel: 'Ongoing',
-            iconClass: 'fa-light fa-chart-line-up',
+            actionType: 'growth',
           });
         } else {
           actions.push({
@@ -206,7 +221,7 @@ export class PaidSocialReachDrawerComponent {
             description: `${formatNumber(this.drawerData().totalReach)} total impressions — tracking performance`,
             priority: 'low',
             dueLabel: 'Ongoing',
-            iconClass: 'fa-light fa-chart-line-up',
+            actionType: 'growth',
           });
         }
       }
