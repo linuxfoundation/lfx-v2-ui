@@ -1803,9 +1803,17 @@ export class ProjectService {
       // Note: Snowflake values are already percentages (e.g., 2.32 = 2.32%), no conversion needed
       const summaryRow = summaryResult.rows[0];
       const currentCtr = summaryRow ? Math.round((summaryRow.CTR_LAST_COMPLETED_MONTH ?? 0) * 10) / 10 : 0;
-      const changePercentage = summaryRow ? Math.round((summaryRow.CTR_MOM_CHANGE ?? 0) * 10) / 10 : 0;
 
       const monthlyData = monthlyResult.rows.map((row) => Math.round((row.MONTHLY_CTR ?? 0) * 10) / 10);
+
+      // Compute change as current CTR vs 6-month average (more stable than MoM)
+      let changePercentage = 0;
+      if (monthlyData.length >= 2 && currentCtr > 0) {
+        const avg = monthlyData.reduce((sum, v) => sum + v, 0) / monthlyData.length;
+        if (avg > 0) {
+          changePercentage = Math.round(((currentCtr - avg) / avg) * 1000) / 10;
+        }
+      }
       const monthlySends = monthlyResult.rows.map((row) => row.TOTAL_SENDS ?? 0);
       const monthlyOpens = monthlyResult.rows.map((row) => row.TOTAL_OPENS ?? 0);
       const monthlyLabels = monthlyResult.rows.map((row) => {
@@ -2370,22 +2378,34 @@ export class ProjectService {
       }
 
       const latest = result.rows[0];
-      const changePercentage = latest.MOM_CHANGE_PERCENTAGE ?? 0;
+
+      // Server-side recompute: exclude newsletter subscribers (unreliable data).
+      // Sum only community + working group + certified for totals and MoM change.
+      const sumSegments = (row: (typeof result.rows)[0]) => (row.COMMUNITY_MEMBERS ?? 0) + (row.WORKING_GROUP_MEMBERS ?? 0) + (row.CERTIFIED_INDIVIDUALS ?? 0);
+
+      const currentTotal = sumSegments(latest);
+      let changePercentage = 0;
+      if (result.rows.length >= 2) {
+        const previousTotal = sumSegments(result.rows[1]);
+        if (previousTotal > 0) {
+          changePercentage = Number((((currentTotal - previousTotal) / previousTotal) * 100).toFixed(2));
+        }
+      }
 
       const monthlyData: NorthStarMonthlyDataPoint[] = [...result.rows].reverse().map((row) => {
         const date = new Date(row.MONTH_START_DATE);
         return {
           month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          value: row.TOTAL_ENGAGED_MEMBERS ?? 0,
+          value: sumSegments(row),
         };
       });
 
       return {
-        totalMembers: latest.TOTAL_ENGAGED_MEMBERS ?? 0,
+        totalMembers: currentTotal,
         changePercentage,
         trend: changePercentage >= 0 ? 'up' : 'down',
         breakdown: {
-          newsletterSubscribers: latest.NEWSLETTER_SUBSCRIBERS ?? 0,
+          newsletterSubscribers: 0,
           communityMembers: latest.COMMUNITY_MEMBERS ?? 0,
           workingGroupMembers: latest.WORKING_GROUP_MEMBERS ?? 0,
           certifiedIndividuals: latest.CERTIFIED_INDIVIDUALS ?? 0,

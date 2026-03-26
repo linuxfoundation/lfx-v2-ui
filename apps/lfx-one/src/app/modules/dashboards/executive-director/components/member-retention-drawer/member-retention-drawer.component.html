@@ -44,15 +44,17 @@
       </lfx-card>
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">vs Target ({{ data().target }}%)</span>
-          <div class="flex items-center gap-2">
-            <span class="text-2xl font-semibold" [class]="data().renewalRate >= data().target ? 'text-green-600' : 'text-red-600'">
-              {{ data().renewalRate >= data().target ? 'Above' : 'Below' }}
-            </span>
-            <i
-              class="text-sm"
-              [class]="data().renewalRate >= data().target ? 'fa-light fa-check-circle text-green-600' : 'fa-light fa-circle-exclamation text-red-600'"></i>
-          </div>
+          <span class="text-sm text-gray-500">Growth</span>
+          @if (data().changePercentage !== 0) {
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+              </span>
+              <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
+            </div>
+          } @else {
+            <span class="text-2xl font-semibold text-gray-500">0%</span>
+          }
         </div>
       </lfx-card>
     </div>

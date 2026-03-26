@@ -312,13 +312,13 @@ export class EmailCtrDrawerComponent {
 
       // CTR trend insight
       if (changePercentage < -10) {
-        insights.push({ text: `CTR dropped ${Math.abs(changePercentage)}% vs last month — significant decline`, type: 'warning' });
+        insights.push({ text: `CTR dropped ${Math.abs(changePercentage)}% vs 6-month avg — significant decline`, type: 'warning' });
       } else if (changePercentage < 0) {
-        insights.push({ text: `CTR declined ${Math.abs(changePercentage)}% vs last month`, type: 'warning' });
+        insights.push({ text: `CTR declined ${Math.abs(changePercentage)}% vs 6-month avg`, type: 'warning' });
       } else if (changePercentage > 10) {
-        insights.push({ text: `CTR grew ${changePercentage}% vs last month — strong improvement`, type: 'driver' });
+        insights.push({ text: `CTR grew ${changePercentage}% vs 6-month avg — strong improvement`, type: 'driver' });
       } else if (changePercentage > 0) {
-        insights.push({ text: `CTR up ${changePercentage}% vs last month`, type: 'info' });
+        insights.push({ text: `CTR up ${changePercentage}% vs 6-month avg`, type: 'info' });
       }
 
       // Open rate insight

@@ -67,19 +67,17 @@
         </lfx-card>
         <lfx-card styleClass="flex-1">
           <div class="flex flex-col gap-1">
-            <span class="text-sm text-gray-500">vs Target ({{ retentionData().target }}%)</span>
-            <div class="flex items-center gap-2">
-              <span class="text-2xl font-semibold" [class]="retentionData().renewalRate >= retentionData().target ? 'text-green-600' : 'text-red-600'">
-                {{ retentionData().renewalRate >= retentionData().target ? 'Above' : 'Below' }}
-              </span>
-              <i
-                class="text-sm"
-                [class]="
-                  retentionData().renewalRate >= retentionData().target
-                    ? 'fa-light fa-check-circle text-green-600'
-                    : 'fa-light fa-circle-exclamation text-red-600'
-                "></i>
-            </div>
+            <span class="text-sm text-gray-500">Growth</span>
+            @if (retentionData().changePercentage !== 0) {
+              <div class="flex items-center gap-2">
+                <span class="text-2xl font-semibold" [class]="retentionData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
+                  {{ retentionData().changePercentage > 0 ? '+' : '' }}{{ retentionData().changePercentage }}%
+                </span>
+                <i class="text-sm" [class]="retentionData().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
+              </div>
+            } @else {
+              <span class="text-2xl font-semibold text-gray-500">0%</span>
+            }
           </div>
         </lfx-card>
       </div>

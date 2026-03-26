@@ -55,23 +55,11 @@ export class MemberRetentionDrawerComponent {
   // === Private Initializers ===
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, changePercentage, target, monthlyData } = this.data();
+      const { renewalRate, netRevenueRetention, changePercentage, monthlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
       if (renewalRate === 0 && monthlyData.length === 0) {
         return actions;
-      }
-
-      // Below target
-      if (renewalRate > 0 && renewalRate < target) {
-        const gap = (target - renewalRate).toFixed(1);
-        actions.push({
-          title: 'Close retention gap to target',
-          description: `Renewal rate is ${renewalRate}% vs ${target}% target — ${gap} points below. Focus on at-risk member engagement`,
-          priority: 'high',
-          dueLabel: 'This quarter',
-          actionType: 'target',
-        });
       }
 
       // NRR below 98% means meaningful revenue shrinking — ignore noise above 98%
@@ -107,7 +95,7 @@ export class MemberRetentionDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Maintain retention excellence',
-          description: `${renewalRate}% renewal rate${renewalRate >= target ? ` exceeds ${target}% target` : ''}${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
+          description: `${renewalRate}% renewal rate${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
           actionType: 'growth',
@@ -120,18 +108,11 @@ export class MemberRetentionDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, target, monthlyData } = this.data();
+      const { renewalRate, netRevenueRetention, monthlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
       if (renewalRate === 0 && monthlyData.length === 0) {
         return insights;
-      }
-
-      // Target comparison
-      if (renewalRate >= target) {
-        insights.push({ text: `Renewal rate at ${renewalRate}% exceeds ${target}% target`, type: 'driver' });
-      } else if (renewalRate > 0) {
-        insights.push({ text: `Renewal rate at ${renewalRate}% is below ${target}% target`, type: 'warning' });
       }
 
       // NRR insight

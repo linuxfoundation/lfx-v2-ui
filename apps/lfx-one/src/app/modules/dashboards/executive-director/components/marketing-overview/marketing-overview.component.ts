@@ -336,37 +336,76 @@ export class MarketingOverviewComponent {
 
   private initMarketingInsights(): Signal<string[]> {
     return computed(() => {
-      const { webActivities, emailCtr } = this.marketingData();
-      const loading = this.marketingDataLoading();
+      const data = this.marketingData();
+      if (this.marketingDataLoading()) {
+        return [];
+      }
+
+      // Collect all metrics that have meaningful data and a change percentage
+      const signals: { label: string; change: number; detail: string }[] = [];
+
+      if (data.socialMedia.totalFollowers > 0) {
+        signals.push({
+          label: 'Social followers',
+          change: data.socialMedia.changePercentage,
+          detail: formatNumber(data.socialMedia.totalFollowers),
+        });
+      }
+
+      if (data.socialReach.totalReach > 0) {
+        signals.push({
+          label: 'Paid social reach',
+          change: data.socialReach.changePercentage,
+          detail: formatNumber(data.socialReach.totalReach),
+        });
+      }
+
+      if (data.engagedCommunity.totalMembers > 0) {
+        signals.push({
+          label: 'Engaged community',
+          change: data.engagedCommunity.changePercentage,
+          detail: formatNumber(data.engagedCommunity.totalMembers),
+        });
+      }
+
+      if (data.memberAcquisition.totalMembers > 0) {
+        signals.push({
+          label: 'Member base',
+          change: data.memberAcquisition.changePercentage,
+          detail: formatNumber(data.memberAcquisition.totalMembers),
+        });
+      }
+
+      if (data.flywheelConversion.conversionRate > 0) {
+        signals.push({
+          label: 'Flywheel conversion',
+          change: data.flywheelConversion.changePercentage,
+          detail: `${data.flywheelConversion.conversionRate}%`,
+        });
+      }
+
+      if (data.memberRetention.renewalRate > 0) {
+        signals.push({
+          label: 'Member retention',
+          change: data.memberRetention.changePercentage,
+          detail: `${data.memberRetention.renewalRate}%`,
+        });
+      }
+
+      // Sort by absolute change magnitude — biggest movers first
+      const sorted = signals.filter((s) => s.change !== 0).sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
       const insights: string[] = [];
 
-      if (loading) {
-        return insights;
+      // Top movers — up to 3, biggest changes across all metrics
+      for (const signal of sorted.slice(0, 3)) {
+        const direction = signal.change > 0 ? 'up' : 'down';
+        insights.push(`${signal.label} is ${direction} ${Math.abs(signal.change)}% — now at ${signal.detail}`);
       }
 
-      // Email CTR insight
-      if (emailCtr.currentCtr > 0) {
-        if (emailCtr.changePercentage < 0) {
-          insights.push(`Email CTR declined ${Math.abs(emailCtr.changePercentage)}% to ${emailCtr.currentCtr.toFixed(1)}% — review email campaign strategy`);
-        } else if (emailCtr.changePercentage > 0) {
-          insights.push(`Email CTR grew ${emailCtr.changePercentage}% to ${emailCtr.currentCtr.toFixed(1)}% — content strategy is working`);
-        } else {
-          insights.push(`Email CTR steady at ${emailCtr.currentCtr.toFixed(1)}%`);
-        }
-      }
-
-      // Website visits insight
-      if (webActivities.totalSessions > 0) {
-        const pagesPerSession = webActivities.totalPageViews / webActivities.totalSessions;
-        insights.push(`${formatNumber(webActivities.totalSessions)} website sessions with ${pagesPerSession.toFixed(1)} pages per visit`);
-      }
-
-      // Domain concentration insight
-      if (webActivities.domainGroups.length > 1 && webActivities.totalSessions > 0) {
-        const sorted = [...webActivities.domainGroups].sort((a, b) => b.totalSessions - a.totalSessions);
-        const topDomain = sorted[0];
-        const topShare = (topDomain.totalSessions / webActivities.totalSessions) * 100;
-        insights.push(`${topDomain.domainGroup} drives ${topShare.toFixed(0)}% of web traffic`);
+      // If fewer than 2 insights from movers, add a steady-state summary
+      if (insights.length < 2 && data.webActivities.totalSessions > 0) {
+        insights.push(`${formatNumber(data.webActivities.totalSessions)} website sessions in the last 30 days`);
       }
 
       return insights;

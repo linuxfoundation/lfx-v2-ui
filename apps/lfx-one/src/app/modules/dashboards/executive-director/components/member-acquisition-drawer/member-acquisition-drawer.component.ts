@@ -301,17 +301,11 @@ export class MemberAcquisitionDrawerComponent {
 
   private initRetentionInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, target, monthlyData } = this.retentionData();
+      const { renewalRate, netRevenueRetention, monthlyData } = this.retentionData();
       const insights: MarketingKeyInsight[] = [];
 
       if (renewalRate === 0 && monthlyData.length === 0) {
         return insights;
-      }
-
-      if (renewalRate >= target) {
-        insights.push({ text: `Renewal rate at ${renewalRate}% exceeds ${target}% target`, type: 'driver' });
-      } else if (renewalRate > 0) {
-        insights.push({ text: `Renewal rate at ${renewalRate}% is below ${target}% target`, type: 'warning' });
       }
 
       if (netRevenueRetention > 100) {
@@ -339,22 +333,11 @@ export class MemberAcquisitionDrawerComponent {
 
   private initRetentionActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { renewalRate, netRevenueRetention, changePercentage, target, monthlyData } = this.retentionData();
+      const { renewalRate, netRevenueRetention, changePercentage, monthlyData } = this.retentionData();
       const actions: MarketingRecommendedAction[] = [];
 
       if (renewalRate === 0 && monthlyData.length === 0) {
         return actions;
-      }
-
-      if (renewalRate > 0 && renewalRate < target) {
-        const gap = (target - renewalRate).toFixed(1);
-        actions.push({
-          title: 'Close retention gap to target',
-          description: `Renewal rate is ${renewalRate}% vs ${target}% target — ${gap} points below. Focus on at-risk member engagement`,
-          priority: 'high',
-          dueLabel: 'This quarter',
-          actionType: 'target',
-        });
       }
 
       if (netRevenueRetention > 0 && netRevenueRetention < 90) {
@@ -388,7 +371,7 @@ export class MemberAcquisitionDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Maintain retention excellence',
-          description: `${renewalRate}% renewal rate${renewalRate >= target ? ` exceeds ${target}% target` : ''}${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
+          description: `${renewalRate}% renewal rate${netRevenueRetention > 100 ? ` with ${netRevenueRetention}% NRR` : ''}`,
           priority: 'low',
           dueLabel: 'Ongoing',
           actionType: 'growth',
