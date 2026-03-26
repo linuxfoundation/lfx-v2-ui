@@ -2295,7 +2295,7 @@ export interface TrainingEnrollmentsResponse {
 // ============================================
 
 /**
- * Raw Snowflake row from PLATINUM.FOUNDATION_TOTAL_PROJECTS_DETAIL
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TOTAL_PROJECTS_DETAIL
  */
 export interface FoundationProjectsDetailRow {
   FOUNDATION_SEGMENT_ID: string;
@@ -2624,7 +2624,7 @@ export interface OrgCertifiedEmployeesDistributionResponse {
 // ============================================
 
 /**
- * Web Activities summary row from Snowflake PLATINUM.WEB_ACTIVITIES_SUMMARY
+ * Web Activities summary row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
  * Represents session/page view totals grouped by domain classification
  */
 export interface WebActivitiesSummaryRow {
@@ -2694,7 +2694,7 @@ export interface MarketingKeyInsight {
 // ============================================
 
 /**
- * Social Reach row from Snowflake PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH
+ * Social Reach row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
  * Monthly paid ad impressions aggregated per foundation
  */
 export interface SocialReachRow {
@@ -2703,7 +2703,7 @@ export interface SocialReachRow {
 }
 
 /**
- * Social Reach channel row from Snowflake PLATINUM.PAID_ADS_BY_CAMPAIGN_CHANNEL_MONTH
+ * Social Reach channel row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
  * Channel-level paid ad impressions aggregated per foundation
  */
 export interface SocialReachChannelRow {
@@ -2775,7 +2775,7 @@ export interface SocialMediaResponse {
 // ============================================
 
 /**
- * Email CTR row from Snowflake PLATINUM.EMAIL_MARKETING_OVERALL_KPIS
+ * Email CTR row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
  * Represents monthly email click-through rate data
  */
 export interface EmailCtrRow {
@@ -2787,7 +2787,7 @@ export interface EmailCtrRow {
 }
 
 /**
- * Email CTR campaign row from Snowflake PLATINUM.EMAIL_MARKETING_OVERALL_KPIS
+ * Email CTR campaign row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
  * Campaign-level email metrics aggregated over the period
  */
 export interface EmailCtrCampaignRow {

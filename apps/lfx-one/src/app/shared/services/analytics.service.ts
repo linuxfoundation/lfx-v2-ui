@@ -844,7 +844,7 @@ export class AnalyticsService {
 
   /**
    * Get social media metrics from Snowflake Platinum tables
-   * Queries ANALYTICS.PLATINUM.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
    * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
    * @returns Social media response with followers, platforms, engagement, and trend data
    */
