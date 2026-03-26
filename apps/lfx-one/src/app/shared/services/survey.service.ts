@@ -16,9 +16,9 @@ export class SurveyService {
     return this.http.get<Survey[]>('/api/surveys', { params });
   }
 
-  /** Fetches surveys scoped to a committee via `tags=committee_uid:{uid}` query parameter. */
+  /** Fetches surveys scoped to a committee via dedicated committee endpoint. */
   public getSurveysByCommittee(committeeUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
-    let params = new HttpParams().set('tags', `committee_uid:${committeeUid}`);
+    let params = new HttpParams();
 
     if (limit !== undefined) {
       params = params.set('page_size', limit.toString());
@@ -28,7 +28,7 @@ export class SurveyService {
       params = params.set('order', orderBy);
     }
 
-    return this.getSurveys(params);
+    return this.http.get<Survey[]>(`/api/committees/${committeeUid}/surveys`, { params });
   }
 
   public getSurveysByProject(projectUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {

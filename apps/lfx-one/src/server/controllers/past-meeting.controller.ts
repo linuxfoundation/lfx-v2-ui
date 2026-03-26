@@ -36,11 +36,10 @@ export class PastMeetingController {
         page_token?: string;
       };
 
-      // TODO: Remove this once we have a way to get the registrants count
       // Process each meeting individually to add registrant and participant counts
       await Promise.all(
         meetings.map(async (meeting) => {
-          const counts = await this.addParticipantsCount(req, meeting.id);
+          const counts = await this.meetingService.getPastMeetingParticipantCounts(req, meeting.id);
           meeting.individual_registrants_count = counts.individual_registrants_count;
           meeting.committee_members_count = counts.committee_members_count;
           meeting.participant_count = counts.participant_count;
@@ -391,59 +390,6 @@ export class PastMeetingController {
         attachment_id: attachmentId,
       });
       next(error);
-    }
-  }
-
-  /**
-   * Helper method to add participant and registrant counts to a past meeting
-   * @param req - Express request object
-   * @param pastMeetingUid - UID of the past meeting
-   * @returns Promise with registrant and participant counts or defaults to 0 on error
-   */
-  private async addParticipantsCount(
-    req: Request,
-    pastMeetingUid: string
-  ): Promise<{ individual_registrants_count: number; committee_members_count: number; participant_count: number; attended_count: number }> {
-    const startTime = logger.startOperation(req, 'add_participant_counts', {
-      past_meeting_id: pastMeetingUid,
-    });
-
-    try {
-      // Get all participants (contains both invited and attended information)
-      const participants = await this.meetingService.getPastMeetingParticipants(req, pastMeetingUid).catch(() => []);
-
-      // Calculate counts based on participant data
-      const invitedCount = participants.filter((p) => p.is_invited).length;
-      const attendedCount = participants.filter((p) => p.is_attended).length;
-      const totalParticipantCount = participants.length;
-
-      const result = {
-        individual_registrants_count: invitedCount, // Count of people who were formally invited
-        committee_members_count: 0, // Not available in participant data, set to 0
-        participant_count: totalParticipantCount, // Total count of all participants
-        attended_count: attendedCount, // Count of people who actually attended
-      };
-
-      logger.success(req, 'add_participant_counts', startTime, {
-        past_meeting_id: pastMeetingUid,
-        invited_count: invitedCount,
-        attended_count: attendedCount,
-        total_count: totalParticipantCount,
-      });
-
-      return result;
-    } catch (error) {
-      // Log error but don't fail - default to 0 counts
-      logger.error(req, 'add_participant_counts', startTime, error, {
-        past_meeting_id: pastMeetingUid,
-      });
-
-      return {
-        individual_registrants_count: 0,
-        committee_members_count: 0,
-        participant_count: 0,
-        attended_count: 0,
-      };
     }
   }
 }

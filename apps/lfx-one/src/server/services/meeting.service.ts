@@ -1063,6 +1063,54 @@ export class MeetingService {
   }
 
   /**
+   * Fetches participant counts for a past meeting (invited, attended, total).
+   * Returns sensible defaults (0) on failure so callers can degrade gracefully.
+   */
+  public async getPastMeetingParticipantCounts(
+    req: Request,
+    pastMeetingUid: string
+  ): Promise<{ individual_registrants_count: number; committee_members_count: number; participant_count: number; attended_count: number }> {
+    const startTime = logger.startOperation(req, 'get_past_meeting_participant_counts', {
+      past_meeting_id: pastMeetingUid,
+    });
+
+    try {
+      const participants = await this.getPastMeetingParticipants(req, pastMeetingUid).catch(() => []);
+
+      const invitedCount = participants.filter((p) => p.is_invited).length;
+      const attendedCount = participants.filter((p) => p.is_attended).length;
+      const totalParticipantCount = participants.length;
+
+      const result = {
+        individual_registrants_count: invitedCount,
+        committee_members_count: 0,
+        participant_count: totalParticipantCount,
+        attended_count: attendedCount,
+      };
+
+      logger.success(req, 'get_past_meeting_participant_counts', startTime, {
+        past_meeting_id: pastMeetingUid,
+        invited_count: invitedCount,
+        attended_count: attendedCount,
+        total_count: totalParticipantCount,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error(req, 'get_past_meeting_participant_counts', startTime, error, {
+        past_meeting_id: pastMeetingUid,
+      });
+
+      return {
+        individual_registrants_count: 0,
+        committee_members_count: 0,
+        participant_count: 0,
+        attended_count: 0,
+      };
+    }
+  }
+
+  /**
    * Fetches committee names for all unique committees referenced in meetings.
    * Returns a Map of committee UID -> committee name for merging into meeting data.
    */

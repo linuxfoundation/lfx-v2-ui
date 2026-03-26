@@ -29,4 +29,11 @@ router.delete('/:id/members/:memberId', (req, res, next) => committeeController.
 router.post('/:id/join', (req, res, next) => committeeController.joinCommittee(req, res, next));
 router.delete('/:id/leave', (req, res, next) => committeeController.leaveCommittee(req, res, next));
 
+// ── Committee-scoped resource routes ───────────────────────────────────────
+router.get('/:id/meetings', (req, res, next) => committeeController.getCommitteeMeetings(req, res, next));
+router.get('/:id/meetings/count', (req, res, next) => committeeController.getCommitteeMeetingsCount(req, res, next));
+router.get('/:id/past-meetings', (req, res, next) => committeeController.getCommitteePastMeetings(req, res, next));
+router.get('/:id/votes', (req, res, next) => committeeController.getCommitteeVotes(req, res, next));
+router.get('/:id/surveys', (req, res, next) => committeeController.getCommitteeSurveys(req, res, next));
+
 export default router;

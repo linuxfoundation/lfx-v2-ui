@@ -1,18 +1,25 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
+import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest, PastMeeting } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
-import { logger } from '../services/logger.service';
+import { validateUidParameter } from '../helpers/validation.helper';
 import { CommitteeService } from '../services/committee.service';
+import { logger } from '../services/logger.service';
+import { MeetingService } from '../services/meeting.service';
+import { SurveyService } from '../services/survey.service';
+import { VoteService } from '../services/vote.service';
 
 /**
  * Controller for handling committee HTTP requests
  */
 export class CommitteeController {
   private committeeService: CommitteeService = new CommitteeService();
+  private meetingService: MeetingService = new MeetingService();
+  private voteService: VoteService = new VoteService();
+  private surveyService: SurveyService = new SurveyService();
 
   /**
    * GET /committees
@@ -517,6 +524,160 @@ export class CommitteeController {
 
       logger.success(req, 'leave_committee', startTime, { committee_id: id });
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ── Committee-scoped resource endpoints ──────────────────────────────────
+
+  /**
+   * GET /committees/:id/meetings
+   */
+  public async getCommitteeMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_meetings', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!validateUidParameter(id, req, next, { operation: 'get_committee_meetings', service: 'committee_controller' })) return;
+
+      const query: Record<string, any> = { ...req.query, tags: `committee_uid:${id}` };
+      const { data, page_token } = await this.meetingService.getMeetings(req, query);
+
+      logger.success(req, 'get_committee_meetings', startTime, {
+        committee_id: id,
+        meeting_count: data.length,
+        has_more_pages: !!page_token,
+      });
+
+      res.json({ data, page_token });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/meetings/count
+   */
+  public async getCommitteeMeetingsCount(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_meetings_count', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!validateUidParameter(id, req, next, { operation: 'get_committee_meetings_count', service: 'committee_controller' })) return;
+
+      const query: Record<string, any> = { ...req.query, tags: `committee_uid:${id}` };
+      const count = await this.meetingService.getMeetingsCount(req, query);
+
+      logger.success(req, 'get_committee_meetings_count', startTime, {
+        committee_id: id,
+        count,
+      });
+
+      res.json({ count });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/past-meetings
+   */
+  public async getCommitteePastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_past_meetings', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!validateUidParameter(id, req, next, { operation: 'get_committee_past_meetings', service: 'committee_controller' })) return;
+
+      const query: Record<string, any> = { ...req.query, tags: `committee_uid:${id}` };
+      const { data: meetings, page_token } = (await this.meetingService.getMeetings(req, query, 'v1_past_meeting')) as {
+        data: PastMeeting[];
+        page_token?: string;
+      };
+
+      // Enrich with participant counts (same as PastMeetingController)
+      await Promise.all(
+        meetings.map(async (meeting) => {
+          const counts = await this.meetingService.getPastMeetingParticipantCounts(req, meeting.id);
+          meeting.individual_registrants_count = counts.individual_registrants_count;
+          meeting.committee_members_count = counts.committee_members_count;
+          meeting.participant_count = counts.participant_count;
+          meeting.attended_count = counts.attended_count;
+        })
+      );
+
+      logger.success(req, 'get_committee_past_meetings', startTime, {
+        committee_id: id,
+        meeting_count: meetings.length,
+        has_more_pages: !!page_token,
+      });
+
+      res.json({ data: meetings, page_token });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/votes
+   */
+  public async getCommitteeVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_votes', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!validateUidParameter(id, req, next, { operation: 'get_committee_votes', service: 'committee_controller' })) return;
+
+      const query: Record<string, any> = { ...req.query, tags: `committee_uid:${id}` };
+      const { data, page_token } = await this.voteService.getVotes(req, query);
+
+      logger.success(req, 'get_committee_votes', startTime, {
+        committee_id: id,
+        vote_count: data.length,
+        has_more_pages: !!page_token,
+      });
+
+      res.json({ data, page_token });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /committees/:id/surveys
+   */
+  public async getCommitteeSurveys(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_surveys', {
+      committee_id: id,
+      query_params: logger.sanitize(req.query as Record<string, any>),
+    });
+
+    try {
+      if (!validateUidParameter(id, req, next, { operation: 'get_committee_surveys', service: 'committee_controller' })) return;
+
+      const query: Record<string, any> = { ...req.query, tags: `committee_uid:${id}` };
+      const surveys = await this.surveyService.getSurveys(req, query);
+
+      logger.success(req, 'get_committee_surveys', startTime, {
+        committee_id: id,
+        survey_count: surveys.length,
+      });
+
+      res.json(surveys);
     } catch (error) {
       next(error);
     }

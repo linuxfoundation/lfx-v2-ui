@@ -77,9 +77,9 @@ export class MeetingService {
     return this.getMeetings(params).pipe(map((response) => response.data));
   }
 
-  /** Fetches upcoming meetings scoped to a committee via `tags=committee_uid:{id}` query parameter. */
+  /** Fetches meetings scoped to a committee via dedicated committee endpoint. */
   public getMeetingsByCommittee(committeeId: string, limit?: number, orderBy?: string): Observable<Meeting[]> {
-    let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
+    let params = new HttpParams();
 
     if (limit) {
       params = params.set('limit', limit.toString());
@@ -89,13 +89,18 @@ export class MeetingService {
       params = params.set('order', orderBy);
     }
 
-    return this.getMeetings(params).pipe(map((response) => response.data));
+    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`, { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load committee meetings:', error);
+        return of({ data: [] as Meeting[], page_token: undefined });
+      }),
+      map((response) => response.data)
+    );
   }
 
-  /** Fetches meeting count scoped to a committee. */
+  /** Fetches meeting count scoped to a committee via dedicated committee endpoint. */
   public getMeetingsCountByCommittee(committeeId: string): Observable<number> {
-    const params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
-    return this.http.get<QueryServiceCountResponse>('/api/meetings/count', { params }).pipe(
+    return this.http.get<QueryServiceCountResponse>(`/api/committees/${committeeId}/meetings/count`).pipe(
       catchError((error) => {
         console.error('Failed to load meetings count:', error);
         return of({ count: 0 });
@@ -104,21 +109,33 @@ export class MeetingService {
     );
   }
 
-  /** Fetches upcoming meetings scoped to a committee. */
+  /** Fetches upcoming meetings scoped to a committee via dedicated committee endpoint. */
   public getUpcomingMeetingsByCommittee(committeeId: string, limit: number = 5): Observable<Meeting[]> {
-    const params = new HttpParams().set('tags', `committee_uid:${committeeId}`).set('limit', limit.toString()).set('skip_registrants', 'true');
-    return this.getMeetings(params).pipe(map((response) => response.data));
+    const params = new HttpParams().set('limit', limit.toString()).set('skip_registrants', 'true');
+    return this.http.get<PaginatedResponse<Meeting>>(`/api/committees/${committeeId}/meetings`, { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load upcoming committee meetings:', error);
+        return of({ data: [] as Meeting[], page_token: undefined });
+      }),
+      map((response) => response.data)
+    );
   }
 
-  /** Fetches past meetings scoped to a committee via `tags=committee_uid:{id}` query parameter. */
+  /** Fetches past meetings scoped to a committee via dedicated committee endpoint. */
   public getPastMeetingsByCommittee(committeeId: string, limit?: number): Observable<PastMeeting[]> {
-    let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
+    let params = new HttpParams();
 
     if (limit) {
       params = params.set('limit', limit.toString());
     }
 
-    return this.getPastMeetings(params).pipe(map((response) => response.data));
+    return this.http.get<PaginatedResponse<PastMeeting>>(`/api/committees/${committeeId}/past-meetings`, { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load committee past meetings:', error);
+        return of({ data: [] as PastMeeting[], page_token: undefined });
+      }),
+      map((response) => response.data)
+    );
   }
 
   public getMeetingsCountByProject(uid: string): Observable<number> {
