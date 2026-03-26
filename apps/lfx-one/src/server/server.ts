@@ -12,6 +12,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pinoHttp from 'pino-http';
 
+import { ProfileController } from './controllers/profile.controller';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
@@ -178,6 +179,13 @@ app.use('/api/lens', lensRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+
+// Flow C: Profile auth callback at /passwordless/callback (registered in Auth0 Profile Client)
+const profileCallbackController = new ProfileController();
+app.get('/passwordless/callback', (req, res) => profileCallbackController.handleProfileAuthCallback(req, res));
+
+// Social identity verification callback (GitHub/LinkedIn OAuth redirect)
+app.get('/social/callback', (req, res) => profileCallbackController.handleSocialCallback(req, res));
 
 /**
  * Handle all other requests by rendering the Angular application.
