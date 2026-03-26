@@ -2735,7 +2735,6 @@ export interface SocialMediaPlatform {
   engagementRate: number;
   postsLast30Days: number;
   impressions: number;
-  iconClass?: string;
 }
 
 /**

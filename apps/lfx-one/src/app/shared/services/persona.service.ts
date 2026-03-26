@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
-import { PersonaType } from '@lfx-one/shared/interfaces';
+import { isBoardScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
 
 import { ProjectContextService } from './project-context.service';
 
@@ -14,7 +14,7 @@ export class PersonaService {
 
   public readonly currentPersona: WritableSignal<PersonaType>;
   public readonly isAutoDetected: WritableSignal<boolean> = signal(false);
-  public readonly isBoardScoped: Signal<boolean> = computed(() => this.currentPersona() === 'board-member' || this.currentPersona() === 'executive-director');
+  public readonly isBoardScoped: Signal<boolean> = computed(() => isBoardScopedPersona(this.currentPersona()));
 
   public constructor() {
     // Default persona - will be overridden by initializeFromAuth if backend provides one
