@@ -139,14 +139,14 @@ export class FlywheelConversionDrawerComponent {
         return actions;
       }
 
-      // Low WG conversion
-      if (funnel.eventAttendees > 0 && funnel.convertedToWorkingGroup > 0) {
+      // Low WG conversion relative to community conversion
+      if (funnel.eventAttendees > 0 && funnel.convertedToWorkingGroup > 0 && funnel.convertedToCommunity > 0) {
         const wgRate = (funnel.convertedToWorkingGroup / funnel.eventAttendees) * 100;
-        const nlRate = funnel.convertedToNewsletter > 0 ? (funnel.convertedToNewsletter / funnel.eventAttendees) * 100 : 0;
-        if (wgRate < nlRate * 0.5 && nlRate > 0) {
+        const communityRate = (funnel.convertedToCommunity / funnel.eventAttendees) * 100;
+        if (wgRate < communityRate * 0.5) {
           actions.push({
             title: 'Improve working group conversion path',
-            description: `WG conversion at ${wgRate.toFixed(1)}% vs ${nlRate.toFixed(1)}% for newsletter — attendees need clearer path to participate`,
+            description: `WG conversion at ${wgRate.toFixed(1)}% vs ${communityRate.toFixed(1)}% for community — attendees need clearer path to participate`,
             priority: 'high',
             dueLabel: 'This quarter',
             actionType: 'conversion',
@@ -169,7 +169,7 @@ export class FlywheelConversionDrawerComponent {
       if (conversionRate > 0 && conversionRate < 10 && funnel.eventAttendees > 0) {
         actions.push({
           title: 'Add post-event engagement CTAs',
-          description: `Only ${conversionRate}% overall conversion — add newsletter signup and community join prompts to event follow-ups`,
+          description: `Only ${conversionRate}% overall conversion — add community join and working group prompts to event follow-ups`,
           priority: 'medium',
           dueLabel: 'Next event',
           actionType: 'content',
@@ -202,7 +202,6 @@ export class FlywheelConversionDrawerComponent {
       // Best conversion path
       if (funnel.eventAttendees > 0) {
         const paths = [
-          { name: 'Newsletter', value: funnel.convertedToNewsletter },
           { name: 'Community', value: funnel.convertedToCommunity },
           { name: 'Working group', value: funnel.convertedToWorkingGroup },
         ]
@@ -269,10 +268,10 @@ export class FlywheelConversionDrawerComponent {
     return computed(() => {
       const { funnel } = this.data();
       return {
-        labels: ['Event Attendees', 'Converted to Newsletter', 'Converted to Community', 'Converted to WG'],
+        labels: ['Event Attendees', 'Converted to Community', 'Converted to WG'],
         datasets: [
           {
-            data: [funnel.eventAttendees, funnel.convertedToNewsletter, funnel.convertedToCommunity, funnel.convertedToWorkingGroup],
+            data: [funnel.eventAttendees, funnel.convertedToCommunity, funnel.convertedToWorkingGroup],
             backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',

@@ -74,13 +74,21 @@ export class MemberRetentionDrawerComponent {
         });
       }
 
-      // NRR below 100% means revenue shrinking
-      if (netRevenueRetention > 0 && netRevenueRetention < 100) {
+      // NRR below 98% means meaningful revenue shrinking — ignore noise above 98%
+      if (netRevenueRetention > 0 && netRevenueRetention < 90) {
         actions.push({
           title: 'Improve net revenue retention',
-          description: `NRR at ${netRevenueRetention}% — revenue shrinking from existing members. Explore upsell opportunities`,
+          description: `NRR at ${netRevenueRetention}% — significant revenue loss from existing members. Review downgrades and churn`,
           priority: 'high',
           dueLabel: 'This quarter',
+          actionType: 'revenue',
+        });
+      } else if (netRevenueRetention >= 90 && netRevenueRetention < 98) {
+        actions.push({
+          title: 'Monitor net revenue retention',
+          description: `NRR at ${netRevenueRetention}% — revenue contraction from existing members. Explore upsell opportunities`,
+          priority: 'medium',
+          dueLabel: 'Next quarter',
           actionType: 'revenue',
         });
       }

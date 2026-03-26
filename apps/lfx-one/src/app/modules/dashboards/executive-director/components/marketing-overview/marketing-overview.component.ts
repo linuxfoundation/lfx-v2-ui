@@ -132,11 +132,6 @@ export class MarketingOverviewComponent {
     };
   });
 
-  protected readonly totalNewsletterOpens = computed(() => {
-    const { monthlyOpens } = this.marketingData().emailCtr;
-    return monthlyOpens.reduce((sum, v) => sum + v, 0);
-  });
-
   protected readonly engagedCommunityChartData = computed(() => {
     const { monthlyData } = this.marketingData().engagedCommunity;
     if (monthlyData.length === 0) return undefined;
@@ -352,7 +347,7 @@ export class MarketingOverviewComponent {
       // Email CTR insight
       if (emailCtr.currentCtr > 0) {
         if (emailCtr.changePercentage < 0) {
-          insights.push(`Email CTR declined ${Math.abs(emailCtr.changePercentage)}% to ${emailCtr.currentCtr.toFixed(1)}% — review newsletter engagement`);
+          insights.push(`Email CTR declined ${Math.abs(emailCtr.changePercentage)}% to ${emailCtr.currentCtr.toFixed(1)}% — review email campaign strategy`);
         } else if (emailCtr.changePercentage > 0) {
           insights.push(`Email CTR grew ${emailCtr.changePercentage}% to ${emailCtr.currentCtr.toFixed(1)}% — content strategy is working`);
         } else {

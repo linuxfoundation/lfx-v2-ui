@@ -161,21 +161,31 @@ export class MemberAcquisitionDrawerComponent {
         return actions;
       }
 
-      // Check if revenue per new member is declining
+      // Check if revenue per new member is declining (only flag if decline > 5%)
       if (quarterlyData.length >= 2) {
         const recent = quarterlyData[quarterlyData.length - 1];
         const previous = quarterlyData[quarterlyData.length - 2];
         const recentPerMember = recent.newMembers > 0 ? recent.revenue / recent.newMembers : 0;
         const previousPerMember = previous.newMembers > 0 ? previous.revenue / previous.newMembers : 0;
-        if (previousPerMember > 0 && recentPerMember < previousPerMember) {
-          const revenueDecline = (((previousPerMember - recentPerMember) / previousPerMember) * 100).toFixed(0);
-          actions.push({
-            title: 'Improve revenue per new member',
-            description: `Revenue per new member declined ${revenueDecline}% — review membership tier mix and onboarding`,
-            priority: 'high',
-            dueLabel: 'This quarter',
-            actionType: 'revenue',
-          });
+        if (previousPerMember > 0) {
+          const declinePct = ((previousPerMember - recentPerMember) / previousPerMember) * 100;
+          if (declinePct > 15) {
+            actions.push({
+              title: 'Improve revenue per new member',
+              description: `Revenue per new member declined ${declinePct.toFixed(0)}% — review membership tier mix and onboarding`,
+              priority: 'high',
+              dueLabel: 'This quarter',
+              actionType: 'revenue',
+            });
+          } else if (declinePct > 5) {
+            actions.push({
+              title: 'Monitor revenue per new member',
+              description: `Revenue per new member declined ${declinePct.toFixed(0)}% — watch tier mix trends`,
+              priority: 'medium',
+              dueLabel: 'Next quarter',
+              actionType: 'revenue',
+            });
+          }
         }
       }
 
@@ -347,12 +357,20 @@ export class MemberAcquisitionDrawerComponent {
         });
       }
 
-      if (netRevenueRetention > 0 && netRevenueRetention < 100) {
+      if (netRevenueRetention > 0 && netRevenueRetention < 90) {
         actions.push({
           title: 'Improve net revenue retention',
-          description: `NRR at ${netRevenueRetention}% — revenue shrinking from existing members. Explore upsell opportunities`,
+          description: `NRR at ${netRevenueRetention}% — significant revenue loss from existing members. Review downgrades and churn`,
           priority: 'high',
           dueLabel: 'This quarter',
+          actionType: 'revenue',
+        });
+      } else if (netRevenueRetention >= 90 && netRevenueRetention < 98) {
+        actions.push({
+          title: 'Monitor net revenue retention',
+          description: `NRR at ${netRevenueRetention}% — revenue contraction from existing members. Explore upsell opportunities`,
+          priority: 'medium',
+          dueLabel: 'Next quarter',
           actionType: 'revenue',
         });
       }

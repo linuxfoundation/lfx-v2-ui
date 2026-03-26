@@ -38,11 +38,8 @@ export class EngagedCommunityDrawerComponent {
     breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
     monthlyData: [],
   });
-  public readonly newsletterOpens = input<number>(0);
-
   // === Computed Signals ===
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
-  protected readonly formattedNewsletterOpens: Signal<string> = computed(() => formatNumber(this.newsletterOpens()));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -149,7 +146,7 @@ export class EngagedCommunityDrawerComponent {
       if (totalMembers > 0 && breakdown.workingGroupMembers < totalMembers * 0.1) {
         actions.push({
           title: 'Increase working group participation',
-          description: `Working group members are only ${((breakdown.workingGroupMembers / totalMembers) * 100).toFixed(0)}% of total — convert newsletter subscribers through targeted outreach`,
+          description: `Working group members are only ${((breakdown.workingGroupMembers / totalMembers) * 100).toFixed(0)}% of total — improve outreach to convert community members into active participants`,
           priority: 'high',
           dueLabel: 'This quarter',
           actionType: 'engagement',
@@ -164,17 +161,6 @@ export class EngagedCommunityDrawerComponent {
           priority: 'high',
           dueLabel: 'This month',
           actionType: 'decline',
-        });
-      }
-
-      // Check if newsletter dominates (concentration risk)
-      if (totalMembers > 0 && breakdown.newsletterSubscribers > totalMembers * 0.7) {
-        actions.push({
-          title: 'Diversify engagement beyond newsletter',
-          description: `${((breakdown.newsletterSubscribers / totalMembers) * 100).toFixed(0)}% of community is newsletter-only — create pathways to deeper participation`,
-          priority: 'medium',
-          dueLabel: 'Next quarter',
-          actionType: 'diversify',
         });
       }
 
@@ -213,7 +199,6 @@ export class EngagedCommunityDrawerComponent {
       // Largest segment
       if (totalMembers > 0) {
         const segments = [
-          { name: 'Newsletter subscribers', value: breakdown.newsletterSubscribers },
           { name: 'Community members', value: breakdown.communityMembers },
           { name: 'Working group members', value: breakdown.workingGroupMembers },
           { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
@@ -263,11 +248,11 @@ export class EngagedCommunityDrawerComponent {
     return computed(() => {
       const { breakdown } = this.data();
       return {
-        labels: ['Newsletter', 'Community', 'Working Groups', 'Certified'],
+        labels: ['Community', 'Working Groups', 'Certified'],
         datasets: [
           {
-            data: [breakdown.newsletterSubscribers, breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
-            backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
+            data: [breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
+            backgroundColor: [lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },

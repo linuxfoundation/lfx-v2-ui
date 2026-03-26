@@ -84,11 +84,11 @@
         [value]="marketingData().engagedCommunity.totalMembers > 0 ? formatNumber(marketingData().engagedCommunity.totalMembers) : undefined"
         [changePercentage]="
           marketingData().engagedCommunity.changePercentage !== 0
-            ? (marketingData().engagedCommunity.changePercentage > 0 ? '↑' : '↓') + ' ' + marketingData().engagedCommunity.changePercentage + '% growth'
+            ? (marketingData().engagedCommunity.changePercentage > 0 ? '↑ +' : '↓ ') + marketingData().engagedCommunity.changePercentage + '%'
             : undefined
         "
-        trend="up"
-        subtitle="Newsletter + Community + Working Groups"
+        [trend]="marketingData().engagedCommunity.trend"
+        subtitle="Community + Working Groups + Certified"
         testId="flywheel-pulse-share-of-voice"
         [loading]="marketingDataLoading()"
         [clickable]="true"
@@ -184,8 +184,7 @@
 <lfx-engaged-community-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
   (visibleChange)="handleDrawerClose()"
-  [data]="marketingData().engagedCommunity"
-  [newsletterOpens]="totalNewsletterOpens()"></lfx-engaged-community-drawer>
+  [data]="marketingData().engagedCommunity"></lfx-engaged-community-drawer>
 
 <lfx-member-acquisition-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"
