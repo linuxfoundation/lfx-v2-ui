@@ -252,7 +252,7 @@ export class CommitteeViewComponent {
       .updateCommittee(committee.uid, {
         mailing_list: this.channelsForm.get('mailingList')?.value || null,
         chat_channel: this.channelsForm.get('chatChannel')?.value || null,
-        website: this.channelsForm.get('website')?.value || undefined,
+        website: this.channelsForm.get('website')?.value || null,
       })
       .pipe(finalize(() => this.savingChannels.set(false)))
       .subscribe({
