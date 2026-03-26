@@ -1858,7 +1858,7 @@ export class ProjectService {
     try {
       // Block 1: Total impressions, spend, revenue (last 6 months)
       const impressionsQuery = `
-      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(REVENUE) AS TOTAL_REVENUE
+      SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(FIRST_TOUCH_REVENUE) AS TOTAL_REVENUE
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
@@ -1866,7 +1866,7 @@ export class ProjectService {
 
       // Block 2: ROAS KPI — latest completed month
       const roasKpiQuery = `
-      SELECT ROAS, ROAS_MOM_PCT
+      SELECT FIRST_TOUCH_ROAS AS ROAS, ROAS_MOM_PCT
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE FOUNDATION_NAME = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
@@ -1875,7 +1875,7 @@ export class ProjectService {
 
       // Block 3: Monthly ROAS trend (bar chart, last 6 months)
       const monthlyRoasQuery = `
-      SELECT CAMPAIGN_MONTH, ROAS
+      SELECT CAMPAIGN_MONTH, FIRST_TOUCH_ROAS AS ROAS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         AND FOUNDATION_NAME = ?
@@ -1892,7 +1892,6 @@ export class ProjectService {
     `;
 
       // Block 5: Impressions by channel (horizontal bar chart, last 6 months)
-      // Note: BY_PROJECT_CHANNEL_MONTH only has IMPRESSIONS — SPEND/REVENUE are on BY_PROJECT_MONTH
       const channelQuery = `
       SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
