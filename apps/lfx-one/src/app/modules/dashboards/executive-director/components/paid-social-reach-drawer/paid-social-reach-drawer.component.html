@@ -28,6 +28,17 @@
 
   <!-- Content -->
   <div class="flex flex-col gap-6 pb-2" data-testid="paid-social-reach-drawer-content">
+    @if (drawerLoading()) {
+      <div class="flex flex-col gap-4">
+        <div class="flex gap-4">
+          <p-skeleton width="100%" height="4rem" />
+          <p-skeleton width="100%" height="4rem" />
+        </div>
+        <p-skeleton width="100%" height="12rem" />
+        <p-skeleton width="100%" height="12rem" />
+        <p-skeleton width="60%" height="1rem" />
+      </div>
+    } @else {
     <!-- Summary Stats -->
     <div class="flex gap-4" data-testid="paid-social-reach-drawer-stats">
       <lfx-card styleClass="flex-1">
@@ -149,5 +160,6 @@
     </div>
 
     <!-- Channel Breakdown (hidden until data quality is validated) -->
+    }
   </div>
 </p-drawer>

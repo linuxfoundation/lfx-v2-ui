@@ -4,6 +4,21 @@
 import type { ChartOptions } from 'chart.js';
 import { lfxColors } from './colors.constants';
 
+/** Deep merge two objects, recursively merging nested objects instead of replacing them */
+function deepMerge<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+  const result = { ...target };
+  for (const key of Object.keys(source) as Array<keyof T>) {
+    const sourceVal = source[key];
+    const targetVal = result[key];
+    if (sourceVal && typeof sourceVal === 'object' && !Array.isArray(sourceVal) && targetVal && typeof targetVal === 'object' && !Array.isArray(targetVal)) {
+      result[key] = deepMerge(targetVal as Record<string, unknown>, sourceVal as Record<string, unknown>) as T[keyof T];
+    } else {
+      result[key] = sourceVal as T[keyof T];
+    }
+  }
+  return result;
+}
+
 /** Standard tooltip config shared across all dashboard drawer charts */
 export const DASHBOARD_TOOLTIP_CONFIG = {
   backgroundColor: 'rgba(255, 255, 255, 0.98)',
@@ -23,7 +38,7 @@ export const DASHBOARD_AXIS_DEFAULTS = {
 
 /** Create bar chart options with standard dashboard styling */
 export function createBarChartOptions(overrides?: Partial<ChartOptions<'bar'>>): ChartOptions<'bar'> {
-  return {
+  const defaults: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -44,13 +59,13 @@ export function createBarChartOptions(overrides?: Partial<ChartOptions<'bar'>>):
         ticks: { ...DASHBOARD_AXIS_DEFAULTS.ticks },
       },
     },
-    ...overrides,
   };
+  return overrides ? deepMerge(defaults, overrides as Record<string, unknown>) as ChartOptions<'bar'> : defaults;
 }
 
 /** Create line chart options with standard dashboard styling */
 export function createLineChartOptions(overrides?: Partial<ChartOptions<'line'>>): ChartOptions<'line'> {
-  return {
+  const defaults: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -71,13 +86,13 @@ export function createLineChartOptions(overrides?: Partial<ChartOptions<'line'>>
         ticks: { ...DASHBOARD_AXIS_DEFAULTS.ticks },
       },
     },
-    ...overrides,
   };
+  return overrides ? deepMerge(defaults, overrides as Record<string, unknown>) as ChartOptions<'line'> : defaults;
 }
 
 /** Create horizontal bar chart options with standard dashboard styling */
 export function createHorizontalBarChartOptions(overrides?: Partial<ChartOptions<'bar'>>): ChartOptions<'bar'> {
-  return {
+  const defaults: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
@@ -102,6 +117,6 @@ export function createHorizontalBarChartOptions(overrides?: Partial<ChartOptions
     datasets: {
       bar: { barPercentage: 0.8, categoryPercentage: 1.0 },
     },
-    ...overrides,
   };
+  return overrides ? deepMerge(defaults, overrides as Record<string, unknown>) as ChartOptions<'bar'> : defaults;
 }
