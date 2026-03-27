@@ -548,7 +548,7 @@ export class CommitteeController {
       // Enrich with display name from OIDC session so the upstream service records who created it
       const user = req.oidc?.user;
       if (!data.created_by_name && user) {
-        data.created_by_name = (user['nickname'] as string) || (user['name'] as string) || '';
+        data.created_by_name = (user['name'] as string) || (user['nickname'] as string) || '';
       }
 
       // Validate required fields
