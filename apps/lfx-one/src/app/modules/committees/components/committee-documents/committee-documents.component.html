@@ -159,15 +159,6 @@
                   }
                   @if (item.isStandalone && canEdit()) {
                     <lfx-button
-                      icon="fa-light fa-pen-to-square"
-                      [text]="true"
-                      [rounded]="true"
-                      size="small"
-                      severity="secondary"
-                      tooltip="Edit"
-                      (onClick)="openEditDocumentDialog(item)"
-                      data-testid="committee-documents-edit-button"></lfx-button>
-                    <lfx-button
                       icon="fa-light fa-trash"
                       [text]="true"
                       [rounded]="true"

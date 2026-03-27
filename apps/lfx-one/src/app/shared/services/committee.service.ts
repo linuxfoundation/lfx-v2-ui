@@ -6,12 +6,12 @@ import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
   Committee,
   CommitteeDocument,
+  CommitteeDocumentType,
   CommitteeMember,
   CreateCommitteeDocumentRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
   QueryServiceCountResponse,
-  UpdateCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
@@ -115,12 +115,9 @@ export class CommitteeService {
     return this.http.post<CommitteeDocument>(`/api/committees/${committeeId}/documents`, data).pipe(take(1));
   }
 
-  public updateCommitteeDocument(committeeId: string, documentId: string, data: UpdateCommitteeDocumentRequest): Observable<CommitteeDocument> {
-    return this.http.put<CommitteeDocument>(`/api/committees/${committeeId}/documents/${documentId}`, data).pipe(take(1));
-  }
-
-  public deleteCommitteeDocument(committeeId: string, documentId: string): Observable<void> {
-    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`).pipe(take(1));
+  public deleteCommitteeDocument(committeeId: string, documentId: string, documentType: CommitteeDocumentType): Observable<void> {
+    const params = new HttpParams().set('type', documentType);
+    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`, { params }).pipe(take(1));
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────

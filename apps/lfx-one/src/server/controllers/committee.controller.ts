@@ -1,13 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import {
-  CommitteeCreateData,
-  CommitteeUpdateData,
-  CreateCommitteeDocumentRequest,
-  CreateCommitteeMemberRequest,
-  UpdateCommitteeDocumentRequest,
-} from '@lfx-one/shared/interfaces';
+import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeDocumentRequest, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -588,62 +582,15 @@ export class CommitteeController {
   }
 
   /**
-   * PUT /committees/:id/documents/:documentId
-   */
-  public async updateCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const { id, documentId } = req.params;
-    const startTime = logger.startOperation(req, 'update_committee_document', {
-      committee_id: id,
-      document_id: documentId,
-      update_data: logger.sanitize(req.body),
-    });
-
-    try {
-      if (!id) {
-        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
-          operation: 'update_committee_document',
-          service: 'committee_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      if (!documentId) {
-        const validationError = ServiceValidationError.forField('documentId', 'Document ID is required', {
-          operation: 'update_committee_document',
-          service: 'committee_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      const data: UpdateCommitteeDocumentRequest = req.body;
-
-      const updatedDocument = await this.committeeService.updateCommitteeDocument(req, id, documentId, data);
-
-      logger.success(req, 'update_committee_document', startTime, {
-        committee_id: id,
-        document_id: documentId,
-      });
-
-      res.json(updatedDocument);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * DELETE /committees/:id/documents/:documentId
+   * DELETE /committees/:id/documents/:documentId?type=folder|link
    */
   public async deleteCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, documentId } = req.params;
+    const documentType = (req.query['type'] as string) || 'link';
     const startTime = logger.startOperation(req, 'delete_committee_document', {
       committee_id: id,
       document_id: documentId,
+      document_type: documentType,
     });
 
     try {
@@ -669,11 +616,12 @@ export class CommitteeController {
         return;
       }
 
-      await this.committeeService.deleteCommitteeDocument(req, id, documentId);
+      await this.committeeService.deleteCommitteeDocument(req, id, documentId, documentType);
 
       logger.success(req, 'delete_committee_document', startTime, {
         committee_id: id,
         document_id: documentId,
+        document_type: documentType,
       });
 
       res.status(204).send();

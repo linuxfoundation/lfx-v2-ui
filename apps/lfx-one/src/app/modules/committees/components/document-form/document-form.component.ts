@@ -8,7 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { CommitteeDocument, CommitteeDocumentType, CreateCommitteeDocumentRequest, UpdateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
+import { CommitteeDocumentType, CreateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -28,9 +28,7 @@ export class DocumentFormComponent {
   public submitting = signal<boolean>(false);
 
   // Config-based properties
-  public readonly isEditing: boolean;
   public readonly committeeId: string;
-  public readonly document: CommitteeDocument | undefined;
   /** Pre-set mode: 'link' or 'folder' — determines which form fields are shown */
   public readonly mode: CommitteeDocumentType;
   /** Available folders for the folder selector (links only) */
@@ -39,14 +37,11 @@ export class DocumentFormComponent {
   public form: FormGroup;
 
   public constructor() {
-    this.isEditing = this.config.data?.isEditing || false;
     this.committeeId = this.config.data?.committeeId;
-    this.document = this.config.data?.document;
-    this.mode = this.config.data?.mode || this.document?.type || 'link';
+    this.mode = this.config.data?.mode || 'link';
     this.folderOptions = this.config.data?.folders || [];
 
     this.form = this.createForm();
-    this.initializeForm();
   }
 
   public get isLink(): boolean {
@@ -54,9 +49,6 @@ export class DocumentFormComponent {
   }
 
   public get submitLabel(): string {
-    if (this.isEditing) {
-      return this.isLink ? 'Save Changes' : 'Save Changes';
-    }
     return this.isLink ? 'Add Link' : 'Create Folder';
   }
 
@@ -73,62 +65,33 @@ export class DocumentFormComponent {
     this.submitting.set(true);
     const formValue = this.form.getRawValue();
 
-    if (this.isEditing && this.document) {
-      const updateData: UpdateCommitteeDocumentRequest = {
-        name: formValue.name,
-        ...(this.isLink && { url: formValue.url }),
-        description: formValue.description || undefined,
-        ...(this.isLink && { parent_uid: formValue.parent_uid || undefined }),
-      };
+    const createData: CreateCommitteeDocumentRequest = {
+      type: this.mode,
+      name: formValue.name,
+      ...(this.isLink && { url: formValue.url }),
+      description: formValue.description || undefined,
+      ...(this.isLink && formValue.parent_uid && { parent_uid: formValue.parent_uid }),
+    };
 
-      this.committeeService.updateCommitteeDocument(this.committeeId, this.document.uid, updateData).subscribe({
-        next: () => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: this.isLink ? 'Link updated successfully' : 'Folder updated successfully',
-          });
-          this.dialogRef.close(true);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: err.error?.message || `Failed to update ${this.isLink ? 'link' : 'folder'}`,
-          });
-        },
-      });
-    } else {
-      const createData: CreateCommitteeDocumentRequest = {
-        type: this.mode,
-        name: formValue.name,
-        ...(this.isLink && { url: formValue.url }),
-        description: formValue.description || undefined,
-        ...(this.isLink && formValue.parent_uid && { parent_uid: formValue.parent_uid }),
-      };
-
-      this.committeeService.createCommitteeDocument(this.committeeId, createData).subscribe({
-        next: () => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: this.isLink ? 'Link added successfully' : 'Folder created successfully',
-          });
-          this.dialogRef.close(true);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: err.error?.message || `Failed to ${this.isLink ? 'add link' : 'create folder'}`,
-          });
-        },
-      });
-    }
+    this.committeeService.createCommitteeDocument(this.committeeId, createData).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: this.isLink ? 'Link added successfully' : 'Folder created successfully',
+        });
+        this.dialogRef.close(true);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.submitting.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err.error?.message || `Failed to ${this.isLink ? 'add link' : 'create folder'}`,
+        });
+      },
+    });
   }
 
   private createForm(): FormGroup {
@@ -146,23 +109,5 @@ export class DocumentFormComponent {
       name: new FormControl('', [Validators.required]),
       description: new FormControl(''),
     });
-  }
-
-  private initializeForm(): void {
-    if (this.isEditing && this.document) {
-      if (this.isLink) {
-        this.form.patchValue({
-          url: this.document.url || '',
-          name: this.document.name,
-          description: this.document.description || '',
-          parent_uid: this.document.parent_uid || null,
-        });
-      } else {
-        this.form.patchValue({
-          name: this.document.name,
-          description: this.document.description || '',
-        });
-      }
-    }
   }
 }

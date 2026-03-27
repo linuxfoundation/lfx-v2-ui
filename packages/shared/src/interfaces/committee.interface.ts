@@ -469,15 +469,8 @@ export interface CreateCommitteeDocumentRequest {
   /** Required for type 'link' */
   url?: string;
   description?: string;
-  /** Parent folder UID (to place inside a folder) */
+  /** Parent folder UID (to place a link inside a folder) */
   parent_uid?: string;
-}
-
-/** Request body for updating a committee document */
-export interface UpdateCommitteeDocumentRequest {
-  name?: string;
-  url?: string;
-  description?: string;
-  /** Parent folder UID (to move into a folder) */
-  parent_uid?: string;
+  /** Display name of the creator (populated by BFF from session) */
+  created_by_name?: string;
 }

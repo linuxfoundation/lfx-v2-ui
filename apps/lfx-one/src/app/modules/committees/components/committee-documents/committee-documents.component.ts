@@ -329,30 +329,6 @@ export class CommitteeDocumentsComponent implements OnInit {
     });
   }
 
-  public openEditDocumentDialog(item: DocumentDisplayItem): void {
-    if (!item.committeeDocument) return;
-
-    const dialogRef = this.dialogService.open(DocumentFormComponent, {
-      header: item.committeeDocument.type === 'folder' ? 'Edit Folder' : 'Edit Link',
-      width: '560px',
-      modal: true,
-      closable: true,
-      data: {
-        isEditing: true,
-        mode: item.committeeDocument.type,
-        committeeId: this.committee().uid,
-        document: item.committeeDocument,
-        folders: this.folderOptions(),
-      },
-    });
-
-    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
-      if (result) {
-        this.refreshStandaloneDocs();
-      }
-    });
-  }
-
   public confirmDeleteDocument(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
@@ -410,7 +386,7 @@ export class CommitteeDocumentsComponent implements OnInit {
   private performDelete(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
-    this.committeeService.deleteCommitteeDocument(this.committee().uid, item.committeeDocument.uid).subscribe({
+    this.committeeService.deleteCommitteeDocument(this.committee().uid, item.committeeDocument.uid, item.committeeDocument.type).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Document deleted successfully' });
         this.refreshStandaloneDocs();

@@ -13,7 +13,6 @@ import {
   MyCommittee,
   QueryServiceCountResponse,
   QueryServiceResponse,
-  UpdateCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -24,6 +23,31 @@ import { logger } from '../services/logger.service';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+
+/** Upstream response shape for committee folders */
+interface CommitteeFolder {
+  uid: string;
+  committee_uid?: string;
+  name: string;
+  created_by_uid?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Upstream response shape for committee links */
+interface CommitteeLink {
+  uid: string;
+  committee_uid?: string;
+  name: string;
+  url?: string;
+  description?: string;
+  folder_uid?: string;
+  created_by_uid?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 /**
  * Service for handling committee business logic
@@ -498,96 +522,144 @@ export class CommitteeService {
     await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/leave`, 'DELETE');
   }
 
-  // ── Committee Documents ─────────────────────────────────────────────────
+  // ── Committee Documents (Folders + Links) ──────────────────────────────
+  // Upstream API uses separate /folders and /links endpoints.
+  // This BFF merges them into a unified CommitteeDocument[] for the frontend.
 
   /**
-   * Fetches all documents for a specific committee
+   * Fetches all folders and links for a committee, merged into a unified list.
    */
   public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
-    logger.debug(req, 'get_committee_documents', 'Fetching committee documents', {
+    logger.debug(req, 'get_committee_documents', 'Fetching committee folders and links', {
       committee_uid: committeeId,
     });
 
-    const documents = await this.microserviceProxy.proxyRequest<CommitteeDocument[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents`, 'GET');
+    // Fetch folders and links in parallel
+    const [folders, links] = await Promise.all([
+      this.microserviceProxy
+        .proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET')
+        .catch(() => [] as CommitteeFolder[]),
+      this.microserviceProxy.proxyRequest<CommitteeLink[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/links`, 'GET').catch(() => [] as CommitteeLink[]),
+    ]);
 
-    return documents || [];
+    // Normalize folders → CommitteeDocument
+    const folderDocs: CommitteeDocument[] = (folders || []).map((f) => ({
+      uid: f.uid,
+      type: 'folder' as const,
+      name: f.name,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      created_by: f.created_by_uid,
+      uploaded_by: f.created_by_name,
+      committee_uid: f.committee_uid,
+    }));
+
+    // Normalize links → CommitteeDocument
+    const linkDocs: CommitteeDocument[] = (links || []).map((l) => ({
+      uid: l.uid,
+      type: 'link' as const,
+      name: l.name,
+      url: l.url,
+      description: l.description,
+      created_at: l.created_at,
+      updated_at: l.updated_at,
+      created_by: l.created_by_uid,
+      uploaded_by: l.created_by_name,
+      parent_uid: l.folder_uid,
+      committee_uid: l.committee_uid,
+    }));
+
+    return [...folderDocs, ...linkDocs];
   }
 
   /**
-   * Creates a new document for a committee
+   * Creates a new folder or link for a committee.
+   * Routes to the correct upstream endpoint based on type.
    */
   public async createCommitteeDocument(req: Request, committeeId: string, data: CreateCommitteeDocumentRequest): Promise<CommitteeDocument> {
-    const newDocument = await this.microserviceProxy.proxyRequest<CommitteeDocument>(
+    if (data.type === 'folder') {
+      const folder = await this.microserviceProxy.proxyRequest<CommitteeFolder>(
+        req,
+        'LFX_V2_SERVICE',
+        `/committees/${committeeId}/folders`,
+        'POST',
+        {},
+        {
+          name: data.name,
+          created_by_name: data.created_by_name,
+        }
+      );
+
+      logger.debug(req, 'create_committee_folder', 'Committee folder created successfully', {
+        committee_uid: committeeId,
+        folder_uid: folder.uid,
+      });
+
+      return {
+        uid: folder.uid,
+        type: 'folder',
+        name: folder.name,
+        created_at: folder.created_at,
+        updated_at: folder.updated_at,
+        created_by: folder.created_by_uid,
+        uploaded_by: folder.created_by_name,
+        committee_uid: folder.committee_uid,
+      };
+    }
+
+    // Link
+    const link = await this.microserviceProxy.proxyRequest<CommitteeLink>(
       req,
       'LFX_V2_SERVICE',
-      `/committees/${committeeId}/documents`,
+      `/committees/${committeeId}/links`,
       'POST',
       {},
-      data
+      {
+        name: data.name,
+        url: data.url,
+        description: data.description,
+        folder_uid: data.parent_uid,
+        created_by_name: data.created_by_name,
+      }
     );
 
-    logger.debug(req, 'create_committee_document', 'Committee document created successfully', {
+    logger.debug(req, 'create_committee_link', 'Committee link created successfully', {
       committee_uid: committeeId,
-      document_uid: newDocument.uid,
-      document_type: data.type,
+      link_uid: link.uid,
     });
 
-    return newDocument;
+    return {
+      uid: link.uid,
+      type: 'link',
+      name: link.name,
+      url: link.url,
+      description: link.description,
+      created_at: link.created_at,
+      updated_at: link.updated_at,
+      created_by: link.created_by_uid,
+      uploaded_by: link.created_by_name,
+      parent_uid: link.folder_uid,
+      committee_uid: link.committee_uid,
+    };
   }
 
   /**
-   * Updates an existing committee document using ETag for concurrency control
+   * Deletes a committee folder or link using ETag for concurrency control.
+   * @param documentType 'folder' or 'link' — determines which upstream endpoint to call
    */
-  public async updateCommitteeDocument(
-    req: Request,
-    committeeId: string,
-    documentId: string,
-    data: UpdateCommitteeDocumentRequest
-  ): Promise<CommitteeDocument> {
-    // Step 1: Fetch document with ETag
-    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/documents/${documentId}`,
-      'update_committee_document'
-    );
+  public async deleteCommitteeDocument(req: Request, committeeId: string, documentId: string, documentType: string): Promise<void> {
+    const resourcePath = documentType === 'folder' ? `/committees/${committeeId}/folders/${documentId}` : `/committees/${committeeId}/links/${documentId}`;
 
-    // Step 2: Update document with ETag
-    const updatedDocument = await this.etagService.updateWithETag<CommitteeDocument>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/documents/${documentId}`,
-      etag,
-      data,
-      'update_committee_document'
-    );
+    // Step 1: Fetch resource with ETag
+    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(req, 'LFX_V2_SERVICE', resourcePath, 'delete_committee_document');
 
-    logger.debug(req, 'update_committee_document', 'Committee document updated successfully', {
+    // Step 2: Delete resource with ETag
+    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', resourcePath, etag, 'delete_committee_document');
+
+    logger.debug(req, 'delete_committee_document', `Committee ${documentType} deleted successfully`, {
       committee_uid: committeeId,
       document_uid: documentId,
-    });
-
-    return updatedDocument;
-  }
-
-  /**
-   * Deletes a committee document using ETag for concurrency control
-   */
-  public async deleteCommitteeDocument(req: Request, committeeId: string, documentId: string): Promise<void> {
-    // Step 1: Fetch document with ETag
-    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(
-      req,
-      'LFX_V2_SERVICE',
-      `/committees/${committeeId}/documents/${documentId}`,
-      'delete_committee_document'
-    );
-
-    // Step 2: Delete document with ETag
-    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents/${documentId}`, etag, 'delete_committee_document');
-
-    logger.debug(req, 'delete_committee_document', 'Committee document deleted successfully', {
-      committee_uid: committeeId,
-      document_uid: documentId,
+      document_type: documentType,
     });
   }
 
