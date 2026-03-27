@@ -1,62 +1,113 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, input, OnDestroy, output, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from '@components/button/button.component';
-import { EnrichedPersonaProject } from '@lfx-one/shared/interfaces';
-import { isFoundationProject } from '@lfx-one/shared/utils';
+import { Project } from '@lfx-one/shared/interfaces';
+import { AppService } from '@services/app.service';
 import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
-import { Popover, PopoverModule } from 'primeng/popover';
 
 import { TagComponent } from '../tag/tag.component';
 
 @Component({
   selector: 'lfx-project-selector',
-  imports: [PopoverModule, ButtonComponent, InputTextModule, FormsModule, AutoFocus, TagComponent],
+  imports: [InputTextModule, FormsModule, AutoFocus, TagComponent],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
 })
-export class ProjectSelectorComponent {
-  public readonly projects = input.required<EnrichedPersonaProject[]>();
-  public readonly selectedProject = input<EnrichedPersonaProject | null>(null);
+export class ProjectSelectorComponent implements OnDestroy {
+  @ViewChild('selectorTrigger') private readonly selectorTrigger?: ElementRef<HTMLDivElement>;
 
-  public readonly projectChange = output<EnrichedPersonaProject>();
+  public readonly projects = input.required<Project[]>();
+  public readonly selectedProject = input<Project | null>(null);
 
+  public readonly projectChange = output<Project>();
+
+  private readonly appService = inject(AppService);
+  private readonly elementRef = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private outsideClickListener: ((e: MouseEvent) => void) | null = null;
+
+  protected readonly isOpen = this.appService.projectSelectorOpen;
+  protected readonly panelTop = signal(0);
   protected readonly searchQuery = signal<string>('');
 
   protected readonly displayName = this.initializeDisplayName();
   protected readonly displayLogo = this.initializeDisplayLogo();
+  protected readonly displayType = this.initializeDisplayType();
   protected readonly foundations = this.initializeFoundations();
   protected readonly childProjectsMap = this.initializeChildProjectsMap();
   protected readonly hasResults = this.initializeHasResults();
 
-  protected selectProject(project: EnrichedPersonaProject, popover: Popover): void {
+  public ngOnDestroy(): void {
+    this.detachOutsideClickListener();
+  }
+
+  protected selectProject(project: Project): void {
     this.projectChange.emit(project);
-    this.searchQuery.set('');
-    popover.hide();
+    this.closePanel();
   }
 
-  protected togglePanel(event: Event, popover: Popover): void {
-    popover.toggle(event);
+  protected togglePanel(): void {
+    if (this.appService.projectSelectorOpen()) {
+      this.closePanel();
+      return;
+    }
+    if (this.selectorTrigger) {
+      const rect = this.selectorTrigger.nativeElement.getBoundingClientRect();
+      this.panelTop.set(rect.top);
+    }
+    this.appService.setProjectSelectorOpen(true);
+    // Attach listener on next tick so the current opening click is not caught
+    setTimeout(() => this.attachOutsideClickListener(), 0);
   }
 
-  protected onPopoverHide(): void {
+  private closePanel(): void {
     this.searchQuery.set('');
+    this.appService.setProjectSelectorOpen(false);
+    this.detachOutsideClickListener();
+  }
+
+  private attachOutsideClickListener(): void {
+    this.outsideClickListener = (event: MouseEvent) => {
+      if (!this.elementRef.nativeElement.contains(event.target as Node)) {
+        this.closePanel();
+      }
+    };
+    document.addEventListener('click', this.outsideClickListener);
+    this.destroyRef.onDestroy(() => this.detachOutsideClickListener());
+  }
+
+  private detachOutsideClickListener(): void {
+    if (this.outsideClickListener) {
+      document.removeEventListener('click', this.outsideClickListener);
+      this.outsideClickListener = null;
+    }
   }
 
   private initializeDisplayName() {
     return computed(() => {
       const project = this.selectedProject();
-      return project?.projectName?.trim() || 'Select Project';
+      return project?.name?.trim() ?? 'Select Project';
+    });
+  }
+
+  private initializeDisplayType() {
+    return computed(() => {
+      const project = this.selectedProject();
+      if (!project) return 'Foundation';
+      const validProjectIds = new Set(this.projects().map((p) => p.uid));
+      const isFoundation = !project.parent_uid || project.parent_uid === '' || !validProjectIds.has(project.parent_uid);
+      return isFoundation ? 'Foundation' : 'Project';
     });
   }
 
   private initializeDisplayLogo() {
     return computed(() => {
       const project = this.selectedProject();
-      return project?.logoUrl || '';
+      return project?.logo_url || '';
     });
   }
 
@@ -65,24 +116,37 @@ export class ProjectSelectorComponent {
       const allProjects = this.projects();
       const query = this.searchQuery().toLowerCase().trim();
 
-      const foundationList = allProjects.filter((p) => isFoundationProject(p));
+      // Create a set of all valid project UIDs for quick lookup
+      const validProjectIds = new Set(allProjects.map((p) => p.uid));
 
+      // A project is a foundation if:
+      // 1. It has no parent_uid OR
+      // 2. Its parent_uid doesn't exist in the projects list
+      const foundationList = allProjects.filter((p) => !p.parent_uid || p.parent_uid === '' || !validProjectIds.has(p.parent_uid));
+
+      // Apply search filter if query exists
       if (!query) {
         return foundationList;
       }
 
-      const matchingFoundations = foundationList.filter((f) => f.projectName?.toLowerCase().includes(query) || f.description?.toLowerCase().includes(query));
+      // Filter foundations that match the query
+      const matchingFoundations = foundationList.filter((f) => f.name.toLowerCase().includes(query) || f.description.toLowerCase().includes(query));
 
+      // Find foundations whose children match the query
       const foundationsWithMatchingChildren = foundationList.filter((foundation) => {
         const children = allProjects.filter(
-          (p) => p.parentProjectUid === foundation.projectUid && (p.projectName?.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query))
+          (p) =>
+            p.parent_uid === foundation.uid &&
+            validProjectIds.has(p.parent_uid) &&
+            (p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query))
         );
         return children.length > 0;
       });
 
-      const uniqueFoundations = new Map<string, EnrichedPersonaProject>();
+      // Combine and deduplicate using Set
+      const uniqueFoundations = new Map<string, Project>();
       [...matchingFoundations, ...foundationsWithMatchingChildren].forEach((f) => {
-        uniqueFoundations.set(f.projectUid, f);
+        uniqueFoundations.set(f.uid, f);
       });
 
       return Array.from(uniqueFoundations.values());
@@ -94,23 +158,30 @@ export class ProjectSelectorComponent {
       const allProjects = this.projects();
       const query = this.searchQuery().toLowerCase().trim();
 
-      const map = new Map<string, EnrichedPersonaProject[]>();
+      // Create a set of all valid project UIDs for quick lookup
+      const validProjectIds = new Set(allProjects.map((p) => p.uid));
 
+      const map = new Map<string, Project[]>();
+
+      // Group projects by parent_uid
+      // Only include projects whose parent_uid exists in the projects list
       allProjects.forEach((project) => {
-        if (!isFoundationProject(project) && project.parentProjectUid) {
-          const children = map.get(project.parentProjectUid) || [];
+        if (project.parent_uid && project.parent_uid !== '' && validProjectIds.has(project.parent_uid)) {
+          const children = map.get(project.parent_uid) || [];
           children.push(project);
-          map.set(project.parentProjectUid, children);
+          map.set(project.parent_uid, children);
         }
       });
 
+      // If no search query, return the full map
       if (!query) {
         return map;
       }
 
-      const filteredMap = new Map<string, EnrichedPersonaProject[]>();
+      // Filter children by search query
+      const filteredMap = new Map<string, Project[]>();
       map.forEach((children, parentId) => {
-        const filtered = children.filter((c) => c.projectName?.toLowerCase().includes(query) || c.description?.toLowerCase().includes(query));
+        const filtered = children.filter((c) => c.name.toLowerCase().includes(query) || c.description.toLowerCase().includes(query));
         if (filtered.length > 0) {
           filteredMap.set(parentId, filtered);
         }
