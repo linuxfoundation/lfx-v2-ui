@@ -545,6 +545,12 @@ export class CommitteeController {
 
       const data: CreateCommitteeDocumentRequest = req.body;
 
+      // Enrich with display name from OIDC session so the upstream service records who created it
+      const user = req.oidc?.user;
+      if (!data.created_by_name && user) {
+        data.created_by_name = (user['nickname'] as string) || (user['name'] as string) || '';
+      }
+
       // Validate required fields
       const fieldErrors: Record<string, string> = {};
       if (!data.name?.trim()) {

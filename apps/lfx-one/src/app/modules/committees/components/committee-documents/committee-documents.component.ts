@@ -106,7 +106,7 @@ export class CommitteeDocumentsComponent implements OnInit {
 
   public sourceOptions = [
     { label: 'Link', value: 'link' },
-    { label: 'Meeting', value: 'file' },
+    { label: 'Meeting', value: 'meeting' },
     { label: 'Folder', value: 'folder' },
   ];
 
@@ -162,7 +162,7 @@ export class CommitteeDocumentsComponent implements OnInit {
       addedBy: item.attachment.created_by?.name,
       date: item.attachment.created_at,
       fileSize: item.attachment.file_size,
-      source: item.attachment.type === 'link' ? 'link' : 'file',
+      source: 'meeting',
       isStandalone: false,
       meetingAttachment: item,
     }));
@@ -353,22 +353,22 @@ export class CommitteeDocumentsComponent implements OnInit {
   /** Returns the tag label for the source filter */
   public getSourceLabel(item: DocumentDisplayItem): string {
     if (item.source === 'folder') return 'Folder';
-    if (item.source === 'link') return 'Link';
-    return 'Meeting';
+    if (item.source === 'meeting') return 'Meeting';
+    return 'Link';
   }
 
   /** Returns the tag severity for the source */
   public getSourceSeverity(item: DocumentDisplayItem): TagSeverity {
     if (item.source === 'folder') return 'info';
-    if (item.source === 'link') return 'success';
-    return 'warn';
+    if (item.source === 'meeting') return 'warn';
+    return 'success';
   }
 
-  /** Returns the tag icon for the source */
+  /** Returns the tag icon based on document type */
   public getSourceIcon(item: DocumentDisplayItem): string {
-    if (item.source === 'folder') return 'fa-light fa-folder';
-    if (item.source === 'link') return 'fa-light fa-link';
-    return 'fa-light fa-video';
+    if (item.type === 'folder') return 'fa-light fa-folder';
+    if (item.type === 'link') return 'fa-light fa-link';
+    return 'fa-light fa-file';
   }
 
   /** Opens a URL only if it uses http: or https: protocol. */
