@@ -469,6 +469,8 @@ export interface CreateCommitteeDocumentRequest {
   /** Required for type 'link' */
   url?: string;
   description?: string;
+  /** Parent folder UID (to place inside a folder) */
+  parent_uid?: string;
 }
 
 /** Request body for updating a committee document */
@@ -476,4 +478,6 @@ export interface UpdateCommitteeDocumentRequest {
   name?: string;
   url?: string;
   description?: string;
+  /** Parent folder UID (to move into a folder) */
+  parent_uid?: string;
 }

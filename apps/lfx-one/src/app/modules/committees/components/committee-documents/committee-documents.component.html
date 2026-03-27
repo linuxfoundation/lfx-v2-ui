@@ -82,10 +82,27 @@
             <tr>
               <!-- Name -->
               <td>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2" [class.pl-8]="item.isChild">
+                  @if (item.type === 'folder') {
+                    <button
+                      type="button"
+                      class="flex items-center justify-center w-5 h-5 text-gray-400 hover:text-gray-600 flex-shrink-0 -ml-1"
+                      (click)="toggleFolder(item.uid)"
+                      [attr.aria-expanded]="isFolderExpanded(item.uid)"
+                      aria-label="Toggle folder">
+                      <i [class]="isFolderExpanded(item.uid) ? 'fa-solid fa-chevron-down text-xs' : 'fa-solid fa-chevron-right text-xs'" aria-hidden="true"></i>
+                    </button>
+                  }
                   <i [class]="getDocumentIcon(item) + ' flex-shrink-0'" aria-hidden="true"></i>
                   <div class="min-w-0">
-                    @if (item.type !== 'folder') {
+                    @if (item.type === 'folder') {
+                      <span class="text-sm font-medium text-gray-900 truncate block max-w-xs cursor-pointer" (click)="toggleFolder(item.uid)">{{
+                        item.name
+                      }}</span>
+                      @if (item.childCount !== undefined) {
+                        <p class="text-[11px] text-gray-400">{{ item.childCount }} link{{ item.childCount !== 1 ? 's' : '' }}</p>
+                      }
+                    } @else {
                       <a
                         role="button"
                         class="text-sm font-medium text-blue-600 hover:text-blue-800 truncate block max-w-xs cursor-pointer"
@@ -95,15 +112,13 @@
                         tabindex="0">
                         {{ item.name }}
                       </a>
-                    } @else {
-                      <span class="text-sm font-medium text-gray-900 truncate block max-w-xs">{{ item.name }}</span>
                     }
                     @if (item.meetingAttachment) {
                       <p class="text-[11px] text-gray-400 truncate">
                         From: {{ item.meetingAttachment.meetingTitle }} · {{ item.meetingAttachment.meetingDate | date: 'MMM d, y' }}
                       </p>
                     }
-                    @if (item.description) {
+                    @if (item.description && item.type !== 'folder') {
                       <p class="text-[11px] text-gray-400 truncate">{{ item.description }}</p>
                     }
                   </div>

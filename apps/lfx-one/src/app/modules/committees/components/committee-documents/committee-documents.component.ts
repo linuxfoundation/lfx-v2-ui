@@ -48,6 +48,12 @@ interface DocumentDisplayItem {
   meetingAttachment?: MeetingAttachmentWithContext;
   /** Original committee document data (for edit/delete) */
   committeeDocument?: CommitteeDocument;
+  /** Parent folder UID (for hierarchy display) */
+  parentUid?: string;
+  /** Number of child links inside this folder */
+  childCount?: number;
+  /** Whether this item is a child inside a folder (indent in table) */
+  isChild?: boolean;
 }
 
 /** Max concurrent attachment fetches to avoid overwhelming the backend. */
@@ -90,6 +96,7 @@ export class CommitteeDocumentsComponent implements OnInit {
   public searchQuery = signal('');
   public sourceFilter = signal<string | null>(null);
   public standaloneDocsVersion = signal(0);
+  public expandedFolders = signal<Set<string>>(new Set());
 
   // Form
   public searchForm = new FormGroup({
@@ -103,14 +110,50 @@ export class CommitteeDocumentsComponent implements OnInit {
     { label: 'Folder', value: 'folder' },
   ];
 
+  // Folder options for the Add Link dialog
+  public folderOptions = computed(() =>
+    this.standaloneDocs()
+      .filter((doc) => doc.type === 'folder')
+      .map((folder) => ({ label: folder.name, value: folder.uid }))
+  );
+
   // Data — meeting attachments
   public meetingAttachments: Signal<MeetingAttachmentWithContext[]> = this.initMeetingAttachments();
 
   // Data — standalone committee documents
   public standaloneDocs: Signal<CommitteeDocument[]> = this.initStandaloneDocuments();
 
-  // Merged display items
+  // Maps folder UID → child document items for hierarchy display
+  public folderChildMap: Signal<Map<string, DocumentDisplayItem[]>> = computed(() => {
+    const childMap = new Map<string, DocumentDisplayItem[]>();
+    for (const doc of this.standaloneDocs()) {
+      if (doc.parent_uid) {
+        const children = childMap.get(doc.parent_uid) || [];
+        children.push({
+          uid: doc.uid,
+          name: doc.name,
+          type: doc.type,
+          url: doc.url,
+          description: doc.description,
+          addedBy: doc.uploaded_by || doc.created_by,
+          date: doc.created_at || doc.updated_at,
+          fileSize: doc.file_size,
+          source: doc.type,
+          isStandalone: true,
+          committeeDocument: doc,
+          parentUid: doc.parent_uid,
+          isChild: true,
+        });
+        childMap.set(doc.parent_uid, children);
+      }
+    }
+    return childMap;
+  });
+
+  // Merged display items (flat, unsorted — does NOT include folder children)
   public allDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
+    const childMap = this.folderChildMap();
+
     const meetingItems: DocumentDisplayItem[] = this.meetingAttachments().map((item) => ({
       uid: item.attachment.uid,
       name: item.attachment.name,
@@ -124,35 +167,73 @@ export class CommitteeDocumentsComponent implements OnInit {
       meetingAttachment: item,
     }));
 
-    const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs().map((doc) => ({
-      uid: doc.uid,
-      name: doc.name,
-      type: doc.type,
-      url: doc.url,
-      description: doc.description,
-      addedBy: doc.uploaded_by || doc.created_by,
-      date: doc.created_at || doc.updated_at,
-      fileSize: doc.file_size,
-      source: doc.type,
-      isStandalone: true,
-      committeeDocument: doc,
-    }));
+    const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs()
+      .filter((doc) => !doc.parent_uid)
+      .map((doc) => ({
+        uid: doc.uid,
+        name: doc.name,
+        type: doc.type,
+        url: doc.url,
+        description: doc.description,
+        addedBy: doc.uploaded_by || doc.created_by,
+        date: doc.created_at || doc.updated_at,
+        fileSize: doc.file_size,
+        source: doc.type,
+        isStandalone: true,
+        committeeDocument: doc,
+        childCount: doc.type === 'folder' ? (childMap.get(doc.uid)?.length ?? 0) : undefined,
+      }));
 
     return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
   });
 
-  // Filtered by search and source
+  // Filtered by search and source, with folder hierarchy (children inserted after expanded folders)
   public filteredDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const source = this.sourceFilter();
+    const expanded = this.expandedFolders();
+    const childMap = this.folderChildMap();
+
     let results = this.allDocuments();
+
+    // When searching, flatten everything (show matching children as standalone rows)
     if (query) {
-      results = results.filter((item) => item.name.toLowerCase().includes(query) || (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query));
+      const allChildren = [...childMap.values()].flat();
+      const allItems = [...results, ...allChildren];
+      results = allItems.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) ||
+          (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query) ||
+          (item.description ?? '').toLowerCase().includes(query)
+      );
+      if (source) {
+        results = results.filter((item) => item.source === source);
+      }
+      return results;
     }
+
     if (source) {
-      results = results.filter((item) => item.source === source);
+      results = results.filter((item) => item.source === source || item.type === 'folder');
+      // Hide folders that have no children matching the filter and aren't the filter themselves
+      if (source !== 'folder') {
+        results = results.filter((item) => item.type !== 'folder' || (childMap.get(item.uid)?.some((child) => child.source === source) ?? false));
+      }
     }
-    return results;
+
+    // Insert folder children after expanded folders
+    const display: DocumentDisplayItem[] = [];
+    for (const item of results) {
+      display.push(item);
+      if (item.type === 'folder' && expanded.has(item.uid)) {
+        let children = childMap.get(item.uid) ?? [];
+        if (source) {
+          children = children.filter((child) => child.source === source);
+        }
+        display.push(...children);
+      }
+    }
+
+    return display;
   });
 
   public ngOnInit(): void {
@@ -189,6 +270,24 @@ export class CommitteeDocumentsComponent implements OnInit {
     }
   }
 
+  /** Toggles a folder's expanded/collapsed state. */
+  public toggleFolder(folderUid: string): void {
+    this.expandedFolders.update((set) => {
+      const next = new Set(set);
+      if (next.has(folderUid)) {
+        next.delete(folderUid);
+      } else {
+        next.add(folderUid);
+      }
+      return next;
+    });
+  }
+
+  /** Whether a folder is currently expanded. */
+  public isFolderExpanded(folderUid: string): boolean {
+    return this.expandedFolders().has(folderUid);
+  }
+
   // ── CRUD Dialog Methods ──────────────────────────────────────────────────
 
   public openAddLinkDialog(): void {
@@ -200,6 +299,7 @@ export class CommitteeDocumentsComponent implements OnInit {
       data: {
         mode: 'link',
         committeeId: this.committee().uid,
+        folders: this.folderOptions(),
       },
     });
 
@@ -242,6 +342,7 @@ export class CommitteeDocumentsComponent implements OnInit {
         mode: item.committeeDocument.type,
         committeeId: this.committee().uid,
         document: item.committeeDocument,
+        folders: this.folderOptions(),
       },
     });
 

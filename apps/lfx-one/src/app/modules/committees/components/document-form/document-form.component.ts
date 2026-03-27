@@ -6,6 +6,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
+import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { CommitteeDocument, CommitteeDocumentType, CreateCommitteeDocumentRequest, UpdateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
@@ -14,7 +15,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'lfx-document-form',
-  imports: [ReactiveFormsModule, ButtonComponent, InputTextComponent, TextareaComponent],
+  imports: [ReactiveFormsModule, ButtonComponent, InputTextComponent, SelectComponent, TextareaComponent],
   templateUrl: './document-form.component.html',
   styleUrl: './document-form.component.scss',
 })
@@ -32,6 +33,8 @@ export class DocumentFormComponent {
   public readonly document: CommitteeDocument | undefined;
   /** Pre-set mode: 'link' or 'folder' — determines which form fields are shown */
   public readonly mode: CommitteeDocumentType;
+  /** Available folders for the folder selector (links only) */
+  public readonly folderOptions: { label: string; value: string }[];
 
   public form: FormGroup;
 
@@ -40,6 +43,7 @@ export class DocumentFormComponent {
     this.committeeId = this.config.data?.committeeId;
     this.document = this.config.data?.document;
     this.mode = this.config.data?.mode || this.document?.type || 'link';
+    this.folderOptions = this.config.data?.folders || [];
 
     this.form = this.createForm();
     this.initializeForm();
@@ -74,6 +78,7 @@ export class DocumentFormComponent {
         name: formValue.name,
         ...(this.isLink && { url: formValue.url }),
         description: formValue.description || undefined,
+        ...(this.isLink && { parent_uid: formValue.parent_uid || undefined }),
       };
 
       this.committeeService.updateCommitteeDocument(this.committeeId, this.document.uid, updateData).subscribe({
@@ -101,6 +106,7 @@ export class DocumentFormComponent {
         name: formValue.name,
         ...(this.isLink && { url: formValue.url }),
         description: formValue.description || undefined,
+        ...(this.isLink && formValue.parent_uid && { parent_uid: formValue.parent_uid }),
       };
 
       this.committeeService.createCommitteeDocument(this.committeeId, createData).subscribe({
@@ -131,6 +137,7 @@ export class DocumentFormComponent {
         url: new FormControl('', [Validators.required]),
         name: new FormControl('', [Validators.required]),
         description: new FormControl(''),
+        parent_uid: new FormControl<string | null>(null),
       });
     }
 
@@ -148,6 +155,7 @@ export class DocumentFormComponent {
           url: this.document.url || '',
           name: this.document.name,
           description: this.document.description || '',
+          parent_uid: this.document.parent_uid || null,
         });
       } else {
         this.form.patchValue({
