@@ -172,6 +172,11 @@ export class CommitteeOverviewComponent {
     }));
     return [...voteItems, ...surveyItems];
   });
+  public pendingActionsViewAllTab: Signal<string> = computed(() => {
+    const overflow = this.pendingActionItems().slice(2);
+    const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
+    return hasVotes ? 'votes' : 'surveys';
+  });
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
   public nextMeeting: Signal<Meeting | null> = computed(() => {
