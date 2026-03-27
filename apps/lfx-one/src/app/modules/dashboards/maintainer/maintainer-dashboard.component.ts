@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal } from '@angular/core';
+import { AppService } from '@services/app.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -21,6 +22,9 @@ import { RecentProgressComponent } from '../components/recent-progress/recent-pr
 export class MaintainerDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
+  private readonly appService = inject(AppService);
+
+  protected readonly isMeLens = computed(() => this.appService.activeLens() === 'me');
 
   public readonly selectedProject = computed(() => this.projectContextService.selectedFoundation() || this.projectContextService.selectedProject());
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);

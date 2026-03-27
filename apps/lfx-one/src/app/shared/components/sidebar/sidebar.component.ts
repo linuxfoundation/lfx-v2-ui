@@ -1,29 +1,35 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass, NgTemplateOutlet } from '@angular/common';
-import { Component, computed, inject, input, PLATFORM_ID, Signal, signal } from '@angular/core';
+import { LowerCasePipe, NgClass, NgTemplateOutlet } from '@angular/common';
+import { Component, computed, effect, ElementRef, inject, input, PLATFORM_ID, Signal, signal, ViewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ProjectSelectorComponent } from '@components/project-selector/project-selector.component';
 import { environment } from '@environments/environment';
-import { Project, ProjectContext, SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { PersonaType, Project, ProjectContext, SidebarMenuItem, User } from '@lfx-one/shared/interfaces';
+import { AccountContextService } from '@services/account-context.service';
 import { PersonaService } from '@services/persona.service';
+import { UserService } from '@services/user.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-sidebar',
-  imports: [NgClass, NgTemplateOutlet, RouterModule, BadgeComponent, ProjectSelectorComponent],
+  imports: [LowerCasePipe, NgClass, NgTemplateOutlet, RouterModule, BadgeComponent, ProjectSelectorComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
+  @ViewChild('scrollContainer') private readonly scrollContainer?: ElementRef<HTMLDivElement>;
+
   private readonly projectService = inject(ProjectService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly personaService = inject(PersonaService);
+  private readonly userService = inject(UserService);
+  private readonly accountContextService = inject(AccountContextService);
   private readonly platformId = inject(PLATFORM_ID);
 
   // Input properties
@@ -32,7 +38,45 @@ export class SidebarComponent {
   public readonly collapsed = input<boolean>(false);
   public readonly styleClass = input<string>('');
   public readonly showProjectSelector = input<boolean>(false);
+  public readonly showOrgSelector = input<boolean>(false);
+  public readonly showMeSelector = input<boolean>(false);
+  public readonly grayed = input<boolean>(false);
   public readonly mobile = input<boolean>(false);
+
+  // Org lens — selected account
+  protected readonly selectedAccount = this.accountContextService.selectedAccount.asReadonly();
+  protected readonly orgInitials = computed(() => {
+    const name = this.selectedAccount().accountName;
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map((n: string) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  });
+  protected readonly orgAvatarColor = computed(() => {
+    const name = this.selectedAccount().accountName;
+    const colors = ['bg-violet-500', 'bg-blue-500', 'bg-teal-500', 'bg-orange-500', 'bg-rose-500', 'bg-indigo-500', 'bg-emerald-500', 'bg-amber-500'];
+    if (!name) return colors[0];
+    const index = [...name].reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+  });
+
+  // Me lens — current user and persona
+  protected readonly user = this.userService.user.asReadonly() as ReturnType<typeof this.userService.user.asReadonly>;
+  protected readonly personaLabels = computed(() => [this.getPersonaLabel(this.personaService.currentPersona())]);
+  protected readonly userInitials = computed(() => {
+    const u: User | null = this.user();
+    if (!u?.name) return '?';
+    return u.name
+      .split(' ')
+      .map((n: string) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  });
 
   // Load all available projects
   // so TransferState never captures it and client makes a duplicate call anyway.
@@ -40,8 +84,10 @@ export class SidebarComponent {
   protected readonly projects: Signal<Project[]> = this.initProjects();
 
   // TODO: DEMO - Remove this once we have proper project permissions
-  protected readonly isBoardMember = this.personaService.isBoardScoped;
-  protected readonly foundationProjects = computed(() => this.projects().filter((p: Project) => (this.isBoardMember() ? p.slug === 'tlf' : true)));
+  public readonly isBoardMember = computed(
+    () => this.personaService.currentPersona() === 'board-member' || this.personaService.currentPersona() === 'executive-director'
+  );
+  protected readonly foundationProjects = computed(() => this.projects());
 
   protected readonly selectedProject = computed(() => {
     // First check if a specific project is selected (child project)
@@ -57,6 +103,29 @@ export class SidebarComponent {
     }
 
     return this.projects().find((p: Project) => p.slug === foundation.slug) || null;
+  });
+
+  // ─── Foundation lens — Insights card ────────────────────────────────────
+  protected readonly isFoundationSelected = computed(() => {
+    const project = this.selectedProject();
+    if (!project) return true;
+    const validProjectIds = new Set(this.projects().map((p: Project) => p.uid));
+    return !project.parent_uid || project.parent_uid === '' || !validProjectIds.has(project.parent_uid);
+  });
+
+  protected readonly insightsCardType = computed(() => (this.isFoundationSelected() ? 'Foundation' : 'Project'));
+
+  // Map app slugs to LFX Insights collection slugs where they differ
+  private readonly insightsSlugMap: Record<string, string> = {
+    tlf: 'the-linux-foundation',
+  };
+
+  protected readonly insightsCardUrl = computed(() => {
+    const project = this.selectedProject();
+    if (!project) return 'https://insights.linuxfoundation.org/';
+    const appSlug = project.slug;
+    const insightsSlug = this.insightsSlugMap[appSlug] ?? appSlug;
+    return `https://insights.linuxfoundation.org/collection/details/${insightsSlug}`;
   });
 
   // Section expanded state tracking - uses section labels as keys
@@ -90,6 +159,14 @@ export class SidebarComponent {
       external: item.url ? this.isExternalUrl(item.url) : undefined,
     }))
   );
+
+  public constructor() {
+    // Scroll sidebar to top whenever nav items change (e.g. on lens switch)
+    effect(() => {
+      this.items();
+      this.scrollContainer?.nativeElement?.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  }
 
   /**
    * Toggle section expanded state
@@ -168,6 +245,17 @@ export class SidebarComponent {
    * A URL is considered external if it starts with http:// or https:// and does NOT start with the home URL
    * Relative URLs (starting with /) are always internal
    */
+  private getPersonaLabel(persona: PersonaType): string {
+    const labels: Record<PersonaType, string> = {
+      'core-developer': 'Core Developer',
+      maintainer: 'Maintainer',
+      projects: 'Projects',
+      'board-member': 'Board Member',
+      'executive-director': 'Executive Director',
+    };
+    return labels[persona] ?? persona;
+  }
+
   private isExternalUrl(url: string): boolean {
     if (!url) {
       return false;

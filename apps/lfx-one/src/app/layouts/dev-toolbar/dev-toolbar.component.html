@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 @if (showDevToolbar()) {
-  <div class="fixed top-0 left-0 right-0 z-50 bg-gray-900 text-white px-4 py-2" data-testid="dev-tools-bar">
+  <div class="fixed top-0 left-0 right-0 z-[100] bg-gray-900 text-white px-4 py-2" data-testid="dev-tools-bar">
     <div class="flex items-center gap-4 max-w-full">
       <!-- Persona Selector (left side) -->
       <div class="flex items-center gap-2" data-testid="dev-tools-bar-persona">
@@ -38,8 +38,8 @@
         </div>
       }
 
-      <!-- Organization Selector (only visible on board dashboard) -->
-      @if (showOrganizationSelector() && isOnBoardDashboard()) {
+      <!-- Organization Selector (visible in org lens or board dashboard) -->
+      @if (showOrgSelector()) {
         <div class="flex items-center gap-2" data-testid="dev-tools-bar-organization">
           <label for="organization-select" class="text-sm">Organization:</label>
           <lfx-select

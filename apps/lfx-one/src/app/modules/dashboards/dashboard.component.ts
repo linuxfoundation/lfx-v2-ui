@@ -3,6 +3,7 @@
 
 import { Component, computed, inject, Signal } from '@angular/core';
 import { PersonaType } from '@lfx-one/shared/interfaces';
+import { AppService } from '@services/app.service';
 import { PersonaService } from '@services/persona.service';
 
 import { BoardMemberDashboardComponent } from './board-member/board-member-dashboard.component';
@@ -21,6 +22,9 @@ import { MaintainerDashboardComponent } from './maintainer/maintainer-dashboard.
 })
 export class DashboardComponent {
   private readonly personaService = inject(PersonaService);
+  private readonly appService = inject(AppService);
+
+  protected readonly isMeLens = computed(() => this.appService.activeLens() === 'me');
 
   /**
    * Computed signal that determines which dashboard to display

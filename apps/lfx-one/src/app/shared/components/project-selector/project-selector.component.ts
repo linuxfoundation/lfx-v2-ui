@@ -1,55 +1,106 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, input, OnDestroy, output, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from '@components/button/button.component';
 import { Project } from '@lfx-one/shared/interfaces';
+import { AppService } from '@services/app.service';
 import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
-import { Popover, PopoverModule } from 'primeng/popover';
 
 import { TagComponent } from '../tag/tag.component';
 
 @Component({
   selector: 'lfx-project-selector',
-  imports: [PopoverModule, ButtonComponent, InputTextModule, FormsModule, AutoFocus, TagComponent],
+  imports: [InputTextModule, FormsModule, AutoFocus, TagComponent],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
 })
-export class ProjectSelectorComponent {
+export class ProjectSelectorComponent implements OnDestroy {
+  @ViewChild('selectorTrigger') private readonly selectorTrigger?: ElementRef<HTMLDivElement>;
+
   public readonly projects = input.required<Project[]>();
   public readonly selectedProject = input<Project | null>(null);
 
   public readonly projectChange = output<Project>();
 
+  private readonly appService = inject(AppService);
+  private readonly elementRef = inject(ElementRef);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private outsideClickListener: ((e: MouseEvent) => void) | null = null;
+
+  protected readonly isOpen = this.appService.projectSelectorOpen;
+  protected readonly panelTop = signal(0);
   protected readonly searchQuery = signal<string>('');
 
   protected readonly displayName = this.initializeDisplayName();
   protected readonly displayLogo = this.initializeDisplayLogo();
+  protected readonly displayType = this.initializeDisplayType();
   protected readonly foundations = this.initializeFoundations();
   protected readonly childProjectsMap = this.initializeChildProjectsMap();
   protected readonly hasResults = this.initializeHasResults();
 
-  protected selectProject(project: Project, popover: Popover): void {
+  public ngOnDestroy(): void {
+    this.detachOutsideClickListener();
+  }
+
+  protected selectProject(project: Project): void {
     this.projectChange.emit(project);
-    this.searchQuery.set(''); // Reset search on selection
-    popover.hide();
+    this.closePanel();
   }
 
-  protected togglePanel(event: Event, popover: Popover): void {
-    popover.toggle(event);
+  protected togglePanel(): void {
+    if (this.appService.projectSelectorOpen()) {
+      this.closePanel();
+      return;
+    }
+    if (this.selectorTrigger) {
+      const rect = this.selectorTrigger.nativeElement.getBoundingClientRect();
+      this.panelTop.set(rect.top);
+    }
+    this.appService.setProjectSelectorOpen(true);
+    // Attach listener on next tick so the current opening click is not caught
+    setTimeout(() => this.attachOutsideClickListener(), 0);
   }
 
-  protected onPopoverHide(): void {
-    // Reset search when popover closes
+  private closePanel(): void {
     this.searchQuery.set('');
+    this.appService.setProjectSelectorOpen(false);
+    this.detachOutsideClickListener();
+  }
+
+  private attachOutsideClickListener(): void {
+    this.outsideClickListener = (event: MouseEvent) => {
+      if (!this.elementRef.nativeElement.contains(event.target as Node)) {
+        this.closePanel();
+      }
+    };
+    document.addEventListener('click', this.outsideClickListener);
+    this.destroyRef.onDestroy(() => this.detachOutsideClickListener());
+  }
+
+  private detachOutsideClickListener(): void {
+    if (this.outsideClickListener) {
+      document.removeEventListener('click', this.outsideClickListener);
+      this.outsideClickListener = null;
+    }
   }
 
   private initializeDisplayName() {
     return computed(() => {
       const project = this.selectedProject();
       return project?.name?.trim() ?? 'Select Project';
+    });
+  }
+
+  private initializeDisplayType() {
+    return computed(() => {
+      const project = this.selectedProject();
+      if (!project) return 'Foundation';
+      const validProjectIds = new Set(this.projects().map((p) => p.uid));
+      const isFoundation = !project.parent_uid || project.parent_uid === '' || !validProjectIds.has(project.parent_uid);
+      return isFoundation ? 'Foundation' : 'Project';
     });
   }
 

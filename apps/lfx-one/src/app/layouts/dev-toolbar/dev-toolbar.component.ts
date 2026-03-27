@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, Signal } from '@angular/core';
+import { Component, computed, inject, Signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { ACCOUNTS, PERSONA_OPTIONS } from '@lfx-one/shared/constants';
 import { Account, isBoardScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
+import { AppService } from '@services/app.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -27,13 +28,18 @@ export class DevToolbarComponent {
   private readonly personaService = inject(PersonaService);
   protected readonly projectContextService = inject(ProjectContextService);
   private readonly accountContextService = inject(AccountContextService);
+  private readonly appService = inject(AppService);
   private readonly cookieRegistry = inject(CookieRegistryService);
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly router = inject(Router);
 
-  // Feature flags
-  protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
+  // Feature flags — showDevToolbar from AppService (single source of truth for layout offsets)
+  protected readonly showDevToolbar = this.appService.showDevToolbar;
   protected readonly showOrganizationSelector = this.featureFlagService.getBooleanFlag('organization-selector', true);
+
+  // Active lens
+  protected readonly activeLens = this.appService.activeLens;
+  protected readonly showOrgSelector = computed(() => this.showOrganizationSelector() && (this.activeLens() === 'org' || this.isOnBoardDashboard()));
 
   // Organization selector options
   protected readonly availableAccounts = ACCOUNTS;

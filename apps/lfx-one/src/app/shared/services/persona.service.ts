@@ -4,6 +4,7 @@
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { isBoardScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
 
+import { AppService } from './app.service';
 import { ProjectContextService } from './project-context.service';
 
 @Injectable({

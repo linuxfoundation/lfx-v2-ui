@@ -2,25 +2,15 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <aside
-  class="h-full bg-white w-72 flex flex-col"
+  class="h-full bg-white w-full flex flex-col"
   [ngClass]="{
     'border-r border-gray-200': !mobile(),
   }"
   data-testid="sidebar">
-  <div class="flex flex-col py-6 h-full min-h-0 overflow-y-auto">
+  <div #scrollContainer class="flex flex-col flex-1 min-h-0 overflow-y-auto py-4">
     <!-- Top Navigation -->
     <div class="flex flex-col items-start w-full flex-1">
-      <!-- LFX Logo - Hidden on mobile (shown in drawer header instead) -->
-      @if (!mobile()) {
-        <div class="h-[20px] ml-2 w-[141.6px] px-3 py-3 mb-12">
-          <a [routerLink]="['/']" class="flex items-center">
-            <!-- LFX Logo SVG -->
-            <img src="/images/logo_lfx.svg" alt="LFX Logo" class="w-auto h-5" />
-          </a>
-        </div>
-      }
-
-      <!-- Project Selector -->
+      <!-- Project Selector (Foundation lens) -->
       @if (showProjectSelector()) {
         <div class="px-3 mb-6 w-full">
           <lfx-project-selector
@@ -30,8 +20,48 @@
         </div>
       }
 
+      <!-- Org Selector (Org lens) -->
+      @if (showOrgSelector()) {
+        <div class="px-3 mb-6 w-full">
+          <div class="box-border flex gap-3 items-center p-3 w-full rounded-lg" data-testid="org-selector">
+            <div class="overflow-clip relative rounded-full shrink-0 size-10 flex items-center justify-center text-white font-semibold text-sm" [ngClass]="orgAvatarColor()">
+              {{ orgInitials() }}
+            </div>
+            <div class="flex flex-col gap-0.5 grow min-w-0">
+              <p class="font-semibold text-base text-gray-900 leading-5 tracking-tight line-clamp-2">{{ selectedAccount().accountName }}</p>
+              <p class="text-xs text-gray-400 leading-4">Organization</p>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Me Selector (Me lens) -->
+      @if (showMeSelector()) {
+        <div class="px-3 mb-6 w-full">
+          <div class="box-border flex gap-3 items-center p-3 w-full rounded-lg" data-testid="me-selector">
+            <div class="overflow-clip relative rounded-full shrink-0 size-10 border border-gray-100">
+              @if (user()?.picture) {
+                <img [src]="user()!.picture" [alt]="user()!.name" class="size-full object-cover" />
+              } @else {
+                <div class="flex items-center justify-center size-full bg-blue-600 text-white font-semibold text-sm">
+                  {{ userInitials() }}
+                </div>
+              }
+            </div>
+            <div class="flex flex-col gap-1 grow min-w-0">
+              <p class="font-semibold text-base text-gray-900 leading-5 tracking-tight line-clamp-2">{{ user()?.name }}</p>
+              <div class="flex flex-wrap gap-1">
+                @for (label of personaLabels(); track label) {
+                  <span class="inline-block text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 leading-4">{{ label }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Main Navigation Items -->
-      <div class="flex flex-col gap-2 items-start px-3 w-full">
+      <div class="flex flex-col gap-2 items-start px-3 w-full" [ngClass]="{ 'opacity-50 pointer-events-none': grayed() }">
         @for (item of itemsWithTestIds(); track item.label) {
           @if (item.isSection) {
             <!-- Section Header -->
@@ -79,6 +109,30 @@
       }
     </div>
   </div>
+
+  <!-- Insights Card (Foundation lens only) — fixed at bottom, outside scroll area -->
+  @if (showProjectSelector()) {
+    <div class="flex-shrink-0 px-3 pb-4 pt-2 border-t border-gray-100" data-testid="insights-card">
+      <div class="rounded-xl p-4 bg-purple-50 border border-purple-200 flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+          <i class="fa-light fa-chart-simple text-purple-600 text-2xl mb-1"></i>
+          <p class="text-sm font-semibold leading-5 text-gray-900">{{ insightsCardType() }} Insights</p>
+          <p class="text-xs text-gray-600 leading-[1.5]">
+            Discover and evaluate health metrics, contributions, and activity for this {{ insightsCardType() | lowercase }}.
+          </p>
+        </div>
+        <a
+          [href]="insightsCardUrl()"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center justify-center gap-2 w-full text-sm font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg transition-colors"
+          data-testid="insights-card-link">
+          <span>View Insights</span>
+          <i class="fa-light fa-arrow-up-right-from-square opacity-80"></i>
+        </a>
+      </div>
+    </div>
+  }
 </aside>
 
 <!-- Menu Item Template -->

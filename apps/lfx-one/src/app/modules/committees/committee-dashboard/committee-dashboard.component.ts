@@ -11,6 +11,7 @@ import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
 import { Committee, MyCommittee, ProjectContext } from '@lfx-one/shared/interfaces';
 import { RoleBadgeClassPipe } from '@pipes/role-badge-class.pipe';
+import { AppService } from '@services/app.service';
 import { CommitteeService } from '@services/committee.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -46,11 +47,15 @@ export class CommitteeDashboardComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly personaService = inject(PersonaService);
   private readonly featureFlagService = inject(FeatureFlagService);
+  private readonly appService = inject(AppService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
   // Use the configurable label constants
   protected readonly committeeLabel = COMMITTEE_LABEL;
+  protected readonly pageTitle = computed(() =>
+    this.appService.activeLens() === 'me' ? `My ${COMMITTEE_LABEL.plural}` : COMMITTEE_LABEL.plural
+  );
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading = signal<boolean>(true);

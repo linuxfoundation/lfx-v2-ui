@@ -3,6 +3,7 @@
 
 import { Routes } from '@angular/router';
 
+import { PlaceholderPageComponent } from './shared/components/placeholder-page/placeholder-page.component';
 import { authGuard } from './shared/guards/auth.guard';
 
 export const routes: Routes = [
@@ -47,6 +48,27 @@ export const routes: Routes = [
         path: 'profile',
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
+      // Me lens — new pages
+      { path: 'me/foundations', component: PlaceholderPageComponent, data: { title: 'My Foundations' } },
+      { path: 'me/actions', component: PlaceholderPageComponent, data: { title: 'My Actions' } },
+      { path: 'me/events', component: PlaceholderPageComponent, data: { title: 'My Events' } },
+      { path: 'me/training', component: PlaceholderPageComponent, data: { title: 'Trainings & Certifications' } },
+      { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
+      { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
+      { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
+      // Foundation lens — new pages
+      { path: 'foundation/projects', component: PlaceholderPageComponent, data: { title: 'Projects' } },
+      { path: 'foundation/events', component: PlaceholderPageComponent, data: { title: 'Events' } },
+      // Org lens — pages
+      { path: 'org', component: PlaceholderPageComponent, data: { title: 'Overview' } },
+      { path: 'org/projects', component: PlaceholderPageComponent, data: { title: 'Key Projects' } },
+      { path: 'org/code', component: PlaceholderPageComponent, data: { title: 'Code Contributions' } },
+      { path: 'org/membership', component: PlaceholderPageComponent, data: { title: 'Membership' } },
+      { path: 'org/benefits', component: PlaceholderPageComponent, data: { title: 'Benefits' } },
+      { path: 'org/groups', component: PlaceholderPageComponent, data: { title: 'Groups' } },
+      { path: 'org/cla', component: PlaceholderPageComponent, data: { title: 'CLA Management' } },
+      { path: 'org/permissions', component: PlaceholderPageComponent, data: { title: 'Access & Permissions' } },
+      { path: 'org/profile', component: PlaceholderPageComponent, data: { title: 'Org Profile' } },
     ],
   },
   {
