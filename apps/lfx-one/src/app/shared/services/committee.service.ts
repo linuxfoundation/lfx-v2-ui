@@ -3,7 +3,16 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeDocument,
+  CommitteeMember,
+  CreateCommitteeDocumentRequest,
+  CreateCommitteeMemberRequest,
+  MyCommittee,
+  QueryServiceCountResponse,
+  UpdateCommitteeDocumentRequest,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -89,6 +98,29 @@ export class CommitteeService {
   /** Leave a group */
   public leaveCommittee(committeeId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
+  }
+
+  // ── Committee Documents ─────────────────────────────────────────────────
+
+  public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
+    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(
+      catchError((error) => {
+        console.error('Failed to load committee documents:', error);
+        return of([]);
+      })
+    );
+  }
+
+  public createCommitteeDocument(committeeId: string, data: CreateCommitteeDocumentRequest): Observable<CommitteeDocument> {
+    return this.http.post<CommitteeDocument>(`/api/committees/${committeeId}/documents`, data).pipe(take(1));
+  }
+
+  public updateCommitteeDocument(committeeId: string, documentId: string, data: UpdateCommitteeDocumentRequest): Observable<CommitteeDocument> {
+    return this.http.put<CommitteeDocument>(`/api/committees/${committeeId}/documents/${documentId}`, data).pipe(take(1));
+  }
+
+  public deleteCommitteeDocument(committeeId: string, documentId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`).pipe(take(1));
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────

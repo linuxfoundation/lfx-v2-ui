@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeCreateData,
+  CommitteeUpdateData,
+  CreateCommitteeDocumentRequest,
+  CreateCommitteeMemberRequest,
+  UpdateCommitteeDocumentRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -481,6 +487,197 @@ export class CommitteeController {
       res.status(204).send();
     } catch (error) {
       // Send the error to the next middleware
+      next(error);
+    }
+  }
+
+  // ── Document Endpoints ──────────────────────────────────────────────────
+
+  /**
+   * GET /committees/:id/documents
+   */
+  public async getCommitteeDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_documents', {
+      committee_id: id,
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'get_committee_documents',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const documents = await this.committeeService.getCommitteeDocuments(req, id);
+
+      logger.success(req, 'get_committee_documents', startTime, {
+        committee_id: id,
+        document_count: documents.length,
+      });
+
+      res.json(documents);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/documents
+   */
+  public async createCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'create_committee_document', {
+      committee_id: id,
+      document_data: logger.sanitize(req.body),
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'create_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const data: CreateCommitteeDocumentRequest = req.body;
+
+      // Validate required fields
+      const fieldErrors: Record<string, string> = {};
+      if (!data.name?.trim()) {
+        fieldErrors['name'] = 'Document name is required';
+      }
+      if (!data.type) {
+        fieldErrors['type'] = 'Document type is required';
+      }
+      if (data.type === 'link' && !data.url?.trim()) {
+        fieldErrors['url'] = 'URL is required for link documents';
+      }
+
+      if (Object.keys(fieldErrors).length > 0) {
+        const validationError = ServiceValidationError.fromFieldErrors(fieldErrors, 'Validation failed', {
+          operation: 'create_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const newDocument = await this.committeeService.createCommitteeDocument(req, id, data);
+
+      logger.success(req, 'create_committee_document', startTime, {
+        committee_id: id,
+        document_uid: newDocument.uid,
+      });
+
+      res.status(201).json(newDocument);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /committees/:id/documents/:documentId
+   */
+  public async updateCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, documentId } = req.params;
+    const startTime = logger.startOperation(req, 'update_committee_document', {
+      committee_id: id,
+      document_id: documentId,
+      update_data: logger.sanitize(req.body),
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'update_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      if (!documentId) {
+        const validationError = ServiceValidationError.forField('documentId', 'Document ID is required', {
+          operation: 'update_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const data: UpdateCommitteeDocumentRequest = req.body;
+
+      const updatedDocument = await this.committeeService.updateCommitteeDocument(req, id, documentId, data);
+
+      logger.success(req, 'update_committee_document', startTime, {
+        committee_id: id,
+        document_id: documentId,
+      });
+
+      res.json(updatedDocument);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /committees/:id/documents/:documentId
+   */
+  public async deleteCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id, documentId } = req.params;
+    const startTime = logger.startOperation(req, 'delete_committee_document', {
+      committee_id: id,
+      document_id: documentId,
+    });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'delete_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      if (!documentId) {
+        const validationError = ServiceValidationError.forField('documentId', 'Document ID is required', {
+          operation: 'delete_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      await this.committeeService.deleteCommitteeDocument(req, id, documentId);
+
+      logger.success(req, 'delete_committee_document', startTime, {
+        committee_id: id,
+        document_id: documentId,
+      });
+
+      res.status(204).send();
+    } catch (error) {
       next(error);
     }
   }

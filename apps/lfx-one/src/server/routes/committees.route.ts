@@ -25,6 +25,12 @@ router.post('/:id/members', (req, res, next) => committeeController.createCommit
 router.put('/:id/members/:memberId', (req, res, next) => committeeController.updateCommitteeMember(req, res, next));
 router.delete('/:id/members/:memberId', (req, res, next) => committeeController.deleteCommitteeMember(req, res, next));
 
+// ── Document routes ────────────────────────────────────────────────────────
+router.get('/:id/documents', (req, res, next) => committeeController.getCommitteeDocuments(req, res, next));
+router.post('/:id/documents', (req, res, next) => committeeController.createCommitteeDocument(req, res, next));
+router.put('/:id/documents/:documentId', (req, res, next) => committeeController.updateCommitteeDocument(req, res, next));
+router.delete('/:id/documents/:documentId', (req, res, next) => committeeController.deleteCommitteeDocument(req, res, next));
+
 // ── Join / Leave routes ────────────────────────────────────────────────────
 router.post('/:id/join', (req, res, next) => committeeController.joinCommittee(req, res, next));
 router.delete('/:id/leave', (req, res, next) => committeeController.leaveCommittee(req, res, next));

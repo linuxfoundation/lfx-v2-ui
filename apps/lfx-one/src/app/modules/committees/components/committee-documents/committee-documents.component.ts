@@ -12,10 +12,15 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { FileSizePipe } from '@pipes/file-size.pipe';
-import { Committee, MeetingAttachment } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeDocument, MeetingAttachment, TagSeverity } from '@lfx-one/shared/interfaces';
+import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
-import { MessageService } from 'primeng/api';
-import { catchError, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
+
+import { DocumentFormComponent } from '../document-form/document-form.component';
 
 /** Attachment enriched with meeting context for display. */
 interface MeetingAttachmentWithContext {
@@ -25,28 +30,66 @@ interface MeetingAttachmentWithContext {
   meetingId: string;
 }
 
+/** Unified display item that covers both meeting attachments and standalone documents. */
+interface DocumentDisplayItem {
+  uid: string;
+  name: string;
+  type: string;
+  url?: string;
+  description?: string;
+  addedBy?: string;
+  date?: string;
+  fileSize?: number;
+  /** Source for filtering: 'meeting', 'link', or 'folder' */
+  source: string;
+  /** Whether this is a standalone document (supports edit/delete) */
+  isStandalone: boolean;
+  /** Original meeting attachment data (for download) */
+  meetingAttachment?: MeetingAttachmentWithContext;
+  /** Original committee document data (for edit/delete) */
+  committeeDocument?: CommitteeDocument;
+}
+
 /** Max concurrent attachment fetches to avoid overwhelming the backend. */
 const ATTACHMENT_FETCH_CONCURRENCY = 4;
 
 @Component({
   selector: 'lfx-committee-documents',
-  imports: [CardComponent, ButtonComponent, InputTextComponent, SelectComponent, ReactiveFormsModule, TableComponent, TagComponent, FileSizePipe, DatePipe],
+  imports: [
+    CardComponent,
+    ButtonComponent,
+    InputTextComponent,
+    SelectComponent,
+    ReactiveFormsModule,
+    TableComponent,
+    TagComponent,
+    FileSizePipe,
+    DatePipe,
+    DynamicDialogModule,
+    ConfirmDialogModule,
+  ],
+  providers: [DialogService, ConfirmationService],
   templateUrl: './committee-documents.component.html',
   styleUrl: './committee-documents.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommitteeDocumentsComponent implements OnInit {
   private readonly meetingService = inject(MeetingService);
+  private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
   public committee = input.required<Committee>();
+  public canEdit = input<boolean>(false);
 
   // State
   public loading = signal<boolean>(true);
   public searchQuery = signal('');
   public sourceFilter = signal<string | null>(null);
+  public standaloneDocsVersion = signal(0);
 
   // Form
   public searchForm = new FormGroup({
@@ -57,21 +100,57 @@ export class CommitteeDocumentsComponent implements OnInit {
   public sourceOptions = [
     { label: 'Link', value: 'link' },
     { label: 'Meeting', value: 'file' },
+    { label: 'Folder', value: 'folder' },
   ];
 
-  // Data — fetches attachments from all committee meetings with bounded concurrency
-  public allAttachments: Signal<MeetingAttachmentWithContext[]> = this.initAttachments();
+  // Data — meeting attachments
+  public meetingAttachments: Signal<MeetingAttachmentWithContext[]> = this.initMeetingAttachments();
+
+  // Data — standalone committee documents
+  public standaloneDocs: Signal<CommitteeDocument[]> = this.initStandaloneDocuments();
+
+  // Merged display items
+  public allDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
+    const meetingItems: DocumentDisplayItem[] = this.meetingAttachments().map((item) => ({
+      uid: item.attachment.uid,
+      name: item.attachment.name,
+      type: item.attachment.type,
+      url: item.attachment.link,
+      addedBy: item.attachment.created_by?.name,
+      date: item.attachment.created_at,
+      fileSize: item.attachment.file_size,
+      source: item.attachment.type === 'link' ? 'link' : 'file',
+      isStandalone: false,
+      meetingAttachment: item,
+    }));
+
+    const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs().map((doc) => ({
+      uid: doc.uid,
+      name: doc.name,
+      type: doc.type,
+      url: doc.url,
+      description: doc.description,
+      addedBy: doc.uploaded_by || doc.created_by,
+      date: doc.created_at || doc.updated_at,
+      fileSize: doc.file_size,
+      source: doc.type,
+      isStandalone: true,
+      committeeDocument: doc,
+    }));
+
+    return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+  });
 
   // Filtered by search and source
-  public filteredAttachments: Signal<MeetingAttachmentWithContext[]> = computed(() => {
+  public filteredDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const source = this.sourceFilter();
-    let results = this.allAttachments();
+    let results = this.allDocuments();
     if (query) {
-      results = results.filter((item) => item.attachment.name.toLowerCase().includes(query) || item.meetingTitle.toLowerCase().includes(query));
+      results = results.filter((item) => item.name.toLowerCase().includes(query) || (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query));
     }
     if (source) {
-      results = results.filter((item) => item.attachment.type === source);
+      results = results.filter((item) => item.source === source);
     }
     return results;
   });
@@ -84,22 +163,114 @@ export class CommitteeDocumentsComponent implements OnInit {
     this.searchForm.controls.source.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.sourceFilter.set(value));
   }
 
-  /** Opens attachment — link in new tab, file via download URL. Validates URL protocol to prevent XSS. */
-  public openAttachment(item: MeetingAttachmentWithContext): void {
-    if (item.attachment.type === 'link' && item.attachment.link) {
-      this.openSafeUrl(item.attachment.link);
-    } else {
-      this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingId, item.attachment.uid).subscribe({
-        next: (response) => {
-          if (response?.download_url) {
-            this.openSafeUrl(response.download_url);
-          }
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
-        },
-      });
+  /** Opens document — links in new tab, meeting files via download URL. */
+  public openDocument(item: DocumentDisplayItem): void {
+    if (item.type === 'folder') {
+      return; // Folders are not clickable
     }
+
+    if (item.isStandalone && item.url) {
+      this.openSafeUrl(item.url);
+    } else if (item.meetingAttachment) {
+      if (item.meetingAttachment.attachment.type === 'link' && item.meetingAttachment.attachment.link) {
+        this.openSafeUrl(item.meetingAttachment.attachment.link);
+      } else {
+        this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingAttachment.meetingId, item.meetingAttachment.attachment.uid).subscribe({
+          next: (response) => {
+            if (response?.download_url) {
+              this.openSafeUrl(response.download_url);
+            }
+          },
+          error: () => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
+          },
+        });
+      }
+    }
+  }
+
+  // ── CRUD Dialog Methods ──────────────────────────────────────────────────
+
+  public openAddDocumentDialog(): void {
+    const dialogRef = this.dialogService.open(DocumentFormComponent, {
+      header: 'Add Document',
+      width: '500px',
+      modal: true,
+      closable: true,
+      data: {
+        committeeId: this.committee().uid,
+      },
+    });
+
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refreshStandaloneDocs();
+      }
+    });
+  }
+
+  public openEditDocumentDialog(item: DocumentDisplayItem): void {
+    if (!item.committeeDocument) return;
+
+    const dialogRef = this.dialogService.open(DocumentFormComponent, {
+      header: 'Edit Document',
+      width: '500px',
+      modal: true,
+      closable: true,
+      data: {
+        isEditing: true,
+        committeeId: this.committee().uid,
+        document: item.committeeDocument,
+      },
+    });
+
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refreshStandaloneDocs();
+      }
+    });
+  }
+
+  public confirmDeleteDocument(item: DocumentDisplayItem): void {
+    if (!item.committeeDocument) return;
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
+      header: 'Delete Document',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
+      accept: () => this.performDelete(item),
+    });
+  }
+
+  /** Returns the icon class for a document type */
+  public getDocumentIcon(item: DocumentDisplayItem): string {
+    if (item.type === 'folder') return 'fa-light fa-folder text-amber-500';
+    if (item.type === 'link') return 'fa-light fa-link text-blue-500';
+    return 'fa-light fa-file text-red-400';
+  }
+
+  /** Returns the tag label for the source filter */
+  public getSourceLabel(item: DocumentDisplayItem): string {
+    if (item.source === 'folder') return 'Folder';
+    if (item.source === 'link') return 'Link';
+    return 'Meeting';
+  }
+
+  /** Returns the tag severity for the source */
+  public getSourceSeverity(item: DocumentDisplayItem): TagSeverity {
+    if (item.source === 'folder') return 'info';
+    if (item.source === 'link') return 'success';
+    return 'warn';
+  }
+
+  /** Returns the tag icon for the source */
+  public getSourceIcon(item: DocumentDisplayItem): string {
+    if (item.source === 'folder') return 'fa-light fa-folder';
+    if (item.source === 'link') return 'fa-light fa-link';
+    return 'fa-light fa-video';
   }
 
   /** Opens a URL only if it uses http: or https: protocol. */
@@ -114,10 +285,27 @@ export class CommitteeDocumentsComponent implements OnInit {
     }
   }
 
-  // Private initializer — uses mergeMap with bounded concurrency instead of forkJoin.
-  // Note: getMeetingsByCommittee returns up to 100 meetings without pagination.
-  // Committee meetings are typically < 20; full pagination (page_token loop) deferred to Phase 2.
-  private initAttachments(): Signal<MeetingAttachmentWithContext[]> {
+  private performDelete(item: DocumentDisplayItem): void {
+    if (!item.committeeDocument) return;
+
+    this.committeeService.deleteCommitteeDocument(this.committee().uid, item.committeeDocument.uid).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Document deleted successfully' });
+        this.refreshStandaloneDocs();
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete document' });
+      },
+    });
+  }
+
+  private refreshStandaloneDocs(): void {
+    this.standaloneDocsVersion.update((v) => v + 1);
+  }
+
+  // ── Private Initializers ─────────────────────────────────────────────────
+
+  private initMeetingAttachments(): Signal<MeetingAttachmentWithContext[]> {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
@@ -148,12 +336,33 @@ export class CommitteeDocumentsComponent implements OnInit {
               );
             }),
             catchError(() => {
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load documents. Please try again.' });
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load meeting documents. Please try again.' });
               return of([]);
             }),
             finalize(() => this.loading.set(false))
           );
         })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initStandaloneDocuments(): Signal<CommitteeDocument[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c) => !!c?.uid),
+        switchMap((c) =>
+          toObservable(this.standaloneDocsVersion).pipe(
+            switchMap(() =>
+              this.committeeService.getCommitteeDocuments(c.uid).pipe(
+                catchError((error) => {
+                  console.error('Failed to load standalone documents:', error);
+                  return of([]);
+                })
+              )
+            )
+          )
+        )
       ),
       { initialValue: [] }
     );

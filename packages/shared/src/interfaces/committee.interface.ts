@@ -432,7 +432,7 @@ export interface CommitteeEngagementMetrics {
 }
 
 /** Type of a committee document entry */
-export type CommitteeDocumentType = 'file' | 'link';
+export type CommitteeDocumentType = 'file' | 'link' | 'folder';
 
 /**
  * A document or resource link associated with a committee.
@@ -443,11 +443,37 @@ export interface CommitteeDocument {
   name: string;
   /** URL for links; download URL for files */
   url?: string;
+  /** Optional description */
+  description?: string;
   /** MIME type or file extension (files only) */
   mime_type?: string;
   /** File size in bytes (files only) */
   file_size?: number;
+  /** ISO date string of creation */
+  created_at?: string;
   /** ISO date string of last update */
   updated_at?: string;
+  /** UID of the user who created the document */
+  created_by?: string;
   uploaded_by?: string;
+  /** Parent folder UID (for nested documents) */
+  parent_uid?: string;
+  /** Committee UID this document belongs to */
+  committee_uid?: string;
+}
+
+/** Request body for creating a committee document */
+export interface CreateCommitteeDocumentRequest {
+  type: CommitteeDocumentType;
+  name: string;
+  /** Required for type 'link' */
+  url?: string;
+  description?: string;
+}
+
+/** Request body for updating a committee document */
+export interface UpdateCommitteeDocumentRequest {
+  name?: string;
+  url?: string;
+  description?: string;
 }

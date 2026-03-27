@@ -4,13 +4,16 @@
 import {
   Committee,
   CommitteeCreateData,
+  CommitteeDocument,
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CreateCommitteeDocumentRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
   QueryServiceCountResponse,
   QueryServiceResponse,
+  UpdateCommitteeDocumentRequest,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -493,6 +496,99 @@ export class CommitteeService {
 
   public async leaveCommittee(req: Request, committeeId: string): Promise<void> {
     await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/leave`, 'DELETE');
+  }
+
+  // ── Committee Documents ─────────────────────────────────────────────────
+
+  /**
+   * Fetches all documents for a specific committee
+   */
+  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
+    logger.debug(req, 'get_committee_documents', 'Fetching committee documents', {
+      committee_uid: committeeId,
+    });
+
+    const documents = await this.microserviceProxy.proxyRequest<CommitteeDocument[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents`, 'GET');
+
+    return documents || [];
+  }
+
+  /**
+   * Creates a new document for a committee
+   */
+  public async createCommitteeDocument(req: Request, committeeId: string, data: CreateCommitteeDocumentRequest): Promise<CommitteeDocument> {
+    const newDocument = await this.microserviceProxy.proxyRequest<CommitteeDocument>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/documents`,
+      'POST',
+      {},
+      data
+    );
+
+    logger.debug(req, 'create_committee_document', 'Committee document created successfully', {
+      committee_uid: committeeId,
+      document_uid: newDocument.uid,
+      document_type: data.type,
+    });
+
+    return newDocument;
+  }
+
+  /**
+   * Updates an existing committee document using ETag for concurrency control
+   */
+  public async updateCommitteeDocument(
+    req: Request,
+    committeeId: string,
+    documentId: string,
+    data: UpdateCommitteeDocumentRequest
+  ): Promise<CommitteeDocument> {
+    // Step 1: Fetch document with ETag
+    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/documents/${documentId}`,
+      'update_committee_document'
+    );
+
+    // Step 2: Update document with ETag
+    const updatedDocument = await this.etagService.updateWithETag<CommitteeDocument>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/documents/${documentId}`,
+      etag,
+      data,
+      'update_committee_document'
+    );
+
+    logger.debug(req, 'update_committee_document', 'Committee document updated successfully', {
+      committee_uid: committeeId,
+      document_uid: documentId,
+    });
+
+    return updatedDocument;
+  }
+
+  /**
+   * Deletes a committee document using ETag for concurrency control
+   */
+  public async deleteCommitteeDocument(req: Request, committeeId: string, documentId: string): Promise<void> {
+    // Step 1: Fetch document with ETag
+    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/documents/${documentId}`,
+      'delete_committee_document'
+    );
+
+    // Step 2: Delete document with ETag
+    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/documents/${documentId}`, etag, 'delete_committee_document');
+
+    logger.debug(req, 'delete_committee_document', 'Committee document deleted successfully', {
+      committee_uid: committeeId,
+      document_uid: documentId,
+    });
   }
 
   /**

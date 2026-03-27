@@ -1,0 +1,80 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+  <!-- Type -->
+  <div>
+    <label for="doc-type" class="block text-sm font-medium text-gray-700 mb-1"> Type <span class="text-red-500">*</span> </label>
+    <lfx-select
+      size="small"
+      [form]="form"
+      control="type"
+      [options]="typeOptions"
+      placeholder="Select type"
+      styleClass="w-full"
+      id="doc-type"
+      data-testid="document-form-type"></lfx-select>
+    @if (form.get('type')?.errors?.['required'] && form.get('type')?.touched) {
+      <p class="mt-1 text-xs text-red-600">Type is required</p>
+    }
+  </div>
+
+  <!-- Name -->
+  <div>
+    <label for="doc-name" class="block text-sm font-medium text-gray-700 mb-1"> Name <span class="text-red-500">*</span> </label>
+    <lfx-input-text
+      size="small"
+      [form]="form"
+      control="name"
+      id="doc-name"
+      placeholder="Enter document name"
+      styleClass="w-full"
+      dataTest="document-form-name"></lfx-input-text>
+    @if (form.get('name')?.errors?.['required'] && form.get('name')?.touched) {
+      <p class="mt-1 text-xs text-red-600">Name is required</p>
+    }
+  </div>
+
+  <!-- URL (only for links) -->
+  @if (isLink) {
+    <div>
+      <label for="doc-url" class="block text-sm font-medium text-gray-700 mb-1"> URL <span class="text-red-500">*</span> </label>
+      <lfx-input-text
+        size="small"
+        [form]="form"
+        control="url"
+        id="doc-url"
+        placeholder="https://..."
+        styleClass="w-full"
+        dataTest="document-form-url"></lfx-input-text>
+      @if (form.get('url')?.errors?.['required'] && form.get('url')?.touched) {
+        <p class="mt-1 text-xs text-red-600">URL is required for link documents</p>
+      }
+    </div>
+  }
+
+  <!-- Description -->
+  <div>
+    <label for="doc-description" class="block text-sm font-medium text-gray-700 mb-1"> Description </label>
+    <lfx-textarea
+      [form]="form"
+      control="description"
+      [rows]="3"
+      [maxlength]="500"
+      placeholder="Optional description..."
+      [autoResize]="true"
+      styleClass="!w-full"
+      dataTest="document-form-description"></lfx-textarea>
+  </div>
+
+  <!-- Form Actions -->
+  <div class="flex justify-end gap-3 pt-4 border-t">
+    <lfx-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="onCancel()" size="small" type="button"></lfx-button>
+    <lfx-button
+      [label]="isEditing ? 'Update Document' : 'Add Document'"
+      [loading]="submitting()"
+      [disabled]="submitting()"
+      type="submit"
+      size="small"></lfx-button>
+  </div>
+</form>
