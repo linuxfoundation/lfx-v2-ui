@@ -18,7 +18,7 @@ import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { catchError, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
@@ -191,13 +191,33 @@ export class CommitteeDocumentsComponent implements OnInit {
 
   // ── CRUD Dialog Methods ──────────────────────────────────────────────────
 
-  public openAddDocumentDialog(): void {
+  public openAddLinkDialog(): void {
     const dialogRef = this.dialogService.open(DocumentFormComponent, {
-      header: 'Add Document',
-      width: '500px',
+      header: 'Add Link',
+      width: '560px',
       modal: true,
       closable: true,
       data: {
+        mode: 'link',
+        committeeId: this.committee().uid,
+      },
+    });
+
+    dialogRef?.onClose.pipe(take(1)).subscribe((result: boolean | undefined) => {
+      if (result) {
+        this.refreshStandaloneDocs();
+      }
+    });
+  }
+
+  public openNewFolderDialog(): void {
+    const dialogRef = this.dialogService.open(DocumentFormComponent, {
+      header: 'New Folder',
+      width: '560px',
+      modal: true,
+      closable: true,
+      data: {
+        mode: 'folder',
         committeeId: this.committee().uid,
       },
     });
@@ -213,12 +233,13 @@ export class CommitteeDocumentsComponent implements OnInit {
     if (!item.committeeDocument) return;
 
     const dialogRef = this.dialogService.open(DocumentFormComponent, {
-      header: 'Edit Document',
-      width: '500px',
+      header: item.committeeDocument.type === 'folder' ? 'Edit Folder' : 'Edit Link',
+      width: '560px',
       modal: true,
       closable: true,
       data: {
         isEditing: true,
+        mode: item.committeeDocument.type,
         committeeId: this.committee().uid,
         document: item.committeeDocument,
       },
@@ -348,19 +369,17 @@ export class CommitteeDocumentsComponent implements OnInit {
   }
 
   private initStandaloneDocuments(): Signal<CommitteeDocument[]> {
+    // Both toObservable calls must be at the top level (injection context).
+    // combineLatest re-emits when either the committee changes or the version bumps (refresh).
     return toSignal(
-      toObservable(this.committee).pipe(
-        filter((c) => !!c?.uid),
-        switchMap((c) =>
-          toObservable(this.standaloneDocsVersion).pipe(
-            switchMap(() =>
-              this.committeeService.getCommitteeDocuments(c.uid).pipe(
-                catchError((error) => {
-                  console.error('Failed to load standalone documents:', error);
-                  return of([]);
-                })
-              )
-            )
+      combineLatest([toObservable(this.committee), toObservable(this.standaloneDocsVersion)]).pipe(
+        filter(([c]) => !!c?.uid),
+        switchMap(([c]) =>
+          this.committeeService.getCommitteeDocuments(c.uid).pipe(
+            catchError((error) => {
+              console.error('Failed to load standalone documents:', error);
+              return of([]);
+            })
           )
         )
       ),
