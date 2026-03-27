@@ -7,6 +7,7 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
+import { Popover } from 'primeng/popover';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -20,7 +21,7 @@ import { UserService } from '@services/user.service';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
@@ -45,6 +46,7 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     ReactiveFormsModule,
     InputTextComponent,
     Dialog,
+    Popover,
     JoinModeLabelPipe,
     LinkifyPipe,
     TextareaComponent,
@@ -135,6 +137,14 @@ export class CommitteeViewComponent {
   public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
+
+  // -- Sub-groups --
+  public subGroups: Signal<Committee[]> = this.initSubGroups();
+  public subGroupsLoading = signal(true);
+  public hasSubGroups: Signal<boolean> = computed(() => this.subGroups().length > 0);
+
+  // -- Parent group --
+  public parentGroup: Signal<Committee | null> = this.initParentGroup();
 
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
@@ -314,6 +324,38 @@ export class CommitteeViewComponent {
       });
   }
 
+  public navigateToParentGroup(): void {
+    const parent = this.parentGroup();
+    if (parent?.uid) {
+      this.router.navigate(['/', 'groups', parent.uid]);
+    }
+  }
+
+  public navigateToSubGroup(subGroup: Committee): void {
+    this.router.navigate(['/', 'groups', subGroup.uid]);
+  }
+
+  public getSubGroupInitials(name: string): string {
+    return name
+      .split(/[\s-]+/)
+      .filter((w) => w.length > 0 && w[0] === w[0].toUpperCase())
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('');
+  }
+
+  public getSubGroupAvatarColor(category: string): string {
+    const severity = getCommitteeCategorySeverity(category);
+    const colorMap: Record<string, string> = {
+      danger: 'bg-red-100 text-red-700',
+      warn: 'bg-amber-100 text-amber-700',
+      success: 'bg-emerald-100 text-emerald-700',
+      info: 'bg-blue-100 text-blue-700',
+      secondary: 'bg-purple-100 text-purple-700',
+    };
+    return colorMap[severity] || 'bg-gray-100 text-gray-700';
+  }
+
   // -- Private initializer functions --
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
@@ -377,6 +419,41 @@ export class CommitteeViewComponent {
         })
       ),
       { initialValue: [] }
+    );
+  }
+
+  private initSubGroups(): Signal<Committee[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c): c is Committee => !!c?.uid),
+        switchMap((c) => {
+          this.subGroupsLoading.set(true);
+          return this.committeeService.getChildCommittees(c.uid).pipe(
+            catchError(() => of([])),
+            finalize(() => this.subGroupsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initParentGroup(): Signal<Committee | null> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        switchMap((c) => {
+          if (!c?.parent_uid) {
+            return of(null);
+          }
+          return this.committeeService.getCommittee(c.parent_uid).pipe(
+            catchError((error) => {
+              console.error('Failed to load parent group:', error);
+              return of(null);
+            })
+          );
+        })
+      ),
+      { initialValue: null }
     );
   }
 

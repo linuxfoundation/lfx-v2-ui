@@ -58,6 +58,18 @@ export class CommitteeService {
     return this.http.put<Committee>(`/api/committees/${id}`, committee).pipe(take(1));
   }
 
+  // ── Sub-groups (children) ─────────────────────────────────────────────────
+
+  /** Fetches child committees (sub-groups) of a parent committee */
+  public getChildCommittees(parentUid: string): Observable<Committee[]> {
+    return this.http.get<Committee[]>(`/api/committees/${parentUid}/children`).pipe(
+      catchError((error) => {
+        console.error('Failed to load child committees:', error);
+        return of([]);
+      })
+    );
+  }
+
   // Committee Members methods
   public getCommitteeMembers(committeeId: string, params?: HttpParams): Observable<CommitteeMember[]> {
     return this.http.get<CommitteeMember[]>(`/api/committees/${committeeId}/members`, { params });

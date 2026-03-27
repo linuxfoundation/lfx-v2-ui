@@ -485,6 +485,40 @@ export class CommitteeController {
     }
   }
 
+  // ── Sub-groups Endpoint ─────────────────────────────────────────────────
+
+  /**
+   * GET /committees/:id/children
+   * Returns child committees (sub-groups) of a parent committee.
+   */
+  public async getCommitteeChildren(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'get_committee_children', { parent_id: id });
+
+    try {
+      if (!id) {
+        const validationError = ServiceValidationError.forField('id', 'Committee ID is required', {
+          operation: 'get_committee_children',
+          service: 'committee_controller',
+          path: req.path,
+        });
+        next(validationError);
+        return;
+      }
+
+      const children = await this.committeeService.getCommittees(req, { ...req.query, tags: `parent_uid:${id}` });
+
+      logger.success(req, 'get_committee_children', startTime, {
+        parent_id: id,
+        children_count: children.length,
+      });
+
+      res.json(children);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ── Join / Leave Endpoints ───────────────────────────────────────────────
 
   /**
