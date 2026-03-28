@@ -291,7 +291,10 @@ export class CommitteeViewComponent {
     if (!committee || this.joiningOrLeaving()) {
       return;
     }
-    if (committee.join_mode === 'open') {
+
+    const joinMode = committee.join_mode;
+
+    if (joinMode === 'open') {
       this.joiningOrLeaving.set(true);
       this.committeeService
         .joinCommittee(committee.uid)
@@ -307,8 +310,31 @@ export class CommitteeViewComponent {
             this.messageService.add({ severity: 'error', summary: 'Unable to Join', detail, life: 6000 });
           },
         });
+    } else if (joinMode === 'application') {
+      this.joiningOrLeaving.set(true);
+      this.committeeService
+        .submitApplication(committee.uid)
+        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
+        .subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Application Submitted',
+              detail: `Your request to join "${committee.name}" has been submitted. An admin will review it shortly.`,
+              life: 8000,
+            });
+          },
+          error: (err: HttpErrorResponse) => {
+            const upstream = err.error?.message as string | undefined;
+            const detail =
+              err.status === 409
+                ? 'You already have a pending application for this group.'
+                : (upstream ?? `Failed to submit your request for "${committee.name}". Please try again.`);
+            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
+          },
+        });
     } else {
-      // Backend does not yet support application-based join requests — show guidance instead
+      // invite_only or closed — no self-service action available
       this.messageService.add({ severity: 'info', summary: 'Contact Admin', detail: 'Contact a group admin to request membership.' });
     }
   }
