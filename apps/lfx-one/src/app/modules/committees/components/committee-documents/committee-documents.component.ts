@@ -332,13 +332,17 @@ export class CommitteeDocumentsComponent implements OnInit {
   public confirmDeleteDocument(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
+    const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
+    const warningDetail = item.type === 'folder' ? ' Any links inside this folder will also be removed.' : '';
+
     this.confirmationService.confirm({
-      message: `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
-      header: 'Delete Document',
+      message: `Are you sure you want to permanently delete the ${typeLabel.toLowerCase()} "${item.name}"?${warningDetail} This action cannot be undone.`,
+      header: `Delete ${typeLabel}`,
+      icon: 'fa-light fa-triangle-exclamation',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-secondary p-button-outlined p-button-sm',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => this.performDelete(item),
     });
   }
@@ -386,13 +390,21 @@ export class CommitteeDocumentsComponent implements OnInit {
   private performDelete(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
+    const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
+
     this.committeeService.deleteCommitteeDocument(this.committee().uid, item.committeeDocument.uid, item.committeeDocument.type).subscribe({
       next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Document deleted successfully' });
+        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" has been deleted` });
         this.refreshStandaloneDocs();
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete document' });
+      error: (err) => {
+        let errorMessage = `Failed to delete ${typeLabel.toLowerCase()}. Please try again.`;
+        if (err?.status === 404) {
+          errorMessage = `${typeLabel} not found. It may have already been deleted.`;
+        } else if (err?.status === 403) {
+          errorMessage = `You do not have permission to delete this ${typeLabel.toLowerCase()}.`;
+        }
+        this.messageService.add({ severity: 'error', summary: 'Delete Failed', detail: errorMessage });
       },
     });
   }
