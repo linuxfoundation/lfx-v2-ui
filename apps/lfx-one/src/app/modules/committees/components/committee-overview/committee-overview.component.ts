@@ -139,6 +139,7 @@ export class CommitteeOverviewComponent {
     const mode = this.committee().join_mode;
     if (mode === 'open') return 'Join Group';
     if (mode === 'application') return 'Request to Join';
+    if (mode === 'invite_only') return 'Request Access';
     return 'Contact Admin';
   });
 
@@ -146,15 +147,14 @@ export class CommitteeOverviewComponent {
   public joinButtonIcon: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
     if (mode === 'open') return 'fa-light fa-user-plus';
-    if (mode === 'application') return 'fa-light fa-paper-plane';
+    if (mode === 'invite_only' || mode === 'application') return 'fa-light fa-paper-plane';
     return 'fa-light fa-envelope';
   });
 
   /** Large illustrative icon above the CTA card title */
   public joinCtaIcon: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
-    if (mode === 'application') return 'fa-light fa-paper-plane';
-    if (mode === 'invite_only') return 'fa-light fa-envelope';
+    if (mode === 'application' || mode === 'invite_only') return 'fa-light fa-paper-plane';
     return 'fa-light fa-users';
   });
 
@@ -163,7 +163,8 @@ export class CommitteeOverviewComponent {
     const name = this.committee().name;
     if (mode === 'open') return `Interested in ${name}? Click Join Group above to become a member.`;
     if (mode === 'application') return `Interested in ${name}? Click Request to Join above to submit your application for admin review.`;
-    return `${name} requires an invitation to join. Contact a group admin to request access.`;
+    if (mode === 'invite_only') return `Interested in ${name}? Click Request Access above to submit a membership request for admin review.`;
+    return `${name} is closed to new members. Contact a group admin for access.`;
   });
 
   public joinCtaTitle: Signal<string> = computed(() => {
@@ -177,7 +178,7 @@ export class CommitteeOverviewComponent {
   public joinCtaDescription: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
     if (mode === 'application') return 'Submit a request and a group admin will review your application.';
-    if (mode === 'invite_only') return 'Contact a group admin to request an invitation to this group.';
+    if (mode === 'invite_only') return 'Submit a request and a group admin will review and send you an invitation if approved.';
     return 'Participate in meetings, vote on proposals, access resources, and collaborate with the group.';
   });
 
