@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
@@ -16,6 +17,7 @@ import { Committee, MeetingAttachment } from '@lfx-one/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { catchError, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 /** Attachment enriched with meeting context for display. */
 interface MeetingAttachmentWithContext {
@@ -95,8 +97,8 @@ export class CommitteeDocumentsComponent implements OnInit {
             this.openSafeUrl(response.download_url);
           }
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
+        error: (err: HttpErrorResponse) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to get download link.') });
         },
       });
     }

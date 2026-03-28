@@ -27,6 +27,7 @@ import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { SafeUrlPipe } from '@pipes/safe-url.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
@@ -240,8 +241,8 @@ export class CommitteeViewComponent {
           this.editingDescription.set(false);
           this.refreshCommittee();
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update description' });
+        error: (err: HttpErrorResponse) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update description. Please try again.') });
         },
       });
   }
@@ -279,8 +280,8 @@ export class CommitteeViewComponent {
           this.showChannelsModal.set(false);
           this.refreshCommittee();
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update channels' });
+        error: (err: HttpErrorResponse) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update channels. Please try again.') });
         },
       });
   }
