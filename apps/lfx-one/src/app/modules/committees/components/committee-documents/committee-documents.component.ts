@@ -11,8 +11,12 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { DocumentIconPipe } from '@pipes/document-icon.pipe';
+import { DocumentTypeIconPipe } from '@pipes/document-type-icon.pipe';
 import { FileSizePipe } from '@pipes/file-size.pipe';
-import { Committee, CommitteeDocument, MeetingAttachment, TagSeverity } from '@lfx-one/shared/interfaces';
+import { SourceLabelPipe } from '@pipes/source-label.pipe';
+import { SourceSeverityPipe } from '@pipes/source-severity.pipe';
+import { Committee, CommitteeDocument, DocumentDisplayItem, MeetingAttachment, MeetingAttachmentWithContext } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -21,13 +25,13 @@ import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import {
   catchError,
   combineLatest,
-  concat,
   debounceTime,
   distinctUntilChanged,
+  EMPTY,
   filter,
   finalize,
+  forkJoin,
   from,
-  last,
   map,
   mergeMap,
   of,
@@ -37,40 +41,6 @@ import {
 } from 'rxjs';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
-
-/** Attachment enriched with meeting context for display. */
-interface MeetingAttachmentWithContext {
-  attachment: MeetingAttachment;
-  meetingTitle: string;
-  meetingDate: string;
-  meetingId: string;
-}
-
-/** Unified display item that covers both meeting attachments and standalone documents. */
-interface DocumentDisplayItem {
-  uid: string;
-  name: string;
-  type: string;
-  url?: string;
-  description?: string;
-  addedBy?: string;
-  date?: string;
-  fileSize?: number;
-  /** Source for filtering: 'meeting', 'link', or 'folder' */
-  source: string;
-  /** Whether this is a standalone document (supports edit/delete) */
-  isStandalone: boolean;
-  /** Original meeting attachment data (for download) */
-  meetingAttachment?: MeetingAttachmentWithContext;
-  /** Original committee document data (for edit/delete) */
-  committeeDocument?: CommitteeDocument;
-  /** Parent folder UID (for hierarchy display) */
-  parentUid?: string;
-  /** Number of child links inside this folder */
-  childCount?: number;
-  /** Whether this item is a child inside a folder (indent in table) */
-  isChild?: boolean;
-}
 
 /** Max concurrent attachment fetches to avoid overwhelming the backend. */
 const ATTACHMENT_FETCH_CONCURRENCY = 4;
@@ -85,7 +55,11 @@ const ATTACHMENT_FETCH_CONCURRENCY = 4;
     ReactiveFormsModule,
     TableComponent,
     TagComponent,
+    DocumentIconPipe,
+    DocumentTypeIconPipe,
     FileSizePipe,
+    SourceLabelPipe,
+    SourceSeverityPipe,
     DatePipe,
     DynamicDialogModule,
     ConfirmDialogModule,
@@ -142,117 +116,13 @@ export class CommitteeDocumentsComponent implements OnInit {
   public standaloneDocs: Signal<CommitteeDocument[]> = this.initStandaloneDocuments();
 
   // Maps folder UID → child document items for hierarchy display
-  public folderChildMap: Signal<Map<string, DocumentDisplayItem[]>> = computed(() => {
-    const childMap = new Map<string, DocumentDisplayItem[]>();
-    for (const doc of this.standaloneDocs()) {
-      if (doc.parent_uid) {
-        const children = childMap.get(doc.parent_uid) || [];
-        children.push({
-          uid: doc.uid,
-          name: doc.name,
-          type: doc.type,
-          url: doc.url,
-          description: doc.description,
-          addedBy: doc.uploaded_by || doc.created_by,
-          date: doc.created_at || doc.updated_at,
-          fileSize: doc.file_size,
-          source: doc.type,
-          isStandalone: true,
-          committeeDocument: doc,
-          parentUid: doc.parent_uid,
-          isChild: true,
-        });
-        childMap.set(doc.parent_uid, children);
-      }
-    }
-    return childMap;
-  });
+  public folderChildMap: Signal<Map<string, DocumentDisplayItem[]>> = this.initFolderChildMap();
 
   // Merged display items (flat, unsorted — does NOT include folder children)
-  public allDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
-    const childMap = this.folderChildMap();
-
-    const meetingItems: DocumentDisplayItem[] = this.meetingAttachments().map((item) => ({
-      uid: item.attachment.uid,
-      name: item.attachment.name,
-      type: item.attachment.type,
-      url: item.attachment.link,
-      addedBy: item.attachment.created_by?.name,
-      date: item.attachment.created_at,
-      fileSize: item.attachment.file_size,
-      source: 'meeting',
-      isStandalone: false,
-      meetingAttachment: item,
-    }));
-
-    const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs()
-      .filter((doc) => !doc.parent_uid)
-      .map((doc) => ({
-        uid: doc.uid,
-        name: doc.name,
-        type: doc.type,
-        url: doc.url,
-        description: doc.description,
-        addedBy: doc.uploaded_by || doc.created_by,
-        date: doc.created_at || doc.updated_at,
-        fileSize: doc.file_size,
-        source: doc.type,
-        isStandalone: true,
-        committeeDocument: doc,
-        childCount: doc.type === 'folder' ? (childMap.get(doc.uid)?.length ?? 0) : undefined,
-      }));
-
-    return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
-  });
+  public allDocuments: Signal<DocumentDisplayItem[]> = this.initAllDocuments();
 
   // Filtered by search and source, with folder hierarchy (children inserted after expanded folders)
-  public filteredDocuments: Signal<DocumentDisplayItem[]> = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const source = this.sourceFilter();
-    const expanded = this.expandedFolders();
-    const childMap = this.folderChildMap();
-
-    let results = this.allDocuments();
-
-    // When searching, flatten everything (show matching children as standalone rows with isChild reset)
-    if (query) {
-      const allChildren = [...childMap.values()].flat().map((child) => ({ ...child, isChild: false }));
-      const allItems = [...results, ...allChildren];
-      results = allItems.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query) ||
-          (item.description ?? '').toLowerCase().includes(query)
-      );
-      if (source) {
-        results = results.filter((item) => item.source === source);
-      }
-      return results;
-    }
-
-    if (source) {
-      results = results.filter((item) => item.source === source || item.type === 'folder');
-      // Hide folders that have no children matching the filter and aren't the filter themselves
-      if (source !== 'folder') {
-        results = results.filter((item) => item.type !== 'folder' || (childMap.get(item.uid)?.some((child) => child.source === source) ?? false));
-      }
-    }
-
-    // Insert folder children after expanded folders
-    const display: DocumentDisplayItem[] = [];
-    for (const item of results) {
-      display.push(item);
-      if (item.type === 'folder' && expanded.has(item.uid)) {
-        let children = childMap.get(item.uid) ?? [];
-        if (source) {
-          children = children.filter((child) => child.source === source);
-        }
-        display.push(...children);
-      }
-    }
-
-    return display;
-  });
+  public filteredDocuments: Signal<DocumentDisplayItem[]> = this.initFilteredDocuments();
 
   public ngOnInit(): void {
     this.searchForm.controls.search.valueChanges
@@ -378,34 +248,6 @@ export class CommitteeDocumentsComponent implements OnInit {
     }
   }
 
-  /** Returns the icon class for a document type */
-  public getDocumentIcon(item: DocumentDisplayItem): string {
-    if (item.type === 'folder') return 'fa-light fa-folder text-amber-500';
-    if (item.type === 'link') return 'fa-light fa-link text-blue-500';
-    return 'fa-light fa-file text-red-400';
-  }
-
-  /** Returns the tag label for the source filter */
-  public getSourceLabel(item: DocumentDisplayItem): string {
-    if (item.source === 'folder') return 'Folder';
-    if (item.source === 'meeting') return 'Meeting';
-    return 'Link';
-  }
-
-  /** Returns the tag severity for the source */
-  public getSourceSeverity(item: DocumentDisplayItem): TagSeverity {
-    if (item.source === 'folder') return 'info';
-    if (item.source === 'meeting') return 'warn';
-    return 'success';
-  }
-
-  /** Returns the tag icon based on document type */
-  public getSourceIcon(item: DocumentDisplayItem): string {
-    if (item.type === 'folder') return 'fa-light fa-folder';
-    if (item.type === 'link') return 'fa-light fa-link';
-    return 'fa-light fa-file';
-  }
-
   /** Opens a URL only if it uses http: or https: protocol. */
   private openSafeUrl(rawUrl: string): void {
     try {
@@ -425,27 +267,53 @@ export class CommitteeDocumentsComponent implements OnInit {
     const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
 
     if (item.type === 'folder') {
-      // Upstream requires folders to be empty — delete child links first, then the folder
+      // Upstream requires folders to be empty — delete child links first, then the folder.
+      // Use forkJoin to attempt all child deletes in parallel with per-child error handling.
       const children = this.folderChildMap().get(item.uid) ?? [];
-      const childDeletes = children
+      const childDeletes$ = children
         .filter((child) => child.committeeDocument)
-        .map((child) => this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type));
+        .map((child) =>
+          this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type).pipe(
+            map(() => ({ uid: child.uid, success: true as const })),
+            catchError(() => of({ uid: child.uid, success: false as const }))
+          )
+        );
 
-      const folderDelete$ =
-        childDeletes.length > 0
-          ? concat(...childDeletes).pipe(
-              last(),
-              switchMap(() => this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder'))
-            )
-          : this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder');
+      if (childDeletes$.length === 0) {
+        // No children — delete folder directly
+        this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder').subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" has been deleted` });
+            this.refreshStandaloneDocs();
+          },
+          error: (err) => this.showDeleteError(err, typeLabel),
+        });
+        return;
+      }
 
-      folderDelete$.subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" and its contents have been deleted` });
-          this.refreshStandaloneDocs();
-        },
-        error: (err) => this.showDeleteError(err, typeLabel),
-      });
+      forkJoin(childDeletes$)
+        .pipe(
+          switchMap((results) => {
+            const failures = results.filter((r) => !r.success);
+            if (failures.length > 0) {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'Partial Failure',
+                detail: `${failures.length} of ${results.length} link${results.length !== 1 ? 's' : ''} could not be deleted. The folder was not removed.`,
+              });
+              this.refreshStandaloneDocs();
+              return EMPTY;
+            }
+            return this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder');
+          })
+        )
+        .subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" and its contents have been deleted` });
+            this.refreshStandaloneDocs();
+          },
+          error: (err) => this.showDeleteError(err, typeLabel),
+        });
     } else {
       this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, item.committeeDocument.type).subscribe({
         next: () => {
@@ -474,6 +342,122 @@ export class CommitteeDocumentsComponent implements OnInit {
   }
 
   // ── Private Initializers ─────────────────────────────────────────────────
+
+  private initFolderChildMap(): Signal<Map<string, DocumentDisplayItem[]>> {
+    return computed(() => {
+      const childMap = new Map<string, DocumentDisplayItem[]>();
+      for (const doc of this.standaloneDocs()) {
+        if (doc.parent_uid) {
+          const children = childMap.get(doc.parent_uid) || [];
+          children.push({
+            uid: doc.uid,
+            name: doc.name,
+            type: doc.type,
+            url: doc.url,
+            description: doc.description,
+            addedBy: doc.uploaded_by || doc.created_by,
+            date: doc.created_at || doc.updated_at,
+            fileSize: doc.file_size,
+            source: doc.type,
+            isStandalone: true,
+            committeeDocument: doc,
+            parentUid: doc.parent_uid,
+            isChild: true,
+          });
+          childMap.set(doc.parent_uid, children);
+        }
+      }
+      return childMap;
+    });
+  }
+
+  private initAllDocuments(): Signal<DocumentDisplayItem[]> {
+    return computed(() => {
+      const childMap = this.folderChildMap();
+
+      const meetingItems: DocumentDisplayItem[] = this.meetingAttachments().map((item) => ({
+        uid: item.attachment.uid,
+        name: item.attachment.name,
+        type: item.attachment.type,
+        url: item.attachment.link,
+        addedBy: item.attachment.created_by?.name,
+        date: item.attachment.created_at,
+        fileSize: item.attachment.file_size,
+        source: 'meeting',
+        isStandalone: false,
+        meetingAttachment: item,
+      }));
+
+      const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs()
+        .filter((doc) => !doc.parent_uid)
+        .map((doc) => ({
+          uid: doc.uid,
+          name: doc.name,
+          type: doc.type,
+          url: doc.url,
+          description: doc.description,
+          addedBy: doc.uploaded_by || doc.created_by,
+          date: doc.created_at || doc.updated_at,
+          fileSize: doc.file_size,
+          source: doc.type,
+          isStandalone: true,
+          committeeDocument: doc,
+          childCount: doc.type === 'folder' ? (childMap.get(doc.uid)?.length ?? 0) : undefined,
+        }));
+
+      return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    });
+  }
+
+  private initFilteredDocuments(): Signal<DocumentDisplayItem[]> {
+    return computed(() => {
+      const query = this.searchQuery().toLowerCase().trim();
+      const source = this.sourceFilter();
+      const expanded = this.expandedFolders();
+      const childMap = this.folderChildMap();
+
+      let results = this.allDocuments();
+
+      // When searching, flatten everything (show matching children as standalone rows with isChild reset)
+      if (query) {
+        const allChildren = [...childMap.values()].flat().map((child) => ({ ...child, isChild: false }));
+        const allItems = [...results, ...allChildren];
+        results = allItems.filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) ||
+            (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query) ||
+            (item.description ?? '').toLowerCase().includes(query)
+        );
+        if (source) {
+          results = results.filter((item) => item.source === source);
+        }
+        return results;
+      }
+
+      if (source) {
+        results = results.filter((item) => item.source === source || item.type === 'folder');
+        // Hide folders that have no children matching the filter and aren't the filter themselves
+        if (source !== 'folder') {
+          results = results.filter((item) => item.type !== 'folder' || (childMap.get(item.uid)?.some((child) => child.source === source) ?? false));
+        }
+      }
+
+      // Insert folder children after expanded folders
+      const display: DocumentDisplayItem[] = [];
+      for (const item of results) {
+        display.push(item);
+        if (item.type === 'folder' && expanded.has(item.uid)) {
+          let children = childMap.get(item.uid) ?? [];
+          if (source) {
+            children = children.filter((child) => child.source === source);
+          }
+          display.push(...children);
+        }
+      }
+
+      return display;
+    });
+  }
 
   private initMeetingAttachments(): Signal<MeetingAttachmentWithContext[]> {
     return toSignal(
@@ -526,8 +510,7 @@ export class CommitteeDocumentsComponent implements OnInit {
         switchMap(([c]) => {
           this.standaloneLoading.set(true);
           return this.committeeService.getCommitteeDocuments(c.uid).pipe(
-            catchError((error) => {
-              console.error('Failed to load standalone documents:', error);
+            catchError(() => {
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load committee documents. Please try again.' });
               return of([] as CommitteeDocument[]);
             }),

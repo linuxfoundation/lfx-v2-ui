@@ -3,6 +3,7 @@
 
 import { CommitteeMemberVisibility } from '../enums/committee.enum';
 import { CommitteeMemberVotingStatus } from '../enums/committee-member.enum';
+import { MeetingAttachment } from './meeting-attachment.interface';
 
 // ── v2.0 Taxonomy Types ─────────────────────────────────────────────────────
 
@@ -476,4 +477,38 @@ export interface CreateCommitteeDocumentRequest {
   parent_uid?: string;
   /** Display name of the creator (populated by BFF from session) */
   created_by_name?: string;
+}
+
+/** Attachment enriched with meeting context for display. */
+export interface MeetingAttachmentWithContext {
+  attachment: MeetingAttachment;
+  meetingTitle: string;
+  meetingDate: string;
+  meetingId: string;
+}
+
+/** Unified display item that covers both meeting attachments and standalone documents. */
+export interface DocumentDisplayItem {
+  uid: string;
+  name: string;
+  type: string;
+  url?: string;
+  description?: string;
+  addedBy?: string;
+  date?: string;
+  fileSize?: number;
+  /** Source for filtering: 'meeting', 'link', or 'folder' */
+  source: string;
+  /** Whether this is a standalone document (supports edit/delete) */
+  isStandalone: boolean;
+  /** Original meeting attachment data (for download) */
+  meetingAttachment?: MeetingAttachmentWithContext;
+  /** Original committee document data (for edit/delete) */
+  committeeDocument?: CommitteeDocument;
+  /** Parent folder UID (for hierarchy display) */
+  parentUid?: string;
+  /** Number of child links inside this folder */
+  childCount?: number;
+  /** Whether this item is a child inside a folder (indent in table) */
+  isChild?: boolean;
 }

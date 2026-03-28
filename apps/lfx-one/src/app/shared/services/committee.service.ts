@@ -103,12 +103,7 @@ export class CommitteeService {
   // ── Committee Documents ─────────────────────────────────────────────────
 
   public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
-    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(
-      catchError((error) => {
-        console.error('Failed to load committee documents:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(catchError(() => of([])));
   }
 
   public createCommitteeDocument(committeeId: string, data: CreateCommitteeDocumentRequest): Observable<CommitteeDocument> {

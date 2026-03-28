@@ -93,7 +93,7 @@
                       <i [class]="isFolderExpanded(item.uid) ? 'fa-solid fa-chevron-down text-xs' : 'fa-solid fa-chevron-right text-xs'" aria-hidden="true"></i>
                     </button>
                   }
-                  <i [class]="getDocumentIcon(item) + ' flex-shrink-0'" aria-hidden="true"></i>
+                  <i [class]="(item | documentIcon) + ' flex-shrink-0'" aria-hidden="true"></i>
                   <div class="min-w-0">
                     @if (item.type === 'folder') {
                       <span class="text-sm font-medium text-gray-900 truncate block max-w-xs cursor-pointer" (click)="toggleFolder(item.uid)">{{
@@ -126,7 +126,7 @@
               </td>
               <!-- Source -->
               <td>
-                <lfx-tag [value]="getSourceLabel(item)" [severity]="getSourceSeverity(item)" [icon]="getSourceIcon(item)"></lfx-tag>
+                <lfx-tag [value]="item | sourceLabel" [severity]="item | sourceSeverity" [icon]="item | documentTypeIcon"></lfx-tag>
               </td>
               <!-- Added By -->
               <td class="text-gray-600">

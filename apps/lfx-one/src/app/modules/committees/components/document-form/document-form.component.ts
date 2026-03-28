@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -18,6 +18,7 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
   imports: [ReactiveFormsModule, ButtonComponent, InputTextComponent, SelectComponent, TextareaComponent],
   templateUrl: './document-form.component.html',
   styleUrl: './document-form.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DocumentFormComponent {
   private readonly config = inject(DynamicDialogConfig);
@@ -36,20 +37,16 @@ export class DocumentFormComponent {
 
   public form: FormGroup;
 
+  // Derived signals
+  public isLink = computed(() => this.mode === 'link');
+  public submitLabel = computed(() => (this.isLink() ? 'Add Link' : 'Create Folder'));
+
   public constructor() {
     this.committeeId = this.config.data?.committeeId;
     this.mode = this.config.data?.mode || 'link';
     this.folderOptions = this.config.data?.folders || [];
 
     this.form = this.createForm();
-  }
-
-  public get isLink(): boolean {
-    return this.mode === 'link';
-  }
-
-  public get submitLabel(): string {
-    return this.isLink ? 'Add Link' : 'Create Folder';
   }
 
   public onCancel(): void {
@@ -68,9 +65,9 @@ export class DocumentFormComponent {
     const createData: CreateCommitteeDocumentRequest = {
       type: this.mode,
       name: formValue.name,
-      ...(this.isLink && { url: formValue.url }),
+      ...(this.isLink() && { url: formValue.url }),
       description: formValue.description || undefined,
-      ...(this.isLink && formValue.parent_uid && { parent_uid: formValue.parent_uid }),
+      ...(this.isLink() && formValue.parent_uid && { parent_uid: formValue.parent_uid }),
     };
 
     this.committeeService.createCommitteeDocument(this.committeeId, createData).subscribe({
@@ -79,7 +76,7 @@ export class DocumentFormComponent {
         this.messageService.add({
           severity: 'success',
           summary: 'Success',
-          detail: this.isLink ? 'Link added successfully' : 'Folder created successfully',
+          detail: this.isLink() ? 'Link added successfully' : 'Folder created successfully',
         });
         this.dialogRef.close(true);
       },
@@ -88,14 +85,14 @@ export class DocumentFormComponent {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: err.error?.message || `Failed to ${this.isLink ? 'add link' : 'create folder'}`,
+          detail: err.error?.message || `Failed to ${this.isLink() ? 'add link' : 'create folder'}`,
         });
       },
     });
   }
 
   private createForm(): FormGroup {
-    if (this.isLink) {
+    if (this.isLink()) {
       return new FormGroup({
         url: new FormControl('', [Validators.required, Validators.pattern(/^https?:\/\//)]),
         name: new FormControl('', [Validators.required]),
