@@ -311,6 +311,7 @@
             [myRole]="myRole()"
             [myMemberUid]="myMemberUid()"
             [myRoleLoading]="myRoleLoading()"
+            (joinRequested)="handleJoinRequest()"
             (tabNavigated)="handleTabNavigation($event)"
             (committeeUpdated)="refreshMembers()" />
         }
