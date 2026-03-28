@@ -315,9 +315,9 @@ export class MeetingCardComponent implements OnInit {
     const ref = this.dialogService.open(SummaryModalComponent, {
       header: 'Meeting Summary',
       width: '800px',
-      modal: false,
-      closable: false,
-      dismissableMask: false,
+      modal: true,
+      closable: true,
+      dismissableMask: true,
       data: {
         summaryContent: this.summaryContent(),
         summaryUid: this.summary()?.uid,
