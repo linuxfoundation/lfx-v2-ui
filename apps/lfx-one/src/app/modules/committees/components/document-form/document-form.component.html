@@ -13,8 +13,12 @@
         placeholder="https://docs.google.com/... or any URL"
         styleClass="w-full"
         dataTest="document-form-url"></lfx-input-text>
-      @if (form.get('url')?.errors?.['required'] && form.get('url')?.touched) {
-        <p class="mt-1 text-xs text-red-600">Link URL is required</p>
+      @if (form.get('url')?.touched && form.get('url')?.errors) {
+        @if (form.get('url')?.errors?.['required']) {
+          <p class="mt-1 text-xs text-red-600">Link URL is required</p>
+        } @else if (form.get('url')?.errors?.['pattern']) {
+          <p class="mt-1 text-xs text-red-600">Please enter a valid URL starting with http:// or https://</p>
+        }
       }
     </div>
 

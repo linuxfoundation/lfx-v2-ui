@@ -517,6 +517,7 @@ export class CommitteeController {
 
       res.json(documents);
     } catch (error) {
+      logger.error(req, 'get_committee_documents', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -583,6 +584,7 @@ export class CommitteeController {
 
       res.status(201).json(newDocument);
     } catch (error) {
+      logger.error(req, 'create_committee_document', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -592,7 +594,8 @@ export class CommitteeController {
    */
   public async deleteCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, documentId } = req.params;
-    const documentType = (req.query['type'] as string) || 'link';
+    const rawType = req.query['type'] as string;
+    const documentType = rawType === 'folder' || rawType === 'link' ? rawType : 'link';
     const startTime = logger.startOperation(req, 'delete_committee_document', {
       committee_id: id,
       document_id: documentId,
@@ -632,6 +635,11 @@ export class CommitteeController {
 
       res.status(204).send();
     } catch (error) {
+      logger.error(req, 'delete_committee_document', startTime, error, {
+        committee_id: id,
+        document_id: documentId,
+        document_type: documentType,
+      });
       next(error);
     }
   }

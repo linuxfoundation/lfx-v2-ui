@@ -97,7 +97,7 @@ export class DocumentFormComponent {
   private createForm(): FormGroup {
     if (this.isLink) {
       return new FormGroup({
-        url: new FormControl('', [Validators.required]),
+        url: new FormControl('', [Validators.required, Validators.pattern(/^https?:\/\/.+/)]),
         name: new FormControl('', [Validators.required]),
         description: new FormControl(''),
         parent_uid: new FormControl<string | null>(null),

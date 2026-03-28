@@ -521,14 +521,7 @@ export class CommitteeDocumentsComponent implements OnInit {
     return toSignal(
       combineLatest([toObservable(this.committee), toObservable(this.standaloneDocsVersion)]).pipe(
         filter(([c]) => !!c?.uid),
-        switchMap(([c]) =>
-          this.committeeService.getCommitteeDocuments(c.uid).pipe(
-            catchError((error) => {
-              console.error('Failed to load standalone documents:', error);
-              return of([]);
-            })
-          )
-        )
+        switchMap(([c]) => this.committeeService.getCommitteeDocuments(c.uid).pipe(catchError(() => of([]))))
       ),
       { initialValue: [] }
     );
