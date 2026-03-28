@@ -18,7 +18,23 @@ import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, concat, debounceTime, distinctUntilChanged, filter, finalize, from, last, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
+import {
+  catchError,
+  combineLatest,
+  concat,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  finalize,
+  from,
+  last,
+  map,
+  mergeMap,
+  of,
+  switchMap,
+  take,
+  toArray,
+} from 'rxjs';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
@@ -334,9 +350,7 @@ export class CommitteeDocumentsComponent implements OnInit {
 
     if (item.type === 'folder') {
       const childCount = this.folderChildMap().get(item.uid)?.length ?? 0;
-      const childDetail = childCount > 0
-        ? ` This folder contains ${childCount} link${childCount !== 1 ? 's' : ''} that will also be permanently deleted.`
-        : '';
+      const childDetail = childCount > 0 ? ` This folder contains ${childCount} link${childCount !== 1 ? 's' : ''} that will also be permanently deleted.` : '';
 
       this.confirmationService.confirm({
         message: `Are you sure you want to delete the folder "${item.name}"?${childDetail} This action cannot be undone.`,
@@ -415,12 +429,13 @@ export class CommitteeDocumentsComponent implements OnInit {
         .filter((child) => child.committeeDocument)
         .map((child) => this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type));
 
-      const folderDelete$ = childDeletes.length > 0
-        ? concat(...childDeletes).pipe(
-            last(),
-            switchMap(() => this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder'))
-          )
-        : this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder');
+      const folderDelete$ =
+        childDeletes.length > 0
+          ? concat(...childDeletes).pipe(
+              last(),
+              switchMap(() => this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder'))
+            )
+          : this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder');
 
       folderDelete$.subscribe({
         next: () => {
