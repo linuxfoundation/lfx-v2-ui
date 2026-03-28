@@ -62,6 +62,16 @@
                   [loading]="joiningOrLeaving()"
                   (onClick)="handleJoinRequest()"
                   data-testid="committee-view-request-to-join-btn" />
+              } @else if (committee()?.join_mode === 'invite_only') {
+                <lfx-button
+                  label="Request Access"
+                  icon="fa-light fa-paper-plane"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  [loading]="joiningOrLeaving()"
+                  (onClick)="handleJoinRequest()"
+                  data-testid="committee-view-request-access-btn" />
               } @else {
                 <lfx-button
                   label="Contact Admin"
