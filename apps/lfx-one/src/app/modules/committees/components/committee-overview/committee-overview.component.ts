@@ -4,6 +4,7 @@
 import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -23,6 +24,7 @@ import { VoteService } from '@services/vote.service';
 import { SurveyService } from '@services/survey.service';
 import { MessageService } from 'primeng/api';
 import { catchError, filter, finalize, forkJoin, of, switchMap } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 @Component({
   selector: 'lfx-committee-overview',
@@ -252,9 +254,12 @@ export class CommitteeOverviewComponent {
           this.showChairsModal.set(false);
           this.committeeUpdated.emit();
         },
-        error: (err: { error?: { message?: string }; message?: string }) => {
-          const detail = err?.error?.message || err?.message || 'Failed to update chairs';
-          this.messageService.add({ severity: 'error', summary: 'Error', detail });
+        error: (err: HttpErrorResponse) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Unable to Save',
+            detail: getHttpErrorDetail(err, 'Failed to update chairs. Please try again.'),
+          });
         },
       });
   }
