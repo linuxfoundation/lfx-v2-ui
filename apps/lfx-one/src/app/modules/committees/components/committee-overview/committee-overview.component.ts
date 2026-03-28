@@ -137,13 +137,32 @@ export class CommitteeOverviewComponent {
 
   public joinButtonLabel: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
-    if (mode === 'open') {
-      return 'Join';
-    }
-    if (mode === 'application') {
-      return 'Request to Join';
-    }
-    return 'Request Invite';
+    if (mode === 'open') return 'Join Group';
+    if (mode === 'application') return 'Request to Join';
+    return 'Contact Admin';
+  });
+
+  public joinBannerText: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    const cat = this.categoryLabel();
+    if (mode === 'open') return `Interested in this ${cat}? Click Join Group above to become a member.`;
+    if (mode === 'application') return `Interested in this ${cat}? Click Request to Join above to submit your application for admin review.`;
+    return `This ${cat} requires an invitation. Contact a group admin to request access.`;
+  });
+
+  public joinCtaTitle: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    const cat = this.categoryLabel();
+    if (mode === 'application') return `Apply to join this ${cat}`;
+    if (mode === 'invite_only') return `Request access to this ${cat}`;
+    return `Join this ${cat}`;
+  });
+
+  public joinCtaDescription: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    if (mode === 'application') return 'Submit a request and a group admin will review your application.';
+    if (mode === 'invite_only') return 'Contact a group admin to request an invitation to this group.';
+    return 'Become a member to participate in meetings, votes, surveys, and collaborate with the group.';
   });
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
