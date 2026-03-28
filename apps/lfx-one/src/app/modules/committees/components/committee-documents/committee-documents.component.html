@@ -138,7 +138,7 @@
               </td>
               <!-- Size -->
               <td class="text-gray-500">
-                @if (item.fileSize) {
+                @if (item.fileSize !== null && item.fileSize !== undefined) {
                   {{ item.fileSize | fileSize }}
                 } @else {
                   —

@@ -108,7 +108,9 @@ export class CommitteeDocumentsComponent implements OnInit {
   public canEdit = input<boolean>(false);
 
   // State
-  public loading = signal<boolean>(true);
+  public meetingLoading = signal<boolean>(true);
+  public standaloneLoading = signal<boolean>(true);
+  public loading = computed(() => this.meetingLoading() || this.standaloneLoading());
   public searchQuery = signal('');
   public sourceFilter = signal<string | null>(null);
   public standaloneDocsVersion = signal(0);
@@ -212,9 +214,9 @@ export class CommitteeDocumentsComponent implements OnInit {
 
     let results = this.allDocuments();
 
-    // When searching, flatten everything (show matching children as standalone rows)
+    // When searching, flatten everything (show matching children as standalone rows with isChild reset)
     if (query) {
-      const allChildren = [...childMap.values()].flat();
+      const allChildren = [...childMap.values()].flat().map((child) => ({ ...child, isChild: false }));
       const allItems = [...results, ...allChildren];
       results = allItems.filter(
         (item) =>
@@ -478,7 +480,7 @@ export class CommitteeDocumentsComponent implements OnInit {
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
         switchMap((c) => {
-          this.loading.set(true);
+          this.meetingLoading.set(true);
           return this.meetingService.getMeetingsByCommittee(c.uid, 100).pipe(
             switchMap((meetings) => {
               if (meetings.length === 0) return of([]);
@@ -507,7 +509,7 @@ export class CommitteeDocumentsComponent implements OnInit {
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load meeting documents. Please try again.' });
               return of([]);
             }),
-            finalize(() => this.loading.set(false))
+            finalize(() => this.meetingLoading.set(false))
           );
         })
       ),
@@ -521,14 +523,17 @@ export class CommitteeDocumentsComponent implements OnInit {
     return toSignal(
       combineLatest([toObservable(this.committee), toObservable(this.standaloneDocsVersion)]).pipe(
         filter(([c]) => !!c?.uid),
-        switchMap(([c]) =>
-          this.committeeService.getCommitteeDocuments(c.uid).pipe(
+        switchMap(([c]) => {
+          this.standaloneLoading.set(true);
+          return this.committeeService.getCommitteeDocuments(c.uid).pipe(
             catchError((error) => {
               console.error('Failed to load standalone documents:', error);
-              return of([]);
-            })
-          )
-        )
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load committee documents. Please try again.' });
+              return of([] as CommitteeDocument[]);
+            }),
+            finalize(() => this.standaloneLoading.set(false))
+          );
+        })
       ),
       { initialValue: [] }
     );

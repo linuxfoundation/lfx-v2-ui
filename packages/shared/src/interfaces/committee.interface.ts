@@ -434,6 +434,9 @@ export interface CommitteeEngagementMetrics {
 /** Type of a committee document entry */
 export type CommitteeDocumentType = 'file' | 'link' | 'folder';
 
+/** Subset of document types that can be created via the BFF (excludes 'file' — meeting attachments only) */
+export type CreateCommitteeDocumentType = 'link' | 'folder';
+
 /**
  * A document or resource link associated with a committee.
  */
@@ -464,7 +467,7 @@ export interface CommitteeDocument {
 
 /** Request body for creating a committee document */
 export interface CreateCommitteeDocumentRequest {
-  type: CommitteeDocumentType;
+  type: CreateCommitteeDocumentType;
   name: string;
   /** Required for type 'link' */
   url?: string;

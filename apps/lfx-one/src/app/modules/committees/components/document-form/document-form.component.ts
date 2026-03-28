@@ -8,7 +8,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { CommitteeDocumentType, CreateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
+import { CreateCommitteeDocumentType, CreateCommitteeDocumentRequest } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -30,7 +30,7 @@ export class DocumentFormComponent {
   // Config-based properties
   public readonly committeeId: string;
   /** Pre-set mode: 'link' or 'folder' — determines which form fields are shown */
-  public readonly mode: CommitteeDocumentType;
+  public readonly mode: CreateCommitteeDocumentType;
   /** Available folders for the folder selector (links only) */
   public readonly folderOptions: { label: string; value: string }[];
 
@@ -97,7 +97,7 @@ export class DocumentFormComponent {
   private createForm(): FormGroup {
     if (this.isLink) {
       return new FormGroup({
-        url: new FormControl('', [Validators.required]),
+        url: new FormControl('', [Validators.required, Validators.pattern(/^https?:\/\//)]),
         name: new FormControl('', [Validators.required]),
         description: new FormControl(''),
         parent_uid: new FormControl<string | null>(null),

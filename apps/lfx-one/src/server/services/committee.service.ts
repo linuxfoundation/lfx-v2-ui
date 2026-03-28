@@ -536,10 +536,20 @@ export class CommitteeService {
 
     // Fetch folders and links in parallel
     const [folders, links] = await Promise.all([
-      this.microserviceProxy
-        .proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET')
-        .catch(() => [] as CommitteeFolder[]),
-      this.microserviceProxy.proxyRequest<CommitteeLink[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/links`, 'GET').catch(() => [] as CommitteeLink[]),
+      this.microserviceProxy.proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET').catch((err) => {
+        logger.warning(req, 'get_committee_documents', 'Failed to fetch committee folders, returning empty list', {
+          committee_uid: committeeId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as CommitteeFolder[];
+      }),
+      this.microserviceProxy.proxyRequest<CommitteeLink[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/links`, 'GET').catch((err) => {
+        logger.warning(req, 'get_committee_documents', 'Failed to fetch committee links, returning empty list', {
+          committee_uid: committeeId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as CommitteeLink[];
+      }),
     ]);
 
     // Normalize folders → CommitteeDocument
@@ -577,6 +587,10 @@ export class CommitteeService {
    * Routes to the correct upstream endpoint based on type.
    */
   public async createCommitteeDocument(req: Request, committeeId: string, data: CreateCommitteeDocumentRequest): Promise<CommitteeDocument> {
+    if (data.type !== 'folder' && data.type !== 'link') {
+      throw new Error(`Unsupported document type: ${data.type}. Only 'link' and 'folder' are supported.`);
+    }
+
     if (data.type === 'folder') {
       const folder = await this.microserviceProxy.proxyRequest<CommitteeFolder>(
         req,

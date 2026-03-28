@@ -545,19 +545,22 @@ export class CommitteeController {
 
       const data: CreateCommitteeDocumentRequest = req.body;
 
-      // Enrich with display name from OIDC session so the upstream service records who created it
+      // Always override created_by_name from OIDC session — never trust client-provided values
       const user = req.oidc?.user;
-      if (!data.created_by_name && user) {
+      if (user) {
         data.created_by_name = (user['name'] as string) || (user['nickname'] as string) || '';
       }
 
       // Validate required fields
+      const validDocTypes = ['link', 'folder'];
       const fieldErrors: Record<string, string> = {};
       if (!data.name?.trim()) {
         fieldErrors['name'] = 'Document name is required';
       }
       if (!data.type) {
         fieldErrors['type'] = 'Document type is required';
+      } else if (!validDocTypes.includes(data.type)) {
+        fieldErrors['type'] = `Document type must be one of: ${validDocTypes.join(', ')}`;
       }
       if (data.type === 'link' && !data.url?.trim()) {
         fieldErrors['url'] = 'URL is required for link documents';
@@ -593,6 +596,7 @@ export class CommitteeController {
   public async deleteCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, documentId } = req.params;
     const documentType = (req.query['type'] as string) || 'link';
+    const validDeleteTypes = ['link', 'folder'];
     const startTime = logger.startOperation(req, 'delete_committee_document', {
       committee_id: id,
       document_id: documentId,
@@ -613,6 +617,17 @@ export class CommitteeController {
 
       if (!documentId) {
         const validationError = ServiceValidationError.forField('documentId', 'Document ID is required', {
+          operation: 'delete_committee_document',
+          service: 'committee_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      if (!validDeleteTypes.includes(documentType)) {
+        const validationError = ServiceValidationError.forField('type', `Document type must be one of: ${validDeleteTypes.join(', ')}`, {
           operation: 'delete_committee_document',
           service: 'committee_controller',
           path: req.path,
