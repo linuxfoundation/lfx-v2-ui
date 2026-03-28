@@ -7,7 +7,8 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
-import { Popover } from 'primeng/popover';
+import { PopoverModule } from 'primeng/popover';
+import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -46,7 +47,8 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     ReactiveFormsModule,
     InputTextComponent,
     Dialog,
-    Popover,
+    PopoverModule,
+    SkeletonModule,
     JoinModeLabelPipe,
     LinkifyPipe,
     TextareaComponent,
@@ -338,10 +340,20 @@ export class CommitteeViewComponent {
   public getSubGroupInitials(name: string): string {
     return name
       .split(/[\s-]+/)
-      .filter((w) => w.length > 0 && w[0] === w[0].toUpperCase())
+      .filter((w) => w.length > 0)
       .slice(0, 2)
-      .map((w) => w[0])
+      .map((w) => w.charAt(0).toUpperCase())
       .join('');
+  }
+
+  public getSafeWebsiteUrl(website: string): string | null {
+    if (website.startsWith('https://') || website.startsWith('http://')) {
+      return website;
+    }
+    if (website.includes('.') && !website.includes(' ')) {
+      return 'https://' + website;
+    }
+    return null;
   }
 
   public getSubGroupAvatarColor(category: string): string {
@@ -429,7 +441,10 @@ export class CommitteeViewComponent {
         switchMap((c) => {
           this.subGroupsLoading.set(true);
           return this.committeeService.getChildCommittees(c.uid).pipe(
-            catchError(() => of([])),
+            catchError((err) => {
+              console.warn('Failed to load sub-groups:', err);
+              return of([]);
+            }),
             finalize(() => this.subGroupsLoading.set(false))
           );
         })
