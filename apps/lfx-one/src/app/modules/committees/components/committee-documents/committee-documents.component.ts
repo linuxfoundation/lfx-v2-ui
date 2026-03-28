@@ -45,6 +45,9 @@ const RECORDING_TYPE_LABELS: Record<string, string> = {
   active_speaker: 'Active Speaker',
 };
 
+/** Allowed recording file types — only these are surfaced in the documents tab. */
+const ALLOWED_RECORDING_FILE_TYPES = new Set(['MP4', 'M4A', 'TRANSCRIPT']);
+
 @Component({
   selector: 'lfx-committee-documents',
   imports: [CardComponent, ButtonComponent, InputTextComponent, SelectComponent, ReactiveFormsModule, TableComponent, TagComponent, FileSizePipe, DatePipe],
@@ -270,11 +273,11 @@ export class CommitteeDocumentsComponent implements OnInit {
           }
         }
 
-        // Recording files (MP4, M4A → recording; TRANSCRIPT → transcript; skip CHAT)
+        // Recording files — whitelist MP4, M4A (→ recording) and TRANSCRIPT (→ transcript)
         if (recording?.recording_files) {
           const shareUrl = this.getLargestSessionShareUrl(recording);
           for (const file of recording.recording_files) {
-            if (file.file_type === 'CHAT') continue;
+            if (!ALLOWED_RECORDING_FILE_TYPES.has(file.file_type)) continue;
             docs.push(this.mapRecordingFileToDoc(file, shareUrl, title, date, meetingId, pastMeetingId));
           }
         }
