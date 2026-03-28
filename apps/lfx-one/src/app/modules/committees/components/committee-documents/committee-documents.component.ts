@@ -18,7 +18,7 @@ import { MeetingService } from '@services/meeting.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, filter, finalize, from, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
+import { catchError, combineLatest, concat, debounceTime, distinctUntilChanged, filter, finalize, from, last, map, mergeMap, of, switchMap, take, toArray } from 'rxjs';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
@@ -332,19 +332,34 @@ export class CommitteeDocumentsComponent implements OnInit {
   public confirmDeleteDocument(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
-    const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
-    const warningDetail = item.type === 'folder' ? ' Any links inside this folder will also be removed.' : '';
+    if (item.type === 'folder') {
+      const childCount = this.folderChildMap().get(item.uid)?.length ?? 0;
+      const childDetail = childCount > 0
+        ? ` This folder contains ${childCount} link${childCount !== 1 ? 's' : ''} that will also be permanently deleted.`
+        : '';
 
-    this.confirmationService.confirm({
-      message: `Are you sure you want to permanently delete the ${typeLabel.toLowerCase()} "${item.name}"?${warningDetail} This action cannot be undone.`,
-      header: `Delete ${typeLabel}`,
-      icon: 'fa-light fa-triangle-exclamation',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-secondary p-button-outlined p-button-sm',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      accept: () => this.performDelete(item),
-    });
+      this.confirmationService.confirm({
+        message: `Are you sure you want to delete the folder "${item.name}"?${childDetail} This action cannot be undone.`,
+        header: 'Delete Folder',
+        icon: 'fa-light fa-triangle-exclamation',
+        acceptButtonStyleClass: 'p-button-danger p-button-sm',
+        rejectButtonStyleClass: 'p-button-secondary p-button-outlined p-button-sm',
+        acceptLabel: childCount > 0 ? 'Delete Folder & Links' : 'Delete Folder',
+        rejectLabel: 'Cancel',
+        accept: () => this.performDelete(item),
+      });
+    } else {
+      this.confirmationService.confirm({
+        message: `Are you sure you want to permanently delete the link "${item.name}"? This action cannot be undone.`,
+        header: 'Delete Link',
+        icon: 'fa-light fa-triangle-exclamation',
+        acceptButtonStyleClass: 'p-button-danger p-button-sm',
+        rejectButtonStyleClass: 'p-button-secondary p-button-outlined p-button-sm',
+        acceptLabel: 'Delete',
+        rejectLabel: 'Cancel',
+        accept: () => this.performDelete(item),
+      });
+    }
   }
 
   /** Returns the icon class for a document type */
@@ -390,23 +405,51 @@ export class CommitteeDocumentsComponent implements OnInit {
   private performDelete(item: DocumentDisplayItem): void {
     if (!item.committeeDocument) return;
 
+    const committeeId = this.committee().uid;
     const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
 
-    this.committeeService.deleteCommitteeDocument(this.committee().uid, item.committeeDocument.uid, item.committeeDocument.type).subscribe({
-      next: () => {
-        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" has been deleted` });
-        this.refreshStandaloneDocs();
-      },
-      error: (err) => {
-        let errorMessage = `Failed to delete ${typeLabel.toLowerCase()}. Please try again.`;
-        if (err?.status === 404) {
-          errorMessage = `${typeLabel} not found. It may have already been deleted.`;
-        } else if (err?.status === 403) {
-          errorMessage = `You do not have permission to delete this ${typeLabel.toLowerCase()}.`;
-        }
-        this.messageService.add({ severity: 'error', summary: 'Delete Failed', detail: errorMessage });
-      },
-    });
+    if (item.type === 'folder') {
+      // Upstream requires folders to be empty — delete child links first, then the folder
+      const children = this.folderChildMap().get(item.uid) ?? [];
+      const childDeletes = children
+        .filter((child) => child.committeeDocument)
+        .map((child) => this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type));
+
+      const folderDelete$ = childDeletes.length > 0
+        ? concat(...childDeletes).pipe(
+            last(),
+            switchMap(() => this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder'))
+          )
+        : this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder');
+
+      folderDelete$.subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" and its contents have been deleted` });
+          this.refreshStandaloneDocs();
+        },
+        error: (err) => this.showDeleteError(err, typeLabel),
+      });
+    } else {
+      this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, item.committeeDocument.type).subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" has been deleted` });
+          this.refreshStandaloneDocs();
+        },
+        error: (err) => this.showDeleteError(err, typeLabel),
+      });
+    }
+  }
+
+  private showDeleteError(err: { status?: number; error?: { message?: string } }, typeLabel: string): void {
+    let errorMessage = `Failed to delete ${typeLabel.toLowerCase()}. Please try again.`;
+    if (err?.status === 404) {
+      errorMessage = `${typeLabel} not found. It may have already been deleted.`;
+    } else if (err?.status === 403) {
+      errorMessage = `You do not have permission to delete this ${typeLabel.toLowerCase()}.`;
+    } else if (err?.error?.message) {
+      errorMessage = err.error.message;
+    }
+    this.messageService.add({ severity: 'error', summary: 'Delete Failed', detail: errorMessage });
   }
 
   private refreshStandaloneDocs(): void {
