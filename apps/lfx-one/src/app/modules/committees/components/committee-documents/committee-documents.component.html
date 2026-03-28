@@ -55,7 +55,7 @@
               <!-- Name -->
               <td>
                 <div class="flex items-center gap-2">
-                  <i class="{{ item.source | documentSourceIcon }} flex-shrink-0" aria-hidden="true"></i>
+                  <i [class]="(item.source | documentSourceIcon) + ' flex-shrink-0'" aria-hidden="true"></i>
                   <div class="min-w-0">
                     <a
                       role="button"

@@ -19,13 +19,22 @@ export const RECORDING_TYPE_LABELS: Record<string, string> = {
 /** Allowed recording file types — only these are surfaced in the documents tab. */
 export const ALLOWED_RECORDING_FILE_TYPES = new Set(['MP4', 'M4A', 'TRANSCRIPT']);
 
-/** Icon class for each document source type. */
+/** Icon class for each document source type (FA icon only — color applied in Angular pipe). */
 export const DOCUMENT_SOURCE_ICONS: Record<CommitteeDocumentSource, string> = {
-  link: 'fa-light fa-link text-blue-500',
-  file: 'fa-light fa-file text-red-400',
-  recording: 'fa-light fa-video text-purple-500',
-  transcript: 'fa-light fa-file-lines text-teal-500',
-  summary: 'fa-light fa-sparkles text-amber-500',
+  link: 'fa-light fa-link',
+  file: 'fa-light fa-file',
+  recording: 'fa-light fa-video',
+  transcript: 'fa-light fa-file-lines',
+  summary: 'fa-light fa-sparkles',
+};
+
+/** Color class for each document source icon (presentation concern — used by Angular pipe). */
+export const DOCUMENT_SOURCE_ICON_COLORS: Record<CommitteeDocumentSource, string> = {
+  link: 'text-blue-500',
+  file: 'text-red-400',
+  recording: 'text-purple-500',
+  transcript: 'text-teal-500',
+  summary: 'text-amber-500',
 };
 
 /** Tag configuration for each document source type. */

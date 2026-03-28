@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { TagSeverity } from '@lfx-one/shared/interfaces';
-import { CommitteeDocumentSource } from '@lfx-one/shared/interfaces';
+import { CommitteeDocumentSource, TagSeverity } from '@lfx-one/shared/interfaces';
 import { DOCUMENT_SOURCE_TAGS } from '@lfx-one/shared/constants';
 
 @Pipe({
