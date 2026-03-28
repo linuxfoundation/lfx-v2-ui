@@ -11,6 +11,7 @@ export class SourceSeverityPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): TagSeverity {
     if (item.source === 'folder') return 'info';
     if (item.source === 'meeting') return 'warn';
+    if (item.source === 'file') return 'secondary';
     return 'success';
   }
 }

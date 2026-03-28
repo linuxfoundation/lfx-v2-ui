@@ -11,6 +11,7 @@ export class SourceLabelPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): string {
     if (item.source === 'folder') return 'Folder';
     if (item.source === 'meeting') return 'Meeting';
+    if (item.source === 'file') return 'File';
     return 'Link';
   }
 }

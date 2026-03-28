@@ -497,7 +497,7 @@ export interface DocumentDisplayItem {
   addedBy?: string;
   date?: string;
   fileSize?: number;
-  /** Source for filtering: 'meeting', 'link', or 'folder' */
+  /** Source for filtering: 'meeting', 'link', 'folder', or 'file' */
   source: string;
   /** Whether this is a standalone document (supports edit/delete) */
   isStandalone: boolean;

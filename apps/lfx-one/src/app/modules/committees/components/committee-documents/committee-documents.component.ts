@@ -179,6 +179,9 @@ export class CommitteeDocumentsComponent implements OnInit {
   // ── CRUD Dialog Methods ──────────────────────────────────────────────────
 
   public openAddLinkDialog(): void {
+    // Wait for standalone docs to settle so folder list is current
+    if (this.standaloneLoading()) return;
+
     const dialogRef = this.dialogService.open(DocumentFormComponent, {
       header: 'Add Link',
       width: '560px',
