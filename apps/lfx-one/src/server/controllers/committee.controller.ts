@@ -597,7 +597,7 @@ export class CommitteeController {
    */
   public async deleteCommitteeDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, documentId } = req.params;
-    const documentType = (req.query['type'] as string) || 'link';
+    const documentType = req.query['type'] as string;
     const validDeleteTypes = ['link', 'folder'];
     const startTime = logger.startOperation(req, 'delete_committee_document', {
       committee_id: id,
@@ -628,8 +628,11 @@ export class CommitteeController {
         return;
       }
 
-      if (!validDeleteTypes.includes(documentType)) {
-        const validationError = ServiceValidationError.forField('type', `Document type must be one of: ${validDeleteTypes.join(', ')}`, {
+      if (!documentType || !validDeleteTypes.includes(documentType)) {
+        const message = !documentType
+          ? 'Document type query parameter is required'
+          : `Document type must be one of: ${validDeleteTypes.join(', ')}`;
+        const validationError = ServiceValidationError.forField('type', message, {
           operation: 'delete_committee_document',
           service: 'committee_controller',
           path: req.path,
