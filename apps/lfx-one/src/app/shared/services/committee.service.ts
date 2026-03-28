@@ -3,7 +3,15 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeJoinApplication,
+  CommitteeMember,
+  CreateCommitteeJoinApplicationRequest,
+  CreateCommitteeMemberRequest,
+  MyCommittee,
+  QueryServiceCountResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -91,6 +99,12 @@ export class CommitteeService {
   /** Leave a group */
   public leaveCommittee(committeeId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
+  }
+
+  /** Submit a join application for a group with join_mode 'application' */
+  public submitApplication(committeeId: string, reason?: string): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = reason ? { reason } : {};
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────
