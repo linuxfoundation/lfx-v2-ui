@@ -4,6 +4,7 @@
 import { Component, computed, inject, linkedSignal, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
@@ -300,8 +301,9 @@ export class CommitteeViewComponent {
             this.refreshCommittee();
             this.membersRefresh.update((v) => v + 1);
           },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to join "${committee.name}"` });
+          error: (err: HttpErrorResponse) => {
+            const detail = this.getJoinErrorMessage(err, committee.name);
+            this.messageService.add({ severity: 'error', summary: 'Unable to Join', detail, life: 6000 });
           },
         });
     } else {
@@ -325,8 +327,10 @@ export class CommitteeViewComponent {
           this.refreshCommittee();
           this.membersRefresh.update((v) => v + 1);
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
+        error: (err: HttpErrorResponse) => {
+          const detail =
+            err.status === 404 ? 'You are not a member of this group.' : (err.error?.message ?? `Failed to leave "${committee.name}". Please try again.`);
+          this.messageService.add({ severity: 'error', summary: 'Unable to Leave', detail, life: 6000 });
         },
       });
   }
@@ -452,5 +456,22 @@ export class CommitteeViewComponent {
 
   private initRepoPlatformIcon(): Signal<string> {
     return computed(() => getRepoPlatformIcon(this.committee()?.website));
+  }
+
+  private getJoinErrorMessage(err: HttpErrorResponse, committeeName: string): string {
+    const upstream = err.error?.message as string | undefined;
+    if (err.status === 409) {
+      return 'You are already a member of this group.';
+    }
+    if (upstream?.includes('organization')) {
+      return 'This group requires a verified organization to join. Please contact an admin for access.';
+    }
+    if (upstream?.includes('business email')) {
+      return 'This group requires a business email address to join. Please contact an admin for access.';
+    }
+    if (err.status === 403) {
+      return 'You do not have permission to join this group.';
+    }
+    return upstream ?? `Failed to join "${committeeName}". Please try again.`;
   }
 }
