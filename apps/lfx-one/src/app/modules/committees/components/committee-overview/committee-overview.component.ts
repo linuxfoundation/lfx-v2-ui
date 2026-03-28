@@ -148,35 +148,8 @@ export class CommitteeOverviewComponent {
   public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent'));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
-  public pendingActionItems: Signal<PendingActionItem[]> = computed(() => {
-    const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
-      type: 'Cast Vote',
-      badge: this.committee().name,
-      text: vote.name,
-      icon: 'fa-light fa-check-to-slot',
-      severity: 'warn' as const,
-      buttonText: 'Review and Vote',
-      buttonLink: vote.uid,
-      date: vote.end_time ? `Deadline: ${new Date(vote.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : undefined,
-    }));
-    const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
-      type: 'Submit Feedback',
-      badge: this.committee().name,
-      text: survey.survey_title,
-      icon: 'fa-light fa-chart-simple',
-      severity: 'warn' as const,
-      buttonText: 'Submit Survey',
-      date: survey.survey_cutoff_date
-        ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-        : undefined,
-    }));
-    return [...voteItems, ...surveyItems];
-  });
-  public pendingActionsViewAllTab: Signal<'votes' | 'surveys'> = computed(() => {
-    const overflow = this.pendingActionItems().slice(2);
-    const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
-    return hasVotes ? 'votes' : 'surveys';
-  });
+  public pendingActionItems: Signal<PendingActionItem[]> = this.initPendingActionItems();
+  public pendingActionsViewAllTab: Signal<'votes' | 'surveys'> = this.initPendingActionsViewAllTab();
   public categoryLabel: Signal<string> = computed(() => (this.committee().category || 'Group').toLowerCase());
 
   public nextMeeting: Signal<Meeting | null> = computed(() => {
@@ -358,6 +331,43 @@ export class CommitteeOverviewComponent {
       ),
       { initialValue: [] }
     );
+  }
+
+  private initPendingActionItems(): Signal<PendingActionItem[]> {
+    return computed(() => {
+      const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
+        type: 'Cast Vote',
+        badge: this.committee().name,
+        text: vote.name,
+        icon: 'fa-light fa-check-to-slot',
+        severity: 'warn' as const,
+        buttonText: 'Review and Vote',
+        buttonLink: vote.uid,
+        date: vote.end_time
+          ? `Deadline: ${new Date(vote.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+          : undefined,
+      }));
+      const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
+        type: 'Submit Feedback',
+        badge: this.committee().name,
+        text: survey.survey_title,
+        icon: 'fa-light fa-chart-simple',
+        severity: 'warn' as const,
+        buttonText: 'Submit Survey',
+        date: survey.survey_cutoff_date
+          ? `Deadline: ${new Date(survey.survey_cutoff_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+          : undefined,
+      }));
+      return [...voteItems, ...surveyItems];
+    });
+  }
+
+  private initPendingActionsViewAllTab(): Signal<'votes' | 'surveys'> {
+    return computed(() => {
+      const overflow = this.pendingActionItems().slice(2);
+      const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
+      return hasVotes ? 'votes' : 'surveys';
+    });
   }
 
   private initSurveys(): Signal<Survey[]> {

@@ -19,8 +19,11 @@ import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCate
 import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { UserService } from '@services/user.service';
+import { CategoryAvatarColorPipe } from '@pipes/category-avatar-color.pipe';
+import { InitialsPipe } from '@pipes/initials.pipe';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
+import { SafeUrlPipe } from '@pipes/safe-url.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
 
@@ -49,8 +52,11 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     Dialog,
     PopoverModule,
     SkeletonModule,
+    CategoryAvatarColorPipe,
+    InitialsPipe,
     JoinModeLabelPipe,
     LinkifyPipe,
+    SafeUrlPipe,
     TextareaComponent,
     CommitteeDocumentsComponent,
     CommitteeMeetingsComponent,
@@ -141,9 +147,8 @@ export class CommitteeViewComponent {
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
 
   // -- Sub-groups --
-  public subGroups: Signal<Committee[]> = this.initSubGroups();
   public subGroupsLoading = signal(true);
-  public hasSubGroups: Signal<boolean> = computed(() => this.subGroups().length > 0);
+  public subGroups: Signal<Committee[]> = this.initSubGroups();
 
   // -- Parent group --
   public parentGroup: Signal<Committee | null> = this.initParentGroup();
@@ -337,37 +342,6 @@ export class CommitteeViewComponent {
     this.router.navigate(['/', 'groups', subGroup.uid]);
   }
 
-  public getSubGroupInitials(name: string): string {
-    return name
-      .split(/[\s-]+/)
-      .filter((w) => w.length > 0)
-      .slice(0, 2)
-      .map((w) => w.charAt(0).toUpperCase())
-      .join('');
-  }
-
-  public getSafeWebsiteUrl(website: string): string | null {
-    if (website.startsWith('https://') || website.startsWith('http://')) {
-      return website;
-    }
-    if (website.includes('.') && !website.includes(' ')) {
-      return 'https://' + website;
-    }
-    return null;
-  }
-
-  public getSubGroupAvatarColor(category: string): string {
-    const severity = getCommitteeCategorySeverity(category);
-    const colorMap: Record<string, string> = {
-      danger: 'bg-red-100 text-red-700',
-      warn: 'bg-amber-100 text-amber-700',
-      success: 'bg-emerald-100 text-emerald-700',
-      info: 'bg-blue-100 text-blue-700',
-      secondary: 'bg-purple-100 text-purple-700',
-    };
-    return colorMap[severity] || 'bg-gray-100 text-gray-700';
-  }
-
   // -- Private initializer functions --
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
@@ -441,10 +415,7 @@ export class CommitteeViewComponent {
         switchMap((c) => {
           this.subGroupsLoading.set(true);
           return this.committeeService.getChildCommittees(c.uid).pipe(
-            catchError((err) => {
-              console.warn('Failed to load sub-groups:', err);
-              return of([]);
-            }),
+            catchError(() => of([])),
             finalize(() => this.subGroupsLoading.set(false))
           );
         })
@@ -460,12 +431,7 @@ export class CommitteeViewComponent {
           if (!c?.parent_uid) {
             return of(null);
           }
-          return this.committeeService.getCommittee(c.parent_uid).pipe(
-            catchError((error) => {
-              console.error('Failed to load parent group:', error);
-              return of(null);
-            })
-          );
+          return this.committeeService.getCommittee(c.parent_uid).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }

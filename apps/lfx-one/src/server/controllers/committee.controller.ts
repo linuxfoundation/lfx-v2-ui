@@ -515,6 +515,7 @@ export class CommitteeController {
 
       res.json(children);
     } catch (error) {
+      logger.error(req, 'get_committee_children', startTime, error, { parent_id: id });
       next(error);
     }
   }
