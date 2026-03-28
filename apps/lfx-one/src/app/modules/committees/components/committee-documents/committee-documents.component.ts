@@ -12,6 +12,8 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { FileSizePipe } from '@pipes/file-size.pipe';
+import { DocumentSourceIconPipe } from '@pipes/document-source-icon.pipe';
+import { DocumentSourceTagPipe } from '@pipes/document-source-tag.pipe';
 import {
   Committee,
   CommitteeDocumentItem,
@@ -27,30 +29,42 @@ import { MeetingService } from '@services/meeting.service';
 import { RecordingModalComponent } from '@modules/meetings/components/recording-modal/recording-modal.component';
 import { SummaryModalComponent } from '@modules/meetings/components/summary-modal/summary-modal.component';
 import { MessageService } from 'primeng/api';
-import { DialogService } from 'primeng/dynamicdialog';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { Observable, catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
+import {
+  mapAttachmentToDoc,
+  mapRecordingFileToDoc,
+  mapSummaryToDoc,
+  getLargestSessionShareUrl,
+  isAllowedRecordingFileType,
+} from '../../utils/committee-document.utils';
 
 /** Max concurrent per-meeting fetches to avoid overwhelming the backend. */
 const FETCH_CONCURRENCY = 4;
 
-/** Recording type labels for human-readable display. */
-const RECORDING_TYPE_LABELS: Record<string, string> = {
-  shared_screen_with_speaker_view: 'Shared Screen with Speaker View',
-  shared_screen_with_gallery_view: 'Shared Screen with Gallery View',
-  speaker_view: 'Speaker View',
-  gallery_view: 'Gallery View',
-  shared_screen: 'Shared Screen',
-  audio_only: 'Audio Only',
-  audio_transcript: 'Audio Transcript',
-  active_speaker: 'Active Speaker',
-};
-
-/** Allowed recording file types — only these are surfaced in the documents tab. */
-const ALLOWED_RECORDING_FILE_TYPES = new Set(['MP4', 'M4A', 'TRANSCRIPT']);
+/**
+ * Max meetings to fetch per type (upcoming/past).
+ * Kept low to limit N+1 API fan-out (each past meeting triggers 3 calls).
+ * TODO: Replace with a backend aggregate endpoint that returns documents for all meetings in one call.
+ */
+const MAX_MEETINGS_PER_TYPE = 25;
 
 @Component({
   selector: 'lfx-committee-documents',
-  imports: [CardComponent, ButtonComponent, InputTextComponent, SelectComponent, ReactiveFormsModule, TableComponent, TagComponent, FileSizePipe, DatePipe],
+  imports: [
+    CardComponent,
+    ButtonComponent,
+    InputTextComponent,
+    SelectComponent,
+    ReactiveFormsModule,
+    TableComponent,
+    TagComponent,
+    FileSizePipe,
+    DatePipe,
+    DynamicDialogModule,
+    DocumentSourceIconPipe,
+    DocumentSourceTagPipe,
+  ],
   providers: [DialogService],
   templateUrl: './committee-documents.component.html',
   styleUrl: './committee-documents.component.scss',
@@ -84,22 +98,9 @@ export class CommitteeDocumentsComponent implements OnInit {
     { label: 'AI Summary', value: 'summary' },
   ];
 
-  // Data — fetches documents from all committee meetings (upcoming + past) with bounded concurrency
+  // Data
   public allDocuments: Signal<CommitteeDocumentItem[]> = this.initDocuments();
-
-  // Filtered by search and source
-  public filteredDocuments: Signal<CommitteeDocumentItem[]> = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const source = this.sourceFilter();
-    let results = this.allDocuments();
-    if (query) {
-      results = results.filter((item) => item.name.toLowerCase().includes(query) || item.meetingTitle.toLowerCase().includes(query));
-    }
-    if (source) {
-      results = results.filter((item) => item.source === source);
-    }
-    return results;
-  });
+  public filteredDocuments: Signal<CommitteeDocumentItem[]> = this.initFilteredDocuments();
 
   public ngOnInit(): void {
     this.searchForm.controls.search.valueChanges
@@ -113,68 +114,82 @@ export class CommitteeDocumentsComponent implements OnInit {
   public openDocument(item: CommitteeDocumentItem): void {
     switch (item.source) {
       case 'link':
-        if (item.linkUrl) {
-          this.openSafeUrl(item.linkUrl);
-        }
-        break;
-
+        return this.openLink(item);
       case 'file':
-        if (item.attachmentUid) {
-          const download$ = item.pastMeetingId
-            ? this.meetingService.getPastMeetingAttachmentDownloadUrl(item.pastMeetingId, item.attachmentUid)
-            : this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingId, item.attachmentUid);
-          download$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-            next: (response) => {
-              if (response?.download_url) {
-                this.openSafeUrl(response.download_url);
-              }
-            },
-            error: () => {
-              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
-            },
-          });
-        }
-        break;
-
+        return this.downloadFile(item);
       case 'recording':
-        if (item.shareUrl) {
-          this.dialogService.open(RecordingModalComponent, {
-            header: 'Meeting Recording',
-            width: '650px',
-            modal: true,
-            closable: true,
-            dismissableMask: true,
-            data: { shareUrl: item.shareUrl, meetingTitle: item.meetingTitle },
-          });
-        } else if (item.playUrl) {
-          this.openSafeUrl(item.playUrl);
-        }
-        break;
-
+        return this.openRecording(item);
       case 'transcript':
-        if (item.downloadUrl) {
-          this.openSafeUrl(item.downloadUrl);
-        }
-        break;
-
+        return this.downloadTranscript(item);
       case 'summary':
-        if (item.summaryData && item.pastMeetingId) {
-          this.dialogService.open(SummaryModalComponent, {
-            header: 'Meeting Summary',
-            width: '800px',
-            modal: false,
-            closable: false,
-            dismissableMask: false,
-            data: {
-              summaryContent: item.summaryData.content,
-              summaryUid: item.summaryData.uid,
-              pastMeetingUid: item.pastMeetingId,
-              meetingTitle: item.meetingTitle,
-              approved: item.summaryData.approved,
-            },
-          });
+        return this.openSummary(item);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-source document handlers
+  // ---------------------------------------------------------------------------
+
+  private openLink(item: CommitteeDocumentItem): void {
+    if (item.linkUrl) {
+      this.openSafeUrl(item.linkUrl);
+    }
+  }
+
+  private downloadFile(item: CommitteeDocumentItem): void {
+    if (!item.attachmentUid) return;
+    const download$ = item.pastMeetingId
+      ? this.meetingService.getPastMeetingAttachmentDownloadUrl(item.pastMeetingId, item.attachmentUid)
+      : this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingId, item.attachmentUid);
+    download$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (response) => {
+        if (response?.download_url) {
+          this.openSafeUrl(response.download_url);
         }
-        break;
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
+      },
+    });
+  }
+
+  private openRecording(item: CommitteeDocumentItem): void {
+    if (item.shareUrl) {
+      this.dialogService.open(RecordingModalComponent, {
+        header: 'Meeting Recording',
+        width: '650px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: { shareUrl: item.shareUrl, meetingTitle: item.meetingTitle },
+      });
+    } else if (item.playUrl) {
+      this.openSafeUrl(item.playUrl);
+    }
+  }
+
+  private downloadTranscript(item: CommitteeDocumentItem): void {
+    if (item.downloadUrl) {
+      this.openSafeUrl(item.downloadUrl);
+    }
+  }
+
+  private openSummary(item: CommitteeDocumentItem): void {
+    if (item.summaryData && item.pastMeetingId) {
+      this.dialogService.open(SummaryModalComponent, {
+        header: 'Meeting Summary',
+        width: '800px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: {
+          summaryContent: item.summaryData.content,
+          summaryUid: item.summaryData.uid,
+          pastMeetingUid: item.pastMeetingId,
+          meetingTitle: item.meetingTitle,
+          approved: item.summaryData.approved,
+        },
+      });
     }
   }
 
@@ -194,11 +209,21 @@ export class CommitteeDocumentsComponent implements OnInit {
   // Private initializers
   // ---------------------------------------------------------------------------
 
-  // Fetches documents from both upcoming and past meetings in parallel.
-  // Upcoming meetings contribute attachments only; past meetings also contribute recordings,
-  // transcripts, and AI summaries.
-  // Note: getMeetingsByCommittee/getPastMeetingsByCommittee return up to 100 meetings.
-  // Committee meetings are typically < 20; full pagination deferred to Phase 2.
+  private initFilteredDocuments(): Signal<CommitteeDocumentItem[]> {
+    return computed(() => {
+      const query = this.searchQuery().toLowerCase().trim();
+      const source = this.sourceFilter();
+      let results = this.allDocuments();
+      if (query) {
+        results = results.filter((item) => item.name.toLowerCase().includes(query) || item.meetingTitle.toLowerCase().includes(query));
+      }
+      if (source) {
+        results = results.filter((item) => item.source === source);
+      }
+      return results;
+    });
+  }
+
   private initDocuments(): Signal<CommitteeDocumentItem[]> {
     return toSignal(
       toObservable(this.committee).pipe(
@@ -207,8 +232,8 @@ export class CommitteeDocumentsComponent implements OnInit {
           this.loading.set(true);
 
           return forkJoin({
-            upcoming: this.meetingService.getMeetingsByCommittee(c.uid, 100).pipe(catchError(() => of([] as Meeting[]))),
-            past: this.meetingService.getPastMeetingsByCommittee(c.uid, 100).pipe(catchError(() => of([] as PastMeeting[]))),
+            upcoming: this.meetingService.getMeetingsByCommittee(c.uid, MAX_MEETINGS_PER_TYPE).pipe(catchError(() => of([] as Meeting[]))),
+            past: this.meetingService.getPastMeetingsByCommittee(c.uid, MAX_MEETINGS_PER_TYPE).pipe(catchError(() => of([] as PastMeeting[]))),
           }).pipe(
             switchMap(({ upcoming, past }) => {
               const upcomingDocs$ = upcoming.length
@@ -227,7 +252,9 @@ export class CommitteeDocumentsComponent implements OnInit {
                   )
                 : of([] as CommitteeDocumentItem[]);
 
-              return forkJoin([upcomingDocs$, pastDocs$]).pipe(map(([u, p]) => [...u, ...p].sort((a, b) => b.date.localeCompare(a.date))));
+              return forkJoin([upcomingDocs$, pastDocs$]).pipe(
+                map(([u, p]) => [...u, ...p].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
+              );
             }),
             catchError(() => {
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load documents. Please try again.' });
@@ -248,7 +275,7 @@ export class CommitteeDocumentsComponent implements OnInit {
   private fetchUpcomingMeetingDocs(meeting: Meeting): Observable<CommitteeDocumentItem[]> {
     return this.meetingService.getMeetingAttachments(meeting.id).pipe(
       catchError(() => of([] as MeetingAttachment[])),
-      map((attachments) => attachments.map((att) => this.mapAttachmentToDoc(att, meeting.title, meeting.start_time, meeting.id, null)))
+      map((attachments) => attachments.map((att) => mapAttachmentToDoc(att, meeting.title, meeting.start_time, meeting.id, null)))
     );
   }
 
@@ -266,129 +293,29 @@ export class CommitteeDocumentsComponent implements OnInit {
       map(({ attachments, recording, summary }) => {
         const docs: CommitteeDocumentItem[] = [];
 
-        // Attachments
         if (attachments) {
           for (const att of attachments) {
-            docs.push(this.mapAttachmentToDoc(att, title, date, meetingId, pastMeetingId));
+            docs.push(mapAttachmentToDoc(att, title, date, meetingId, pastMeetingId));
           }
         }
 
-        // Recording files — whitelist MP4, M4A (→ recording) and TRANSCRIPT (→ transcript)
         if (recording?.recording_files) {
-          const shareUrl = this.getLargestSessionShareUrl(recording);
+          const shareUrl = getLargestSessionShareUrl(recording);
           for (const file of recording.recording_files) {
-            if (!ALLOWED_RECORDING_FILE_TYPES.has(file.file_type)) continue;
-            docs.push(this.mapRecordingFileToDoc(file, shareUrl, title, date, meetingId, pastMeetingId));
+            if (!isAllowedRecordingFileType(file.file_type)) continue;
+            docs.push(mapRecordingFileToDoc(file, shareUrl, title, date, meetingId, pastMeetingId));
           }
         }
 
-        // AI Summary
         if (summary?.summary_data) {
           const content = summary.summary_data.edited_content || summary.summary_data.content;
           if (content) {
-            docs.push(this.mapSummaryToDoc(summary, title, date, meetingId, pastMeetingId));
+            docs.push(mapSummaryToDoc(summary, title, date, meetingId, pastMeetingId));
           }
         }
 
         return docs;
       })
     );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Mapping helpers
-  // ---------------------------------------------------------------------------
-
-  private mapAttachmentToDoc(
-    att: MeetingAttachment | PastMeetingAttachment,
-    meetingTitle: string,
-    meetingDate: string,
-    meetingId: string,
-    pastMeetingId: string | null
-  ): CommitteeDocumentItem {
-    const isLink = att.type === 'link';
-    return {
-      id: `att-${att.uid}`,
-      name: att.name,
-      source: isLink ? 'link' : 'file',
-      addedBy: att.created_by?.name || null,
-      date: att.created_at,
-      fileSize: att.file_size ?? null,
-      meetingTitle,
-      meetingDate,
-      meetingId,
-      pastMeetingId,
-      linkUrl: isLink ? att.link : undefined,
-      attachmentUid: !isLink ? att.uid : undefined,
-    };
-  }
-
-  private mapRecordingFileToDoc(
-    file: RecordingFile,
-    shareUrl: string | null,
-    meetingTitle: string,
-    meetingDate: string,
-    meetingId: string,
-    pastMeetingId: string
-  ): CommitteeDocumentItem {
-    const isTranscript = file.file_type === 'TRANSCRIPT';
-    return {
-      id: `${isTranscript ? 'trs' : 'rec'}-${file.id}`,
-      name: isTranscript ? 'Meeting Transcript' : this.getRecordingDisplayName(file),
-      source: isTranscript ? 'transcript' : 'recording',
-      addedBy: null,
-      date: file.recording_start,
-      fileSize: file.file_size ?? null,
-      meetingTitle,
-      meetingDate,
-      meetingId,
-      pastMeetingId,
-      playUrl: isTranscript ? undefined : file.play_url,
-      downloadUrl: file.download_url,
-      shareUrl: isTranscript ? undefined : (shareUrl ?? undefined),
-    };
-  }
-
-  private mapSummaryToDoc(
-    summary: PastMeetingSummary,
-    meetingTitle: string,
-    meetingDate: string,
-    meetingId: string,
-    pastMeetingId: string
-  ): CommitteeDocumentItem {
-    return {
-      id: `sum-${summary.uid}`,
-      name: summary.summary_data.title || 'AI Meeting Summary',
-      source: 'summary',
-      addedBy: null,
-      date: summary.created_at,
-      fileSize: null,
-      meetingTitle,
-      meetingDate,
-      meetingId,
-      pastMeetingId,
-      summaryData: {
-        uid: summary.uid,
-        content: summary.summary_data.edited_content || summary.summary_data.content,
-        approved: summary.approved,
-      },
-    };
-  }
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  private getRecordingDisplayName(file: RecordingFile): string {
-    const typeName = RECORDING_TYPE_LABELS[file.recording_type] || file.recording_type;
-    return `${typeName} (${file.file_type})`;
-  }
-
-  private getLargestSessionShareUrl(recording: PastMeetingRecording): string | null {
-    if (!recording.sessions || recording.sessions.length === 0) {
-      return null;
-    }
-    const largestSession = recording.sessions.reduce((largest, current) => (current.total_size > largest.total_size ? current : largest));
-    return largestSession.share_url || null;
   }
 }
