@@ -517,6 +517,7 @@ export class CommitteeController {
 
       res.json(documents);
     } catch (error) {
+      logger.error(req, 'get_committee_documents', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -586,6 +587,7 @@ export class CommitteeController {
 
       res.status(201).json(newDocument);
     } catch (error) {
+      logger.error(req, 'create_committee_document', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -647,6 +649,7 @@ export class CommitteeController {
 
       res.status(204).send();
     } catch (error) {
+      logger.error(req, 'delete_committee_document', startTime, error, { committee_id: id, document_id: documentId });
       next(error);
     }
   }

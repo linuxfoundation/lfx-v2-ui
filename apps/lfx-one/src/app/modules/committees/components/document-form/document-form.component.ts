@@ -3,7 +3,7 @@
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -94,7 +94,7 @@ export class DocumentFormComponent {
   private createForm(): FormGroup {
     if (this.isLink()) {
       return new FormGroup({
-        url: new FormControl('', [Validators.required, Validators.pattern(/^https?:\/\//)]),
+        url: new FormControl('', [Validators.required, this.httpUrlValidator]),
         name: new FormControl('', [Validators.required]),
         description: new FormControl(''),
         parent_uid: new FormControl<string | null>(null),
@@ -107,4 +107,16 @@ export class DocumentFormComponent {
       description: new FormControl(''),
     });
   }
+
+  /** Validates that the value is a well-formed http or https URL. */
+  private readonly httpUrlValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value as string;
+    if (!value) return null;
+    try {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol) ? null : { invalidUrl: true };
+    } catch {
+      return { invalidUrl: true };
+    }
+  };
 }
