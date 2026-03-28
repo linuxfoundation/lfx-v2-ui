@@ -142,6 +142,22 @@ export class CommitteeOverviewComponent {
     return 'Contact Admin';
   });
 
+  /** Icon for the CTA button — matches the header button icon */
+  public joinButtonIcon: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    if (mode === 'open') return 'fa-light fa-user-plus';
+    if (mode === 'application') return 'fa-light fa-paper-plane';
+    return 'fa-light fa-envelope';
+  });
+
+  /** Large illustrative icon above the CTA card title */
+  public joinCtaIcon: Signal<string> = computed(() => {
+    const mode = this.committee().join_mode;
+    if (mode === 'application') return 'fa-light fa-paper-plane';
+    if (mode === 'invite_only') return 'fa-light fa-envelope';
+    return 'fa-light fa-users';
+  });
+
   public joinBannerText: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
     const name = this.committee().name;
