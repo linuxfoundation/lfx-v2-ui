@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeCreateData,
+  CommitteeUpdateData,
+  CommitteeJoinApplication,
+  CreateCommitteeMemberRequest,
+  CreateCommitteeJoinApplicationRequest,
+} from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -535,6 +541,25 @@ export class CommitteeController {
 
       logger.success(req, 'join_committee', startTime, { committee_id: id });
       res.status(201).json(member);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /committees/:id/applications
+   * Submit a join application for a committee with join_mode 'application'.
+   */
+  public async submitApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const { id } = req.params;
+    const startTime = logger.startOperation(req, 'submit_committee_application', { committee_id: id });
+
+    try {
+      const body = req.body as CreateCommitteeJoinApplicationRequest;
+      const application = await this.committeeService.submitApplication(req, id, body);
+
+      logger.success(req, 'submit_committee_application', startTime, { committee_id: id });
+      res.status(201).json(application);
     } catch (error) {
       next(error);
     }
