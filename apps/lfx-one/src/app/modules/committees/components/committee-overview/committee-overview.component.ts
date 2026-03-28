@@ -144,25 +144,25 @@ export class CommitteeOverviewComponent {
 
   public joinBannerText: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
-    const cat = this.categoryLabel();
-    if (mode === 'open') return `Interested in this ${cat}? Click Join Group above to become a member.`;
-    if (mode === 'application') return `Interested in this ${cat}? Click Request to Join above to submit your application for admin review.`;
-    return `This ${cat} requires an invitation. Contact a group admin to request access.`;
+    const name = this.committee().name;
+    if (mode === 'open') return `Interested in ${name}? Click Join Group above to become a member.`;
+    if (mode === 'application') return `Interested in ${name}? Click Request to Join above to submit your application for admin review.`;
+    return `${name} requires an invitation to join. Contact a group admin to request access.`;
   });
 
   public joinCtaTitle: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
-    const cat = this.categoryLabel();
-    if (mode === 'application') return `Apply to join this ${cat}`;
-    if (mode === 'invite_only') return `Request access to this ${cat}`;
-    return `Join this ${cat}`;
+    const name = this.committee().name;
+    if (mode === 'application') return `Apply to join ${name}`;
+    if (mode === 'invite_only') return `Request access to ${name}`;
+    return `Join ${name}`;
   });
 
   public joinCtaDescription: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
     if (mode === 'application') return 'Submit a request and a group admin will review your application.';
     if (mode === 'invite_only') return 'Contact a group admin to request an invitation to this group.';
-    return 'Become a member to participate in meetings, votes, surveys, and collaborate with the group.';
+    return 'Participate in meetings, vote on proposals, access resources, and collaborate with the group.';
   });
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
