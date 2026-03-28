@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
@@ -39,6 +40,7 @@ import {
   take,
   toArray,
 } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
@@ -150,8 +152,8 @@ export class CommitteeDocumentsComponent implements OnInit {
               this.openSafeUrl(response.download_url);
             }
           },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to get download link.' });
+          error: (err: HttpErrorResponse) => {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to get download link.') });
           },
         });
       }
