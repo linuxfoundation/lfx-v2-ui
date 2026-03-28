@@ -7,8 +7,10 @@ import {
   Committee,
   CommitteeDocument,
   CommitteeDocumentType,
+  CommitteeJoinApplication,
   CommitteeMember,
   CreateCommitteeDocumentRequest,
+  CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
   QueryServiceCountResponse,
@@ -115,6 +117,12 @@ export class CommitteeService {
   public deleteCommitteeDocument(committeeId: string, documentId: string, documentType: CommitteeDocumentType): Observable<void> {
     const params = new HttpParams().set('type', documentType);
     return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`, { params }).pipe(take(1));
+  }
+
+  /** Submit a join application for a group with join_mode 'application' */
+  public submitApplication(committeeId: string, reason?: string): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = reason ? { reason } : {};
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────

@@ -5,10 +5,12 @@ import {
   Committee,
   CommitteeCreateData,
   CommitteeDocument,
+  CommitteeJoinApplication,
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
   CreateCommitteeDocumentRequest,
+  CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
   QueryServiceCountResponse,
@@ -675,6 +677,14 @@ export class CommitteeService {
       document_uid: documentId,
       document_type: documentType,
     });
+  }
+
+  /**
+   * Submits a join application for a committee with join_mode 'application'.
+   */
+  public async submitApplication(req: Request, committeeId: string, body: CreateCommitteeJoinApplicationRequest): Promise<CommitteeJoinApplication> {
+    logger.debug(req, 'submit_committee_application', 'Submitting join application', { committee_uid: committeeId });
+    return this.microserviceProxy.proxyRequest<CommitteeJoinApplication>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, body);
   }
 
   /**

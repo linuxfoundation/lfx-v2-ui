@@ -40,7 +40,7 @@
           @if (!committee()?.public) {
             <i class="fa-light fa-lock w-4 h-4 text-gray-400"></i>
           }
-          <!-- Join / Request Invite / Leave actions -->
+          <!-- Join / Request to Join / Contact Admin / Leave actions -->
           <div class="ml-auto flex items-center gap-2">
             @if (isVisitor()) {
               @if (committee()?.join_mode === 'open') {
@@ -52,16 +52,25 @@
                   [loading]="joiningOrLeaving()"
                   (onClick)="handleJoinRequest()"
                   data-testid="committee-view-join-btn" />
-              } @else {
+              } @else if (committee()?.join_mode === 'application') {
                 <lfx-button
-                  label="Request Invite"
-                  icon="fa-light fa-envelope"
+                  label="Request to Join"
+                  icon="fa-light fa-paper-plane"
                   severity="secondary"
                   [outlined]="true"
                   size="small"
                   [loading]="joiningOrLeaving()"
                   (onClick)="handleJoinRequest()"
-                  data-testid="committee-view-request-invite-btn" />
+                  data-testid="committee-view-request-to-join-btn" />
+              } @else {
+                <lfx-button
+                  label="Contact Admin"
+                  icon="fa-light fa-envelope"
+                  severity="secondary"
+                  [outlined]="true"
+                  size="small"
+                  (onClick)="handleJoinRequest()"
+                  data-testid="committee-view-contact-admin-btn" />
               }
             } @else if (isMemberOrAdmin() && !canEdit()) {
               <lfx-button
