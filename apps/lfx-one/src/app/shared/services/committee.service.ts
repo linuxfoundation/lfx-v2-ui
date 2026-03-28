@@ -15,12 +15,7 @@ export class CommitteeService {
   private readonly http = inject(HttpClient);
 
   public getCommittees(params?: HttpParams): Observable<Committee[]> {
-    return this.http.get<Committee[]>('/api/committees', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load committees:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<Committee[]>('/api/committees', { params }).pipe(catchError(() => of([])));
   }
 
   public getCommitteesByProject(uid: string): Observable<Committee[]> {
@@ -56,6 +51,13 @@ export class CommitteeService {
 
   public updateCommittee(id: string, committee: Partial<Committee>): Observable<Committee> {
     return this.http.put<Committee>(`/api/committees/${id}`, committee).pipe(take(1));
+  }
+
+  // ── Sub-groups (children) ─────────────────────────────────────────────────
+
+  /** Fetches child committees (sub-groups) of a parent committee */
+  public getChildCommittees(parentUid: string): Observable<Committee[]> {
+    return this.http.get<Committee[]>(`/api/committees/${parentUid}/children`).pipe(catchError(() => of([])));
   }
 
   // Committee Members methods
@@ -99,11 +101,6 @@ export class CommitteeService {
     if (projectUid) {
       params = params.set('project_uid', projectUid);
     }
-    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load my committees:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(catchError(() => of([])));
   }
 }

@@ -7,6 +7,8 @@ import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
+import { PopoverModule } from 'primeng/popover';
+import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -17,10 +19,13 @@ import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCate
 import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { UserService } from '@services/user.service';
+import { CategoryAvatarColorPipe } from '@pipes/category-avatar-color.pipe';
+import { InitialsPipe } from '@pipes/initials.pipe';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
+import { SafeUrlPipe } from '@pipes/safe-url.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
@@ -45,8 +50,13 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     ReactiveFormsModule,
     InputTextComponent,
     Dialog,
+    PopoverModule,
+    SkeletonModule,
+    CategoryAvatarColorPipe,
+    InitialsPipe,
     JoinModeLabelPipe,
     LinkifyPipe,
+    SafeUrlPipe,
     TextareaComponent,
     CommitteeDocumentsComponent,
     CommitteeMeetingsComponent,
@@ -135,6 +145,13 @@ export class CommitteeViewComponent {
   public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
+
+  // -- Sub-groups --
+  public subGroupsLoading = signal(true);
+  public subGroups: Signal<Committee[]> = this.initSubGroups();
+
+  // -- Parent group --
+  public parentGroup: Signal<Committee | null> = this.initParentGroup();
 
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
@@ -314,6 +331,17 @@ export class CommitteeViewComponent {
       });
   }
 
+  public navigateToParentGroup(): void {
+    const parent = this.parentGroup();
+    if (parent?.uid) {
+      this.router.navigate(['/', 'groups', parent.uid]);
+    }
+  }
+
+  public navigateToSubGroup(subGroup: Committee): void {
+    this.router.navigate(['/', 'groups', subGroup.uid]);
+  }
+
   // -- Private initializer functions --
   private initializeCommittee(): Signal<Committee | null> {
     return toSignal(
@@ -377,6 +405,36 @@ export class CommitteeViewComponent {
         })
       ),
       { initialValue: [] }
+    );
+  }
+
+  private initSubGroups(): Signal<Committee[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c): c is Committee => !!c?.uid),
+        switchMap((c) => {
+          this.subGroupsLoading.set(true);
+          return this.committeeService.getChildCommittees(c.uid).pipe(
+            catchError(() => of([])),
+            finalize(() => this.subGroupsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initParentGroup(): Signal<Committee | null> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        switchMap((c) => {
+          if (!c?.parent_uid) {
+            return of(null);
+          }
+          return this.committeeService.getCommittee(c.parent_uid).pipe(catchError(() => of(null)));
+        })
+      ),
+      { initialValue: null }
     );
   }
 
