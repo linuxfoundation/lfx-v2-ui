@@ -23,7 +23,6 @@ import {
   PastMeetingAttachment,
   PastMeetingRecording,
   PastMeetingSummary,
-  RecordingFile,
 } from '@lfx-one/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
 import { RecordingModalComponent } from '@modules/meetings/components/recording-modal/recording-modal.component';
