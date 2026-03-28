@@ -1,5 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
+/* eslint-disable @typescript-eslint/explicit-member-accessibility */
 
 import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -272,7 +273,8 @@ export class SurveyManageComponent {
         this.submitting.set(false);
         this.navigateBack();
       },
-      error: (error: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      error: (_error: unknown) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',

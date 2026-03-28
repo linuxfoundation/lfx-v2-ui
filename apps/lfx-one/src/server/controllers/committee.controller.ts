@@ -4,7 +4,6 @@
 import {
   CommitteeCreateData,
   CommitteeUpdateData,
-  CommitteeJoinApplication,
   CreateCommitteeMemberRequest,
   CreateCommitteeJoinApplicationRequest,
 } from '@lfx-one/shared/interfaces';
