@@ -5,89 +5,149 @@
   <!-- Sticky Top Bar -->
   <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg shadow-md p-4">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-      <!-- Search Input -->
-      <div class="flex-1">
-        <lfx-input-text
-          [form]="searchForm"
-          control="search"
-          placeholder="Search meetings..."
-          icon="fa-light fa-search"
-          styleClass="w-full"
-          size="small"
-          dataTest="committee-meetings-search"></lfx-input-text>
-      </div>
+      @if (viewMode() === 'list') {
+        <!-- Search Input — list mode only -->
+        <div class="flex-1">
+          <lfx-input-text
+            [form]="searchForm"
+            control="search"
+            placeholder="Search meetings..."
+            icon="fa-light fa-search"
+            styleClass="w-full"
+            size="small"
+            dataTest="committee-meetings-search"></lfx-input-text>
+        </div>
 
-      <!-- Meeting Type Filter -->
-      <div class="w-full sm:w-64">
-        <lfx-select
-          [form]="searchForm"
-          control="meetingType"
-          size="small"
-          [options]="meetingTypeOptions"
-          placeholder="All Types"
-          [showClear]="true"
-          styleClass="w-full"
-          (onChange)="onMeetingTypeChange($event.value)"
-          data-testid="committee-meetings-type-filter"></lfx-select>
-      </div>
+        <!-- Meeting Type Filter — list mode only -->
+        <div class="w-full sm:w-64">
+          <lfx-select
+            [form]="searchForm"
+            control="meetingType"
+            size="small"
+            [options]="meetingTypeOptions"
+            placeholder="All Types"
+            [showClear]="true"
+            styleClass="w-full"
+            (onChange)="onMeetingTypeChange($event.value)"
+            data-testid="committee-meetings-type-filter"></lfx-select>
+        </div>
 
-      <!-- Time Filter -->
-      <div class="w-full sm:w-40">
-        <lfx-select
-          [form]="searchForm"
-          control="timeFilter"
-          size="small"
-          [options]="timeFilterOptions"
-          placeholder="Upcoming"
-          styleClass="w-full"
-          (onChange)="onTimeFilterChange($event.value)"
-          data-testid="committee-meetings-time-filter"></lfx-select>
-      </div>
-
-      <!-- Create Meeting button (inline in top bar) -->
-      @if (canEdit()) {
-        <lfx-button
-          label="Create Meeting"
-          icon="fa-light fa-calendar"
-          severity="info"
-          size="small"
-          [routerLink]="['/meetings', 'create']"
-          [queryParams]="{ committee_uid: committee().uid }"
-          data-testid="committee-meetings-create-btn"></lfx-button>
+        <!-- Time Filter — list mode only -->
+        <div class="w-full sm:w-40">
+          <lfx-select
+            [form]="searchForm"
+            control="timeFilter"
+            size="small"
+            [options]="timeFilterOptions"
+            placeholder="Upcoming"
+            styleClass="w-full"
+            (onChange)="onTimeFilterChange($event.value)"
+            data-testid="committee-meetings-time-filter"></lfx-select>
+        </div>
       }
+
+      <!-- Right-side actions: view toggle + create -->
+      <div class="flex items-center gap-2 md:ml-auto shrink-0">
+        <!-- List / Calendar toggle -->
+        <div class="flex rounded-md border border-gray-200 overflow-hidden" data-testid="committee-meetings-view-toggle">
+          <button
+            type="button"
+            (click)="viewMode.set('list')"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors"
+            [class]="viewMode() === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'"
+            data-testid="committee-meetings-list-btn">
+            <i class="fa-light fa-list-ul" aria-hidden="true"></i>
+            <span>List</span>
+          </button>
+          <button
+            type="button"
+            (click)="viewMode.set('calendar')"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200"
+            [class]="viewMode() === 'calendar' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'"
+            data-testid="committee-meetings-calendar-btn">
+            <i class="fa-light fa-calendar-days" aria-hidden="true"></i>
+            <span>Calendar</span>
+          </button>
+        </div>
+
+        <!-- Create Meeting button -->
+        @if (canEdit()) {
+          <lfx-button
+            label="Create Meeting"
+            icon="fa-light fa-calendar"
+            severity="info"
+            size="small"
+            [routerLink]="['/meetings', 'create']"
+            [queryParams]="{ committee_uid: committee().uid }"
+            data-testid="committee-meetings-create-btn"></lfx-button>
+        }
+      </div>
     </div>
   </div>
 
-  <!-- Meeting Cards -->
-  @if (loading()) {
-    <div class="flex flex-col gap-4">
-      @for (i of [1, 2, 3]; track i) {
-        <div class="rounded-lg shadow-md p-6">
-          <p-skeleton width="80%" height="1.5rem" styleClass="mb-4" />
-          <p-skeleton height="1.25rem" styleClass="mb-3" />
-          <p-skeleton width="60%" height="1rem" styleClass="mb-4" />
-          <div class="grid grid-cols-2 gap-4 mt-4">
-            <p-skeleton height="6rem" />
-            <p-skeleton height="6rem" />
-          </div>
+  <!-- Calendar View -->
+  @if (viewMode() === 'calendar') {
+    <div class="flex flex-col gap-4" data-testid="committee-meetings-calendar-view">
+      <!-- Legend -->
+      <div class="flex items-center gap-4 flex-wrap px-1 text-xs text-gray-500">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+          Meeting
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+          Vote
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
+          Survey
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+          Cancelled
+        </span>
+      </div>
+
+      @if (calendarLoading()) {
+        <div class="flex items-center justify-center py-20">
+          <i class="fa-light fa-spinner-third fa-spin text-2xl text-gray-400" aria-hidden="true"></i>
         </div>
-      }
-    </div>
-  } @else if (filteredMeetings().length > 0) {
-    <div class="flex flex-col gap-4">
-      @for (meeting of filteredMeetings(); track meeting.id) {
-        <lfx-meeting-card [meetingInput]="meeting" [pastMeeting]="timeFilter() === 'past'" [showBorder]="true"></lfx-meeting-card>
+      } @else {
+        <lfx-fullcalendar [events]="calendarEvents()" (eventClick)="onCalendarEventClick($event)" data-testid="committee-meetings-calendar"></lfx-fullcalendar>
       }
     </div>
   } @else {
-    <lfx-card>
-      <div class="flex flex-col items-center py-12">
-        <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3" aria-hidden="true"></i>
-        <p class="text-sm font-medium text-gray-500">No {{ timeFilter() === 'upcoming' ? 'upcoming' : 'past' }} meetings</p>
-        <p class="text-xs text-gray-400 mt-1">
-          {{ timeFilter() === 'upcoming' ? 'Meetings for this group will appear here when scheduled.' : 'No past meetings found for this group.' }}
-        </p>
+    <!-- List View -->
+    @if (loading()) {
+      <div class="flex flex-col gap-4">
+        @for (i of [1, 2, 3]; track i) {
+          <div class="rounded-lg shadow-md p-6">
+            <p-skeleton width="80%" height="1.5rem" styleClass="mb-4" />
+            <p-skeleton height="1.25rem" styleClass="mb-3" />
+            <p-skeleton width="60%" height="1rem" styleClass="mb-4" />
+            <div class="grid grid-cols-2 gap-4 mt-4">
+              <p-skeleton height="6rem" />
+              <p-skeleton height="6rem" />
+            </div>
+          </div>
+        }
       </div>
-    </lfx-card>
+    } @else if (filteredMeetings().length > 0) {
+      <div class="flex flex-col gap-4">
+        @for (meeting of filteredMeetings(); track meeting.id) {
+          <lfx-meeting-card [meetingInput]="meeting" [pastMeeting]="timeFilter() === 'past'" [showBorder]="true"></lfx-meeting-card>
+        }
+      </div>
+    } @else {
+      <lfx-card>
+        <div class="flex flex-col items-center py-12">
+          <i class="fa-light fa-calendar text-3xl text-gray-300 mb-3" aria-hidden="true"></i>
+          <p class="text-sm font-medium text-gray-500">No {{ timeFilter() === 'upcoming' ? 'upcoming' : 'past' }} meetings</p>
+          <p class="text-xs text-gray-400 mt-1">
+            {{ timeFilter() === 'upcoming' ? 'Meetings for this group will appear here when scheduled.' : 'No past meetings found for this group.' }}
+          </p>
+        </div>
+      </lfx-card>
+    }
   }
 </div>
