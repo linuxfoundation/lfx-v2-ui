@@ -116,6 +116,7 @@ export class MeetingCardComponent implements OnInit {
   public readonly meetingTypeBadge: Signal<{
     badgeClass: string;
     severity: TagSeverity;
+    styleClass: string;
     icon?: string;
     text: string;
   } | null> = this.initMeetingTypeBadge();
@@ -568,6 +569,7 @@ export class MeetingCardComponent implements OnInit {
   private initMeetingTypeBadge(): Signal<{
     badgeClass: string;
     severity: TagSeverity;
+    styleClass: string;
     icon?: string;
     text: string;
   } | null> {
@@ -579,17 +581,53 @@ export class MeetingCardComponent implements OnInit {
 
       switch (type) {
         case 'board':
-          return { badgeClass: 'bg-red-100 text-red-500', severity: 'danger', icon: 'fa-light fa-user-check', text: meetingType };
+          return {
+            badgeClass: 'bg-red-100 text-red-500',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-board',
+            icon: 'fa-light fa-user-check',
+            text: meetingType,
+          };
         case 'maintainers':
-          return { badgeClass: 'bg-blue-100 text-blue-500', severity: 'info', icon: 'fa-light fa-gear', text: meetingType };
+          return {
+            badgeClass: 'bg-blue-100 text-blue-500',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-maintainers',
+            icon: 'fa-light fa-gear',
+            text: meetingType,
+          };
         case 'marketing':
-          return { badgeClass: 'bg-emerald-100 text-emerald-500', severity: 'success', icon: 'fa-light fa-chart-line-up', text: meetingType };
+          return {
+            badgeClass: 'bg-emerald-100 text-emerald-500',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-marketing',
+            icon: 'fa-light fa-chart-line-up',
+            text: meetingType,
+          };
         case 'technical':
-          return { badgeClass: 'bg-violet-100 text-violet-500', severity: 'secondary', icon: 'fa-light fa-code', text: meetingType };
+          return {
+            badgeClass: 'bg-violet-100 text-violet-500',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-technical',
+            icon: 'fa-light fa-code',
+            text: meetingType,
+          };
         case 'legal':
-          return { badgeClass: 'bg-amber-100 text-amber-500', severity: 'warn', icon: 'fa-light fa-scale-balanced', text: meetingType };
+          return {
+            badgeClass: 'bg-amber-100 text-amber-500',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-legal',
+            icon: 'fa-light fa-scale-balanced',
+            text: meetingType,
+          };
         default:
-          return { badgeClass: 'bg-gray-100 text-gray-400', severity: 'secondary', icon: 'fa-light fa-calendar-days', text: meetingType };
+          return {
+            badgeClass: 'bg-gray-100 text-gray-400',
+            severity: 'secondary' as TagSeverity,
+            styleClass: 'tag-meeting-other',
+            icon: 'fa-light fa-calendar-days',
+            text: meetingType,
+          };
       }
     });
   }
