@@ -232,20 +232,20 @@
                       @if (ml.public) {
                         <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Public</span>
                       } @else {
-                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600">Private</span>
+                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Private</span>
                       }
                       @if (ml.audience_access) {
                         <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{{ ml.audience_access }}</span>
                       }
                     </div>
-                    <div class="text-[11px] text-gray-400 mt-0.5 truncate">
+                    <div class="text-[11px] text-gray-400 mt-0.5 flex items-center min-w-0">
                       <a
                         [href]="'mailto:' + committee()!.mailing_list"
-                        class="text-gray-400 hover:text-blue-600 transition-colors no-underline"
+                        class="text-gray-400 hover:text-blue-600 transition-colors no-underline truncate min-w-0"
                         [title]="committee()!.mailing_list!"
                         >{{ committee()!.mailing_list }}</a
                       >
-                      <span class="mx-1">·</span>{{ ml.subscriber_count }} subscribers
+                      <span class="shrink-0 ml-1">· {{ ml.subscriber_count }} subscribers</span>
                     </div>
                   </div>
                 </div>
@@ -265,47 +265,53 @@
               }
 
               <!-- Chat Channel + Website rows -->
-              <div class="flex flex-col gap-1.5 px-3.5 py-2.5">
+              <div class="flex flex-col divide-y divide-gray-200">
                 @if (committee()?.chat_channel; as chatChannel) {
-                  <div class="flex items-baseline gap-1.5 justify-end overflow-hidden">
-                    <span class="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
-                      <i [class]="chatPlatformIcon()" aria-hidden="true"></i> {{ chatPlatformLabel() }} :
-                    </span>
-                    @if (chatChannel.startsWith('http://') || chatChannel.startsWith('https://')) {
-                      <a
-                        [href]="chatChannel"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate"
-                        [title]="chatChannel"
-                        >{{ chatChannel }}</a
-                      >
-                    } @else {
-                      <span class="text-xs text-gray-900 truncate">{{ chatChannel }}</span>
-                    }
+                  <div class="flex items-center gap-2.5 px-3.5 py-2.5" data-testid="committee-view-chat-channel-row">
+                    <div class="w-[30px] h-[30px] rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <i [class]="chatPlatformIcon()" class="text-gray-600 text-xs" aria-hidden="true"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-[11px] font-medium text-gray-500">{{ chatPlatformLabel() }}</div>
+                      @if (chatChannel.startsWith('http://') || chatChannel.startsWith('https://')) {
+                        <a
+                          [href]="chatChannel"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline no-underline truncate block"
+                          [title]="chatChannel"
+                          >{{ chatChannel }}</a
+                        >
+                      } @else {
+                        <span class="text-[11px] text-gray-600 truncate block" [title]="chatChannel">{{ chatChannel }}</span>
+                      }
+                    </div>
                   </div>
                 }
                 @if (committee()?.website; as website) {
-                  <div class="flex items-baseline gap-1.5 justify-end overflow-hidden">
-                    <span class="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
-                      <i [class]="repoPlatformIcon()" aria-hidden="true"></i> {{ repoPlatformLabel() }} :
-                    </span>
-                    @if (website | safeUrl; as safeUrl) {
-                      <a
-                        [href]="safeUrl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate"
-                        [title]="website"
-                        >{{ website }}</a
-                      >
-                    } @else {
-                      <span class="text-xs text-gray-900 truncate" [title]="website">{{ website }}</span>
-                    }
+                  <div class="flex items-center gap-2.5 px-3.5 py-2.5" data-testid="committee-view-website-row">
+                    <div class="w-[30px] h-[30px] rounded-md bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <i [class]="repoPlatformIcon()" class="text-gray-600 text-xs" aria-hidden="true"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="text-[11px] font-medium text-gray-500">{{ repoPlatformLabel() }}</div>
+                      @if (website | safeUrl; as safeUrl) {
+                        <a
+                          [href]="safeUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline no-underline truncate block"
+                          [title]="website"
+                          >{{ website }}</a
+                        >
+                      } @else {
+                        <span class="text-[11px] text-gray-600 truncate block" [title]="website">{{ website }}</span>
+                      }
+                    </div>
                   </div>
                 }
                 @if (!committee()?.mailing_list && !committee()?.chat_channel && !committee()?.website) {
-                  <div class="text-gray-400">No channels configured</div>
+                  <div class="px-3.5 py-2.5 text-gray-400">No channels configured</div>
                 }
               </div>
 
