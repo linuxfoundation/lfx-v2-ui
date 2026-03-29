@@ -383,10 +383,11 @@ export class CommitteeDocumentsComponent implements OnInit {
         name: item.attachment.name,
         type: item.attachment.type,
         url: item.attachment.link,
+        description: item.attachment.description ?? '',
         addedBy: item.attachment.created_by?.name,
         date: item.attachment.created_at,
         fileSize: item.attachment.file_size,
-        source: 'meeting',
+        source: 'meeting' as const,
         isStandalone: false,
         meetingAttachment: item,
       }));
@@ -408,7 +409,7 @@ export class CommitteeDocumentsComponent implements OnInit {
           childCount: doc.type === 'folder' ? (childMap.get(doc.uid)?.length ?? 0) : undefined,
         }));
 
-      return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+      return [...meetingItems, ...standaloneItems].sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
     });
   }
 

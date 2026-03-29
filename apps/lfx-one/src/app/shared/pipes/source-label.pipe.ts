@@ -6,6 +6,7 @@ import { DocumentDisplayItem } from '@lfx-one/shared/interfaces';
 
 @Pipe({
   name: 'sourceLabel',
+  standalone: true,
 })
 export class SourceLabelPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): string {

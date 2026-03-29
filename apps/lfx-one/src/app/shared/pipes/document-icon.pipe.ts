@@ -6,6 +6,7 @@ import { DocumentDisplayItem } from '@lfx-one/shared/interfaces';
 
 @Pipe({
   name: 'documentIcon',
+  standalone: true,
 })
 export class DocumentIconPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): string {

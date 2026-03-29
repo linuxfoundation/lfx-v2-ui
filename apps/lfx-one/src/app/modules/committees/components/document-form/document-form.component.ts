@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -38,8 +38,9 @@ export class DocumentFormComponent {
   public form: FormGroup;
 
   // Derived signals
-  public isLink = computed(() => this.mode === 'link');
-  public submitLabel = computed(() => (this.isLink() ? 'Add Link' : 'Create Folder'));
+  public isLink: Signal<boolean> = this.initIsLink();
+  public isFolder: Signal<boolean> = this.initIsFolder();
+  public submitLabel: Signal<string> = this.initSubmitLabel();
 
   public constructor() {
     this.committeeId = this.config.data?.committeeId;
@@ -119,4 +120,18 @@ export class DocumentFormComponent {
       return { invalidUrl: true };
     }
   };
+
+  // ── Private Initializers ─────────────────────────────────────────────────
+
+  private initIsLink(): Signal<boolean> {
+    return computed(() => this.mode === 'link');
+  }
+
+  private initIsFolder(): Signal<boolean> {
+    return computed(() => this.mode === 'folder');
+  }
+
+  private initSubmitLabel(): Signal<string> {
+    return computed(() => (this.isLink() ? 'Add Link' : 'Create Folder'));
+  }
 }

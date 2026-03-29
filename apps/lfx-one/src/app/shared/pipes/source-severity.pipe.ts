@@ -6,6 +6,7 @@ import { DocumentDisplayItem, TagSeverity } from '@lfx-one/shared/interfaces';
 
 @Pipe({
   name: 'sourceSeverity',
+  standalone: true,
 })
 export class SourceSeverityPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): TagSeverity {

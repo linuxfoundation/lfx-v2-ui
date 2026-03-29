@@ -547,10 +547,7 @@ export class CommitteeController {
       const data: CreateCommitteeDocumentRequest = req.body;
 
       // Always override created_by_name from OIDC session — never trust client-provided values
-      const user = req.oidc?.user;
-      if (user) {
-        data.created_by_name = (user['name'] as string) || (user['nickname'] as string) || '';
-      }
+      data.created_by_name = (req.oidc?.user?.['name'] as string) || (req.oidc?.user?.['nickname'] as string) || '';
 
       // Validate required fields
       const validDocTypes = ['link', 'folder'];
@@ -629,9 +626,7 @@ export class CommitteeController {
       }
 
       if (!documentType || !validDeleteTypes.includes(documentType)) {
-        const message = !documentType
-          ? 'Document type query parameter is required'
-          : `Document type must be one of: ${validDeleteTypes.join(', ')}`;
+        const message = !documentType ? 'Document type query parameter is required' : `Document type must be one of: ${validDeleteTypes.join(', ')}`;
         const validationError = ServiceValidationError.forField('type', message, {
           operation: 'delete_committee_document',
           service: 'committee_controller',

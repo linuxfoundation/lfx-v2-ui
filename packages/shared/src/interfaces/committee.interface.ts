@@ -491,14 +491,14 @@ export interface MeetingAttachmentWithContext {
 export interface DocumentDisplayItem {
   uid: string;
   name: string;
-  type: string;
+  type: CommitteeDocumentType;
   url?: string;
   description?: string;
   addedBy?: string;
   date?: string;
   fileSize?: number;
   /** Source for filtering: 'meeting', 'link', 'folder', or 'file' */
-  source: string;
+  source: CommitteeDocumentType | 'meeting';
   /** Whether this is a standalone document (supports edit/delete) */
   isStandalone: boolean;
   /** Original meeting attachment data (for download) */
