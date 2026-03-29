@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, linkedSignal, model, signal, Signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -17,8 +17,10 @@ import { TagComponent } from '@components/tag/tag.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
 import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
+import { MailingListService } from '@services/mailing-list.service';
 import { UserService } from '@services/user.service';
 import { CategoryAvatarColorPipe } from '@pipes/category-avatar-color.pipe';
 import { InitialsPipe } from '@pipes/initials.pipe';
@@ -26,7 +28,7 @@ import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { SafeUrlPipe } from '@pipes/safe-url.pipe';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, filter, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, map, of, switchMap } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
@@ -76,6 +78,7 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly mailingListService = inject(MailingListService);
   private readonly messageService = inject(MessageService);
   private readonly userService = inject(UserService);
 
@@ -104,15 +107,6 @@ export class CommitteeViewComponent {
   public descriptionForm = new FormGroup({
     description: new FormControl(''),
   });
-
-  // -- Channels edit state --
-  public showChannelsModal = model(false);
-  public channelsForm = new FormGroup({
-    mailingList: new FormControl(''),
-    chatChannel: new FormControl(''),
-    website: new FormControl(''),
-  });
-  public savingChannels = signal(false);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -147,6 +141,9 @@ export class CommitteeViewComponent {
   public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
+
+  // -- Linked mailing list (rich object for header display) --
+  public linkedMailingList: Signal<GroupsIOMailingList | null> = this.initLinkedMailingList();
 
   // -- Sub-groups --
   public subGroupsLoading = signal(true);
@@ -243,45 +240,6 @@ export class CommitteeViewComponent {
         },
         error: (err: HttpErrorResponse) => {
           this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update description. Please try again.') });
-        },
-      });
-  }
-
-  public openEditChannels(): void {
-    this.channelsForm.patchValue({
-      mailingList: this.committee()?.mailing_list || '',
-      chatChannel: this.committee()?.chat_channel || '',
-      website: this.committee()?.website || '',
-    });
-    this.showChannelsModal.set(true);
-  }
-
-  public cancelEditChannels(): void {
-    this.showChannelsModal.set(false);
-  }
-
-  public saveChannels(): void {
-    const committee = this.committee();
-    if (!committee?.uid) {
-      return;
-    }
-    this.savingChannels.set(true);
-
-    this.committeeService
-      .updateCommittee(committee.uid, {
-        mailing_list: this.channelsForm.get('mailingList')?.value || null,
-        chat_channel: this.channelsForm.get('chatChannel')?.value || null,
-        website: this.channelsForm.get('website')?.value || null,
-      })
-      .pipe(finalize(() => this.savingChannels.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Channels updated' });
-          this.showChannelsModal.set(false);
-          this.refreshCommittee();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update channels. Please try again.') });
         },
       });
   }
@@ -506,6 +464,29 @@ export class CommitteeViewComponent {
 
   private initRepoPlatformIcon(): Signal<string> {
     return computed(() => getRepoPlatformIcon(this.committee()?.website));
+  }
+
+  private initLinkedMailingList(): Signal<GroupsIOMailingList | null> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c): c is Committee => !!c?.project_uid && !!c?.mailing_list),
+        switchMap((c) =>
+          this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
+            map((lists) => {
+              const email = c.mailing_list!;
+              return (
+                lists.find((ml) => {
+                  const mlEmail = ml.service?.domain ? `${ml.group_name}@${ml.service.domain}` : ml.group_name;
+                  return mlEmail === email;
+                }) ?? null
+              );
+            }),
+            catchError(() => of(null))
+          )
+        )
+      ),
+      { initialValue: null }
+    );
   }
 
   private getJoinErrorMessage(err: HttpErrorResponse, committeeName: string): string {

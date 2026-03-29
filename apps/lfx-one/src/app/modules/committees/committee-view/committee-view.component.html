@@ -212,23 +212,57 @@
           <!-- Right: Channels card -->
           @if (hasChannels()) {
             <div
-              class="relative bg-gray-50 border border-gray-200 hover:border-blue-500 transition-colors rounded-lg py-2.5 px-3.5 pr-9 text-left text-[12.5px] leading-[1.7] text-gray-600 w-full lg:max-w-[360px] overflow-hidden flex-shrink-0 self-start"
-              data-testid="committee-view-channels-card">
-              <!-- Channel values -->
-              <div class="flex flex-col gap-1.5" [attr.inert]="isVisitor() || null">
-                @if (committee()?.mailing_list; as mailingList) {
-                  <div class="flex items-baseline gap-1.5 justify-end overflow-hidden">
-                    <span class="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
-                      <i class="fa-light fa-envelope" aria-hidden="true"></i> Mailing List :
-                    </span>
-                    <a
-                      [href]="'mailto:' + mailingList"
-                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate"
-                      [title]="mailingList"
-                      >{{ mailingList }}</a
-                    >
+              class="relative bg-gray-50 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 w-full lg:max-w-[380px] overflow-hidden flex-shrink-0 self-start"
+              data-testid="committee-view-channels-card"
+              [attr.inert]="isVisitor() || null">
+              <!-- Mailing List row (rich display) -->
+              @if (linkedMailingList(); as ml) {
+                <div class="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-gray-200" data-testid="committee-view-mailing-list-row">
+                  <div class="w-[30px] h-[30px] rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-light fa-envelope text-blue-600 text-xs" aria-hidden="true"></i>
                   </div>
-                }
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <a
+                        [href]="'mailto:' + committee()!.mailing_list"
+                        class="text-[12.5px] font-semibold text-gray-900 hover:text-blue-600 transition-colors no-underline"
+                        [title]="ml.group_name"
+                        >{{ ml.group_name }}</a
+                      >
+                      @if (ml.public) {
+                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Public</span>
+                      } @else {
+                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600">Private</span>
+                      }
+                    </div>
+                    <div class="text-[11px] text-gray-400 mt-0.5 truncate">
+                      <a
+                        [href]="'mailto:' + committee()!.mailing_list"
+                        class="text-gray-400 hover:text-blue-600 transition-colors no-underline"
+                        [title]="committee()!.mailing_list!"
+                        >{{ committee()!.mailing_list }}</a
+                      >
+                      <span class="mx-1">·</span>{{ ml.subscriber_count }} subscribers
+                    </div>
+                  </div>
+                </div>
+              } @else if (committee()?.mailing_list; as mailingList) {
+                <!-- Fallback: mailing list email without rich data -->
+                <div class="flex items-baseline gap-1.5 justify-end overflow-hidden px-3.5 py-2.5 border-b border-gray-200">
+                  <span class="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
+                    <i class="fa-light fa-envelope" aria-hidden="true"></i> Mailing List :
+                  </span>
+                  <a
+                    [href]="'mailto:' + mailingList"
+                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate"
+                    [title]="mailingList"
+                    >{{ mailingList }}</a
+                  >
+                </div>
+              }
+
+              <!-- Chat Channel + Website rows -->
+              <div class="flex flex-col gap-1.5 px-3.5 py-2.5">
                 @if (committee()?.chat_channel; as chatChannel) {
                   <div class="flex items-baseline gap-1.5 justify-end overflow-hidden">
                     <span class="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
@@ -271,6 +305,7 @@
                   <div class="text-gray-400">No channels configured</div>
                 }
               </div>
+
               <!-- Visitor blur mask -->
               @if (isVisitor()) {
                 <div class="absolute inset-0 bg-gray-50/60 backdrop-blur-sm rounded-lg z-[5] flex items-center justify-center">
@@ -279,18 +314,6 @@
                     <div class="text-[11px] font-medium text-gray-500">Join to view channels</div>
                   </div>
                 </div>
-              }
-              <!-- Edit button (admin only) -->
-              @if (canEdit()) {
-                <lfx-button
-                  icon="fa-light fa-pen-to-square"
-                  [text]="true"
-                  [rounded]="true"
-                  size="small"
-                  severity="secondary"
-                  styleClass="!absolute !top-1.5 !right-1.5 !z-[6] !w-[22px] !h-[22px] !p-0"
-                  title="Edit Channels"
-                  (onClick)="openEditChannels()" />
               }
             </div>
           }
@@ -362,63 +385,6 @@
     </div>
   }
 </div>
-
-<!-- Edit Channels Modal -->
-<p-dialog
-  header="Edit Channels"
-  [(visible)]="showChannelsModal"
-  [modal]="true"
-  [closable]="true"
-  [style]="{ width: '480px' }"
-  [draggable]="false"
-  data-testid="committee-view-channels-modal">
-  <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-1">
-      <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Mailing List</label>
-      <lfx-input-text
-        [form]="channelsForm"
-        control="mailingList"
-        placeholder="Email address"
-        size="small"
-        styleClass="w-full"
-        dataTest="committee-view-channels-mailing-list"></lfx-input-text>
-    </div>
-    <div class="flex flex-col gap-1">
-      <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Chat Channel</label>
-      <lfx-input-text
-        [form]="channelsForm"
-        control="chatChannel"
-        placeholder="Slack, Discord, or other chat URL"
-        size="small"
-        styleClass="w-full"
-        dataTest="committee-view-channels-chat-url"></lfx-input-text>
-      <p class="text-[11px] text-gray-400 mt-0.5">The platform is auto-detected from the URL.</p>
-    </div>
-    <div class="flex flex-col gap-1">
-      <label class="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Website</label>
-      <lfx-input-text
-        [form]="channelsForm"
-        control="website"
-        placeholder="GitHub, GitLab, or other website URL"
-        size="small"
-        styleClass="w-full"
-        dataTest="committee-view-channels-website-url"></lfx-input-text>
-      <p class="text-[11px] text-gray-400 mt-0.5">The platform is auto-detected from the URL.</p>
-    </div>
-  </div>
-  <ng-template #footer>
-    <div class="flex justify-end gap-2">
-      <lfx-button
-        label="Cancel"
-        severity="secondary"
-        [outlined]="true"
-        size="small"
-        (onClick)="cancelEditChannels()"
-        [disabled]="savingChannels()"></lfx-button>
-      <lfx-button label="Save Changes" severity="info" size="small" (onClick)="saveChannels()" [loading]="savingChannels()"></lfx-button>
-    </div>
-  </ng-template>
-</p-dialog>
 
 <!-- Description View Dialog -->
 <p-dialog
