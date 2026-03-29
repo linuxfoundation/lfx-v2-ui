@@ -176,7 +176,7 @@ export class CommitteeMeetingsComponent {
   }
 
   private initCalendarEvents(): Signal<EventInput[]> {
-    // Lazy-load votes and surveys the first time calendar view is activated
+    // Lazy-load votes, surveys, and past meetings the first time calendar view is activated
     const externalData = toSignal(
       toObservable(this.viewMode).pipe(
         filter((mode) => mode === 'calendar'),
@@ -184,19 +184,20 @@ export class CommitteeMeetingsComponent {
         tap(() => this.calendarLoading.set(true)),
         switchMap(() => {
           const committeeUid = this.committee()?.uid;
-          if (!committeeUid) return of({ votes: [] as Vote[], surveys: [] as Survey[] });
+          if (!committeeUid) return of({ votes: [] as Vote[], surveys: [] as Survey[], pastMeetings: [] as PastMeeting[] });
           return forkJoin({
             votes: this.voteService.getVotesByCommittee(committeeUid).pipe(catchError(() => of([] as Vote[]))),
             surveys: this.surveyService.getSurveysByCommittee(committeeUid).pipe(catchError(() => of([] as Survey[]))),
+            pastMeetings: this.meetingService.getPastMeetingsByCommittee(committeeUid).pipe(catchError(() => of([] as PastMeeting[]))),
           });
         }),
         tap(() => this.calendarLoading.set(false))
       ),
-      { initialValue: { votes: [] as Vote[], surveys: [] as Survey[] } }
+      { initialValue: { votes: [] as Vote[], surveys: [] as Survey[], pastMeetings: [] as PastMeeting[] } }
     );
 
     return computed(() => {
-      const allMeetings: (Meeting | PastMeeting)[] = [...this.meetings(), ...this.pastMeetings()];
+      const allMeetings: (Meeting | PastMeeting)[] = [...this.meetings(), ...externalData().pastMeetings];
       const { votes, surveys } = externalData();
 
       const meetingEvents = allMeetings.flatMap((m) => this.meetingToEvents(m));
@@ -224,6 +225,7 @@ export class CommitteeMeetingsComponent {
           backgroundColor: c.bg,
           borderColor: c.border,
           textColor: '#ffffff',
+          display: 'block',
           extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
         };
       });
@@ -239,6 +241,7 @@ export class CommitteeMeetingsComponent {
         backgroundColor: colors.bg,
         borderColor: colors.border,
         textColor: '#ffffff',
+        display: 'block',
         extendedProps: { type: 'meeting', meetingId: meeting.id },
       },
     ];
