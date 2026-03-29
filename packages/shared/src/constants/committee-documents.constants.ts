@@ -28,15 +28,6 @@ export const DOCUMENT_SOURCE_ICONS: Record<CommitteeDocumentSource, string> = {
   summary: 'fa-light fa-sparkles',
 };
 
-/** Color class for each document source icon (presentation concern — used by Angular pipe). */
-export const DOCUMENT_SOURCE_ICON_COLORS: Record<CommitteeDocumentSource, string> = {
-  link: 'text-blue-500',
-  file: 'text-red-400',
-  recording: 'text-purple-500',
-  transcript: 'text-teal-500',
-  summary: 'text-amber-500',
-};
-
 /** Tag configuration for each document source type. */
 export const DOCUMENT_SOURCE_TAGS: Record<CommitteeDocumentSource, { value: string; severity: TagSeverity; icon: string }> = {
   link: { value: 'Link', severity: 'success', icon: 'fa-light fa-link' },

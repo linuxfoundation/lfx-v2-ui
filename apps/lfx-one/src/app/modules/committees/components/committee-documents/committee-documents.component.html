@@ -92,58 +92,14 @@
               <!-- Actions -->
               <td class="text-right">
                 <div class="flex gap-1 justify-end">
-                  @switch (item.source) {
-                    @case ('link') {
-                      <lfx-button
-                        icon="fa-light fa-external-link"
-                        [text]="true"
-                        [rounded]="true"
-                        size="small"
-                        severity="secondary"
-                        tooltip="Open Link"
-                        (onClick)="openDocument(item)"></lfx-button>
-                    }
-                    @case ('file') {
-                      <lfx-button
-                        icon="fa-light fa-download"
-                        [text]="true"
-                        [rounded]="true"
-                        size="small"
-                        severity="secondary"
-                        tooltip="Download"
-                        (onClick)="openDocument(item)"></lfx-button>
-                    }
-                    @case ('recording') {
-                      <lfx-button
-                        icon="fa-light fa-play"
-                        [text]="true"
-                        [rounded]="true"
-                        size="small"
-                        severity="secondary"
-                        tooltip="View Recording"
-                        (onClick)="openDocument(item)"></lfx-button>
-                    }
-                    @case ('transcript') {
-                      <lfx-button
-                        icon="fa-light fa-download"
-                        [text]="true"
-                        [rounded]="true"
-                        size="small"
-                        severity="secondary"
-                        tooltip="Download Transcript"
-                        (onClick)="openDocument(item)"></lfx-button>
-                    }
-                    @case ('summary') {
-                      <lfx-button
-                        icon="fa-light fa-eye"
-                        [text]="true"
-                        [rounded]="true"
-                        size="small"
-                        severity="secondary"
-                        tooltip="View Summary"
-                        (onClick)="openDocument(item)"></lfx-button>
-                    }
-                  }
+                  <lfx-button
+                    [icon]="item.source | documentSourceAction: 'icon'"
+                    [text]="true"
+                    [rounded]="true"
+                    size="small"
+                    severity="secondary"
+                    [tooltip]="item.source | documentSourceAction: 'tooltip'"
+                    (onClick)="openDocument(item)"></lfx-button>
                 </div>
               </td>
             </tr>

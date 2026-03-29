@@ -3,7 +3,15 @@
 
 import { Pipe, PipeTransform } from '@angular/core';
 import { CommitteeDocumentSource } from '@lfx-one/shared/interfaces';
-import { DOCUMENT_SOURCE_ICON_COLORS, DOCUMENT_SOURCE_ICONS } from '@lfx-one/shared/constants';
+import { DOCUMENT_SOURCE_ICONS } from '@lfx-one/shared/constants';
+
+const ICON_COLORS: Record<CommitteeDocumentSource, string> = {
+  link: 'text-blue-500',
+  file: 'text-red-400',
+  recording: 'text-purple-500',
+  transcript: 'text-teal-500',
+  summary: 'text-amber-500',
+};
 
 @Pipe({
   name: 'documentSourceIcon',
@@ -12,7 +20,7 @@ import { DOCUMENT_SOURCE_ICON_COLORS, DOCUMENT_SOURCE_ICONS } from '@lfx-one/sha
 export class DocumentSourceIconPipe implements PipeTransform {
   public transform(source: CommitteeDocumentSource): string {
     const icon = DOCUMENT_SOURCE_ICONS[source] || '';
-    const color = DOCUMENT_SOURCE_ICON_COLORS[source] || '';
+    const color = ICON_COLORS[source] || '';
     return `${icon} ${color}`.trim();
   }
 }

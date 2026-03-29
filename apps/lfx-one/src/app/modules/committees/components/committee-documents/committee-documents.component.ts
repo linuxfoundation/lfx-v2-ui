@@ -12,6 +12,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { FileSizePipe } from '@pipes/file-size.pipe';
+import { DocumentSourceActionPipe } from '@pipes/document-source-action.pipe';
 import { DocumentSourceIconPipe } from '@pipes/document-source-icon.pipe';
 import { DocumentSourceTagPipe } from '@pipes/document-source-tag.pipe';
 import {
@@ -25,8 +26,8 @@ import {
   PastMeetingSummary,
 } from '@lfx-one/shared/interfaces';
 import { MeetingService } from '@services/meeting.service';
-import { RecordingModalComponent } from '@modules/meetings/components/recording-modal/recording-modal.component';
-import { SummaryModalComponent } from '@modules/meetings/components/summary-modal/summary-modal.component';
+import { RecordingModalComponent } from '@components/recording-modal/recording-modal.component';
+import { SummaryModalComponent } from '@components/summary-modal/summary-modal.component';
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { Observable, catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
@@ -61,6 +62,7 @@ const MAX_MEETINGS_PER_TYPE = 25;
     FileSizePipe,
     DatePipe,
     DynamicDialogModule,
+    DocumentSourceActionPipe,
     DocumentSourceIconPipe,
     DocumentSourceTagPipe,
   ],
