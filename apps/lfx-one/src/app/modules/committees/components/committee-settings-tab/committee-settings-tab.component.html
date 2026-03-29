@@ -6,8 +6,13 @@
     <lfx-button label="Save Changes" severity="info" size="small" icon="fa-light fa-floppy-disk" (onClick)="saveSettings()" [loading]="saving()"></lfx-button>
   </div>
 
-  <!-- Reuse existing settings form (hide its own header) -->
-  <lfx-committee-settings [form]="form" [showHeader]="false"></lfx-committee-settings>
+  <!-- Reuse existing settings form (hide its own header), pass mailing list data -->
+  <lfx-committee-settings
+    [form]="form"
+    [showHeader]="false"
+    [linkedMailingList]="linkedMailingList()"
+    [mlLoading]="mlLoading()"
+    (mlPickerOpen)="openMailingListPicker()"></lfx-committee-settings>
 
   <!-- Danger Zone -->
   <div class="mt-10 border border-red-300 rounded-xl p-5 bg-red-50" data-testid="committee-settings-danger-zone">
@@ -27,3 +32,110 @@
 </div>
 
 <p-confirmDialog></p-confirmDialog>
+
+<!-- Mailing List Picker Dialog -->
+<p-dialog
+  header="Associated Mailing List"
+  [visible]="mlPickerVisible()"
+  (visibleChange)="mlPickerVisible.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '640px' }"
+  [draggable]="false"
+  data-testid="settings-ml-picker-dialog">
+  <div class="flex flex-col gap-4">
+    <!-- Subtext -->
+    <p class="text-[12.5px] text-gray-500 -mt-1">Select a mailing list to associate with this group. Members will be auto-subscribed.</p>
+
+    <!-- Search -->
+    <div class="relative">
+      <i class="fa-light fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+      <input
+        type="text"
+        class="w-full h-9 border border-gray-300 rounded-md pl-8 pr-3 text-[13px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        placeholder="Search mailing lists…"
+        [value]="mlSearchQuery()"
+        (input)="mlSearchQuery.set($any($event.target).value)"
+        data-testid="settings-ml-picker-search" />
+    </div>
+
+    <!-- List -->
+    <div class="border border-gray-200 rounded-lg overflow-hidden max-h-80 overflow-y-auto" data-testid="settings-ml-picker-table">
+      @if (filteredMailingLists().length === 0) {
+        <div class="py-8 text-center text-[12.5px] text-gray-400">
+          @if (mlLoading()) {
+            <i class="fa-light fa-spinner-third fa-spin mr-1.5"></i>Loading mailing lists…
+          } @else {
+            No mailing lists found.
+          }
+        </div>
+      } @else {
+        <table class="w-full border-collapse text-[12.5px]">
+          <thead>
+            <tr class="bg-gray-50 sticky top-0">
+              <th class="w-10 py-2.5 px-4"></th>
+              <th class="py-2.5 px-2 text-left text-[11.5px] font-medium text-gray-500">Name</th>
+              <th class="py-2.5 px-2 text-left text-[11.5px] font-medium text-gray-500">Email</th>
+              <th class="py-2.5 px-2 text-left text-[11.5px] font-medium text-gray-500">Visibility</th>
+              <th class="py-2.5 px-4 text-left text-[11.5px] font-medium text-gray-500">Access</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ml of filteredMailingLists(); track ml.uid) {
+              <tr
+                class="border-t border-gray-100 cursor-pointer transition-colors"
+                [class.bg-blue-50]="selectedMailingListUid() === ml.uid"
+                [class.hover:bg-gray-50]="selectedMailingListUid() !== ml.uid"
+                (click)="selectMailingList(ml.uid)"
+                [attr.data-testid]="'settings-ml-picker-row-' + ml.uid">
+                <td class="py-3 px-4">
+                  <div
+                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                    [class.border-blue-500]="selectedMailingListUid() === ml.uid"
+                    [class.border-gray-300]="selectedMailingListUid() !== ml.uid">
+                    @if (selectedMailingListUid() === ml.uid) {
+                      <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    }
+                  </div>
+                </td>
+                <td class="py-3 px-2 font-semibold text-gray-900">{{ ml.group_name }}</td>
+                <td class="py-3 px-2 text-gray-500">{{ getMailingListEmail(ml) }}</td>
+                <td class="py-3 px-2">
+                  @if (ml.public) {
+                    <span class="text-[10.5px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Public</span>
+                  } @else {
+                    <span class="text-[10.5px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600">Private</span>
+                  }
+                </td>
+                <td class="py-3 px-4 text-gray-500">{{ ml.audience_access | titlecase }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <div class="px-4 py-2.5 bg-gray-50 border-t border-gray-200 text-[11.5px] text-gray-400">
+          Showing {{ filteredMailingLists().length }} of {{ projectMailingLists().length }} mailing lists
+        </div>
+      }
+    </div>
+  </div>
+
+  <ng-template #footer>
+    <div class="flex justify-between items-center">
+      @if (selectedMailingListUid()) {
+        <button
+          type="button"
+          class="text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+          (click)="clearMailingListAssociation()"
+          data-testid="settings-ml-picker-clear-btn">
+          Clear association
+        </button>
+      } @else {
+        <span></span>
+      }
+      <div class="flex gap-2">
+        <lfx-button label="Cancel" severity="secondary" [outlined]="true" size="small" (onClick)="mlPickerVisible.set(false)"></lfx-button>
+        <lfx-button label="Save" severity="info" size="small" [loading]="savingMl()" (onClick)="saveMailingListAssociation()"></lfx-button>
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>

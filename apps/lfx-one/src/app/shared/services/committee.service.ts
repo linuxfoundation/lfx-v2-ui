@@ -64,6 +64,11 @@ export class CommitteeService {
     return this.http.put<Committee>(`/api/committees/${id}`, committee).pipe(take(1));
   }
 
+  /** Fetches a committee by ID without updating shared service state. */
+  public fetchCommittee(id: string): Observable<Committee> {
+    return this.http.get<Committee>(`/api/committees/${id}`).pipe(catchError((error) => throwError(() => error)));
+  }
+
   // ── Sub-groups (children) ─────────────────────────────────────────────────
 
   /** Fetches child committees (sub-groups) of a parent committee */

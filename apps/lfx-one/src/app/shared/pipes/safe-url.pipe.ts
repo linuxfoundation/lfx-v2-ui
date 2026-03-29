@@ -9,7 +9,8 @@ import { Pipe, PipeTransform } from '@angular/core';
   pure: true,
 })
 export class SafeUrlPipe implements PipeTransform {
-  public transform(url: string): string | null {
+  public transform(url: string | null | undefined): string | null {
+    if (!url?.trim()) return null;
     if (url.startsWith('https://') || url.startsWith('http://')) {
       return url;
     }
