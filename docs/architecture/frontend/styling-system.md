@@ -96,7 +96,7 @@ export default {
 ```scss
 // Custom font theme variables
 @theme {
-  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Roboto Slab', ui-serif, Georgia, serif;
   --font-serif: 'Roboto Slab', ui-serif, Georgia, serif;
 }
@@ -106,8 +106,7 @@ export default {
 
 Fonts are loaded via Google Fonts for optimal performance:
 
-- **Inter**: Primary visible sans-serif font (overrides Open Sans in styles.scss)
-- **Open Sans**: Fallback sans-serif font
+- **Inter**: Primary sans-serif font for all UI text
 - **Roboto Slab**: Display font for headings and emphasis
 
 ### Custom Font Sizes
@@ -138,7 +137,6 @@ export default {
       colors: lfxColors,
       fontSize: lfxFontSizes,
       fontFamily: {
-        sans: ['Open Sans', 'sans-serif'],
         inter: ['Inter', 'sans-serif'],
         display: ['Roboto Slab', 'serif'],
         serif: ['Roboto Slab', 'serif'],
