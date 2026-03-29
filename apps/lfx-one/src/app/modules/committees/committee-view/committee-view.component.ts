@@ -12,7 +12,6 @@ import { PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
@@ -52,7 +51,6 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     DatePipe,
     NgClass,
     ReactiveFormsModule,
-    InputTextComponent,
     Dialog,
     PopoverModule,
     SkeletonModule,
