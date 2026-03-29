@@ -230,9 +230,9 @@
                         >{{ ml.group_name }}</a
                       >
                       @if (ml.public) {
-                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Public</span>
+                        <lfx-tag value="Public" severity="success" styleClass="!text-[10px]" />
                       } @else {
-                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Private</span>
+                        <lfx-tag value="Private" severity="danger" styleClass="!text-[10px]" />
                       }
                       @if (ml.audience_access) {
                         <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{{ ml.audience_access }}</span>

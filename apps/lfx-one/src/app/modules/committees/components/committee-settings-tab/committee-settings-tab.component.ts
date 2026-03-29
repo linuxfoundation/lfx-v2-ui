@@ -7,6 +7,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { TagComponent } from '@components/tag/tag.component';
 import { Committee, GroupsIOMailingList, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -21,7 +22,7 @@ import { CommitteeSettingsComponent } from '../committee-settings/committee-sett
 
 @Component({
   selector: 'lfx-committee-settings-tab',
-  imports: [CommitteeSettingsComponent, ButtonComponent, TitleCasePipe, ConfirmDialogModule, DialogModule],
+  imports: [CommitteeSettingsComponent, ButtonComponent, TagComponent, TitleCasePipe, ConfirmDialogModule, DialogModule],
   templateUrl: './committee-settings-tab.component.html',
   styleUrl: './committee-settings-tab.component.scss',
 })
