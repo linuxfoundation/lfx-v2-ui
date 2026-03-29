@@ -12,14 +12,25 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DocumentIconPipe } from '@pipes/document-icon.pipe';
-import { DocumentTypeIconPipe } from '@pipes/document-type-icon.pipe';
 import { FileSizePipe } from '@pipes/file-size.pipe';
-import { SourceLabelPipe } from '@pipes/source-label.pipe';
-import { SourceSeverityPipe } from '@pipes/source-severity.pipe';
-import { Committee, CommitteeDocument, DocumentDisplayItem, MeetingAttachment, MeetingAttachmentWithContext } from '@lfx-one/shared/interfaces';
+import { DocumentSourceActionPipe } from '@pipes/document-source-action.pipe';
+import { DocumentSourceIconPipe } from '@pipes/document-source-icon.pipe';
+import { DocumentSourceTagPipe } from '@pipes/document-source-tag.pipe';
+import {
+  Committee,
+  CommitteeDocument,
+  DocumentDisplayItem,
+  Meeting,
+  MeetingAttachment,
+  PastMeeting,
+  PastMeetingAttachment,
+  PastMeetingRecording,
+  PastMeetingSummary,
+} from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
+import { RecordingModalComponent } from '@components/recording-modal/recording-modal.component';
+import { SummaryModalComponent } from '@components/summary-modal/summary-modal.component';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
@@ -35,17 +46,32 @@ import {
   from,
   map,
   mergeMap,
+  Observable,
   of,
   switchMap,
   take,
   toArray,
 } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
+import {
+  mapAttachmentToDoc,
+  mapRecordingFileToDoc,
+  mapSummaryToDoc,
+  getLargestSessionShareUrl,
+  isAllowedRecordingFileType,
+} from '../../utils/committee-document.utils';
 
 import { DocumentFormComponent } from '../document-form/document-form.component';
 
-/** Max concurrent attachment fetches to avoid overwhelming the backend. */
-const ATTACHMENT_FETCH_CONCURRENCY = 4;
+/** Max concurrent per-meeting fetches to avoid overwhelming the backend. */
+const FETCH_CONCURRENCY = 4;
+
+/**
+ * Max meetings to fetch per type (upcoming/past).
+ * Kept low to limit N+1 API fan-out (each past meeting triggers 3 calls).
+ * TODO: Replace with a backend aggregate endpoint that returns documents for all meetings in one call.
+ */
+const MAX_MEETINGS_PER_TYPE = 25;
 
 @Component({
   selector: 'lfx-committee-documents',
@@ -57,14 +83,13 @@ const ATTACHMENT_FETCH_CONCURRENCY = 4;
     ReactiveFormsModule,
     TableComponent,
     TagComponent,
-    DocumentIconPipe,
-    DocumentTypeIconPipe,
     FileSizePipe,
-    SourceLabelPipe,
-    SourceSeverityPipe,
     DatePipe,
     DynamicDialogModule,
     ConfirmDialogModule,
+    DocumentSourceActionPipe,
+    DocumentSourceIconPipe,
+    DocumentSourceTagPipe,
   ],
   providers: [DialogService, ConfirmationService],
   templateUrl: './committee-documents.component.html',
@@ -100,7 +125,10 @@ export class CommitteeDocumentsComponent implements OnInit {
 
   public sourceOptions = [
     { label: 'Link', value: 'link' },
-    { label: 'Meeting', value: 'meeting' },
+    { label: 'File', value: 'file' },
+    { label: 'Recording', value: 'recording' },
+    { label: 'Transcript', value: 'transcript' },
+    { label: 'AI Summary', value: 'summary' },
     { label: 'Folder', value: 'folder' },
   ];
 
@@ -111,8 +139,8 @@ export class CommitteeDocumentsComponent implements OnInit {
       .map((folder) => ({ label: folder.name, value: folder.uid }))
   );
 
-  // Data — meeting attachments
-  public meetingAttachments: Signal<MeetingAttachmentWithContext[]> = this.initMeetingAttachments();
+  // Data — meeting documents (attachments, recordings, transcripts, summaries)
+  public meetingDocuments: Signal<DocumentDisplayItem[]> = this.initMeetingDocuments();
 
   // Data — standalone committee documents
   public standaloneDocs: Signal<CommitteeDocument[]> = this.initStandaloneDocuments();
@@ -134,7 +162,7 @@ export class CommitteeDocumentsComponent implements OnInit {
     this.searchForm.controls.source.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.sourceFilter.set(value));
   }
 
-  /** Opens document — links in new tab, meeting files via download URL. */
+  /** Opens document — links in new tab, files via download URL, recordings/summaries via modals. */
   public openDocument(item: DocumentDisplayItem): void {
     if (item.type === 'folder') {
       return; // Folders are not clickable
@@ -142,21 +170,50 @@ export class CommitteeDocumentsComponent implements OnInit {
 
     if (item.isStandalone && item.url) {
       this.openSafeUrl(item.url);
-    } else if (item.meetingAttachment) {
-      if (item.meetingAttachment.attachment.type === 'link' && item.meetingAttachment.attachment.link) {
-        this.openSafeUrl(item.meetingAttachment.attachment.link);
-      } else {
-        this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingAttachment.meetingId, item.meetingAttachment.attachment.uid).subscribe({
-          next: (response) => {
-            if (response?.download_url) {
-              this.openSafeUrl(response.download_url);
-            }
-          },
-          error: (err: HttpErrorResponse) => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to get download link.') });
-          },
-        });
-      }
+      return;
+    }
+
+    // Meeting-sourced documents
+    switch (item.source) {
+      case 'link':
+        if (item.meetingAttachment?.attachment?.link) {
+          this.openSafeUrl(item.meetingAttachment.attachment.link);
+        } else if (item.linkUrl) {
+          this.openSafeUrl(item.linkUrl);
+        }
+        break;
+      case 'file':
+        this.downloadMeetingFile(item);
+        break;
+      case 'recording':
+        this.openRecording(item);
+        break;
+      case 'transcript':
+        if (item.downloadUrl) {
+          this.openSafeUrl(item.downloadUrl);
+        }
+        break;
+      case 'summary':
+        this.openSummary(item);
+        break;
+      default:
+        // Legacy meeting attachment fallback
+        if (item.meetingAttachment) {
+          if (item.meetingAttachment.attachment.type === 'link' && item.meetingAttachment.attachment.link) {
+            this.openSafeUrl(item.meetingAttachment.attachment.link);
+          } else {
+            this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingAttachment.meetingId, item.meetingAttachment.attachment.uid).subscribe({
+              next: (response) => {
+                if (response?.download_url) {
+                  this.openSafeUrl(response.download_url);
+                }
+              },
+              error: (err: HttpErrorResponse) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to get download link.') });
+              },
+            });
+          }
+        }
     }
   }
 
@@ -262,6 +319,57 @@ export class CommitteeDocumentsComponent implements OnInit {
       }
     } catch {
       // Invalid URL — silently ignore
+    }
+  }
+
+  private downloadMeetingFile(item: DocumentDisplayItem): void {
+    if (!item.attachmentUid) return;
+    const download$ = item.pastMeetingId
+      ? this.meetingService.getPastMeetingAttachmentDownloadUrl(item.pastMeetingId, item.attachmentUid)
+      : this.meetingService.getMeetingAttachmentDownloadUrl(item.meetingId ?? '', item.attachmentUid);
+    download$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (response) => {
+        if (response?.download_url) {
+          this.openSafeUrl(response.download_url);
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to get download link.') });
+      },
+    });
+  }
+
+  private openRecording(item: DocumentDisplayItem): void {
+    if (item.shareUrl) {
+      this.dialogService.open(RecordingModalComponent, {
+        header: 'Meeting Recording',
+        width: '650px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: { shareUrl: item.shareUrl, meetingTitle: item.meetingTitle },
+      });
+    } else if (item.playUrl) {
+      this.openSafeUrl(item.playUrl);
+    }
+  }
+
+  private openSummary(item: DocumentDisplayItem): void {
+    if (item.summaryData && item.pastMeetingId) {
+      this.dialogService.open(SummaryModalComponent, {
+        header: 'Meeting Summary',
+        width: '800px',
+        modal: true,
+        closable: true,
+        dismissableMask: true,
+        data: {
+          summaryContent: item.summaryData.content,
+          summaryUid: item.summaryData.uid,
+          pastMeetingUid: item.pastMeetingId,
+          meetingTitle: item.meetingTitle,
+          approved: item.summaryData.approved,
+        },
+      });
     }
   }
 
@@ -380,19 +488,6 @@ export class CommitteeDocumentsComponent implements OnInit {
     return computed(() => {
       const childMap = this.folderChildMap();
 
-      const meetingItems: DocumentDisplayItem[] = this.meetingAttachments().map((item) => ({
-        uid: item.attachment.uid,
-        name: item.attachment.name,
-        type: item.attachment.type,
-        url: item.attachment.link,
-        addedBy: item.attachment.created_by?.name,
-        date: item.attachment.created_at,
-        fileSize: item.attachment.file_size,
-        source: 'meeting',
-        isStandalone: false,
-        meetingAttachment: item,
-      }));
-
       const standaloneItems: DocumentDisplayItem[] = this.standaloneDocs()
         .filter((doc) => !doc.parent_uid)
         .map((doc) => ({
@@ -410,7 +505,7 @@ export class CommitteeDocumentsComponent implements OnInit {
           childCount: doc.type === 'folder' ? (childMap.get(doc.uid)?.length ?? 0) : undefined,
         }));
 
-      return [...meetingItems, ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+      return [...this.meetingDocuments(), ...standaloneItems].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
     });
   }
 
@@ -430,6 +525,7 @@ export class CommitteeDocumentsComponent implements OnInit {
         results = allItems.filter(
           (item) =>
             item.name.toLowerCase().includes(query) ||
+            (item.meetingTitle ?? '').toLowerCase().includes(query) ||
             (item.meetingAttachment?.meetingTitle ?? '').toLowerCase().includes(query) ||
             (item.description ?? '').toLowerCase().includes(query)
         );
@@ -464,39 +560,41 @@ export class CommitteeDocumentsComponent implements OnInit {
     });
   }
 
-  private initMeetingAttachments(): Signal<MeetingAttachmentWithContext[]> {
+  private initMeetingDocuments(): Signal<DocumentDisplayItem[]> {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
         switchMap((c) => {
           this.meetingLoading.set(true);
-          return this.meetingService.getMeetingsByCommittee(c.uid, 100).pipe(
-            switchMap((meetings) => {
-              if (meetings.length === 0) return of([]);
 
-              return from(meetings).pipe(
-                mergeMap(
-                  (meeting) =>
-                    this.meetingService.getMeetingAttachments(meeting.id).pipe(
-                      catchError(() => of([] as MeetingAttachment[])),
-                      map((attachments) =>
-                        attachments.map((att) => ({
-                          attachment: att,
-                          meetingTitle: meeting.title,
-                          meetingDate: meeting.start_time,
-                          meetingId: meeting.id,
-                        }))
-                      )
-                    ),
-                  ATTACHMENT_FETCH_CONCURRENCY
-                ),
-                toArray(),
-                map((results) => results.flat().sort((a, b) => (b.attachment.created_at ?? '').localeCompare(a.attachment.created_at ?? '')))
+          return forkJoin({
+            upcoming: this.meetingService.getMeetingsByCommittee(c.uid, MAX_MEETINGS_PER_TYPE).pipe(catchError(() => of([] as Meeting[]))),
+            past: this.meetingService.getPastMeetingsByCommittee(c.uid, MAX_MEETINGS_PER_TYPE).pipe(catchError(() => of([] as PastMeeting[]))),
+          }).pipe(
+            switchMap(({ upcoming, past }) => {
+              const upcomingDocs$ = upcoming.length
+                ? from(upcoming).pipe(
+                    mergeMap((meeting) => this.fetchUpcomingMeetingDocs(meeting), FETCH_CONCURRENCY),
+                    toArray(),
+                    map((arrays) => arrays.flat())
+                  )
+                : of([] as DocumentDisplayItem[]);
+
+              const pastDocs$ = past.length
+                ? from(past).pipe(
+                    mergeMap((meeting) => this.fetchPastMeetingDocs(meeting), FETCH_CONCURRENCY),
+                    toArray(),
+                    map((arrays) => arrays.flat())
+                  )
+                : of([] as DocumentDisplayItem[]);
+
+              return forkJoin([upcomingDocs$, pastDocs$]).pipe(
+                map(([u, p]) => [...u, ...p].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
               );
             }),
             catchError(() => {
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load meeting documents. Please try again.' });
-              return of([]);
+              return of([] as DocumentDisplayItem[]);
             }),
             finalize(() => this.meetingLoading.set(false))
           );
@@ -525,5 +623,87 @@ export class CommitteeDocumentsComponent implements OnInit {
       ),
       { initialValue: [] }
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Per-meeting fetchers
+  // ---------------------------------------------------------------------------
+
+  private fetchUpcomingMeetingDocs(meeting: Meeting): Observable<DocumentDisplayItem[]> {
+    return this.meetingService.getMeetingAttachments(meeting.id).pipe(
+      catchError(() => of([] as MeetingAttachment[])),
+      map((attachments) =>
+        attachments.map((att) => {
+          const doc = mapAttachmentToDoc(att, meeting.title, meeting.start_time, meeting.id, null);
+          return this.committeeDocumentItemToDisplayItem(doc);
+        })
+      )
+    );
+  }
+
+  private fetchPastMeetingDocs(meeting: PastMeeting): Observable<DocumentDisplayItem[]> {
+    const title = meeting.title;
+    const date = meeting.scheduled_start_time || meeting.start_time;
+    const meetingId = meeting.meeting_id || meeting.id;
+    const pastMeetingId = meeting.id;
+
+    return forkJoin({
+      attachments: this.meetingService.getPastMeetingAttachments(pastMeetingId).pipe(catchError(() => of(null as PastMeetingAttachment[] | null))),
+      recording: this.meetingService.getPastMeetingRecording(pastMeetingId).pipe(catchError(() => of(null as PastMeetingRecording | null))),
+      summary: this.meetingService.getPastMeetingSummary(pastMeetingId).pipe(catchError(() => of(null as PastMeetingSummary | null))),
+    }).pipe(
+      map(({ attachments, recording, summary }) => {
+        const items: DocumentDisplayItem[] = [];
+
+        if (attachments) {
+          for (const att of attachments) {
+            const doc = mapAttachmentToDoc(att, title, date, meetingId, pastMeetingId);
+            items.push(this.committeeDocumentItemToDisplayItem(doc));
+          }
+        }
+
+        if (recording?.recording_files) {
+          const shareUrl = getLargestSessionShareUrl(recording);
+          for (const file of recording.recording_files) {
+            if (!isAllowedRecordingFileType(file.file_type)) continue;
+            const doc = mapRecordingFileToDoc(file, shareUrl, title, date, meetingId, pastMeetingId);
+            items.push(this.committeeDocumentItemToDisplayItem(doc));
+          }
+        }
+
+        if (summary?.summary_data) {
+          const content = summary.summary_data.edited_content || summary.summary_data.content;
+          if (content) {
+            const doc = mapSummaryToDoc(summary, title, date, meetingId, pastMeetingId);
+            items.push(this.committeeDocumentItemToDisplayItem(doc));
+          }
+        }
+
+        return items;
+      })
+    );
+  }
+
+  /** Maps a CommitteeDocumentItem (from meeting sources) to a DocumentDisplayItem for the shared table. */
+  private committeeDocumentItemToDisplayItem(item: import('@lfx-one/shared/interfaces').CommitteeDocumentItem): DocumentDisplayItem {
+    return {
+      uid: item.id,
+      name: item.name,
+      type: item.source,
+      addedBy: item.addedBy ?? undefined,
+      date: item.date,
+      fileSize: item.fileSize ?? undefined,
+      source: item.source,
+      isStandalone: false,
+      meetingTitle: item.meetingTitle,
+      meetingId: item.meetingId,
+      pastMeetingId: item.pastMeetingId ?? undefined,
+      linkUrl: item.linkUrl,
+      attachmentUid: item.attachmentUid,
+      playUrl: item.playUrl,
+      downloadUrl: item.downloadUrl,
+      shareUrl: item.shareUrl,
+      summaryData: item.summaryData,
+    };
   }
 }

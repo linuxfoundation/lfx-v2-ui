@@ -93,7 +93,7 @@
                       <i [class]="isFolderExpanded(item.uid) ? 'fa-solid fa-chevron-down text-xs' : 'fa-solid fa-chevron-right text-xs'" aria-hidden="true"></i>
                     </button>
                   }
-                  <i [class]="(item | documentIcon) + ' flex-shrink-0'" aria-hidden="true"></i>
+                  <i [class]="(item.source | documentSourceIcon) + ' flex-shrink-0'" aria-hidden="true"></i>
                   <div class="min-w-0">
                     @if (item.type === 'folder') {
                       <span class="text-sm font-medium text-gray-900 truncate block max-w-xs cursor-pointer" (click)="toggleFolder(item.uid)">{{
@@ -117,6 +117,8 @@
                       <p class="text-[11px] text-gray-400 truncate">
                         From: {{ item.meetingAttachment.meetingTitle }} · {{ item.meetingAttachment.meetingDate | date: 'MMM d, y' }}
                       </p>
+                    } @else if (item.meetingTitle) {
+                      <p class="text-[11px] text-gray-400 truncate">From: {{ item.meetingTitle }}</p>
                     }
                     @if (item.description && item.type !== 'folder') {
                       <p class="text-[11px] text-gray-400 truncate">{{ item.description }}</p>
@@ -126,7 +128,10 @@
               </td>
               <!-- Source -->
               <td>
-                <lfx-tag [value]="item | sourceLabel" [severity]="item | sourceSeverity" [icon]="item | documentTypeIcon"></lfx-tag>
+                <lfx-tag
+                  [value]="item.source | documentSourceTag: 'value'"
+                  [severity]="item.source | documentSourceTag: 'severity'"
+                  [icon]="item.source | documentSourceTag: 'icon'"></lfx-tag>
               </td>
               <!-- Added By -->
               <td class="text-gray-600">
@@ -149,12 +154,12 @@
                 <div class="flex gap-1 justify-end">
                   @if (item.type !== 'folder') {
                     <lfx-button
-                      icon="fa-light fa-arrow-up-right-from-square"
+                      [icon]="item.source | documentSourceAction: 'icon'"
                       [text]="true"
                       [rounded]="true"
                       size="small"
                       severity="secondary"
-                      tooltip="Open"
+                      [tooltip]="item.source | documentSourceAction: 'tooltip'"
                       (onClick)="openDocument(item)"></lfx-button>
                   }
                   @if (item.isStandalone && canEdit()) {
@@ -193,7 +198,7 @@
       <div class="flex flex-col items-center py-12">
         <i class="fa-light fa-folder-open text-3xl text-gray-300 mb-3" aria-hidden="true"></i>
         <p class="text-sm font-medium text-gray-500">No documents yet</p>
-        <p class="text-xs text-gray-400 mt-1">Links and meeting attachments shared with this group will appear here.</p>
+        <p class="text-xs text-gray-400 mt-1">Links, meeting attachments, recordings, and summaries for this group will appear here.</p>
         @if (canEdit()) {
           <div class="flex items-center gap-2 mt-4">
             <lfx-button
