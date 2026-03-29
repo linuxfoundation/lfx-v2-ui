@@ -7,7 +7,6 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
 import { Committee, GroupsIOMailingList, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -22,7 +21,7 @@ import { CommitteeSettingsComponent } from '../committee-settings/committee-sett
 
 @Component({
   selector: 'lfx-committee-settings-tab',
-  imports: [CommitteeSettingsComponent, ButtonComponent, TitleCasePipe, InputTextComponent, ConfirmDialogModule, DialogModule],
+  imports: [CommitteeSettingsComponent, ButtonComponent, TitleCasePipe, ConfirmDialogModule, DialogModule],
   templateUrl: './committee-settings-tab.component.html',
   styleUrl: './committee-settings-tab.component.scss',
 })
@@ -74,10 +73,11 @@ export class CommitteeSettingsTabComponent {
     return this.projectMailingLists().find((ml) => this.getMailingListEmail(ml) === email) ?? null;
   });
 
-  // Filtered mailing lists for picker
+  // Filtered mailing lists for picker — only lists with a service domain can be associated
+  // (the backend requires mailing_list to be a valid email: group_name@service.domain)
   public filteredMailingLists: Signal<GroupsIOMailingList[]> = computed(() => {
     const query = this.mlSearchQuery().toLowerCase().trim();
-    const lists = this.projectMailingLists();
+    const lists = this.projectMailingLists().filter((ml) => !!ml.service?.domain);
     if (!query) return lists;
     return lists.filter((ml) => ml.group_name.toLowerCase().includes(query) || ml.title?.toLowerCase().includes(query));
   });
@@ -120,6 +120,12 @@ export class CommitteeSettingsTabComponent {
 
     const selectedList = uid ? (this.projectMailingLists().find((ml) => ml.uid === uid) ?? null) : null;
     const emailValue = selectedList ? this.getMailingListEmail(selectedList) : null;
+
+    // Guard: upstream service requires a valid email (group_name@domain)
+    if (emailValue && !emailValue.includes('@')) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Selected mailing list has no associated domain and cannot be linked.' });
+      return;
+    }
 
     this.savingMl.set(true);
     this.committeeService
