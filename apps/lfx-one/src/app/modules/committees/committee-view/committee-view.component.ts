@@ -441,7 +441,7 @@ export class CommitteeViewComponent {
           if (!c?.parent_uid) {
             return of(null);
           }
-          return this.committeeService.getCommittee(c.parent_uid).pipe(catchError(() => of(null)));
+          return this.committeeService.fetchCommittee(c.parent_uid).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }
@@ -467,9 +467,10 @@ export class CommitteeViewComponent {
   private initLinkedMailingList(): Signal<GroupsIOMailingList | null> {
     return toSignal(
       toObservable(this.committee).pipe(
-        filter((c): c is Committee => !!c?.project_uid && !!c?.mailing_list),
-        switchMap((c) =>
-          this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
+        filter((c): c is Committee => !!c?.project_uid),
+        switchMap((c) => {
+          if (!c.mailing_list) return of(null);
+          return this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
             map((lists) => {
               const email = c.mailing_list!;
               return (
@@ -480,8 +481,8 @@ export class CommitteeViewComponent {
               );
             }),
             catchError(() => of(null))
-          )
-        )
+          );
+        })
       ),
       { initialValue: null }
     );

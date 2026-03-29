@@ -234,6 +234,9 @@
                       } @else {
                         <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600">Private</span>
                       }
+                      @if (ml.audience_access) {
+                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{{ ml.audience_access }}</span>
+                      }
                     </div>
                     <div class="text-[11px] text-gray-400 mt-0.5 truncate">
                       <a
