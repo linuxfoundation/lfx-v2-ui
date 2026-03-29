@@ -310,49 +310,28 @@ export class CommitteeViewComponent {
             this.messageService.add({ severity: 'error', summary: 'Unable to Join', detail, life: 6000 });
           },
         });
-    } else if (joinMode === 'application') {
+    } else if (joinMode === 'application' || joinMode === 'invite_only') {
+      const isApplication = joinMode === 'application';
+      const successSummary = isApplication ? 'Application Submitted' : 'Request Submitted';
+      const successDetail = isApplication
+        ? `Your request to join "${committee.name}" has been submitted. An admin will review it shortly.`
+        : `Your access request for "${committee.name}" has been submitted. An admin will review and send you an invitation if approved.`;
+      const conflictDetail = isApplication ? 'You already have a pending application for this group.' : 'You already have a pending request for this group.';
+      const failDetail = isApplication
+        ? `Failed to submit your request for "${committee.name}". Please try again.`
+        : `Failed to submit your access request for "${committee.name}". Please try again.`;
+
       this.joiningOrLeaving.set(true);
       this.committeeService
         .submitApplication(committee.uid)
         .pipe(finalize(() => this.joiningOrLeaving.set(false)))
         .subscribe({
           next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Application Submitted',
-              detail: `Your request to join "${committee.name}" has been submitted. An admin will review it shortly.`,
-              life: 8000,
-            });
+            this.messageService.add({ severity: 'success', summary: successSummary, detail: successDetail, life: 8000 });
           },
           error: (err: HttpErrorResponse) => {
             const upstream = err.error?.message as string | undefined;
-            const detail =
-              err.status === 409
-                ? 'You already have a pending application for this group.'
-                : (upstream ?? `Failed to submit your request for "${committee.name}". Please try again.`);
-            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
-          },
-        });
-    } else if (joinMode === 'invite_only') {
-      this.joiningOrLeaving.set(true);
-      this.committeeService
-        .submitApplication(committee.uid)
-        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
-        .subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Request Submitted',
-              detail: `Your access request for "${committee.name}" has been submitted. An admin will review and send you an invitation if approved.`,
-              life: 8000,
-            });
-          },
-          error: (err: HttpErrorResponse) => {
-            const upstream = err.error?.message as string | undefined;
-            const detail =
-              err.status === 409
-                ? 'You already have a pending request for this group.'
-                : (upstream ?? `Failed to submit your access request for "${committee.name}". Please try again.`);
+            const detail = err.status === 409 ? conflictDetail : (upstream ?? failDetail);
             this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
           },
         });

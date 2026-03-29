@@ -9,12 +9,28 @@ import { Pipe, PipeTransform } from '@angular/core';
   pure: true,
 })
 export class SafeUrlPipe implements PipeTransform {
-  public transform(url: string): string | null {
-    if (url.startsWith('https://') || url.startsWith('http://')) {
-      return url;
+  public transform(url: string | null | undefined): string | null {
+    if (!url?.trim()) return null;
+    const trimmed = url.trim();
+    // If it already has http/https scheme, validate it directly
+    if (/^https?:\/\//i.test(trimmed)) {
+      try {
+        new URL(trimmed);
+        return trimmed;
+      } catch {
+        return null;
+      }
     }
-    if (url.includes('.') && !url.includes(' ')) {
-      return 'https://' + url;
+    // Try prepending https:// and validate
+    const withHttps = `https://${trimmed}`;
+    try {
+      const parsed = new URL(withHttps);
+      // Only allow if the hostname looks real (has a dot, no spaces)
+      if (parsed.hostname.includes('.') && !parsed.hostname.includes(' ')) {
+        return withHttps;
+      }
+    } catch {
+      // invalid
     }
     return null;
   }

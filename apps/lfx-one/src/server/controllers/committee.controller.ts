@@ -1,12 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import {
-  CommitteeCreateData,
-  CommitteeUpdateData,
-  CreateCommitteeMemberRequest,
-  CreateCommitteeJoinApplicationRequest,
-} from '@lfx-one/shared/interfaces';
+import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest, CreateCommitteeJoinApplicationRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
