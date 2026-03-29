@@ -102,9 +102,9 @@
                 <td class="py-3 px-2 text-gray-500">{{ getMailingListEmail(ml) }}</td>
                 <td class="py-3 px-2">
                   @if (ml.public) {
-                    <span class="text-[10.5px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">Public</span>
+                    <lfx-tag value="Public" severity="success" styleClass="!text-[10px]" />
                   } @else {
-                    <span class="text-[10.5px] font-medium px-1.5 py-0.5 rounded bg-red-50 text-red-600">Private</span>
+                    <lfx-tag value="Private" severity="danger" styleClass="!text-[10px]" />
                   }
                 </td>
                 <td class="py-3 px-4 text-gray-500">{{ ml.audience_access | titlecase }}</td>
