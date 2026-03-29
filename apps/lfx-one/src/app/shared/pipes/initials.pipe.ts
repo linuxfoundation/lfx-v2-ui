@@ -10,9 +10,12 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class InitialsPipe implements PipeTransform {
   public transform(name: string, maxChars: number = 2): string {
-    return name
+    const words = name
+      .trim()
       .split(/[\s-]+/)
-      .filter((w) => w.length > 0)
+      .filter((w) => w.length > 0);
+    if (words.length === 0) return '?';
+    return words
       .slice(0, maxChars)
       .map((w) => w.charAt(0).toUpperCase())
       .join('');

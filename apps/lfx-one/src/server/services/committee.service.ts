@@ -176,8 +176,19 @@ export class CommitteeService {
       );
 
       // Step 2: Strip read-only and computed fields, then merge with update data (PUT replaces the entire resource)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields
-      const { uid: _uid, created_at: _createdAt, updated_at: _updatedAt, total_members: _totalMembers, total_voting_repos: _totalVotingRepos, writer: _writer, project_name: _projectName, foundation_name: _foundationName, ...mutableFields } = currentCommittee;
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      const {
+        uid: _uid,
+        created_at: _createdAt,
+        updated_at: _updatedAt,
+        total_members: _totalMembers,
+        total_voting_repos: _totalVotingRepos,
+        writer: _writer,
+        project_name: _projectName,
+        foundation_name: _foundationName,
+        ...mutableFields
+      } = currentCommittee;
+      /* eslint-enable @typescript-eslint/no-unused-vars */
 
       const mergedData = {
         ...mutableFields,
@@ -327,8 +338,17 @@ export class CommitteeService {
     );
 
     // Step 2: Strip read-only fields, then merge with update data (PUT requires full resource)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields
-    const { uid: _uid, created_at: _createdAt, updated_at: _updatedAt, committee_uid: _committeeUid, committee_name: _committeeName, committee_category: _committeeCategory, ...mutableMemberFields } = currentMember;
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const {
+      uid: _uid,
+      created_at: _createdAt,
+      updated_at: _updatedAt,
+      committee_uid: _committeeUid,
+      committee_name: _committeeName,
+      committee_category: _committeeCategory,
+      ...mutableMemberFields
+    } = currentMember;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     const mergedData = { ...mutableMemberFields, ...data };
 
