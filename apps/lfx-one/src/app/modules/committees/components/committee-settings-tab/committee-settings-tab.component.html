@@ -36,7 +36,8 @@
 <!-- Mailing List Picker Dialog -->
 <p-dialog
   header="Associated Mailing List"
-  [(visible)]="mlPickerVisible"
+  [visible]="mlPickerVisible()"
+  (visibleChange)="mlPickerVisible.set($event)"
   [modal]="true"
   [closable]="true"
   [style]="{ width: '640px' }"

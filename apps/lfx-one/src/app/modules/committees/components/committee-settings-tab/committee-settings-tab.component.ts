@@ -47,6 +47,7 @@ export class CommitteeSettingsTabComponent {
   public mlSearchQuery = signal('');
   public selectedMailingListUid = signal<string | null>(null);
   public savingMl = signal(false);
+  public mlLoading = signal(false);
 
   // Form
   public form = new FormGroup({
@@ -64,7 +65,6 @@ export class CommitteeSettingsTabComponent {
 
   // Project mailing lists (loaded when committee has a project_uid)
   public projectMailingLists: Signal<GroupsIOMailingList[]> = this.initProjectMailingLists();
-  public mlLoading: Signal<boolean> = computed(() => this.projectMailingLists() === null);
 
   // Currently linked mailing list (matched by email)
   public linkedMailingList: Signal<GroupsIOMailingList | null> = computed(() => {
@@ -214,7 +214,13 @@ export class CommitteeSettingsTabComponent {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.project_uid),
-        switchMap((c) => this.mailingListService.getMailingListsByProject(c!.project_uid!).pipe(catchError(() => of([] as GroupsIOMailingList[]))))
+        switchMap((c) => {
+          this.mlLoading.set(true);
+          return this.mailingListService.getMailingListsByProject(c!.project_uid!).pipe(
+            catchError(() => of([] as GroupsIOMailingList[])),
+            finalize(() => this.mlLoading.set(false))
+          );
+        })
       ),
       { initialValue: [] as GroupsIOMailingList[] }
     );
