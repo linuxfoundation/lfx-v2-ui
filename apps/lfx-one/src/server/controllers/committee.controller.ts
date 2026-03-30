@@ -506,10 +506,9 @@ export class CommitteeController {
         return;
       }
 
-      // The query service supports filtering by tags using OR logic.
-      // The committee service indexes each sub-group with a `parent_uid:{uid}` tag,
-      // allowing child committee lookups via the query service.
-      const children = await this.committeeService.getCommittees(req, { ...req.query, tags: `parent_uid:${id}` });
+      // Use the query service's dedicated `parent` parameter for structured parent-child lookups.
+      // Format: `committee:{uid}` — matches the `^[a-zA-Z]+:[a-zA-Z0-9_-]+$` pattern in the query service.
+      const children = await this.committeeService.getCommittees(req, { ...req.query, parent: `committee:${id}` });
 
       logger.success(req, 'get_committee_children', startTime, {
         parent_id: id,
@@ -558,6 +557,7 @@ export class CommitteeController {
       logger.success(req, 'submit_committee_application', startTime, { committee_id: id });
       res.status(201).json(application);
     } catch (error) {
+      logger.error(req, 'submit_committee_application', startTime, error, { committee_id: id });
       next(error);
     }
   }

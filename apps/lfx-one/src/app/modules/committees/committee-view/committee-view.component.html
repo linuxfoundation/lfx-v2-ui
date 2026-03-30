@@ -43,45 +43,15 @@
           <!-- Join / Request to Join / Contact Admin / Leave actions -->
           <div class="ml-auto flex items-center gap-2">
             @if (isVisitor()) {
-              @if (committee()?.join_mode === 'open') {
-                <lfx-button
-                  label="Join Group"
-                  icon="fa-light fa-user-plus"
-                  severity="info"
-                  size="small"
-                  [loading]="joiningOrLeaving()"
-                  (onClick)="handleJoinRequest()"
-                  data-testid="committee-view-join-btn" />
-              } @else if (committee()?.join_mode === 'application') {
-                <lfx-button
-                  label="Request to Join"
-                  icon="fa-light fa-paper-plane"
-                  severity="secondary"
-                  [outlined]="true"
-                  size="small"
-                  [loading]="joiningOrLeaving()"
-                  (onClick)="handleJoinRequest()"
-                  data-testid="committee-view-request-to-join-btn" />
-              } @else if (committee()?.join_mode === 'invite_only') {
-                <lfx-button
-                  label="Request Access"
-                  icon="fa-light fa-paper-plane"
-                  severity="secondary"
-                  [outlined]="true"
-                  size="small"
-                  [loading]="joiningOrLeaving()"
-                  (onClick)="handleJoinRequest()"
-                  data-testid="committee-view-request-access-btn" />
-              } @else {
-                <lfx-button
-                  label="Contact Admin"
-                  icon="fa-light fa-envelope"
-                  severity="secondary"
-                  [outlined]="true"
-                  size="small"
-                  (onClick)="handleJoinRequest()"
-                  data-testid="committee-view-contact-admin-btn" />
-              }
+              <lfx-button
+                [label]="joinButtonLabel()"
+                [icon]="joinButtonIcon()"
+                [severity]="joinButtonSeverity()"
+                [outlined]="joinButtonOutlined()"
+                size="small"
+                [loading]="joiningOrLeaving()"
+                (onClick)="handleJoinRequest()"
+                [attr.data-testid]="joinButtonTestId()" />
             } @else if (isMemberOrAdmin() && !canEdit()) {
               <lfx-button
                 label="Leave Group"
