@@ -52,6 +52,16 @@ export class CommitteeService {
     );
   }
 
+  /**
+   * Fetches a committee by ID without updating shared service state.
+   * Use this instead of getCommittee() when you need to read a committee
+   * for contextual display (e.g. parent group) without side-effecting the
+   * current committee signal.
+   */
+  public fetchCommitteeById(id: string): Observable<Committee> {
+    return this.http.get<Committee>(`/api/committees/${id}`).pipe(take(1));
+  }
+
   public deleteCommittee(id: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${id}`).pipe(take(1));
   }

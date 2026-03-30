@@ -490,7 +490,9 @@ export class CommitteeViewComponent {
           if (!c?.parent_uid) {
             return of(null);
           }
-          return this.committeeService.getCommittee(c.parent_uid).pipe(catchError(() => of(null)));
+          // Use fetchCommitteeById (no shared-state side effect) to avoid
+          // overwriting committeeService.committee with the parent's data.
+          return this.committeeService.fetchCommitteeById(c.parent_uid).pipe(catchError(() => of(null)));
         })
       ),
       { initialValue: null }
