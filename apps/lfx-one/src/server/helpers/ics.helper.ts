@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Meeting, PaginatedResponse } from '@lfx-one/shared/interfaces';
+import { logger } from '../services/logger.service';
 
 /**
  * Formats an ISO date string to ICS DTSTART/DTEND format (e.g., 20230115T140000Z).
@@ -15,6 +16,22 @@ export function formatICSDate(isoDate: string): string {
  */
 export function escapeICSText(value: string): string {
   return (value ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+/**
+ * Folds a long ICS content line at 75 octets per RFC 5545 §3.1.
+ * Continuation lines begin with a single SPACE character.
+ */
+export function foldLine(line: string): string {
+  if (line.length <= 75) return line;
+  const chunks: string[] = [];
+  chunks.push(line.slice(0, 75));
+  let i = 75;
+  while (i < line.length) {
+    chunks.push(' ' + line.slice(i, i + 74));
+    i += 74;
+  }
+  return chunks.join('\r\n');
 }
 
 /**
@@ -34,7 +51,7 @@ export function buildVEvent(uid: string, title: string, startIso: string, durati
     `DTSTAMP:${dtstamp}`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
-    `SUMMARY:${escapeICSText(title)}`,
+    foldLine(`SUMMARY:${escapeICSText(title)}`),
     'END:VEVENT',
   ].join('\r\n');
 }
@@ -70,18 +87,27 @@ export function buildVCalendar(events: string[]): string {
   );
 }
 
+const MAX_PAGES = 50;
+
 /**
  * Fetches all pages of meetings by following page_token pagination.
  * Accepts a callback so the caller controls which service method and query params are used.
+ * Stops after MAX_PAGES pages to prevent unbounded loops from runaway pagination tokens.
  */
 export async function fetchAllMeetingPages(fetchPage: (pageToken?: string) => Promise<PaginatedResponse<Meeting>>): Promise<Meeting[]> {
   const results: Meeting[] = [];
   let pageToken: string | undefined = undefined;
+  let pageCount = 0;
 
   do {
     const result = await fetchPage(pageToken);
     results.push(...result.data);
     pageToken = result.page_token;
+    pageCount++;
+    if (pageCount >= MAX_PAGES) {
+      logger.warning(undefined, 'fetch_all_meeting_pages', 'Max page limit reached', { pageCount });
+      break;
+    }
   } while (pageToken);
 
   return results;

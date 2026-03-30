@@ -132,14 +132,18 @@
                     <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1">
                       <i [class]="repoPlatformIcon() + ' w-3'" aria-hidden="true"></i> {{ repoPlatformLabel() }}
                     </p>
-                    <a
-                      [href]="website"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate block"
-                      [title]="website"
-                      >{{ website }}</a
-                    >
+                    @if (website.startsWith('http://') || website.startsWith('https://')) {
+                      <a
+                        [href]="website"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline no-underline truncate block"
+                        [title]="website"
+                        >{{ website }}</a
+                      >
+                    } @else {
+                      <span class="text-xs text-gray-900 truncate block" [title]="website">{{ website }}</span>
+                    }
                   </div>
                 }
                 @if (!committee()?.mailing_list && !committee()?.chat_channel && !committee()?.website) {

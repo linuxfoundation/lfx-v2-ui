@@ -29,7 +29,8 @@ async function globalSetup(config: FullConfig) {
   const page = await context.newPage();
 
   try {
-    // Use baseURL from config or default to localhost
+    // Port 4210 is used instead of the Angular default 4200 to avoid conflicts
+    // with the lfx-v2-ui main worktree running simultaneously during development.
     const url = baseURL || 'http://localhost:4210';
     console.log(`🔐 Attempting to authenticate at ${url}`);
 

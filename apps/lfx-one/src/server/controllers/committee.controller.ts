@@ -564,6 +564,7 @@ export class CommitteeController {
 
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="committee-${id}.ics"`);
+      res.setHeader('Cache-Control', 'public, max-age=900'); // 15 minutes — reduces load from calendar clients polling every 15-60 minutes
       res.send(ics);
     } catch (error) {
       logger.error(req, 'get_committee_calendar', startTime, error, { committee_id: id });

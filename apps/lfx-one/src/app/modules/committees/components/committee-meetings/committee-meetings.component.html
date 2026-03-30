@@ -11,34 +11,33 @@
 
     <!-- List | Calendar | Subscribe buttons -->
     <div class="flex items-center gap-2 shrink-0" data-testid="committee-meetings-view-toggle" role="group" aria-label="Meetings view">
-      <button
-        type="button"
-        (click)="viewMode.set('list')"
-        [attr.aria-pressed]="viewMode() === 'list'"
-        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
-        [class]="viewMode() === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
-        data-testid="committee-meetings-list-btn">
-        <i class="fa-light fa-list-ul" aria-hidden="true"></i>
-        List
-      </button>
-      <button
-        type="button"
-        (click)="viewMode.set('calendar')"
-        [attr.aria-pressed]="viewMode() === 'calendar'"
-        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
-        [class]="viewMode() === 'calendar' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
-        data-testid="committee-meetings-calendar-btn">
-        <i class="fa-light fa-calendar-days" aria-hidden="true"></i>
-        Calendar
-      </button>
-      <button
-        type="button"
-        (click)="onSubscribe()"
-        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border bg-white text-gray-500 border-gray-200 hover:bg-gray-50 transition-colors"
-        data-testid="committee-meetings-subscribe-btn">
-        <i class="fa-light fa-calendar-arrow-down" aria-hidden="true"></i>
-        Subscribe
-      </button>
+      <lfx-button
+        label="List"
+        icon="fa-light fa-list-ul"
+        size="small"
+        [severity]="viewMode() === 'list' ? 'info' : 'secondary'"
+        [outlined]="viewMode() !== 'list'"
+        [ariaLabel]="'List view' + (viewMode() === 'list' ? ' (active)' : '')"
+        (onClick)="viewMode.set('list')"
+        data-testid="committee-meetings-list-btn"></lfx-button>
+      <lfx-button
+        label="Calendar"
+        icon="fa-light fa-calendar-days"
+        size="small"
+        [severity]="viewMode() === 'calendar' ? 'info' : 'secondary'"
+        [outlined]="viewMode() !== 'calendar'"
+        [ariaLabel]="'Calendar view' + (viewMode() === 'calendar' ? ' (active)' : '')"
+        (onClick)="viewMode.set('calendar')"
+        data-testid="committee-meetings-calendar-btn"></lfx-button>
+      <lfx-button
+        label="Subscribe"
+        icon="fa-light fa-calendar-arrow-down"
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        ariaLabel="Subscribe to calendar"
+        (onClick)="onSubscribe()"
+        data-testid="committee-meetings-subscribe-btn"></lfx-button>
     </div>
   </div>
 
