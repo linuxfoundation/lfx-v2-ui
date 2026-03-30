@@ -62,25 +62,27 @@ export class CommitteeService {
       })
     );
 
-    // Batch access check: the query service returns ALL committees but not all are accessible
-    // to the current user. Use viewer access to filter out committees the user cannot see,
-    // then addAccessToResources adds the writer field for edit permissions.
-    const accessMap = await this.accessCheckService.checkAccess(
-      req,
-      committees.map((c) => ({ resource: 'committee' as const, id: c.uid, access: 'viewer' as const }))
-    );
+    // Add writer access field so the filter below can use it
+    committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
 
-    const accessibleCommittees = committees.filter((c) => accessMap.get(c.uid));
+    // Visibility filter: only show committees the current user can actually open.
+    // The query service may return committees the committee service will reject (403/404),
+    // so we filter to: public committees, committees the user has write access to,
+    // or committees the user is an explicit member of.
+    const myCommittees = await this.getMyCommittees(req);
+    const myUids = new Set(myCommittees.map((c) => c.uid));
+    const totalBefore = committees.length;
 
-    if (accessibleCommittees.length < committees.length) {
-      logger.debug(req, 'get_committees', 'Filtered inaccessible committees', {
-        filtered_count: committees.length - accessibleCommittees.length,
-        total: committees.length,
+    committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
+
+    if (committees.length < totalBefore) {
+      logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
+        filtered_count: totalBefore - committees.length,
+        total: totalBefore,
       });
     }
 
-    // Add writer access field to accessible committees
-    return await this.accessCheckService.addAccessToResources(req, accessibleCommittees, 'committee');
+    return committees;
   }
 
   /**
