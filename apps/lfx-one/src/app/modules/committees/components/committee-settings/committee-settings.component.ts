@@ -4,6 +4,7 @@
 import { Component, input, output } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -14,7 +15,7 @@ import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-committee-settings',
-  imports: [ReactiveFormsModule, TitleCasePipe, MessageComponent, SelectComponent, TagComponent, ToggleComponent, InputTextComponent],
+  imports: [ReactiveFormsModule, TitleCasePipe, ButtonComponent, MessageComponent, SelectComponent, TagComponent, ToggleComponent, InputTextComponent],
   templateUrl: './committee-settings.component.html',
 })
 export class CommitteeSettingsComponent {

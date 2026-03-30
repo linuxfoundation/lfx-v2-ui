@@ -506,6 +506,9 @@ export class CommitteeController {
         return;
       }
 
+      // The query service indexes committee resources by a `parent_uid:<id>` tag as part of
+      // the upstream API contract (lfx-v2-committee-service). This tag is set on child committees
+      // when they are created with a parent_uid, allowing efficient parent-scoped lookups.
       const children = await this.committeeService.getCommittees(req, { ...req.query, tags: `parent_uid:${id}` });
 
       logger.success(req, 'get_committee_children', startTime, {
@@ -515,8 +518,10 @@ export class CommitteeController {
 
       res.json(children);
     } catch (error) {
+      // Gracefully return an empty list rather than propagating the error — sub-group
+      // lookup is a non-critical enrichment; the parent committee page should still load.
       logger.error(req, 'get_committee_children', startTime, error, { parent_id: id });
-      next(error);
+      res.json([]);
     }
   }
 

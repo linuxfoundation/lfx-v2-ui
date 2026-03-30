@@ -395,6 +395,57 @@
   }
 </div>
 
+<!-- Join Application Dialog -->
+<p-dialog
+  [header]="pendingApplicationCommittee()?.mode === 'invite_only' ? 'Request Access' : 'Request to Join'"
+  [visible]="showApplicationDialog()"
+  (visibleChange)="showApplicationDialog.set($event)"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '520px' }"
+  [draggable]="false"
+  data-testid="committee-view-application-dialog">
+  <div class="flex flex-col gap-4">
+    <p class="text-sm text-gray-500">
+      @if (pendingApplicationCommittee()?.mode === 'invite_only') {
+        Provide a brief message to help admins understand why you need access to
+        <strong>{{ pendingApplicationCommittee()?.name }}</strong
+        >.
+      } @else {
+        Optionally include a message to introduce yourself or explain why you'd like to join
+        <strong>{{ pendingApplicationCommittee()?.name }}</strong
+        >.
+      }
+    </p>
+    <lfx-textarea
+      [form]="applicationForm"
+      control="message"
+      [rows]="5"
+      [maxlength]="2000"
+      placeholder="Enter your message (optional)…"
+      [autoResize]="true"
+      styleClass="!w-full"
+      dataTest="committee-view-application-message-textarea"></lfx-textarea>
+  </div>
+  <ng-template #footer>
+    <div class="flex justify-end gap-2">
+      <lfx-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="cancelApplication()"
+        [disabled]="joiningOrLeaving()"></lfx-button>
+      <lfx-button
+        [label]="pendingApplicationCommittee()?.mode === 'invite_only' ? 'Submit Request' : 'Submit Application'"
+        severity="info"
+        size="small"
+        (onClick)="submitApplicationWithMessage()"
+        [loading]="joiningOrLeaving()"></lfx-button>
+    </div>
+  </ng-template>
+</p-dialog>
+
 <!-- Description View Dialog -->
 <p-dialog
   header="Description"

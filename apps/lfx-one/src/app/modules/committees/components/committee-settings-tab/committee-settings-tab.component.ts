@@ -4,9 +4,11 @@
 import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { InputTextComponent } from '@components/input-text/input-text.component';
+import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, GroupsIOMailingList, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
@@ -22,7 +24,17 @@ import { CommitteeSettingsComponent } from '../committee-settings/committee-sett
 
 @Component({
   selector: 'lfx-committee-settings-tab',
-  imports: [CommitteeSettingsComponent, ButtonComponent, TagComponent, TitleCasePipe, ConfirmDialogModule, DialogModule],
+  imports: [
+    CommitteeSettingsComponent,
+    ButtonComponent,
+    InputTextComponent,
+    RadioButtonComponent,
+    ReactiveFormsModule,
+    TagComponent,
+    TitleCasePipe,
+    ConfirmDialogModule,
+    DialogModule,
+  ],
   templateUrl: './committee-settings-tab.component.html',
   styleUrl: './committee-settings-tab.component.scss',
 })
@@ -49,6 +61,11 @@ export class CommitteeSettingsTabComponent {
   public selectedMailingListUid = signal<string | null>(null);
   public savingMl = signal(false);
   public mlLoading = signal(false);
+
+  // Search form for the mailing list picker — used by lfx-input-text
+  public mlSearchForm = new FormGroup({
+    query: new FormControl(''),
+  });
 
   // Form
   public form = new FormGroup({
@@ -101,12 +118,18 @@ export class CommitteeSettingsTabComponent {
         });
       }
     });
+
+    // Keep mlSearchQuery signal in sync with the form control value
+    this.mlSearchForm.get('query')!.valueChanges.subscribe((val) => {
+      this.mlSearchQuery.set(val ?? '');
+    });
   }
 
   public openMailingListPicker(): void {
     const linked = this.linkedMailingList();
     this.selectedMailingListUid.set(linked?.uid ?? null);
     this.mlSearchQuery.set('');
+    this.mlSearchForm.reset({ query: '' });
     this.mlPickerVisible.set(true);
   }
 
