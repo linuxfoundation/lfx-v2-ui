@@ -148,6 +148,34 @@ export class CommitteeViewComponent {
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
 
+  // -- Join button computed signals --
+  public joinButtonLabel: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'Join Group';
+    if (mode === 'application') return 'Request to Join';
+    if (mode === 'invite_only') return 'Request Access';
+    return 'Contact Admin';
+  });
+
+  public joinButtonIcon: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'fa-light fa-user-plus';
+    if (mode === 'application' || mode === 'invite_only') return 'fa-light fa-paper-plane';
+    return 'fa-light fa-envelope';
+  });
+
+  public joinButtonSeverity: Signal<'info' | 'secondary'> = computed(() => (this.committee()?.join_mode === 'open' ? 'info' : 'secondary'));
+
+  public joinButtonOutlined: Signal<boolean> = computed(() => this.committee()?.join_mode !== 'open');
+
+  public joinButtonTestId: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'committee-view-join-btn';
+    if (mode === 'application') return 'committee-view-request-to-join-btn';
+    if (mode === 'invite_only') return 'committee-view-request-access-btn';
+    return 'committee-view-contact-admin-btn';
+  });
+
   // -- Sub-groups --
   public subGroupsLoading = signal(true);
   public subGroups: Signal<Committee[]> = this.initSubGroups();
