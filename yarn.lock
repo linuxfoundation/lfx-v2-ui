@@ -11583,7 +11583,6 @@ __metadata:
     "@typescript-eslint/types": "npm:^8.39.1"
     "@typescript-eslint/utils": "npm:^8.39.1"
     chart.js: "npm:^4.5.1"
-    express-rate-limit: "npm:^8.3.2"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^16.2.7"
     prettier: "npm:^3.7.4"
