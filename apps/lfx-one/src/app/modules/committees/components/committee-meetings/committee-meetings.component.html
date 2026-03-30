@@ -10,10 +10,11 @@
     </div>
 
     <!-- List | Calendar | Subscribe buttons -->
-    <div class="flex items-center gap-2 shrink-0" data-testid="committee-meetings-view-toggle">
+    <div class="flex items-center gap-2 shrink-0" data-testid="committee-meetings-view-toggle" role="group" aria-label="Meetings view">
       <button
         type="button"
         (click)="viewMode.set('list')"
+        [attr.aria-pressed]="viewMode() === 'list'"
         class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
         [class]="viewMode() === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
         data-testid="committee-meetings-list-btn">
@@ -23,6 +24,7 @@
       <button
         type="button"
         (click)="viewMode.set('calendar')"
+        [attr.aria-pressed]="viewMode() === 'calendar'"
         class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
         [class]="viewMode() === 'calendar' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
         data-testid="committee-meetings-calendar-btn">
@@ -40,64 +42,66 @@
     </div>
   </div>
 
-  <!-- Sticky Filter Bar -->
-  <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg shadow-md p-4">
-    <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-      @if (viewMode() === 'list') {
-        <!-- Search Input -->
-        <div class="flex-1">
-          <lfx-input-text
-            [form]="searchForm"
-            control="search"
-            placeholder="Search meetings..."
-            icon="fa-light fa-search"
-            styleClass="w-full"
-            size="small"
-            dataTest="committee-meetings-search"></lfx-input-text>
-        </div>
+  <!-- Sticky Filter Bar — only rendered when it has visible content -->
+  @if (viewMode() === 'list' || canEdit()) {
+    <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg shadow-md p-4">
+      <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+        @if (viewMode() === 'list') {
+          <!-- Search Input -->
+          <div class="flex-1">
+            <lfx-input-text
+              [form]="searchForm"
+              control="search"
+              placeholder="Search meetings..."
+              icon="fa-light fa-search"
+              styleClass="w-full"
+              size="small"
+              dataTest="committee-meetings-search"></lfx-input-text>
+          </div>
 
-        <!-- Meeting Type Filter -->
-        <div class="w-full sm:w-64">
-          <lfx-select
-            [form]="searchForm"
-            control="meetingType"
-            size="small"
-            [options]="meetingTypeOptions"
-            placeholder="All Types"
-            [showClear]="true"
-            styleClass="w-full"
-            (onChange)="onMeetingTypeChange($event.value)"
-            data-testid="committee-meetings-type-filter"></lfx-select>
-        </div>
+          <!-- Meeting Type Filter -->
+          <div class="w-full sm:w-64">
+            <lfx-select
+              [form]="searchForm"
+              control="meetingType"
+              size="small"
+              [options]="meetingTypeOptions"
+              placeholder="All Types"
+              [showClear]="true"
+              styleClass="w-full"
+              (onChange)="onMeetingTypeChange($event.value)"
+              data-testid="committee-meetings-type-filter"></lfx-select>
+          </div>
 
-        <!-- Time Filter -->
-        <div class="w-full sm:w-40">
-          <lfx-select
-            [form]="searchForm"
-            control="timeFilter"
-            size="small"
-            [options]="timeFilterOptions"
-            placeholder="Upcoming"
-            styleClass="w-full"
-            (onChange)="onTimeFilterChange($event.value)"
-            data-testid="committee-meetings-time-filter"></lfx-select>
-        </div>
-      }
+          <!-- Time Filter -->
+          <div class="w-full sm:w-40">
+            <lfx-select
+              [form]="searchForm"
+              control="timeFilter"
+              size="small"
+              [options]="timeFilterOptions"
+              placeholder="Upcoming"
+              styleClass="w-full"
+              (onChange)="onTimeFilterChange($event.value)"
+              data-testid="committee-meetings-time-filter"></lfx-select>
+          </div>
+        }
 
-      <!-- Schedule Meeting button — always visible, auto-pushed right in calendar mode -->
-      @if (canEdit()) {
-        <lfx-button
-          label="Schedule Meeting"
-          icon="fa-light fa-plus"
-          severity="info"
-          size="small"
-          [class]="viewMode() === 'calendar' ? 'md:ml-auto' : ''"
-          [routerLink]="['/meetings', 'create']"
-          [queryParams]="{ committee_uid: committee().uid }"
-          data-testid="committee-meetings-create-btn"></lfx-button>
-      }
+        <!-- Schedule Meeting button — always visible, auto-pushed right in calendar mode -->
+        @if (canEdit()) {
+          <lfx-button
+            label="Schedule Meeting"
+            icon="fa-light fa-plus"
+            severity="info"
+            size="small"
+            [class]="viewMode() === 'calendar' ? 'md:ml-auto' : ''"
+            [routerLink]="['/meetings', 'create']"
+            [queryParams]="{ committee_uid: committee().uid }"
+            data-testid="committee-meetings-create-btn"></lfx-button>
+        }
+      </div>
     </div>
-  </div>
+  }
 
   <!-- Calendar View -->
   @if (viewMode() === 'calendar') {
@@ -106,7 +110,7 @@
       <div class="flex items-center gap-4 flex-wrap px-1 text-xs text-gray-500">
         <span class="flex items-center gap-1.5">
           <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
-          Meeting
+          Meeting (default)
         </span>
         <span class="flex items-center gap-1.5">
           <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>

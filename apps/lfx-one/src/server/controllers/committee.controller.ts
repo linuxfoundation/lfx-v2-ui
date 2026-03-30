@@ -5,7 +5,7 @@ import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest 
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
-import { buildVCalendar, meetingsToVEvents } from '../helpers/ics.helper';
+import { buildVCalendar, fetchAllMeetingPages, meetingsToVEvents } from '../helpers/ics.helper';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
@@ -537,15 +537,23 @@ export class CommitteeController {
     const { id } = req.params;
     const startTime = logger.startOperation(req, 'get_committee_calendar', { committee_id: id });
 
+    // Validate UID before using in query tags and Content-Disposition header
+    if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) {
+      next(ServiceValidationError.forField('id', 'Invalid committee ID', { operation: 'get_committee_calendar' }));
+      return;
+    }
+
     try {
       const query = { tags: `committee_uid:${id}` };
 
-      const [upcomingResult, pastResult] = await Promise.all([
-        this.meetingService.getMeetings(req, query, 'v1_meeting', false),
-        this.meetingService.getMeetings(req, query, 'v1_past_meeting', false),
+      // Paginate both upcoming and past meetings — first page only would silently
+      // drop meetings once a committee exceeds the default page size.
+      const [upcoming, past] = await Promise.all([
+        fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_meeting', false)),
+        fetchAllMeetingPages((token) => this.meetingService.getMeetings(req, token ? { ...query, page_token: token } : query, 'v1_past_meeting', false)),
       ]);
 
-      const allMeetings = [...upcomingResult.data, ...pastResult.data];
+      const allMeetings = [...upcoming, ...past];
       const events = meetingsToVEvents(allMeetings);
       const ics = buildVCalendar(events);
 

@@ -20,7 +20,7 @@ import { SurveyService } from '@services/survey.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageService } from 'primeng/api';
 import { EventClickArg, EventInput } from '@fullcalendar/core';
-import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, take, tap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, tap } from 'rxjs';
 
 type TimeFilter = 'upcoming' | 'past';
 type ViewMode = 'list' | 'calendar';
@@ -196,19 +196,17 @@ export class CommitteeMeetingsComponent {
   private initCalendarEvents(): Signal<EventInput[]> {
     // Lazy-load votes, surveys, and past meetings the first time calendar view is activated
     const externalData = toSignal(
-      toObservable(this.viewMode).pipe(
-        filter((mode) => mode === 'calendar'),
-        take(1),
+      toObservable(computed(() => ({ mode: this.viewMode(), uid: this.committee()?.uid }))).pipe(
+        filter(({ mode, uid }) => mode === 'calendar' && !!uid),
+        distinctUntilChanged((a, b) => a.uid === b.uid),
         tap(() => this.calendarLoading.set(true)),
-        switchMap(() => {
-          const committeeUid = this.committee()?.uid;
-          if (!committeeUid) return of({ votes: [] as Vote[], surveys: [] as Survey[], pastMeetings: [] as PastMeeting[] });
-          return forkJoin({
-            votes: this.voteService.getVotesByCommittee(committeeUid).pipe(catchError(() => of([] as Vote[]))),
-            surveys: this.surveyService.getSurveysByCommittee(committeeUid).pipe(catchError(() => of([] as Survey[]))),
-            pastMeetings: this.meetingService.getPastMeetingsByCommittee(committeeUid).pipe(catchError(() => of([] as PastMeeting[]))),
-          });
-        }),
+        switchMap(({ uid: committeeUid }) =>
+          forkJoin({
+            votes: this.voteService.getVotesByCommittee(committeeUid!).pipe(catchError(() => of([] as Vote[]))),
+            surveys: this.surveyService.getSurveysByCommittee(committeeUid!).pipe(catchError(() => of([] as Survey[]))),
+            pastMeetings: this.meetingService.getPastMeetingsByCommittee(committeeUid!).pipe(catchError(() => of([] as PastMeeting[]))),
+          })
+        ),
         tap(() => this.calendarLoading.set(false))
       ),
       { initialValue: { votes: [] as Vote[], surveys: [] as Survey[], pastMeetings: [] as PastMeeting[] } }
@@ -239,7 +237,7 @@ export class CommitteeMeetingsComponent {
           id: `${meeting.id}-${occ.occurrence_id}`,
           title: occ.title || meeting.title,
           start: occ.start_time,
-          end: this.addMinutes(occ.start_time, meeting.duration),
+          end: this.addMinutes(occ.start_time, occ.duration ?? meeting.duration),
           backgroundColor: c.bg,
           borderColor: c.border,
           textColor: '#ffffff',
@@ -291,9 +289,9 @@ export class CommitteeMeetingsComponent {
     };
   }
 
-  private addMinutes(isoDate: string, minutes: number): string {
+  private addMinutes(isoDate: string, minutes: number | null | undefined): string {
     const d = new Date(isoDate);
-    d.setMinutes(d.getMinutes() + (minutes || 60));
+    d.setMinutes(d.getMinutes() + (minutes ?? 60));
     return d.toISOString();
   }
 }
