@@ -231,8 +231,9 @@ export class CommitteeService {
       ...(is_audit_enabled !== undefined && { is_audit_enabled }),
       ...(show_meeting_attendees !== undefined && { show_meeting_attendees }),
       ...(member_visibility !== undefined && { member_visibility }),
-      // Preserve mailing_list from the request payload — upstream PUT does not echo it back
-      ...(committeeData.mailing_list !== undefined && { mailing_list: committeeData.mailing_list }),
+      // Preserve mailing_list: use the upstream response value if present, otherwise fall back to
+      // the request payload value (upstream PUT does not always echo mailing_list back).
+      ...(committeeData.mailing_list !== undefined && { mailing_list: updatedCommittee.mailing_list ?? committeeData.mailing_list }),
     };
   }
 
