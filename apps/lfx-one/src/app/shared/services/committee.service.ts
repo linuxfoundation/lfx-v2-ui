@@ -5,8 +5,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
 import {
   Committee,
+  CommitteeDocument,
+  CommitteeDocumentType,
   CommitteeJoinApplication,
   CommitteeMember,
+  CreateCommitteeDocumentRequest,
   CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
@@ -105,6 +108,21 @@ export class CommitteeService {
   public submitApplication(committeeId: string, message?: string): Observable<CommitteeJoinApplication> {
     const body: CreateCommitteeJoinApplicationRequest = message ? { message } : {};
     return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
+  }
+
+  // ── Committee Documents ─────────────────────────────────────────────────
+
+  public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
+    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(catchError(() => of([])));
+  }
+
+  public createCommitteeDocument(committeeId: string, data: CreateCommitteeDocumentRequest): Observable<CommitteeDocument> {
+    return this.http.post<CommitteeDocument>(`/api/committees/${committeeId}/documents`, data).pipe(take(1));
+  }
+
+  public deleteCommitteeDocument(committeeId: string, documentId: string, documentType: CommitteeDocumentType): Observable<void> {
+    const params = new HttpParams().set('type', documentType);
+    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`, { params }).pipe(take(1));
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────
