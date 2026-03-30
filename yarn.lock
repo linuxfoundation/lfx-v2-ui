@@ -9527,6 +9527,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"express-rate-limit@npm:^8.3.2":
+  version: 8.3.2
+  resolution: "express-rate-limit@npm:8.3.2"
+  dependencies:
+    ip-address: "npm:10.1.0"
+  peerDependencies:
+    express: ">= 4.11"
+  checksum: 10c0/5b64d0691071086cdb8cfc6bcd5e761f5687cf4fabdebfe2a043ea5b4d31443637181e7be71e7ffabce76aee816daee62c1ca83250045847957da408a129f650
+  languageName: node
+  linkType: hard
+
 "express@npm:^4.18.2, express@npm:^4.21.2":
   version: 4.21.2
   resolution: "express@npm:4.21.2"
@@ -11583,6 +11594,7 @@ __metadata:
     "@typescript-eslint/types": "npm:^8.39.1"
     "@typescript-eslint/utils": "npm:^8.39.1"
     chart.js: "npm:^4.5.1"
+    express-rate-limit: "npm:^8.3.2"
     husky: "npm:^9.1.7"
     lint-staged: "npm:^16.2.7"
     prettier: "npm:^3.7.4"
