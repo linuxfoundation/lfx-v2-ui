@@ -15,7 +15,7 @@ export function formatICSDate(isoDate: string): string {
  * Escapes ICS text values per RFC 5545 (backslash, semicolons, commas, newlines).
  */
 export function escapeICSText(value: string): string {
-  return (value ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  return (value ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
 }
 
 /**
