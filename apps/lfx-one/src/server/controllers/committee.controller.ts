@@ -557,7 +557,15 @@ export class CommitteeController {
         }
       }
 
-      const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//LFX//Committee Calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', ...events, 'END:VCALENDAR'].join('\r\n');
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//LFX//Committee Calendar//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        ...events,
+        'END:VCALENDAR',
+      ].join('\r\n');
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,
@@ -593,6 +601,14 @@ export class CommitteeController {
     const dtend = this.formatICSDate(endDate.toISOString());
     const dtstamp = this.formatICSDate(new Date().toISOString());
 
-    return ['BEGIN:VEVENT', `UID:${uid}@lfx.linuxfoundation.org`, `DTSTAMP:${dtstamp}`, `DTSTART:${dtstart}`, `DTEND:${dtend}`, `SUMMARY:${this.escapeICSText(title)}`, 'END:VEVENT'].join('\r\n');
+    return [
+      'BEGIN:VEVENT',
+      `UID:${uid}@lfx.linuxfoundation.org`,
+      `DTSTAMP:${dtstamp}`,
+      `DTSTART:${dtstart}`,
+      `DTEND:${dtend}`,
+      `SUMMARY:${this.escapeICSText(title)}`,
+      'END:VEVENT',
+    ].join('\r\n');
   }
 }
