@@ -506,6 +506,9 @@ export class CommitteeController {
         return;
       }
 
+      // The query service supports filtering by tags using OR logic.
+      // The committee service indexes each sub-group with a `parent_uid:{uid}` tag,
+      // allowing child committee lookups via the query service.
       const children = await this.committeeService.getCommittees(req, { ...req.query, tags: `parent_uid:${id}` });
 
       logger.success(req, 'get_committee_children', startTime, {
