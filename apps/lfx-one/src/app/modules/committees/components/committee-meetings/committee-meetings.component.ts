@@ -5,6 +5,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSign
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -17,6 +18,7 @@ import { MeetingService } from '@services/meeting.service';
 import { VoteService } from '@services/vote.service';
 import { SurveyService } from '@services/survey.service';
 import { SkeletonModule } from 'primeng/skeleton';
+import { MessageService } from 'primeng/api';
 import { EventClickArg, EventInput } from '@fullcalendar/core';
 import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, take, tap } from 'rxjs';
 
@@ -43,6 +45,7 @@ const SURVEY_COLOR = { bg: '#a855f7', border: '#9333ea' };
   imports: [
     ReactiveFormsModule,
     RouterLink,
+    ClipboardModule,
     ButtonComponent,
     CardComponent,
     InputTextComponent,
@@ -60,6 +63,8 @@ export class CommitteeMeetingsComponent {
   private readonly voteService = inject(VoteService);
   private readonly surveyService = inject(SurveyService);
   private readonly router = inject(Router);
+  private readonly clipboard = inject(Clipboard);
+  private readonly messageService = inject(MessageService);
 
   // Inputs
   public committee = input.required<Committee>();
@@ -129,6 +134,19 @@ export class CommitteeMeetingsComponent {
   public onMeetingTypeChange(value: string | null): void {
     this.meetingTypeFilter.set(value);
     this.searchForm.get('meetingType')?.setValue(value, { emitEvent: false });
+  }
+
+  /** Copies the committee's calendar subscribe URL to clipboard and shows a confirmation toast. */
+  public onSubscribe(): void {
+    const uid = this.committee().uid;
+    const url = `${window.location.origin}/api/committees/${uid}/calendar.ics`;
+    this.clipboard.copy(url);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Subscribe URL copied!',
+      detail: 'Add this to Google Calendar, Outlook, or Apple Calendar.',
+      life: 5000,
+    });
   }
 
   /** Handles FullCalendar event click — navigates to meeting detail for meeting events. */

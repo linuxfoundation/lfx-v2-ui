@@ -2,11 +2,49 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="flex flex-col gap-4 pt-2" data-testid="committee-meetings-tab">
-  <!-- Sticky Top Bar -->
+  <!-- Page Header: title + subtitle + view toggle -->
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">Meetings</h2>
+      <p class="text-sm text-gray-500 mt-0.5">Coordinate decisions, align stakeholders, and maintain transparent governance in your working group.</p>
+    </div>
+
+    <!-- List | Calendar | Subscribe buttons -->
+    <div class="flex items-center gap-2 shrink-0" data-testid="committee-meetings-view-toggle">
+      <button
+        type="button"
+        (click)="viewMode.set('list')"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+        [class]="viewMode() === 'list' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
+        data-testid="committee-meetings-list-btn">
+        <i class="fa-light fa-list-ul" aria-hidden="true"></i>
+        List
+      </button>
+      <button
+        type="button"
+        (click)="viewMode.set('calendar')"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors"
+        [class]="viewMode() === 'calendar' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'"
+        data-testid="committee-meetings-calendar-btn">
+        <i class="fa-light fa-calendar-days" aria-hidden="true"></i>
+        Calendar
+      </button>
+      <button
+        type="button"
+        (click)="onSubscribe()"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border bg-white text-gray-500 border-gray-200 hover:bg-gray-50 transition-colors"
+        data-testid="committee-meetings-subscribe-btn">
+        <i class="fa-light fa-calendar-arrow-down" aria-hidden="true"></i>
+        Subscribe
+      </button>
+    </div>
+  </div>
+
+  <!-- Sticky Filter Bar -->
   <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg shadow-md p-4">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       @if (viewMode() === 'list') {
-        <!-- Search Input — list mode only -->
+        <!-- Search Input -->
         <div class="flex-1">
           <lfx-input-text
             [form]="searchForm"
@@ -18,7 +56,7 @@
             dataTest="committee-meetings-search"></lfx-input-text>
         </div>
 
-        <!-- Meeting Type Filter — list mode only -->
+        <!-- Meeting Type Filter -->
         <div class="w-full sm:w-64">
           <lfx-select
             [form]="searchForm"
@@ -32,7 +70,7 @@
             data-testid="committee-meetings-type-filter"></lfx-select>
         </div>
 
-        <!-- Time Filter — list mode only -->
+        <!-- Time Filter -->
         <div class="w-full sm:w-40">
           <lfx-select
             [form]="searchForm"
@@ -46,42 +84,18 @@
         </div>
       }
 
-      <!-- Right-side actions: view toggle + create -->
-      <div class="flex items-center gap-2 md:ml-auto shrink-0">
-        <!-- List / Calendar toggle -->
-        <div class="flex rounded-md border border-gray-200 overflow-hidden" data-testid="committee-meetings-view-toggle">
-          <button
-            type="button"
-            (click)="viewMode.set('list')"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors"
-            [class]="viewMode() === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'"
-            data-testid="committee-meetings-list-btn">
-            <i class="fa-light fa-list-ul" aria-hidden="true"></i>
-            <span>List</span>
-          </button>
-          <button
-            type="button"
-            (click)="viewMode.set('calendar')"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200"
-            [class]="viewMode() === 'calendar' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'"
-            data-testid="committee-meetings-calendar-btn">
-            <i class="fa-light fa-calendar-days" aria-hidden="true"></i>
-            <span>Calendar</span>
-          </button>
-        </div>
-
-        <!-- Create Meeting button -->
-        @if (canEdit()) {
-          <lfx-button
-            label="Create Meeting"
-            icon="fa-light fa-calendar"
-            severity="info"
-            size="small"
-            [routerLink]="['/meetings', 'create']"
-            [queryParams]="{ committee_uid: committee().uid }"
-            data-testid="committee-meetings-create-btn"></lfx-button>
-        }
-      </div>
+      <!-- Schedule Meeting button — always visible, auto-pushed right in calendar mode -->
+      @if (canEdit()) {
+        <lfx-button
+          label="Schedule Meeting"
+          icon="fa-light fa-plus"
+          severity="info"
+          size="small"
+          [class]="viewMode() === 'calendar' ? 'md:ml-auto' : ''"
+          [routerLink]="['/meetings', 'create']"
+          [queryParams]="{ committee_uid: committee().uid }"
+          data-testid="committee-meetings-create-btn"></lfx-button>
+      }
     </div>
   </div>
 
