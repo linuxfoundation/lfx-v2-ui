@@ -201,6 +201,7 @@ export class CommitteeService {
       );
 
       // Step 2: Strip read-only and computed fields, then merge with update data (PUT replaces the entire resource)
+      /* eslint-disable @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields */
       const {
         uid: _uid,
         created_at: _createdAt,
@@ -212,6 +213,7 @@ export class CommitteeService {
         foundation_name: _foundationName,
         ...mutableFields
       } = currentCommittee;
+      /* eslint-enable @typescript-eslint/no-unused-vars */
 
       const mergedData = {
         ...mutableFields,
@@ -361,6 +363,7 @@ export class CommitteeService {
     );
 
     // Step 2: Strip read-only fields, then merge with update data (PUT requires full resource)
+    /* eslint-disable @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields */
     const {
       uid: _uid,
       created_at: _createdAt,
@@ -370,6 +373,7 @@ export class CommitteeService {
       committee_category: _committeeCategory,
       ...mutableMemberFields
     } = currentMember;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     const mergedData = { ...mutableMemberFields, ...data };
 

@@ -490,7 +490,9 @@ export class CommitteeDocumentsComponent implements OnInit {
                   ATTACHMENT_FETCH_CONCURRENCY
                 ),
                 toArray(),
-                map((results) => results.flat().sort((a, b) => (b.attachment.created_at ?? '').localeCompare(a.attachment.created_at ?? '')))
+                map((results) =>
+                  results.flat().sort((a, b) => new Date(b.attachment.created_at ?? 0).getTime() - new Date(a.attachment.created_at ?? 0).getTime())
+                )
               );
             }),
             catchError(() => {

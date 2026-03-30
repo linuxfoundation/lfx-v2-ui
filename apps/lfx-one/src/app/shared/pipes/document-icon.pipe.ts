@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { DocumentDisplayItem } from '@lfx-one/shared/interfaces';
+import { CommitteeDocumentType, DocumentDisplayItem } from '@lfx-one/shared/interfaces';
+import { getDocumentTypeIconClass } from './document-type-icon.pipe';
+
+const DOCUMENT_ICON_COLORS: Record<CommitteeDocumentType, string> = {
+  folder: 'text-amber-500',
+  link: 'text-blue-500',
+  file: 'text-red-400',
+};
 
 @Pipe({
   name: 'documentIcon',
@@ -10,8 +17,6 @@ import { DocumentDisplayItem } from '@lfx-one/shared/interfaces';
 })
 export class DocumentIconPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): string {
-    if (item.type === 'folder') return 'fa-light fa-folder text-amber-500';
-    if (item.type === 'link') return 'fa-light fa-link text-blue-500';
-    return 'fa-light fa-file text-red-400';
+    return `${getDocumentTypeIconClass(item.type)} ${DOCUMENT_ICON_COLORS[item.type] ?? 'text-red-400'}`;
   }
 }
