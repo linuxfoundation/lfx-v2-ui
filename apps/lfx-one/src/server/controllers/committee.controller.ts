@@ -5,6 +5,7 @@ import { CommitteeCreateData, CommitteeUpdateData, CreateCommitteeMemberRequest 
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
+import { buildVCalendar, meetingsToVEvents } from '../helpers/ics.helper';
 import { logger } from '../services/logger.service';
 import { CommitteeService } from '../services/committee.service';
 import { MeetingService } from '../services/meeting.service';
@@ -529,6 +530,8 @@ export class CommitteeController {
   /**
    * GET /committees/:id/calendar.ics
    * Returns an iCalendar (.ics) file containing all meetings for the committee.
+   * MeetingService is injected here rather than CommitteeService to avoid a
+   * circular dependency (MeetingService already imports CommitteeService).
    */
   public async getCommitteeCalendar(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id } = req.params;
@@ -543,29 +546,8 @@ export class CommitteeController {
       ]);
 
       const allMeetings = [...upcomingResult.data, ...pastResult.data];
-
-      const events: string[] = [];
-
-      for (const meeting of allMeetings) {
-        if (meeting.occurrences && meeting.occurrences.length > 0) {
-          for (const occ of meeting.occurrences) {
-            if (occ.status === 'cancel') continue;
-            events.push(this.buildVEvent(`${meeting.id}-${occ.occurrence_id}`, occ.title || meeting.title, occ.start_time, occ.duration || meeting.duration));
-          }
-        } else if (meeting.start_time) {
-          events.push(this.buildVEvent(meeting.id, meeting.title, meeting.start_time, meeting.duration));
-        }
-      }
-
-      const ics = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//LFX//Committee Calendar//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
-        ...events,
-        'END:VCALENDAR',
-      ].join('\r\n');
+      const events = meetingsToVEvents(allMeetings);
+      const ics = buildVCalendar(events);
 
       logger.success(req, 'get_committee_calendar', startTime, {
         committee_id: id,
@@ -579,36 +561,5 @@ export class CommitteeController {
       logger.error(req, 'get_committee_calendar', startTime, error, { committee_id: id });
       next(error);
     }
-  }
-
-  // ── ICS Helpers ──────────────────────────────────────────────────────────
-
-  /** Formats an ISO date string to ICS DTSTART/DTEND format (e.g., 20230115T140000Z). */
-  private formatICSDate(isoDate: string): string {
-    return new Date(isoDate).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  }
-
-  /** Escapes ICS text values per RFC 5545 (backslash, semicolons, commas, newlines). */
-  private escapeICSText(value: string): string {
-    return (value ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-  }
-
-  /** Builds a single VEVENT block from meeting fields. */
-  private buildVEvent(uid: string, title: string, startIso: string, durationMinutes: number): string {
-    const dtstart = this.formatICSDate(startIso);
-    const endDate = new Date(startIso);
-    endDate.setMinutes(endDate.getMinutes() + (durationMinutes || 60));
-    const dtend = this.formatICSDate(endDate.toISOString());
-    const dtstamp = this.formatICSDate(new Date().toISOString());
-
-    return [
-      'BEGIN:VEVENT',
-      `UID:${uid}@lfx.linuxfoundation.org`,
-      `DTSTAMP:${dtstamp}`,
-      `DTSTART:${dtstart}`,
-      `DTEND:${dtend}`,
-      `SUMMARY:${this.escapeICSText(title)}`,
-      'END:VEVENT',
-    ].join('\r\n');
   }
 }
