@@ -273,8 +273,7 @@ export class SurveyManageComponent {
         this.submitting.set(false);
         this.navigateBack();
       },
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      error: (_error: unknown) => {
+      error: () => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
