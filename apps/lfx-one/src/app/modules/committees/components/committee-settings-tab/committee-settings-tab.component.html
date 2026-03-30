@@ -48,16 +48,14 @@
     <p class="text-[12.5px] text-gray-500 -mt-1">Select a mailing list to associate with this group. Members will be auto-subscribed.</p>
 
     <!-- Search -->
-    <div class="relative">
-      <i class="fa-light fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
-      <input
-        type="text"
-        class="w-full h-9 border border-gray-300 rounded-md pl-8 pr-3 text-[13px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        placeholder="Search mailing lists…"
-        [value]="mlSearchQuery()"
-        (input)="mlSearchQuery.set($any($event.target).value)"
-        data-testid="settings-ml-picker-search" />
-    </div>
+    <lfx-input-text
+      [form]="mlSearchForm"
+      control="query"
+      placeholder="Search mailing lists…"
+      size="small"
+      icon="fa-light fa-search"
+      styleClass="w-full"
+      dataTest="settings-ml-picker-search"></lfx-input-text>
 
     <!-- List -->
     <div class="border border-gray-200 rounded-lg overflow-hidden max-h-80 overflow-y-auto" data-testid="settings-ml-picker-table">
@@ -89,14 +87,11 @@
                 (click)="selectMailingList(ml.uid)"
                 [attr.data-testid]="'settings-ml-picker-row-' + ml.uid">
                 <td class="py-3 px-4">
-                  <div
-                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                    [class.border-blue-500]="selectedMailingListUid() === ml.uid"
-                    [class.border-gray-300]="selectedMailingListUid() !== ml.uid">
-                    @if (selectedMailingListUid() === ml.uid) {
-                      <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                    }
-                  </div>
+                  <lfx-radio-button
+                    name="mailingListSelection"
+                    [value]="ml.uid"
+                    [inputId]="'ml-radio-' + ml.uid"
+                    (onChange)="selectMailingList(ml.uid)"></lfx-radio-button>
                 </td>
                 <td class="py-3 px-2 font-semibold text-gray-900">{{ ml.group_name }}</td>
                 <td class="py-3 px-2 text-gray-500">{{ getMailingListEmail(ml) }}</td>
@@ -122,13 +117,13 @@
   <ng-template #footer>
     <div class="flex justify-between items-center">
       @if (selectedMailingListUid()) {
-        <button
-          type="button"
-          class="text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-          (click)="clearMailingListAssociation()"
-          data-testid="settings-ml-picker-clear-btn">
-          Clear association
-        </button>
+        <lfx-button
+          label="Clear association"
+          severity="danger"
+          [text]="true"
+          size="small"
+          (onClick)="clearMailingListAssociation()"
+          data-testid="settings-ml-picker-clear-btn"></lfx-button>
       } @else {
         <span></span>
       }

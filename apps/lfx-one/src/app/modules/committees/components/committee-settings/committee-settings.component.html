@@ -126,24 +126,26 @@
                 }
               </div>
             </div>
-            <button
-              type="button"
-              class="flex-shrink-0 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-              (click)="mlPickerOpen.emit()"
-              data-testid="settings-update-mailing-list-btn">
-              Update
-            </button>
+            <lfx-button
+              label="Update"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              styleClass="flex-shrink-0"
+              (onClick)="mlPickerOpen.emit()"
+              data-testid="settings-update-mailing-list-btn"></lfx-button>
           </div>
         } @else {
           <div class="flex items-center justify-between gap-3 py-1" data-testid="settings-no-mailing-list">
             <p class="text-[12.5px] text-gray-400">No mailing list associated with this group.</p>
-            <button
-              type="button"
-              class="flex-shrink-0 bg-white border border-gray-300 rounded-md px-3 py-1.5 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-              (click)="mlPickerOpen.emit()"
-              data-testid="settings-link-mailing-list-btn">
-              Link Mailing List
-            </button>
+            <lfx-button
+              label="Link Mailing List"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              styleClass="flex-shrink-0"
+              (onClick)="mlPickerOpen.emit()"
+              data-testid="settings-link-mailing-list-btn"></lfx-button>
           </div>
         }
 

@@ -106,6 +106,13 @@ export class CommitteeViewComponent {
     description: new FormControl(''),
   });
 
+  // -- Join application dialog state --
+  public showApplicationDialog = signal(false);
+  public applicationForm = new FormGroup({
+    message: new FormControl(''),
+  });
+  public pendingApplicationCommittee = signal<{ uid: string; name: string; mode: 'application' | 'invite_only' } | null>(null);
+
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
   public members: Signal<CommitteeMember[]> = this.initializeMembers();
@@ -267,51 +274,13 @@ export class CommitteeViewComponent {
           },
         });
     } else if (joinMode === 'application') {
-      this.joiningOrLeaving.set(true);
-      this.committeeService
-        .submitApplication(committee.uid)
-        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
-        .subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Application Submitted',
-              detail: `Your request to join "${committee.name}" has been submitted. An admin will review it shortly.`,
-              life: 8000,
-            });
-          },
-          error: (err: HttpErrorResponse) => {
-            const upstream = err.error?.message as string | undefined;
-            const detail =
-              err.status === 409
-                ? 'You already have a pending application for this group.'
-                : (upstream ?? `Failed to submit your request for "${committee.name}". Please try again.`);
-            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
-          },
-        });
+      this.pendingApplicationCommittee.set({ uid: committee.uid, name: committee.name, mode: 'application' });
+      this.applicationForm.reset({ message: '' });
+      this.showApplicationDialog.set(true);
     } else if (joinMode === 'invite_only') {
-      this.joiningOrLeaving.set(true);
-      this.committeeService
-        .submitApplication(committee.uid)
-        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
-        .subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Request Submitted',
-              detail: `Your access request for "${committee.name}" has been submitted. An admin will review and send you an invitation if approved.`,
-              life: 8000,
-            });
-          },
-          error: (err: HttpErrorResponse) => {
-            const upstream = err.error?.message as string | undefined;
-            const detail =
-              err.status === 409
-                ? 'You already have a pending request for this group.'
-                : (upstream ?? `Failed to submit your access request for "${committee.name}". Please try again.`);
-            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
-          },
-        });
+      this.pendingApplicationCommittee.set({ uid: committee.uid, name: committee.name, mode: 'invite_only' });
+      this.applicationForm.reset({ message: '' });
+      this.showApplicationDialog.set(true);
     } else {
       // closed — no self-service action available
       this.messageService.add({ severity: 'info', summary: 'Contact Admin', detail: 'Contact a group admin to request membership.' });
@@ -339,6 +308,55 @@ export class CommitteeViewComponent {
           this.messageService.add({ severity: 'error', summary: 'Unable to Leave', detail, life: 6000 });
         },
       });
+  }
+
+  public submitApplicationWithMessage(): void {
+    const pending = this.pendingApplicationCommittee();
+    if (!pending || this.joiningOrLeaving()) {
+      return;
+    }
+
+    const message = this.applicationForm.get('message')?.value?.trim() || undefined;
+    const isApplication = pending.mode === 'application';
+
+    this.joiningOrLeaving.set(true);
+    this.showApplicationDialog.set(false);
+
+    this.committeeService
+      .submitApplication(pending.uid, message)
+      .pipe(finalize(() => this.joiningOrLeaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: isApplication ? 'Application Submitted' : 'Request Submitted',
+            detail: isApplication
+              ? `Your request to join "${pending.name}" has been submitted. An admin will review it shortly.`
+              : `Your access request for "${pending.name}" has been submitted. An admin will review and send you an invitation if approved.`,
+            life: 8000,
+          });
+          this.pendingApplicationCommittee.set(null);
+        },
+        error: (err: HttpErrorResponse) => {
+          const upstream = err.error?.message as string | undefined;
+          let detail: string;
+          if (err.status === 409) {
+            detail = isApplication ? 'You already have a pending application for this group.' : 'You already have a pending request for this group.';
+          } else {
+            const fallback = isApplication
+              ? `Failed to submit your request for "${pending.name}". Please try again.`
+              : `Failed to submit your access request for "${pending.name}". Please try again.`;
+            detail = upstream ?? fallback;
+          }
+          this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
+          this.pendingApplicationCommittee.set(null);
+        },
+      });
+  }
+
+  public cancelApplication(): void {
+    this.showApplicationDialog.set(false);
+    this.pendingApplicationCommittee.set(null);
   }
 
   public navigateToParentGroup(): void {

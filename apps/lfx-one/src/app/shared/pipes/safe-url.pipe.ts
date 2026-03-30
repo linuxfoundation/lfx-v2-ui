@@ -11,12 +11,17 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class SafeUrlPipe implements PipeTransform {
   public transform(url: string | null | undefined): string | null {
     if (!url?.trim()) return null;
-    if (url.startsWith('https://') || url.startsWith('http://')) {
+
+    // If the URL already has a valid protocol, return it as-is
+    try {
+      new URL(url);
       return url;
+    } catch {
+      // No valid protocol — prepend https:// only if it looks like a hostname
+      if (/^[\w-]+(\.[\w-]+)+/.test(url)) {
+        return `https://${url}`;
+      }
+      return null;
     }
-    if (url.includes('.') && !url.includes(' ')) {
-      return 'https://' + url;
-    }
-    return null;
   }
 }
