@@ -506,10 +506,9 @@ export class CommitteeController {
         return;
       }
 
-      // The query service indexes committee resources by a `parent_uid:<id>` tag as part of
-      // the upstream API contract (lfx-v2-committee-service). This tag is set on child committees
-      // when they are created with a parent_uid, allowing efficient parent-scoped lookups.
-      const children = await this.committeeService.getCommittees(req, { ...req.query, tags: `parent_uid:${id}` });
+      // Use the query service's dedicated `parent` parameter for structured parent-child lookups.
+      // Format: `committee:{uid}` — matches the `^[a-zA-Z]+:[a-zA-Z0-9_-]+$` pattern in the query service.
+      const children = await this.committeeService.getCommittees(req, { ...req.query, parent: `committee:${id}` });
 
       logger.success(req, 'get_committee_children', startTime, {
         parent_id: id,
