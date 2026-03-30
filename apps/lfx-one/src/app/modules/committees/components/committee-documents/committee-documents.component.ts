@@ -11,11 +11,11 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DocumentIconPipe } from '@pipes/document-icon.pipe';
-import { DocumentTypeIconPipe } from '@pipes/document-type-icon.pipe';
 import { FileSizePipe } from '@pipes/file-size.pipe';
-import { SourceLabelPipe } from '@pipes/source-label.pipe';
-import { SourceSeverityPipe } from '@pipes/source-severity.pipe';
+import { DocumentIconPipe } from '../../pipes/document-icon.pipe';
+import { DocumentTypeIconPipe } from '../../pipes/document-type-icon.pipe';
+import { SourceLabelPipe } from '../../pipes/source-label.pipe';
+import { SourceSeverityPipe } from '../../pipes/source-severity.pipe';
 import { Committee, CommitteeDocument, DocumentDisplayItem, MeetingAttachment, MeetingAttachmentWithContext } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
@@ -25,12 +25,11 @@ import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import {
   catchError,
   combineLatest,
+  concatMap,
   debounceTime,
   distinctUntilChanged,
-  EMPTY,
   filter,
   finalize,
-  forkJoin,
   from,
   map,
   mergeMap,
@@ -84,6 +83,8 @@ export class CommitteeDocumentsComponent implements OnInit {
   // State
   public meetingLoading = signal<boolean>(true);
   public standaloneLoading = signal<boolean>(true);
+  /** True while a cascading folder delete (children + folder) is in flight — disables all mutating actions. */
+  public cascadeDeleting = signal(false);
   public loading = computed(() => this.meetingLoading() || this.standaloneLoading());
   public searchQuery = signal('');
   public sourceFilter = signal<string | null>(null);
@@ -270,20 +271,11 @@ export class CommitteeDocumentsComponent implements OnInit {
     const typeLabel = item.type === 'folder' ? 'Folder' : 'Link';
 
     if (item.type === 'folder') {
-      // Upstream requires folders to be empty — delete child links first, then the folder.
-      // Use forkJoin to attempt all child deletes in parallel with per-child error handling.
       const children = this.folderChildMap().get(item.uid) ?? [];
-      const childDeletes$ = children
-        .filter((child) => child.committeeDocument)
-        .map((child) =>
-          this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type).pipe(
-            map(() => ({ uid: child.uid, success: true as const })),
-            catchError(() => of({ uid: child.uid, success: false as const }))
-          )
-        );
+      const deletableChildren = children.filter((child) => child.committeeDocument);
 
-      if (childDeletes$.length === 0) {
-        // No children — delete folder directly
+      if (deletableChildren.length === 0) {
+        // Empty folder — delete directly, no cascade needed.
         this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, 'folder').subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" has been deleted` });
@@ -294,28 +286,30 @@ export class CommitteeDocumentsComponent implements OnInit {
         return;
       }
 
-      forkJoin(childDeletes$)
+      // Upstream requires folders to be empty before deletion.
+      // Delete children sequentially (concatMap) so a failure aborts the cascade immediately
+      // rather than leaving a partially-emptied folder. cascadeDeleting disables all
+      // mutating actions in the UI until the operation settles.
+      this.cascadeDeleting.set(true);
+
+      from(deletableChildren)
         .pipe(
-          switchMap((results) => {
-            const failures = results.filter((r) => !r.success);
-            if (failures.length > 0) {
-              this.messageService.add({
-                severity: 'warn',
-                summary: 'Partial Failure',
-                detail: `${failures.length} of ${results.length} link${results.length !== 1 ? 's' : ''} could not be deleted. The folder was not removed.`,
-              });
-              this.refreshStandaloneDocs();
-              return EMPTY;
-            }
-            return this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder');
-          })
+          concatMap((child) =>
+            this.committeeService.deleteCommitteeDocument(committeeId, child.committeeDocument!.uid, child.committeeDocument!.type)
+          ),
+          toArray(),
+          switchMap(() => this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument!.uid, 'folder')),
+          finalize(() => this.cascadeDeleting.set(false))
         )
         .subscribe({
           next: () => {
             this.messageService.add({ severity: 'success', summary: 'Deleted', detail: `"${item.name}" and its contents have been deleted` });
             this.refreshStandaloneDocs();
           },
-          error: (err) => this.showDeleteError(err, typeLabel),
+          error: (err) => {
+            this.refreshStandaloneDocs(); // Reflect any partial state
+            this.showDeleteError(err, typeLabel);
+          },
         });
     } else {
       this.committeeService.deleteCommitteeDocument(committeeId, item.committeeDocument.uid, item.committeeDocument.type).subscribe({

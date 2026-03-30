@@ -14,6 +14,7 @@ const DOCUMENT_ICON_COLORS: Record<CommitteeDocumentType, string> = {
 @Pipe({
   name: 'documentIcon',
   standalone: true,
+  pure: true,
 })
 export class DocumentIconPipe implements PipeTransform {
   public transform(item: DocumentDisplayItem): string {

@@ -16,6 +16,7 @@
           size="small"
           severity="secondary"
           [outlined]="true"
+          [disabled]="cascadeDeleting()"
           (onClick)="openNewFolderDialog()"
           data-testid="committee-documents-new-folder-button"></lfx-button>
         <lfx-button
@@ -24,6 +25,7 @@
           size="small"
           severity="secondary"
           [outlined]="true"
+          [disabled]="cascadeDeleting()"
           (onClick)="openAddLinkDialog()"
           data-testid="committee-documents-add-link-button"></lfx-button>
       </div>
@@ -165,6 +167,7 @@
                       size="small"
                       severity="danger"
                       tooltip="Delete"
+                      [disabled]="cascadeDeleting()"
                       (onClick)="confirmDeleteDocument(item)"
                       data-testid="committee-documents-delete-button"></lfx-button>
                   }
