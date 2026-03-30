@@ -7,3 +7,4 @@
  */
 
 export * from './projects.mock';
+export * from './committees.mock';
