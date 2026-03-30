@@ -447,10 +447,8 @@ export class CommitteeViewComponent {
         filter((c): c is Committee => !!c?.uid),
         switchMap((c) => {
           this.subGroupsLoading.set(true);
-          return this.committeeService.getChildCommittees(c.uid).pipe(
-            catchError(() => of([])),
-            finalize(() => this.subGroupsLoading.set(false))
-          );
+          // getChildCommittees already handles errors internally with catchError(() => of([]))
+          return this.committeeService.getChildCommittees(c.uid).pipe(finalize(() => this.subGroupsLoading.set(false)));
         })
       ),
       { initialValue: [] }
