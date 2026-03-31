@@ -79,7 +79,6 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
       },
       // Me lens — placeholder pages
-      { path: 'me/foundations', component: PlaceholderPageComponent, data: { title: 'My Foundations' } },
       { path: 'me/actions', component: PlaceholderPageComponent, data: { title: 'My Actions' } },
       { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
