@@ -139,8 +139,10 @@ export class CommitteeViewComponent {
 
   public hasChannels: Signal<boolean> = computed(() => {
     const c = this.committee();
-    return !!(c?.mailing_list || c?.chat_channel || c?.website) || this.canEdit();
+    return this.associatedMailingLists().length > 0 || !!(c?.chat_channel || c?.website) || this.canEdit();
   });
+
+  public mlExpanded = signal(false);
 
   public chatPlatformLabel: Signal<string> = this.initChatPlatformLabel();
   public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
@@ -175,8 +177,8 @@ export class CommitteeViewComponent {
     return 'committee-view-contact-admin-btn';
   });
 
-  // -- Linked mailing list (rich object for header display) --
-  public linkedMailingList: Signal<GroupsIOMailingList | null> = this.initLinkedMailingList();
+  // -- Associated mailing lists (rich objects filtered by ml.committees[]) --
+  public associatedMailingLists: Signal<GroupsIOMailingList[]> = this.initAssociatedMailingLists();
 
   // -- Sub-groups --
   public subGroupsLoading = signal(true);
@@ -510,27 +512,18 @@ export class CommitteeViewComponent {
     return computed(() => getRepoPlatformIcon(this.committee()?.website));
   }
 
-  private initLinkedMailingList(): Signal<GroupsIOMailingList | null> {
+  private initAssociatedMailingLists(): Signal<GroupsIOMailingList[]> {
     return toSignal(
       toObservable(this.committee).pipe(
-        filter((c): c is Committee => !!c?.project_uid),
+        filter((c): c is Committee => !!c?.uid && !!c?.project_uid),
         switchMap((c) => {
-          if (!c.mailing_list) return of(null);
           return this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
-            map((lists) => {
-              const email = c.mailing_list!;
-              return (
-                lists.find((ml) => {
-                  const mlEmail = ml.service?.domain ? `${ml.group_name}@${ml.service.domain}` : ml.group_name;
-                  return mlEmail === email;
-                }) ?? null
-              );
-            }),
-            catchError(() => of(null))
+            map((lists) => lists.filter((ml) => ml.committees?.some((ref) => ref.uid === c.uid))),
+            catchError(() => of([]))
           );
         })
       ),
-      { initialValue: null }
+      { initialValue: [] }
     );
   }
 
