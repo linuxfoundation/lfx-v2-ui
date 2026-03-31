@@ -23,8 +23,6 @@ import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
-import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
-
 type DialogMode = 'search' | 'configure';
 
 /**
@@ -217,8 +215,9 @@ export class AddMemberDialogComponent {
       },
       error: (err: HttpErrorResponse) => {
         this.submitting.set(false);
+        const upstream = typeof err.error?.message === 'string' ? err.error.message : null;
         const detail =
-          err.status === 409 ? 'This person is already a member of this group.' : getHttpErrorDetail(err, 'Failed to add member. Please try again.');
+          err.status === 409 ? 'This person is already a member of this group.' : (upstream ?? 'Failed to add member. Please try again.');
         this.messageService.add({ severity: 'error', summary: 'Unable to Add Member', detail });
       },
     });
