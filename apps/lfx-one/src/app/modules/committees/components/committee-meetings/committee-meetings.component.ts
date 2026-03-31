@@ -4,29 +4,67 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { Committee, Meeting, PastMeeting } from '@lfx-one/shared/interfaces';
+import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
+import { Committee, Meeting, PastMeeting, Vote, Survey } from '@lfx-one/shared/interfaces';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { MeetingService } from '@services/meeting.service';
+import { VoteService } from '@services/vote.service';
+import { SurveyService } from '@services/survey.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { debounceTime, distinctUntilChanged, filter, finalize, startWith, switchMap, tap } from 'rxjs';
+import { MessageService } from 'primeng/api';
+import { EventClickArg, EventInput } from '@fullcalendar/core';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, tap } from 'rxjs';
 
 type TimeFilter = 'upcoming' | 'past';
+type ViewMode = 'list' | 'calendar';
+
+/** Hex color config per meeting type for FullCalendar events (Tailwind classes don't apply inside FC). */
+const MEETING_TYPE_COLORS: Record<string, { bg: string; border: string }> = {
+  technical: { bg: '#7c3aed', border: '#6d28d9' },
+  maintainers: { bg: '#2563eb', border: '#1d4ed8' },
+  board: { bg: '#dc2626', border: '#b91c1c' },
+  marketing: { bg: '#059669', border: '#047857' },
+  legal: { bg: '#d97706', border: '#b45309' },
+  other: { bg: '#4b5563', border: '#374151' },
+  default: { bg: '#3b82f6', border: '#2563eb' },
+};
+
+const CANCELLED_COLOR = { bg: '#9ca3af', border: '#6b7280' };
+const VOTE_COLOR = { bg: '#f59e0b', border: '#d97706' };
+const SURVEY_COLOR = { bg: '#a855f7', border: '#9333ea' };
 
 @Component({
   selector: 'lfx-committee-meetings',
-  imports: [ReactiveFormsModule, RouterLink, ButtonComponent, CardComponent, InputTextComponent, SelectComponent, SkeletonModule, MeetingCardComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    ClipboardModule,
+    ButtonComponent,
+    CardComponent,
+    InputTextComponent,
+    SelectComponent,
+    SkeletonModule,
+    MeetingCardComponent,
+    FullCalendarComponent,
+  ],
   templateUrl: './committee-meetings.component.html',
   styleUrl: './committee-meetings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommitteeMeetingsComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly voteService = inject(VoteService);
+  private readonly surveyService = inject(SurveyService);
+  private readonly router = inject(Router);
+  private readonly clipboard = inject(Clipboard);
+  private readonly messageService = inject(MessageService);
 
   // Inputs
   public committee = input.required<Committee>();
@@ -36,6 +74,9 @@ export class CommitteeMeetingsComponent {
   // Filter state — linkedSignal tracks initialTimeFilter but allows local overrides
   public timeFilter = linkedSignal(() => this.initialTimeFilter());
   public meetingTypeFilter = signal<string | null>(null);
+
+  // View mode: list or calendar
+  public viewMode = signal<ViewMode>('list');
 
   // Form for search + filter controls (bound in template)
   public searchForm = new FormGroup({
@@ -58,6 +99,7 @@ export class CommitteeMeetingsComponent {
   // Loading state
   public meetingsLoading = signal(true);
   public pastMeetingsLoading = signal(false);
+  public calendarLoading = signal(false);
 
   // Data — upcoming meetings
   public meetings: Signal<Meeting[]> = this.initMeetings();
@@ -76,8 +118,11 @@ export class CommitteeMeetingsComponent {
   // Loading computed: true when active tab's data is loading
   public loading: Signal<boolean> = computed(() => (this.timeFilter() === 'upcoming' ? this.meetingsLoading() : this.pastMeetingsLoading()));
 
-  // Filtered data
+  // Filtered data (list view)
   public filteredMeetings: Signal<(Meeting | PastMeeting)[]> = this.initFilteredMeetings();
+
+  // Calendar: votes + surveys lazy-loaded on first switch to calendar mode
+  public calendarEvents: Signal<EventInput[]> = this.initCalendarEvents();
 
   /** Handles time filter change from dropdown — syncs signal and form control. */
   public onTimeFilterChange(value: TimeFilter): void {
@@ -91,7 +136,29 @@ export class CommitteeMeetingsComponent {
     this.searchForm.get('meetingType')?.setValue(value, { emitEvent: false });
   }
 
+  /** Copies the committee's calendar subscribe URL to clipboard and shows a confirmation toast. */
+  public onSubscribe(): void {
+    const uid = this.committee().uid;
+    const url = `${window.location.origin}/api/committees/${uid}/calendar.ics`;
+    this.clipboard.copy(url);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Subscribe URL copied!',
+      detail: 'Add this to Google Calendar, Outlook, or Apple Calendar.',
+      life: 5000,
+    });
+  }
+
+  /** Handles FullCalendar event click — navigates to meeting detail for meeting events. */
+  public onCalendarEventClick(arg: EventClickArg): void {
+    const props = arg.event.extendedProps as { type: string; meetingId?: string };
+    if (props.type === 'meeting' && props.meetingId) {
+      void this.router.navigate(['/meetings', props.meetingId]);
+    }
+  }
+
   // Private initializer functions
+
   private initMeetings(): Signal<Meeting[]> {
     return toSignal(
       toObservable(this.committee).pipe(
@@ -124,5 +191,107 @@ export class CommitteeMeetingsComponent {
         return matchesSearch && matchesType;
       });
     });
+  }
+
+  private initCalendarEvents(): Signal<EventInput[]> {
+    // Lazy-load votes, surveys, and past meetings the first time calendar view is activated
+    const externalData = toSignal(
+      toObservable(computed(() => ({ mode: this.viewMode(), uid: this.committee()?.uid }))).pipe(
+        filter(({ mode, uid }) => mode === 'calendar' && !!uid),
+        distinctUntilChanged((a, b) => a.uid === b.uid),
+        tap(() => this.calendarLoading.set(true)),
+        switchMap(({ uid: committeeUid }) =>
+          forkJoin({
+            votes: this.voteService.getVotesByCommittee(committeeUid!).pipe(catchError(() => of([] as Vote[]))),
+            surveys: this.surveyService.getSurveysByCommittee(committeeUid!).pipe(catchError(() => of([] as Survey[]))),
+            pastMeetings: this.meetingService.getPastMeetingsByCommittee(committeeUid!).pipe(catchError(() => of([] as PastMeeting[]))),
+          })
+        ),
+        tap(() => this.calendarLoading.set(false))
+      ),
+      { initialValue: { votes: [] as Vote[], surveys: [] as Survey[], pastMeetings: [] as PastMeeting[] } }
+    );
+
+    return computed(() => {
+      const allMeetings: (Meeting | PastMeeting)[] = [...this.meetings(), ...externalData().pastMeetings];
+      const { votes, surveys } = externalData();
+
+      const meetingEvents = allMeetings.flatMap((m) => this.meetingToEvents(m));
+      const voteEvents = votes.filter((v) => !!v.end_time).map((v) => this.voteToEvent(v));
+      const surveyEvents = surveys.filter((s) => !!s.survey_cutoff_date).map((s) => this.surveyToEvent(s));
+
+      return [...meetingEvents, ...voteEvents, ...surveyEvents];
+    });
+  }
+
+  private meetingToEvents(meeting: Meeting | PastMeeting): EventInput[] {
+    const typeKey = (meeting.meeting_type ?? 'default').toLowerCase();
+    const colors = MEETING_TYPE_COLORS[typeKey] ?? MEETING_TYPE_COLORS['default'];
+
+    // Recurring meetings — expand each occurrence as a separate calendar event
+    if (meeting.occurrences && meeting.occurrences.length > 0) {
+      return meeting.occurrences.map((occ) => {
+        const isCancelled = occ.status === 'cancel';
+        const c = isCancelled ? CANCELLED_COLOR : colors;
+        return {
+          id: `${meeting.id}-${occ.occurrence_id}`,
+          title: occ.title || meeting.title,
+          start: occ.start_time,
+          end: this.addMinutes(occ.start_time, occ.duration ?? meeting.duration),
+          backgroundColor: c.bg,
+          borderColor: c.border,
+          textColor: '#ffffff',
+          display: 'block',
+          extendedProps: { type: 'meeting', meetingId: meeting.id, cancelled: isCancelled },
+        };
+      });
+    }
+
+    // Non-recurring — single event
+    return [
+      {
+        id: meeting.id,
+        title: meeting.title,
+        start: meeting.start_time,
+        end: this.addMinutes(meeting.start_time, meeting.duration),
+        backgroundColor: colors.bg,
+        borderColor: colors.border,
+        textColor: '#ffffff',
+        display: 'block',
+        extendedProps: { type: 'meeting', meetingId: meeting.id },
+      },
+    ];
+  }
+
+  private voteToEvent(vote: Vote): EventInput {
+    return {
+      id: `vote-${vote.uid}`,
+      title: `Vote closes: ${vote.name}`,
+      start: vote.end_time,
+      allDay: true,
+      backgroundColor: VOTE_COLOR.bg,
+      borderColor: VOTE_COLOR.border,
+      textColor: '#ffffff',
+      extendedProps: { type: 'vote', voteId: vote.uid },
+    };
+  }
+
+  private surveyToEvent(survey: Survey): EventInput {
+    return {
+      id: `survey-${survey.uid}`,
+      title: `Survey: ${survey.survey_title}`,
+      start: survey.survey_cutoff_date,
+      allDay: true,
+      backgroundColor: SURVEY_COLOR.bg,
+      borderColor: SURVEY_COLOR.border,
+      textColor: '#ffffff',
+      extendedProps: { type: 'survey', surveyId: survey.uid },
+    };
+  }
+
+  private addMinutes(isoDate: string, minutes: number | null | undefined): string {
+    const d = new Date(isoDate);
+    d.setMinutes(d.getMinutes() + (minutes ?? 60));
+    return d.toISOString();
   }
 }
