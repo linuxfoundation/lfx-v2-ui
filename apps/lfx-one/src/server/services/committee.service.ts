@@ -692,14 +692,6 @@ export class CommitteeService {
   }
 
   /**
-   * Submits a join application for a committee with join_mode 'application'.
-   */
-  public async submitApplication(req: Request, committeeId: string, body: CreateCommitteeJoinApplicationRequest): Promise<CommitteeJoinApplication> {
-    logger.debug(req, 'submit_committee_application', 'Submitting join application', { committee_uid: committeeId });
-    return this.microserviceProxy.proxyRequest<CommitteeJoinApplication>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, body);
-  }
-
-  /**
    * Fetches committee settings by ID
    * @returns Committee settings or empty object if not found/error
    */
