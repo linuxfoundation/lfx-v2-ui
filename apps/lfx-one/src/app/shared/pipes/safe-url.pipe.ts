@@ -17,10 +17,10 @@ export class SafeUrlPipe implements PipeTransform {
       new URL(url);
       return url;
     } catch {
-      // No valid protocol — prepend https:// only if it looks like a real hostname
-      // Requires at least one dot with a letter-only TLD (2+ chars) to avoid false positives
+      // No valid protocol — prepend https:// only if it looks like a domain with a valid TLD
+      // Requires dot-separated segments with a letter-only TLD (2+ chars) to avoid false positives
       // like "v2.0", "2024.Q1", or "test.log"
-      if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(url)) {
+      if (/^[\w-]+(\.[\w-]+)*\.[a-z]{2,}(\/.*)?$/i.test(url)) {
         return `https://${url}`;
       }
       return null;

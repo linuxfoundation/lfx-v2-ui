@@ -110,8 +110,8 @@ export class CommitteeService {
   }
 
   /** Submit a join application for a group with join_mode 'application' or 'invite_only' */
-  public submitApplication(committeeId: string, message?: string): Observable<CommitteeJoinApplication> {
-    const body: CreateCommitteeJoinApplicationRequest = { message: message ?? 'I would like to join this group.' };
+  public submitApplication(committeeId: string, message: string = 'I would like to join this group.'): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = { message };
     return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
   }
 

@@ -683,6 +683,10 @@ export class CommitteeController {
       // Format: `committee:{uid}` — matches the `^[a-zA-Z]+:[a-zA-Z0-9_-]+$` pattern in the query service.
       const children = await this.committeeService.getCommittees(req, { ...req.query, parent: `committee:${id}` });
 
+      if (children.length === 0) {
+        logger.warning(req, 'get_committee_children', 'No child committees found', { parent_id: id });
+      }
+
       logger.success(req, 'get_committee_children', startTime, {
         parent_id: id,
         children_count: children.length,
