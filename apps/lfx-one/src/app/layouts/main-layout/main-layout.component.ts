@@ -51,7 +51,6 @@ export class MainLayoutComponent {
       isSection: true,
       expanded: true,
       items: [
-        { label: 'My Foundations', icon: 'fa-light fa-layer-group', routerLink: '/me/foundations' },
         { label: 'My Actions', icon: 'fa-light fa-bolt', routerLink: '/me/actions' },
         { label: 'My Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
         { label: `My ${COMMITTEE_LABEL.plural}`, icon: 'fa-light fa-users', routerLink: '/groups' },

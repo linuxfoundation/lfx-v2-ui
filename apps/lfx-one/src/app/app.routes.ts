@@ -49,7 +49,6 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
       // Me lens — new pages
-      { path: 'me/foundations', component: PlaceholderPageComponent, data: { title: 'My Foundations' } },
       { path: 'me/actions', component: PlaceholderPageComponent, data: { title: 'My Actions' } },
       { path: 'me/events', component: PlaceholderPageComponent, data: { title: 'My Events' } },
       { path: 'me/training', component: PlaceholderPageComponent, data: { title: 'Trainings & Certifications' } },
