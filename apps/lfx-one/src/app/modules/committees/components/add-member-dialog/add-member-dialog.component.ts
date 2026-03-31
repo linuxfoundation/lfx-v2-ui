@@ -15,7 +15,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, UserSearchResult } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CreateCommitteeMemberRequest, DialogMode, UserSearchResult } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { SearchService } from '@services/search.service';
@@ -23,7 +23,6 @@ import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
-type DialogMode = 'search' | 'configure';
 
 /**
  * Search-first "Add Member" dialog for the committee Members tab.
@@ -92,8 +91,14 @@ export class AddMemberDialogComponent {
   /** Deduplicated search results with "already member" flag */
   public searchResults: Signal<(UserSearchResult & { alreadyMember: boolean })[]> = this.initSearchResults();
 
-  /** Raw query value as a signal — safe to read in templates under zoneless CD */
-  public readonly queryValue = toSignal(this.searchForm.get('query')!.valueChanges.pipe(startWith('')), { initialValue: '' });
+  /** Trimmed query value as a signal — safe to read in templates under zoneless CD */
+  public readonly queryValue = toSignal(
+    this.searchForm.get('query')!.valueChanges.pipe(
+      startWith(''),
+      map((v) => (v ?? '').trim())
+    ),
+    { initialValue: '' }
+  );
 
   /** Tracks form validity as a signal for use in computed() */
   private readonly formValid = toSignal(

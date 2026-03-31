@@ -85,7 +85,7 @@
       }
 
       <!-- Empty state: query typed but no results -->
-      @if (!searchLoading() && searchResults().length === 0 && (queryValue()?.trim()?.length ?? 0) >= 2) {
+      @if (!searchLoading() && searchResults().length === 0 && queryValue().length >= 2) {
         <div class="flex flex-col items-center gap-3 py-8 text-center" data-testid="add-member-empty-state">
           <i class="fa-light fa-user-magnifying-glass text-3xl text-gray-300" aria-hidden="true"></i>
           <div>
@@ -103,7 +103,7 @@
       }
 
       <!-- Hint: before user types -->
-      @if (!searchLoading() && (queryValue()?.trim()?.length ?? 0) < 2) {
+      @if (!searchLoading() && queryValue().length < 2) {
         <p class="text-xs text-gray-400 text-center py-6">Start typing to search for LF accounts</p>
       }
     </div>

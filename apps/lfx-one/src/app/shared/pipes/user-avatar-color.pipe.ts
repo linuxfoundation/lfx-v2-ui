@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
+import { AVATAR_COLORS } from '@lfx-one/shared/constants';
 import { UserSearchResult } from '@lfx-one/shared/interfaces';
-
-const AVATAR_COLORS = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-indigo-500', 'bg-teal-500'];
 
 /**
  * Returns a deterministic Tailwind background-color class for a user avatar,
