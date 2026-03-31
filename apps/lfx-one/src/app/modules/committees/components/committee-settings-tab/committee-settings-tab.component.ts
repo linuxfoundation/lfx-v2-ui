@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
-import { TitleCasePipe } from '@angular/common';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,7 +14,7 @@ import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { catchError, filter, finalize, of, switchMap } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
@@ -31,7 +30,6 @@ import { CommitteeSettingsComponent } from '../committee-settings/committee-sett
     RadioButtonComponent,
     ReactiveFormsModule,
     TagComponent,
-    TitleCasePipe,
     ConfirmDialogModule,
     DialogModule,
   ],
@@ -234,13 +232,19 @@ export class CommitteeSettingsTabComponent {
     return ml.group_name;
   }
 
+  /** Formats a snake_case audience_access value for human display (e.g. "approval_required" → "Approval Required"). */
+  public formatAudienceAccess(value: string | undefined): string {
+    if (!value) return '';
+    return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   private initProjectMailingLists(): Signal<GroupsIOMailingList[]> {
     return toSignal(
       toObservable(this.committee).pipe(
-        filter((c) => !!c?.project_uid),
         switchMap((c) => {
+          if (!c?.project_uid) return of([] as GroupsIOMailingList[]);
           this.mlLoading.set(true);
-          return this.mailingListService.getMailingListsByProject(c!.project_uid!).pipe(
+          return this.mailingListService.getMailingListsByProject(c.project_uid).pipe(
             catchError(() => of([] as GroupsIOMailingList[])),
             finalize(() => this.mlLoading.set(false))
           );

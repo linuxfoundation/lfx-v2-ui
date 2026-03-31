@@ -102,7 +102,7 @@
                     <lfx-tag value="Private" severity="danger" styleClass="!text-[10px]" />
                   }
                 </td>
-                <td class="py-3 px-4 text-gray-500">{{ ml.audience_access | titlecase }}</td>
+                <td class="py-3 px-4 text-gray-500">{{ formatAudienceAccess(ml.audience_access) }}</td>
               </tr>
             }
           </tbody>
