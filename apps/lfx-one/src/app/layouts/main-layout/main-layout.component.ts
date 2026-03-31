@@ -120,42 +120,29 @@ export class MainLayoutComponent {
   });
 
   // ─── Org Lens ─────────────────────────────────────────────────────────────
-  private readonly orgLensItems: SidebarMenuItem[] = [
-    {
-      label: 'Overview',
-      icon: 'fa-light fa-grid-2',
-      routerLink: '/org',
-    },
-    {
-      label: 'Portfolio',
-      isSection: true,
-      expanded: true,
-      items: [
-        { label: 'Key Projects', icon: 'fa-light fa-diagram-project', routerLink: '/org/projects' },
-        { label: 'Code Contributions', icon: 'fa-light fa-code', routerLink: '/org/code' },
-      ],
-    },
-    {
-      label: 'Membership',
-      isSection: true,
-      expanded: true,
-      items: [
-        { label: 'Membership', icon: 'fa-light fa-id-card', routerLink: '/org/membership' },
-        { label: 'Benefits', icon: 'fa-light fa-gift', routerLink: '/org/benefits' },
-      ],
-    },
-    {
-      label: 'Administration',
-      isSection: true,
-      expanded: true,
-      items: [
-        { label: 'Groups', icon: 'fa-light fa-users', routerLink: '/org/groups' },
-        { label: 'CLA Management', icon: 'fa-light fa-file-signature', routerLink: '/org/cla' },
-        { label: 'Access & Permissions', icon: 'fa-light fa-key', routerLink: '/org/permissions' },
-        { label: 'Org Profile', icon: 'fa-light fa-building', routerLink: '/org/profile' },
-      ],
-    },
-  ];
+  private readonly orgUserType = this.appService.orgUserType;
+
+  private readonly orgLensItems = computed((): SidebarMenuItem[] => {
+    const isAdmin = this.orgUserType() !== 'employee';
+    const items: SidebarMenuItem[] = [
+      { label: 'Overview', icon: 'fa-light fa-house', routerLink: '/org' },
+    ];
+    if (isAdmin) {
+      items.push({ label: 'Memberships', icon: 'fa-light fa-display', routerLink: '/org/membership' });
+    }
+    items.push(
+      { label: 'Key Projects', icon: 'fa-light fa-folder', routerLink: '/org/projects' },
+      { label: 'Activities', icon: 'fa-light fa-people-group', routerLink: '/org/code' },
+    );
+    if (isAdmin) {
+      items.push(
+        { label: 'People', icon: 'fa-light fa-user-plus', routerLink: '/org/groups' },
+        { label: 'Company Data', icon: 'fa-light fa-building-columns', routerLink: '/org/profile' },
+      );
+    }
+    items.push({ label: 'OSPO Resources', icon: 'fa-light fa-book', routerLink: '/org/benefits' });
+    return items;
+  });
 
   // ─── Active nav items based on lens ───────────────────────────────────────
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
@@ -163,7 +150,7 @@ export class MainLayoutComponent {
       case 'foundation':
         return this.foundationLensItems();
       case 'org':
-        return this.orgLensItems;
+        return this.orgLensItems();
       default:
         return this.meLensItems;
     }

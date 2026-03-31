@@ -1,0 +1,81 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto" data-testid="org-projects-container">
+  <div class="mb-6">
+    <h1>Key Projects</h1>
+    <p class="mt-1 text-sm text-slate-500">Projects your organization is involved in across LF foundations.</p>
+  </div>
+
+  <!-- Influence Level Summary -->
+  <div class="flex border border-gray-200 rounded-xl overflow-hidden mb-6 bg-white" data-testid="org-projects-influence-summary">
+    <div class="flex-1 p-4 bg-green-50 border-r border-gray-200">
+      <div class="text-2xl font-bold text-green-700">{{ influenceCounts.leading }}</div>
+      <div class="text-xs font-semibold text-green-700 mt-0.5">Leading</div>
+      <div class="text-xs text-green-600">Org drives direction</div>
+    </div>
+    <div class="flex-1 p-4 bg-blue-50 border-r border-gray-200">
+      <div class="text-2xl font-bold text-blue-700">{{ influenceCounts.contributing }}</div>
+      <div class="text-xs font-semibold text-blue-700 mt-0.5">Contributing</div>
+      <div class="text-xs text-blue-600">Regular contributions</div>
+    </div>
+    <div class="flex-1 p-4 bg-amber-50 border-r border-gray-200">
+      <div class="text-2xl font-bold text-amber-700">{{ influenceCounts.participating }}</div>
+      <div class="text-xs font-semibold text-amber-700 mt-0.5">Participating</div>
+      <div class="text-xs text-amber-600">Light involvement</div>
+    </div>
+    <div class="flex-1 p-4 bg-slate-50">
+      <div class="text-2xl font-bold text-slate-400">{{ influenceCounts.silent }}</div>
+      <div class="text-xs font-semibold text-slate-400 mt-0.5">Silent</div>
+      <div class="text-xs text-slate-400">No recent activity</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex gap-2 mb-4" data-testid="org-projects-filters">
+    @for (f of filters; track f) {
+      <button
+        class="px-3 py-1.5 text-sm font-medium rounded-lg border cursor-pointer transition-colors {{ filterClass(f) }}"
+        (click)="activeFilter.set(f)">
+        {{ f }}
+      </button>
+    }
+  </div>
+
+  <!-- Projects Table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="org-projects-table">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-gray-100">
+          <tr>
+            <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Project</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Foundation</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Influence</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Commits</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Contributors</th>
+            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Maintainers</th>
+            <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Health</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          @for (project of filteredProjects; track project.name) {
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-6 py-3.5 font-medium text-slate-900">{{ project.name }}</td>
+              <td class="px-4 py-3.5 text-slate-500">{{ project.foundation }}</td>
+              <td class="px-4 py-3.5">
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full {{ levelClass(project.level) }}">{{ project.level }}</span>
+              </td>
+              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.commits | number }}</td>
+              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.contributors }}</td>
+              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.maintainers }}</td>
+              <td class="px-6 py-3.5 text-right font-semibold {{ healthClass(project.healthScore) }}">{{ project.healthScore }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="px-6 py-3 border-t border-gray-100 text-xs text-slate-500">
+      Showing {{ filteredProjects.length }} of {{ projects.length }} projects
+    </div>
+  </div>
+</div>

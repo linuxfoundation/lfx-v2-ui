@@ -1,0 +1,284 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto" data-testid="org-activities-container">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1>Employee Activities</h1>
+      <p class="mt-1 text-sm text-slate-500">Track your organization's participation in open source projects, training, and events.</p>
+    </div>
+    @if (isAdmin()) {
+      <button class="flex items-center gap-2 px-4 py-2 border border-gray-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 cursor-pointer">
+        <i class="fa-light fa-download"></i>
+        Export CSV
+      </button>
+    }
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="flex gap-1 border-b border-gray-200 mb-6" data-testid="org-activities-tabs">
+    <button
+      (click)="setTab('code')"
+      class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer"
+      [class]="activeTab() === 'code' ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700'"
+      data-testid="tab-code">
+      <i class="fa-light fa-code mr-2"></i>Code Contributions
+    </button>
+    <button
+      (click)="setTab('training')"
+      class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer"
+      [class]="activeTab() === 'training' ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700'"
+      data-testid="tab-training">
+      <i class="fa-light fa-graduation-cap mr-2"></i>Training &amp; Certifications
+    </button>
+    <button
+      (click)="setTab('events')"
+      class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer"
+      [class]="activeTab() === 'events' ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700'"
+      data-testid="tab-events">
+      <i class="fa-light fa-calendar-star mr-2"></i>Events
+    </button>
+  </div>
+
+  <!-- ── CODE CONTRIBUTIONS TAB ── -->
+  @if (activeTab() === 'code') {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-testid="code-stats">
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-slate-900">{{ codeStats.totalCommits | number }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Total Commits (1yr)</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-blue-600">{{ codeStats.totalContributors | number }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Active Contributors</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-emerald-600">{{ codeStats.maintainers }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Maintainers</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-slate-900">{{ codeStats.activeRepos }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Active Repos</div>
+      </div>
+    </div>
+
+    @if (isAdmin()) {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6" data-testid="code-top-contributors">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">Top Contributors</span>
+          <span class="text-xs text-slate-400">Last 12 months</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Employee</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Top Project</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Commits</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">PRs</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reviews</th>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Last Active</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (c of topContributors; track c.name) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-3.5">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{{ c.initials }}</div>
+                      <span class="font-medium text-slate-900">{{ c.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3.5 text-slate-600">{{ c.project }}</td>
+                  <td class="px-4 py-3.5 text-right font-medium text-slate-900">{{ c.commits | number }}</td>
+                  <td class="px-4 py-3.5 text-right text-slate-600">{{ c.prs }}</td>
+                  <td class="px-4 py-3.5 text-right text-slate-600">{{ c.reviews }}</td>
+                  <td class="px-6 py-3.5 text-slate-500 text-xs">{{ c.lastActive }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="code-projects-table">
+      <div class="px-6 py-4 border-b border-gray-100">
+        <span class="text-sm font-semibold text-slate-700">Contributions by Project</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-gray-100">
+            <tr>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Project</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Foundation</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Commits</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Contributors</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">PRs Opened</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">PRs Merged</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Lines Changed</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (p of codeProjects; track p.name) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-3.5 font-medium text-slate-900">{{ p.name }}</td>
+                <td class="px-4 py-3.5 text-slate-500">{{ p.foundation }}</td>
+                <td class="px-4 py-3.5 text-right font-medium text-slate-900">{{ p.commits | number }}</td>
+                <td class="px-4 py-3.5 text-right text-slate-600">{{ p.contributors | number }}</td>
+                <td class="px-4 py-3.5 text-right text-slate-600">{{ p.prsOpened | number }}</td>
+                <td class="px-4 py-3.5 text-right text-slate-600">{{ p.prsMerged | number }}</td>
+                <td class="px-6 py-3.5 text-right text-slate-500">{{ p.linesChanged | number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ── TRAINING TAB ── -->
+  @if (activeTab() === 'training') {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-testid="training-stats">
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-slate-900">{{ trainingStats.totalEnrollments }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Total Enrollments</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-emerald-600">{{ trainingStats.completed }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Completed</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-blue-600">{{ trainingStats.inProgress }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">In Progress</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-purple-600">{{ trainingStats.certifications }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Certifications Earned</div>
+      </div>
+    </div>
+
+    @if (!isAdmin()) {
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+        <i class="fa-light fa-circle-info mr-2"></i>
+        Showing summary data. Admin access is required to view individual employee records.
+      </div>
+    } @else {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="training-table">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">Training &amp; Certification Records</span>
+          <div class="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-slate-50">
+            <i class="fa-light fa-magnifying-glass text-slate-400 text-sm"></i>
+            <input type="text" placeholder="Search employees..." class="text-sm outline-none bg-transparent text-slate-700 w-40" />
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Employee</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Course</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Enrolled</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Completed</th>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (t of trainingRecords; track t.name + t.course) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-3.5">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{{ t.initials }}</div>
+                      <span class="font-medium text-slate-900">{{ t.name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3.5 text-slate-700 max-w-xs">{{ t.course }}</td>
+                  <td class="px-4 py-3.5">
+                    <span class="text-xs font-medium px-2 py-0.5 rounded" [class]="t.type === 'Certification' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-600'">{{ t.type }}</span>
+                  </td>
+                  <td class="px-4 py-3.5 text-slate-500 text-xs">{{ t.enrolled }}</td>
+                  <td class="px-4 py-3.5 text-slate-500 text-xs">{{ t.completed }}</td>
+                  <td class="px-6 py-3.5">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded {{ t.statusClass }}">{{ t.status }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ── EVENTS TAB ── -->
+  @if (activeTab() === 'events') {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-testid="events-stats">
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-slate-900">{{ eventStats.attended }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Events Attended (1yr)</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-blue-600">{{ eventStats.speakers }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Speakers / Presenters</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-emerald-600">{{ eventStats.upcoming }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Upcoming</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-4">
+        <div class="text-2xl font-bold text-amber-600">{{ eventStats.sponsored }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">Sponsored Events</div>
+      </div>
+    </div>
+
+    @if (!isAdmin()) {
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+        <i class="fa-light fa-circle-info mr-2"></i>
+        Showing summary data. Admin access is required to view employee-level event details.
+      </div>
+    } @else {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="events-table">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">Events</span>
+          <div class="flex items-center gap-1">
+            <button class="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white">All</button>
+            <button class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100">Past</button>
+            <button class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100">Upcoming</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Event</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Location</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Registrants</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Sponsor</th>
+                <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Speakers</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (e of events; track e.name) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-3.5 text-slate-500 text-xs whitespace-nowrap">{{ e.date }}</td>
+                  <td class="px-4 py-3.5 font-medium text-slate-900">{{ e.name }}</td>
+                  <td class="px-4 py-3.5 text-slate-500">{{ e.location }}</td>
+                  <td class="px-4 py-3.5 text-right text-slate-700">{{ e.registrants }} / {{ e.capacity }}</td>
+                  <td class="px-4 py-3.5 text-center">
+                    @if (e.sponsor) {
+                      <i class="fa-light fa-circle-check text-emerald-500"></i>
+                    } @else {
+                      <span class="text-slate-300">—</span>
+                    }
+                  </td>
+                  <td class="px-6 py-3.5 text-right text-slate-700">{{ e.speakers }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>

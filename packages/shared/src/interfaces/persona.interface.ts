@@ -7,6 +7,12 @@
  */
 export type PersonaType = 'core-developer' | 'maintainer' | 'projects' | 'board-member' | 'executive-director';
 
+/**
+ * User type within the Organization lens
+ * @description Defines the access level a user has in the org context
+ */
+export type OrgUserType = 'employee' | 'admin-read-only' | 'admin-edit' | 'conglomerate-admin';
+
 /** Board-scoped personas that see foundation-level dashboards */
 export const BOARD_SCOPED_PERSONAS: ReadonlySet<PersonaType> = new Set(['board-member', 'executive-director']);
 

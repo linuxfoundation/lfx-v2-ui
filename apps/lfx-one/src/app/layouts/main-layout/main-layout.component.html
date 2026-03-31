@@ -13,7 +13,7 @@
     </div>
     <!-- Nav Panel (280px) -->
     <div class="w-[280px] flex-shrink-0">
-      <lfx-sidebar [items]="sidebarItems()" [footerItems]="[]" [showMeSelector]="activeLens() === 'me'" [showProjectSelector]="activeLens() === 'foundation'" [showOrgSelector]="activeLens() === 'org'" [grayed]="activeLens() === 'org'"></lfx-sidebar>
+      <lfx-sidebar [items]="sidebarItems()" [footerItems]="[]" [showMeSelector]="activeLens() === 'me'" [showProjectSelector]="activeLens() === 'foundation'" [showOrgSelector]="activeLens() === 'org'" [grayed]="false"></lfx-sidebar>
     </div>
   </div>
 
@@ -46,7 +46,7 @@
           [showMeSelector]="activeLens() === 'me'"
           [showProjectSelector]="activeLens() === 'foundation'"
           [showOrgSelector]="activeLens() === 'org'"
-          [grayed]="activeLens() === 'org'"
+          [grayed]="false"
           [mobile]="true"></lfx-sidebar>
       </div>
     </div>

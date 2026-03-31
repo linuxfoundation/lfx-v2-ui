@@ -58,16 +58,11 @@ export const routes: Routes = [
       // Foundation lens — new pages
       { path: 'foundation/projects', component: PlaceholderPageComponent, data: { title: 'Projects' } },
       { path: 'foundation/events', component: PlaceholderPageComponent, data: { title: 'Events' } },
-      // Org lens — pages
-      { path: 'org', component: PlaceholderPageComponent, data: { title: 'Overview' } },
-      { path: 'org/projects', component: PlaceholderPageComponent, data: { title: 'Key Projects' } },
-      { path: 'org/code', component: PlaceholderPageComponent, data: { title: 'Code Contributions' } },
-      { path: 'org/membership', component: PlaceholderPageComponent, data: { title: 'Membership' } },
-      { path: 'org/benefits', component: PlaceholderPageComponent, data: { title: 'Benefits' } },
-      { path: 'org/groups', component: PlaceholderPageComponent, data: { title: 'Groups' } },
-      { path: 'org/cla', component: PlaceholderPageComponent, data: { title: 'CLA Management' } },
-      { path: 'org/permissions', component: PlaceholderPageComponent, data: { title: 'Access & Permissions' } },
-      { path: 'org/profile', component: PlaceholderPageComponent, data: { title: 'Org Profile' } },
+      // Org lens — module
+      {
+        path: 'org',
+        loadChildren: () => import('./modules/org-lens/org-lens.routes').then((m) => m.ORG_LENS_ROUTES),
+      },
     ],
   },
   {

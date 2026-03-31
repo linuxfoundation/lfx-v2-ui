@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { inject, Injectable, signal } from '@angular/core';
+import { OrgUserType } from '@lfx-one/shared/interfaces';
 import { FeatureFlagService } from './feature-flag.service';
 
 export type Lens = 'me' | 'foundation' | 'org';
@@ -31,6 +32,10 @@ export class AppService {
   private readonly projectSelectorOpenSignal = signal(false);
   public readonly projectSelectorOpen = this.projectSelectorOpenSignal.asReadonly();
 
+  // Org lens user type — controls access level displayed in org lens
+  private readonly orgUserTypeSignal = signal<OrgUserType>('admin-edit');
+  public readonly orgUserType = this.orgUserTypeSignal.asReadonly();
+
   /**
    * Open or close the project selector panel
    */
@@ -43,6 +48,13 @@ export class AppService {
    */
   public setLens(lens: Lens): void {
     this.activeLensSignal.set(lens);
+  }
+
+  /**
+   * Set the active org user type
+   */
+  public setOrgUserType(type: OrgUserType): void {
+    this.orgUserTypeSignal.set(type);
   }
 
   /**

@@ -38,6 +38,25 @@
         </div>
       }
 
+      <!-- Org User Type Selector (visible in org lens) -->
+      @if (showOrgUserTypeSelector()) {
+        <div class="flex items-center gap-2" data-testid="dev-tools-bar-org-user-type">
+          <label for="org-user-type-select" class="text-sm">User Type:</label>
+          <lfx-select
+            [form]="form"
+            control="orgUserType"
+            [options]="orgUserTypeOptions"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="false"
+            placeholder="Select user type"
+            [showClear]="false"
+            styleClass="min-w-[200px] dev-tools-select"
+            inputId="org-user-type-select"
+            data-testid="dev-tools-bar-org-user-type-select" />
+        </div>
+      }
+
       <!-- Organization Selector (visible in org lens or board dashboard) -->
       @if (showOrgSelector()) {
         <div class="flex items-center gap-2" data-testid="dev-tools-bar-organization">

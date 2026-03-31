@@ -1,11 +1,21 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { PersonaOption } from '../interfaces';
+import { OrgUserType, PersonaOption } from '../interfaces';
 
 /**
  * Persona options available for user selection
  */
+/**
+ * Organization lens user type options
+ */
+export const ORG_USER_TYPE_OPTIONS: { value: OrgUserType; label: string }[] = [
+  { value: 'employee', label: 'Employee' },
+  { value: 'admin-read-only', label: 'Admin (read only)' },
+  { value: 'admin-edit', label: 'Admin (write access)' },
+  { value: 'conglomerate-admin', label: 'Conglomerate admin' },
+];
+
 export const PERSONA_OPTIONS: PersonaOption[] = [
   // {
   //   value: 'core-developer',

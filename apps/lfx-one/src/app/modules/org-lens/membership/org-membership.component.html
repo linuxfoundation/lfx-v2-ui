@@ -1,0 +1,450 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto" data-testid="org-membership-container">
+
+  <!-- ── LIST VIEW ── -->
+  @if (!selectedMembership()) {
+    <div class="flex items-center justify-between mb-4">
+      <h1>Membership</h1>
+    </div>
+
+    <!-- List Tabs -->
+    <div class="flex gap-1 border-b border-gray-200 mb-6" data-testid="membership-list-tabs">
+      <button (click)="setListTab('active')"
+        class="px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer"
+        [class]="activeListTab() === 'active' ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'">
+        Active ({{ activeMemberships.length }})
+      </button>
+      <button (click)="setListTab('expired')"
+        class="px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer"
+        [class]="activeListTab() === 'expired' ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'">
+        Expired ({{ expiredMemberships.length }})
+      </button>
+      <button (click)="setListTab('discover')"
+        class="px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer"
+        [class]="activeListTab() === 'discover' ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'">
+        Discover
+      </button>
+    </div>
+
+    <!-- Active Memberships -->
+    @if (activeListTab() === 'active') {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="active-memberships">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <div class="text-sm font-semibold text-slate-800">Active Memberships</div>
+            <div class="text-xs text-slate-400">Projects your organization have active membership for</div>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-slate-50">
+            <i class="fa-light fa-magnifying-glass text-slate-400 text-sm"></i>
+            <input type="text" placeholder="Search..." class="text-sm outline-none bg-transparent text-slate-700 w-36" (input)="searchQuery.set($any($event.target).value)" />
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Membership Tier</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Renewal Date</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Your Projects</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Board Members</th>
+                <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Key Contacts</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @for (m of filteredActive(); track m.foundation) {
+                <tr class="hover:bg-slate-50 transition-colors cursor-pointer" (click)="selectMembership(m)">
+                  <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-blue-600 hover:underline">{{ m.foundation }}</div>
+                    <div class="text-xs text-slate-400">Member since {{ m.memberSince }}</div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="text-sm font-semibold text-slate-800">{{ m.tier }}</div>
+                    <div class="text-xs text-slate-400">{{ m.tierDateRange }}</div>
+                  </td>
+                  <td class="px-4 py-4 text-sm text-slate-700">{{ m.renewalDate }}</td>
+                  <td class="px-4 py-4 text-right text-sm text-slate-700">{{ m.projects }}</td>
+                  <td class="px-4 py-4 text-right text-sm text-slate-700">{{ m.boardMembers }}</td>
+                  <td class="px-6 py-4 text-right">
+                    <span class="text-sm font-semibold" [class]="m.keyContacts < m.keyContactsTotal ? 'text-orange-500' : 'text-green-600'">
+                      {{ m.keyContacts }}/{{ m.keyContactsTotal }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Expired Memberships -->
+    @if (activeListTab() === 'expired') {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="expired-memberships">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <div class="text-sm font-semibold text-slate-800">Expired Memberships</div>
+          <div class="text-xs text-slate-400">Previous memberships that have lapsed or were not renewed</div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Membership Tier</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Expired</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Your Projects</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Board Members</th>
+                @if (canEdit()) {
+                  <th class="px-6 py-3"></th>
+                }
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @for (m of expiredMemberships; track m.foundation) {
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-slate-700">{{ m.foundation }}</div>
+                    <div class="text-xs text-slate-400">Member since {{ m.memberSince }}</div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <div class="text-sm font-semibold text-slate-700">{{ m.tier }}</div>
+                    <div class="text-xs text-slate-400">{{ m.tierDateRange }}</div>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-red-50 text-red-700">{{ m.renewalDate }}</span>
+                  </td>
+                  <td class="px-4 py-4 text-right text-sm text-slate-500">{{ m.projects }}</td>
+                  <td class="px-4 py-4 text-right text-sm text-slate-500">{{ m.boardMembers }}</td>
+                  @if (canEdit()) {
+                    <td class="px-6 py-4 text-right">
+                      <button class="text-xs text-blue-600 hover:underline cursor-pointer font-medium">Renew →</button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Discover -->
+    @if (activeListTab() === 'discover') {
+      <div class="flex flex-col gap-4" data-testid="discover-memberships">
+        <div class="text-sm text-slate-500 mb-2">Foundations relevant to your organization's open source activity that you are not yet a member of.</div>
+        @for (d of discoverMemberships; track d.foundation) {
+          <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-semibold text-slate-900 mb-1">{{ d.foundation }}</div>
+              <div class="text-sm text-slate-500 mb-2">{{ d.description }}</div>
+              <div class="flex items-center gap-1.5 text-xs text-blue-600">
+                <i class="fa-light fa-circle-info"></i>
+                {{ d.relevance }}
+              </div>
+            </div>
+            <a href="#" class="flex-shrink-0 px-3 py-1.5 border border-blue-200 text-blue-600 text-xs font-semibold rounded-lg hover:bg-blue-50 cursor-pointer">
+              Learn More
+            </a>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── DETAIL VIEW ── -->
+  @if (selectedMembership(); as m) {
+    <!-- Breadcrumb -->
+    <div class="flex items-center gap-2 text-sm mb-5">
+      <button (click)="clearMembership()" class="text-blue-600 hover:underline cursor-pointer font-medium">Memberships</button>
+      <i class="fa-light fa-chevron-right text-slate-400 text-xs"></i>
+      <span class="text-slate-700">{{ m.foundation }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">{{ m.foundation }}</h1>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-sm text-slate-500">{{ m.tier }}</span>
+          <span class="text-slate-300">·</span>
+          <span class="text-xs text-slate-400">Member since {{ m.memberSince }}</span>
+          @if (m.expired) {
+            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-red-50 text-red-700">Expired</span>
+          }
+        </div>
+      </div>
+      @if (canEdit() && !m.expired) {
+        <button class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
+          <i class="fa-light fa-pen"></i> Edit
+        </button>
+      }
+      @if (canEdit() && m.expired) {
+        <button class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
+          <i class="fa-light fa-rotate-right"></i> Renew Membership
+        </button>
+      }
+    </div>
+
+    <!-- Detail Tabs -->
+    <div class="flex gap-1 border-b border-gray-200 mb-6" data-testid="membership-detail-tabs">
+      @for (tab of [
+        {id: 'docs', label: 'Documentation', icon: 'fa-light fa-file-lines'},
+        {id: 'contacts', label: 'Key Contacts', icon: 'fa-light fa-address-book'},
+        {id: 'board', label: 'Board & Committees', icon: 'fa-light fa-people-roof'},
+        {id: 'onboarding', label: 'Onboarding', icon: 'fa-light fa-list-check'},
+        {id: 'roi', label: 'ROI', icon: 'fa-light fa-chart-line'}
+      ]; track tab.id) {
+        <button
+          (click)="setDetailTab(tab.id)"
+          class="px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap"
+          [class]="activeDetailTab() === tab.id ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700'">
+          <i [class]="tab.icon + ' mr-1.5'"></i>{{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- Documentation Tab -->
+    @if (activeDetailTab() === 'docs') {
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="membership-docs">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-4">
+          <div class="text-sm font-semibold text-slate-700 mb-1">Membership Agreements</div>
+          <div class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+            <i class="fa-light fa-file-pdf text-red-400 text-xl flex-shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-slate-800">Membership Agreement 2024</div>
+              <div class="text-xs text-slate-400">Signed Jan 14, 2024</div>
+            </div>
+            <button class="text-xs text-blue-600 hover:underline cursor-pointer">View</button>
+          </div>
+          <div class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
+            <i class="fa-light fa-file-pdf text-red-400 text-xl flex-shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-slate-800">Foundation Charter</div>
+              <div class="text-xs text-slate-400">Uploaded Mar 2022</div>
+            </div>
+            <button class="text-xs text-blue-600 hover:underline cursor-pointer">View</button>
+          </div>
+          @if (canEdit()) {
+            <button class="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer mt-1">
+              <i class="fa-light fa-upload"></i> Upload Document
+            </button>
+          }
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-4">
+          <div class="text-sm font-semibold text-slate-700 mb-1">Renewal Dates</div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-50">
+            <span class="text-sm text-slate-500">Renewal Date</span>
+            <span class="text-sm font-semibold" [class]="m.expired ? 'text-red-600' : 'text-slate-900'">{{ m.renewalDate }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-slate-50">
+            <span class="text-sm text-slate-500">Annual Fee</span>
+            <span class="text-sm font-semibold text-slate-900">{{ m.annualFee }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2">
+            <span class="text-sm text-slate-500">Member Since</span>
+            <span class="text-sm font-semibold text-slate-900">{{ m.memberSince }}</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Key Contacts Tab -->
+    @if (activeDetailTab() === 'contacts') {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="membership-contacts">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">Key Contact Roles</span>
+          @if (canEdit()) {
+            <button class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
+              <i class="fa-light fa-user-plus"></i> Assign Contact
+            </button>
+          }
+        </div>
+        <div class="flex flex-col divide-y divide-slate-50">
+          @for (c of detailKeyContacts; track c.role) {
+            <div class="flex items-center gap-4 px-6 py-4">
+              @if (c.filled) {
+                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0">{{ initials(c.name!) }}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-slate-900">{{ c.name }}</div>
+                  <div class="text-xs text-slate-400">{{ c.email }}</div>
+                </div>
+                <span class="text-xs font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded">{{ c.role }}</span>
+                @if (canEdit()) {
+                  <button class="text-xs text-blue-600 hover:underline cursor-pointer">Edit</button>
+                }
+              } @else {
+                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center flex-shrink-0">
+                  <i class="fa-light fa-user-slash text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-slate-400 italic">Unfilled</div>
+                </div>
+                <span class="text-xs font-medium px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-200 rounded">{{ c.role }}</span>
+                @if (canEdit()) {
+                  <button class="text-xs text-blue-600 hover:underline cursor-pointer">Assign →</button>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Board & Committees Tab -->
+    @if (activeDetailTab() === 'board') {
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="membership-board">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">Board &amp; Committee Seats</span>
+          @if (canEdit()) {
+            <button class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
+              <i class="fa-light fa-user-plus"></i> Assign Seat
+            </button>
+          }
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-gray-100">
+              <tr>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Committee / Board</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Representative</th>
+                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              @for (seat of detailBoardSeats; track seat.committee) {
+                <tr class="hover:bg-slate-50">
+                  <td class="px-6 py-3.5 font-medium text-slate-900">{{ seat.committee }}</td>
+                  <td class="px-4 py-3.5">
+                    <span class="text-xs px-2 py-0.5 rounded" [class]="seat.type === 'Board' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200'">{{ seat.type }}</span>
+                  </td>
+                  <td class="px-4 py-3.5">
+                    @if (seat.filled) {
+                      <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{{ initials(seat.member!) }}</div>
+                        <span class="text-slate-800">{{ seat.member }}</span>
+                      </div>
+                    } @else {
+                      <span class="text-slate-400 italic text-xs">Vacant</span>
+                    }
+                  </td>
+                  <td class="px-6 py-3.5">
+                    @if (seat.filled) {
+                      <span class="text-xs font-semibold px-2 py-0.5 rounded bg-green-50 text-green-700">Filled</span>
+                    } @else {
+                      <span class="text-xs font-semibold px-2 py-0.5 rounded bg-orange-50 text-orange-700">Vacant</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Onboarding Tab -->
+    @if (activeDetailTab() === 'onboarding') {
+      <div class="flex flex-col gap-6" data-testid="membership-onboarding">
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-semibold text-slate-700">Overall Progress</span>
+            <span class="text-sm font-bold" [class]="onboardingPercent() === 100 ? 'text-green-600' : 'text-amber-600'">{{ onboardingPercent() }}%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
+            <div class="h-full rounded-full transition-all" [class]="onboardingPercent() === 100 ? 'bg-green-500' : 'bg-amber-400'" [style.width.%]="onboardingPercent()"></div>
+          </div>
+          <div class="text-xs text-slate-400">{{ onboardingDoneCount() }} of {{ detailOnboardingSteps.length }} steps complete</div>
+        </div>
+
+        @for (category of ['Documentation', 'Key Contacts', 'Board & Committees', 'Communications']; track category) {
+          <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="text-sm font-semibold text-slate-700 mb-3">{{ category }}</div>
+            <div class="flex flex-col gap-2">
+              @for (step of detailOnboardingSteps; track step.label) {
+                @if (step.category === category) {
+                  <div class="flex items-center gap-3">
+                    @if (step.done) {
+                      <i class="fa-solid fa-circle-check text-green-500 flex-shrink-0"></i>
+                    } @else {
+                      <i class="fa-light fa-circle text-slate-300 flex-shrink-0"></i>
+                    }
+                    <span class="text-sm" [class]="step.done ? 'text-slate-700' : 'text-slate-500'">{{ step.label }}</span>
+                    @if (!step.done && canEdit()) {
+                      <button class="ml-auto text-xs text-blue-600 hover:underline cursor-pointer">Complete →</button>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ROI Tab -->
+    @if (activeDetailTab() === 'roi') {
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" data-testid="membership-roi">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 flex flex-col gap-4">
+          <div class="text-sm font-semibold text-slate-700">ROI Calculator</div>
+          <div class="flex flex-col gap-3">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Annual Membership Fee</label>
+              <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-slate-50">
+                <span class="text-slate-400 text-sm">$</span>
+                <input type="text" value="370000" class="text-sm text-slate-700 bg-transparent outline-none flex-1" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Employee Hours Contributed / Year</label>
+              <input type="number" value="4200" class="w-full border border-gray-200 rounded-lg px-3 py-2 bg-slate-50 text-sm text-slate-700 outline-none" />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">Avg Hourly Rate (USD)</label>
+              <input type="number" value="145" class="w-full border border-gray-200 rounded-lg px-3 py-2 bg-slate-50 text-sm text-slate-700 outline-none" />
+            </div>
+          </div>
+          <div class="border-t border-slate-100 pt-4 flex flex-col gap-2">
+            <div class="flex justify-between text-sm"><span class="text-slate-500">Estimated Benefit Value</span><span class="font-semibold text-slate-900">$1,890,000</span></div>
+            <div class="flex justify-between text-sm"><span class="text-slate-500">Total Investment</span><span class="font-semibold text-slate-900">$979,000</span></div>
+            <div class="flex justify-between text-sm font-bold"><span class="text-slate-700">Net ROI</span><span class="text-emerald-600">+93%</span></div>
+          </div>
+          @if (canEdit()) {
+            <button class="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer mt-1"><i class="fa-light fa-file-export"></i> Export PDF</button>
+          }
+        </div>
+        <div class="flex flex-col gap-4">
+          <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="text-sm font-semibold text-slate-700 mb-3">Influence Summary</div>
+            <div class="flex flex-col gap-3">
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Projects Leading</span><span class="font-semibold text-emerald-600">8</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Projects Contributing</span><span class="font-semibold text-slate-900">14</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Active Maintainers</span><span class="font-semibold text-slate-900">15</span></div>
+              <div class="flex justify-between text-sm"><span class="text-slate-500">Annual Commits</span><span class="font-semibold text-slate-900">8,423</span></div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="text-sm font-semibold text-slate-700 mb-3">Goals Progress</div>
+            <div class="flex flex-col gap-3">
+              @for (goal of [
+                {label: 'Increase maintainer count to 20', progress: 75},
+                {label: 'Fill all key contact roles', progress: 75},
+                {label: 'Complete onboarding checklist', progress: 92},
+                {label: 'Achieve Leading status on 10 projects', progress: 80}
+              ]; track goal.label) {
+                <div>
+                  <div class="flex justify-between text-xs mb-1"><span class="text-slate-600">{{ goal.label }}</span><span class="font-medium text-slate-700">{{ goal.progress }}%</span></div>
+                  <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full bg-blue-500" [style.width.%]="goal.progress"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>
