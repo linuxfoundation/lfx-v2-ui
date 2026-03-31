@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { TitleCasePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, OnInit, output, signal, Signal } from '@angular/core';
 import { FullNamePipe } from '@pipes/full-name.pipe';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -221,7 +222,7 @@ export class CommitteeMembersComponent implements OnInit {
         // Refresh members list by re-fetching
         this.refreshMembers();
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.isDeleting.set(false);
 
         this.messageService.add({
