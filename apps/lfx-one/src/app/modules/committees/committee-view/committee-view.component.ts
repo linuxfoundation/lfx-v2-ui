@@ -139,16 +139,46 @@ export class CommitteeViewComponent {
 
   public hasChannels: Signal<boolean> = computed(() => {
     const c = this.committee();
-    return !!(c?.mailing_list || c?.chat_channel || c?.website) || this.canEdit();
+    return this.associatedMailingLists().length > 0 || !!(c?.chat_channel || c?.website) || this.canEdit();
   });
+
+  public mlExpanded = signal(false);
 
   public chatPlatformLabel: Signal<string> = this.initChatPlatformLabel();
   public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
   public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
 
-  // -- Linked mailing list (rich object for header display) --
-  public linkedMailingList: Signal<GroupsIOMailingList | null> = this.initLinkedMailingList();
+  // -- Join button computed signals --
+  public joinButtonLabel: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'Join Group';
+    if (mode === 'application') return 'Request to Join';
+    if (mode === 'invite_only') return 'Request Access';
+    return 'Contact Admin';
+  });
+
+  public joinButtonIcon: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'fa-light fa-user-plus';
+    if (mode === 'application' || mode === 'invite_only') return 'fa-light fa-paper-plane';
+    return 'fa-light fa-envelope';
+  });
+
+  public joinButtonSeverity: Signal<'info' | 'secondary'> = computed(() => (this.committee()?.join_mode === 'open' ? 'info' : 'secondary'));
+
+  public joinButtonOutlined: Signal<boolean> = computed(() => this.committee()?.join_mode !== 'open');
+
+  public joinButtonTestId: Signal<string> = computed(() => {
+    const mode = this.committee()?.join_mode;
+    if (mode === 'open') return 'committee-view-join-btn';
+    if (mode === 'application') return 'committee-view-request-to-join-btn';
+    if (mode === 'invite_only') return 'committee-view-request-access-btn';
+    return 'committee-view-contact-admin-btn';
+  });
+
+  // -- Associated mailing lists (rich objects filtered by ml.committees[]) --
+  public associatedMailingLists: Signal<GroupsIOMailingList[]> = this.initAssociatedMailingLists();
 
   // -- Sub-groups --
   public subGroupsLoading = signal(true);
@@ -482,27 +512,18 @@ export class CommitteeViewComponent {
     return computed(() => getRepoPlatformIcon(this.committee()?.website));
   }
 
-  private initLinkedMailingList(): Signal<GroupsIOMailingList | null> {
+  private initAssociatedMailingLists(): Signal<GroupsIOMailingList[]> {
     return toSignal(
       toObservable(this.committee).pipe(
-        filter((c): c is Committee => !!c?.project_uid),
+        filter((c): c is Committee => !!c?.uid && !!c?.project_uid),
         switchMap((c) => {
-          if (!c.mailing_list) return of(null);
           return this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
-            map((lists) => {
-              const email = c.mailing_list!;
-              return (
-                lists.find((ml) => {
-                  const mlEmail = ml.service?.domain ? `${ml.group_name}@${ml.service.domain}` : ml.group_name;
-                  return mlEmail === email;
-                }) ?? null
-              );
-            }),
-            catchError(() => of(null))
+            map((lists) => lists.filter((ml) => ml.committees?.some((ref) => ref.uid === c.uid))),
+            catchError(() => of([]))
           );
         })
       ),
-      { initialValue: null }
+      { initialValue: [] }
     );
   }
 
