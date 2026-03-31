@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
-import { UserAvatarColorPipe } from '@pipes/user-avatar-color.pipe';
-import { UserInitialsPipe } from '@pipes/user-initials.pipe';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
+import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
-import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, CreateCommitteeMemberRequest, DialogMode, UserSearchResult } from '@lfx-one/shared/interfaces';
+import { UserAvatarColorPipe } from '@pipes/user-avatar-color.pipe';
+import { UserInitialsPipe } from '@pipes/user-initials.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { SearchService } from '@services/search.service';
@@ -24,16 +24,6 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 
-/**
- * Search-first "Add Member" dialog for the committee Members tab.
- *
- * Flow:
- *  Step 1 (search)    — type-ahead search for LF accounts; existing members greyed out.
- *  Step 2 (configure) — selected person card + role / voting / org / mailing-list toggle.
- *  Manual fallback    — closes this dialog with 'manual'; parent opens MemberFormComponent.
- *
- * Generated with [Claude Code](https://claude.ai/code)
- */
 @Component({
   selector: 'lfx-add-member-dialog',
   imports: [
@@ -53,7 +43,6 @@ import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, swi
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AddMemberDialogComponent {
-  // ── Injections ────────────────────────────────────────────────────────────
   private readonly committeeService = inject(CommitteeService);
   private readonly mailingListService = inject(MailingListService);
   private readonly searchService = inject(SearchService);
@@ -61,18 +50,11 @@ export class AddMemberDialogComponent {
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
 
-  // ── Dialog config data ────────────────────────────────────────────────────
   public readonly committee: Committee | null = this.config.data?.committee ?? null;
-  /** Set of lowercase emails for members already in this committee */
   private readonly existingEmails = new Set<string>(
     ((this.config.data?.existingMembers as CommitteeMember[]) ?? []).map((m: CommitteeMember) => (m.email ?? '').toLowerCase())
   );
-
-  // ── Forms ─────────────────────────────────────────────────────────────────
-  /** Search input form — drives the live query */
   public readonly searchForm = new FormGroup({ query: new FormControl('') });
-
-  /** Configure form (Step 2) — role, voting, org, mailing list */
   public readonly configForm = new FormGroup({
     role: new FormControl<string | null>(null, this.committee?.enable_voting ? [Validators.required] : []),
     voting_status: new FormControl<string | null>(null, this.committee?.enable_voting ? [Validators.required] : []),
@@ -81,17 +63,12 @@ export class AddMemberDialogComponent {
     subscribe_mailing_list: new FormControl<boolean>(true),
   });
 
-  // ── Writable signals ──────────────────────────────────────────────────────
   public mode = signal<DialogMode>('search');
   public submitting = signal(false);
   public searchLoading = signal(false);
   public selectedUser = signal<UserSearchResult | null>(null);
-
-  // ── Computed signals ──────────────────────────────────────────────────────
-  /** Deduplicated search results with "already member" flag */
   public searchResults: Signal<(UserSearchResult & { alreadyMember: boolean })[]> = this.initSearchResults();
 
-  /** Trimmed query value as a signal — safe to read in templates under zoneless CD */
   public readonly queryValue = toSignal(
     this.searchForm.get('query')!.valueChanges.pipe(
       startWith(''),
@@ -111,26 +88,17 @@ export class AddMemberDialogComponent {
     }
   );
 
-  /** True when the "Add to Group" submit button should be available */
   public readonly canSubmit = computed(() => this.mode() === 'configure' && !!this.selectedUser() && this.formValid());
-
-  /** Whether this committee has an associated mailing list to subscribe to */
   public readonly hasMailingList = computed(() => !!this.committee?.mailing_list);
 
-  /** Whether org fields are required (business email or voting enabled committees) */
   public readonly requiresOrg = computed(() => !!(this.committee?.business_email_required || this.committee?.enable_voting));
 
-  // ── Options ───────────────────────────────────────────────────────────────
   public readonly roleOptions = MEMBER_ROLES;
   public readonly votingStatusOptions = VOTING_STATUSES;
 
-  // ── Public methods ────────────────────────────────────────────────────────
-
-  /** Select a user from the search results and advance to the configure step. */
   public selectUser(user: UserSearchResult & { alreadyMember: boolean }): void {
     if (user.alreadyMember) return;
     this.selectedUser.set(user);
-    // Pre-populate org fields from the search result
     this.configForm.patchValue({
       org_name: user.organization?.name ?? '',
       org_domain: user.organization?.website ?? '',
@@ -138,17 +106,12 @@ export class AddMemberDialogComponent {
     this.mode.set('configure');
   }
 
-  /** Clear the selected user and return to search mode. */
   public clearSelection(): void {
     this.selectedUser.set(null);
     this.configForm.patchValue({ org_name: '', org_domain: '' });
     this.mode.set('search');
   }
 
-  /**
-   * Close this dialog with the sentinel 'manual'.
-   * CommitteeMembersComponent will catch this and open MemberFormComponent.
-   */
   public showManualForm(): void {
     this.dialogRef.close('manual');
   }
@@ -160,8 +123,6 @@ export class AddMemberDialogComponent {
   public onSubmit(): void {
     this.submitAddMember();
   }
-
-  // ── Private methods ───────────────────────────────────────────────────────
 
   private submitAddMember(): void {
     const user = this.selectedUser();
@@ -221,14 +182,11 @@ export class AddMemberDialogComponent {
       error: (err: HttpErrorResponse) => {
         this.submitting.set(false);
         const upstream = typeof err.error?.message === 'string' ? err.error.message : null;
-        const detail =
-          err.status === 409 ? 'This person is already a member of this group.' : (upstream ?? 'Failed to add member. Please try again.');
+        const detail = err.status === 409 ? 'This person is already a member of this group.' : (upstream ?? 'Failed to add member. Please try again.');
         this.messageService.add({ severity: 'error', summary: 'Unable to Add Member', detail });
       },
     });
   }
-
-  // ── Private initializer functions ─────────────────────────────────────────
 
   private initSearchResults(): Signal<(UserSearchResult & { alreadyMember: boolean })[]> {
     const queryControl = this.searchForm.get('query')!;
