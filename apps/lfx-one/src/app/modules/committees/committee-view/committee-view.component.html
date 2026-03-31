@@ -110,6 +110,8 @@
                     severity="info"
                     styleClass="!text-xs !p-0 whitespace-nowrap"
                     (onClick)="showDescriptionDialog.set(true)"></lfx-button>
+                } @else if (canEdit()) {
+                  <span class="text-gray-400 text-sm italic flex-1">No description yet.</span>
                 }
                 @if (canEdit()) {
                   <lfx-button
