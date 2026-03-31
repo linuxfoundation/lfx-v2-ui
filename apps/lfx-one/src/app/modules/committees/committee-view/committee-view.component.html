@@ -63,6 +63,17 @@
                 (onClick)="handleLeaveRequest()"
                 data-testid="committee-view-leave-btn" />
             }
+            @if (canEdit()) {
+              <lfx-button
+                icon="fa-light fa-gear"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                tooltip="Group Settings"
+                (onClick)="activeTab.set('settings')"
+                data-testid="committee-view-settings-btn" />
+            }
           </div>
         </div>
         <!-- Description + Channels card side by side -->
@@ -272,22 +283,24 @@
       <!-- Tabs -->
       <div class="flex gap-1 border-b" data-testid="committee-view-tabs">
         @for (tab of visibleTabs(); track tab.key) {
-          <button
-            (click)="activeTab.set(tab.key)"
-            class="px-4 py-2 text-sm font-medium transition-colors"
-            [ngClass]="{
-              'border-b-2 border-blue-600 text-blue-600': activeTab() === tab.key,
-              'text-gray-500': activeTab() !== tab.key,
-            }">
-            <i class="fa-light {{ tab.icon }} mr-2"></i>{{ tab.label }}
-            @if (tab.badge && tab.badge() !== null) {
-              <lfx-tag
-                [value]="'' + tab.badge()"
-                [rounded]="true"
-                [severity]="activeTab() === tab.key ? 'info' : 'secondary'"
-                styleClass="ml-1 !text-[10px] !px-1.5 !py-0.5" />
-            }
-          </button>
+          @if (tab.key !== 'settings') {
+            <button
+              (click)="activeTab.set(tab.key)"
+              class="px-4 py-2 text-sm font-medium transition-colors"
+              [ngClass]="{
+                'border-b-2 border-blue-600 text-blue-600': activeTab() === tab.key,
+                'text-gray-500': activeTab() !== tab.key,
+              }">
+              <i class="fa-light {{ tab.icon }} mr-2"></i>{{ tab.label }}
+              @if (tab.badge && tab.badge() !== null) {
+                <lfx-tag
+                  [value]="'' + tab.badge()"
+                  [rounded]="true"
+                  [severity]="activeTab() === tab.key ? 'info' : 'secondary'"
+                  styleClass="ml-1 !text-[10px] !px-1.5 !py-0.5" />
+              }
+            </button>
+          }
         }
       </div>
 
@@ -327,7 +340,17 @@
         }
         @case ('settings') {
           @if (canEdit()) {
-            <lfx-committee-settings-tab [committee]="committee()!" (committeeUpdated)="refreshCommittee()" />
+            <div class="flex flex-col gap-4">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 w-fit"
+                (click)="activeTab.set('overview')"
+                data-testid="committee-view-settings-back-btn">
+                <i class="fa-light fa-arrow-left text-xs" aria-hidden="true"></i>
+                Back to Overview
+              </button>
+              <lfx-committee-settings-tab [committee]="committee()!" (committeeUpdated)="refreshCommittee()" />
+            </div>
           }
         }
       }
