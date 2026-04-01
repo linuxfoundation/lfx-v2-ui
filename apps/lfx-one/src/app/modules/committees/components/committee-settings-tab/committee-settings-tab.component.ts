@@ -278,7 +278,7 @@ export class CommitteeSettingsTabComponent {
       description: ml.description,
       title: ml.title,
       service_uid: ml.service_uid,
-      committee_uid: committeeUid,
+      committee_uid: committeeUid ?? '',
       subject_tag: ml.subject_tag,
       writers: ml.writers,
       auditors: ml.auditors,
