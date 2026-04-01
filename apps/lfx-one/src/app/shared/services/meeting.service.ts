@@ -111,8 +111,12 @@ export class MeetingService {
   }
 
   /** Fetches past meetings scoped to a committee via `parent=committee:{id}` query parameter. */
-  public getPastMeetingsByCommittee(committeeId: string, limit?: number): Observable<PastMeeting[]> {
-    let params = new HttpParams().set('parent', `committee:${committeeId}`).set('sort', 'updated_desc');
+  public getPastMeetingsByCommittee(committeeId: string, limit?: number, sort?: string): Observable<PastMeeting[]> {
+    let params = new HttpParams().set('parent', `committee:${committeeId}`);
+
+    if (sort) {
+      params = params.set('sort', sort);
+    }
 
     if (limit) {
       params = params.set('page_size', limit.toString());
@@ -146,7 +150,7 @@ export class MeetingService {
 
     // TODO: Add filter for upcoming meetings
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
 
     return this.getMeetings(params).pipe(map((response) => response.data));
@@ -156,7 +160,7 @@ export class MeetingService {
     let params = new HttpParams().set('tags', `project_uid:${uid}`);
 
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
 
     // TODO: Add sort parameter once API supports sorting by scheduled_start_time
@@ -176,7 +180,7 @@ export class MeetingService {
   ): Observable<PaginatedResponse<Meeting>> {
     let params = new HttpParams().set('tags', `project_uid:${uid}`);
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
     if (orderBy) {
       params = params.set('order', orderBy);
@@ -204,7 +208,7 @@ export class MeetingService {
   ): Observable<PaginatedResponse<PastMeeting>> {
     let params = new HttpParams().set('tags', `project_uid:${uid}`);
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
     if (pageToken) {
       params = params.set('page_token', pageToken);

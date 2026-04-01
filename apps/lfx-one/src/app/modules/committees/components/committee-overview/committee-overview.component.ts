@@ -348,7 +348,7 @@ export class CommitteeOverviewComponent {
         filter((c) => !!c?.uid),
         switchMap((c) => {
           this.pastMeetingsLoading.set(true);
-          return this.meetingService.getPastMeetingsByCommittee(c.uid, 5).pipe(
+          return this.meetingService.getPastMeetingsByCommittee(c.uid, 5, 'updated_desc').pipe(
             catchError(() => of([])),
             finalize(() => this.pastMeetingsLoading.set(false))
           );
