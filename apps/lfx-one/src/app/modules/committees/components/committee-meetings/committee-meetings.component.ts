@@ -92,7 +92,7 @@ export class CommitteeMeetingsComponent {
   public calendarLoading = signal(false);
 
   // Data — upcoming meetings
-  public meetings: Signal<Meeting[]> = this.initMeetings();
+  public upcomingMeetings: Signal<Meeting[]> = this.initUpcomingMeetings();
 
   // Data — past meetings, lazy-loaded reactively when filter switches to 'past'
   public pastMeetings: Signal<PastMeeting[]> = toSignal(
@@ -149,13 +149,13 @@ export class CommitteeMeetingsComponent {
 
   // Private initializer functions
 
-  private initMeetings(): Signal<Meeting[]> {
+  private initUpcomingMeetings(): Signal<Meeting[]> {
     return toSignal(
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
         tap(() => this.meetingsLoading.set(true)),
         switchMap((c) =>
-          this.meetingService.getMeetingsByCommittee(c.uid, undefined, 'start_time.asc').pipe(
+          this.meetingService.getMeetingsByCommittee(c.uid, 100, 'start_time.asc').pipe(
             map((meetings) => {
               const active = meetings.filter((m) => {
                 if (m.occurrences?.length) {
@@ -189,7 +189,7 @@ export class CommitteeMeetingsComponent {
       const time = this.timeFilter();
       const term = (searchTerm() || '').toLowerCase();
       const typeFilter = this.meetingTypeFilter();
-      const items: (Meeting | PastMeeting)[] = time === 'upcoming' ? this.meetings() : this.pastMeetings();
+      const items: (Meeting | PastMeeting)[] = time === 'upcoming' ? this.upcomingMeetings() : this.pastMeetings();
 
       return items.filter((m) => {
         const title = 'title' in m ? m.title : '';
