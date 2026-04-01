@@ -3,7 +3,7 @@
 
 import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { DatePipe, NgClass } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
@@ -36,7 +36,6 @@ import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
     DashboardMeetingCardComponent,
     MessageComponent,
     NgClass,
-    DatePipe,
     SkeletonModule,
     SelectComponent,
     TagComponent,
