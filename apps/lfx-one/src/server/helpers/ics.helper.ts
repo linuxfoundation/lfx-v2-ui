@@ -25,18 +25,35 @@ export function escapeICSText(value: string): string {
 
 /**
  * Folds a long ICS content line at 75 octets per RFC 5545 §3.1.
- * Continuation lines begin with a single SPACE character.
+ * Counts UTF-8 bytes (not characters) so multi-byte chars don't exceed the limit.
+ * Continuation lines begin with a single SPACE character (1 octet).
  */
 export function foldLine(line: string): string {
-  if (line.length <= 75) return line;
+  if (Buffer.byteLength(line, 'utf8') <= 75) return line;
+
   const chunks: string[] = [];
-  chunks.push(line.slice(0, 75));
-  let i = 75;
-  while (i < line.length) {
-    chunks.push(' ' + line.slice(i, i + 74));
-    i += 74;
+  let current = '';
+  let currentBytes = 0;
+  const maxFirst = 75;
+  const maxCont = 74; // continuation lines: 75 minus the leading SPACE
+
+  for (const char of line) {
+    const charBytes = Buffer.byteLength(char, 'utf8');
+    const limit = chunks.length === 0 ? maxFirst : maxCont;
+
+    if (currentBytes + charBytes > limit) {
+      chunks.push(current);
+      current = char;
+      currentBytes = charBytes;
+    } else {
+      current += char;
+      currentBytes += charBytes;
+    }
   }
-  return chunks.join('\r\n');
+
+  if (current) chunks.push(current);
+
+  return chunks.join('\r\n ');
 }
 
 /**

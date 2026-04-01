@@ -1,26 +1,27 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, linkedSignal, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
+import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
+import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
-import { Committee, Meeting, PastMeeting, TimeFilter, ViewMode, Vote, Survey } from '@lfx-one/shared/interfaces';
-import { CANCELLED_COLOR, MEETING_TYPE_COLORS, MEETING_TYPE_CONFIGS, SURVEY_COLOR, VOTE_COLOR } from '@lfx-one/shared/constants';
-import { addMinutesToDate } from '@lfx-one/shared/utils';
-import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
-import { MeetingService } from '@services/meeting.service';
-import { VoteService } from '@services/vote.service';
-import { SurveyService } from '@services/survey.service';
-import { SkeletonModule } from 'primeng/skeleton';
-import { MessageService } from 'primeng/api';
+import { environment } from '@environments/environment';
 import { EventClickArg, EventInput } from '@fullcalendar/core';
+import { CANCELLED_COLOR, MEETING_TYPE_COLORS, MEETING_TYPE_CONFIGS, SURVEY_COLOR, VOTE_COLOR } from '@lfx-one/shared/constants';
+import { Committee, Meeting, PastMeeting, Survey, TimeFilter, ViewMode, Vote } from '@lfx-one/shared/interfaces';
+import { addMinutesToDate } from '@lfx-one/shared/utils';
+import { MeetingService } from '@services/meeting.service';
+import { SurveyService } from '@services/survey.service';
+import { VoteService } from '@services/vote.service';
+import { MessageService } from 'primeng/api';
+import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, tap } from 'rxjs';
 
 @Component({
@@ -127,7 +128,7 @@ export class CommitteeMeetingsComponent {
   /** Copies the committee's calendar subscribe URL to clipboard and shows a confirmation toast. */
   public onSubscribe(): void {
     const uid = this.committee().uid;
-    const url = `${window.location.origin}/public/api/committees/${uid}/calendar.ics`;
+    const url = `${environment.urls.home}/public/api/committees/${uid}/calendar.ics`;
     this.clipboard.copy(url);
     this.messageService.add({
       severity: 'info',
@@ -193,7 +194,7 @@ export class CommitteeMeetingsComponent {
             votes: this.voteService.getVotesByCommittee(committeeUid!).pipe(catchError(() => of([] as Vote[]))),
             surveys: this.surveyService.getSurveysByCommittee(committeeUid!).pipe(catchError(() => of([] as Survey[]))),
             pastMeetings: this.meetingService.getPastMeetingsByCommittee(committeeUid!).pipe(catchError(() => of([] as PastMeeting[]))),
-          })
+          }).pipe(finalize(() => this.calendarLoading.set(false)))
         ),
         tap(() => this.calendarLoading.set(false))
       ),
