@@ -8,7 +8,7 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { environment } from '@environments/environment';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL, MY_ACTIVITY_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
-import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { isBoardScopedPersona, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
@@ -61,7 +61,7 @@ export class MainLayoutComponent {
   // Order: Overview, Meetings, Mailing Lists, Groups, Projects, My Activity, Insights, Governance
   protected readonly sidebarItems = computed(() => {
     const items: SidebarMenuItem[] = [];
-    const isTlfOnlyPersona = this.personaService.isTlfOnlyPersona();
+    const isBoardMember = isBoardScopedPersona(this.personaService.currentPersona());
 
     // Overview (Dashboard)
     items.push({
@@ -117,7 +117,7 @@ export class MainLayoutComponent {
     });
 
     // Governance section (Votes, Surveys, Permissions) - only for non-board-members
-    if (!isTlfOnlyPersona) {
+    if (!isBoardMember) {
       items.push({
         label: 'Governance',
         isSection: true,

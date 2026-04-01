@@ -48,6 +48,14 @@ import {
   UserCodeCommitsResponse,
   UserProjectsResponse,
   UserPullRequestsResponse,
+  EmailCtrResponse,
+  EngagedCommunitySizeResponse,
+  FlywheelConversionResponse,
+  MemberAcquisitionResponse,
+  MemberRetentionResponse,
+  SocialMediaResponse,
+  SocialReachResponse,
+  WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -789,6 +797,176 @@ export class AnalyticsService {
     return this.http.get<OrgTrainingEnrollmentsDistributionResponse>('/api/analytics/org-training-enrollments-distribution', { params }).pipe(
       catchError(() => {
         return of({ projects: [] });
+      })
+    );
+  }
+
+  /**
+   * Get web activities summary grouped by domain category
+   * @param foundationSlug - Foundation slug to filter by (e.g., 'tlf', 'cncf')
+   * @returns Observable of web activities summary response
+   */
+  public getWebActivitiesSummary(foundationSlug: string): Observable<WebActivitiesSummaryResponse> {
+    return this.http.get<WebActivitiesSummaryResponse>('/api/analytics/web-activities-summary', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalSessions: 0,
+          totalPageViews: 0,
+          domainGroups: [],
+          dailyData: [],
+          dailyLabels: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get email click-through rate data
+   * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
+   * @returns Observable of email CTR response
+   */
+  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
+      catchError(() => {
+        return of({
+          currentCtr: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          monthlyLabels: [],
+          campaignGroups: [],
+          monthlySends: [],
+          monthlyOpens: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get social media metrics from Snowflake Platinum tables
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
+   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @returns Social media response with followers, platforms, engagement, and trend data
+   */
+  public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
+    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
+      catchError(() => {
+        return of({
+          totalFollowers: 0,
+          totalPlatforms: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          platforms: [],
+          monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get paid social reach metrics
+   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @returns Social reach response with ROAS, impressions, and monthly trends
+   */
+  public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
+      catchError(() => {
+        return of({
+          totalReach: 0,
+          roas: 0,
+          totalSpend: 0,
+          totalRevenue: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          monthlyLabels: [],
+          monthlyRoas: [],
+          channelGroups: [],
+        });
+      })
+    );
+  }
+
+  // North Star Metrics
+
+  /**
+   * Get member retention metrics from Snowflake North Star views
+   */
+  public getMemberRetention(foundationSlug: string): Observable<MemberRetentionResponse> {
+    return this.http.get<MemberRetentionResponse>('/api/analytics/member-retention', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          renewalRate: 0,
+          netRevenueRetention: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          target: 85,
+          monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get member acquisition rate metrics from Snowflake North Star views
+   */
+  public getMemberAcquisition(foundationSlug: string): Observable<MemberAcquisitionResponse> {
+    return this.http.get<MemberAcquisitionResponse>('/api/analytics/member-acquisition', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalMembers: 0,
+          totalMembersMonthlyData: [],
+          totalMembersMonthlyLabels: [],
+          newMembersThisQuarter: 0,
+          newMemberRevenue: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          quarterlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get engaged community size metrics from Snowflake North Star views
+   */
+  public getEngagedCommunity(foundationSlug: string): Observable<EngagedCommunitySizeResponse> {
+    return this.http.get<EngagedCommunitySizeResponse>('/api/analytics/engaged-community', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalMembers: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          breakdown: {
+            newsletterSubscribers: 0,
+            communityMembers: 0,
+            workingGroupMembers: 0,
+            certifiedIndividuals: 0,
+          },
+          monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get flywheel conversion rate metrics from Snowflake North Star views
+   */
+  public getFlywheelConversion(foundationSlug: string): Observable<FlywheelConversionResponse> {
+    return this.http.get<FlywheelConversionResponse>('/api/analytics/flywheel-conversion', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          conversionRate: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          funnel: {
+            eventAttendees: 0,
+            convertedToNewsletter: 0,
+            convertedToCommunity: 0,
+            convertedToWorkingGroup: 0,
+          },
+          monthlyData: [],
+        });
       })
     );
   }

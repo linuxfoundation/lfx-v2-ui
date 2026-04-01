@@ -13,18 +13,24 @@ import {
   SURVEY_LABEL,
   SURVEY_MANAGE_TOTAL_STEPS,
 } from '@lfx-one/shared/constants';
-import { CommitteeReference, SurveyDistributionMethod, SurveyReminderType } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeReference, CreateSurveyRequest, SurveyDistributionMethod, SurveyReminderType } from '@lfx-one/shared/interfaces';
+import { CommitteeService } from '@services/committee.service';
+import { SurveyService } from '@services/survey.service';
+import { MessageComponent } from '@components/message/message.component';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { trimmedRequired } from '@lfx-one/shared/validators';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
-import { combineLatest, distinctUntilChanged, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap, take } from 'rxjs';
 
 import { SurveyAudienceTypeComponent } from '../components/survey-audience-type/survey-audience-type.component';
 import { SurveyEmailDraftComponent } from '../components/survey-email-draft/survey-email-draft.component';
 import { SurveyReviewComponent } from '../components/survey-review/survey-review.component';
 import { SurveyTimingRemindersComponent } from '../components/survey-timing-reminders/survey-timing-reminders.component';
+
+/** Upstream requires survey_send_date in the future — offset for "immediate" sends. */
+const IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
 
 @Component({
   selector: 'lfx-survey-manage',
@@ -32,6 +38,7 @@ import { SurveyTimingRemindersComponent } from '../components/survey-timing-remi
     ReactiveFormsModule,
     RouterLink,
     ButtonComponent,
+    MessageComponent,
     ConfirmDialogModule,
     StepperModule,
     SurveyAudienceTypeComponent,
@@ -48,6 +55,11 @@ export class SurveyManageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly committeeService = inject(CommitteeService);
+  private readonly surveyService = inject(SurveyService);
+
+  // Committee context — when navigated from a committee tab with ?committee_uid=
+  public readonly committeeContext = signal<Committee | null>(null);
 
   // Protected constants
   public readonly totalSteps = SURVEY_MANAGE_TOTAL_STEPS;
@@ -71,6 +83,10 @@ export class SurveyManageComponent {
   public readonly isLastStep: Signal<boolean> = this.initIsLastStep();
   public currentStep: Signal<number> = this.initCurrentStep();
   public readonly submitButtonLabel: Signal<string> = this.initSubmitButtonLabel();
+
+  public constructor() {
+    this.initCommitteeContext();
+  }
 
   public nextStep(): void {
     const next = this.currentStep() + 1;
@@ -107,7 +123,7 @@ export class SurveyManageComponent {
   }
 
   public onCancel(): void {
-    this.router.navigate(['/surveys']);
+    this.navigateBack();
   }
 
   public onSaveAsDraft(): void {
@@ -224,18 +240,47 @@ export class SurveyManageComponent {
   private submitSurvey(): void {
     this.submitting.set(true);
 
-    // TODO: Implement actual API call
-    setTimeout(() => {
-      const action = this.getSubmitAction();
+    const formData = this.form().getRawValue();
+    const committees = formData.committees as CommitteeReference[];
+    const distributionMethod = formData.distributionMethod as SurveyDistributionMethod;
+    const isImmediate = distributionMethod === 'immediate';
 
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `${this.surveyLabel.singular} ${action} successfully`,
-      });
-      this.submitting.set(false);
-      this.router.navigate(['/surveys']);
-    }, 1000);
+    const surveyData: CreateSurveyRequest = {
+      survey_monkey_id: formData.surveyTemplate,
+      survey_title: committees[0]?.name ? `${committees[0].name} Survey` : 'New Survey',
+      send_immediately: isImmediate,
+      survey_send_date: isImmediate ? new Date(Date.now() + IMMEDIATE_SEND_OFFSET_MS).toISOString() : new Date(formData.scheduledDate).toISOString(),
+      survey_cutoff_date: new Date(formData.cutoffDate).toISOString(),
+      survey_reminder_rate_days: parseInt(formData.reminderFrequency, 10) || 7,
+      email_subject: formData.emailSubject,
+      email_body: `<!DOCTYPE html><html><body>${formData.emailBody}</body></html>`,
+      email_body_text: formData.emailBody,
+      committee_uid: committees[0]?.uid || '',
+      committee_voting_enabled: this.committeeContext()?.enable_voting ?? false,
+      is_project_survey: false,
+      // creator_username, creator_name, creator_id are enriched server-side from OIDC session
+    };
+
+    this.surveyService.createSurvey(surveyData).subscribe({
+      next: () => {
+        const action = this.getSubmitAction();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: `${this.surveyLabel.singular} ${action} successfully`,
+        });
+        this.submitting.set(false);
+        this.navigateBack();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: `Failed to create ${this.surveyLabel.singular.toLowerCase()}. Please try again.`,
+        });
+        this.submitting.set(false);
+      },
+    });
   }
 
   // Private initializer functions
@@ -273,7 +318,9 @@ Thank you,
   }
 
   private initFormValue(): Signal<Record<string, unknown>> {
-    return toSignal(this.form().valueChanges, { initialValue: this.form().value });
+    // Use getRawValue() on every emission to include disabled controls (e.g., locked committees)
+    const form = this.form();
+    return toSignal(form.valueChanges.pipe(map(() => form.getRawValue())), { initialValue: form.getRawValue() });
   }
 
   private initCanGoPrevious(): Signal<boolean> {
@@ -350,8 +397,8 @@ Thank you,
 
     switch (step) {
       case 1: {
-        // Committees must have at least one selection
-        const committeesValue = form.get('committees')?.value as CommitteeReference[] | null;
+        // Committee is valid if locked via group context, or if the form control has selections
+        const committeesValue = this.committeeContext() ? [this.committeeContext()] : (form.get('committees')?.value as CommitteeReference[] | null);
         const committeesValid = Array.isArray(committeesValue) && committeesValue.length > 0;
         const surveyTemplateValid = !!form.get('surveyTemplate')?.valid && !!form.get('surveyTemplate')?.value;
         return committeesValid && surveyTemplateValid;
@@ -386,5 +433,38 @@ Thank you,
 
   private markAllFormControlsAsTouched(): void {
     markFormControlsAsTouched(this.form());
+  }
+
+  /** Navigates back to the committee surveys tab or the main surveys page. */
+  private navigateBack(): void {
+    const ctx = this.committeeContext();
+    if (ctx) {
+      this.router.navigate(['/groups', ctx.uid], { queryParams: { tab: 'surveys' } });
+    } else {
+      this.router.navigate(['/surveys']);
+    }
+  }
+
+  /** Reads committee_uid from queryParams and pre-populates the committees field (locked). */
+  private initCommitteeContext(): void {
+    this.route.queryParamMap
+      .pipe(
+        take(1),
+        map((params) => params.get('committee_uid')),
+        filter((uid): uid is string => !!uid && !this.route.snapshot.paramMap.has('id')),
+        switchMap((uid) => this.committeeService.getCommittee(uid)),
+        catchError(() => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load group context.' });
+          return of(null);
+        })
+      )
+      .subscribe((committee) => {
+        if (!committee) return;
+        this.committeeContext.set(committee);
+        const ref: CommitteeReference = { uid: committee.uid, name: committee.name };
+        const committeesControl = this.form().get('committees');
+        committeesControl?.setValue([ref]);
+        committeesControl?.disable();
+      });
   }
 }

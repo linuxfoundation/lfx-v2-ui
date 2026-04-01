@@ -1,8 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, input, model, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { Committee, Vote } from '@lfx-one/shared/interfaces';
 import { VotesTableComponent } from '@app/modules/votes/components/votes-table/votes-table.component';
@@ -13,9 +14,10 @@ import { catchError, filter, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-votes',
-  imports: [CardComponent, VotesTableComponent, VoteResultsDrawerComponent],
+  imports: [ButtonComponent, CardComponent, VotesTableComponent, VoteResultsDrawerComponent],
   templateUrl: './committee-votes.component.html',
   styleUrl: './committee-votes.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommitteeVotesComponent {
   private readonly voteService = inject(VoteService);
@@ -50,13 +52,8 @@ export class CommitteeVotesComponent {
         switchMap((c) => {
           this.loading.set(true);
           return this.voteService.getVotesByCommittee(c.uid, 'updated_at.desc').pipe(
-            catchError((error) => {
-              console.error('Failed to load committee votes:', error);
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to load votes. Please try again.',
-              });
+            catchError(() => {
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load votes. Please try again.' });
               return of([]);
             }),
             finalize(() => this.loading.set(false))

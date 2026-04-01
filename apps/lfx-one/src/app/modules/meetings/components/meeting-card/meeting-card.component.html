@@ -8,13 +8,13 @@
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Privacy Badge -->
         @if (meeting().visibility === 'private') {
-          <lfx-tag value="Private" severity="danger" icon="fa-light fa-shield"></lfx-tag>
+          <lfx-tag value="Private" severity="danger" icon="fa-light fa-shield" styleClass="tag-private"></lfx-tag>
         }
 
         <!-- Meeting Type Badge -->
         @if (meetingTypeBadge(); as badge) {
           @if (badge.text !== 'None') {
-            <lfx-tag [value]="badge.text" [severity]="badge.severity" [icon]="badge.icon"></lfx-tag>
+            <lfx-tag [value]="badge.text" [severity]="badge.severity" [icon]="badge.icon" [styleClass]="badge.styleClass"></lfx-tag>
           }
         }
 
@@ -24,6 +24,7 @@
             [value]="meeting().recurrence | recurrenceSummary"
             severity="secondary"
             icon="fa-light fa-repeat"
+            styleClass="tag-recurring"
             pTooltip="This is a recurring meeting"
             data-testid="recurring-badge"></lfx-tag>
         }
@@ -94,16 +95,16 @@
           data-testid="meeting-datetime"></lfx-tag>
       }
       @if (meeting().youtube_upload_enabled) {
-        <lfx-tag value="YouTube Upload" severity="danger" icon="fa-light fa-upload"></lfx-tag>
+        <lfx-tag value="YouTube Upload" severity="secondary" icon="fa-light fa-upload" styleClass="tag-feature-youtube"></lfx-tag>
       }
       @if (meeting().recording_enabled) {
-        <lfx-tag value="Recording" severity="info" icon="fa-light fa-video"></lfx-tag>
+        <lfx-tag value="Recording" severity="secondary" icon="fa-light fa-video" styleClass="tag-feature-recording"></lfx-tag>
       }
       @if (meeting().transcript_enabled) {
-        <lfx-tag value="Transcripts" severity="secondary" icon="fa-light fa-file-lines"></lfx-tag>
+        <lfx-tag value="Transcripts" severity="secondary" icon="fa-light fa-file-lines" styleClass="tag-feature-transcripts"></lfx-tag>
       }
       @if (hasAiCompanion()) {
-        <lfx-tag value="AI Summary" severity="success" icon="fa-light fa-sparkles"></lfx-tag>
+        <lfx-tag value="AI Summary" severity="secondary" icon="fa-light fa-sparkles" styleClass="tag-feature-ai"></lfx-tag>
       }
       @if (meeting().show_meeting_attendees) {
         <lfx-tag value="Show Attendees" severity="secondary" icon="fa-light fa-users"></lfx-tag>
@@ -167,7 +168,7 @@
                       class="bg-gray-200 hover:bg-gray-300 rounded px-2.5 py-1.5 flex items-center gap-2.5 transition-colors cursor-pointer"
                       [attr.data-testid]="'resource-link-' + i">
                       <i class="fa-light fa-arrow-up-right-from-square text-xs text-black flex-shrink-0"></i>
-                      <span class="text-xs text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-sans">{{ attachment.name }}</span>
+                      <span class="text-xs text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{ attachment.name }}</span>
                     </a>
                   } @else {
                     <a
@@ -175,7 +176,7 @@
                       class="bg-gray-200 hover:bg-gray-300 rounded px-2.5 py-1.5 flex items-center gap-2.5 transition-colors cursor-pointer"
                       [attr.data-testid]="'resource-file-' + i">
                       <i class="fa-light fa-file-arrow-down text-xs text-black flex-shrink-0"></i>
-                      <span class="text-xs text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-sans">{{ attachment.name }}</span>
+                      <span class="text-xs text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{ attachment.name }}</span>
                     </a>
                   }
                 }

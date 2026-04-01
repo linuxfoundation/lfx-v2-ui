@@ -1,25 +1,37 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, linkedSignal, model, signal, Signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { Dialog } from 'primeng/dialog';
+import { PopoverModule } from 'primeng/popover';
+import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { TextareaComponent } from '@components/textarea/textarea.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
+import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
+import { MailingListService } from '@services/mailing-list.service';
 import { UserService } from '@services/user.service';
+import { CategoryAvatarColorPipe } from '@pipes/category-avatar-color.pipe';
+import { InitialsPipe } from '@pipes/initials.pipe';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
+import { SafeUrlPipe } from '@pipes/safe-url.pipe';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, map, of, switchMap, take } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
+import { JoinApplicationDialogResult } from '@lfx-one/shared/interfaces';
+import { JoinApplicationDialogComponent } from '../components/join-application-dialog/join-application-dialog.component';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
@@ -30,6 +42,7 @@ import { CommitteeSurveysComponent } from '../components/committee-surveys/commi
 import { CommitteeVotesComponent } from '../components/committee-votes/committee-votes.component';
 
 type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
+const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 'surveys', 'documents', 'settings'];
 
 @Component({
   selector: 'lfx-committee-view',
@@ -41,10 +54,14 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     DatePipe,
     NgClass,
     ReactiveFormsModule,
-    InputTextComponent,
     Dialog,
+    PopoverModule,
+    SkeletonModule,
+    CategoryAvatarColorPipe,
+    InitialsPipe,
     JoinModeLabelPipe,
     LinkifyPipe,
+    SafeUrlPipe,
     TextareaComponent,
     CommitteeDocumentsComponent,
     CommitteeMeetingsComponent,
@@ -54,6 +71,7 @@ type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 
     CommitteeSurveysComponent,
     CommitteeVotesComponent,
   ],
+  providers: [DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -62,10 +80,18 @@ export class CommitteeViewComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly committeeService = inject(CommitteeService);
+  private readonly mailingListService = inject(MailingListService);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
   private readonly userService = inject(UserService);
 
   public meetingsTimeFilter = signal<'upcoming' | 'past'>('upcoming');
+
+  // Initial tab from queryParams (e.g., ?tab=surveys after create flow redirect)
+  private readonly initialTab: CommitteeTab | null = (() => {
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+    return tab && VALID_TABS.includes(tab as CommitteeTab) ? (tab as CommitteeTab) : null;
+  })();
 
   // -- Writable signals --
   public loading = signal<boolean>(true);
@@ -84,14 +110,6 @@ export class CommitteeViewComponent {
   public descriptionForm = new FormGroup({
     description: new FormControl(''),
   });
-
-  // -- Channels edit state --
-  public showChannelsModal = model(false);
-  public channelsForm = new FormGroup({
-    mailingList: new FormControl(''),
-    chatChannel: new FormControl(''),
-  });
-  public savingChannels = signal(false);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -123,7 +141,19 @@ export class CommitteeViewComponent {
   });
 
   public chatPlatformLabel: Signal<string> = this.initChatPlatformLabel();
+  public chatPlatformIcon: Signal<string> = this.initChatPlatformIcon();
   public repoPlatformLabel: Signal<string> = this.initRepoPlatformLabel();
+  public repoPlatformIcon: Signal<string> = this.initRepoPlatformIcon();
+
+  // -- Linked mailing list (rich object for header display) --
+  public linkedMailingList: Signal<GroupsIOMailingList | null> = this.initLinkedMailingList();
+
+  // -- Sub-groups --
+  public subGroupsLoading = signal(true);
+  public subGroups: Signal<Committee[]> = this.initSubGroups();
+
+  // -- Parent group --
+  public parentGroup: Signal<Committee | null> = this.initParentGroup();
 
   // -- Tab visibility signals --
   public isMembersTabVisible: Signal<boolean> = computed(() => this.committee()?.member_visibility !== CommitteeMemberVisibility.HIDDEN || this.canEdit());
@@ -154,6 +184,10 @@ export class CommitteeViewComponent {
   public activeTab = linkedSignal<typeof this.tabConfig, CommitteeTab>({
     source: this.visibleTabs,
     computation: (visible, previous) => {
+      // On first computation, use queryParam tab if provided and visible
+      if (!previous && this.initialTab && visible.some((t) => t.key === this.initialTab)) {
+        return this.initialTab!;
+      }
       if (previous && visible.some((t) => t.key === previous.value)) {
         return previous.value;
       }
@@ -177,8 +211,7 @@ export class CommitteeViewComponent {
 
   public handleTabNavigation(tabWithContext: string): void {
     const [tab, context] = tabWithContext.split(':');
-    const validTabs: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 'surveys', 'documents', 'settings'];
-    if (!validTabs.includes(tab as CommitteeTab)) {
+    if (!VALID_TABS.includes(tab as CommitteeTab)) {
       return;
     }
     this.activeTab.set(tab as CommitteeTab);
@@ -208,45 +241,8 @@ export class CommitteeViewComponent {
           this.editingDescription.set(false);
           this.refreshCommittee();
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update description' });
-        },
-      });
-  }
-
-  public openEditChannels(): void {
-    this.channelsForm.patchValue({
-      mailingList: this.committee()?.mailing_list || '',
-      chatChannel: this.committee()?.chat_channel || '',
-    });
-    this.showChannelsModal.set(true);
-  }
-
-  public cancelEditChannels(): void {
-    this.showChannelsModal.set(false);
-  }
-
-  public saveChannels(): void {
-    const committee = this.committee();
-    if (!committee?.uid) {
-      return;
-    }
-    this.savingChannels.set(true);
-
-    this.committeeService
-      .updateCommittee(committee.uid, {
-        mailing_list: this.channelsForm.get('mailingList')?.value || null,
-        chat_channel: this.channelsForm.get('chatChannel')?.value || null,
-      })
-      .pipe(finalize(() => this.savingChannels.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Channels updated' });
-          this.showChannelsModal.set(false);
-          this.refreshCommittee();
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update channels' });
+        error: (err: HttpErrorResponse) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update description. Please try again.') });
         },
       });
   }
@@ -256,7 +252,10 @@ export class CommitteeViewComponent {
     if (!committee || this.joiningOrLeaving()) {
       return;
     }
-    if (committee.join_mode === 'open') {
+
+    const joinMode = committee.join_mode;
+
+    if (joinMode === 'open') {
       this.joiningOrLeaving.set(true);
       this.committeeService
         .joinCommittee(committee.uid)
@@ -267,12 +266,15 @@ export class CommitteeViewComponent {
             this.refreshCommittee();
             this.membersRefresh.update((v) => v + 1);
           },
-          error: () => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to join "${committee.name}"` });
+          error: (err: HttpErrorResponse) => {
+            const detail = this.getJoinErrorMessage(err, committee.name);
+            this.messageService.add({ severity: 'error', summary: 'Unable to Join', detail, life: 6000 });
           },
         });
+    } else if (joinMode === 'application' || joinMode === 'invite_only') {
+      this.openApplicationDialog(committee.uid, committee.name, joinMode);
     } else {
-      // Backend does not yet support application-based join requests — show guidance instead
+      // closed — no self-service action available
       this.messageService.add({ severity: 'info', summary: 'Contact Admin', detail: 'Contact a group admin to request membership.' });
     }
   }
@@ -292,10 +294,71 @@ export class CommitteeViewComponent {
           this.refreshCommittee();
           this.membersRefresh.update((v) => v + 1);
         },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: `Failed to leave "${committee.name}"` });
+        error: (err: HttpErrorResponse) => {
+          const detail =
+            err.status === 404 ? 'You are not a member of this group.' : (err.error?.message ?? `Failed to leave "${committee.name}". Please try again.`);
+          this.messageService.add({ severity: 'error', summary: 'Unable to Leave', detail, life: 6000 });
         },
       });
+  }
+
+  public navigateToParentGroup(): void {
+    const parent = this.parentGroup();
+    if (parent?.uid) {
+      this.router.navigate(['/', 'groups', parent.uid]);
+    }
+  }
+
+  public navigateToSubGroup(subGroup: Committee): void {
+    this.router.navigate(['/', 'groups', subGroup.uid]);
+  }
+
+  // -- Private methods --
+  private openApplicationDialog(committeeUid: string, committeeName: string, mode: 'application' | 'invite_only'): void {
+    const isApplication = mode === 'application';
+
+    const ref = this.dialogService.open(JoinApplicationDialogComponent, {
+      header: mode === 'invite_only' ? 'Request Access' : 'Request to Join',
+      width: '520px',
+      modal: true,
+      closable: true,
+      dismissableMask: false,
+      data: { committeeName, mode },
+    }) as DynamicDialogRef;
+
+    ref.onClose.pipe(take(1)).subscribe((result: JoinApplicationDialogResult | null) => {
+      if (!result) return;
+
+      this.joiningOrLeaving.set(true);
+      this.committeeService
+        .submitApplication(committeeUid, result.message)
+        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
+        .subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: isApplication ? 'Application Submitted' : 'Request Submitted',
+              detail: isApplication
+                ? `Your request to join "${committeeName}" has been submitted. An admin will review it shortly.`
+                : `Your access request for "${committeeName}" has been submitted. An admin will review and send you an invitation if approved.`,
+              life: 8000,
+            });
+          },
+          error: (err: HttpErrorResponse) => {
+            const upstream = err.error?.message as string | undefined;
+            let detail: string;
+            if (err.status === 409) {
+              detail = isApplication ? 'You already have a pending application for this group.' : 'You already have a pending request for this group.';
+            } else {
+              const fallback = isApplication
+                ? `Failed to submit your request for "${committeeName}". Please try again.`
+                : `Failed to submit your access request for "${committeeName}". Please try again.`;
+              detail = upstream ?? fallback;
+            }
+            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
+          },
+        });
+    });
   }
 
   // -- Private initializer functions --
@@ -364,26 +427,90 @@ export class CommitteeViewComponent {
     );
   }
 
+  private initSubGroups(): Signal<Committee[]> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c): c is Committee => !!c?.uid),
+        switchMap((c) => {
+          this.subGroupsLoading.set(true);
+          return this.committeeService.getChildCommittees(c.uid).pipe(
+            catchError(() => of([])),
+            finalize(() => this.subGroupsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initParentGroup(): Signal<Committee | null> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        switchMap((c) => {
+          if (!c?.parent_uid) {
+            return of(null);
+          }
+          return this.committeeService.fetchCommittee(c.parent_uid).pipe(catchError(() => of(null)));
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
   private initChatPlatformLabel(): Signal<string> {
-    return computed(() => {
-      const url = this.committee()?.chat_channel?.toLowerCase() || '';
-      if (url.includes('slack')) return 'Slack';
-      if (url.includes('discord')) return 'Discord';
-      if (url.includes('teams.microsoft') || url.includes('teams.live')) return 'Microsoft Teams';
-      if (url.includes('chat.google')) return 'Google Chat';
-      if (url.includes('zulip')) return 'Zulip';
-      if (url.includes('matrix') || url.includes('element')) return 'Matrix / Element';
-      return 'Other';
-    });
+    return computed(() => getChatPlatformLabel(this.committee()?.chat_channel));
+  }
+
+  private initChatPlatformIcon(): Signal<string> {
+    return computed(() => getChatPlatformIcon(this.committee()?.chat_channel));
   }
 
   private initRepoPlatformLabel(): Signal<string> {
-    return computed(() => {
-      const url = this.committee()?.website?.toLowerCase() || '';
-      if (url.includes('github')) return 'GitHub';
-      if (url.includes('gitlab')) return 'GitLab';
-      if (url.includes('bitbucket')) return 'Bitbucket';
-      return 'Website';
-    });
+    return computed(() => getRepoPlatformLabel(this.committee()?.website));
+  }
+
+  private initRepoPlatformIcon(): Signal<string> {
+    return computed(() => getRepoPlatformIcon(this.committee()?.website));
+  }
+
+  private initLinkedMailingList(): Signal<GroupsIOMailingList | null> {
+    return toSignal(
+      toObservable(this.committee).pipe(
+        filter((c): c is Committee => !!c?.project_uid),
+        switchMap((c) => {
+          if (!c.mailing_list) return of(null);
+          return this.mailingListService.getMailingListsByProject(c.project_uid!).pipe(
+            map((lists) => {
+              const email = c.mailing_list!;
+              return (
+                lists.find((ml) => {
+                  const mlEmail = ml.service?.domain ? `${ml.group_name}@${ml.service.domain}` : ml.group_name;
+                  return mlEmail === email;
+                }) ?? null
+              );
+            }),
+            catchError(() => of(null))
+          );
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private getJoinErrorMessage(err: HttpErrorResponse, committeeName: string): string {
+    const upstream = err.error?.message as string | undefined;
+    if (err.status === 409) {
+      return 'You are already a member of this group.';
+    }
+    if (upstream?.includes('organization')) {
+      return 'This group requires a verified organization to join. Please contact an admin for access.';
+    }
+    if (upstream?.includes('business email')) {
+      return 'This group requires a business email address to join. Please contact an admin for access.';
+    }
+    if (err.status === 403) {
+      return 'You do not have permission to join this group.';
+    }
+    return upstream ?? `Failed to join "${committeeName}". Please try again.`;
   }
 }
