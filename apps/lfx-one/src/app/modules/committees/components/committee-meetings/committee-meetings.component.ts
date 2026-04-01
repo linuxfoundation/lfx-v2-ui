@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, linkedSignal, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
@@ -50,6 +50,7 @@ export class CommitteeMeetingsComponent {
   private readonly router = inject(Router);
   private readonly clipboard = inject(Clipboard);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
   public committee = input.required<Committee>();
@@ -116,12 +117,19 @@ export class CommitteeMeetingsComponent {
   public calendarEvents: Signal<EventInput[]> = this.initCalendarEvents();
 
   public constructor() {
-    // Keep the form control in sync with timeFilter signal.
-    // FormControl is initialized once at class field init before Angular sets inputs,
-    // so linkedSignal updates won't be reflected automatically without this effect.
-    effect(() => {
-      this.searchForm.get('timeFilter')?.setValue(this.timeFilter(), { emitEvent: false });
-    });
+    // Form control → signal (user dropdown selection syncs to reactive state)
+    (this.searchForm.get('timeFilter') as FormControl<TimeFilter>).valueChanges
+      .pipe(startWith(this.initialTimeFilter()), takeUntilDestroyed(this.destroyRef))
+      .subscribe((v) => this.timeFilter.set(v));
+
+    (this.searchForm.get('meetingType') as FormControl<string | null>).valueChanges
+      .pipe(startWith(null), takeUntilDestroyed(this.destroyRef))
+      .subscribe((v) => this.meetingTypeFilter.set(v));
+
+    // Signal → form control (programmatic changes via initialTimeFilter input update the dropdown)
+    toObservable(this.timeFilter)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((v) => this.searchForm.get('timeFilter')?.setValue(v, { emitEvent: false }));
   }
 
   /** Handles time filter change from dropdown — syncs signal and form control. */
