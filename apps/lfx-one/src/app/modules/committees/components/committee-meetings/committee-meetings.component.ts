@@ -100,9 +100,7 @@ export class CommitteeMeetingsComponent {
       filter(({ time, uid }) => time === 'past' && !!uid),
       distinctUntilChanged((a, b) => a.uid === b.uid),
       tap(() => this.pastMeetingsLoading.set(true)),
-      switchMap(({ uid }) =>
-        this.meetingService.getPastMeetingsByCommittee(uid!, undefined, 'updated_desc').pipe(finalize(() => this.pastMeetingsLoading.set(false)))
-      )
+      switchMap(({ uid }) => this.meetingService.getPastMeetingsByCommittee(uid!).pipe(finalize(() => this.pastMeetingsLoading.set(false))))
     ),
     { initialValue: [] }
   );
@@ -130,12 +128,6 @@ export class CommitteeMeetingsComponent {
     toObservable(this.timeFilter)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((v) => this.searchForm.get('timeFilter')?.setValue(v, { emitEvent: false }));
-  }
-
-  /** Handles time filter change from dropdown — syncs signal and form control. */
-  public onTimeFilterChange(value: TimeFilter): void {
-    this.timeFilter.set(value);
-    this.searchForm.get('timeFilter')?.setValue(value, { emitEvent: false });
   }
 
   /** Copies the committee's calendar subscribe URL to clipboard and shows a confirmation toast. */
@@ -167,6 +159,10 @@ export class CommitteeMeetingsComponent {
         filter((c) => !!c?.uid),
         tap(() => this.meetingsLoading.set(true)),
         switchMap((c) =>
+          // NOTE: The query service does not support `order` — only `sort` with values
+          // name_asc/desc, updated_asc/desc. There is no start_time sort upstream.
+          // The `order=start_time.asc` param passed here is silently ignored;
+          // the client-side sort below (lines 178-185) is the actual sorting mechanism.
           this.meetingService.getMeetingsByCommittee(c.uid, 100, 'start_time.asc').pipe(
             map((meetings) => {
               const active = meetings.filter((m) => {
