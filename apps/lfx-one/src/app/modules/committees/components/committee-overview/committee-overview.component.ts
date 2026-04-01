@@ -196,7 +196,7 @@ export class CommitteeOverviewComponent {
   });
 
   public lastMeeting: Signal<PastMeeting | null> = computed(() => {
-    const past = [...this.pastMeetings()].sort((a, b) => (b.scheduled_start_time ?? '').localeCompare(a.scheduled_start_time ?? ''));
+    const past = [...this.pastMeetings()].sort((a, b) => (b.start_time ?? '').localeCompare(a.start_time ?? ''));
     return past[0] ?? null;
   });
 
@@ -348,7 +348,7 @@ export class CommitteeOverviewComponent {
         filter((c) => !!c?.uid),
         switchMap((c) => {
           this.pastMeetingsLoading.set(true);
-          return this.meetingService.getPastMeetingsByCommittee(c.uid, 5, 'updated_desc').pipe(
+          return this.meetingService.getPastMeetingsByCommittee(c.uid, 20, 'updated_desc').pipe(
             catchError(() => of([])),
             finalize(() => this.pastMeetingsLoading.set(false))
           );
