@@ -3,7 +3,18 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MyCommittee, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeDocument,
+  CommitteeDocumentType,
+  CommitteeJoinApplication,
+  CommitteeMember,
+  CreateCommitteeDocumentRequest,
+  CreateCommitteeJoinApplicationRequest,
+  CreateCommitteeMemberRequest,
+  MyCommittee,
+  QueryServiceCountResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -15,12 +26,7 @@ export class CommitteeService {
   private readonly http = inject(HttpClient);
 
   public getCommittees(params?: HttpParams): Observable<Committee[]> {
-    return this.http.get<Committee[]>('/api/committees', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load committees:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<Committee[]>('/api/committees', { params }).pipe(catchError(() => of([])));
   }
 
   public getCommitteesByProject(uid: string): Observable<Committee[]> {
@@ -58,6 +64,18 @@ export class CommitteeService {
     return this.http.put<Committee>(`/api/committees/${id}`, committee).pipe(take(1));
   }
 
+  /** Fetches a committee by ID without updating shared service state. */
+  public fetchCommittee(id: string): Observable<Committee> {
+    return this.http.get<Committee>(`/api/committees/${id}`).pipe(take(1));
+  }
+
+  // ── Sub-groups (children) ─────────────────────────────────────────────────
+
+  /** Fetches child committees (sub-groups) of a parent committee */
+  public getChildCommittees(parentUid: string): Observable<Committee[]> {
+    return this.http.get<Committee[]>(`/api/committees/${parentUid}/children`).pipe(catchError(() => of([])));
+  }
+
   // Committee Members methods
   public getCommitteeMembers(committeeId: string, params?: HttpParams): Observable<CommitteeMember[]> {
     return this.http.get<CommitteeMember[]>(`/api/committees/${committeeId}/members`, { params });
@@ -91,6 +109,27 @@ export class CommitteeService {
     return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
   }
 
+  /** Submit a join application for a group with join_mode 'application' or 'invite_only' */
+  public submitApplication(committeeId: string, message?: string): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = { message: message || '' };
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
+  }
+
+  // ── Committee Documents ─────────────────────────────────────────────────
+
+  public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
+    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(catchError(() => of([])));
+  }
+
+  public createCommitteeDocument(committeeId: string, data: CreateCommitteeDocumentRequest): Observable<CommitteeDocument> {
+    return this.http.post<CommitteeDocument>(`/api/committees/${committeeId}/documents`, data).pipe(take(1));
+  }
+
+  public deleteCommitteeDocument(committeeId: string, documentId: string, documentType: CommitteeDocumentType): Observable<void> {
+    const params = new HttpParams().set('type', documentType);
+    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`, { params }).pipe(take(1));
+  }
+
   // ── My Committees ─────────────────────────────────────────────────────────
 
   /** Get committees for the current user, optionally scoped to a project */
@@ -99,11 +138,6 @@ export class CommitteeService {
     if (projectUid) {
       params = params.set('project_uid', projectUid);
     }
-    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load my committees:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(catchError(() => of([])));
   }
 }

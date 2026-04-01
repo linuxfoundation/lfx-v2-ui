@@ -84,7 +84,7 @@ export class SurveyManageComponent {
   public currentStep: Signal<number> = this.initCurrentStep();
   public readonly submitButtonLabel: Signal<string> = this.initSubmitButtonLabel();
 
-  constructor() {
+  public constructor() {
     this.initCommitteeContext();
   }
 
@@ -272,7 +272,7 @@ export class SurveyManageComponent {
         this.submitting.set(false);
         this.navigateBack();
       },
-      error: (error: unknown) => {
+      error: () => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
