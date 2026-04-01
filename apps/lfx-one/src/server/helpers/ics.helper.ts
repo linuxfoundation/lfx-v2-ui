@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Meeting, PaginatedResponse } from '@lfx-one/shared/interfaces';
+import { addMinutesToDate } from '@lfx-one/shared/utils';
 import { logger } from '../services/logger.service';
 
 /**
@@ -15,7 +16,11 @@ export function formatICSDate(isoDate: string): string {
  * Escapes ICS text values per RFC 5545 (backslash, semicolons, commas, newlines).
  */
 export function escapeICSText(value: string): string {
-  return (value ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n');
+  return (value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
 }
 
 /**
@@ -42,9 +47,7 @@ export function foldLine(line: string): string {
  */
 export function buildVEvent(uid: string, title: string, startIso: string, durationMinutes: number | null | undefined): string {
   const dtstart = formatICSDate(startIso);
-  const endDate = new Date(startIso);
-  endDate.setMinutes(endDate.getMinutes() + (durationMinutes ?? 60));
-  const dtend = formatICSDate(endDate.toISOString());
+  const dtend = formatICSDate(addMinutesToDate(startIso, durationMinutes).toISOString());
   const dtstamp = formatICSDate(new Date().toISOString());
 
   return [

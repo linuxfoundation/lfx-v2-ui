@@ -13,6 +13,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
 import { Committee, Meeting, PastMeeting, TimeFilter, ViewMode, Vote, Survey } from '@lfx-one/shared/interfaces';
 import { CANCELLED_COLOR, MEETING_TYPE_COLORS, MEETING_TYPE_CONFIGS, SURVEY_COLOR, VOTE_COLOR } from '@lfx-one/shared/constants';
+import { addMinutesToDate } from '@lfx-one/shared/utils';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { MeetingService } from '@services/meeting.service';
 import { VoteService } from '@services/vote.service';
@@ -224,7 +225,7 @@ export class CommitteeMeetingsComponent {
           id: `${meeting.id}-${occ.occurrence_id}`,
           title: occ.title || meeting.title,
           start: occ.start_time,
-          end: this.addMinutes(occ.start_time, occ.duration ?? meeting.duration),
+          end: addMinutesToDate(occ.start_time, occ.duration ?? meeting.duration).toISOString(),
           backgroundColor: c.bg,
           borderColor: c.border,
           textColor: '#ffffff',
@@ -240,7 +241,7 @@ export class CommitteeMeetingsComponent {
         id: meeting.id,
         title: meeting.title,
         start: meeting.start_time,
-        end: this.addMinutes(meeting.start_time, meeting.duration),
+        end: addMinutesToDate(meeting.start_time, meeting.duration).toISOString(),
         backgroundColor: colors.bg,
         borderColor: colors.border,
         textColor: '#ffffff',
@@ -276,11 +277,5 @@ export class CommitteeMeetingsComponent {
       classNames: ['cursor-default'],
       extendedProps: { type: 'survey', surveyId: survey.uid },
     };
-  }
-
-  private addMinutes(isoDate: string, minutes: number | null | undefined): string {
-    const d = new Date(isoDate);
-    d.setMinutes(d.getMinutes() + (minutes ?? 60));
-    return d.toISOString();
   }
 }
