@@ -294,18 +294,7 @@ export class MeetingJoinComponent {
           if (meetingId) {
             return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
               catchError((error) => {
-                // For authenticated users hitting a private/restricted meeting (403), fall back
-                // to the authenticated endpoint — the public endpoint only serves public meetings.
-                if (error.status === 403 && this.authenticated()) {
-                  return this.meetingService.getMeeting(meetingId).pipe(
-                    map((meeting) => ({ meeting, project: null as unknown as Project })),
-                    catchError(() => {
-                      this.router.navigate(['/meetings/not-found']);
-                      return of({} as { meeting: Meeting; project: Project });
-                    })
-                  );
-                }
-                // If 404, 400, or unauthenticated 403, navigate to not found page
+                // If 404, navigate to not found page
                 if ([404, 403, 400].includes(error.status)) {
                   this.router.navigate(['/meetings/not-found']);
                   return of({} as { meeting: Meeting; project: Project });
