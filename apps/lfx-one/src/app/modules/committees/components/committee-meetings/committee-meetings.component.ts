@@ -22,7 +22,8 @@ import { SurveyService } from '@services/survey.service';
 import { VoteService } from '@services/vote.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, of, startWith, switchMap, tap } from 'rxjs';
+import { getCurrentOrNextOccurrence, hasMeetingEnded } from '@lfx-one/shared/utils';
+import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJoin, map, of, startWith, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-meetings',
@@ -153,7 +154,27 @@ export class CommitteeMeetingsComponent {
       toObservable(this.committee).pipe(
         filter((c) => !!c?.uid),
         tap(() => this.meetingsLoading.set(true)),
-        switchMap((c) => this.meetingService.getMeetingsByCommittee(c.uid, undefined, 'start_time.asc').pipe(finalize(() => this.meetingsLoading.set(false))))
+        switchMap((c) =>
+          this.meetingService.getMeetingsByCommittee(c.uid, undefined, 'start_time.asc').pipe(
+            map((meetings) => {
+              const active = meetings.filter((m) => {
+                if (m.occurrences?.length) {
+                  return m.occurrences.some((o) => o.status !== 'cancel' && !hasMeetingEnded(m, o));
+                }
+                return !hasMeetingEnded(m);
+              });
+              return active.sort((a, b) => {
+                const oA = getCurrentOrNextOccurrence(a);
+                const oB = getCurrentOrNextOccurrence(b);
+                return (
+                  (oA ? new Date(oA.start_time).getTime() : new Date(a.start_time).getTime()) -
+                  (oB ? new Date(oB.start_time).getTime() : new Date(b.start_time).getTime())
+                );
+              });
+            }),
+            finalize(() => this.meetingsLoading.set(false))
+          )
+        )
       ),
       { initialValue: [] }
     );

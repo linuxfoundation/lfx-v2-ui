@@ -67,7 +67,7 @@ export class MeetingService {
     let params = new HttpParams().set('tags', `project_uid:${uid}`);
 
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
 
     if (orderBy) {
@@ -82,7 +82,7 @@ export class MeetingService {
     let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
 
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
 
     if (orderBy) {
@@ -106,16 +106,16 @@ export class MeetingService {
 
   /** Fetches upcoming meetings scoped to a committee. */
   public getUpcomingMeetingsByCommittee(committeeId: string, limit: number = 5): Observable<Meeting[]> {
-    const params = new HttpParams().set('tags', `committee_uid:${committeeId}`).set('limit', limit.toString()).set('skip_registrants', 'true');
+    const params = new HttpParams().set('tags', `committee_uid:${committeeId}`).set('page_size', limit.toString()).set('skip_registrants', 'true');
     return this.getMeetings(params).pipe(map((response) => response.data));
   }
 
-  /** Fetches past meetings scoped to a committee via `tags=committee_uid:{id}` query parameter. */
+  /** Fetches past meetings scoped to a committee via `parent=committee:{id}` query parameter. */
   public getPastMeetingsByCommittee(committeeId: string, limit?: number): Observable<PastMeeting[]> {
-    let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
+    let params = new HttpParams().set('parent', `committee:${committeeId}`).set('sort', 'updated_desc');
 
     if (limit) {
-      params = params.set('limit', limit.toString());
+      params = params.set('page_size', limit.toString());
     }
 
     return this.getPastMeetings(params).pipe(map((response) => response.data));
