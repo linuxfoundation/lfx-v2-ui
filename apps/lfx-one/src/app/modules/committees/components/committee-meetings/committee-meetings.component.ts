@@ -100,7 +100,9 @@ export class CommitteeMeetingsComponent {
       filter(({ time, uid }) => time === 'past' && !!uid),
       distinctUntilChanged((a, b) => a.uid === b.uid),
       tap(() => this.pastMeetingsLoading.set(true)),
-      switchMap(({ uid }) => this.meetingService.getPastMeetingsByCommittee(uid!, undefined, 'updated_desc').pipe(finalize(() => this.pastMeetingsLoading.set(false))))
+      switchMap(({ uid }) =>
+        this.meetingService.getPastMeetingsByCommittee(uid!, undefined, 'updated_desc').pipe(finalize(() => this.pastMeetingsLoading.set(false)))
+      )
     ),
     { initialValue: [] }
   );
