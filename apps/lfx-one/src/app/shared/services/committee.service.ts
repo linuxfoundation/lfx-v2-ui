@@ -3,7 +3,18 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, QueryServiceCountResponse } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeDocument,
+  CommitteeDocumentType,
+  CommitteeJoinApplication,
+  CommitteeMember,
+  CreateCommitteeDocumentRequest,
+  CreateCommitteeJoinApplicationRequest,
+  CreateCommitteeMemberRequest,
+  MyCommittee,
+  QueryServiceCountResponse,
+} from '@lfx-one/shared/interfaces';
 import { catchError, map, Observable, of, take, tap, throwError } from 'rxjs';
 
 @Injectable({
@@ -15,12 +26,7 @@ export class CommitteeService {
   private readonly http = inject(HttpClient);
 
   public getCommittees(params?: HttpParams): Observable<Committee[]> {
-    return this.http.get<Committee[]>('/api/committees', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load committees:', error);
-        return of([]);
-      })
-    );
+    return this.http.get<Committee[]>('/api/committees', { params }).pipe(catchError(() => of([])));
   }
 
   public getCommitteesByProject(uid: string): Observable<Committee[]> {
@@ -33,24 +39,14 @@ export class CommitteeService {
     const params = new HttpParams().set('tags', `project_uid:${uid}`);
     return this.http
       .get<QueryServiceCountResponse>('/api/committees/count', { params })
-      .pipe(
-        catchError((error) => {
-          console.error('Failed to load committees count:', error);
-          return of({ count: 0 });
-        })
-      )
+      .pipe(catchError(() => of({ count: 0 })))
       .pipe(map((response) => response.count));
-  }
-
-  public getRecentCommitteesByProject(uid: string): Observable<Committee[]> {
-    return this.getCommitteesByProject(uid);
   }
 
   public getCommittee(id: string): Observable<Committee> {
     return this.http.get<Committee>(`/api/committees/${id}`).pipe(
       catchError((error) => {
-        console.error(`Failed to load committee ${id}:`, error);
-        return throwError(() => new Error(`Failed to load committee ${id}`));
+        return throwError(() => error);
       }),
       tap((committee) => this.committee.set(committee ?? null))
     );
@@ -66,6 +62,18 @@ export class CommitteeService {
 
   public updateCommittee(id: string, committee: Partial<Committee>): Observable<Committee> {
     return this.http.put<Committee>(`/api/committees/${id}`, committee).pipe(take(1));
+  }
+
+  /** Fetches a committee by ID without updating shared service state. */
+  public fetchCommittee(id: string): Observable<Committee> {
+    return this.http.get<Committee>(`/api/committees/${id}`).pipe(take(1));
+  }
+
+  // ── Sub-groups (children) ─────────────────────────────────────────────────
+
+  /** Fetches child committees (sub-groups) of a parent committee */
+  public getChildCommittees(parentUid: string): Observable<Committee[]> {
+    return this.http.get<Committee[]>(`/api/committees/${parentUid}/children`).pipe(catchError(() => of([])));
   }
 
   // Committee Members methods
@@ -87,5 +95,49 @@ export class CommitteeService {
 
   public deleteCommitteeMember(committeeId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`/api/committees/${committeeId}/members/${memberId}`).pipe(take(1));
+  }
+
+  // ── Join / Leave Methods ──────────────────────────────────────────────────
+
+  /** Self-join an open group */
+  public joinCommittee(committeeId: string): Observable<CommitteeMember> {
+    return this.http.post<CommitteeMember>(`/api/committees/${committeeId}/join`, {}).pipe(take(1));
+  }
+
+  /** Leave a group */
+  public leaveCommittee(committeeId: string): Observable<void> {
+    return this.http.delete<void>(`/api/committees/${committeeId}/leave`).pipe(take(1));
+  }
+
+  /** Submit a join application for a group with join_mode 'application' or 'invite_only' */
+  public submitApplication(committeeId: string, message?: string): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = { message: message || '' };
+    return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
+  }
+
+  // ── Committee Documents ─────────────────────────────────────────────────
+
+  public getCommitteeDocuments(committeeId: string): Observable<CommitteeDocument[]> {
+    return this.http.get<CommitteeDocument[]>(`/api/committees/${committeeId}/documents`).pipe(catchError(() => of([])));
+  }
+
+  public createCommitteeDocument(committeeId: string, data: CreateCommitteeDocumentRequest): Observable<CommitteeDocument> {
+    return this.http.post<CommitteeDocument>(`/api/committees/${committeeId}/documents`, data).pipe(take(1));
+  }
+
+  public deleteCommitteeDocument(committeeId: string, documentId: string, documentType: CommitteeDocumentType): Observable<void> {
+    const params = new HttpParams().set('type', documentType);
+    return this.http.delete<void>(`/api/committees/${committeeId}/documents/${documentId}`, { params }).pipe(take(1));
+  }
+
+  // ── My Committees ─────────────────────────────────────────────────────────
+
+  /** Get committees for the current user, optionally scoped to a project */
+  public getMyCommittees(projectUid?: string): Observable<MyCommittee[]> {
+    let params = new HttpParams();
+    if (projectUid) {
+      params = params.set('project_uid', projectUid);
+    }
+    return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(catchError(() => of([])));
   }
 }

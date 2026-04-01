@@ -2295,7 +2295,7 @@ export interface TrainingEnrollmentsResponse {
 // ============================================
 
 /**
- * Raw Snowflake row from PLATINUM.FOUNDATION_TOTAL_PROJECTS_DETAIL
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TOTAL_PROJECTS_DETAIL
  */
 export interface FoundationProjectsDetailRow {
   FOUNDATION_SEGMENT_ID: string;
@@ -2617,4 +2617,283 @@ export interface OrgCertifiedEmployeesDistributionItem {
  */
 export interface OrgCertifiedEmployeesDistributionResponse {
   programs: OrgCertifiedEmployeesDistributionItem[];
+}
+
+// ============================================
+// Web Activities (Marketing Dashboard)
+// ============================================
+
+/**
+ * Web Activities summary row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
+ * Represents session/page view totals grouped by domain classification
+ */
+export interface WebActivitiesSummaryRow {
+  LF_SUB_DOMAIN_CLASSIFICATION: string;
+  TOTAL_SESSIONS: number;
+  TOTAL_PAGE_VIEWS: number;
+}
+
+/**
+ * Domain group breakdown in the API response
+ */
+export interface WebActivitiesDomainGroup {
+  domainGroup: string;
+  totalSessions: number;
+  totalPageViews: number;
+}
+
+/**
+ * API response for Web Activities Summary query
+ */
+export interface WebActivitiesSummaryResponse {
+  totalSessions: number;
+  totalPageViews: number;
+  domainGroups: WebActivitiesDomainGroup[];
+  dailyData: number[];
+  dailyLabels: string[];
+}
+
+// ============================================
+// Marketing Dashboard Shared Types
+// ============================================
+
+/**
+ * Recommended action for marketing drawers
+ */
+export type MarketingActionType =
+  | 'decline'
+  | 'growth'
+  | 'target'
+  | 'revenue'
+  | 'engagement'
+  | 'conversion'
+  | 'content'
+  | 'diversify'
+  | 'optimize'
+  | 'investigate'
+  | 'monitor';
+
+export interface MarketingRecommendedAction {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  dueLabel: string;
+  actionType: MarketingActionType;
+}
+
+/**
+ * Key insight for marketing drawers
+ */
+export interface MarketingKeyInsight {
+  text: string;
+  type: 'driver' | 'warning' | 'info';
+}
+
+// ============================================
+// Social Reach (Marketing Dashboard)
+// ============================================
+
+/**
+ * Social Reach row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+ * Monthly paid ad impressions aggregated per foundation
+ */
+export interface SocialReachRow {
+  MONTH: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Social Reach channel row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+ * Channel-level paid ad impressions aggregated per foundation
+ */
+export interface SocialReachChannelRow {
+  CHANNEL: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Channel group for paid social reach breakdown
+ */
+export interface SocialReachChannelGroup {
+  channel: string;
+  totalImpressions: number;
+}
+
+/**
+ * API response for Paid Social query (ROAS + impressions)
+ */
+export interface SocialReachResponse {
+  totalReach: number;
+  roas: number;
+  totalSpend: number;
+  totalRevenue: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  monthlyRoas: number[];
+  channelGroups: SocialReachChannelGroup[];
+}
+
+// ============================================
+// Social Media (Marketing Dashboard)
+// ============================================
+
+/**
+ * Individual social media platform data
+ */
+export interface SocialMediaPlatform {
+  platform: string;
+  followers: number;
+  engagementRate: number;
+  postsLast30Days: number;
+  impressions: number;
+}
+
+/**
+ * Monthly social media metrics for trend chart
+ */
+export interface SocialMediaMonthlyData {
+  month: string;
+  totalFollowers: number;
+}
+
+/**
+ * API response for Social Media query
+ */
+export interface SocialMediaResponse {
+  totalFollowers: number;
+  totalPlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  platforms: SocialMediaPlatform[];
+  monthlyData: SocialMediaMonthlyData[];
+}
+
+// ============================================
+// Email CTR (Marketing Dashboard)
+// ============================================
+
+/**
+ * Email CTR row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
+ * Represents monthly email click-through rate data
+ */
+export interface EmailCtrRow {
+  CREATED_MONTH_DATE: string;
+  OVERALL_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+  TOTAL_OPENS: number;
+}
+
+/**
+ * Email CTR campaign row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
+ * Campaign-level email metrics aggregated over the period
+ */
+export interface EmailCtrCampaignRow {
+  PROJECT_NAME: string;
+  AVG_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+}
+
+/**
+ * Campaign group for email CTR breakdown
+ */
+export interface EmailCtrCampaignGroup {
+  campaignName: string;
+  classification: string;
+  avgCtr: number;
+}
+
+/**
+ * API response for Email CTR query
+ */
+export interface EmailCtrResponse {
+  currentCtr: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  campaignGroups: EmailCtrCampaignGroup[];
+  monthlySends: number[];
+  monthlyOpens: number[];
+}
+
+// ============================================
+// North Star Metrics (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Monthly data point for North Star metric trend charts
+ */
+export interface NorthStarMonthlyDataPoint {
+  month: string;
+  value: number;
+}
+
+/**
+ * API response for Engaged Community Size metric
+ * Newsletter + community + WG + certified individuals (deduplicated)
+ */
+export interface EngagedCommunitySizeResponse {
+  totalMembers: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  breakdown: {
+    newsletterSubscribers: number;
+    communityMembers: number;
+    workingGroupMembers: number;
+    certifiedIndividuals: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Member Acquisition Rate metric
+ * New paying members/quarter + new member revenue (CAC not available in Snowflake)
+ */
+export interface MemberAcquisitionResponse {
+  totalMembers: number;
+  totalMembersMonthlyData: number[];
+  totalMembersMonthlyLabels: string[];
+  newMembersThisQuarter: number;
+  newMemberRevenue: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  quarterlyData: {
+    quarter: string;
+    newMembers: number;
+    revenue: number;
+  }[];
+}
+
+/**
+ * API response for Member Retention / NRR metric
+ * Annual renewal rate + net revenue retention
+ */
+export interface MemberRetentionResponse {
+  renewalRate: number;
+  netRevenueRetention: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  target: number;
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Flywheel Conversion Rate metric
+ * % of event attendees → newsletter/community/WG within 90 days
+ */
+export interface FlywheelConversionResponse {
+  conversionRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  funnel: {
+    eventAttendees: number;
+    convertedToNewsletter: number;
+    convertedToCommunity: number;
+    convertedToWorkingGroup: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
 }

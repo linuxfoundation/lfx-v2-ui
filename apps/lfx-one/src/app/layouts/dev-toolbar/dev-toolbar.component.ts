@@ -9,7 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { SelectButtonComponent } from '@components/select-button/select-button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { ACCOUNTS, PERSONA_OPTIONS } from '@lfx-one/shared/constants';
-import { Account, PersonaType } from '@lfx-one/shared/interfaces';
+import { Account, isBoardScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
@@ -41,8 +41,8 @@ export class DevToolbarComponent {
   // Persona options for SelectButton
   protected readonly personaOptions = PERSONA_OPTIONS;
 
-  // TLF-only persona project override
-  protected readonly isTlfOnlyPersona = this.personaService.isTlfOnlyPersona;
+  // Board member project override — delegates to centralized isBoardScoped signal
+  protected readonly isBoardMember = this.personaService.isBoardScoped;
 
   // Check if we're on the board dashboard page
   protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
@@ -62,7 +62,7 @@ export class DevToolbarComponent {
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value: PersonaType) => {
-        if (value === 'board-member' || value === 'executive-director') {
+        if (isBoardScopedPersona(value)) {
           // TODO: DEMO - Remove when proper permissions are implemented
           const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
           if (tlfProject) {
