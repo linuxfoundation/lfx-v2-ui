@@ -4,9 +4,13 @@
 import {
   Committee,
   CommitteeCreateData,
+  CommitteeDocument,
+  CommitteeJoinApplication,
   CommitteeMember,
   CommitteeSettingsData,
   CommitteeUpdateData,
+  CreateCommitteeDocumentRequest,
+  CreateCommitteeJoinApplicationRequest,
   CreateCommitteeMemberRequest,
   MyCommittee,
   QueryServiceCountResponse,
@@ -21,6 +25,31 @@ import { logger } from '../services/logger.service';
 import { AccessCheckService } from './access-check.service';
 import { ETagService } from './etag.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+
+/** Upstream response shape for committee folders */
+interface CommitteeFolder {
+  uid: string;
+  committee_uid?: string;
+  name: string;
+  created_by_uid?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Upstream response shape for committee links */
+interface CommitteeLink {
+  uid: string;
+  committee_uid?: string;
+  name: string;
+  url?: string;
+  description?: string;
+  folder_uid?: string;
+  created_by_uid?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 /**
  * Service for handling committee business logic
@@ -60,25 +89,27 @@ export class CommitteeService {
       })
     );
 
-    // Batch access check: the query service returns ALL committees but not all are accessible
-    // to the current user. Use viewer access to filter out committees the user cannot see,
-    // then addAccessToResources adds the writer field for edit permissions.
-    const accessMap = await this.accessCheckService.checkAccess(
-      req,
-      committees.map((c) => ({ resource: 'committee' as const, id: c.uid, access: 'viewer' as const }))
-    );
+    // Add writer access field so the filter below can use it
+    committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
 
-    const accessibleCommittees = committees.filter((c) => accessMap.get(c.uid));
+    // Visibility filter: only show committees the current user can actually open.
+    // The query service may return committees the committee service will reject (403/404),
+    // so we filter to: public committees, committees the user has write access to,
+    // or committees the user is an explicit member of.
+    const myCommittees = await this.getMyCommittees(req);
+    const myUids = new Set(myCommittees.map((c) => c.uid));
+    const totalBefore = committees.length;
 
-    if (accessibleCommittees.length < committees.length) {
-      logger.debug(req, 'get_committees', 'Filtered inaccessible committees', {
-        filtered_count: committees.length - accessibleCommittees.length,
-        total: committees.length,
+    committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
+
+    if (committees.length < totalBefore) {
+      logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
+        filtered_count: totalBefore - committees.length,
+        total: totalBefore,
       });
     }
 
-    // Add writer access field to accessible committees
-    return await this.accessCheckService.addAccessToResources(req, accessibleCommittees, 'committee');
+    return committees;
   }
 
   /**
@@ -174,6 +205,7 @@ export class CommitteeService {
       );
 
       // Step 2: Strip read-only and computed fields, then merge with update data (PUT replaces the entire resource)
+      /* eslint-disable @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields */
       const {
         uid: _uid,
         created_at: _createdAt,
@@ -185,6 +217,7 @@ export class CommitteeService {
         foundation_name: _foundationName,
         ...mutableFields
       } = currentCommittee;
+      /* eslint-enable @typescript-eslint/no-unused-vars */
 
       const mergedData = {
         ...mutableFields,
@@ -227,6 +260,10 @@ export class CommitteeService {
       ...(is_audit_enabled !== undefined && { is_audit_enabled }),
       ...(show_meeting_attendees !== undefined && { show_meeting_attendees }),
       ...(member_visibility !== undefined && { member_visibility }),
+      // Workaround: upstream committee-service PUT does not include mailing_list in the response body
+      // (verified 2026-03-29). Prefer the upstream value if present; fall back to the request payload.
+      // TODO: Remove this workaround once upstream echoes mailing_list in PUT responses.
+      ...(committeeData.mailing_list !== undefined && { mailing_list: updatedCommittee.mailing_list ?? committeeData.mailing_list }),
     };
   }
 
@@ -334,6 +371,7 @@ export class CommitteeService {
     );
 
     // Step 2: Strip read-only fields, then merge with update data (PUT requires full resource)
+    /* eslint-disable @typescript-eslint/no-unused-vars -- intentional destructuring to strip server-computed fields */
     const {
       uid: _uid,
       created_at: _createdAt,
@@ -343,6 +381,7 @@ export class CommitteeService {
       committee_category: _committeeCategory,
       ...mutableMemberFields
     } = currentMember;
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     const mergedData = { ...mutableMemberFields, ...data };
 
@@ -493,6 +532,164 @@ export class CommitteeService {
 
   public async leaveCommittee(req: Request, committeeId: string): Promise<void> {
     await this.microserviceProxy.proxyRequest(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/leave`, 'DELETE');
+  }
+
+  /**
+   * Submits a join application for a committee with join_mode 'application'.
+   */
+  public async submitApplication(req: Request, committeeId: string, body: CreateCommitteeJoinApplicationRequest): Promise<CommitteeJoinApplication> {
+    logger.debug(req, 'submit_committee_application', 'Submitting join application', { committee_uid: committeeId });
+    return this.microserviceProxy.proxyRequest<CommitteeJoinApplication>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/applications`, 'POST', {}, body);
+  }
+
+  // ── Committee Documents ────────────────────────────────────────────────────
+
+  public async getCommitteeDocuments(req: Request, committeeId: string): Promise<CommitteeDocument[]> {
+    logger.debug(req, 'get_committee_documents', 'Fetching committee folders and links', {
+      committee_uid: committeeId,
+    });
+
+    // Fetch folders and links in parallel
+    const [folders, links] = await Promise.all([
+      this.microserviceProxy.proxyRequest<CommitteeFolder[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/folders`, 'GET').catch((err) => {
+        logger.warning(req, 'get_committee_documents', 'Failed to fetch committee folders, returning empty list', {
+          committee_uid: committeeId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as CommitteeFolder[];
+      }),
+      this.microserviceProxy.proxyRequest<CommitteeLink[]>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/links`, 'GET').catch((err) => {
+        logger.warning(req, 'get_committee_documents', 'Failed to fetch committee links, returning empty list', {
+          committee_uid: committeeId,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as CommitteeLink[];
+      }),
+    ]);
+
+    // Normalize folders → CommitteeDocument
+    const folderDocs: CommitteeDocument[] = (folders || []).map((f) => ({
+      uid: f.uid,
+      type: 'folder' as const,
+      name: f.name,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+      created_by: f.created_by_uid,
+      uploaded_by: f.created_by_name,
+      committee_uid: f.committee_uid,
+    }));
+
+    // Normalize links → CommitteeDocument
+    const linkDocs: CommitteeDocument[] = (links || []).map((l) => ({
+      uid: l.uid,
+      type: 'link' as const,
+      name: l.name,
+      url: l.url,
+      description: l.description,
+      created_at: l.created_at,
+      updated_at: l.updated_at,
+      created_by: l.created_by_uid,
+      uploaded_by: l.created_by_name,
+      parent_uid: l.folder_uid,
+      committee_uid: l.committee_uid,
+    }));
+
+    return [...folderDocs, ...linkDocs];
+  }
+
+  /**
+   * Creates a new folder or link for a committee.
+   * Routes to the correct upstream endpoint based on type.
+   */
+  public async createCommitteeDocument(req: Request, committeeId: string, data: CreateCommitteeDocumentRequest): Promise<CommitteeDocument> {
+    if (data.type !== 'folder' && data.type !== 'link') {
+      throw new Error(`Unsupported document type: ${data.type}. Only 'link' and 'folder' are supported.`);
+    }
+
+    if (data.type === 'folder') {
+      const folder = await this.microserviceProxy.proxyRequest<CommitteeFolder>(
+        req,
+        'LFX_V2_SERVICE',
+        `/committees/${committeeId}/folders`,
+        'POST',
+        {},
+        {
+          name: data.name,
+          created_by_name: data.created_by_name,
+        }
+      );
+
+      logger.debug(req, 'create_committee_folder', 'Committee folder created successfully', {
+        committee_uid: committeeId,
+        folder_uid: folder.uid,
+      });
+
+      return {
+        uid: folder.uid,
+        type: 'folder',
+        name: folder.name,
+        created_at: folder.created_at,
+        updated_at: folder.updated_at,
+        created_by: folder.created_by_uid,
+        uploaded_by: folder.created_by_name,
+        committee_uid: folder.committee_uid,
+      };
+    }
+
+    // Link
+    const link = await this.microserviceProxy.proxyRequest<CommitteeLink>(
+      req,
+      'LFX_V2_SERVICE',
+      `/committees/${committeeId}/links`,
+      'POST',
+      {},
+      {
+        name: data.name,
+        url: data.url,
+        description: data.description,
+        folder_uid: data.parent_uid,
+        created_by_name: data.created_by_name,
+      }
+    );
+
+    logger.debug(req, 'create_committee_link', 'Committee link created successfully', {
+      committee_uid: committeeId,
+      link_uid: link.uid,
+    });
+
+    return {
+      uid: link.uid,
+      type: 'link',
+      name: link.name,
+      url: link.url,
+      description: link.description,
+      created_at: link.created_at,
+      updated_at: link.updated_at,
+      created_by: link.created_by_uid,
+      uploaded_by: link.created_by_name,
+      parent_uid: link.folder_uid,
+      committee_uid: link.committee_uid,
+    };
+  }
+
+  /**
+   * Deletes a committee folder or link using ETag for concurrency control.
+   * @param documentType 'folder' or 'link' — determines which upstream endpoint to call
+   */
+  public async deleteCommitteeDocument(req: Request, committeeId: string, documentId: string, documentType: string): Promise<void> {
+    const resourcePath = documentType === 'folder' ? `/committees/${committeeId}/folders/${documentId}` : `/committees/${committeeId}/links/${documentId}`;
+
+    // Step 1: Fetch resource with ETag
+    const { etag } = await this.etagService.fetchWithETag<CommitteeDocument>(req, 'LFX_V2_SERVICE', resourcePath, 'delete_committee_document');
+
+    // Step 2: Delete resource with ETag
+    await this.etagService.deleteWithETag(req, 'LFX_V2_SERVICE', resourcePath, etag, 'delete_committee_document');
+
+    logger.debug(req, 'delete_committee_document', `Committee ${documentType} deleted successfully`, {
+      committee_uid: committeeId,
+      document_uid: documentId,
+      document_type: documentType,
+    });
   }
 
   /**
