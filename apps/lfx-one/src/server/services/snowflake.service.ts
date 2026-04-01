@@ -146,7 +146,7 @@ export class SnowflakeService {
               });
             });
 
-            const rowCount = result.rows.length;
+            const rowCount = Array.isArray(result?.rows) ? result.rows.length : 0;
             const poolStats = this.getPoolStats();
 
             span.setStatus({ code: SpanStatusCode.OK });

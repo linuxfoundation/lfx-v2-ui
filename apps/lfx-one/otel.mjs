@@ -57,6 +57,9 @@ if (!otlpEndpoint) {
   // Trace sampling ratio (0.0 to 1.0, default 1.0 = sample everything)
   const rawRatio = parseFloat(process.env['OTEL_TRACES_SAMPLER_ARG'] || '1.0');
   const traceRatio = Number.isFinite(rawRatio) ? Math.min(1.0, Math.max(0.0, rawRatio)) : 1.0;
+  if (process.env['OTEL_TRACES_SAMPLER_ARG'] && (!Number.isFinite(rawRatio) || rawRatio < 0 || rawRatio > 1)) {
+    console.warn(`[otel] Invalid OTEL_TRACES_SAMPLER_ARG=${process.env['OTEL_TRACES_SAMPLER_ARG']}, using ${traceRatio}`);
+  }
 
   // OTEL_TRACES_SAMPLER selects the sampler strategy (default: parentbased_always_on)
   const samplerName = (process.env['OTEL_TRACES_SAMPLER'] || 'parentbased_always_on').toLowerCase();
@@ -115,13 +118,17 @@ if (!otlpEndpoint) {
     ],
   });
 
-  sdk.start();
-  console.log('[otel] Tracing enabled:', JSON.stringify({
-    service: serviceName,
-    version: serviceVersion,
-    sampler: samplerName,
-    ratio: traceRatio,
-  }));
+  try {
+    await sdk.start();
+    console.log('[otel] Tracing enabled:', JSON.stringify({
+      service: serviceName,
+      version: serviceVersion,
+      sampler: samplerName,
+      ratio: traceRatio,
+    }));
+  } catch (err) {
+    console.error('[otel] Failed to start SDK:', err);
+  }
 
   const shutdown = async () => {
     try {
