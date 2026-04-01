@@ -17,9 +17,4 @@ export enum NatsSubjects {
   USER_IDENTITY_UNLINK = 'lfx.auth-service.user_identity.unlink',
   USER_IDENTITY_LIST = 'lfx.auth-service.user_identity.list',
   LOOKUP_V1_MAPPING = 'lfx.lookup_v1_mapping',
-  EMAIL_SEND_VERIFICATION = 'lfx.auth-service.email_linking.send_verification',
-  EMAIL_VERIFY_OTP = 'lfx.auth-service.email_linking.verify',
-  USER_IDENTITY_LINK = 'lfx.auth-service.user_identity.link',
-  USER_IDENTITY_UNLINK = 'lfx.auth-service.user_identity.unlink',
-  USER_IDENTITY_LIST = 'lfx.auth-service.user_identity.list',
 }
