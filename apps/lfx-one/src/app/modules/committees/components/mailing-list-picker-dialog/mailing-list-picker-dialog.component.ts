@@ -42,6 +42,11 @@ export class MailingListPickerDialogComponent {
     query: new FormControl(''),
   });
 
+  // Form for radio button binding so the selected state is visually reflected
+  public selectionForm = new FormGroup({
+    selectedUid: new FormControl<string | null>(this.config.data.selectedUid),
+  });
+
   public filteredMailingLists = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const lists = this.mailingLists.filter((ml) => !!ml.service?.domain);
@@ -57,10 +62,12 @@ export class MailingListPickerDialogComponent {
 
   public selectMailingList(uid: string): void {
     this.selectedMailingListUid.set(uid);
+    this.selectionForm.get('selectedUid')!.setValue(uid);
   }
 
   public clearAssociation(): void {
     this.selectedMailingListUid.set(null);
+    this.selectionForm.get('selectedUid')!.setValue(null);
   }
 
   public save(): void {

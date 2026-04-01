@@ -694,10 +694,8 @@ export class CommitteeController {
 
       res.json(children);
     } catch (error) {
-      // Gracefully return an empty list rather than propagating the error — sub-group
-      // lookup is a non-critical enrichment; the parent committee page should still load.
       logger.error(req, 'get_committee_children', startTime, error, { parent_id: id });
-      res.json([]);
+      next(error);
     }
   }
 

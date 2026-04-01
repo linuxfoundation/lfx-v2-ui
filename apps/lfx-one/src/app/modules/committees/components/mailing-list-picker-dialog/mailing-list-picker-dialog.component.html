@@ -46,6 +46,8 @@
               [attr.data-testid]="'settings-ml-picker-row-' + ml.uid">
               <td class="py-3 px-4">
                 <lfx-radio-button
+                  [form]="selectionForm"
+                  control="selectedUid"
                   name="mailingListSelection"
                   [value]="ml.uid"
                   [inputId]="'ml-radio-' + ml.uid"

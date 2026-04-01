@@ -1,6 +1,5 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
-/* eslint-disable @typescript-eslint/explicit-member-accessibility */
 
 import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -85,7 +84,7 @@ export class SurveyManageComponent {
   public currentStep: Signal<number> = this.initCurrentStep();
   public readonly submitButtonLabel: Signal<string> = this.initSubmitButtonLabel();
 
-  constructor() {
+  public constructor() {
     this.initCommitteeContext();
   }
 

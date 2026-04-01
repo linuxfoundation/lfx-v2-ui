@@ -66,7 +66,7 @@ export class CommitteeService {
 
   /** Fetches a committee by ID without updating shared service state. */
   public fetchCommittee(id: string): Observable<Committee> {
-    return this.http.get<Committee>(`/api/committees/${id}`).pipe(catchError((error) => throwError(() => error)));
+    return this.http.get<Committee>(`/api/committees/${id}`).pipe(take(1));
   }
 
   // ── Sub-groups (children) ─────────────────────────────────────────────────
@@ -110,8 +110,8 @@ export class CommitteeService {
   }
 
   /** Submit a join application for a group with join_mode 'application' or 'invite_only' */
-  public submitApplication(committeeId: string, message: string = 'I would like to join this group.'): Observable<CommitteeJoinApplication> {
-    const body: CreateCommitteeJoinApplicationRequest = { message };
+  public submitApplication(committeeId: string, message?: string): Observable<CommitteeJoinApplication> {
+    const body: CreateCommitteeJoinApplicationRequest = { message: message || '' };
     return this.http.post<CommitteeJoinApplication>(`/api/committees/${committeeId}/applications`, body).pipe(take(1));
   }
 
