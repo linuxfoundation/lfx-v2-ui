@@ -14,6 +14,7 @@ import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DashboardMeetingCardComponent } from '../../../dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
+import { MeetingCardComponent } from '../../../meetings/components/meeting-card/meeting-card.component';
 import { VoteResultsDrawerComponent } from '../../../votes/components/vote-results-drawer/vote-results-drawer.component';
 
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
@@ -34,6 +35,7 @@ import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
     ButtonComponent,
     Dialog,
     DashboardMeetingCardComponent,
+    MeetingCardComponent,
     MessageComponent,
     NgClass,
     DatePipe,
