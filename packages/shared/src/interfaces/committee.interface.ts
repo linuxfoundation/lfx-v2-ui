@@ -565,6 +565,11 @@ export interface CommitteeDocumentItem {
   };
 }
 
+export interface DocumentAction {
+  icon: string;
+  tooltip: string;
+}
+
 /** View mode for the committee meetings tab. */
 export type ViewMode = 'list' | 'calendar';
 

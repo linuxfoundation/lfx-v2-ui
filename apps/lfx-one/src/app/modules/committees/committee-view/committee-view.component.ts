@@ -6,9 +6,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { Dialog } from 'primeng/dialog';
 import { PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
@@ -24,9 +22,8 @@ import { UserService } from '@services/user.service';
 import { CategoryAvatarColorPipe } from '@pipes/category-avatar-color.pipe';
 import { InitialsPipe } from '@pipes/initials.pipe';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
-import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { SafeUrlPipe } from '@pipes/safe-url.pipe';
-import { TextareaComponent } from '@components/textarea/textarea.component';
+import { DescriptionDialogComponent } from '../components/description-dialog/description-dialog.component';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, filter, finalize, of, switchMap, take } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
@@ -54,17 +51,13 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     RouteLoadingComponent,
     DatePipe,
     NgClass,
-    ReactiveFormsModule,
-    Dialog,
     PopoverModule,
     SkeletonModule,
     CategoryAvatarColorPipe,
     InitialsPipe,
     JoinModeLabelPipe,
-    LinkifyPipe,
     MailingListEmailPipe,
     SafeUrlPipe,
-    TextareaComponent,
     CommitteeDocumentsComponent,
     CommitteeMeetingsComponent,
     CommitteeMembersComponent,
@@ -106,13 +99,7 @@ export class CommitteeViewComponent {
   public myRoleLoading: Signal<boolean> = computed(() => this.membersLoading());
   public joiningOrLeaving = signal(false);
 
-  // -- Description state --
-  public showDescriptionDialog = signal(false);
-  public editingDescription = signal(false);
   public savingDescription = signal(false);
-  public descriptionForm = new FormGroup({
-    description: new FormControl(''),
-  });
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -227,25 +214,39 @@ export class CommitteeViewComponent {
     }
   }
 
+  public openDescriptionView(): void {
+    this.dialogService.open(DescriptionDialogComponent, {
+      header: 'Description',
+      width: '560px',
+      modal: true,
+      closable: true,
+      data: { mode: 'view', description: this.committee()?.description || '' },
+    });
+  }
+
   public openEditDescription(): void {
-    this.descriptionForm.patchValue({ description: this.committee()?.description || '' });
-    this.editingDescription.set(true);
+    const ref = this.dialogService.open(DescriptionDialogComponent, {
+      header: 'Edit Description',
+      width: '560px',
+      modal: true,
+      closable: true,
+      data: { mode: 'edit', description: this.committee()?.description || '' },
+    });
+    ref?.onClose.pipe(take(1)).subscribe((newDescription: string | undefined) => {
+      if (newDescription !== undefined) {
+        this.saveDescription(newDescription);
+      }
+    });
   }
 
-  public cancelEditDescription(): void {
-    this.editingDescription.set(false);
-  }
-
-  public saveDescription(): void {
+  public saveDescription(description: string): void {
     this.savingDescription.set(true);
-    const description = this.descriptionForm.get('description')?.value || '';
     this.committeeService
       .updateCommittee(this.committee()!.uid, { description })
       .pipe(finalize(() => this.savingDescription.set(false)))
       .subscribe({
         next: () => {
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Description updated' });
-          this.editingDescription.set(false);
           this.refreshCommittee();
         },
         error: (err: HttpErrorResponse) => {
