@@ -7,13 +7,13 @@ import { DatePipe, NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { Dialog } from 'primeng/dialog';
 import { PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { TextareaComponent } from '@components/textarea/textarea.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
 import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
@@ -26,9 +26,11 @@ import { InitialsPipe } from '@pipes/initials.pipe';
 import { JoinModeLabelPipe } from '@pipes/join-mode-label.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { SafeUrlPipe } from '@pipes/safe-url.pipe';
+import { TextareaComponent } from '@components/textarea/textarea.component';
 import { MenuItem, MessageService } from 'primeng/api';
-import { catchError, combineLatest, filter, finalize, map, of, switchMap } from 'rxjs';
+import { catchError, combineLatest, filter, finalize, map, of, switchMap, take } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
+import { JoinApplicationDialogComponent, JoinApplicationDialogResult } from '../components/join-application-dialog/join-application-dialog.component';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
@@ -68,6 +70,7 @@ const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 
     CommitteeSurveysComponent,
     CommitteeVotesComponent,
   ],
+  providers: [DialogService],
   templateUrl: './committee-view.component.html',
   styleUrl: './committee-view.component.scss',
 })
@@ -78,6 +81,7 @@ export class CommitteeViewComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly mailingListService = inject(MailingListService);
   private readonly messageService = inject(MessageService);
+  private readonly dialogService = inject(DialogService);
   private readonly userService = inject(UserService);
 
   public meetingsTimeFilter = signal<'upcoming' | 'past'>('upcoming');
@@ -105,13 +109,6 @@ export class CommitteeViewComponent {
   public descriptionForm = new FormGroup({
     description: new FormControl(''),
   });
-
-  // -- Join application dialog state --
-  public showApplicationDialog = signal(false);
-  public applicationForm = new FormGroup({
-    message: new FormControl(''),
-  });
-  public pendingApplicationCommittee = signal<{ uid: string; name: string; mode: 'application' | 'invite_only' } | null>(null);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -273,14 +270,8 @@ export class CommitteeViewComponent {
             this.messageService.add({ severity: 'error', summary: 'Unable to Join', detail, life: 6000 });
           },
         });
-    } else if (joinMode === 'application') {
-      this.pendingApplicationCommittee.set({ uid: committee.uid, name: committee.name, mode: 'application' });
-      this.applicationForm.reset({ message: '' });
-      this.showApplicationDialog.set(true);
-    } else if (joinMode === 'invite_only') {
-      this.pendingApplicationCommittee.set({ uid: committee.uid, name: committee.name, mode: 'invite_only' });
-      this.applicationForm.reset({ message: '' });
-      this.showApplicationDialog.set(true);
+    } else if (joinMode === 'application' || joinMode === 'invite_only') {
+      this.openApplicationDialog(committee.uid, committee.name, joinMode);
     } else {
       // closed — no self-service action available
       this.messageService.add({ severity: 'info', summary: 'Contact Admin', detail: 'Contact a group admin to request membership.' });
@@ -310,55 +301,6 @@ export class CommitteeViewComponent {
       });
   }
 
-  public submitApplicationWithMessage(): void {
-    const pending = this.pendingApplicationCommittee();
-    if (!pending || this.joiningOrLeaving()) {
-      return;
-    }
-
-    const message = this.applicationForm.get('message')?.value?.trim() || undefined;
-    const isApplication = pending.mode === 'application';
-
-    this.joiningOrLeaving.set(true);
-    this.showApplicationDialog.set(false);
-
-    this.committeeService
-      .submitApplication(pending.uid, message)
-      .pipe(finalize(() => this.joiningOrLeaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({
-            severity: 'success',
-            summary: isApplication ? 'Application Submitted' : 'Request Submitted',
-            detail: isApplication
-              ? `Your request to join "${pending.name}" has been submitted. An admin will review it shortly.`
-              : `Your access request for "${pending.name}" has been submitted. An admin will review and send you an invitation if approved.`,
-            life: 8000,
-          });
-          this.pendingApplicationCommittee.set(null);
-        },
-        error: (err: HttpErrorResponse) => {
-          const upstream = err.error?.message as string | undefined;
-          let detail: string;
-          if (err.status === 409) {
-            detail = isApplication ? 'You already have a pending application for this group.' : 'You already have a pending request for this group.';
-          } else {
-            const fallback = isApplication
-              ? `Failed to submit your request for "${pending.name}". Please try again.`
-              : `Failed to submit your access request for "${pending.name}". Please try again.`;
-            detail = upstream ?? fallback;
-          }
-          this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
-          this.pendingApplicationCommittee.set(null);
-        },
-      });
-  }
-
-  public cancelApplication(): void {
-    this.showApplicationDialog.set(false);
-    this.pendingApplicationCommittee.set(null);
-  }
-
   public navigateToParentGroup(): void {
     const parent = this.parentGroup();
     if (parent?.uid) {
@@ -368,6 +310,54 @@ export class CommitteeViewComponent {
 
   public navigateToSubGroup(subGroup: Committee): void {
     this.router.navigate(['/', 'groups', subGroup.uid]);
+  }
+
+  // -- Private methods --
+  private openApplicationDialog(committeeUid: string, committeeName: string, mode: 'application' | 'invite_only'): void {
+    const isApplication = mode === 'application';
+
+    const ref = this.dialogService.open(JoinApplicationDialogComponent, {
+      header: mode === 'invite_only' ? 'Request Access' : 'Request to Join',
+      width: '520px',
+      modal: true,
+      closable: true,
+      dismissableMask: false,
+      data: { committeeName, mode },
+    }) as DynamicDialogRef;
+
+    ref.onClose.pipe(take(1)).subscribe((result: JoinApplicationDialogResult | null) => {
+      if (!result) return;
+
+      this.joiningOrLeaving.set(true);
+      this.committeeService
+        .submitApplication(committeeUid, result.message)
+        .pipe(finalize(() => this.joiningOrLeaving.set(false)))
+        .subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: isApplication ? 'Application Submitted' : 'Request Submitted',
+              detail: isApplication
+                ? `Your request to join "${committeeName}" has been submitted. An admin will review it shortly.`
+                : `Your access request for "${committeeName}" has been submitted. An admin will review and send you an invitation if approved.`,
+              life: 8000,
+            });
+          },
+          error: (err: HttpErrorResponse) => {
+            const upstream = err.error?.message as string | undefined;
+            let detail: string;
+            if (err.status === 409) {
+              detail = isApplication ? 'You already have a pending application for this group.' : 'You already have a pending request for this group.';
+            } else {
+              const fallback = isApplication
+                ? `Failed to submit your request for "${committeeName}". Please try again.`
+                : `Failed to submit your access request for "${committeeName}". Please try again.`;
+              detail = upstream ?? fallback;
+            }
+            this.messageService.add({ severity: 'error', summary: 'Unable to Submit', detail, life: 6000 });
+          },
+        });
+    });
   }
 
   // -- Private initializer functions --

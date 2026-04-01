@@ -12,10 +12,11 @@ export class SafeUrlPipe implements PipeTransform {
   public transform(url: string | null | undefined): string | null {
     if (!url?.trim()) return null;
 
-    // If the URL already has a valid protocol, return it as-is
+    // If the URL already has a valid protocol, return it only if http(s)
     try {
-      new URL(url);
-      return url;
+      const parsed = new URL(url);
+      if (['http:', 'https:'].includes(parsed.protocol)) return url;
+      return null;
     } catch {
       // No valid protocol — prepend https:// only if it looks like a domain with a valid TLD
       // Requires dot-separated segments with a letter-only TLD (2+ chars) to avoid false positives

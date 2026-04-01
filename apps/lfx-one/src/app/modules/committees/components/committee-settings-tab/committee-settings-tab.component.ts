@@ -1,38 +1,30 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, effect, inject, input, output, signal, Signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Component, computed, DestroyRef, inject, input, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { InputTextComponent } from '@components/input-text/input-text.component';
-import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, GroupsIOMailingList, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { catchError, filter, finalize, of, switchMap, take } from 'rxjs';
+import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
 
 import { CommitteeSettingsComponent } from '../committee-settings/committee-settings.component';
+import { MailingListPickerDialogComponent, MailingListPickerDialogResult } from '../mailing-list-picker-dialog/mailing-list-picker-dialog.component';
+import { MailingListEmailPipe } from './pipes/mailing-list-email.pipe';
 
 @Component({
   selector: 'lfx-committee-settings-tab',
-  imports: [
-    CommitteeSettingsComponent,
-    ButtonComponent,
-    InputTextComponent,
-    RadioButtonComponent,
-    ReactiveFormsModule,
-    TagComponent,
-    ConfirmDialogModule,
-    DialogModule,
-  ],
+  imports: [CommitteeSettingsComponent, ButtonComponent, ReactiveFormsModule, TagComponent, ConfirmDialogModule],
+  providers: [DialogService],
   templateUrl: './committee-settings-tab.component.html',
   styleUrl: './committee-settings-tab.component.scss',
 })
@@ -41,7 +33,10 @@ export class CommitteeSettingsTabComponent {
   private readonly mailingListService = inject(MailingListService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly mailingListEmailPipe = new MailingListEmailPipe();
 
   // Inputs
   public committee = input.required<Committee>();
@@ -52,18 +47,8 @@ export class CommitteeSettingsTabComponent {
   // State
   public saving = signal(false);
   public deleting = signal(false);
-
-  // Mailing list picker state
-  public mlPickerVisible = signal(false);
-  public mlSearchQuery = signal('');
-  public selectedMailingListUid = signal<string | null>(null);
   public savingMl = signal(false);
   public mlLoading = signal(false);
-
-  // Search form for the mailing list picker — used by lfx-input-text
-  public mlSearchForm = new FormGroup({
-    query: new FormControl(''),
-  });
 
   // Form
   public form = new FormGroup({
@@ -86,22 +71,16 @@ export class CommitteeSettingsTabComponent {
   public linkedMailingList: Signal<GroupsIOMailingList | null> = computed(() => {
     const email = this.committee().mailing_list;
     if (!email) return null;
-    return this.projectMailingLists().find((ml) => this.getMailingListEmail(ml) === email) ?? null;
-  });
-
-  // Filtered mailing lists for picker — only lists with a service domain can be associated
-  // (the backend requires mailing_list to be a valid email: group_name@service.domain)
-  public filteredMailingLists: Signal<GroupsIOMailingList[]> = computed(() => {
-    const query = this.mlSearchQuery().toLowerCase().trim();
-    const lists = this.projectMailingLists().filter((ml) => !!ml.service?.domain);
-    if (!query) return lists;
-    return lists.filter((ml) => ml.group_name.toLowerCase().includes(query) || ml.title?.toLowerCase().includes(query));
+    return this.projectMailingLists().find((ml) => this.mailingListEmailPipe.transform(ml) === email) ?? null;
   });
 
   public constructor() {
-    effect(() => {
-      const c = this.committee();
-      if (c) {
+    toObservable(this.committee)
+      .pipe(
+        filter((c): c is Committee => !!c),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((c) => {
         this.form.patchValue({
           member_visibility: c.member_visibility || 'hidden',
           join_mode: c.join_mode || 'invite_only',
@@ -114,59 +93,30 @@ export class CommitteeSettingsTabComponent {
           chat_channel: c.chat_channel ?? null,
           website: c.website ?? null,
         });
-      }
-    });
-
-    // Keep mlSearchQuery signal in sync with the form control value
-    this.mlSearchForm.get('query')!.valueChanges.subscribe((val) => {
-      this.mlSearchQuery.set(val ?? '');
-    });
+      });
   }
 
   public openMailingListPicker(): void {
     const linked = this.linkedMailingList();
-    this.selectedMailingListUid.set(linked?.uid ?? null);
-    this.mlSearchQuery.set('');
-    this.mlSearchForm.reset({ query: '' });
-    this.mlPickerVisible.set(true);
-  }
 
-  public selectMailingList(uid: string): void {
-    this.selectedMailingListUid.set(uid);
-  }
+    const ref = this.dialogService.open(MailingListPickerDialogComponent, {
+      header: 'Associated Mailing List',
+      width: '640px',
+      modal: true,
+      closable: true,
+      dismissableMask: false,
+      data: {
+        mailingLists: this.projectMailingLists(),
+        selectedUid: linked?.uid ?? null,
+        loading: this.mlLoading(),
+      },
+    }) as DynamicDialogRef;
 
-  public saveMailingListAssociation(): void {
-    const uid = this.selectedMailingListUid();
-    const committee = this.committee();
-    if (!committee?.uid) return;
-
-    const selectedList = uid ? (this.projectMailingLists().find((ml) => ml.uid === uid) ?? null) : null;
-    const emailValue = selectedList ? this.getMailingListEmail(selectedList) : null;
-
-    // Guard: upstream service requires a valid email (group_name@domain)
-    if (emailValue && !emailValue.includes('@')) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Selected mailing list has no associated domain and cannot be linked.' });
-      return;
-    }
-
-    this.savingMl.set(true);
-    this.committeeService
-      .updateCommittee(committee.uid, { mailing_list: emailValue })
-      .pipe(finalize(() => this.savingMl.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Mailing list association updated' });
-          this.mlPickerVisible.set(false);
-          this.committeeUpdated.emit();
-        },
-        error: () => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update mailing list association' });
-        },
-      });
-  }
-
-  public clearMailingListAssociation(): void {
-    this.selectedMailingListUid.set(null);
+    ref.onClose.pipe(take(1)).subscribe((result: MailingListPickerDialogResult | null) => {
+      if (result) {
+        this.saveMailingListAssociation(result.selectedUid);
+      }
+    });
   }
 
   public confirmDelete(): void {
@@ -225,17 +175,32 @@ export class CommitteeSettingsTabComponent {
   }
 
   // -- Private helpers --
-  public getMailingListEmail(ml: GroupsIOMailingList): string {
-    if (ml.service?.domain) {
-      return `${ml.group_name}@${ml.service.domain}`;
-    }
-    return ml.group_name;
-  }
+  private saveMailingListAssociation(uid: string | null): void {
+    const committee = this.committee();
+    if (!committee?.uid) return;
 
-  /** Formats a snake_case audience_access value for human display (e.g. "approval_required" → "Approval Required"). */
-  public formatAudienceAccess(value: string | undefined): string {
-    if (!value) return '';
-    return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const selectedList = uid ? (this.projectMailingLists().find((ml) => ml.uid === uid) ?? null) : null;
+    const emailValue = selectedList ? this.mailingListEmailPipe.transform(selectedList) : null;
+
+    // Guard: upstream service requires a valid email (group_name@domain)
+    if (emailValue && !emailValue.includes('@')) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Selected mailing list has no associated domain and cannot be linked.' });
+      return;
+    }
+
+    this.savingMl.set(true);
+    this.committeeService
+      .updateCommittee(committee.uid, { mailing_list: emailValue })
+      .pipe(finalize(() => this.savingMl.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Mailing list association updated' });
+          this.committeeUpdated.emit();
+        },
+        error: () => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update mailing list association' });
+        },
+      });
   }
 
   private initProjectMailingLists(): Signal<GroupsIOMailingList[]> {
