@@ -50,7 +50,6 @@ export class CommitteeMeetingsComponent {
   private readonly router = inject(Router);
   private readonly clipboard = inject(Clipboard);
   private readonly messageService = inject(MessageService);
-  private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
   public committee = input.required<Committee>();
@@ -228,7 +227,7 @@ export class CommitteeMeetingsComponent {
     );
 
     return computed(() => {
-      const allMeetings: (Meeting | PastMeeting)[] = [...this.meetings(), ...externalData().pastMeetings];
+      const allMeetings: (Meeting | PastMeeting)[] = [...this.upcomingMeetings(), ...externalData().pastMeetings];
       const { votes, surveys } = externalData();
 
       const meetingEvents = allMeetings.flatMap((m) => this.meetingToEvents(m));
