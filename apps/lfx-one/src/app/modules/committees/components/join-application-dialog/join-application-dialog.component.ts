@@ -5,16 +5,8 @@ import { Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
+import { JoinApplicationDialogResult } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-
-export interface JoinApplicationDialogData {
-  committeeName: string;
-  mode: 'application' | 'invite_only';
-}
-
-export interface JoinApplicationDialogResult {
-  message: string | undefined;
-}
 
 @Component({
   selector: 'lfx-join-application-dialog',

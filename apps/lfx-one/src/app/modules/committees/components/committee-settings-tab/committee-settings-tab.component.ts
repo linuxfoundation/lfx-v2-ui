@@ -18,7 +18,8 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { CommitteeSettingsComponent } from '../committee-settings/committee-settings.component';
-import { MailingListPickerDialogComponent, MailingListPickerDialogResult } from '../mailing-list-picker-dialog/mailing-list-picker-dialog.component';
+import { MailingListPickerDialogResult } from '@lfx-one/shared/interfaces';
+import { MailingListPickerDialogComponent } from '../mailing-list-picker-dialog/mailing-list-picker-dialog.component';
 import { MailingListEmailPipe } from './pipes/mailing-list-email.pipe';
 
 @Component({

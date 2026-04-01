@@ -1,27 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { RadioButtonComponent } from '@components/radio-button/radio-button.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
+import { GroupsIOMailingList, MailingListPickerDialogResult } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 import { AudienceAccessPipe } from '../committee-settings-tab/pipes/audience-access.pipe';
 import { MailingListEmailPipe } from '../committee-settings-tab/pipes/mailing-list-email.pipe';
-
-export interface MailingListPickerDialogData {
-  mailingLists: GroupsIOMailingList[];
-  selectedUid: string | null;
-  loading: boolean;
-}
-
-export interface MailingListPickerDialogResult {
-  selectedUid: string | null;
-}
 
 @Component({
   selector: 'lfx-mailing-list-picker-dialog',
@@ -30,6 +21,7 @@ export interface MailingListPickerDialogResult {
 })
 export class MailingListPickerDialogComponent {
   private readonly config = inject(DynamicDialogConfig);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly dialogRef = inject(DynamicDialogRef);
 
   public readonly mailingLists: GroupsIOMailingList[] = this.config.data.mailingLists;
@@ -55,9 +47,12 @@ export class MailingListPickerDialogComponent {
   });
 
   public constructor() {
-    this.searchForm.get('query')!.valueChanges.subscribe((val) => {
-      this.searchQuery.set(val ?? '');
-    });
+    this.searchForm
+      .get('query')!
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((val) => {
+        this.searchQuery.set(val ?? '');
+      });
   }
 
   public selectMailingList(uid: string): void {

@@ -30,7 +30,8 @@ import { TextareaComponent } from '@components/textarea/textarea.component';
 import { MenuItem, MessageService } from 'primeng/api';
 import { catchError, combineLatest, filter, finalize, map, of, switchMap, take } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
-import { JoinApplicationDialogComponent, JoinApplicationDialogResult } from '../components/join-application-dialog/join-application-dialog.component';
+import { JoinApplicationDialogResult } from '@lfx-one/shared/interfaces';
+import { JoinApplicationDialogComponent } from '../components/join-application-dialog/join-application-dialog.component';
 
 import { CommitteeDocumentsComponent } from '../components/committee-documents/committee-documents.component';
 import { CommitteeMeetingsComponent } from '../components/committee-meetings/committee-meetings.component';
