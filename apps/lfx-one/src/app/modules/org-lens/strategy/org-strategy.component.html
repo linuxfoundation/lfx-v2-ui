@@ -1,0 +1,90 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="container mx-auto" data-testid="org-strategy-container">
+  <div class="mb-6">
+    <h1>Open Source Strategy</h1>
+    <p class="mt-1 text-sm text-gray-500">Discover ways to deepen your organization's open source engagement across the LF ecosystem.</p>
+  </div>
+
+  <!-- How to Get More Involved -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-strategy-involve">
+    <div class="text-base font-bold text-gray-900 mb-5">How to Get More Involved</div>
+
+    <!-- Tabs -->
+    <div class="flex border-b-2 border-gray-200 mb-5 gap-0 flex-wrap">
+      @for (tab of [
+        { id: 'brand', label: 'Build Brand' },
+        { id: 'talent', label: 'Attract & Retain Talent' },
+        { id: 'risk', label: 'Decrease Platform Risk' },
+        { id: 'security', label: 'Increase Security' },
+        { id: 'systems', label: 'Open & Interoperable Systems' },
+        { id: 'insights', label: 'Strategic Insights' }
+      ]; track tab.id) {
+        <button
+          class="px-4 py-3 text-sm font-medium border-b-2 -mb-0.5 transition-colors cursor-pointer bg-transparent"
+          [class]="activeInvolveTab() === tab.id ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-blue-500'"
+          (click)="setInvolveTab(tab.id)">
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- Tab: Build Brand -->
+    @if (activeInvolveTab() === 'brand') {
+      <div class="grid grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-base font-semibold text-gray-900 mb-3">How open source builds your brand</h3>
+          <ul class="list-disc pl-5 text-sm text-gray-700 leading-loose mb-4">
+            <li>Improves software quality</li>
+            <li>Makes the organization a better place to work</li>
+            <li>Enables the IT industry to be more innovative</li>
+            <li>Fulfills a moral obligation to other OSS consumers</li>
+          </ul>
+          <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-sm font-semibold text-gray-900 mb-2.5">Take Action</div>
+            <div class="grid grid-cols-2 gap-2">
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Commission Research</a>
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Post a blog to Linux.com</a>
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Sponsor Events</a>
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Speak at Events</a>
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Create a Community Event</a>
+              <a class="text-blue-500 text-sm hover:text-blue-600 cursor-pointer">Form a New Industry Initiative</a>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-6 flex flex-col justify-end min-h-64">
+          <div class="text-base font-semibold text-white mb-3">A Deep Dive Into Open Source Community Management</div>
+          <div class="flex justify-end">
+            <a class="px-5 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 cursor-pointer">Read Report</a>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Tab: Attract & Retain Talent -->
+    @if (activeInvolveTab() === 'talent') {
+      <p class="text-sm text-gray-500 py-5">Open source participation helps attract top developers and retain existing talent by providing opportunities to work on cutting-edge technology.</p>
+    }
+
+    <!-- Tab: Decrease Platform Risk -->
+    @if (activeInvolveTab() === 'risk') {
+      <p class="text-sm text-gray-500 py-5">Active participation in open source reduces vendor lock-in and ensures your organization has influence over the technologies you depend on.</p>
+    }
+
+    <!-- Tab: Increase Security -->
+    @if (activeInvolveTab() === 'security') {
+      <p class="text-sm text-gray-500 py-5">Contributing to open source security initiatives helps protect your software supply chain and builds trust with customers and partners.</p>
+    }
+
+    <!-- Tab: Open & Interoperable Systems -->
+    @if (activeInvolveTab() === 'systems') {
+      <p class="text-sm text-gray-500 py-5">Open standards and interoperable systems reduce integration costs and enable innovation across the technology ecosystem.</p>
+    }
+
+    <!-- Tab: Strategic Insights -->
+    @if (activeInvolveTab() === 'insights') {
+      <p class="text-sm text-gray-500 py-5">Leverage open source intelligence to inform strategic decisions about technology investments and industry direction.</p>
+    }
+  </div>
+</div>

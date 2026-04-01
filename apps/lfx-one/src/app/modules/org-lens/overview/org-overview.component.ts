@@ -26,10 +26,44 @@ interface MembershipOnboarding {
   memberSince?: string;
 }
 
-interface ProjectInfluence {
+interface MostActiveProject {
   name: string;
   detail: string;
   level: 'Leading' | 'Contributing' | 'Participating' | 'Silent';
+}
+
+interface MostInfluentialProject {
+  name: string;
+  ecosystemScore: string;
+  technicalScore: string;
+  totalScore: number;
+  scoreColor: string;
+}
+
+interface InfluenceChange {
+  name: string;
+  percentChange: number;
+  fromLevel: string;
+  toLevel: string;
+  why: string;
+  positive: boolean;
+}
+
+interface TopContributor {
+  rank: number;
+  name: string;
+  value: number;
+}
+
+interface OrgEvent {
+  name: string;
+  location: string;
+  startDate: string;
+  endDate?: string;
+  myRegistrants: number;
+  totalRegistrants: string;
+  speakingProposals?: number;
+  speakingTotal?: number;
 }
 
 @Component({
@@ -44,15 +78,6 @@ export class OrgOverviewComponent {
   protected readonly orgName = this.accountContextService.selectedAccount;
   protected readonly orgUserType = this.appService.orgUserType;
   protected readonly isAdmin = computed(() => this.orgUserType() !== 'employee');
-
-  protected readonly employeeActivityStats = {
-    codeProjects: 75,
-    commits: 8423,
-    meetingsAttended: 124,
-    eventsAttended: 24,
-    trainingsCompleted: 89,
-    certifications: 28,
-  };
 
   protected readonly summaryStats = {
     today: { foundations: 18, committeeMembers: 44, withinFoundations: 15 },
@@ -135,16 +160,106 @@ export class OrgOverviewComponent {
     },
   ];
 
+  // ─── Key Projects ─────────────────────────────────────────────────────────
   protected readonly influenceCounts = { leading: 8, contributing: 15, participating: 18, silent: 42 };
 
-  protected readonly topProjects: ProjectInfluence[] = [
+  protected readonly mostActiveProjects: MostActiveProject[] = [
     { name: 'Kubernetes', detail: '2,847 commits · 156 contributors', level: 'Leading' },
-    { name: 'Linux Kernel', detail: '1,203 commits · 89 contributors', level: 'Leading' },
-    { name: 'Prometheus', detail: '734 commits · 42 contributors', level: 'Contributing' },
-    { name: 'Envoy', detail: '521 commits · 31 contributors', level: 'Contributing' },
-    { name: 'OpenTelemetry', detail: '298 commits · 18 contributors', level: 'Participating' },
+    { name: 'Linux Kernel', detail: '1,923 commits · 243 contributors', level: 'Leading' },
+    { name: 'Envoy', detail: '1,456 commits · 98 contributors', level: 'Contributing' },
   ];
 
+  protected readonly mostInfluentialProjects: MostInfluentialProject[] = [
+    { name: 'Kubernetes', ecosystemScore: '24/27', technicalScore: '11/12', totalScore: 35, scoreColor: 'text-green-700' },
+    { name: 'Linux Kernel', ecosystemScore: '22/27', technicalScore: '10/12', totalScore: 32, scoreColor: 'text-green-700' },
+    { name: 'Prometheus', ecosystemScore: '20/27', technicalScore: '9/12', totalScore: 29, scoreColor: 'text-blue-700' },
+  ];
+
+  protected readonly influenceChanges: InfluenceChange[] = [
+    {
+      name: 'Envoy',
+      percentChange: 34,
+      fromLevel: 'Participating',
+      toLevel: 'Contributing',
+      why: '+3 new code contributors (Priya Sharma, James Wu, Mei Lin) · Commits up 210% · 2 employees accepted as conference speakers · Priya Sharma promoted to core reviewer',
+      positive: true,
+    },
+    {
+      name: 'OpenTelemetry',
+      percentChange: 18,
+      fromLevel: 'Contributing',
+      toLevel: 'Participating',
+      why: 'Alex Torres (primary contributor) left the company · Commits down 62% · Meeting attendance dropped from 18 to 4 · No event speakers submitted this year',
+      positive: false,
+    },
+  ];
+
+  // ─── Employee Activities Summary ──────────────────────────────────────────
+  protected readonly employeeActivitySummary = {
+    activeProjects: 75,
+    commits: '2,847',
+    meetingsAttended: 127,
+    activeContributors: 156,
+  };
+
+  protected readonly topCommitters: TopContributor[] = [
+    { rank: 1, name: 'Sarah Chen', value: 847 },
+    { rank: 2, name: 'Marcus Rivera', value: 623 },
+    { rank: 3, name: 'Priya Sharma', value: 412 },
+    { rank: 4, name: 'James Wu', value: 389 },
+    { rank: 5, name: 'Elena Popov', value: 287 },
+    { rank: 6, name: 'David Kim', value: 234 },
+    { rank: 7, name: 'Aisha Okafor', value: 198 },
+    { rank: 8, name: 'Lars Andersen', value: 176 },
+    { rank: 9, name: 'Mei Lin', value: 154 },
+    { rank: 10, name: 'Tom Bradley', value: 132 },
+  ];
+
+  protected readonly topMeetingAttendees: TopContributor[] = [
+    { rank: 1, name: 'Marcus Rivera', value: 48 },
+    { rank: 2, name: 'Sarah Chen', value: 42 },
+    { rank: 3, name: 'Elena Popov', value: 36 },
+    { rank: 4, name: 'David Kim', value: 31 },
+    { rank: 5, name: 'James Wu', value: 28 },
+    { rank: 6, name: 'Priya Sharma', value: 24 },
+    { rank: 7, name: 'Aisha Okafor', value: 21 },
+    { rank: 8, name: 'Tom Bradley', value: 18 },
+    { rank: 9, name: 'Lars Andersen', value: 15 },
+    { rank: 10, name: 'Mei Lin', value: 12 },
+  ];
+
+  // ─── Events ───────────────────────────────────────────────────────────────
+  protected readonly events: OrgEvent[] = [
+    {
+      name: 'Open Source in Finance Forum Toronto 2026',
+      location: 'Toronto Canada',
+      startDate: 'Apr 14, 2026',
+      myRegistrants: 2,
+      totalRegistrants: '325',
+      speakingProposals: 0,
+      speakingTotal: 1,
+    },
+    {
+      name: 'OpenSearchCon Europe 2026',
+      location: 'Nové Město Czechia',
+      startDate: 'Apr 16, 2026',
+      endDate: 'Apr 17, 2026',
+      myRegistrants: 1,
+      totalRegistrants: '250',
+    },
+    {
+      name: 'Open Source Summit + Embedded Linux Conference North America 2026',
+      location: 'Minneapolis United States',
+      startDate: 'May 18, 2026',
+      endDate: 'May 20, 2026',
+      myRegistrants: 1,
+      totalRegistrants: '2,000',
+      speakingProposals: 0,
+      speakingTotal: 1,
+    },
+  ];
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   protected levelClass(level: string): string {
     switch (level) {
       case 'Leading':
@@ -157,4 +272,5 @@ export class OrgOverviewComponent {
         return 'bg-slate-100 text-slate-500';
     }
   }
+
 }

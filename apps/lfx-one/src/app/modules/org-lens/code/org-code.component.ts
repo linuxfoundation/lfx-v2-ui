@@ -3,55 +3,44 @@
 
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { OrgUserType } from '@lfx-one/shared/interfaces';
+import { ButtonComponent } from '@components/button/button.component';
 import { AppService } from '@services/app.service';
 
 type ActivityTab = 'code' | 'training' | 'events';
+type ParticipantType = 'all' | 'maintainers' | 'contributors' | 'participants';
+type EventsSubTab = 'overview' | 'sponsorships' | 'travel';
 
-interface CodeContributor {
+interface ContributorRecord {
   name: string;
   initials: string;
-  project: string;
-  commits: number;
-  prs: number;
-  reviews: number;
+  bgColor: string;
+  textColor: string;
+  highestType: string;
+  activities: number;
   lastActive: string;
+  mostActiveProject: string;
+  mostActiveFoundation: string;
 }
 
-interface CodeProject {
+interface TrainingCourse {
   name: string;
-  foundation: string;
-  commits: number;
-  contributors: number;
-  prsOpened: number;
-  prsMerged: number;
-  linesChanged: number;
-}
-
-interface TrainingRecord {
-  name: string;
-  initials: string;
-  course: string;
+  enrollees: number;
   type: 'Training' | 'Certification';
-  enrolled: string;
-  completed: string;
-  status: 'Completed' | 'In Progress' | 'Enrolled';
-  statusClass: string;
 }
 
 interface EventRecord {
-  date: string;
   name: string;
   location: string;
-  registrants: number;
-  capacity: number;
-  sponsor: boolean;
-  speakers: number;
+  dates: string;
+  myRegistrants: number;
+  totalRegistrants: number;
+  speakingProposals: number | null;
+  speakingTotal: number | null;
 }
 
 @Component({
   selector: 'lfx-org-code',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ButtonComponent],
   templateUrl: './org-code.component.html',
 })
 export class OrgCodeComponent {
@@ -62,64 +51,56 @@ export class OrgCodeComponent {
   protected readonly canEdit = computed(() => this.orgUserType() === 'admin-edit' || this.orgUserType() === 'conglomerate-admin');
 
   protected readonly activeTab = signal<ActivityTab>('code');
+  protected readonly activeParticipantType = signal<ParticipantType>('all');
+  protected readonly hideFormerEmployees = signal(false);
+  protected readonly activeEventsSubTab = signal<EventsSubTab>('overview');
 
-  protected readonly codeStats = {
-    totalCommits: 8423,
-    totalContributors: 287,
-    maintainers: 15,
-    activeRepos: 64,
-  };
-
-  protected readonly codeProjects: CodeProject[] = [
-    { name: 'Kubernetes', foundation: 'CNCF', commits: 2847, contributors: 156, prsOpened: 412, prsMerged: 389, linesChanged: 284500 },
-    { name: 'Linux Kernel', foundation: 'Linux Foundation', commits: 1203, contributors: 89, prsOpened: 215, prsMerged: 198, linesChanged: 142300 },
-    { name: 'Envoy Proxy', foundation: 'CNCF', commits: 934, contributors: 67, prsOpened: 178, prsMerged: 162, linesChanged: 98700 },
-    { name: 'Prometheus', foundation: 'CNCF', commits: 734, contributors: 42, prsOpened: 134, prsMerged: 121, linesChanged: 67400 },
-    { name: 'OpenTelemetry', foundation: 'CNCF', commits: 521, contributors: 31, prsOpened: 98, prsMerged: 87, linesChanged: 48200 },
-    { name: 'Argo CD', foundation: 'CNCF', commits: 412, contributors: 28, prsOpened: 76, prsMerged: 69, linesChanged: 35600 },
-    { name: 'Fluentd', foundation: 'CNCF', commits: 298, contributors: 18, prsOpened: 54, prsMerged: 48, linesChanged: 24100 },
-  ];
-
-  protected readonly topContributors: CodeContributor[] = [
-    { name: 'Alice Chen', initials: 'AC', project: 'Kubernetes', commits: 412, prs: 89, reviews: 234, lastActive: 'Today' },
-    { name: 'Bob Wilson', initials: 'BW', project: 'Linux Kernel', commits: 298, prs: 54, reviews: 178, lastActive: 'Yesterday' },
-    { name: 'Carol Martinez', initials: 'CM', project: 'Envoy Proxy', commits: 187, prs: 43, reviews: 112, lastActive: '3 days ago' },
-    { name: 'David Park', initials: 'DP', project: 'Prometheus', commits: 134, prs: 31, reviews: 89, lastActive: '1 week ago' },
-    { name: 'Emma Johnson', initials: 'EJ', project: 'Kubernetes', commits: 98, prs: 22, reviews: 67, lastActive: 'Today' },
+  protected readonly participantTypes = [
+    { id: 'all', label: 'All Employees', count: 291 },
+    { id: 'maintainers', label: 'Maintainers', count: 12 },
+    { id: 'contributors', label: 'Contributors', count: 240 },
+    { id: 'participants', label: 'Participants', count: 39 },
   ];
 
   protected readonly trainingStats = {
-    totalEnrollments: 143,
-    completed: 89,
-    inProgress: 34,
-    certifications: 28,
+    trainingCourses: 59,
+    individualsEnrolled: 20,
+    certificationCourses: 23,
+    individualsIssued: 10,
   };
 
-  protected readonly trainingRecords: TrainingRecord[] = [
-    { name: 'Alice Chen', initials: 'AC', course: 'Certified Kubernetes Administrator (CKA)', type: 'Certification', enrolled: 'Jan 10, 2025', completed: 'Mar 15, 2025', status: 'Completed', statusClass: 'bg-green-50 text-green-700' },
-    { name: 'Bob Wilson', initials: 'BW', course: 'LFD201: Introduction to Open Source', type: 'Training', enrolled: 'Feb 1, 2025', completed: 'Feb 28, 2025', status: 'Completed', statusClass: 'bg-green-50 text-green-700' },
-    { name: 'Carol Martinez', initials: 'CM', course: 'LFS258: Kubernetes Fundamentals', type: 'Training', enrolled: 'Mar 5, 2025', completed: '—', status: 'In Progress', statusClass: 'bg-blue-50 text-blue-700' },
-    { name: 'David Park', initials: 'DP', course: 'Certified Kubernetes Security Specialist (CKS)', type: 'Certification', enrolled: 'Mar 20, 2025', completed: '—', status: 'Enrolled', statusClass: 'bg-amber-50 text-amber-700' },
-    { name: 'Emma Johnson', initials: 'EJ', course: 'LFS250: Kubernetes and Cloud Native Essentials', type: 'Training', enrolled: 'Feb 15, 2025', completed: 'Mar 30, 2025', status: 'Completed', statusClass: 'bg-green-50 text-green-700' },
-    { name: 'Frank Lee', initials: 'FL', course: 'LFS162: Introduction to DevOps and Site Reliability Engineering', type: 'Training', enrolled: 'Jan 25, 2025', completed: 'Feb 20, 2025', status: 'Completed', statusClass: 'bg-green-50 text-green-700' },
+  protected readonly contributors: ContributorRecord[] = [
+    { name: 'Simon Deziel', initials: 'SD', bgColor: '#E0F2FE', textColor: '#0284C7', highestType: 'Contributor', activities: 15882, lastActive: 'Mar 26, 2026', mostActiveProject: 'Node.js', mostActiveFoundation: 'OpenJS Foundation' },
+    { name: 'Thomas Parrott', initials: 'T', bgColor: '#7C3AED', textColor: '#FFFFFF', highestType: 'Contributor', activities: 9422, lastActive: 'Feb 3, 2026', mostActiveProject: 'Kubernetes', mostActiveFoundation: 'CNCF' },
+    { name: 'dann frazier', initials: 'DF', bgColor: '#FED7AA', textColor: '#9A3412', highestType: 'Contributor', activities: 4308, lastActive: 'Mar 8, 2026', mostActiveProject: 'PyTorch Project', mostActiveFoundation: 'PyTorch Foundation' },
+    { name: 'Simon Richardson', initials: 'SR', bgColor: '#DBEAFE', textColor: '#1D4ED8', highestType: 'Contributor', activities: 4635, lastActive: 'Feb 3, 2026', mostActiveProject: 'Linux Kernel', mostActiveFoundation: 'Linux Foundation' },
+    { name: 'kadinsayani', initials: 'K', bgColor: '#E0E7FF', textColor: '#4338CA', highestType: 'Contributor', activities: 2228, lastActive: 'Mar 27, 2026', mostActiveProject: 'Aether Project', mostActiveFoundation: 'Linux Foundation' },
   ];
 
-  protected readonly eventStats = {
-    attended: 24,
-    speakers: 8,
-    upcoming: 5,
-    sponsored: 3,
-  };
+  protected readonly trainingCourses: TrainingCourse[] = [
+    { name: 'Certified Kubernetes Security Specialist (CKS)', enrollees: 9, type: 'Certification' },
+    { name: 'Certified Kubernetes Administrator (CKA)', enrollees: 8, type: 'Certification' },
+    { name: 'Certified Kubernetes Application Developer (CKAD)', enrollees: 8, type: 'Certification' },
+    { name: 'Kubernetes and Cloud Native Security Associate (KCSA)', enrollees: 7, type: 'Certification' },
+    { name: 'Getting Started with OpenTofu (LFEL1009)', enrollees: 7, type: 'Training' },
+    { name: 'Kubernetes and Cloud Native Associate Exam (KCNA)', enrollees: 7, type: 'Certification' },
+  ];
 
   protected readonly events: EventRecord[] = [
-    { date: 'May 12–14, 2025', name: 'KubeCon EU 2025', location: 'London, UK', registrants: 18, capacity: 18, sponsor: true, speakers: 3 },
-    { date: 'Mar 25–27, 2025', name: 'Open Source Summit NA', location: 'Denver, CO', registrants: 12, capacity: 15, sponsor: false, speakers: 2 },
-    { date: 'Feb 3–5, 2025', name: 'FOSDEM 2025', location: 'Brussels, BE', registrants: 6, capacity: 10, sponsor: false, speakers: 1 },
-    { date: 'Jan 20–22, 2025', name: 'Linux Foundation Member Summit', location: 'Napa, CA', registrants: 4, capacity: 6, sponsor: true, speakers: 0 },
-    { date: 'Jun 23–25, 2025', name: 'Open Source Summit Europe (Upcoming)', location: 'Amsterdam, NL', registrants: 9, capacity: 12, sponsor: true, speakers: 2 },
+    { name: 'Open Source in Finance Forum Toronto 2026', location: 'Toronto Canada', dates: 'Apr 14, 2026', myRegistrants: 2, totalRegistrants: 325, speakingProposals: 0, speakingTotal: 1 },
+    { name: 'OpenSearchCon Europe 2026', location: 'Nové Město Czechia', dates: 'Apr 16 - Apr 17, 2026', myRegistrants: 1, totalRegistrants: 250, speakingProposals: null, speakingTotal: null },
+    { name: 'Open Source Summit + ELC North America 2026', location: 'Minneapolis United States', dates: 'May 18 - May 20, 2026', myRegistrants: 1, totalRegistrants: 2000, speakingProposals: 0, speakingTotal: 1 },
   ];
 
   protected setTab(tab: ActivityTab): void {
     this.activeTab.set(tab);
+  }
+
+  protected setParticipantType(type: string): void {
+    this.activeParticipantType.set(type as ParticipantType);
+  }
+
+  protected setEventsSubTab(tab: string): void {
+    this.activeEventsSubTab.set(tab as EventsSubTab);
   }
 }

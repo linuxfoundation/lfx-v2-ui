@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component } from '@angular/core';
+import { ButtonComponent } from '@components/button/button.component';
 
 interface ClaAgreement {
   project: string;
@@ -18,6 +19,7 @@ interface ClaAgreement {
 
 @Component({
   selector: 'lfx-org-cla',
+  imports: [ButtonComponent],
   templateUrl: './org-cla.component.html',
 })
 export class OrgClaComponent {

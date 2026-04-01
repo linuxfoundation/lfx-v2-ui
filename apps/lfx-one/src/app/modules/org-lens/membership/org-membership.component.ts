@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal } from '@angular/core';
+import { ButtonComponent } from '@components/button/button.component';
+import { TagComponent } from '@components/tag/tag.component';
 import { AppService } from '@services/app.service';
 
 type MembershipListTab = 'active' | 'expired' | 'discover';
@@ -51,6 +53,7 @@ interface OnboardingStep {
 
 @Component({
   selector: 'lfx-org-membership',
+  imports: [ButtonComponent, TagComponent],
   templateUrl: './org-membership.component.html',
 })
 export class OrgMembershipComponent {

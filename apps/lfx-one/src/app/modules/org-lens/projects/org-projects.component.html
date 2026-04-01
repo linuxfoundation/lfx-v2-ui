@@ -3,79 +3,159 @@
 
 <div class="container mx-auto" data-testid="org-projects-container">
   <div class="mb-6">
-    <h1>Key Projects</h1>
-    <p class="mt-1 text-sm text-slate-500">Projects your organization is involved in across LF foundations.</p>
+    <h1>Key projects</h1>
+    <p class="mt-1 text-sm text-gray-500">Identify our company's key open source projects, understand their health status, and assess our company's influence.</p>
   </div>
 
-  <!-- Influence Level Summary -->
-  <div class="flex border border-gray-200 rounded-xl overflow-hidden mb-6 bg-white" data-testid="org-projects-influence-summary">
-    <div class="flex-1 p-4 bg-green-50 border-r border-gray-200">
-      <div class="text-2xl font-bold text-green-700">{{ influenceCounts.leading }}</div>
-      <div class="text-xs font-semibold text-green-700 mt-0.5">Leading</div>
-      <div class="text-xs text-green-600">Org drives direction</div>
-    </div>
-    <div class="flex-1 p-4 bg-blue-50 border-r border-gray-200">
-      <div class="text-2xl font-bold text-blue-700">{{ influenceCounts.contributing }}</div>
-      <div class="text-xs font-semibold text-blue-700 mt-0.5">Contributing</div>
-      <div class="text-xs text-blue-600">Regular contributions</div>
-    </div>
-    <div class="flex-1 p-4 bg-amber-50 border-r border-gray-200">
-      <div class="text-2xl font-bold text-amber-700">{{ influenceCounts.participating }}</div>
-      <div class="text-xs font-semibold text-amber-700 mt-0.5">Participating</div>
-      <div class="text-xs text-amber-600">Light involvement</div>
-    </div>
-    <div class="flex-1 p-4 bg-slate-50">
-      <div class="text-2xl font-bold text-slate-400">{{ influenceCounts.silent }}</div>
-      <div class="text-xs font-semibold text-slate-400 mt-0.5">Silent</div>
-      <div class="text-xs text-slate-400">No recent activity</div>
-    </div>
-  </div>
+  <!-- Table Card -->
+  <div class="bg-white rounded-lg border border-gray-200 overflow-visible" data-testid="org-projects-table">
 
-  <!-- Filters -->
-  <div class="flex gap-2 mb-4" data-testid="org-projects-filters">
-    @for (f of filters; track f) {
-      <button
-        class="px-3 py-1.5 text-sm font-medium rounded-lg border cursor-pointer transition-colors {{ filterClass(f) }}"
-        (click)="activeFilter.set(f)">
-        {{ f }}
-      </button>
-    }
-  </div>
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+      <!-- Workspace selector -->
+      <div class="relative" data-workspace-dropdown>
+        <button
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-md bg-white hover:border-gray-400 cursor-pointer"
+          (click)="workspaceDropdownOpen.set(!workspaceDropdownOpen())">
+          <span class="text-gray-500 font-normal">Workspace:</span>
+          <span>{{ activeWorkspace.label }}</span>
+          <i class="fa-light fa-chevron-down text-gray-400 text-xs"></i>
+        </button>
+        @if (workspaceDropdownOpen()) {
+          <div class="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-52" data-workspace-dropdown>
+            @for (ws of workspaces; track ws.id) {
+              <button
+                class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer first:rounded-t-lg last:rounded-b-lg"
+                [class]="ws.id === activeWorkspaceId() ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-700'"
+                (click)="selectWorkspace(ws.id)">
+                {{ ws.label }}
+              </button>
+            }
+          </div>
+        }
+      </div>
 
-  <!-- Projects Table -->
-  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="org-projects-table">
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-md bg-white hover:border-gray-400 cursor-pointer">
+          Export to CSV
+        </button>
+        <button class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 cursor-pointer">
+          + Add project
+        </button>
+        <button class="px-2 py-1.5 text-gray-500 hover:text-gray-700 cursor-pointer text-lg leading-none">
+          ···
+        </button>
+      </div>
+    </div>
+
+    <!-- Table section label -->
+    <div class="px-5 py-3 border-b border-gray-100">
+      <span class="text-sm font-semibold text-gray-800">Key Projects</span>
+    </div>
+
+    <!-- Table -->
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead class="bg-slate-50 border-b border-gray-100">
+        <thead class="border-b border-gray-100">
           <tr>
-            <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Project</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Foundation</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Influence</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Commits</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Contributors</th>
-            <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Maintainers</th>
-            <th class="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Health</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Project</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Health Score</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Technical Influence</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ecosystem Influence</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Our Contributors</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Our Participants</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Our Activity (1Y)</th>
+            <th class="px-4 py-3 w-10"></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-50">
-          @for (project of filteredProjects; track project.name) {
-            <tr class="hover:bg-slate-50 transition-colors">
-              <td class="px-6 py-3.5 font-medium text-slate-900">{{ project.name }}</td>
-              <td class="px-4 py-3.5 text-slate-500">{{ project.foundation }}</td>
-              <td class="px-4 py-3.5">
-                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full {{ levelClass(project.level) }}">{{ project.level }}</span>
+        <tbody class="divide-y divide-gray-100">
+          @for (project of visibleProjects; track project.slug) {
+            <tr class="hover:bg-gray-50 transition-colors">
+
+              <!-- Project name -->
+              <td class="px-5 py-3.5">
+                <a [routerLink]="['/org/projects', project.slug]" class="text-blue-500 font-medium hover:text-blue-600 cursor-pointer">
+                  {{ project.name }}
+                </a>
               </td>
-              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.commits | number }}</td>
-              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.contributors }}</td>
-              <td class="px-4 py-3.5 text-right text-slate-700">{{ project.maintainers }}</td>
-              <td class="px-6 py-3.5 text-right font-semibold {{ healthClass(project.healthScore) }}">{{ project.healthScore }}</td>
+
+              <!-- Health Score -->
+              <td class="px-4 py-3.5">
+                <span class="px-2 py-0.5 rounded text-xs font-medium {{ healthClass(project.healthLabel) }}">
+                  {{ project.healthLabel }}
+                </span>
+              </td>
+
+              <!-- Technical Influence -->
+              <td class="px-4 py-3.5 text-gray-700">
+                <div class="flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polyline points="1 12 4 8 6 10 15 1"></polyline>
+                  </svg>
+                  {{ project.technicalInfluence }}
+                </div>
+              </td>
+
+              <!-- Ecosystem Influence -->
+              <td class="px-4 py-3.5 text-gray-700">{{ project.ecosystemInfluence }}</td>
+
+              <!-- Our Contributors -->
+              <td class="px-4 py-3.5">
+                <div class="flex items-center gap-2">
+                  <div class="flex">
+                    @for (i of [].constructor(project.contributorAvatars); track $index) {
+                      <div
+                        class="w-6 h-6 rounded-full border-2 border-white -ml-2 first:ml-0"
+                        [style.background]="contributorColors[$index % contributorColors.length]">
+                      </div>
+                    }
+                  </div>
+                  <span class="text-sm font-medium text-gray-800">{{ project.contributorCount }}</span>
+                </div>
+              </td>
+
+              <!-- Our Participants -->
+              <td class="px-4 py-3.5">
+                <div class="flex items-center gap-2">
+                  <div class="flex">
+                    @for (i of [].constructor(project.participantAvatars); track $index) {
+                      <div
+                        class="w-6 h-6 rounded-full border-2 border-white -ml-2 first:ml-0"
+                        [style.background]="participantColors[$index % participantColors.length]">
+                      </div>
+                    }
+                  </div>
+                  <span class="text-sm font-medium text-gray-800">{{ project.participantCount }}</span>
+                </div>
+              </td>
+
+              <!-- Our Activity -->
+              <td class="px-4 py-3.5">
+                <div class="flex items-center gap-2">
+                  <svg class="w-10 h-5 flex-shrink-0" viewBox="0 0 40 20" fill="none"
+                    [attr.stroke]="project.activityPositive ? '#10B981' : '#EF4444'" stroke-width="1.5">
+                    <polyline [attr.points]="project.sparklinePoints"></polyline>
+                  </svg>
+                  <span class="text-sm font-medium" [class]="project.activityPositive ? 'text-emerald-600' : 'text-red-500'">
+                    {{ project.activityPositive ? '+' : '-' }}{{ project.activityChange }}%
+                  </span>
+                </div>
+              </td>
+
+              <!-- Row actions -->
+              <td class="px-4 py-3.5">
+                <button class="text-gray-400 hover:text-gray-600 cursor-pointer text-lg leading-none px-1">⋮</button>
+              </td>
+
             </tr>
           }
         </tbody>
       </table>
     </div>
-    <div class="px-6 py-3 border-t border-gray-100 text-xs text-slate-500">
-      Showing {{ filteredProjects.length }} of {{ projects.length }} projects
+
+    <div class="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
+      Showing {{ visibleProjects.length }} projects
     </div>
   </div>
 </div>

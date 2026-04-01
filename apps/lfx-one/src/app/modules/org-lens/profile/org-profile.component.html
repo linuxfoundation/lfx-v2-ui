@@ -1,227 +1,108 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="container mx-auto" data-testid="org-company-data-container">
-  <div class="flex items-center justify-between mb-6">
+<div class="container mx-auto" data-testid="org-settings-container">
+  <div class="mb-6">
+    <h1>Organization settings</h1>
+    <p class="mt-1 text-sm text-gray-500">Manage your organization's profile, domains, and structure across LF foundations.</p>
+  </div>
+
+  <!-- Company Profile -->
+  <div class="bg-white rounded-lg border border-gray-200 p-7 mb-6" data-testid="company-profile">
+    <div class="text-base font-bold text-gray-900 mb-6">Company Profile</div>
+    <div class="grid gap-10" style="grid-template-columns: 200px 1fr;">
+      <!-- Logo -->
+      <div class="flex flex-col items-center">
+        <img
+          src="https://lf-master-project-logos-prod.s3.us-east-2.amazonaws.com/thelinuxfoundation-color.svg"
+          alt="Organization Logo"
+          class="max-w-36 mb-4"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'" />
+        <div class="hidden w-24 h-24 rounded-lg bg-blue-100 items-center justify-center text-blue-700 text-2xl font-bold">LF</div>
+        <div class="text-xs text-gray-400 text-center mt-2">UID: {{ profile.uid.slice(0, 18) }}...</div>
+      </div>
+      <!-- Info -->
+      <div class="flex flex-col gap-5">
+        <div>
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Name</div>
+          <div class="text-base font-semibold text-gray-900">{{ profile.name }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Founded</div>
+          <div class="text-sm text-gray-700">{{ profile.founded }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Website</div>
+          <a class="text-sm text-blue-500 hover:text-blue-600 cursor-pointer">{{ profile.website }}</a>
+        </div>
+        <div>
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Description</div>
+          <div class="text-sm text-gray-600 leading-relaxed">{{ profile.description }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Organization Structure & Domains -->
+  <div class="bg-white rounded-lg border border-gray-200 p-7" data-testid="org-structure">
+    <div class="text-base font-bold text-gray-900 mb-6">Organization Structure &amp; Domains</div>
+
+    <!-- Conglomerate Structure -->
+    <div class="mb-8">
+      <div class="text-sm font-semibold text-gray-800 mb-4">Conglomerate Structure</div>
+      <div class="border border-gray-200 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200 cursor-pointer">
+          <span class="text-sm font-semibold text-gray-900">{{ profile.name }}</span>
+          <i class="fa-light fa-chevron-down text-gray-400 text-xs"></i>
+        </div>
+        <div class="px-5 py-4 flex flex-col divide-y divide-gray-100 text-sm">
+          <div class="py-3">
+            <div class="font-semibold text-gray-800">Primary Organization</div>
+            <div class="text-gray-500 text-xs mt-0.5">{{ profile.name }} (HQ)</div>
+          </div>
+          <div class="py-3">
+            <div class="font-semibold text-gray-800">Related Entities</div>
+            <div class="text-gray-500 text-xs mt-0.5">{{ linkedOrgNames }}</div>
+          </div>
+          <div class="py-3">
+            <div class="font-semibold text-gray-800">Employee Count</div>
+            <div class="text-gray-500 text-xs mt-0.5">234 employees globally</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email Domains -->
     <div>
-      <h1>Company Data</h1>
-      <p class="mt-1 text-sm text-slate-500">Manage your organization's profile, domains, and structure across LF foundations.</p>
-    </div>
-  </div>
-
-  <!-- Tab Navigation -->
-  <div class="flex gap-1 border-b border-gray-200 mb-6" data-testid="company-data-tabs">
-    <button (click)="setTab('profile')"
-      class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer"
-      [class]="activeTab() === 'profile' ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700'"
-      data-testid="tab-profile">
-      <i class="fa-light fa-building mr-2"></i>Company Profile
-    </button>
-    <button (click)="setTab('data')"
-      class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer"
-      [class]="activeTab() === 'data' ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50' : 'text-slate-500 hover:text-slate-700'"
-      data-testid="tab-data">
-      <i class="fa-light fa-database mr-2"></i>Company Data
-    </button>
-  </div>
-
-  <!-- ── COMPANY PROFILE TAB ── -->
-  @if (activeTab() === 'profile') {
-    <!-- Profile completeness banner -->
-    <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6" data-testid="profile-completeness">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-semibold text-slate-700">Profile Completeness</span>
-        <span class="text-sm font-bold" [class]="profileCompleteness === 100 ? 'text-green-600' : 'text-amber-600'">{{ profileCompleteness }}%</span>
-      </div>
-      <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-2">
-        <div class="h-full rounded-full bg-amber-400" [style.width.%]="profileCompleteness"></div>
-      </div>
-      <p class="text-xs text-slate-500">Complete your profile to unlock richer insights and improve discoverability across LF foundations.</p>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Logo & Basic Info -->
-      <div class="lg:col-span-2 flex flex-col gap-6">
-        <div class="bg-white rounded-xl border border-gray-200 p-6" data-testid="profile-info">
-          <div class="flex items-start justify-between mb-5">
-            <div class="flex items-start gap-4">
-              <!-- Logo -->
-              <div class="w-16 h-16 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold flex-shrink-0 relative">
-                {{ orgName().accountName.slice(0, 2).toUpperCase() }}
-                @if (canEdit()) {
-                  <div class="absolute inset-0 rounded-xl bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
-                    <i class="fa-light fa-camera text-white text-sm"></i>
-                  </div>
-                }
-              </div>
-              <div>
-                <h2 class="text-lg font-bold text-slate-900">{{ orgName().accountName }}</h2>
-                <div class="text-sm text-slate-500 mt-0.5">{{ profile.industry }} · {{ profile.size }}</div>
-                <div class="text-sm text-slate-400 mt-0.5">{{ profile.headquarters }}</div>
-              </div>
-            </div>
-            @if (canEdit()) {
-              <button class="flex items-center gap-2 px-3 py-1.5 border border-gray-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 cursor-pointer">
-                <i class="fa-light fa-pen"></i> Edit
-              </button>
-            }
-          </div>
-
-          <!-- Description -->
-          <div class="mb-5">
-            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Description</div>
-            <p class="text-sm text-slate-600 leading-relaxed">{{ profile.description }}</p>
-            <div class="text-xs text-slate-400 mt-1">Auto-populated from Crunchbase · Last updated Feb 2025</div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="flex flex-col gap-3">
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Website</div>
-                <a href="#" class="text-sm text-blue-600 hover:underline">{{ profile.website }}</a>
-              </div>
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Founded</div>
-                <div class="text-sm text-slate-700">{{ profile.founded }}</div>
-              </div>
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Employee Size</div>
-                <div class="text-sm text-slate-700">{{ profile.size }}</div>
-              </div>
-            </div>
-            <div class="flex flex-col gap-3">
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">LinkedIn</div>
-                <a href="#" class="text-sm text-blue-600 hover:underline">{{ profile.linkedIn }}</a>
-              </div>
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Twitter / X</div>
-                <div class="text-sm text-slate-700">{{ profile.twitter }}</div>
-              </div>
-              <div>
-                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Headquarters</div>
-                <div class="text-sm text-slate-700">{{ profile.headquarters }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sidebar: missing fields -->
-      <div class="flex flex-col gap-4">
-        <div class="bg-white rounded-xl border border-gray-200 p-5">
-          <div class="text-sm font-semibold text-slate-700 mb-3">Missing Fields</div>
-          <div class="flex flex-col gap-2 text-sm">
-            @for (field of ['Logo', 'GitHub organization', 'YouTube channel', 'Blog / news URL', 'OSS policy URL', 'Primary programming language']; track field) {
-              <div class="flex items-center gap-2 text-slate-500">
-                <i class="fa-light fa-circle text-slate-300 flex-shrink-0 text-xs"></i>
-                {{ field }}
-              </div>
-            }
-          </div>
-          @if (canEdit()) {
-            <button class="mt-4 w-full px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 cursor-pointer">Complete Profile</button>
-          }
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ── COMPANY DATA TAB ── -->
-  @if (activeTab() === 'data') {
-    <div class="flex flex-col gap-6">
-
-      <!-- Domains -->
-      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="company-domains">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold text-slate-700">Domains &amp; Email Addresses</div>
-            <div class="text-xs text-slate-400 mt-0.5">Employees with matching email domains are auto-associated with your organization.</div>
-          </div>
-          @if (canEdit()) {
-            <button class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
-              <i class="fa-light fa-plus"></i> Add Domain
-            </button>
-          }
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-slate-50 border-b border-gray-100">
-              <tr>
-                <th class="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Domain</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Verified</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Matched Employees</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Added</th>
-                @if (canEdit()) {
-                  <th class="px-6 py-3"></th>
-                }
+      <div class="text-sm font-semibold text-gray-800 mb-4">Email Domains</div>
+      <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-sm">
+          <thead class="border-b border-gray-200 bg-gray-50">
+            <tr>
+              <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Domain</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Primary Use</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Employee Count</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            @for (d of domains; track d.domain) {
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-5 py-3.5 font-semibold text-gray-900">{{ d.domain }}</td>
+                <td class="px-4 py-3.5 text-gray-600">{{ d.primaryUse }}</td>
+                <td class="px-4 py-3.5 text-gray-700">{{ d.employeeCount }}</td>
+                <td class="px-4 py-3.5">
+                  <span
+                    class="text-xs font-semibold px-2.5 py-0.5 rounded"
+                    [class]="d.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'">
+                    {{ d.status }}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              @for (d of domains; track d.domain) {
-                <tr class="hover:bg-slate-50 transition-colors">
-                  <td class="px-6 py-3.5 font-medium text-slate-900">{{ d.domain }}</td>
-                  <td class="px-4 py-3.5">
-                    @if (d.verified) {
-                      <span class="flex items-center gap-1.5 text-xs text-green-700 font-medium">
-                        <i class="fa-solid fa-circle-check text-green-500"></i> Verified
-                      </span>
-                    } @else {
-                      <span class="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
-                        <i class="fa-light fa-clock text-amber-400"></i> Pending DNS
-                      </span>
-                    }
-                  </td>
-                  <td class="px-4 py-3.5 text-right text-slate-700">{{ d.employees }}</td>
-                  <td class="px-4 py-3.5 text-slate-500 text-xs">{{ d.addedDate }}</td>
-                  @if (canEdit()) {
-                    <td class="px-6 py-3.5 text-right">
-                      <button class="text-xs text-red-500 hover:underline cursor-pointer">Remove</button>
-                    </td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Conglomerate Structure -->
-      @if (isConglomerate()) {
-        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden" data-testid="conglomerate-structure">
-          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-semibold text-slate-700">Conglomerate Structure</div>
-              <div class="text-xs text-slate-400 mt-0.5">Parent and linked subsidiary organizations sharing memberships.</div>
-            </div>
-            <button class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
-              <i class="fa-light fa-plus"></i> Link Org
-            </button>
-          </div>
-          <div class="flex flex-col divide-y divide-slate-50">
-            @for (org of linkedOrgs; track org.name) {
-              <div class="flex items-center gap-4 px-6 py-3.5">
-                <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">{{ org.initials }}</div>
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-slate-900">{{ org.name }}</div>
-                  <div class="text-xs text-slate-400">{{ org.memberships }} memberships</div>
-                </div>
-                <span class="text-xs px-2 py-0.5 rounded font-medium" [class]="org.relationship === 'Parent' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-600'">{{ org.relationship }}</span>
-                <button class="text-xs text-red-400 hover:text-red-600 cursor-pointer ml-2">Unlink</button>
-              </div>
             }
-          </div>
-        </div>
-      } @else {
-        <div class="bg-white rounded-xl border border-gray-200 p-6" data-testid="conglomerate-info">
-          <div class="text-sm font-semibold text-slate-700 mb-2">Conglomerate Structure</div>
-          <p class="text-sm text-slate-500 mb-3">Your organization is not part of a conglomerate. Conglomerate Admins can link parent and subsidiary organizations to share membership data.</p>
-          <div class="flex items-center gap-2 text-xs text-slate-400">
-            <i class="fa-light fa-circle-info"></i>
-            Contact your LF account team or a Conglomerate Admin to enable this feature.
-          </div>
-        </div>
-      }
+          </tbody>
+        </table>
+      </div>
     </div>
-  }
+  </div>
 </div>

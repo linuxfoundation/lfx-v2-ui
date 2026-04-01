@@ -13,6 +13,10 @@ export const ORG_LENS_ROUTES: Routes = [
     loadComponent: () => import('./projects/org-projects.component').then((m) => m.OrgProjectsComponent),
   },
   {
+    path: 'projects/:slug',
+    loadComponent: () => import('./project-detail/org-project-detail.component').then((m) => m.OrgProjectDetailComponent),
+  },
+  {
     path: 'code',
     loadComponent: () => import('./code/org-code.component').then((m) => m.OrgCodeComponent),
   },
@@ -23,6 +27,10 @@ export const ORG_LENS_ROUTES: Routes = [
   {
     path: 'benefits',
     loadComponent: () => import('./benefits/org-benefits.component').then((m) => m.OrgBenefitsComponent),
+  },
+  {
+    path: 'strategy',
+    loadComponent: () => import('./strategy/org-strategy.component').then((m) => m.OrgStrategyComponent),
   },
   {
     path: 'groups',

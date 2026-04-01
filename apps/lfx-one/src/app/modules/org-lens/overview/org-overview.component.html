@@ -5,85 +5,54 @@
   <div class="flex items-center justify-between mb-6">
     <h1>{{ orgName().accountName }} Overview</h1>
     @if (!isAdmin()) {
-      <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
+      <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
         <i class="fa-light fa-eye mr-1"></i>Employee view
       </span>
     }
   </div>
 
   <!-- Summary Banner (all roles) -->
-  <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" data-testid="org-overview-summary-banner">
-    <h2 class="text-base font-semibold text-slate-900 mb-4">Your LF Open Source Involvement</h2>
-    <div class="flex items-center gap-0 bg-slate-50 rounded-lg p-5 border border-gray-200">
+  <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-overview-summary-banner">
+    <h2 class="text-base font-semibold text-gray-900 mb-4">Your LF Open Source Involvement</h2>
+    <div class="flex items-center gap-0 bg-gray-50 rounded-lg p-5 border border-gray-200">
       <div class="mr-6 flex-shrink-0">
         <div class="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center">
-          <i class="fa-light fa-building text-slate-400 text-xl"></i>
+          <i class="fa-light fa-building text-gray-400 text-xl"></i>
         </div>
       </div>
       <div class="flex-none pr-8 border-r border-gray-200">
-        <div class="text-xs text-slate-500 mb-2">Today</div>
+        <div class="text-xs text-gray-500 mb-2">Today</div>
         <div class="flex gap-8">
           <div>
-            <span class="text-3xl font-bold text-slate-900">{{ summaryStats.today.foundations }}</span>
-            <span class="text-sm text-slate-700 ml-1">Foundations</span>
-            <div class="text-xs text-slate-400">Active Memberships</div>
+            <span class="text-3xl font-bold text-gray-900">{{ summaryStats.today.foundations }}</span>
+            <span class="text-sm text-gray-700 ml-1">Foundations</span>
+            <div class="text-xs text-gray-400">Active Memberships</div>
           </div>
           @if (isAdmin()) {
             <div>
-              <span class="text-3xl font-bold text-slate-900">{{ summaryStats.today.committeeMembers }}</span>
-              <span class="text-sm text-slate-700 ml-1">Committee Members</span>
-              <div class="text-xs text-slate-400">Within {{ summaryStats.today.withinFoundations }} Foundations</div>
+              <span class="text-3xl font-bold text-gray-900">{{ summaryStats.today.committeeMembers }}</span>
+              <span class="text-sm text-gray-700 ml-1">Committee Members</span>
+              <div class="text-xs text-gray-400">Within {{ summaryStats.today.withinFoundations }} Foundations</div>
             </div>
           }
         </div>
       </div>
       <div class="flex-1 pl-8">
-        <div class="text-xs text-slate-500 mb-2">Active past 1 year</div>
+        <div class="text-xs text-gray-500 mb-2">Active past 1 year</div>
         <div class="flex gap-8">
           <div>
-            <span class="text-3xl font-bold text-slate-900">{{ summaryStats.pastYear.lfProjects }}</span>
-            <span class="text-sm text-slate-700 ml-1">LF Projects</span>
-            <div class="text-xs text-slate-400">{{ summaryStats.pastYear.nonLfProjects }} Non-LF Projects</div>
+            <span class="text-3xl font-bold text-gray-900">{{ summaryStats.pastYear.lfProjects }}</span>
+            <span class="text-sm text-gray-700 ml-1">LF Projects</span>
+            <div class="text-xs text-gray-400">{{ summaryStats.pastYear.nonLfProjects }} Non-LF Projects</div>
           </div>
           <div>
-            <span class="text-3xl font-bold text-slate-900">{{ summaryStats.pastYear.contributors }}</span>
-            <span class="text-sm text-slate-700 ml-1">Contributors</span>
+            <span class="text-3xl font-bold text-gray-900">{{ summaryStats.pastYear.contributors }}</span>
+            <span class="text-sm text-gray-700 ml-1">Contributors</span>
           </div>
           <div>
-            <span class="text-3xl font-bold text-slate-900">{{ summaryStats.pastYear.maintainers }}</span>
-            <span class="text-sm text-slate-700 ml-1">Maintainers</span>
+            <span class="text-3xl font-bold text-gray-900">{{ summaryStats.pastYear.maintainers }}</span>
+            <span class="text-sm text-gray-700 ml-1">Maintainers</span>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Employee Activity Summary (all roles) -->
-  <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" data-testid="org-overview-activity">
-    <div class="flex items-center justify-between mb-4">
-      <span class="text-base font-bold text-slate-900">Employee Activities</span>
-      <a routerLink="/org/code" class="text-sm text-blue-600 font-medium hover:text-blue-700">View details →</a>
-    </div>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100">
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Code</div>
-        <div class="flex flex-col gap-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Active Projects</span><span class="font-semibold text-slate-900">{{ employeeActivityStats.codeProjects }}</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Commits (1yr)</span><span class="font-semibold text-slate-900">8,423</span></div>
-        </div>
-      </div>
-      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100">
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Events</div>
-        <div class="flex flex-col gap-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Attended</span><span class="font-semibold text-slate-900">{{ employeeActivityStats.eventsAttended }}</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Meetings</span><span class="font-semibold text-slate-900">{{ employeeActivityStats.meetingsAttended }}</span></div>
-        </div>
-      </div>
-      <div class="bg-slate-50 rounded-lg p-4 border border-slate-100">
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Training</div>
-        <div class="flex flex-col gap-1">
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Completed</span><span class="font-semibold text-slate-900">{{ employeeActivityStats.trainingsCompleted }}</span></div>
-          <div class="flex justify-between text-sm"><span class="text-slate-500">Certifications</span><span class="font-semibold text-slate-900">{{ employeeActivityStats.certifications }}</span></div>
         </div>
       </div>
     </div>
@@ -91,17 +60,17 @@
 
   <!-- Admin-only: Data Maintenance -->
   @if (isAdmin()) {
-    <div class="text-base font-bold text-slate-900 mb-3">Data Maintenance</div>
+    <div class="text-base font-bold text-gray-900 mb-3">Data Maintenance</div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-testid="org-overview-data-maintenance">
       @for (card of dataMaintenanceCards; track card.label) {
-        <div class="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3">
+        <div class="bg-white rounded-lg border border-gray-200 p-5 flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full {{ card.badgeClass }}">{{ card.badge }}</span>
-            <i class="fa-light fa-users text-slate-300 text-lg"></i>
+            <i class="fa-light fa-users text-gray-300 text-lg"></i>
           </div>
           <div>
-            <div class="text-3xl font-bold text-slate-900 leading-none">{{ card.count }}</div>
-            <div class="text-sm text-slate-500 mt-1">{{ card.label }}</div>
+            <div class="text-3xl font-bold text-gray-900 leading-none">{{ card.count }}</div>
+            <div class="text-sm text-gray-500 mt-1">{{ card.label }}</div>
           </div>
           <a [routerLink]="card.actionRoute" class="w-full py-2 px-3 text-xs font-semibold rounded-md text-center cursor-pointer {{ card.actionClass }}">
             {{ card.actionLabel }}
@@ -111,17 +80,17 @@
     </div>
 
     <!-- Admin-only: Membership Onboarding -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-6" data-testid="org-overview-onboarding">
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-overview-onboarding">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <span class="text-base font-bold text-slate-900">Membership Onboarding</span>
-          <span class="text-xs text-slate-500 ml-2">Action needed</span>
+          <span class="text-base font-bold text-gray-900">Membership Onboarding</span>
+          <span class="text-xs text-gray-500 ml-2">Action needed</span>
         </div>
         <a routerLink="/org/membership" class="text-sm text-blue-600 font-medium hover:text-blue-700">View all memberships →</a>
       </div>
       <div class="flex flex-col gap-3">
         @for (item of membershipOnboarding; track item.id) {
-          <div class="rounded-xl border p-4" [class]="item.status === 'action-needed' ? 'border-amber-300 bg-amber-50' : 'border-green-300 bg-green-50'">
+          <div class="rounded-lg border p-4" [class]="item.status === 'action-needed' ? 'border-amber-300 bg-amber-50' : 'border-green-300 bg-green-50'">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" [class]="item.status === 'action-needed' ? 'bg-amber-100' : 'bg-green-100'">
@@ -133,7 +102,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-semibold text-slate-900">{{ item.name }}</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ item.name }}</span>
                     @if (item.status === 'action-needed') {
                       <span class="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">{{ item.stepsRemaining }} {{ item.stepsRemaining === 1 ? 'step' : 'steps' }} remaining</span>
                     } @else {
@@ -157,20 +126,21 @@
           </div>
         }
       </div>
-      <div class="text-xs text-slate-500 mt-3">Showing 4 of 18 memberships · Sorted by action needed first</div>
+      <div class="text-xs text-gray-500 mt-3">Showing 4 of 18 memberships · Sorted by action needed first</div>
     </div>
   }
 
-  <!-- Key Projects Summary (all roles, but admin sees contributor names) -->
-  <div class="bg-white rounded-xl border border-gray-200 p-6" data-testid="org-overview-projects">
+  <!-- Summary of Key Projects -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-overview-projects">
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-2">
-        <span class="text-base font-bold text-slate-900">Key Projects</span>
-        <span class="text-xs text-slate-500">(1 Year)</span>
+        <span class="text-base font-bold text-gray-900">Summary of Key Projects</span>
+        <span class="text-xs text-gray-500 font-normal">(1 Year)</span>
       </div>
-      <a routerLink="/org/projects" class="text-sm text-blue-600 font-medium hover:text-blue-700">View all →</a>
+      <a routerLink="/org/projects" class="text-sm text-blue-600 font-medium hover:text-blue-700">View all projects →</a>
     </div>
 
+    <!-- Influence level counts -->
     <div class="flex border border-gray-200 rounded-lg overflow-hidden mb-5">
       <div class="flex-1 p-3.5 bg-green-50 border-r border-gray-200">
         <div class="text-2xl font-bold text-green-700">{{ influenceCounts.leading }}</div>
@@ -184,34 +154,202 @@
         <div class="text-2xl font-bold text-amber-700">{{ influenceCounts.participating }}</div>
         <div class="text-xs font-medium text-amber-700">Participating</div>
       </div>
-      <div class="flex-1 p-3.5 bg-slate-50">
-        <div class="text-2xl font-bold text-slate-400">{{ influenceCounts.silent }}</div>
-        <div class="text-xs font-medium text-slate-400">Silent</div>
+      <div class="flex-1 p-3.5 bg-gray-50">
+        <div class="text-2xl font-bold text-gray-400">{{ influenceCounts.silent }}</div>
+        <div class="text-xs font-medium text-gray-400">Silent</div>
       </div>
     </div>
 
-    <div class="flex flex-col divide-y divide-slate-100">
-      @for (project of topProjects; track project.name) {
-        <div class="py-3 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-medium text-slate-900">{{ project.name }}</div>
-            <!-- Admin sees contributor details; Employee sees summary only -->
-            @if (isAdmin()) {
-              <div class="text-xs text-slate-500">{{ project.detail }}</div>
-            } @else {
-              <div class="text-xs text-slate-400">Active in past 12 months</div>
-            }
+    <!-- Three columns -->
+    <div class="grid grid-cols-3 gap-5 mb-5">
+      <!-- Most Active Projects -->
+      <div>
+        <div class="text-sm font-semibold text-gray-900 mb-2.5">Most Active Projects</div>
+        @for (project of mostActiveProjects; track project.name; let last = $last) {
+          <div class="py-2.5 flex items-center justify-between" [class]="!last ? 'border-b border-gray-100' : ''">
+            <div>
+              <div class="text-sm font-medium text-gray-900">{{ project.name }}</div>
+              <div class="text-xs text-gray-500">{{ project.detail }}</div>
+            </div>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full ml-2 {{ levelClass(project.level) }}">{{ project.level }}</span>
           </div>
-          <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full {{ levelClass(project.level) }}">{{ project.level }}</span>
+        }
+      </div>
+
+      <!-- Most Influential Projects -->
+      <div>
+        <div class="text-sm font-semibold text-gray-900 mb-2.5">Most Influential Projects</div>
+        @for (project of mostInfluentialProjects; track project.name; let last = $last) {
+          <div class="py-2.5 flex items-center justify-between" [class]="!last ? 'border-b border-gray-100' : ''">
+            <div>
+              <div class="text-sm font-medium text-gray-900">{{ project.name }}</div>
+              <div class="text-xs text-gray-500">Ecosystem: {{ project.ecosystemScore }} · Technical: {{ project.technicalScore }}</div>
+            </div>
+            <span class="text-sm font-bold ml-2 {{ project.scoreColor }}">{{ project.totalScore }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Influence Changes -->
+      <div>
+        <div class="text-sm font-semibold text-gray-900 mb-2.5">Influence Changes</div>
+        <div class="flex flex-col gap-2">
+          @for (change of influenceChanges; track change.name) {
+            <div class="p-3 rounded-lg" [class]="change.positive ? 'bg-green-50' : 'bg-red-50'">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-semibold text-gray-900">{{ change.name }}</span>
+                <span class="text-xs font-bold" [class]="change.positive ? 'text-green-700' : 'text-red-600'">
+                  {{ change.positive ? '↑ +' : '↓ -' }}{{ change.percentChange }}%
+                </span>
+              </div>
+              <div class="text-xs font-medium mt-0.5" [class]="change.positive ? 'text-green-700' : 'text-red-600'">
+                {{ change.fromLevel }} → {{ change.toLevel }}
+              </div>
+              <div class="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                <span class="text-gray-400">Why:</span> {{ change.why }}
+              </div>
+            </div>
+          }
         </div>
-      }
+      </div>
     </div>
 
-    @if (!isAdmin()) {
-      <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
-        <i class="fa-light fa-circle-info mr-1"></i>
-        Admin access required to view contributor names and detailed metrics.
+    <!-- AI Summary -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg px-5 py-4">
+      <div class="flex items-center gap-1.5 mb-2">
+        <i class="fa-light fa-layer-group text-indigo-500 text-xs"></i>
+        <span class="text-xs font-semibold text-indigo-500">AI Summary</span>
       </div>
-    }
+      <p class="text-sm text-gray-700 leading-relaxed">
+        Your organization holds <strong>Leading</strong> influence in 8 projects, driven primarily by <strong>Sarah Chen</strong> (Kubernetes maintainer, 847 commits) and <strong>Marcus Rivera</strong> (Linux Kernel subsystem lead). <strong>Envoy</strong> saw the strongest growth this year after <strong>Priya Sharma</strong> joined as a core reviewer and <strong>James Wu</strong> increased commit activity by 3x. Conversely, <strong>OpenTelemetry</strong> influence declined 18% following the departure of <strong>Alex Torres</strong>, who was the primary contributor — consider backfilling this role to maintain your position. Overall, your organization's technical footprint is strong across CNCF projects but thinning in observability tooling.
+      </p>
+    </div>
   </div>
+
+  <!-- Summary of Employees & Activities -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-overview-employees-activities">
+    <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center gap-2">
+        <span class="text-base font-bold text-gray-900">Summary of Employees &amp; Activities</span>
+        <span class="text-xs text-gray-500 font-normal">(1 Year)</span>
+      </div>
+      <a routerLink="/org/code" class="text-sm text-blue-600 font-medium hover:text-blue-700">View all activities →</a>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="flex border border-gray-200 rounded-lg overflow-hidden mb-5">
+      <div class="flex-1 p-3.5 border-r border-gray-200">
+        <div class="text-2xl font-bold text-gray-900">{{ employeeActivitySummary.activeProjects }}</div>
+        <div class="text-xs font-medium text-gray-500">Active Projects</div>
+      </div>
+      <div class="flex-1 p-3.5 border-r border-gray-200">
+        <div class="text-2xl font-bold text-gray-900">{{ employeeActivitySummary.commits }}</div>
+        <div class="text-xs font-medium text-gray-500">Commits</div>
+      </div>
+      <div class="flex-1 p-3.5 border-r border-gray-200">
+        <div class="text-2xl font-bold text-gray-900">{{ employeeActivitySummary.meetingsAttended }}</div>
+        <div class="text-xs font-medium text-gray-500">Meetings Attended</div>
+      </div>
+      <div class="flex-1 p-3.5">
+        <div class="text-2xl font-bold text-gray-900">{{ employeeActivitySummary.activeContributors }}</div>
+        <div class="text-xs font-medium text-gray-500">Active Contributors</div>
+      </div>
+    </div>
+
+    <!-- Two leaderboard tables -->
+    <div class="grid grid-cols-2 gap-6">
+      <!-- Top 10 Most Commits -->
+      <div>
+        <div class="text-sm font-semibold text-gray-900 mb-2.5">Top 10 – Most Commits</div>
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left py-1.5 text-xs font-medium text-gray-500 w-6">#</th>
+              <th class="text-left py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
+              <th class="text-right py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Commits</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (contributor of topCommitters; track contributor.rank; let last = $last) {
+              <tr [class]="!last ? 'border-b border-gray-50' : ''">
+                <td class="py-1.5 text-gray-400 text-xs">{{ contributor.rank }}</td>
+                <td class="py-1.5 font-medium text-gray-900">{{ contributor.name }}</td>
+                <td class="py-1.5 text-right font-semibold text-gray-900">{{ contributor.value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Top 10 Most Meetings Attended -->
+      <div>
+        <div class="text-sm font-semibold text-gray-900 mb-2.5">Top 10 – Most Meetings Attended</div>
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left py-1.5 text-xs font-medium text-gray-500 w-6">#</th>
+              <th class="text-left py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
+              <th class="text-right py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Meetings</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (contributor of topMeetingAttendees; track contributor.rank; let last = $last) {
+              <tr [class]="!last ? 'border-b border-gray-50' : ''">
+                <td class="py-1.5 text-gray-400 text-xs">{{ contributor.rank }}</td>
+                <td class="py-1.5 font-medium text-gray-900">{{ contributor.name }}</td>
+                <td class="py-1.5 text-right font-semibold text-gray-900">{{ contributor.value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Events -->
+  <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6" data-testid="org-overview-events">
+    <div class="mb-1">
+      <span class="text-base font-bold text-gray-900">Events</span>
+    </div>
+    <div class="text-sm text-gray-500 mb-5">Send employees or sponsor events to build your brand</div>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="border-b border-gray-200">
+          <th class="text-left py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
+          <th class="text-left py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Dates</th>
+          <th class="text-left py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">My Registrants</th>
+          <th class="text-left py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Speaking Proposals</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (event of events; track event.name) {
+          <tr class="border-b border-gray-50">
+            <td class="py-4 pr-4 align-top">
+              <a class="text-blue-500 font-medium text-sm hover:text-blue-600 cursor-pointer">{{ event.name }}</a>
+              <div class="text-xs text-gray-500 mt-1">{{ event.location }}</div>
+            </td>
+            <td class="py-4 pr-4 align-top text-sm text-gray-900">
+              {{ event.startDate }}{{ event.endDate ? ' - ' + event.endDate : '' }}
+            </td>
+            <td class="py-4 pr-4 align-top text-sm">
+              <span class="text-blue-500 font-semibold">{{ event.myRegistrants }}</span>
+              <span class="text-gray-900"> / {{ event.totalRegistrants }}</span>
+            </td>
+            <td class="py-4 align-top text-sm">
+              @if (event.speakingTotal !== undefined) {
+                <span class="text-blue-500 font-semibold">{{ event.speakingProposals }}</span>
+                <span class="text-gray-900"> / {{ event.speakingTotal }}</span>
+              } @else {
+                <span class="text-gray-900">0</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="flex justify-end mt-5">
+      <a routerLink="/org/benefits" class="px-6 py-2 text-sm font-medium text-blue-500 border border-blue-400 rounded-full hover:bg-blue-50 cursor-pointer">Learn More</a>
+    </div>
+  </div>
+
 </div>

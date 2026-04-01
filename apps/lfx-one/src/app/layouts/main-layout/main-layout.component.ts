@@ -125,22 +125,35 @@ export class MainLayoutComponent {
   private readonly orgLensItems = computed((): SidebarMenuItem[] => {
     const isAdmin = this.orgUserType() !== 'employee';
     const items: SidebarMenuItem[] = [
-      { label: 'Overview', icon: 'fa-light fa-house', routerLink: '/org' },
+      { label: 'Overview', icon: 'fa-light fa-grid-2', routerLink: '/org' },
     ];
     if (isAdmin) {
-      items.push({ label: 'Memberships', icon: 'fa-light fa-display', routerLink: '/org/membership' });
+      items.push({ label: 'Memberships', icon: 'fa-light fa-file-contract', routerLink: '/org/membership' });
     }
     items.push(
-      { label: 'Key Projects', icon: 'fa-light fa-folder', routerLink: '/org/projects' },
-      { label: 'Activities', icon: 'fa-light fa-people-group', routerLink: '/org/code' },
+      { label: 'Key Projects', icon: 'fa-light fa-folder-bookmark', routerLink: '/org/projects' },
+      { label: 'Employee activities', icon: 'fa-light fa-wave-pulse', routerLink: '/org/code' },
     );
+
+    const settingsItems: SidebarMenuItem[] = [];
     if (isAdmin) {
-      items.push(
-        { label: 'People', icon: 'fa-light fa-user-plus', routerLink: '/org/groups' },
-        { label: 'Company Data', icon: 'fa-light fa-building-columns', routerLink: '/org/profile' },
+      settingsItems.push(
+        { label: 'Organization settings', icon: 'fa-light fa-buildings', routerLink: '/org/profile' },
+        { label: 'People', icon: 'fa-light fa-people-group', routerLink: '/org/groups' },
       );
     }
-    items.push({ label: 'OSPO Resources', icon: 'fa-light fa-book', routerLink: '/org/benefits' });
+    settingsItems.push(
+      { label: 'OSPO Resources', icon: 'fa-light fa-book', routerLink: '/org/benefits' },
+      { label: 'Open Source Strategy', icon: 'fa-light fa-compass', routerLink: '/org/strategy' },
+    );
+
+    items.push({
+      label: 'Settings & Resources',
+      isSection: true,
+      expanded: true,
+      items: settingsItems,
+    });
+
     return items;
   });
 
