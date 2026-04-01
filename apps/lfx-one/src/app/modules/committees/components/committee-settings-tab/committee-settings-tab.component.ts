@@ -6,7 +6,6 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { TagComponent } from '@components/tag/tag.component';
 import { Committee, GroupsIOMailingList, JoinMode } from '@lfx-one/shared/interfaces';
 import { CommitteeMemberVisibility } from '@lfx-one/shared/enums';
 import { CommitteeService } from '@services/committee.service';
@@ -24,7 +23,7 @@ import { MailingListEmailPipe } from './pipes/mailing-list-email.pipe';
 
 @Component({
   selector: 'lfx-committee-settings-tab',
-  imports: [CommitteeSettingsComponent, ButtonComponent, ReactiveFormsModule, TagComponent, ConfirmDialogModule],
+  imports: [CommitteeSettingsComponent, ButtonComponent, ReactiveFormsModule, ConfirmDialogModule],
   providers: [DialogService],
   templateUrl: './committee-settings-tab.component.html',
   styleUrl: './committee-settings-tab.component.scss',
