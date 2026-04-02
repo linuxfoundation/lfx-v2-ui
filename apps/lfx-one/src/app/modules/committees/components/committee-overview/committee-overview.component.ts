@@ -55,8 +55,6 @@ export class CommitteeOverviewComponent {
   public readonly joinRequested = output<void>();
   public readonly tabNavigated = output<string>();
 
-  public savingChairs = signal(false);
-
   // Vote drawer state
   public voteDrawerVisible = signal(false);
   public selectedVoteId = signal<string | null>(null);
@@ -214,6 +212,7 @@ export class CommitteeOverviewComponent {
       width: '480px',
       modal: true,
       closable: true,
+      draggable: false,
       data: {
         members: this.memberOptions(),
         currentChairUid: currentChair?.uid || null,
@@ -229,14 +228,12 @@ export class CommitteeOverviewComponent {
   }
 
   public saveChairs(newChairUid: string | null, newViceChairUid: string | null): void {
-    this.savingChairs.set(true);
     const committeeId = this.committee().uid;
     const currentChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.CHAIR);
     const currentViceChair = this.chairs().find((c) => c.role?.name === CommitteeMemberRole.VICE_CHAIR);
 
     if (newChairUid && newChairUid === newViceChairUid) {
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Chair and Vice Chair must be different members' });
-      this.savingChairs.set(false);
       return;
     }
 
@@ -262,29 +259,23 @@ export class CommitteeOverviewComponent {
     }
 
     if (removals.length === 0 && assignments.length === 0) {
-      this.savingChairs.set(false);
       return;
     }
 
     // Execute removals first, then assignments
-    (removals.length > 0 ? forkJoin(removals) : of([]))
-      .pipe(
-        switchMap(() => (assignments.length > 0 ? forkJoin(assignments) : of([]))),
-        finalize(() => this.savingChairs.set(false))
-      )
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Chairs updated' });
-          this.committeeUpdated.emit();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Unable to Save',
-            detail: getHttpErrorDetail(err, 'Failed to update chairs. Please try again.'),
-          });
-        },
-      });
+    (removals.length > 0 ? forkJoin(removals) : of([])).pipe(switchMap(() => (assignments.length > 0 ? forkJoin(assignments) : of([])))).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Chairs updated' });
+        this.committeeUpdated.emit();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Unable to Save',
+          detail: getHttpErrorDetail(err, 'Failed to update chairs. Please try again.'),
+        });
+      },
+    });
   }
 
   // Private initializer functions

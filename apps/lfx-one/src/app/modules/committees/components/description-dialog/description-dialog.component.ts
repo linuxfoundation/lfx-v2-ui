@@ -6,6 +6,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
+import { DescriptionDialogData } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
@@ -15,11 +16,11 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
   templateUrl: './description-dialog.component.html',
 })
 export class DescriptionDialogComponent {
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject(DynamicDialogConfig<DescriptionDialogData>);
   private readonly ref = inject(DynamicDialogRef);
 
-  public readonly mode: 'view' | 'edit' = this.config.data.mode;
-  public readonly description: string = this.config.data.description;
+  public readonly mode = this.config.data.mode;
+  public readonly description = this.config.data.description;
 
   public descriptionForm = new FormGroup({
     description: new FormControl(this.description),

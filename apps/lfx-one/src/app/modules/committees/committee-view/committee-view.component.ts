@@ -13,8 +13,9 @@ import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
-import { Committee, CommitteeMember, CommitteeMemberVisibility, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import { Committee, CommitteeMember, CommitteeMemberVisibility, CommitteeTab, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
 import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
+import { COMMITTEE_VALID_TABS } from '@lfx-one/shared/constants';
 import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MailingListService } from '@services/mailing-list.service';
@@ -38,9 +39,6 @@ import { MailingListEmailPipe } from '../components/committee-settings-tab/pipes
 import { CommitteeSettingsTabComponent } from '../components/committee-settings-tab/committee-settings-tab.component';
 import { CommitteeSurveysComponent } from '../components/committee-surveys/committee-surveys.component';
 import { CommitteeVotesComponent } from '../components/committee-votes/committee-votes.component';
-
-type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
-const VALID_TABS: CommitteeTab[] = ['overview', 'members', 'votes', 'meetings', 'surveys', 'documents', 'settings'];
 
 @Component({
   selector: 'lfx-committee-view',
@@ -86,7 +84,7 @@ export class CommitteeViewComponent {
   // Initial tab from queryParams (e.g., ?tab=surveys after create flow redirect)
   private readonly initialTab: CommitteeTab | null = (() => {
     const tab = this.route.snapshot.queryParamMap.get('tab');
-    return tab && VALID_TABS.includes(tab as CommitteeTab) ? (tab as CommitteeTab) : null;
+    return tab && COMMITTEE_VALID_TABS.includes(tab as CommitteeTab) ? (tab as CommitteeTab) : null;
   })();
 
   // -- Writable signals --
@@ -98,8 +96,6 @@ export class CommitteeViewComponent {
   public membersLoading = signal<boolean>(true);
   public myRoleLoading: Signal<boolean> = computed(() => this.membersLoading());
   public joiningOrLeaving = signal(false);
-
-  public savingDescription = signal(false);
 
   // -- Computed / toSignal --
   public committee: Signal<Committee | null> = this.initializeCommittee();
@@ -205,7 +201,7 @@ export class CommitteeViewComponent {
 
   public handleTabNavigation(tabWithContext: string): void {
     const [tab, context] = tabWithContext.split(':');
-    if (!VALID_TABS.includes(tab as CommitteeTab)) {
+    if (!COMMITTEE_VALID_TABS.includes(tab as CommitteeTab)) {
       return;
     }
     this.activeTab.set(tab as CommitteeTab);
@@ -220,6 +216,7 @@ export class CommitteeViewComponent {
       width: '560px',
       modal: true,
       closable: true,
+      draggable: false,
       data: { mode: 'view', description: this.committee()?.description || '' },
     });
   }
@@ -230,6 +227,7 @@ export class CommitteeViewComponent {
       width: '560px',
       modal: true,
       closable: true,
+      draggable: false,
       data: { mode: 'edit', description: this.committee()?.description || '' },
     });
     ref?.onClose.pipe(take(1)).subscribe((newDescription: string | undefined) => {
@@ -240,19 +238,19 @@ export class CommitteeViewComponent {
   }
 
   public saveDescription(description: string): void {
-    this.savingDescription.set(true);
-    this.committeeService
-      .updateCommittee(this.committee()!.uid, { description })
-      .pipe(finalize(() => this.savingDescription.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Description updated' });
-          this.refreshCommittee();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update description. Please try again.') });
-        },
-      });
+    const committee = this.committee();
+    if (!committee) {
+      return;
+    }
+    this.committeeService.updateCommittee(committee.uid, { description }).subscribe({
+      next: () => {
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Description updated' });
+        this.refreshCommittee();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: getHttpErrorDetail(err, 'Failed to update description. Please try again.') });
+      },
+    });
   }
 
   public handleJoinRequest(): void {

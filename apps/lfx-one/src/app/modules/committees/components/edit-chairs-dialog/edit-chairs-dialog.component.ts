@@ -5,6 +5,7 @@ import { Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
+import { EditChairsDialogData } from '@lfx-one/shared/interfaces';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
@@ -14,10 +15,10 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
   templateUrl: './edit-chairs-dialog.component.html',
 })
 export class EditChairsDialogComponent {
-  private readonly config = inject(DynamicDialogConfig);
+  private readonly config = inject(DynamicDialogConfig<EditChairsDialogData>);
   private readonly ref = inject(DynamicDialogRef);
 
-  public readonly memberOptions: { label: string; value: string }[] = this.config.data.members;
+  public readonly memberOptions = this.config.data.members;
 
   public chairsForm = new FormGroup({
     chairUid: new FormControl<string | null>(this.config.data.currentChairUid),

@@ -69,7 +69,7 @@ export class CommitteeManageComponent {
   public submitting = signal<boolean>(false);
 
   // Validation signals for template
-  private formValue = toSignal(this.form.valueChanges);
+  private formValue = toSignal(this.form.valueChanges, { initialValue: this.form.value });
   public readonly canProceed = computed(() => {
     this.formValue();
     return this.isStepValid(this.currentStep());
