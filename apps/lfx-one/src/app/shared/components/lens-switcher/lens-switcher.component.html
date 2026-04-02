@@ -23,7 +23,6 @@
       }">
       <i [ngClass]="isHome() ? 'fa-solid fa-objects-column' : 'fa-light fa-objects-column'" class="text-lg"></i>
     </div>
-    <span class="text-[10px] leading-tight font-medium">Home</span>
   </button>
 
   <!-- Separator -->
@@ -47,7 +46,7 @@
           }">
           <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-lg"></i>
         </div>
-        <span class="text-[10px] leading-tight font-medium">{{ lens.switcherLabel }}</span>
+        <span class="text-[10px] leading-tight font-medium w-full text-center truncate">{{ lens.switcherLabel }}</span>
       </button>
     }
   </div>
@@ -68,7 +67,6 @@
       <div class="flex items-center justify-center w-[40px] h-[40px] rounded-[12px] transition-colors group-hover:bg-white/10">
         <i class="fa-light fa-chart-simple text-lg"></i>
       </div>
-      <span class="text-[10px] leading-tight font-medium">Insights</span>
     </a>
 
     <!-- Separator -->
