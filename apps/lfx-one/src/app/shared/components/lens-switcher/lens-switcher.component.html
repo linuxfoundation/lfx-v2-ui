@@ -21,7 +21,7 @@
         'bg-blue-500/20': isHome(),
         'group-hover:bg-white/10': !isHome(),
       }">
-      <i [ngClass]="isHome() ? 'fa-solid fa-objects-column' : 'fa-light fa-objects-column'" class="text-lg"></i>
+      <i [ngClass]="isHome() ? 'fa-solid fa-objects-column' : 'fa-light fa-objects-column'" class="text-xl"></i>
     </div>
   </button>
 
@@ -44,9 +44,8 @@
             'bg-blue-500/20': activeLens() === lens.id && !isHome(),
             'group-hover:bg-white/10': activeLens() !== lens.id || isHome(),
           }">
-          <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-lg"></i>
+          <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-xl"></i>
         </div>
-        <span class="text-[10px] leading-tight font-medium w-full text-center truncate">{{ lens.switcherLabel }}</span>
       </button>
     }
   </div>
