@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, Signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
@@ -14,7 +14,7 @@ import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
 import { DrawerModule } from 'primeng/drawer';
-import { filter } from 'rxjs';
+import { filter, map, startWith } from 'rxjs';
 
 import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
@@ -33,6 +33,7 @@ export class MainLayoutComponent {
 
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
   protected readonly activeLens = this.appService.activeLens;
+  protected readonly isHome: Signal<boolean> = this.initIsHome();
   protected readonly projectSelectorOpen = this.appService.projectSelectorOpen;
   protected readonly showDevToolbar = this.appService.showDevToolbar;
 
@@ -203,6 +204,17 @@ export class MainLayoutComponent {
         this.appService.closeMobileSidebar();
         this.appService.setProjectSelectorOpen(false);
       });
+  }
+
+  private initIsHome(): Signal<boolean> {
+    return toSignal(
+      this.router.events.pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        map((e) => e.urlAfterRedirects === '/home'),
+        startWith(this.router.url === '/home')
+      ),
+      { initialValue: this.router.url === '/home' }
+    );
   }
 
   public closeProjectSelector(): void {

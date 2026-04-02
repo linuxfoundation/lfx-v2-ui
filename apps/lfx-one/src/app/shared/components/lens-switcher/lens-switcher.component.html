@@ -15,16 +15,16 @@
     aria-label="Home"
     pTooltip="Home"
     tooltipPosition="right"
-    class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors mb-1"
+    class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors mb-2"
     [ngClass]="{
       'bg-blue-500/20 text-blue-400': isHome(),
-      'text-white/80 hover:bg-white/10 hover:text-white': !isHome(),
+      'text-white/40 hover:bg-white/10 hover:text-white': !isHome(),
     }">
     <i [ngClass]="isHome() ? 'fa-solid fa-house' : 'fa-light fa-house'" class="text-xl"></i>
   </button>
 
   <!-- Separator -->
-  <hr class="w-6 border-white/20 mb-3" />
+  <hr class="w-6 border-white/20 mb-2" />
 
   <!-- Lens Buttons -->
   <div class="flex flex-col items-center gap-2 flex-1">
@@ -39,14 +39,14 @@
         class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors"
         [ngClass]="{
           'bg-blue-500/20 text-blue-400': activeLens() === lens.id && !isHome(),
-          'text-white/80 hover:bg-white/10 hover:text-white': activeLens() !== lens.id || isHome(),
+          'text-white/40 hover:bg-white/10 hover:text-white': activeLens() !== lens.id || isHome(),
         }">
         <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-xl"></i>
       </button>
     }
   </div>
 
-  <!-- Footer Actions -->
+  <!-- Footer -->
   <div class="flex flex-col items-center gap-2 mt-auto">
     <!-- LFX Insights -->
     <a
@@ -58,26 +58,86 @@
       [pTooltip]="insightsTooltip"
       [escape]="false"
       tooltipPosition="right"
-      class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors text-white/80 hover:bg-white/10 hover:text-white">
+      class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors text-white/40 hover:bg-white/10 hover:text-white">
       <i class="fa-light fa-chart-simple text-xl"></i>
     </a>
 
-    <!-- Separator -->
-    <hr class="w-6 border-white/20" />
+    <!-- User Avatar + Dropdown -->
+    <div class="relative" data-testid="lens-user-menu">
+      <button
+        type="button"
+        (click)="toggleDropdown()"
+        aria-label="User menu"
+        data-testid="lens-user-avatar"
+        class="flex items-center justify-center w-[40px] h-[40px] rounded-full overflow-hidden transition-all hover:ring-2 hover:ring-white/30 focus:outline-none">
+        @if (user()?.picture) {
+          <img [src]="user()!.picture" [alt]="user()!.name" class="w-full h-full object-cover" />
+        } @else {
+          <div class="flex items-center justify-center w-full h-full bg-blue-600 text-white text-sm font-semibold">
+            {{ userInitials() }}
+          </div>
+        }
+      </button>
 
-    @for (action of footerActions; track action.label) {
-      <a
-        [href]="action.url"
-        [target]="action.target"
-        rel="noopener noreferrer"
-        [attr.data-testid]="action.testId"
-        [attr.aria-label]="action.label"
-        [pTooltip]="action.tooltipHtml"
-        [escape]="false"
-        tooltipPosition="right"
-        class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors text-white/80 hover:bg-white/10 hover:text-white">
-        <i [ngClass]="action.icon" class="text-xl"></i>
-      </a>
-    }
+      @if (showDropdown()) {
+        <!-- Backdrop to close on outside click -->
+        <div class="fixed inset-0 z-[70]" (click)="closeDropdown()"></div>
+
+        <!-- Dropdown panel -->
+        <div class="absolute bottom-0 left-full ml-3 z-[80] w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+          <!-- User identity -->
+          <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+            <div class="shrink-0 w-9 h-9 rounded-full overflow-hidden">
+              @if (user()?.picture) {
+                <img [src]="user()!.picture" [alt]="user()!.name" class="w-full h-full object-cover" />
+              } @else {
+                <div class="flex items-center justify-center w-full h-full bg-blue-600 text-white text-sm font-semibold">
+                  {{ userInitials() }}
+                </div>
+              }
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="font-semibold text-sm text-gray-900 truncate">{{ user()?.name }}</span>
+              <span class="text-xs text-gray-500 truncate">{{ user()?.email }}</span>
+            </div>
+          </div>
+
+          <!-- Changelog & Support -->
+          <div class="py-1 border-b border-gray-100">
+            <a
+              href="https://changelog.lfx.dev/"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="lens-changelog"
+              class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+              <i class="fa-light fa-clock-rotate-left w-4 text-gray-400"></i>
+              <span>Changelog</span>
+              <i class="fa-light fa-arrow-up-right-from-square ml-auto text-xs text-gray-400"></i>
+            </a>
+            <a
+              href="https://jira.linuxfoundation.org/servicedesk/customer/portal/4"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="lens-support"
+              class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+              <i class="fa-light fa-question-circle w-4 text-gray-400"></i>
+              <span>Support</span>
+              <i class="fa-light fa-arrow-up-right-from-square ml-auto text-xs text-gray-400"></i>
+            </a>
+          </div>
+
+          <!-- Sign out -->
+          <div class="py-1">
+            <a
+              href="/logout"
+              data-testid="lens-logout"
+              class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+              <i class="fa-light fa-arrow-right-from-bracket w-4 text-gray-400"></i>
+              <span>Sign out</span>
+            </a>
+          </div>
+        </div>
+      }
+    </div>
   </div>
 </div>
