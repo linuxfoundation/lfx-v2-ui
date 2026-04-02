@@ -7,6 +7,25 @@
     <img src="/images/logo_lf_white.svg" alt="Linux Foundation" class="w-[24px] h-[24px]" />
   </a>
 
+  <!-- Home Button -->
+  <button
+    type="button"
+    (click)="navigateHome()"
+    data-testid="lens-home"
+    aria-label="Home"
+    pTooltip="Home"
+    tooltipPosition="right"
+    class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors mb-1"
+    [ngClass]="{
+      'bg-blue-500/20 text-blue-400': isHome(),
+      'text-white/80 hover:bg-white/10 hover:text-white': !isHome(),
+    }">
+    <i [ngClass]="isHome() ? 'fa-solid fa-house' : 'fa-light fa-house'" class="text-xl"></i>
+  </button>
+
+  <!-- Separator -->
+  <hr class="w-6 border-white/20 mb-3" />
+
   <!-- Lens Buttons -->
   <div class="flex flex-col items-center gap-2 flex-1">
     @for (lens of lenses; track lens.id) {

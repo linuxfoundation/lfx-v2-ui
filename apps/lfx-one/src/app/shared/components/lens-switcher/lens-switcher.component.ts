@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { Component, inject, Signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { AppService, Lens } from '@services/app.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { filter, map, startWith } from 'rxjs';
 
 interface LensOption {
   id: Lens;
@@ -47,6 +49,7 @@ export class LensSwitcherComponent {
   private readonly router = inject(Router);
 
   protected readonly activeLens = this.appService.activeLens;
+  protected readonly isHome: Signal<boolean> = this.initIsHome();
 
   protected readonly lenses: LensOption[] = [
     { id: 'me', label: 'Me', icon: 'fa-light fa-circle-user', activeIcon: 'fa-solid fa-circle-user', testId: 'lens-me' },
@@ -86,5 +89,20 @@ export class LensSwitcherComponent {
   protected setLens(lens: Lens): void {
     this.appService.setLens(lens);
     void this.router.navigate([LENS_DEFAULT_ROUTES[lens]]);
+  }
+
+  protected navigateHome(): void {
+    void this.router.navigate(['/']);
+  }
+
+  private initIsHome(): Signal<boolean> {
+    return toSignal(
+      this.router.events.pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        map((e) => e.urlAfterRedirects === '/'),
+        startWith(this.router.url === '/')
+      ),
+      { initialValue: this.router.url === '/' }
+    );
   }
 }
