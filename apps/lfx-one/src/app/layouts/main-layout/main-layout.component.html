@@ -89,9 +89,9 @@
         <i class="fa-light fa-bars text-gray-600 text-xl"></i>
       </button>
     </div>
-    <!-- Top Bar -->
+    <!-- Top Bar (fixed — reserves space via pt-[48px] below) -->
     <lfx-top-bar></lfx-top-bar>
-    <div class="flex-grow px-10 py-6" [ngClass]="{ 'max-w-[1200px] mx-auto w-full': isHome() }">
+    <div class="flex-grow px-10 py-6 pt-[48px]" [ngClass]="{ 'max-w-[1200px] mx-auto w-full': isHome() }">
       <router-outlet />
     </div>
     <!-- Footer Component -->

@@ -2,8 +2,13 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div
-  class="sticky z-40 bg-gray-50 border-b border-gray-200 flex items-center h-[48px] px-10"
-  [ngClass]="showDevToolbar() ? 'top-[48px]' : 'top-0'"
+  class="fixed right-0 z-40 bg-gray-50 border-b border-gray-200 flex items-center h-[48px] px-10"
+  [ngClass]="{
+    'top-[96px]': showDevToolbar(),
+    'top-[48px]': !showDevToolbar(),
+    'left-[344px]': !isHome(),
+    'left-[64px]': isHome(),
+  }"
   data-testid="top-bar">
   <!-- Breadcrumb -->
   <nav class="flex items-center gap-2 text-sm" aria-label="Breadcrumb">

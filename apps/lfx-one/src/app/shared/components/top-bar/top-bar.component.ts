@@ -68,6 +68,14 @@ export class TopBarComponent {
   private readonly router = inject(Router);
 
   protected readonly showDevToolbar = this.appService.showDevToolbar;
+  protected readonly isHome: Signal<boolean> = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects === '/home' || e.urlAfterRedirects === '/'),
+      startWith(this.router.url === '/home' || this.router.url === '/')
+    ),
+    { initialValue: this.router.url === '/home' || this.router.url === '/' }
+  );
 
   private readonly currentUrl: Signal<string> = toSignal(
     this.router.events.pipe(
