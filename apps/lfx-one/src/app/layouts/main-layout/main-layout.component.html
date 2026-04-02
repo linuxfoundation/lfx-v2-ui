@@ -25,7 +25,7 @@
           [items]="sidebarItems()"
           [footerItems]="[]"
           [showMeSelector]="activeLens() === 'me'"
-          [showProjectSelector]="true"
+          [showProjectSelector]="activeLens() === 'foundation'"
           [showOrgSelector]="activeLens() === 'org'"
           [grayed]="activeLens() === 'org'"></lfx-sidebar>
       </div>
@@ -59,7 +59,7 @@
           [items]="sidebarItems()"
           [footerItems]="[]"
           [showMeSelector]="activeLens() === 'me'"
-          [showProjectSelector]="true"
+          [showProjectSelector]="activeLens() === 'foundation'"
           [showOrgSelector]="activeLens() === 'org'"
           [grayed]="activeLens() === 'org'"
           [mobile]="true"></lfx-sidebar>
