@@ -13,6 +13,8 @@
     (click)="navigateHome()"
     data-testid="lens-home"
     aria-label="Home"
+    pTooltip="Home"
+    tooltipPosition="right"
     class="group flex flex-col items-center gap-1 w-[56px] transition-colors"
     [ngClass]="isHome() ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
     <div
@@ -36,6 +38,8 @@
         (click)="setLens(lens.id)"
         [attr.data-testid]="lens.testId"
         [attr.aria-label]="'Switch to ' + lens.label + ' lens'"
+        [pTooltip]="lens.label"
+        tooltipPosition="right"
         class="group flex flex-col items-center gap-1 w-[56px] transition-colors"
         [ngClass]="activeLens() === lens.id && !isHome() ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
         <div
