@@ -33,8 +33,8 @@ function buildTooltip(label: string, external: boolean): string {
 }
 
 const LENS_DEFAULT_ROUTES: Record<Lens, string> = {
-  me: '/',
-  foundation: '/',
+  me: '/me/overview',
+  foundation: '/foundation/overview',
   org: '/org',
 };
 

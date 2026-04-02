@@ -38,10 +38,10 @@
         tooltipPosition="right"
         class="flex items-center justify-center w-[40px] h-[40px] rounded-full transition-colors"
         [ngClass]="{
-          'bg-blue-500/20 text-blue-400': activeLens() === lens.id,
-          'text-white/80 hover:bg-white/10 hover:text-white': activeLens() !== lens.id,
+          'bg-blue-500/20 text-blue-400': activeLens() === lens.id && !isHome(),
+          'text-white/80 hover:bg-white/10 hover:text-white': activeLens() !== lens.id || isHome(),
         }">
-        <i [ngClass]="activeLens() === lens.id ? lens.activeIcon : lens.icon" class="text-xl"></i>
+        <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-xl"></i>
       </button>
     }
   </div>

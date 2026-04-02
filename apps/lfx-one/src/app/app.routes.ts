@@ -73,7 +73,11 @@ export const routes: Routes = [
         path: 'profile',
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
-      // Me lens — real implementations
+      // Me lens — overview + real implementations + placeholder pages
+      {
+        path: 'me/overview',
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
       {
         path: 'me/events',
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
@@ -82,18 +86,20 @@ export const routes: Routes = [
         path: 'me/training',
         loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
       },
-      // Me lens — placeholder pages
       { path: 'me/actions', component: PlaceholderPageComponent, data: { title: 'My Actions' } },
       { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
       { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
-      // Foundation lens — real implementation
+      // Foundation lens — overview + real implementation + placeholder pages
+      {
+        path: 'foundation/overview',
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
       {
         path: 'events',
         data: { lens: 'foundation' },
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.FOUNDATION_EVENTS_ROUTES),
       },
-      // Foundation lens — placeholder pages
       { path: 'foundation/projects', component: PlaceholderPageComponent, data: { title: 'Projects' } },
       { path: 'foundation/events', component: PlaceholderPageComponent, data: { title: 'Events' } },
       // Org lens — placeholder pages (overview is handled by org route above)

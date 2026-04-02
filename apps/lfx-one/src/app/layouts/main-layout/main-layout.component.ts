@@ -44,7 +44,7 @@ export class MainLayoutComponent {
     {
       label: 'Overview',
       icon: 'fa-light fa-grid-2',
-      routerLink: '/',
+      routerLink: '/me/overview',
     },
     {
       label: 'My Engagement',
@@ -87,7 +87,7 @@ export class MainLayoutComponent {
       {
         label: 'Overview',
         icon: 'fa-light fa-grid-2',
-        routerLink: '/',
+        routerLink: '/foundation/overview',
       },
       {
         label: 'Community',
