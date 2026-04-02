@@ -7,6 +7,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
+import { TopBarComponent } from '@components/top-bar/top-bar.component';
 import { environment } from '@environments/environment';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
@@ -20,7 +21,7 @@ import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, LensSwitcherComponent, DrawerModule, DevToolbarComponent],
+  imports: [NgClass, RouterModule, SidebarComponent, LensSwitcherComponent, DrawerModule, DevToolbarComponent, TopBarComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
