@@ -13,6 +13,7 @@ import { filter, map, startWith } from 'rxjs';
 interface LensOption {
   id: Lens;
   label: string;
+  switcherLabel: string;
   icon: string;
   activeIcon: string;
   testId: string;
@@ -54,9 +55,9 @@ export class LensSwitcherComponent {
   });
 
   protected readonly lenses: LensOption[] = [
-    { id: 'me', label: 'Me', icon: 'fa-light fa-circle-user', activeIcon: 'fa-solid fa-circle-user', testId: 'lens-me' },
-    { id: 'foundation', label: 'Foundation', icon: 'fa-light fa-laptop-code', activeIcon: 'fa-solid fa-laptop-code', testId: 'lens-foundation' },
-    { id: 'org', label: 'Organization', icon: 'fa-light fa-building', activeIcon: 'fa-solid fa-building', testId: 'lens-org' },
+    { id: 'me', label: 'Me', switcherLabel: 'Me', icon: 'fa-light fa-circle-user', activeIcon: 'fa-solid fa-circle-user', testId: 'lens-me' },
+    { id: 'foundation', label: 'Foundation', switcherLabel: 'Foundation', icon: 'fa-light fa-laptop-code', activeIcon: 'fa-solid fa-laptop-code', testId: 'lens-foundation' },
+    { id: 'org', label: 'Organization', switcherLabel: 'Org', icon: 'fa-light fa-building', activeIcon: 'fa-solid fa-building', testId: 'lens-org' },
   ];
 
   protected readonly insightsTooltip = `<div style="max-width:200px"><strong>LFX Insights${EXTERNAL_ICON}</strong><br><span style="font-size:11px;opacity:0.85;line-height:1.4;display:block;margin-top:2px">Discover and evaluate the world's most critical open source projects at scale</span></div>`;
