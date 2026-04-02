@@ -417,6 +417,8 @@ export interface SidebarMenuItem {
   expanded?: boolean;
   /** Whether to render a divider line before this item */
   dividerBefore?: boolean;
+  /** Whether routerLinkActive uses exact URL matching (defaults to true) */
+  exactMatch?: boolean;
 }
 
 /**

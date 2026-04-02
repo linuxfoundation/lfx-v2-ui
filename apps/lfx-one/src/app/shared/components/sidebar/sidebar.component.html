@@ -134,7 +134,7 @@
     <a
       [routerLink]="item.routerLink"
       routerLinkActive="bg-blue-100 font-medium text-gray-950"
-      [routerLinkActiveOptions]="{ exact: true }"
+      [routerLinkActiveOptions]="{ exact: item.exactMatch ?? true }"
       class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base !text-gray-950 font-normal hover:bg-gray-50"
       [ngClass]="{
         'opacity-50 pointer-events-none cursor-not-allowed': item.disabled,

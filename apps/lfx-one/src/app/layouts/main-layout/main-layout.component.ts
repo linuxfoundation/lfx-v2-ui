@@ -73,7 +73,7 @@ export class MainLayoutComponent {
       isSection: true,
       expanded: true,
       items: [
-        { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile' },
+        { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', exactMatch: false },
         { label: 'Transactions', icon: 'fa-light fa-receipt', routerLink: '/me/transactions' },
         { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
       ],
