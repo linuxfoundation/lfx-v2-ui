@@ -8,6 +8,7 @@ import { HiddenActionsService } from '@services/hidden-actions.service';
 import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
+import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
@@ -27,8 +28,10 @@ export class ExecutiveDirectorDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly lensService = inject(LensService);
+  private readonly userService = inject(UserService);
 
   protected readonly showMeetings = computed(() => this.lensService.activeLens() !== 'org');
+  protected readonly userFirstName = computed(() => this.userService.user()?.name?.split(' ')[0] ?? '');
 
   // === Configuration ===
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
