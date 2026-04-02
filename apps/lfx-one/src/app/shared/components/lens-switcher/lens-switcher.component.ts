@@ -21,8 +21,8 @@ interface LensOption {
 const EXTERNAL_ICON = '<i class="fa-light fa-arrow-up-right-from-square" style="margin-left:5px;font-size:10px;vertical-align:middle;opacity:0.7"></i>';
 
 const LENS_DEFAULT_ROUTES: Record<Lens, string> = {
-  me: '/me/overview',
-  foundation: '/foundation/overview',
+  me: '/',
+  foundation: '/',
   org: '/org',
 };
 

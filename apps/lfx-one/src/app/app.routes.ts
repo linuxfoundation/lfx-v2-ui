@@ -73,11 +73,7 @@ export const routes: Routes = [
         path: 'profile',
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
-      // Me lens — overview + real implementations + placeholder pages
-      {
-        path: 'me/overview',
-        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
-      },
+      // Me lens — real implementations + placeholder pages
       {
         path: 'me/events',
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
@@ -90,11 +86,7 @@ export const routes: Routes = [
       { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
       { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
-      // Foundation lens — overview + real implementation + placeholder pages
-      {
-        path: 'foundation/overview',
-        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
-      },
+      // Foundation lens — real implementation + placeholder pages
       {
         path: 'events',
         data: { lens: 'foundation' },
