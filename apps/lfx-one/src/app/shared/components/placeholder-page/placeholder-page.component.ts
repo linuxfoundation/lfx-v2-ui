@@ -12,4 +12,5 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 export class PlaceholderPageComponent {
   private readonly route = inject(ActivatedRoute);
   protected readonly pageTitle = this.route.snapshot.data['title'] as string | undefined;
+  protected readonly pageDescription = this.route.snapshot.data['description'] as string | undefined;
 }

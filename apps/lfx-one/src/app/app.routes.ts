@@ -73,7 +73,8 @@ export const routes: Routes = [
         path: 'profile',
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
-      // Me lens — real implementations + placeholder pages
+      // Me lens — overview + real implementations + placeholder pages
+      { path: 'me/overview', component: PlaceholderPageComponent, data: { title: 'Overview', description: 'Me lens index page' } },
       {
         path: 'me/events',
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
@@ -86,7 +87,8 @@ export const routes: Routes = [
       { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
       { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
-      // Foundation lens — real implementation + placeholder pages
+      // Foundation lens — overview + real implementation + placeholder pages
+      { path: 'foundation/overview', component: PlaceholderPageComponent, data: { title: 'Overview', description: 'Foundation lens index page' } },
       {
         path: 'events',
         data: { lens: 'foundation' },
@@ -94,7 +96,7 @@ export const routes: Routes = [
       },
       { path: 'foundation/projects', component: PlaceholderPageComponent, data: { title: 'Projects' } },
       { path: 'foundation/events', component: PlaceholderPageComponent, data: { title: 'Events' } },
-      // Org lens — placeholder pages (overview is handled by org route above)
+      // Org lens — placeholder pages (overview is handled by org DashboardComponent route above)
       { path: 'org/projects', component: PlaceholderPageComponent, data: { title: 'Key Projects' } },
       { path: 'org/code', component: PlaceholderPageComponent, data: { title: 'Code Contributions' } },
       { path: 'org/membership', component: PlaceholderPageComponent, data: { title: 'Membership' } },
