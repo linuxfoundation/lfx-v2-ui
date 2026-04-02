@@ -560,8 +560,8 @@ export class ProjectService {
       const result: { name: string; email: string; username: string; avatar?: string } = {
         // Use the name from metadata, fallback to constructed name from given_name/family_name
         name: userData.name || `${userData.given_name || ''} ${userData.family_name || ''}`.trim() || usernameForLookup,
-        // Use the original email if we had one, otherwise leave empty
-        email: originalEmail || '',
+        // Use the original email if we had one, otherwise use email from user metadata
+        email: originalEmail || userData.email || '',
         username: usernameForLookup,
       };
 
