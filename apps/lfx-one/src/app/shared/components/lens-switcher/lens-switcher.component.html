@@ -28,10 +28,10 @@
   </button>
 
   <!-- Separator -->
-  <hr class="w-6 border-white/20 my-3" />
+  <hr class="w-6 border-white/20 my-2.5" />
 
   <!-- Lens Buttons -->
-  <div class="flex flex-col items-center gap-3 flex-1">
+  <div class="flex flex-col items-center gap-2.5 flex-1">
     @for (lens of lenses; track lens.id) {
       <button
         type="button"
@@ -55,7 +55,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="flex flex-col items-center gap-3 mt-auto">
+  <div class="flex flex-col items-center gap-2.5 mt-auto">
     <!-- LFX Insights -->
     <a
       href="https://insights.linuxfoundation.org/"
@@ -101,7 +101,7 @@
   <!-- Panel -->
   <div class="fixed bottom-4 left-[72px] z-[201] w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
     <!-- User identity -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+    <div class="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100">
       <div class="shrink-0 w-9 h-9 rounded-full overflow-hidden">
         @if (user()?.picture) {
           <img [src]="user()!.picture" [alt]="user()!.name" class="w-full h-full object-cover" />
@@ -123,7 +123,7 @@
         type="button"
         data-testid="lens-profile"
         (click)="navigateToProfile()"
-        class="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        class="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-user w-4 text-gray-400"></i>
         <span>My profile</span>
       </button>
@@ -133,7 +133,7 @@
         rel="noopener noreferrer"
         data-testid="lens-changelog"
         (click)="closeDropdown()"
-        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-clock-rotate-left w-4 text-gray-400"></i>
         <span>Changelog</span>
       </a>
@@ -143,7 +143,7 @@
         rel="noopener noreferrer"
         data-testid="lens-support"
         (click)="closeDropdown()"
-        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-question-circle w-4 text-gray-400"></i>
         <span>Support</span>
       </a>
@@ -154,7 +154,7 @@
       <a
         href="/logout"
         data-testid="lens-logout"
-        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-arrow-right-from-bracket w-4 text-gray-400"></i>
         <span>Sign out</span>
       </a>
