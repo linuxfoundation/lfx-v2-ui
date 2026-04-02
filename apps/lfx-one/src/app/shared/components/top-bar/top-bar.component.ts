@@ -61,6 +61,7 @@ const HOME_CONFIG: LensConfig = { id: 'home', label: 'Home', icon: 'fa-light fa-
   selector: 'lfx-top-bar',
   imports: [NgClass],
   templateUrl: './top-bar.component.html',
+  host: { class: 'block' },
 })
 export class TopBarComponent {
   private readonly appService = inject(AppService);
