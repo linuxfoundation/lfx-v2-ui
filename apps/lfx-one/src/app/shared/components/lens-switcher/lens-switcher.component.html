@@ -109,14 +109,14 @@
 
     <!-- My Profile, Changelog & Support -->
     <div class="py-1 border-b border-gray-100">
-      <a
-        routerLink="/profile"
+      <button
+        type="button"
         data-testid="lens-profile"
-        (click)="closeDropdown()"
-        class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+        (click)="navigateToProfile()"
+        class="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-user w-4 text-gray-400"></i>
         <span>My profile</span>
-      </a>
+      </button>
       <a
         href="https://changelog.lfx.dev/"
         target="_blank"

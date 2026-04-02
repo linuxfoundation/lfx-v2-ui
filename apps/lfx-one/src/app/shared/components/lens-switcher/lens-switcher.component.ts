@@ -78,6 +78,12 @@ export class LensSwitcherComponent {
     this.showDropdown.set(false);
   }
 
+  protected navigateToProfile(): void {
+    this.closeDropdown();
+    this.appService.setLens('me');
+    void this.router.navigate(['/profile']);
+  }
+
   private initIsHome(): Signal<boolean> {
     return toSignal(
       this.router.events.pipe(
