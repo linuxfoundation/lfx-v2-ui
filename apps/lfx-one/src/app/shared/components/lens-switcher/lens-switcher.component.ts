@@ -92,17 +92,17 @@ export class LensSwitcherComponent {
   }
 
   protected navigateHome(): void {
-    void this.router.navigate(['/']);
+    void this.router.navigate(['/home']);
   }
 
   private initIsHome(): Signal<boolean> {
     return toSignal(
       this.router.events.pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-        map((e) => e.urlAfterRedirects === '/'),
-        startWith(this.router.url === '/')
+        map((e) => e.urlAfterRedirects === '/home'),
+        startWith(this.router.url === '/home')
       ),
-      { initialValue: this.router.url === '/' }
+      { initialValue: this.router.url === '/home' }
     );
   }
 }
