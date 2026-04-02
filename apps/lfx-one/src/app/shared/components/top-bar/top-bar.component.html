@@ -4,8 +4,8 @@
 <div
   class="fixed right-0 z-40 bg-gray-50 border-b border-gray-200 flex items-center h-[48px] px-10"
   [ngClass]="{
-    'top-[96px]': showDevToolbar(),
-    'top-[48px]': !showDevToolbar(),
+    'top-[48px]': showDevToolbar(),
+    'top-0': !showDevToolbar(),
     'left-[344px]': !isHome(),
     'left-[64px]': isHome(),
   }"
