@@ -43,7 +43,7 @@ export class DataCopilotComponent {
   public readonly visible = signal<boolean>(false);
 
   // Feature flag
-  protected readonly isLfxLensEnabled = this.featureFlagService.getBooleanFlag('lfx-lens', false);
+  protected readonly isLfxLensEnabled = this.featureFlagService.getBooleanFlag('lfx-lens', true);
 
   // Copilot service signals
   protected readonly messages = this.copilotService.messages;
