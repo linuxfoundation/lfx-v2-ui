@@ -26,9 +26,10 @@
     font-family: var(--font-inter);
   }
 
-  /* Heading styles - only apply to elements without text or font classes */
-  h1:not([class*='text-']):not([class*='font-']) {
-    @apply text-xl font-semibold;
+  /* h1 always uses Roboto Slab 300 at 24px */
+  h1 {
+    font-family: 'Roboto Slab', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    @apply text-2xl font-light;
   }
 
   h2:not([class*='text-']):not([class*='font-']) {
