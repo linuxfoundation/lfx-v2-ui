@@ -2,10 +2,15 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div
-  class="sticky z-40 bg-gray-50 border-b border-gray-200 h-[48px] flex items-center"
-  [ngClass]="showDevToolbar() ? 'top-[48px]' : 'top-0'"
+  class="fixed right-0 z-40 bg-gray-50 border-b border-gray-200 h-[48px] flex items-center"
+  [ngClass]="{
+    'top-[48px]': showDevToolbar(),
+    'top-0': !showDevToolbar(),
+    'left-[344px]': !isHome(),
+    'left-[64px]': isHome(),
+  }"
   data-testid="top-bar">
-  <!-- Inner wrapper mirrors the page content width constraint -->
+  <!-- Inner wrapper aligns breadcrumb with page content -->
   <div
     class="flex items-center h-full w-full px-10"
     [ngClass]="{ 'max-w-[1200px] mx-auto': isHome() }">
