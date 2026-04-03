@@ -49,7 +49,7 @@ export class MeetingsDashboardComponent {
   private readonly personaService = inject(PersonaService);
   private readonly appService = inject(AppService);
 
-  protected readonly pageTitle = computed(() => this.appService.activeLens() === 'me' ? 'My Meetings' : 'Meetings');
+  protected readonly pageTitle = computed(() => (this.appService.activeLens() === 'me' ? 'My Meetings' : 'Meetings'));
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly lensService = inject(LensService);
   private readonly userService = inject(UserService);

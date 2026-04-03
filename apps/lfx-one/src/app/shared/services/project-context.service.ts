@@ -35,6 +35,9 @@ export class ProjectContextService {
   public readonly selectedFoundation: Signal<ProjectContext | null> = computed(() => this.foundationSelection());
   public readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectSelection());
 
+  /** Sub-project selected via the top bar project dropdown in Foundation lens */
+  public readonly topBarSubProject: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
+
   // Available projects filtered for the active lens
   public readonly availableProjects: Signal<ProjectContext[]> = this.initAvailableProjects();
 

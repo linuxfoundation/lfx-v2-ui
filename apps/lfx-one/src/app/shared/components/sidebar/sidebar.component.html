@@ -108,8 +108,10 @@
     <div class="flex-shrink-0 px-3 pb-4 pt-2" data-testid="insights-card">
       <div class="rounded-xl p-4 bg-purple-50 border border-purple-200 flex flex-col gap-3">
         <div class="flex flex-col gap-1">
-          <i class="fa-light fa-chart-simple text-purple-600 text-2xl mb-1"></i>
-          <p class="text-sm font-semibold leading-5 text-gray-900">{{ insightsCardType() }} Insights</p>
+          <div class="flex items-center gap-1.5">
+            <i class="fa-light fa-chart-simple text-purple-600 text-base"></i>
+            <p class="text-sm font-semibold leading-5 text-gray-900">{{ insightsCardType() }} Insights</p>
+          </div>
           <p class="text-xs text-gray-600 leading-[1.5]">
             Discover and evaluate health metrics, contributions, and activity for this {{ insightsCardType() | lowercase }}.
           </p>
@@ -118,10 +120,10 @@
           [href]="insightsCardUrl()"
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center justify-center gap-2 w-full text-sm font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg transition-colors"
+          class="flex items-center gap-1.5 text-sm font-semibold text-purple-600 hover:text-purple-700 transition-colors"
           data-testid="insights-card-link">
           <span>View Insights</span>
-          <i class="fa-light fa-arrow-up-right-from-square opacity-80"></i>
+          <i class="fa-light fa-arrow-up-right-from-square text-xs opacity-80"></i>
         </a>
       </div>
     </div>

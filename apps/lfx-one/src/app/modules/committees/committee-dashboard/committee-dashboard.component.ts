@@ -57,9 +57,7 @@ export class CommitteeDashboardComponent {
 
   // Use the configurable label constants
   protected readonly committeeLabel = COMMITTEE_LABEL;
-  protected readonly pageTitle = computed(() =>
-    this.appService.activeLens() === 'me' ? `My ${COMMITTEE_LABEL.plural}` : COMMITTEE_LABEL.plural
-  );
+  protected readonly pageTitle = computed(() => (this.appService.activeLens() === 'me' ? `My ${COMMITTEE_LABEL.plural}` : COMMITTEE_LABEL.plural));
 
   // ── Writable Signals ──────────────────────────────────────────────────────
   public committeesLoading = signal<boolean>(true);

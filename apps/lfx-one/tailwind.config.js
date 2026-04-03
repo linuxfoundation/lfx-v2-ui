@@ -67,6 +67,7 @@ export default {
     },
     fontSize: lfxFontSizes,
     fontFamily: {
+      sans: ['Inter', 'sans-serif'],
       inter: ['Inter', 'sans-serif'],
       display: ['Roboto Slab', 'serif'],
       serif: ['Roboto Slab', 'serif'],
