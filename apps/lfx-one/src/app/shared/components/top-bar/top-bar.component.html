@@ -11,7 +11,7 @@
   }"
   data-testid="top-bar">
   <!-- Inner wrapper aligns breadcrumb with page content -->
-  <div class="flex items-center h-full w-full px-16">
+  <div class="flex items-center h-full w-full px-16" [ngClass]="{ 'max-w-[1200px]': isHome() }">
     <!-- Breadcrumb -->
     <nav class="flex items-center gap-2 text-sm" aria-label="Breadcrumb">
       <!-- Lens / Home -->
