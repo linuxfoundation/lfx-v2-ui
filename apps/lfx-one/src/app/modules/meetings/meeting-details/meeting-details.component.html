@@ -205,6 +205,7 @@
               </a>
             } @else {
               <a
+                (click)="downloadAttachment(attachment)"
                 class="bg-gray-100 hover:bg-gray-200 rounded px-3 py-2 flex items-center gap-3 transition-colors cursor-pointer"
                 [attr.data-testid]="'resource-file-' + i">
                 <i class="fa-light fa-file-arrow-down text-xs text-gray-600 flex-shrink-0"></i>

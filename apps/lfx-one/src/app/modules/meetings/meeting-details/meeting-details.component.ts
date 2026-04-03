@@ -28,6 +28,7 @@ import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
+import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap, take, tap } from 'rxjs';
@@ -48,7 +49,6 @@ import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switc
     TableComponent,
     AvatarComponent,
   ],
-  providers: [DialogService],
   templateUrl: './meeting-details.component.html',
 })
 export class MeetingDetailsComponent {
@@ -57,6 +57,7 @@ export class MeetingDetailsComponent {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly meetingService = inject(MeetingService);
+  private readonly messageService = inject(MessageService);
   private readonly committeeService = inject(CommitteeService);
   private readonly dialogService = inject(DialogService);
 
@@ -126,6 +127,29 @@ export class MeetingDetailsComponent {
       dismissableMask: true,
       data: { summary },
     });
+  }
+
+  public downloadAttachment(attachment: PastMeetingAttachment): void {
+    const meeting = this.meeting();
+    if (!meeting) return;
+
+    this.meetingService
+      .getPastMeetingAttachmentDownloadUrl(meeting.id, attachment.uid)
+      .pipe(take(1))
+      .subscribe({
+        next: (res) => {
+          const newWindow = window.open(res.download_url, '_blank', 'noopener');
+          if (newWindow) {
+            newWindow.opener = null;
+          }
+        },
+        error: () =>
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Download Failed',
+            detail: 'Unable to download the attachment. Please try again.',
+          }),
+      });
   }
 
   public openRecording(): void {
