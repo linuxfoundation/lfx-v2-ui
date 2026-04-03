@@ -212,30 +212,40 @@ export class MeetingService {
   }
 
   /**
-   * Fetches a single past meeting by UID via the query service
+   * Fetches a single past meeting by UID via ITX endpoint
    */
   public async getPastMeetingById(req: Request, pastMeetingUid: string): Promise<PastMeeting> {
     logger.debug(req, 'get_past_meeting_by_id', 'Fetching past meeting by ID', {
       past_meeting_id: pastMeetingUid,
     });
 
-    const { data: meetings } = (await this.getMeetings(req, { filters: `meeting_and_occurrence_id:${pastMeetingUid}` }, 'v1_past_meeting')) as {
-      data: PastMeeting[];
-      page_token?: string;
-    };
+    const meeting = await this.microserviceProxy.proxyRequest<PastMeeting>(req, 'LFX_V2_SERVICE', `/itx/past_meetings/${pastMeetingUid}`, 'GET');
 
-    if (!meetings || meetings.length === 0) {
+    if (!meeting) {
       throw new ResourceNotFoundError('Past Meeting', pastMeetingUid, {
         operation: 'get_past_meeting_by_id',
         service: 'meeting_service',
+        path: `/itx/past_meetings/${pastMeetingUid}`,
       });
     }
 
-    const meeting = meetings[0];
+    meeting.id = pastMeetingUid;
+
+    if (meeting.committees && meeting.committees.length > 0) {
+      logger.debug(req, 'get_past_meeting_by_id', 'Enriching past meeting with committee data', {
+        past_meeting_id: pastMeetingUid,
+        committee_count: meeting.committees.length,
+      });
+      const committeeNameMap = await this.getCommitteeNameMap(req, [meeting]);
+      meeting.committees = meeting.committees.map((c) => ({
+        uid: c.uid,
+        name: committeeNameMap.get(c.uid) || c.name,
+        allowed_voting_statuses: c.allowed_voting_statuses,
+      }));
+    }
 
     logger.debug(req, 'get_past_meeting_by_id', 'Completed past meeting fetch', {
       past_meeting_id: pastMeetingUid,
-      meeting_id: meeting.id,
     });
 
     return meeting;
