@@ -1842,7 +1842,10 @@ export class ProfileController {
       const isCdpVerifiedWithOwner = cdp.verified && !!cdp.verifiedBy;
       let displayState: IdentityDisplayState;
 
-      if (isCdpVerifiedWithOwner && hasMultiLfid) {
+      if (cdp.platform === 'linkedin') {
+        // LinkedIn identities must be linked via auth-service — ignore CDP-only entries
+        displayState = 'hidden';
+      } else if (isCdpVerifiedWithOwner && hasMultiLfid) {
         // Multi-LFID merged profile — hide identities verified by another LFID
         displayState = 'hidden';
       } else {
@@ -1927,7 +1930,7 @@ export class ProfileController {
       case 'github':
         return pd.nickname ?? null;
       case 'linkedin':
-        return pd.nickname ?? null;
+        return pd.email ?? pd.name ?? null;
       default:
         return null;
     }

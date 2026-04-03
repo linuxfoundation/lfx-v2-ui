@@ -60,6 +60,7 @@ export const YEAR_OPTIONS: { label: string; value: string }[] = Array.from({ len
  */
 export const IDENTITY_PROVIDER_OPTIONS: IdentityProviderOption[] = [
   { id: 'github', name: 'GitHub', description: 'Connect your GitHub account for code contributions', icon: 'fa-brands fa-github' },
+  { id: 'linkedin', name: 'LinkedIn', description: 'Connect your LinkedIn account for employer recognition', icon: 'fa-brands fa-linkedin' },
   { id: 'email', name: 'Email', description: 'Add an email address for notifications and attribution', icon: 'fa-light fa-envelope' },
   { id: 'lfid', name: 'LF ID', description: 'Connect your Linux Foundation ID', icon: 'fa-light fa-id-badge' },
 ];
@@ -68,7 +69,7 @@ export const IDENTITY_PROVIDER_OPTIONS: IdentityProviderOption[] = [
  * Platforms that the UI supports verification for.
  * Only identities on these platforms are returned to the frontend.
  */
-export const IDENTITY_DISPLAY_PLATFORMS: readonly string[] = ['github', 'email'];
+export const IDENTITY_DISPLAY_PLATFORMS: readonly string[] = ['github', 'linkedin', 'email'];
 
 /**
  * Maps Auth0 identity provider names to CDP platform names
