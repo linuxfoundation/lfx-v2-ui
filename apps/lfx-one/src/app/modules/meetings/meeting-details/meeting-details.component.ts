@@ -34,7 +34,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
-  selector: 'lfx-meeting-details',
+  selector: 'lfx-past-meeting-details',
   imports: [
     NgClass,
     SkeletonModule,

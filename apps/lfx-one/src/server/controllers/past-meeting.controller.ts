@@ -98,6 +98,9 @@ export class PastMeetingController {
 
       res.json(meeting);
     } catch (error) {
+      logger.error(req, 'get_past_meeting_by_id', startTime, error, {
+        past_meeting_id: uid,
+      });
       next(error);
     }
   }

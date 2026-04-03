@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
+import { UserInitialsInput } from '@lfx-one/shared/interfaces';
 
 /**
  * Returns uppercase initials for a user avatar.
@@ -12,7 +13,7 @@ import { Pipe, PipeTransform } from '@angular/core';
   name: 'userInitials',
 })
 export class UserInitialsPipe implements PipeTransform {
-  public transform(user: { first_name?: string; last_name?: string; email?: string } | null | undefined, maxChars: number = 2): string {
+  public transform(user: UserInitialsInput | null | undefined, maxChars: number = 2): string {
     if (!user) return '?';
     const first = user.first_name?.charAt(0) ?? '';
     const last = user.last_name?.charAt(0) ?? '';
