@@ -116,7 +116,7 @@ export class TopBarComponent {
 
   /** Child projects of the foundation selected in the Foundation-lens sidebar */
   private readonly foundationLensChildProjects: Signal<Project[]> = computed(() => {
-    const selected = this.selectedProject();
+    const selected = this.selectedFoundation();
     if (!selected) return [];
     return this.allProjects().filter((p) => p.parent_uid === selected.uid);
   });
@@ -142,8 +142,9 @@ export class TopBarComponent {
   protected readonly showProjectDropdown: Signal<boolean> = computed(() => {
     const lens = this.activeLens();
     if (lens === 'org') return false;
-    if (lens === 'foundation') return !!this.selectedProject();
-    // Home or Me: only when a foundation is chosen
+    // Foundation lens: show project dropdown when a foundation is selected in the sidebar
+    if (lens === 'foundation') return !!this.selectedFoundation();
+    // Home or Me: only when a foundation is chosen in the top-bar
     return !!this.selectedFoundation();
   });
 
