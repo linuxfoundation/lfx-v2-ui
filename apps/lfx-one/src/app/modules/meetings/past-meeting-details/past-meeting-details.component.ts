@@ -49,9 +49,9 @@ import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switc
     TableComponent,
     AvatarComponent,
   ],
-  templateUrl: './meeting-details.component.html',
+  templateUrl: './past-meeting-details.component.html',
 })
-export class MeetingDetailsComponent {
+export class PastMeetingDetailsComponent {
   // Private injections
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
