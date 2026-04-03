@@ -15,6 +15,7 @@ import {
   MeetingRegistrant,
   MeetingRsvp,
   PaginatedResponse,
+  PastMeeting,
   PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -205,6 +206,36 @@ export class MeetingService {
 
     logger.debug(req, 'get_meeting_by_id', 'Completed meeting fetch', {
       meeting_id: meetingUid,
+    });
+
+    return meeting;
+  }
+
+  /**
+   * Fetches a single past meeting by UID via the query service
+   */
+  public async getPastMeetingById(req: Request, pastMeetingUid: string): Promise<PastMeeting> {
+    logger.debug(req, 'get_past_meeting_by_id', 'Fetching past meeting by ID', {
+      past_meeting_id: pastMeetingUid,
+    });
+
+    const { data: meetings } = (await this.getMeetings(req, { filters: `meeting_and_occurrence_id:${pastMeetingUid}` }, 'v1_past_meeting')) as {
+      data: PastMeeting[];
+      page_token?: string;
+    };
+
+    if (!meetings || meetings.length === 0) {
+      throw new ResourceNotFoundError('Past Meeting', pastMeetingUid, {
+        operation: 'get_past_meeting_by_id',
+        service: 'meeting_service',
+      });
+    }
+
+    const meeting = meetings[0];
+
+    logger.debug(req, 'get_past_meeting_by_id', 'Completed past meeting fetch', {
+      past_meeting_id: pastMeetingUid,
+      meeting_id: meeting.id,
     });
 
     return meeting;
@@ -576,7 +607,7 @@ export class MeetingService {
     try {
       const params = {
         type: 'v1_past_meeting_recording',
-        tags: pastMeetingUid,
+        tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
       };
 
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingRecording>>(
@@ -616,7 +647,7 @@ export class MeetingService {
     try {
       const params = {
         type: 'v1_past_meeting_summary',
-        tags: `past_meeting_id:${pastMeetingUid}`,
+        tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
       };
 
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingSummary>>(
@@ -983,7 +1014,7 @@ export class MeetingService {
   public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<PastMeetingAttachment[]> {
     const params = {
       type: 'v1_past_meeting_attachment',
-      parent: `past_meeting:${pastMeetingUid}`,
+      tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
     };
 
     logger.debug(req, 'get_past_meeting_attachments', 'Fetching past meeting attachments', { past_meeting_id: pastMeetingUid });
