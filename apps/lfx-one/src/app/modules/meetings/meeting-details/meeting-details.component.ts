@@ -26,7 +26,6 @@ import {
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
-import { UserInitialsPipe } from '@pipes/user-initials.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
@@ -45,7 +44,6 @@ import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switc
     MeetingTimePipe,
     RecurrenceSummaryPipe,
     LinkifyPipe,
-    UserInitialsPipe,
     DynamicDialogModule,
     TableComponent,
     AvatarComponent,
