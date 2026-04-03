@@ -35,7 +35,7 @@ export class SocialVerificationService {
   private readonly baseUrl: string;
   private readonly redirectUri: string;
 
-  private static readonly validProviders: readonly SocialProvider[] = ['github', 'linkedin'];
+  private static readonly validProviders: readonly SocialProvider[] = ['github', 'google', 'linkedin'];
 
   public constructor() {
     this.clientId = process.env['PROFILE_CLIENT_ID'] || '';
@@ -68,12 +68,15 @@ export class SocialVerificationService {
     }
     req.appSession.socialAuthState = state;
 
+    // Map internal provider names to Auth0 connection names
+    const connection = provider === 'google' ? 'google-oauth2' : provider;
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       scope: 'openid profile email',
-      connection: provider,
+      connection,
       state,
       prompt: 'login',
     });
