@@ -3,6 +3,7 @@
 
 import { Component, input } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -11,7 +12,7 @@ import { COMMITTEE_LABEL, COMMITTEE_SETTINGS_FEATURES, JOIN_MODE_OPTIONS, MEMBER
 
 @Component({
   selector: 'lfx-committee-settings',
-  imports: [ReactiveFormsModule, MessageComponent, SelectComponent, TagComponent, ToggleComponent],
+  imports: [ReactiveFormsModule, MessageComponent, SelectComponent, TagComponent, ToggleComponent, InputTextComponent],
   templateUrl: './committee-settings.component.html',
 })
 export class CommitteeSettingsComponent {

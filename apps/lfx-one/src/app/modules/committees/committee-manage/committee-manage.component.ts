@@ -1,8 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
@@ -14,6 +15,7 @@ import { MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StepperModule } from 'primeng/stepper';
 import { BehaviorSubject, catchError, concat, filter, finalize, forkJoin, Observable, of, switchMap, take, toArray } from 'rxjs';
+import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { CommitteeBasicInfoComponent } from '../components/committee-basic-info/committee-basic-info.component';
 import { CommitteeCategorySelectionComponent } from '../components/committee-category-selection/committee-category-selection.component';
@@ -42,8 +44,6 @@ export class CommitteeManageComponent {
   private readonly committeeService = inject(CommitteeService);
   private readonly messageService = inject(MessageService);
   private readonly projectContextService = inject(ProjectContextService);
-  private readonly destroyRef = inject(DestroyRef);
-
   // Mode and state signals
   public mode = signal<'create' | 'edit'>('create');
   public committeeId = signal<string | null>(null);
@@ -69,7 +69,11 @@ export class CommitteeManageComponent {
   public submitting = signal<boolean>(false);
 
   // Validation signals for template
-  public readonly canProceed = signal<boolean>(false);
+  private formValue = toSignal(this.form.valueChanges, { initialValue: this.form.value });
+  public readonly canProceed = computed(() => {
+    this.formValue();
+    return this.isStepValid(this.currentStep());
+  });
   public readonly canGoNext = computed(() => this.currentStep() + 1 < this.totalSteps && this.canNavigateToStep(this.currentStep() + 1));
   public readonly canGoPrevious = computed(() => this.currentStep() > 1);
   public readonly isFirstStep = computed(() => this.currentStep() === 1);
@@ -106,17 +110,6 @@ export class CommitteeManageComponent {
       ),
       { initialValue: 1 }
     );
-
-    // Subscribe to form value changes and update validation signals
-    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.updateCanProceed();
-    });
-
-    // Effect for step changes - handles validation
-    effect(() => {
-      this.currentStep();
-      this.updateCanProceed();
-    });
 
     // Populate form when editing
     toObservable(this.committee)
@@ -208,13 +201,13 @@ export class CommitteeManageComponent {
       // Update existing committee
       this.committeeService.updateCommittee(this.committeeId()!, committeeData).subscribe({
         next: () => this.handleCommitteeSuccess('updated'),
-        error: () => this.handleCommitteeError('update'),
+        error: (err: HttpErrorResponse) => this.handleCommitteeError('update', err),
       });
     } else {
       // Create new committee
       this.committeeService.createCommittee(committeeData).subscribe({
         next: (committee) => this.handleCreateSuccess(committee),
-        error: () => this.handleCommitteeError('create'),
+        error: (err: HttpErrorResponse) => this.handleCommitteeError('create', err),
       });
     }
   }
@@ -246,11 +239,11 @@ export class CommitteeManageComponent {
           this.showMemberOperationToast(totalSuccess, totalFailed, totalSuccess + totalFailed);
           this.router.navigate(['/groups']);
         },
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to save member changes',
+            detail: getHttpErrorDetail(err, 'Failed to save member changes'),
           });
           this.router.navigate(['/groups']);
         },
@@ -332,11 +325,11 @@ export class CommitteeManageComponent {
           // Navigate back to committees list
           this.router.navigate(['/groups']);
         },
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
-            detail: `Failed to update ${this.committeeLabel.toLowerCase()}. Please try again.`,
+            detail: getHttpErrorDetail(err, `Failed to update ${this.committeeLabel.toLowerCase()}. Please try again.`),
           });
         },
       });
@@ -453,13 +446,13 @@ export class CommitteeManageComponent {
     }
   }
 
-  private handleCommitteeError(operation: 'create' | 'update'): void {
+  private handleCommitteeError(operation: 'create' | 'update', err: HttpErrorResponse): void {
     this.submitting.set(false);
 
     this.messageService.add({
       severity: 'error',
       summary: 'Error',
-      detail: `Failed to ${operation} ${this.committeeLabel.toLowerCase()}. Please try again.`,
+      detail: getHttpErrorDetail(err, `Failed to ${operation} ${this.committeeLabel.toLowerCase()}. Please try again.`),
     });
   }
 
@@ -476,11 +469,6 @@ export class CommitteeManageComponent {
       }
     }
     return true;
-  }
-
-  private updateCanProceed(): void {
-    const isValid = this.isStepValid(this.currentStep());
-    this.canProceed.set(isValid);
   }
 
   private isStepValid(step: number): boolean {

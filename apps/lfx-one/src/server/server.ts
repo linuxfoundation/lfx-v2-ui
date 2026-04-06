@@ -12,10 +12,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pinoHttp from 'pino-http';
 
+import { ProfileController } from './controllers/profile.controller';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
+import { apiRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import lensRouter from './routes/lens.route';
@@ -25,6 +27,7 @@ import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
@@ -44,6 +47,10 @@ const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const angularApp = new AngularNodeAppEngine();
 const app = express();
+
+// Trust the first proxy (load balancer) so express-rate-limit and req.ip
+// correctly resolve client IPs from the X-Forwarded-For header
+app.set('trust proxy', 1);
 
 /**
  * Enable gzip/deflate compression for all responses.
@@ -157,9 +164,14 @@ app.use('/login', (req: Request, res: Response) => {
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
 
+// Apply rate limiting to all API and auth routes
+app.use('/api/', apiRateLimiter);
+app.use('/login', apiRateLimiter);
+
 // Mount API routes after authentication middleware
 // Public API routes
 app.use('/public/api/meetings', publicMeetingsRouter);
+app.use('/public/api/committees', publicCommitteesRouter);
 
 // Protected API routes
 app.use('/api/projects', projectsRouter);
@@ -178,6 +190,13 @@ app.use('/api/lens', lensRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+
+// Flow C: Profile auth callback at /passwordless/callback (registered in Auth0 Profile Client)
+const profileCallbackController = new ProfileController();
+app.get('/passwordless/callback', apiRateLimiter, (req, res) => profileCallbackController.handleProfileAuthCallback(req, res));
+
+// Social identity verification callback (GitHub/LinkedIn OAuth redirect)
+app.get('/social/callback', apiRateLimiter, (req, res) => profileCallbackController.handleSocialCallback(req, res));
 
 /**
  * Handle all other requests by rendering the Angular application.
@@ -226,6 +245,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     launchDarklyClientId: process.env['LD_CLIENT_ID'] || '',
     dataDogRumClientId: process.env['DD_RUM_CLIENT_ID'] || '',
     dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
+    allowedTracingUrls: [process.env['LFX_V2_SERVICE'], process.env['PCC_BASE_URL']].filter(Boolean) as string[],
   };
 
   angularApp

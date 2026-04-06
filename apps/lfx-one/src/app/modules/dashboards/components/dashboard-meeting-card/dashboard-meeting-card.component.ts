@@ -36,6 +36,10 @@ export class DashboardMeetingCardComponent {
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
+  /** Optional override for the "See Meeting Details" URL. If not provided, defaults to /meetings/{meeting.id}. */
+  public readonly detailUrl = input<string | null>(null);
+  /** Set to false to hide the "See Meeting Details" button (e.g. for past meetings where the detail page is inaccessible). */
+  public readonly showDetailsButton = input<boolean>(true);
 
   public readonly attachments: Signal<MeetingAttachment[]> = this.initAttachments();
   public readonly joinUrl: Signal<string | null>;
@@ -113,18 +117,11 @@ export class DashboardMeetingCardComponent {
       const type = this.meeting().meeting_type?.toLowerCase();
       const config = type ? (MEETING_TYPE_CONFIGS[type] ?? DEFAULT_MEETING_TYPE_CONFIG) : DEFAULT_MEETING_TYPE_CONFIG;
 
-      // Map text color to severity
-      let severity: TagSeverity = 'secondary';
-      if (config.textColor.includes('red')) severity = 'danger';
-      else if (config.textColor.includes('blue')) severity = 'info';
-      else if (config.textColor.includes('green')) severity = 'success';
-      else if (config.textColor.includes('purple')) severity = 'secondary';
-      else if (config.textColor.includes('amber')) severity = 'warn';
-
       return {
         label: config.label,
         className: `${config.bgColor} ${config.textColor}`,
-        severity,
+        severity: 'secondary' as TagSeverity,
+        styleClass: config.tagStyleClass,
         icon: `${config.icon} mr-2`,
       };
     });
@@ -260,6 +257,11 @@ export class DashboardMeetingCardComponent {
 
   private initMeetingDetailUrl(): Signal<string> {
     return computed(() => {
+      const override = this.detailUrl();
+      if (override) {
+        return override;
+      }
+
       const meeting = this.meeting();
       const params = new URLSearchParams();
 

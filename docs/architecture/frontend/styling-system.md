@@ -69,6 +69,7 @@ The `customPreset` shown above is built from LFX UI Core design tokens via `defi
 
 ```typescript
 // Colors imported from @lfx-one/shared package
+// Defined in packages/shared/src/constants/colors.constants.ts
 import { lfxColors } from '@lfx-one/shared/constants';
 ```
 
@@ -96,7 +97,7 @@ export default {
 ```scss
 // Custom font theme variables
 @theme {
-  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Roboto Slab', ui-serif, Georgia, serif;
   --font-serif: 'Roboto Slab', ui-serif, Georgia, serif;
 }
@@ -106,14 +107,13 @@ export default {
 
 Fonts are loaded via Google Fonts for optimal performance:
 
-- **Inter**: Primary visible sans-serif font (overrides Open Sans in styles.scss)
-- **Open Sans**: Fallback sans-serif font
+- **Inter**: Primary sans-serif font for all UI text
 - **Roboto Slab**: Display font for headings and emphasis
 
 ### Custom Font Sizes
 
 ```typescript
-// src/app/config/styles/font-size.ts
+// packages/shared/src/constants/font-sizes.constants.ts (imported via @lfx-one/shared)
 export const lfxFontSizes = {
   '2xs': ['0.625rem', { lineHeight: '0.75rem' }],
   xs: ['0.75rem', { lineHeight: '1rem' }],
@@ -138,7 +138,6 @@ export default {
       colors: lfxColors,
       fontSize: lfxFontSizes,
       fontFamily: {
-        sans: ['Open Sans', 'sans-serif'],
         inter: ['Inter', 'sans-serif'],
         display: ['Roboto Slab', 'serif'],
         serif: ['Roboto Slab', 'serif'],
@@ -148,6 +147,10 @@ export default {
   plugins: [PrimeUI],
 };
 ```
+
+> **Note**: Colors and font sizes are imported from `@lfx-one/shared` package, not local config files. The Tailwind config uses ESM syntax (`export default`).
+>
+> **Note**: While Open Sans is the declared `sans` font, `Inter` is explicitly applied to body text elements (h1-h6, p, label, button, input) in `styles.scss` and is the primary visible font. The `inter` font family utility class is available via Tailwind.
 
 ### PrimeUI Plugin Integration
 
