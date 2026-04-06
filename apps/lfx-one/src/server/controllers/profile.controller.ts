@@ -1800,12 +1800,9 @@ export class ProfileController {
     // Process CDP identities
     const enriched: EnrichedIdentity[] = cdpIdentities.map((cdp): EnrichedIdentity => {
       const authKey = `${cdp.platform}:${cdp.value}`;
-      let authIdentity = authServiceMap.get(authKey);
-
       // Google OAuth creates email-type CDP entries — cross-match CDP email entries against Google auth identities
-      if (!authIdentity && cdp.platform === 'email') {
-        authIdentity = authServiceMap.get(`google:${cdp.value}`);
-      }
+      const authIdentity = authServiceMap.get(authKey)
+        ?? (cdp.platform === 'email' ? authServiceMap.get(`google:${cdp.value}`) : undefined);
 
       const inAuthService = !!authIdentity;
 

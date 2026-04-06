@@ -6,6 +6,7 @@ import { Request } from 'express';
 
 import { logger } from './logger.service';
 
+import { CDP_TO_AUTH0_PROVIDER_MAP } from '@lfx-one/shared/constants';
 import type { SocialProvider } from '@lfx-one/shared/interfaces';
 
 interface SocialTokenResponse {
@@ -26,7 +27,7 @@ interface SocialTokenResponse {
  * Auth0 Configuration Required:
  * - The Profile Client must have the social callback URL in its Allowed Callback URLs
  *   e.g., http://localhost:4200/social/callback
- * - The `github` and `linkedin` social connections must be enabled on the Auth0 tenant
+ * - The `github`, `google-oauth2`, and `linkedin` social connections must be enabled on the Auth0 tenant
  */
 export class SocialVerificationService {
   private readonly clientId: string;
@@ -68,8 +69,8 @@ export class SocialVerificationService {
     }
     req.appSession.socialAuthState = state;
 
-    // Map internal provider names to Auth0 connection names
-    const connection = provider === 'google' ? 'google-oauth2' : provider;
+    // Map internal provider names to Auth0 connection names (e.g., 'google' → 'google-oauth2')
+    const connection = CDP_TO_AUTH0_PROVIDER_MAP[provider] || provider;
 
     const params = new URLSearchParams({
       response_type: 'code',

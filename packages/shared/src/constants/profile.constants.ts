@@ -88,6 +88,8 @@ export const AUTH0_TO_CDP_PROVIDER_MAP: Record<string, string> = {
 /**
  * Reverse of AUTH0_TO_CDP_PROVIDER_MAP — maps CDP platform names back to Auth0 provider names.
  * Used when unlinking identities (Auth0 expects its own provider names, not CDP platform names).
+ * Note: Assumes a 1:1 mapping — if two Auth0 providers map to the same CDP platform,
+ * the last entry wins silently. Currently all mappings are unique.
  */
 export const CDP_TO_AUTH0_PROVIDER_MAP: Record<string, string> = Object.fromEntries(
   Object.entries(AUTH0_TO_CDP_PROVIDER_MAP).map(([auth0, cdp]) => [cdp, auth0])
