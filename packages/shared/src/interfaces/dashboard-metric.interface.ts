@@ -20,6 +20,7 @@ export type MetricCategory =
   | 'code'
   | 'projectHealth'
   | 'marketing'
+  | 'northStar'
   // Reserved for future ED dashboard categories
   | 'memberships'
   | 'education'

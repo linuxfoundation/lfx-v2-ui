@@ -14,6 +14,7 @@ import {
   DashboardMetricCard,
   EmailCtrResponse,
   EngagedCommunitySizeResponse,
+  FilterPillOption,
   FlywheelConversionResponse,
   MemberAcquisitionResponse,
   MemberRetentionResponse,
@@ -25,6 +26,7 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
@@ -42,6 +44,7 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
   imports: [
     ButtonComponent,
     CardComponent,
+    FilterPillsComponent,
     MetricCardComponent,
     ScrollShadowDirective,
 
@@ -73,6 +76,14 @@ export class MarketingOverviewComponent {
     map((foundation) => ({ slug: foundation?.slug || '', name: foundation?.name || '' }))
   );
 
+  // === Filter ===
+  public readonly selectedFilter = signal<string>('all');
+  public readonly filterOptions: FilterPillOption[] = [
+    { id: 'all', label: 'All' },
+    { id: 'northStar', label: 'North Star' },
+    { id: 'marketing', label: 'Marketing' },
+  ];
+
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
@@ -89,6 +100,9 @@ export class MarketingOverviewComponent {
     flywheelConversion: FlywheelConversionResponse;
   }> = this.initMarketingData();
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
+  protected readonly northStarCards: Signal<DashboardMetricCard[]> = this.initNorthStarCards();
+  protected readonly filteredCards: Signal<DashboardMetricCard[]> = this.initFilteredCards();
+  protected readonly showInsightsCard = computed(() => this.selectedFilter() === 'all' || this.selectedFilter() === 'marketing');
   protected readonly formatNumber = formatNumber;
   protected readonly noTooltipChartOptions = NO_TOOLTIP_CHART_OPTIONS;
 
@@ -165,6 +179,10 @@ export class MarketingOverviewComponent {
     this.activeDrawer.set(null);
   }
 
+  public handleFilterChange(filter: string): void {
+    this.selectedFilter.set(filter);
+  }
+
   // === Private Initializers ===
   private initMarketingCards(): Signal<DashboardMetricCard[]> {
     return computed(() => {
@@ -185,6 +203,87 @@ export class MarketingOverviewComponent {
             return card;
         }
       });
+    });
+  }
+
+  private initNorthStarCards(): Signal<DashboardMetricCard[]> {
+    return computed(() => {
+      const data = this.marketingData();
+      const loading = this.marketingDataLoading();
+
+      const flywheelCard: DashboardMetricCard = {
+        title: 'Flywheel Conversion',
+        icon: 'fa-light fa-arrows-spin',
+        chartType: 'line',
+        category: 'northStar',
+        testId: 'flywheel-pulse-conversion',
+        loading,
+        chartData: this.flywheelChartData(),
+        chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+        drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
+        value: data.flywheelConversion.conversionRate > 0 ? data.flywheelConversion.conversionRate + '%' : undefined,
+        changePercentage:
+          data.flywheelConversion.changePercentage !== 0
+            ? (data.flywheelConversion.changePercentage > 0 ? '+' : '') + data.flywheelConversion.changePercentage + '%'
+            : undefined,
+        trend: data.flywheelConversion.trend,
+        subtitle: 'Event attendee → community/WG within 90 days',
+      };
+
+      const memberGrowthCard: DashboardMetricCard = {
+        title: 'Member Growth',
+        icon: 'fa-light fa-user-group',
+        chartType: 'line',
+        category: 'northStar',
+        testId: 'flywheel-pulse-member-growth',
+        loading,
+        chartData: this.memberGrowthChartData(),
+        chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+        drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
+        value: data.memberAcquisition.totalMembers > 0 ? formatNumber(data.memberAcquisition.totalMembers) : undefined,
+        changePercentage: data.memberAcquisition.newMembersThisQuarter > 0 ? '+' + data.memberAcquisition.newMembersThisQuarter + ' this quarter' : undefined,
+        trend: data.memberAcquisition.trend,
+        subtitle:
+          data.memberRetention.renewalRate > 0
+            ? data.memberRetention.renewalRate + '% retention · NRR ' + data.memberRetention.netRevenueRetention + '%'
+            : undefined,
+      };
+
+      const engagedCommunityCard: DashboardMetricCard = {
+        title: 'Engaged Community',
+        icon: 'fa-light fa-people-group',
+        chartType: 'line',
+        category: 'northStar',
+        testId: 'flywheel-pulse-share-of-voice',
+        loading,
+        chartData: this.engagedCommunityChartData(),
+        chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+        drawerType: DashboardDrawerType.NorthStarEngagedCommunity,
+        value: data.engagedCommunity.totalMembers > 0 ? formatNumber(data.engagedCommunity.totalMembers) : undefined,
+        changePercentage:
+          data.engagedCommunity.changePercentage !== 0
+            ? (data.engagedCommunity.changePercentage > 0 ? '↑ +' : '↓ ') + data.engagedCommunity.changePercentage + '%'
+            : undefined,
+        trend: data.engagedCommunity.trend,
+        subtitle: 'Community + Working Groups + Certified',
+      };
+
+      return [flywheelCard, memberGrowthCard, engagedCommunityCard];
+    });
+  }
+
+  private initFilteredCards(): Signal<DashboardMetricCard[]> {
+    return computed(() => {
+      const filter = this.selectedFilter();
+      const allCards = [
+        ...this.northStarCards().map((card) => ({ card, category: 'northStar' })),
+        ...this.marketingCards().map((card) => ({ card, category: 'marketing' })),
+      ];
+
+      if (filter === 'all') {
+        return allCards.map((item) => item.card);
+      }
+      return allCards.filter((item) => item.category === filter).map((item) => item.card);
     });
   }
 
