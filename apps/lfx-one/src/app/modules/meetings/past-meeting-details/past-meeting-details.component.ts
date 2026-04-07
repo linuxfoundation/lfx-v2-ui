@@ -8,9 +8,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MeetingSummaryModalComponent } from '@app/modules/meetings/components/meeting-summary-modal/meeting-summary-modal.component';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
-import { TableComponent } from '@components/table/table.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
+import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import {
   DEFAULT_MEETING_TYPE_CONFIG,
@@ -31,6 +31,7 @@ import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switchMap, take, tap } from 'rxjs';
 
 @Component({
@@ -48,6 +49,7 @@ import { catchError, combineLatest, distinctUntilChanged, filter, map, of, switc
     DynamicDialogModule,
     TableComponent,
     AvatarComponent,
+    TooltipModule,
   ],
   templateUrl: './past-meeting-details.component.html',
 })
