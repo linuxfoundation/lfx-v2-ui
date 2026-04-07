@@ -7,6 +7,8 @@ import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
 import {
   Account,
   EnrichedPersonaProject,
+  hasFoundationLens,
+  hasProjectLens,
   isBoardScopedPersona,
   isProjectScopedPersona,
   PersistedPersonaState,
@@ -55,6 +57,12 @@ export class PersonaService {
 
   /** Whether the user holds any project-scoped persona (maintainer, contributor) */
   public readonly hasProjectRole: Signal<boolean>;
+
+  /** Whether the current persona has access to the Foundation lens */
+  public readonly showFoundationLens: Signal<boolean> = computed(() => hasFoundationLens(this.currentPersona()));
+
+  /** Whether the current persona has access to the Project lens */
+  public readonly showProjectLens: Signal<boolean> = computed(() => hasProjectLens(this.currentPersona()));
 
   public constructor() {
     const stored = this.loadFromCookie();

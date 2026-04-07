@@ -4,7 +4,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { FeatureFlagService } from './feature-flag.service';
 
-export type Lens = 'me' | 'foundation' | 'org';
+export type Lens = 'me' | 'foundation' | 'project' | 'org';
 
 /**
  * Application-wide state management service

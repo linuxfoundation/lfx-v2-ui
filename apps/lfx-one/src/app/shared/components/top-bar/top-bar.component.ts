@@ -55,6 +55,7 @@ const ROUTE_LABELS: Array<{ path: string; label: string }> = [
 const LENS_CONFIGS: Record<Lens, LensConfig> = {
   me: { id: 'me', label: 'Me', icon: 'fa-light fa-circle-user' },
   foundation: { id: 'foundation', label: 'Foundation', icon: 'fa-light fa-laptop-code' },
+  project: { id: 'project', label: 'Project', icon: 'fa-light fa-laptop-code' },
   org: { id: 'org', label: 'Organization', icon: 'fa-light fa-building' },
 };
 
