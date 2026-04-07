@@ -2,23 +2,22 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, input, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AvatarComponent } from '@components/avatar/avatar.component';
 import { environment } from '@environments/environment';
 import { LENS_DEFAULT_ROUTES } from '@lfx-one/shared/constants';
 import { Lens } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
 import { UserService } from '@services/user.service';
+import { Popover, PopoverModule } from 'primeng/popover';
 import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule],
+  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',
-  host: {
-    '(document:keydown.escape)': 'closeDropdown()',
-  },
 })
 export class LensSwitcherComponent {
   private readonly lensService = inject(LensService);
@@ -31,26 +30,22 @@ export class LensSwitcherComponent {
   protected readonly lenses = this.lensService.availableLenses;
   protected readonly user = this.userService.user;
   protected readonly changelogUrl = environment.urls.changelog;
-  protected readonly showDropdown = signal(false);
+  protected readonly userMenu = viewChild<Popover>('userMenu');
 
   protected readonly userInitials = this.userService.userInitials;
 
   protected setLens(lens: Lens): void {
-    this.closeDropdown();
+    this.userMenu()?.hide();
     this.lensService.setLens(lens);
     this.router.navigate([LENS_DEFAULT_ROUTES[lens]]);
   }
 
-  protected toggleDropdown(): void {
-    this.showDropdown.update((v) => !v);
-  }
-
-  protected closeDropdown(): void {
-    this.showDropdown.set(false);
+  protected toggleUserMenu(event: Event): void {
+    this.userMenu()?.toggle(event);
   }
 
   protected navigateToProfile(): void {
-    this.closeDropdown();
+    this.userMenu()?.hide();
     this.lensService.setLens('me');
     this.router.navigate(['/profile']);
   }

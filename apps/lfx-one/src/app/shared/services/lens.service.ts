@@ -85,7 +85,7 @@ export class LensService {
   private loadFromCookie(): Lens | null {
     try {
       const stored = this.cookieService.get(LENS_COOKIE_KEY);
-      if (stored && ['me', 'foundation', 'project', 'org'].includes(stored)) {
+      if (stored && stored in ALL_LENSES) {
         return stored as Lens;
       }
     } catch {

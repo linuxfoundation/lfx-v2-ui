@@ -101,39 +101,21 @@
       <!-- User Avatar -->
       <button
         type="button"
-        (click)="toggleDropdown()"
+        (click)="toggleUserMenu($event)"
         aria-label="User menu"
         data-testid="lens-user-avatar"
         class="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden transition-all hover:ring-2 hover:ring-white/30 focus:outline-none shrink-0">
-        @if (user()?.picture) {
-          <img [src]="user()!.picture" [alt]="user()!.name" class="w-full h-full object-cover" />
-        } @else {
-          <div class="flex items-center justify-center w-full h-full bg-blue-600 text-white text-sm font-semibold">
-            {{ userInitials() }}
-          </div>
-        }
+        <lfx-avatar [image]="user()?.picture ?? ''" [label]="user()?.name ?? ''" shape="circle" size="normal" styleClass="w-full h-full"></lfx-avatar>
       </button>
     </div>
   </div>
 
-  <!-- User Dropdown (desktop only, fixed position to avoid stacking issues) -->
-  @if (showDropdown()) {
-    <!-- Backdrop -->
-    <div class="fixed inset-0 z-[200]" (click)="closeDropdown()"></div>
-
-    <!-- Panel -->
-    <div class="fixed bottom-4 left-[72px] z-[201] w-64 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden" data-testid="lens-user-dropdown">
+  <!-- User Menu Popover -->
+  <p-popover #userMenu appendTo="body" styleClass="w-64 user-menu-popover">
+    <ng-template #content>
       <!-- User identity -->
       <div class="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100">
-        <div class="shrink-0 w-9 h-9 rounded-full overflow-hidden">
-          @if (user()?.picture) {
-            <img [src]="user()!.picture" [alt]="user()!.name" class="w-full h-full object-cover" />
-          } @else {
-            <div class="flex items-center justify-center w-full h-full bg-blue-600 text-white text-sm font-semibold">
-              {{ userInitials() }}
-            </div>
-          }
-        </div>
+        <lfx-avatar [image]="user()?.picture ?? ''" [label]="user()?.name ?? ''" shape="circle" size="normal" styleClass="shrink-0"></lfx-avatar>
         <div class="flex flex-col min-w-0">
           <span class="font-semibold text-sm text-gray-900 truncate">{{ user()?.name }}</span>
           <span class="text-xs text-gray-500 truncate">{{ user()?.email }}</span>
@@ -155,7 +137,6 @@
           target="_blank"
           rel="noopener noreferrer"
           data-testid="lens-changelog"
-          (click)="closeDropdown()"
           class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
           <i class="fa-light fa-clock-rotate-left w-4 text-gray-400"></i>
           <span>Changelog</span>
@@ -165,7 +146,6 @@
           target="_blank"
           rel="noopener noreferrer"
           data-testid="lens-support"
-          (click)="closeDropdown()"
           class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
           <i class="fa-light fa-question-circle w-4 text-gray-400"></i>
           <span>Support</span>
@@ -179,6 +159,6 @@
           <span>Sign out</span>
         </a>
       </div>
-    </div>
-  }
+    </ng-template>
+  </p-popover>
 }

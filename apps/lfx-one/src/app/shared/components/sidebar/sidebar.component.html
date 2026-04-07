@@ -23,15 +23,7 @@
       <!-- Me Selector — uses [class.hidden] to avoid SSR hydration mismatch -->
       <div class="px-4 mb-6 w-full" [class.hidden]="!showMeSelector()">
         <div data-testid="me-selector" class="box-border flex gap-3 items-center p-3 w-full rounded-lg">
-          <div class="overflow-clip relative rounded-full shrink-0 size-10 border border-gray-100">
-            @if (user()?.picture) {
-              <img class="size-full object-cover" [src]="user()!.picture" [alt]="user()!.name" />
-            } @else {
-              <div class="flex items-center justify-center size-full bg-blue-600 text-white text-sm font-semibold">
-                {{ userInitials() }}
-              </div>
-            }
-          </div>
+          <lfx-avatar [image]="user()?.picture ?? ''" [label]="user()?.name ?? ''" shape="circle" size="large" styleClass="shrink-0 size-10"></lfx-avatar>
           <div class="flex flex-col gap-1 grow min-w-0">
             <p class="font-semibold text-base text-gray-900 leading-5 tracking-tight line-clamp-2">{{ user()?.name }}</p>
             <div class="flex flex-wrap gap-1">

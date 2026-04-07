@@ -4,11 +4,11 @@
 import { NgClass } from '@angular/common';
 import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
-import { COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
-import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { ALL_LENSES, COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
+import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { LensService } from '@services/lens.service';
@@ -27,6 +27,7 @@ import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 })
 export class MainLayoutComponent {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly appService = inject(AppService);
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly personaService = inject(PersonaService);
@@ -313,7 +314,7 @@ export class MainLayoutComponent {
   ];
 
   public constructor() {
-    // Close mobile sidebar on navigation
+    // Close mobile sidebar and sync lens from route data on navigation
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
@@ -321,6 +322,7 @@ export class MainLayoutComponent {
       )
       .subscribe(() => {
         this.appService.closeMobileSidebar();
+        this.syncLensFromRoute();
       });
   }
 
@@ -331,6 +333,21 @@ export class MainLayoutComponent {
   public onDrawerVisibilityChange(visible: boolean): void {
     if (!visible) {
       this.appService.closeMobileSidebar();
+    }
+  }
+
+  /**
+   * Sync the active lens from the current route's data.lens property.
+   * Ensures deep links and hard refreshes activate the correct lens.
+   */
+  private syncLensFromRoute(): void {
+    let currentRoute = this.route;
+    while (currentRoute.firstChild) {
+      currentRoute = currentRoute.firstChild;
+    }
+    const lens = currentRoute.snapshot.data['lens'];
+    if (lens && lens in ALL_LENSES) {
+      this.lensService.setLens(lens as Lens);
     }
   }
 }

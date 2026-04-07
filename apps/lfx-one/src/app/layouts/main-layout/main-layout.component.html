@@ -20,7 +20,6 @@
     <div class="w-[280px] flex-shrink-0">
       <lfx-sidebar
         [items]="sidebarItems()"
-        [footerItems]="[]"
         [showMeSelector]="activeLens() === 'me'"
         [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"></lfx-sidebar>
     </div>
@@ -51,7 +50,6 @@
       <div class="flex-1 min-h-0">
         <lfx-sidebar
           [items]="sidebarItems()"
-          [footerItems]="[]"
           [showMeSelector]="activeLens() === 'me'"
           [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
           [mobile]="true"></lfx-sidebar>
