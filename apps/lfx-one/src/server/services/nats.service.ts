@@ -27,9 +27,17 @@ export class NatsService {
 
   public constructor() {
     const natsUrl = process.env['NATS_URL'] || NATS_CONFIG.DEFAULT_SERVER_URL;
-    const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
-    this.natsHostname = parsedUrl.hostname;
-    this.natsPort = parseInt(parsedUrl.port, 10) || 4222;
+    try {
+      const parsedUrl = new URL(natsUrl.replace(/^nats:/, 'http:'));
+      this.natsHostname = parsedUrl.hostname;
+      this.natsPort = parseInt(parsedUrl.port, 10) || 4222;
+    } catch {
+      // Invalid or missing NATS_URL — fall back to localhost defaults.
+      // The service will fail gracefully when a request is attempted.
+      logger.warning(undefined, 'nats_init', `Invalid NATS_URL "${natsUrl}", falling back to localhost:4222`);
+      this.natsHostname = 'localhost';
+      this.natsPort = 4222;
+    }
   }
 
   /**
