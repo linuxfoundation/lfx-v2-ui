@@ -209,7 +209,7 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
     title: 'Paid Social Reach',
     icon: 'fa-light fa-share-nodes',
     chartType: 'line',
-    category: 'marketing',
+    category: 'social',
     testId: 'marketing-card-paid-social-reach',
     chartData: EMPTY_CHART_DATA,
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
@@ -219,7 +219,7 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
     title: 'Social Media',
     icon: 'fa-light fa-thumbs-up',
     chartType: 'line',
-    category: 'marketing',
+    category: 'social',
     testId: 'marketing-card-social-media',
     chartData: EMPTY_CHART_DATA,
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
@@ -234,6 +234,7 @@ export const MARKETING_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'all', label: 'All' },
   { id: 'northStar', label: 'North Star' },
   { id: 'marketing', label: 'Marketing' },
+  { id: 'social', label: 'Social' },
 ];
 
 // ============================================

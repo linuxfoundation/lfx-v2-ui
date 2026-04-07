@@ -273,12 +273,19 @@ export class MarketingOverviewComponent {
       if (filter === 'all') {
         return allCards;
       }
+      // "Marketing" pill includes both marketing and social cards
+      if (filter === 'marketing') {
+        return allCards.filter((card) => card.category === 'marketing' || card.category === 'social');
+      }
       return allCards.filter((card) => card.category === filter);
     });
   }
 
   private initShowInsightsCard(): Signal<boolean> {
-    return computed(() => this.selectedFilter() === 'all' || this.selectedFilter() === 'marketing');
+    return computed(() => {
+      const filter = this.selectedFilter();
+      return filter === 'all' || filter === 'marketing' || filter === 'social';
+    });
   }
 
   private initMarketingData(): Signal<{
