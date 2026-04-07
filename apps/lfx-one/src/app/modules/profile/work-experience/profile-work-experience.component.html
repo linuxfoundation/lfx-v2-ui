@@ -71,7 +71,7 @@
             class="transition-colors hover:bg-slate-50/50"
             [class.border-b]="rowIndex < sortedExperience().length - 1"
             [class.border-slate-100]="rowIndex < sortedExperience().length - 1"
-            [class.bg-blue-50/30]="item.needsReview"
+            [class]="item.needsReview ? 'bg-blue-50/30' : ''"
             [attr.data-row-index]="rowIndex"
             [attr.data-testid]="'work-experience-row-' + item.id">
             <!-- Organization -->

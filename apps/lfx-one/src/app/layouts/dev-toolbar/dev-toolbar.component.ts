@@ -28,7 +28,13 @@ interface DevPersonaPreset {
 const DEV_PERSONA_PRESETS: DevPersonaPreset[] = [
   // Single-role presets
   { label: 'Contributor', value: 'contributor', personas: ['core-developer'], primary: 'core-developer' },
-  { label: 'Contributor + Maint (multi proj)', value: 'contributor-maintainer-multi', personas: ['core-developer', 'maintainer'], primary: 'maintainer', multiProject: true },
+  {
+    label: 'Contributor + Maint (multi proj)',
+    value: 'contributor-maintainer-multi',
+    personas: ['core-developer', 'maintainer'],
+    primary: 'maintainer',
+    multiProject: true,
+  },
   { label: 'Maint (1 proj)', value: 'maintainer-single', personas: ['maintainer'], primary: 'maintainer' },
   { label: 'Maint (multi proj)', value: 'maintainer-multi', personas: ['maintainer'], primary: 'maintainer', multiProject: true },
   { label: 'Board (1 fdn)', value: 'board-single', personas: ['board-member'], primary: 'board-member' },
@@ -40,11 +46,25 @@ const DEV_PERSONA_PRESETS: DevPersonaPreset[] = [
   { label: 'Maint(1) + Board(1)', value: 'maint1-board1', personas: ['maintainer', 'board-member'], primary: 'board-member' },
   { label: 'Maint(1) + Board(multi)', value: 'maint1-board-multi', personas: ['maintainer', 'board-member'], primary: 'board-member', multiFoundation: true },
   { label: 'Maint(multi) + Board(1)', value: 'maint-multi-board1', personas: ['maintainer', 'board-member'], primary: 'board-member', multiProject: true },
-  { label: 'Maint(multi) + Board(multi)', value: 'maint-multi-board-multi', personas: ['maintainer', 'board-member'], primary: 'board-member', multiProject: true, multiFoundation: true },
+  {
+    label: 'Maint(multi) + Board(multi)',
+    value: 'maint-multi-board-multi',
+    personas: ['maintainer', 'board-member'],
+    primary: 'board-member',
+    multiProject: true,
+    multiFoundation: true,
+  },
 
   // Multi-role: Maintainer + ED
   { label: 'Maint(1) + ED(1)', value: 'maint1-ed1', personas: ['maintainer', 'executive-director'], primary: 'executive-director' },
-  { label: 'Maint(multi) + ED(multi)', value: 'maint-multi-ed-multi', personas: ['maintainer', 'executive-director'], primary: 'executive-director', multiProject: true, multiFoundation: true },
+  {
+    label: 'Maint(multi) + ED(multi)',
+    value: 'maint-multi-ed-multi',
+    personas: ['maintainer', 'executive-director'],
+    primary: 'executive-director',
+    multiProject: true,
+    multiFoundation: true,
+  },
 ];
 
 @Component({
@@ -72,7 +92,7 @@ export class DevToolbarComponent {
   protected readonly personaPresets = DEV_PERSONA_PRESETS;
 
   // Track the active preset for conditional UI
-  protected readonly activePreset = signal<DevPersonaPreset>(DEV_PERSONA_PRESETS[1]); // default: maintainer
+  protected readonly activePreset = signal<DevPersonaPreset>(DEV_PERSONA_PRESETS.find((p) => p.value === 'maintainer-single') ?? DEV_PERSONA_PRESETS[0]);
 
   /** Label for the project/foundation selector */
   protected readonly selectorLabel = computed(() => (isBoardScopedPersona(this.activePreset().primary) ? 'Foundation:' : 'Project:'));
@@ -96,7 +116,11 @@ export class DevToolbarComponent {
     this.form = new FormGroup({
       persona: new FormControl<string>(initialPreset.value, [Validators.required]),
       selectedAccountId: new FormControl<string>(this.accountContextService.selectedAccount().accountId),
-      selectedProjectUid: new FormControl<string>(this.projectContextService.selectedFoundation()?.uid || ''),
+      selectedProjectUid: new FormControl<string>(
+        isBoardScopedPersona(currentPersona)
+          ? this.projectContextService.selectedFoundation()?.uid || ''
+          : this.projectContextService.selectedProject()?.uid || this.projectContextService.selectedFoundation()?.uid || ''
+      ),
     });
 
     // Subscribe to persona preset changes
@@ -141,14 +165,18 @@ export class DevToolbarComponent {
         }
       });
 
-    // Subscribe to board member project override changes
+    // Subscribe to project/foundation selection changes
     this.form
       .get('selectedProjectUid')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((uid: string) => {
         const project = this.projectContextService.availableProjects.find((p) => p.uid === uid);
         if (project) {
-          this.projectContextService.setFoundation(project);
+          if (isBoardScopedPersona(this.personaService.currentPersona())) {
+            this.projectContextService.setFoundation(project);
+          } else {
+            this.projectContextService.setProject(project);
+          }
         }
       });
   }

@@ -29,10 +29,10 @@ export class PersonaService {
   public readonly isBoardScoped: Signal<boolean>;
 
   /** Whether the user holds any board-scoped persona (board-member, executive-director) */
-  public readonly hasBoardRole: Signal<boolean> = this.initHasBoardRole();
+  public readonly hasBoardRole: Signal<boolean>;
 
   /** Whether the user holds any project-scoped persona (maintainer, core-developer, projects) */
-  public readonly hasProjectRole: Signal<boolean> = this.initHasProjectRole();
+  public readonly hasProjectRole: Signal<boolean>;
 
   /** Whether the user has access to multiple projects (affects project lens sidebar) */
   public readonly multiProject: WritableSignal<boolean>;
@@ -47,6 +47,8 @@ export class PersonaService {
     this.multiProject = signal<boolean>(stored?.multiProject ?? false);
     this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
+    this.hasBoardRole = this.initHasBoardRole();
+    this.hasProjectRole = this.initHasProjectRole();
   }
 
   /**

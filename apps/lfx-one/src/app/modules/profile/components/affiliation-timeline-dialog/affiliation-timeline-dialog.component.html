@@ -66,7 +66,10 @@
 
               @for (period of org.periods; track period.id) {
                 @let isOverlapping = overlappingPeriodIds().has(period.id);
-                <div class="flex items-center gap-2 rounded-md px-2 py-1" [class.bg-amber-50/50]="isOverlapping" [attr.data-testid]="'period-row-' + period.id">
+                <div
+                  class="flex items-center gap-2 rounded-md px-2 py-1"
+                  [class]="isOverlapping ? 'bg-amber-50/50' : ''"
+                  [attr.data-testid]="'period-row-' + period.id">
                   <!-- Start Month -->
                   <p-select
                     [options]="monthOptions"
