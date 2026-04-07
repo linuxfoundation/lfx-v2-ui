@@ -23,6 +23,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
   selector: 'lfx-affiliation-timeline-dialog',
   imports: [FormsModule, ButtonComponent, CheckboxModule, SelectModule, ToggleSwitchModule],
   templateUrl: './affiliation-timeline-dialog.component.html',
+  styles: [`:host { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }`],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AffiliationTimelineDialogComponent {
@@ -41,6 +42,9 @@ export class AffiliationTimelineDialogComponent {
   public readonly overlappingPeriodIds: Signal<Set<string>> = this.initOverlappingPeriodIds();
   public readonly hasOverlap: Signal<boolean> = computed(() => this.overlappingPeriodIds().size > 0);
   public readonly hasNoWorkExperience: Signal<boolean> = computed(() => this.companyOrgs().length === 0);
+  public readonly hasUnverifiedWorkExperienceOnly: Signal<boolean> = computed(
+    () => this.workExperience().length > 0 && this.companyOrgs().length === 0
+  );
   public readonly hasValidationErrors: Signal<boolean> = this.initHasValidationErrors();
   public readonly availableYearsMap: Signal<Map<string, { label: string; value: string }[]>> = this.initAvailableYearsMap();
   public readonly periodErrorsMap: Signal<Map<string, { startBeforeWeStart: boolean; endAfterWeEnd: boolean; startAfterEnd: boolean }>> =
