@@ -12,17 +12,21 @@
     <div class="flex flex-col items-start w-full flex-1">
       <!-- Project Selector (Foundation lens) -->
       @if (showProjectSelector()) {
-        <div class="px-3 mb-6 w-full">
+        <div class="px-4 mb-6 w-full">
           <lfx-project-selector
             [projects]="foundationProjects()"
             [selectedProject]="selectedProject()"
+            [projectsOnly]="activeLens() === 'project'"
+            [selectable]="isSelectorSelectable()"
+            [sublabel]="projectSublabel()"
+            [searchPlaceholder]="activeLens() === 'project' ? 'Search projects...' : 'Search foundations...'"
             (projectChange)="onProjectChange($event)"></lfx-project-selector>
         </div>
       }
 
       <!-- Org Selector (Org lens) -->
       @if (showOrgSelector()) {
-        <div class="px-3 mb-6 w-full">
+        <div class="px-4 mb-6 w-full">
           <div class="box-border flex gap-3 items-center p-3 w-full rounded-lg" data-testid="org-selector">
             <div
               class="overflow-clip relative rounded-full shrink-0 size-10 flex items-center justify-center text-white font-semibold text-sm"
@@ -39,7 +43,7 @@
 
       <!-- Me Selector (Me lens) -->
       @if (showMeSelector()) {
-        <div class="px-3 mb-6 w-full">
+        <div class="px-4 mb-6 w-full">
           <div class="box-border flex gap-3 items-center p-3 w-full rounded-lg" data-testid="me-selector">
             <div class="overflow-clip relative rounded-full shrink-0 size-10 border border-gray-100">
               @if (user()?.picture) {
@@ -54,7 +58,7 @@
               <p class="font-semibold text-base text-gray-900 leading-5 tracking-tight line-clamp-2">{{ user()?.name }}</p>
               <div class="flex flex-wrap gap-1">
                 @for (label of personaLabels(); track label) {
-                  <span class="inline-block text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 leading-4">{{ label }}</span>
+                  <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4">{{ label }}</span>
                 }
               </div>
             </div>
@@ -63,7 +67,7 @@
       }
 
       <!-- Main Navigation Items -->
-      <div class="flex flex-col gap-2 items-start px-3 w-full" [ngClass]="{ 'opacity-50 pointer-events-none': grayed() }">
+      <div class="flex flex-col gap-2 items-start px-4 w-full" [ngClass]="{ 'opacity-50 pointer-events-none': grayed() }">
         @for (item of itemsWithTestIds(); track item.label) {
           @if (item.isSection) {
             <!-- Section Header -->
@@ -94,7 +98,7 @@
     </div>
 
     <!-- Bottom Navigation (stays at bottom when space allows, scrolls with content otherwise) -->
-    <div class="flex flex-col gap-2 items-start px-3 w-full mt-auto pt-4">
+    <div class="flex flex-col gap-2 items-start px-4 w-full mt-auto pt-4">
       @if (footerItems().length > 0) {
         @for (item of footerItemsWithTestIds(); track item.label) {
           <ng-container *ngTemplateOutlet="menuItem; context: { $implicit: item }"></ng-container>
@@ -105,7 +109,7 @@
 
   <!-- Insights Card (Foundation lens only) — fixed at bottom, outside scroll area -->
   @if (showProjectSelector()) {
-    <div class="flex-shrink-0 px-3 pb-4 pt-2" data-testid="insights-card">
+    <div class="flex-shrink-0 px-4 pb-4 pt-2" data-testid="insights-card">
       <div class="rounded-xl p-4 bg-purple-50 border border-purple-200 flex flex-col gap-3">
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-1.5">
@@ -137,7 +141,7 @@
       [routerLink]="item.routerLink"
       routerLinkActive="bg-blue-100 font-medium text-gray-950"
       [routerLinkActiveOptions]="{ exact: item.exactMatch ?? true }"
-      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base text-gray-600 font-normal hover:bg-gray-50"
       [ngClass]="{
         'opacity-50 pointer-events-none cursor-not-allowed': item.disabled,
       }"
@@ -159,7 +163,7 @@
       [href]="item.url"
       [target]="item.target || '_blank'"
       [rel]="item.rel || 'noopener noreferrer'"
-      class="flex items-center justify-between gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center justify-between gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-base text-gray-600 font-normal hover:bg-gray-50"
       [ngClass]="{
         'opacity-50 pointer-events-none cursor-not-allowed': item.disabled,
       }"
@@ -184,7 +188,7 @@
     <button
       type="button"
       (click)="item.command()"
-      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-left text-base !text-gray-950 font-normal hover:bg-gray-50"
+      class="flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer w-full text-left text-base text-gray-600 font-normal hover:bg-gray-50"
       [ngClass]="{
         'opacity-50 cursor-not-allowed': item.disabled,
       }"
@@ -202,3 +206,4 @@
     </button>
   }
 </ng-template>
+

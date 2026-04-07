@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-@if (projects().length > 1) {
+@if (isSelectable()) {
   <!-- Interactive trigger for multiple projects -->
   <div
     #selectorTrigger
@@ -22,7 +22,7 @@
     <!-- Text -->
     <div class="flex flex-col gap-0.5 grow items-start relative min-w-0">
       <p class="sidebar-project-name">{{ displayName() }}</p>
-      <p class="text-xs text-gray-400 leading-4">{{ displayType() }}</p>
+      <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4">{{ displayType() }}</span>
     </div>
 
     <!-- Switcher icon -->
@@ -46,7 +46,7 @@
             type="text"
             [value]="searchQuery()"
             (input)="searchQuery.set($any($event.target).value)"
-            placeholder="Search foundations and projects..."
+            [placeholder]="searchPlaceholder()"
             class="pl-10 h-9 w-full text-sm bg-gray-50"
             data-testid="project-search-input" />
         </div>
@@ -54,66 +54,96 @@
 
       <!-- Projects List -->
       <div class="flex-1 overflow-y-auto p-2">
-        @for (foundation of foundations(); track foundation.uid) {
-          <div>
-            <!-- Foundation -->
+        @if (projectsOnly()) {
+          <!-- Flat project list (Project lens) -->
+          @for (project of projectsOnlyList(); track project.uid) {
             <div
               class="flex items-center gap-3 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
-              (click)="selectProject(foundation)"
-              [attr.data-testid]="'foundation-' + foundation.slug">
-              <!-- Foundation Logo (32px) -->
+              (click)="selectProject(project)"
+              [attr.data-testid]="'project-' + project.slug">
               <div class="bg-gray-100 overflow-clip rounded-full shrink-0 size-[32px]">
-                <div class="flex items-center justify-center size-full p-[8px]">
-                  @if (foundation.logo_url) {
-                    <img [alt]="foundation.name" class="w-full h-full object-contain" [src]="foundation.logo_url" />
+                <div class="flex items-center justify-center size-full p-[7px]">
+                  @if (project.logo_url) {
+                    <img [alt]="project.name" class="w-full h-full object-contain" [src]="project.logo_url" />
+                  } @else {
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="#0094FF" />
+                      <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="#003778" />
+                    </svg>
                   }
                 </div>
               </div>
-
-              <!-- Foundation Info -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <p class="font-medium text-sm text-gray-900 mb-0">{{ foundation.name }}</p>
-                  <lfx-tag value="Foundation" severity="info"></lfx-tag>
+                  <p class="font-medium text-sm text-gray-900">{{ project.name }}</p>
+                  @if (sublabel()) {
+                    <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{ sublabel() }}</span>
+                  }
                 </div>
-                <p class="text-xs text-gray-500 line-clamp-1">{{ foundation.description }}</p>
+                <p class="text-xs text-gray-500 line-clamp-1">{{ project.description }}</p>
               </div>
             </div>
+          } @empty {
+            <div class="text-center py-8 text-gray-500 text-sm">No projects found</div>
+          }
+        } @else {
+          <!-- Foundation-grouped list (Foundation lens) -->
+          @for (foundation of foundations(); track foundation.uid) {
+            <div>
+              <!-- Foundation -->
+              <div
+                class="flex items-center gap-3 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
+                (click)="selectProject(foundation)"
+                [attr.data-testid]="'foundation-' + foundation.slug">
+                <div class="bg-gray-100 overflow-clip rounded-full shrink-0 size-[32px]">
+                  <div class="flex items-center justify-center size-full p-[8px]">
+                    @if (foundation.logo_url) {
+                      <img [alt]="foundation.name" class="w-full h-full object-contain" [src]="foundation.logo_url" />
+                    }
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium text-sm text-gray-900 mb-0">{{ foundation.name }}</p>
+                    @if (sublabel()) {
+                      <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{ sublabel() }}</span>
+                    }
+                  </div>
+                  <p class="text-xs text-gray-500 line-clamp-1">{{ foundation.description }}</p>
+                </div>
+              </div>
 
-            <!-- Child Projects -->
-            @if (childProjectsMap().has(foundation.uid)) {
-              <div class="ml-4 border-l-2 border-gray-200 pl-2 my-1">
-                @for (project of childProjectsMap().get(foundation.uid); track project.uid) {
-                  <div
-                    class="flex items-center gap-3 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
-                    (click)="selectProject(project)"
-                    [attr.data-testid]="'project-' + project.slug">
-                    <!-- Project Logo (28px) -->
-                    <div class="bg-gray-100 overflow-clip rounded-full shrink-0 size-[28px]">
-                      <div class="flex items-center justify-center size-full p-[6px]">
-                        @if (project.logo_url) {
-                          <img [alt]="project.name" class="w-full h-full object-contain" [src]="project.logo_url" />
-                        } @else {
-                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H3.96369Z" fill="#0094FF" />
-                            <path d="M19.8645 0H0V6.00333H3.96369V4.01761H15.9009V15.9781H13.919V19.9495H19.8645V0Z" fill="#003778" />
-                          </svg>
-                        }
+              <!-- Child Projects -->
+              @if (childProjectsMap().has(foundation.uid)) {
+                <div class="ml-4 border-l-2 border-gray-200 pl-2 my-1">
+                  @for (project of childProjectsMap().get(foundation.uid); track project.uid) {
+                    <div
+                      class="flex items-center gap-3 p-2 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
+                      (click)="selectProject(project)"
+                      [attr.data-testid]="'project-' + project.slug">
+                      <div class="bg-gray-100 overflow-clip rounded-full shrink-0 size-[28px]">
+                        <div class="flex items-center justify-center size-full p-[6px]">
+                          @if (project.logo_url) {
+                            <img [alt]="project.name" class="w-full h-full object-contain" [src]="project.logo_url" />
+                          } @else {
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3.96369 15.9789V7.98987H0V19.9504H11.9372V15.9789H13.919V19.9495H19.8645V0Z" fill="#003778" />
+                            </svg>
+                          }
+                        </div>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm text-gray-900">{{ project.name }}</p>
+                        <p class="text-xs text-gray-500 line-clamp-1">{{ project.description }}</p>
                       </div>
                     </div>
-
-                    <!-- Project Info -->
-                    <div class="flex-1 min-w-0">
-                      <p class="font-medium text-sm text-gray-900">{{ project.name }}</p>
-                      <p class="text-xs text-gray-500 line-clamp-1">{{ project.description }}</p>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        } @empty {
-          <div class="text-center py-8 text-gray-500 text-sm">No foundations or projects found</div>
+                  }
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="text-center py-8 text-gray-500 text-sm">No foundations or projects found</div>
+          }
         }
       </div>
     </div>
@@ -135,7 +165,8 @@
     <!-- Text -->
     <div class="flex flex-col gap-0.5 grow items-start relative min-w-0">
       <p class="sidebar-project-name">{{ displayName() }}</p>
-      <p class="text-xs text-gray-400 leading-4">{{ displayType() }}</p>
+      <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4">{{ displayType() }}</span>
     </div>
   </div>
 }
+

@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
 import { AppService, Lens } from '@services/app.service';
+import { PersonaService } from '@services/persona.service';
 import { UserService } from '@services/user.service';
 import { TooltipModule } from 'primeng/tooltip';
-import { filter, map, startWith } from 'rxjs';
 
 interface LensOption {
   id: Lens;
@@ -22,9 +21,32 @@ interface LensOption {
 const EXTERNAL_ICON = '<i class="fa-light fa-arrow-up-right-from-square" style="margin-left:5px;font-size:10px;vertical-align:middle;opacity:0.7"></i>';
 
 const LENS_DEFAULT_ROUTES: Record<Lens, string> = {
-  me: '/me/overview',
+  me: '/home',
+  project: '/project/overview',
   foundation: '/foundation/overview',
   org: '/org',
+};
+
+/** All possible lens definitions — visibility is controlled by persona */
+const ALL_LENSES: Record<Lens, LensOption> = {
+  me: { id: 'me', label: 'Me', switcherLabel: 'Me', icon: 'fa-light fa-circle-user', activeIcon: 'fa-solid fa-circle-user', testId: 'lens-me' },
+  foundation: {
+    id: 'foundation',
+    label: 'Foundation',
+    switcherLabel: 'Foundation',
+    icon: 'fa-light fa-landmark',
+    activeIcon: 'fa-solid fa-landmark',
+    testId: 'lens-foundation',
+  },
+  project: {
+    id: 'project',
+    label: 'Project',
+    switcherLabel: 'Project',
+    icon: 'fa-light fa-laptop-code',
+    activeIcon: 'fa-solid fa-laptop-code',
+    testId: 'lens-project',
+  },
+  org: { id: 'org', label: 'Organization', switcherLabel: 'Organiz.', icon: 'fa-light fa-building', activeIcon: 'fa-solid fa-building', testId: 'lens-org' },
 };
 
 @Component({
@@ -35,11 +57,11 @@ const LENS_DEFAULT_ROUTES: Record<Lens, string> = {
 })
 export class LensSwitcherComponent {
   private readonly appService = inject(AppService);
+  private readonly personaService = inject(PersonaService);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
 
   protected readonly activeLens = this.appService.activeLens;
-  protected readonly isHome: Signal<boolean> = this.initIsHome();
   protected readonly user = this.userService.user;
   protected readonly showDropdown = signal(false);
 
@@ -54,21 +76,26 @@ export class LensSwitcherComponent {
       .slice(0, 2);
   });
 
-  protected readonly lenses: LensOption[] = [
-    { id: 'me', label: 'Me', switcherLabel: 'Me', icon: 'fa-light fa-circle-user', activeIcon: 'fa-solid fa-circle-user', testId: 'lens-me' },
-    { id: 'foundation', label: 'Foundation', switcherLabel: 'Foundation', icon: 'fa-light fa-laptop-code', activeIcon: 'fa-solid fa-laptop-code', testId: 'lens-foundation' },
-    { id: 'org', label: 'Organization', switcherLabel: 'Organization', icon: 'fa-light fa-building', activeIcon: 'fa-solid fa-building', testId: 'lens-org' },
-  ];
+  /**
+   * Visible lenses based on current persona.
+   * Order: ME · FDN (governance only) · PROJ (all except new-contributor) · ORG
+   */
+  protected readonly lenses = computed((): LensOption[] => {
+    const showFoundation = this.personaService.showFoundationLens();
+    const showProject = this.personaService.showProjectLens();
+
+    const visible: LensOption[] = [ALL_LENSES.me];
+    if (showFoundation) visible.push(ALL_LENSES.foundation);
+    if (showProject) visible.push(ALL_LENSES.project);
+    visible.push(ALL_LENSES.org);
+    return visible;
+  });
 
   protected readonly insightsTooltip = `<div style="max-width:200px"><strong>LFX Insights${EXTERNAL_ICON}</strong><br><span style="font-size:11px;opacity:0.85;line-height:1.4;display:block;margin-top:2px">Discover and evaluate the world's most critical open source projects at scale</span></div>`;
 
   protected setLens(lens: Lens): void {
     this.appService.setLens(lens);
     void this.router.navigate([LENS_DEFAULT_ROUTES[lens]]);
-  }
-
-  protected navigateHome(): void {
-    void this.router.navigate(['/home']);
   }
 
   protected toggleDropdown(): void {
@@ -83,16 +110,5 @@ export class LensSwitcherComponent {
     this.closeDropdown();
     this.appService.setLens('me');
     void this.router.navigate(['/profile']);
-  }
-
-  private initIsHome(): Signal<boolean> {
-    return toSignal(
-      this.router.events.pipe(
-        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-        map((e) => e.urlAfterRedirects === '/home'),
-        startWith(this.router.url === '/home')
-      ),
-      { initialValue: this.router.url === '/home' }
-    );
   }
 }

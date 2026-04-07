@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, Signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
-import { TopBarComponent } from '@components/top-bar/top-bar.component';
 import { environment } from '@environments/environment';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { SidebarMenuItem } from '@lfx-one/shared/interfaces';
@@ -15,13 +14,13 @@ import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
 import { DrawerModule } from 'primeng/drawer';
-import { filter, map, startWith } from 'rxjs';
+import { filter } from 'rxjs';
 
 import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, LensSwitcherComponent, DrawerModule, DevToolbarComponent, TopBarComponent],
+  imports: [NgClass, RouterModule, SidebarComponent, LensSwitcherComponent, DrawerModule, DevToolbarComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -34,7 +33,6 @@ export class MainLayoutComponent {
 
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
   protected readonly activeLens = this.appService.activeLens;
-  protected readonly isHome: Signal<boolean> = this.initIsHome();
   protected readonly projectSelectorOpen = this.appService.projectSelectorOpen;
   protected readonly showDevToolbar = this.appService.showDevToolbar;
 
@@ -44,19 +42,21 @@ export class MainLayoutComponent {
   // ─── Me Lens ──────────────────────────────────────────────────────────────
   private readonly meLensItems: SidebarMenuItem[] = [
     {
-      label: 'Overview',
+      label: 'My Dashboard',
       icon: 'fa-light fa-grid-2',
-      routerLink: '/me/overview',
+      routerLink: '/home',
     },
     {
       label: 'My Engagement',
       isSection: true,
       expanded: true,
       items: [
-        { label: 'My Actions', icon: 'fa-light fa-bolt', routerLink: '/me/actions' },
         { label: 'My Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-        { label: `My ${COMMITTEE_LABEL.plural}`, icon: 'fa-light fa-users', routerLink: '/groups' },
         { label: 'My Events', icon: 'fa-light fa-ticket', routerLink: '/me/events' },
+        { label: 'My Groups', icon: 'fa-light fa-users-rectangle', routerLink: '/groups' },
+        { label: 'My Mailing Lists', icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
+        { label: 'My Votes', icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
+        { label: 'My Surveys', icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
       ],
     },
     {
@@ -64,9 +64,9 @@ export class MainLayoutComponent {
       isSection: true,
       expanded: true,
       items: [
-        { label: 'Trainings & Certifications', icon: 'fa-light fa-graduation-cap', routerLink: '/me/training' },
-        { label: 'Badges', icon: 'fa-light fa-certificate', routerLink: '/me/badges' },
-        { label: 'EasyCLA', icon: 'fa-light fa-file-signature', routerLink: '/me/easycla' },
+        { label: 'Trainings & Certs', icon: 'fa-light fa-graduation-cap', routerLink: '/me/training' },
+        { label: 'Mentorships', icon: 'fa-light fa-chalkboard-teacher', routerLink: '/me/mentorships' },
+        { label: 'Badges', icon: 'fa-light fa-award', routerLink: '/me/badges' },
       ],
     },
     {
@@ -75,51 +75,103 @@ export class MainLayoutComponent {
       expanded: true,
       items: [
         { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', exactMatch: false },
-        { label: 'Transactions', icon: 'fa-light fa-receipt', routerLink: '/me/transactions' },
         { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
+        { label: 'Transactions', icon: 'fa-light fa-receipt', routerLink: '/me/transactions' },
       ],
     },
   ];
 
-  // ─── Foundation Lens ──────────────────────────────────────────────────────
-  private readonly foundationLensItems = computed((): SidebarMenuItem[] => {
-    const isBoardMember = this.personaService.currentPersona() === 'board-member' || this.personaService.currentPersona() === 'executive-director';
+  // ─── Project Lens (PROJ) ───────────────────────────────────────────────────
+  private readonly projectLensItems: SidebarMenuItem[] = [
+    {
+      label: 'Dashboard',
+      icon: 'fa-light fa-grid-2',
+      routerLink: '/project/overview',
+    },
+    {
+      label: 'Meetings',
+      icon: 'fa-light fa-calendar',
+      routerLink: '/meetings',
+    },
+    {
+      label: MAILING_LIST_LABEL.plural,
+      icon: 'fa-light fa-envelope',
+      routerLink: '/mailing-lists',
+    },
+    {
+      label: COMMITTEE_LABEL.plural,
+      icon: 'fa-light fa-users-rectangle',
+      routerLink: '/groups',
+    },
+  ];
 
-    const items: SidebarMenuItem[] = [
-      {
-        label: 'Overview',
-        icon: 'fa-light fa-grid-2',
-        routerLink: '/foundation/overview',
-      },
-      {
-        label: 'Community',
-        isSection: true,
-        expanded: true,
-        items: [
-          { label: 'Projects', icon: 'fa-light fa-folder-open', routerLink: '/foundation/projects' },
-          { label: 'Meetings', icon: 'fa-light fa-calendar', routerLink: '/meetings' },
-          { label: MAILING_LIST_LABEL.plural, icon: 'fa-light fa-envelope', routerLink: '/mailing-lists' },
-          { label: COMMITTEE_LABEL.plural, icon: 'fa-light fa-users', routerLink: '/groups' },
-          { label: 'Events', icon: 'fa-light fa-ticket', routerLink: '/foundation/events' },
-        ],
-      },
-    ];
+  // ─── Project Lens — Maintainer Admin (includes Governance) ───────────────
+  private readonly maintainerAdminProjectLensItems: SidebarMenuItem[] = [
+    {
+      label: 'Dashboard',
+      icon: 'fa-light fa-grid-2',
+      routerLink: '/project/overview',
+    },
+    {
+      label: 'Meetings',
+      icon: 'fa-light fa-calendar',
+      routerLink: '/meetings',
+    },
+    {
+      label: MAILING_LIST_LABEL.plural,
+      icon: 'fa-light fa-envelope',
+      routerLink: '/mailing-lists',
+    },
+    {
+      label: COMMITTEE_LABEL.plural,
+      icon: 'fa-light fa-users-rectangle',
+      routerLink: '/groups',
+    },
+    {
+      label: 'Governance',
+      isSection: true,
+      expanded: true,
+      items: [
+        { label: VOTE_LABEL.plural, icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
+        { label: SURVEY_LABEL.plural, icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
+        { label: 'Permissions', icon: 'fa-light fa-shield', routerLink: '/foundation/permissions' },
+      ],
+    },
+  ];
 
-    if (isBoardMember) {
-      items.push({
-        label: 'Governance',
-        isSection: true,
-        expanded: true,
-        items: [
-          { label: VOTE_LABEL.plural, icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
-          { label: SURVEY_LABEL.plural, icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
-          { label: 'Permissions', icon: 'fa-light fa-shield', routerLink: '/settings' },
-        ],
-      });
-    }
-
-    return items;
-  });
+  // ─── Foundation Lens (FDN) — governance personas only ────────────────────
+  private readonly foundationLensItems: SidebarMenuItem[] = [
+    {
+      label: 'Dashboard',
+      icon: 'fa-light fa-grid-2',
+      routerLink: '/foundation/overview',
+    },
+    {
+      label: 'Meetings',
+      icon: 'fa-light fa-calendar',
+      routerLink: '/meetings',
+    },
+    {
+      label: MAILING_LIST_LABEL.plural,
+      icon: 'fa-light fa-envelope',
+      routerLink: '/mailing-lists',
+    },
+    {
+      label: COMMITTEE_LABEL.plural,
+      icon: 'fa-light fa-users-rectangle',
+      routerLink: '/groups',
+    },
+    {
+      label: 'Governance',
+      isSection: true,
+      expanded: true,
+      items: [
+        { label: VOTE_LABEL.plural, icon: 'fa-light fa-check-to-slot', routerLink: '/votes' },
+        { label: SURVEY_LABEL.plural, icon: 'fa-light fa-clipboard-list', routerLink: '/surveys' },
+        { label: 'Permissions', icon: 'fa-light fa-shield', routerLink: '/foundation/permissions' },
+      ],
+    },
+  ];
 
   // ─── Org Lens ─────────────────────────────────────────────────────────────
   private readonly orgLensItems: SidebarMenuItem[] = [
@@ -151,7 +203,7 @@ export class MainLayoutComponent {
       isSection: true,
       expanded: true,
       items: [
-        { label: 'Groups', icon: 'fa-light fa-users', routerLink: '/org/groups' },
+        { label: 'Groups', icon: 'fa-light fa-users-rectangle', routerLink: '/org/groups' },
         { label: 'CLA Management', icon: 'fa-light fa-file-signature', routerLink: '/org/cla' },
         { label: 'Access & Permissions', icon: 'fa-light fa-key', routerLink: '/org/permissions' },
         { label: 'Org Profile', icon: 'fa-light fa-building', routerLink: '/org/profile' },
@@ -162,8 +214,12 @@ export class MainLayoutComponent {
   // ─── Active nav items based on lens ───────────────────────────────────────
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
+      case 'project':
+        return this.personaService.currentPersona() === 'maintainer-admin'
+          ? this.maintainerAdminProjectLensItems
+          : this.projectLensItems;
       case 'foundation':
-        return this.foundationLensItems();
+        return this.foundationLensItems;
       case 'org':
         return this.orgLensItems;
       default:
@@ -207,17 +263,6 @@ export class MainLayoutComponent {
       });
   }
 
-  private initIsHome(): Signal<boolean> {
-    return toSignal(
-      this.router.events.pipe(
-        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-        map((e) => e.urlAfterRedirects === '/home'),
-        startWith(this.router.url === '/home')
-      ),
-      { initialValue: this.router.url === '/home' }
-    );
-  }
-
   public closeProjectSelector(): void {
     this.appService.setProjectSelectorOpen(false);
   }
@@ -232,3 +277,5 @@ export class MainLayoutComponent {
     }
   }
 }
+
+

@@ -3,36 +3,20 @@
 
 <div class="flex flex-col items-center h-full bg-blue-900 py-4" data-testid="lens-switcher">
   <!-- LF Logo -->
-  <a (click)="navigateHome()" class="mb-4 flex items-center justify-center px-3 cursor-pointer" aria-label="Linux Foundation Home">
-    <img src="/images/logo_lf_white.svg" alt="Linux Foundation" class="w-[24px] h-[24px]" />
-  </a>
-
-  <!-- Home Button -->
   <button
     type="button"
-    (click)="navigateHome()"
-    data-testid="lens-home"
-    aria-label="Home"
-    pTooltip="Home"
-    tooltipPosition="right"
-    class="group flex flex-col items-center gap-1 w-[56px] transition-colors"
-    [ngClass]="isHome() ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
-    <div
-      class="flex items-center justify-center w-[40px] h-[40px] rounded-[12px] transition-colors"
-      [ngClass]="{
-        'bg-blue-500/20': isHome(),
-        'group-hover:bg-white/10': !isHome(),
-      }">
-      <i [ngClass]="isHome() ? 'fa-solid fa-objects-column' : 'fa-light fa-objects-column'" class="text-xl"></i>
-    </div>
+    (click)="setLens('me')"
+    class="mb-4 flex items-center justify-center px-3 focus:outline-none"
+    aria-label="Go to My Dashboard">
+    <img src="/images/logo_lf_white.svg" alt="Linux Foundation" class="w-[24px] h-[24px]" />
   </button>
 
-  <!-- Separator -->
-  <hr class="w-6 border-white/20 my-2.5" />
+  <!-- Divider below logo -->
+  <hr class="w-6 border-white/20 mb-3" />
 
   <!-- Lens Buttons -->
   <div class="flex flex-col items-center gap-2.5 flex-1">
-    @for (lens of lenses; track lens.id) {
+    @for (lens of lenses(); track lens.id) {
       <button
         type="button"
         (click)="setLens(lens.id)"
@@ -41,15 +25,16 @@
         [pTooltip]="lens.label"
         tooltipPosition="right"
         class="group flex flex-col items-center gap-1 w-[56px] transition-colors"
-        [ngClass]="activeLens() === lens.id && !isHome() ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
+        [ngClass]="activeLens() === lens.id ? 'text-blue-400' : 'text-blue-200/70 hover:text-white'">
         <div
           class="flex items-center justify-center w-[40px] h-[40px] rounded-[12px] transition-colors"
           [ngClass]="{
-            'bg-blue-500/20': activeLens() === lens.id && !isHome(),
-            'group-hover:bg-white/10': activeLens() !== lens.id || isHome(),
+            'bg-blue-500/20': activeLens() === lens.id,
+            'group-hover:bg-white/10': activeLens() !== lens.id,
           }">
-          <i [ngClass]="activeLens() === lens.id && !isHome() ? lens.activeIcon : lens.icon" class="text-xl"></i>
+          <i [ngClass]="activeLens() === lens.id ? lens.activeIcon : lens.icon" class="text-xl"></i>
         </div>
+        <span class="text-[9px] font-medium leading-none">{{ lens.switcherLabel }}</span>
       </button>
     }
   </div>
@@ -161,3 +146,4 @@
     </div>
   </div>
 }
+

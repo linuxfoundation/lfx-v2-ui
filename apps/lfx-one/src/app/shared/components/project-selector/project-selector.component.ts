@@ -5,14 +5,13 @@ import { Component, computed, DestroyRef, ElementRef, inject, input, OnDestroy, 
 import { FormsModule } from '@angular/forms';
 import { Project } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
+import { PersonaService } from '@services/persona.service';
 import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
 
-import { TagComponent } from '../tag/tag.component';
-
 @Component({
   selector: 'lfx-project-selector',
-  imports: [InputTextModule, FormsModule, AutoFocus, TagComponent],
+  imports: [InputTextModule, FormsModule, AutoFocus],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
 })
@@ -21,10 +20,15 @@ export class ProjectSelectorComponent implements OnDestroy {
 
   public readonly projects = input.required<Project[]>();
   public readonly selectedProject = input<Project | null>(null);
+  public readonly projectsOnly = input<boolean>(false);
+  public readonly selectable = input<boolean>(true);
+  public readonly sublabel = input<string>('');
+  public readonly searchPlaceholder = input<string>('Search foundations and projects...');
 
   public readonly projectChange = output<Project>();
 
   private readonly appService = inject(AppService);
+  private readonly personaService = inject(PersonaService);
   private readonly elementRef = inject(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -40,10 +44,19 @@ export class ProjectSelectorComponent implements OnDestroy {
   protected readonly foundations = this.initializeFoundations();
   protected readonly childProjectsMap = this.initializeChildProjectsMap();
   protected readonly hasResults = this.initializeHasResults();
+  protected readonly projectsOnlyList = this.initializeProjectsOnlyList();
+  protected readonly isSelectable = computed(() => {
+    const persona = this.personaService.currentPersona();
+    const lens = this.appService.activeLens();
+    // board-1 and ed-1 have exactly one foundation — no switcher
+    if (lens === 'foundation' && (persona === 'board-1' || persona === 'ed-1')) return false;
+    return this.projectsOnly() ? this.projectsOnlyList().length > 1 : this.foundations().length > 1;
+  });
 
   public ngOnDestroy(): void {
     this.detachOutsideClickListener();
   }
+
 
   protected selectProject(project: Project): void {
     this.projectChange.emit(project);
@@ -96,11 +109,28 @@ export class ProjectSelectorComponent implements OnDestroy {
 
   private initializeDisplayType() {
     return computed(() => {
+      const sub = this.sublabel();
+      if (sub) return sub;
       const project = this.selectedProject();
       if (!project) return 'Foundation';
       const validProjectIds = new Set(this.projects().map((p) => p.uid));
       const isFoundation = !project.parent_uid || project.parent_uid === '' || !validProjectIds.has(project.parent_uid);
       return isFoundation ? 'Foundation' : 'Project';
+    });
+  }
+
+  private initializeProjectsOnlyList() {
+    return computed(() => {
+      const allProjects = this.projects();
+      const query = this.searchQuery().toLowerCase().trim();
+      const validProjectIds = new Set(allProjects.map((p) => p.uid));
+      const childProjects = allProjects.filter(
+        (p) => p.parent_uid && p.parent_uid !== '' && validProjectIds.has(p.parent_uid)
+      );
+      if (!query) return childProjects;
+      return childProjects.filter(
+        (p) => p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query)
+      );
     });
   }
 
@@ -197,3 +227,6 @@ export class ProjectSelectorComponent implements OnDestroy {
     });
   }
 }
+
+
+

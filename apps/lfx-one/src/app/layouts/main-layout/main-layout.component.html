@@ -5,12 +5,10 @@
 <lfx-dev-toolbar></lfx-dev-toolbar>
 
 <div class="flex min-h-screen" [ngClass]="{ 'pt-[48px]': showDevToolbar() }">
-  <!-- Sidebar - Desktop: lens switcher (64px) + nav panel (280px, hidden on Home) -->
+  <!-- Sidebar - Desktop: lens switcher (64px) + nav panel (280px) -->
   <div
-    class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 z-[60]"
+    class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 z-[60] w-[344px]"
     [ngClass]="{
-      'w-[344px]': !isHome(),
-      'w-[64px]': isHome(),
       'top-[48px]': showDevToolbar(),
       'top-0': !showDevToolbar(),
     }">
@@ -18,18 +16,16 @@
     <div class="w-[64px] flex-shrink-0" data-testid="lens-switcher-column">
       <lfx-lens-switcher></lfx-lens-switcher>
     </div>
-    <!-- Nav Panel (280px) — hidden on Home page -->
-    @if (!isHome()) {
-      <div class="w-[280px] flex-shrink-0">
-        <lfx-sidebar
-          [items]="sidebarItems()"
-          [footerItems]="[]"
-          [showMeSelector]="activeLens() === 'me'"
-          [showProjectSelector]="activeLens() === 'foundation'"
-          [showOrgSelector]="activeLens() === 'org'"
-          [grayed]="activeLens() === 'org'"></lfx-sidebar>
-      </div>
-    }
+    <!-- Nav Panel (280px) -->
+    <div class="w-[280px] flex-shrink-0">
+      <lfx-sidebar
+        [items]="sidebarItems()"
+        [footerItems]="[]"
+        [showMeSelector]="activeLens() === 'me'"
+        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+        [showOrgSelector]="activeLens() === 'org'"
+        [grayed]="activeLens() === 'org'"></lfx-sidebar>
+    </div>
   </div>
 
   <!-- Sidebar - Mobile Drawer -->
@@ -59,7 +55,7 @@
           [items]="sidebarItems()"
           [footerItems]="[]"
           [showMeSelector]="activeLens() === 'me'"
-          [showProjectSelector]="activeLens() === 'foundation'"
+          [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
           [showOrgSelector]="activeLens() === 'org'"
           [grayed]="activeLens() === 'org'"
           [mobile]="true"></lfx-sidebar>
@@ -67,7 +63,7 @@
     </div>
   </p-drawer>
 
-  <!-- Project Selector Backdrop (z-[50]: visual dim only; close is handled by document:click in project-selector) -->
+  <!-- Project Selector Backdrop -->
   @if (projectSelectorOpen()) {
     <div
       class="fixed inset-0 z-[50] bg-black/30 cursor-pointer"
@@ -77,7 +73,7 @@
   }
 
   <!-- Main Content Area -->
-  <main class="flex-1 min-w-0 flex flex-col" [ngClass]="isHome() ? 'lg:ml-[64px]' : 'lg:ml-[344px]'" data-testid="main-content">
+  <main class="flex-1 min-w-0 flex flex-col lg:ml-[344px]" data-testid="main-content">
     <!-- Mobile Menu Button -->
     <div class="lg:hidden sticky z-30 bg-white border-b border-gray-200 px-5 py-3" [ngClass]="{ 'top-[48px]': showDevToolbar(), 'top-0': !showDevToolbar() }">
       <button
@@ -89,10 +85,10 @@
         <i class="fa-light fa-bars text-gray-600 text-xl"></i>
       </button>
     </div>
-    <!-- Top Bar (fixed — reserves space via pt-[48px] below) -->
-    <lfx-top-bar></lfx-top-bar>
-    <div class="flex-grow px-10 py-6 mt-[48px]" [ngClass]="{ 'max-w-[1200px] mx-auto w-full': isHome() }">
-      <router-outlet />
+    <div class="flex-grow px-10 py-6">
+      <div class="max-w-[1400px] mx-auto w-full">
+        <router-outlet />
+      </div>
     </div>
     <!-- Footer Component -->
     <lfx-footer class="md:ml-8 p-8 mt-auto"></lfx-footer>

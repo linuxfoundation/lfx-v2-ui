@@ -8,8 +8,9 @@ import { RouterModule } from '@angular/router';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ProjectSelectorComponent } from '@components/project-selector/project-selector.component';
 import { environment } from '@environments/environment';
-import { PersonaType, Project, ProjectContext, SidebarMenuItem, User } from '@lfx-one/shared/interfaces';
+import { hasFoundationLens, MULTI_FOUNDATION_PERSONAS, PersonaType, Project, ProjectContext, SidebarMenuItem, User } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
+import { AppService } from '@services/app.service';
 import { PersonaService } from '@services/persona.service';
 import { UserService } from '@services/user.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -28,6 +29,7 @@ export class SidebarComponent {
   private readonly projectService = inject(ProjectService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly personaService = inject(PersonaService);
+  private readonly appService = inject(AppService);
   private readonly userService = inject(UserService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -66,7 +68,7 @@ export class SidebarComponent {
 
   // Me lens — current user and persona
   protected readonly user = this.userService.user.asReadonly() as ReturnType<typeof this.userService.user.asReadonly>;
-  protected readonly personaLabels = computed(() => [this.getPersonaLabel(this.personaService.currentPersona())]);
+  protected readonly personaLabels = computed(() => this.getPersonaLabels(this.personaService.currentPersona()));
   protected readonly userInitials = computed(() => {
     const u: User | null = this.user();
     if (!u?.name) return '?';
@@ -83,11 +85,20 @@ export class SidebarComponent {
   // shareReplay(1) in ProjectService deduplicates within the client runtime.
   protected readonly projects: Signal<Project[]> = this.initProjects();
 
-  // TODO: DEMO - Remove this once we have proper project permissions
-  public readonly isBoardMember = computed(
-    () => this.personaService.currentPersona() === 'board-member' || this.personaService.currentPersona() === 'executive-director'
-  );
+  // Governance persona check — used in template for conditional rendering
+  public readonly isGovernancePersona = computed(() => hasFoundationLens(this.personaService.currentPersona()));
   protected readonly foundationProjects = computed(() => this.projects());
+  protected readonly activeLens = this.appService.activeLens;
+  // Single-foundation roles (board-1, ed-1) must not open the foundation dropdown
+  protected readonly isSelectorSelectable = computed(() => {
+    const persona = this.personaService.currentPersona();
+    if (this.activeLens() !== 'foundation') return true;
+    return MULTI_FOUNDATION_PERSONAS.has(persona) || persona === 'maintainer-board';
+  });
+  protected readonly projectSublabel = computed(() => {
+    const labels = this.personaLabels();
+    return this.activeLens() === 'foundation' ? (labels[1] ?? labels[0] ?? '') : (labels[0] ?? '');
+  });
 
   protected readonly selectedProject = computed(() => {
     // First check if a specific project is selected (child project)
@@ -113,7 +124,7 @@ export class SidebarComponent {
     return !project.parent_uid || project.parent_uid === '' || !validProjectIds.has(project.parent_uid);
   });
 
-  protected readonly insightsCardType = computed(() => (this.isFoundationSelected() ? 'Foundation' : 'Project'));
+  protected readonly insightsCardType = computed(() => (this.appService.activeLens() === 'foundation' ? 'Foundation' : 'Project'));
 
   // Map app slugs to LFX Insights collection slugs where they differ
   private readonly insightsSlugMap: Record<string, string> = {
@@ -245,15 +256,25 @@ export class SidebarComponent {
    * A URL is considered external if it starts with http:// or https:// and does NOT start with the home URL
    * Relative URLs (starting with /) are always internal
    */
-  private getPersonaLabel(persona: PersonaType): string {
-    const labels: Record<PersonaType, string> = {
-      'core-developer': 'Core Developer',
-      maintainer: 'Maintainer',
-      projects: 'Projects',
-      'board-member': 'Board Member',
-      'executive-director': 'Executive Director',
+  private getPersonaLabels(persona: PersonaType): string[] {
+    const labels: Record<PersonaType, string[]> = {
+      // V2 personas
+      contributor: ['Contributor'],
+      maintainer: ['Maintainer'],
+      'maintainer-admin': ['Maintainer Admin'],
+      'board-1': ['Board Member'],
+      'board-multi': ['Board Member'],
+      'ed-1': ['Executive Director'],
+      'ed-multi': ['Executive Director'],
+      'maintainer-board': ['Maintainer', 'Board Member'],
+      'new-contributor': ['Contributor'],
+      // Legacy personas
+      'core-developer': ['Core Developer'],
+      projects: ['Projects'],
+      'board-member': ['Board Member'],
+      'executive-director': ['Executive Director'],
     };
-    return labels[persona] ?? persona;
+    return labels[persona] ?? [persona];
   }
 
   private isExternalUrl(url: string): boolean {
@@ -275,3 +296,5 @@ export class SidebarComponent {
     return false;
   }
 }
+
+
