@@ -3,18 +3,11 @@
 
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
-import { isBoardScopedPersona, isProjectScopedPersona, PersonaType, VALID_PERSONAS } from '@lfx-one/shared/interfaces';
+import { isBoardScopedPersona, isProjectScopedPersona, PersistedPersonaState, PersonaType, VALID_PERSONAS } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
 import { CookieRegistryService } from './cookie-registry.service';
 import { ProjectContextService } from './project-context.service';
-
-interface PersistedPersonaState {
-  primary: PersonaType;
-  all: PersonaType[];
-  multiProject?: boolean;
-  multiFoundation?: boolean;
-}
 
 @Injectable({
   providedIn: 'root',

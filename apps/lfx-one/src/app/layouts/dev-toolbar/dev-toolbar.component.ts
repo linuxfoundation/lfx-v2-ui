@@ -7,65 +7,14 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { NavigationEnd, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
-import { ACCOUNTS } from '@lfx-one/shared/constants';
-import { Account, isBoardScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
+import { ACCOUNTS, DEV_PERSONA_PRESETS } from '@lfx-one/shared/constants';
+import { Account, DevPersonaPreset, isBoardScopedPersona } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { filter, map, startWith } from 'rxjs';
-
-interface DevPersonaPreset {
-  label: string;
-  value: string;
-  personas: PersonaType[];
-  primary: PersonaType;
-  multiProject?: boolean;
-  multiFoundation?: boolean;
-}
-
-const DEV_PERSONA_PRESETS: DevPersonaPreset[] = [
-  // Single-role presets
-  { label: 'Contributor', value: 'contributor', personas: ['core-developer'], primary: 'core-developer' },
-  {
-    label: 'Contributor + Maint (multi proj)',
-    value: 'contributor-maintainer-multi',
-    personas: ['core-developer', 'maintainer'],
-    primary: 'maintainer',
-    multiProject: true,
-  },
-  { label: 'Maint (1 proj)', value: 'maintainer-single', personas: ['maintainer'], primary: 'maintainer' },
-  { label: 'Maint (multi proj)', value: 'maintainer-multi', personas: ['maintainer'], primary: 'maintainer', multiProject: true },
-  { label: 'Board (1 fdn)', value: 'board-single', personas: ['board-member'], primary: 'board-member' },
-  { label: 'Board (multi fdn)', value: 'board-multi', personas: ['board-member'], primary: 'board-member', multiFoundation: true },
-  { label: 'ED (1 fdn)', value: 'ed-single', personas: ['executive-director'], primary: 'executive-director' },
-  { label: 'ED (multi fdn)', value: 'ed-multi', personas: ['executive-director'], primary: 'executive-director', multiFoundation: true },
-
-  // Multi-role: Maintainer + Board
-  { label: 'Maint(1) + Board(1)', value: 'maint1-board1', personas: ['maintainer', 'board-member'], primary: 'board-member' },
-  { label: 'Maint(1) + Board(multi)', value: 'maint1-board-multi', personas: ['maintainer', 'board-member'], primary: 'board-member', multiFoundation: true },
-  { label: 'Maint(multi) + Board(1)', value: 'maint-multi-board1', personas: ['maintainer', 'board-member'], primary: 'board-member', multiProject: true },
-  {
-    label: 'Maint(multi) + Board(multi)',
-    value: 'maint-multi-board-multi',
-    personas: ['maintainer', 'board-member'],
-    primary: 'board-member',
-    multiProject: true,
-    multiFoundation: true,
-  },
-
-  // Multi-role: Maintainer + ED
-  { label: 'Maint(1) + ED(1)', value: 'maint1-ed1', personas: ['maintainer', 'executive-director'], primary: 'executive-director' },
-  {
-    label: 'Maint(multi) + ED(multi)',
-    value: 'maint-multi-ed-multi',
-    personas: ['maintainer', 'executive-director'],
-    primary: 'executive-director',
-    multiProject: true,
-    multiFoundation: true,
-  },
-];
 
 @Component({
   selector: 'lfx-dev-toolbar',

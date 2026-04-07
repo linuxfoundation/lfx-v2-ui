@@ -27,6 +27,40 @@ export function isProjectScopedPersona(persona: PersonaType): boolean {
 }
 
 /**
+ * Persisted persona state for cookie storage
+ * @description Structure for serializing/deserializing persona selection across page reloads
+ */
+export interface PersistedPersonaState {
+  /** Primary active persona */
+  primary: PersonaType;
+  /** All active persona types */
+  all: PersonaType[];
+  /** Whether the user has access to multiple projects */
+  multiProject?: boolean;
+  /** Whether the user has access to multiple foundations */
+  multiFoundation?: boolean;
+}
+
+/**
+ * Dev toolbar persona preset configuration
+ * @description Defines a persona combination for testing different role/access scenarios
+ */
+export interface DevPersonaPreset {
+  /** Display label in the dropdown */
+  label: string;
+  /** Unique preset identifier */
+  value: string;
+  /** All persona types active in this preset */
+  personas: PersonaType[];
+  /** Primary persona type (determines lens behavior) */
+  primary: PersonaType;
+  /** Whether this preset simulates multiple project access */
+  multiProject?: boolean;
+  /** Whether this preset simulates multiple foundation access */
+  multiFoundation?: boolean;
+}
+
+/**
  * Persona option configuration
  * @description Structure for persona selection dropdown options
  */
