@@ -255,7 +255,7 @@ export class MarketingOverviewComponent {
         value: data.engagedCommunity.totalMembers > 0 ? formatNumber(data.engagedCommunity.totalMembers) : undefined,
         changePercentage:
           data.engagedCommunity.changePercentage !== 0
-            ? (data.engagedCommunity.changePercentage > 0 ? '↑ +' : '↓ ') + data.engagedCommunity.changePercentage + '%'
+            ? (data.engagedCommunity.changePercentage > 0 ? '↑ +' : '↓ ') + Math.abs(data.engagedCommunity.changePercentage) + '%'
             : undefined,
         trend: data.engagedCommunity.trend,
         subtitle: 'Community + Working Groups + Certified',
