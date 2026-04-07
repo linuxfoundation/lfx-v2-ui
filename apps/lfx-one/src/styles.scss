@@ -85,15 +85,6 @@
   color: inherit;
 }
 
-/* Affiliation timeline dialog: make the component host element flex so the inner wrapper can take full height */
-.affiliation-timeline-dialog-top .p-dialog-content lfx-affiliation-timeline-dialog {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-
 /* Custom font family theme variables */
 @theme {
   /* Inter as the primary sans-serif font */
