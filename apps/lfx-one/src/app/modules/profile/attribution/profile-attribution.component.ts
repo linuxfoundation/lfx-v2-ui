@@ -14,7 +14,7 @@ import { ProfileWorkExperienceComponent } from '../work-experience/profile-work-
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileAttributionComponent {
-  private readonly workExperience = viewChild(ProfileWorkExperienceComponent);
+  public readonly workExperience = viewChild(ProfileWorkExperienceComponent);
   private readonly affiliations = viewChild(ProfileAffiliationsComponent);
 
   public onAddWorkExperience(): void {

@@ -140,6 +140,9 @@ export class ProfileAffiliationsComponent {
       modal: true,
       closable: true,
       dismissableMask: false,
+      styleClass: 'affiliation-timeline-dialog-top',
+      style: { 'max-height': 'calc(100vh - 2rem)', display: 'flex', 'flex-direction': 'column' },
+      contentStyle: { display: 'flex', 'flex-direction': 'column', flex: '1 1 auto', 'min-height': '0', overflow: 'hidden' },
       data,
     }) as DynamicDialogRef;
 
@@ -183,6 +186,9 @@ export class ProfileAffiliationsComponent {
       modal: true,
       closable: true,
       dismissableMask: false,
+      styleClass: 'affiliation-timeline-dialog-top',
+      style: { 'max-height': 'calc(100vh - 2rem)', display: 'flex', 'flex-direction': 'column' },
+      contentStyle: { display: 'flex', 'flex-direction': 'column', flex: '1 1 auto', 'min-height': '0', overflow: 'hidden' },
       data,
     }) as DynamicDialogRef;
 
