@@ -268,18 +268,12 @@ export class ProfileLayoutComponent {
       combineLatest([
         this.userService.getWorkExperiences().pipe(
           map((entries) => entries.some((e) => e.needsReview)),
-          catchError((err) => {
-            console.warn('Failed to load work experiences for tab notification', err);
-            return of(false);
-          }),
+          catchError(() => of(false)),
           startWith(false)
         ),
         this.userService.getIdentities().pipe(
           map((identities) => identities.some((id) => id.platform !== 'lfid' && id.displayState !== 'hidden' && id.displayState !== 'verified')),
-          catchError((err) => {
-            console.warn('Failed to load identities for tab notification', err);
-            return of(false);
-          }),
+          catchError(() => of(false)),
           startWith(false)
         ),
       ]).pipe(

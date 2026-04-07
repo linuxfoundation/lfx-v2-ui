@@ -79,10 +79,10 @@
   border-bottom: 1px solid #f1f5f9; /* slate-100 */
 }
 
-.p-menu .text-red-500 .p-menu-item-content,
-.p-menu .text-red-500 .p-menu-item-label,
-.p-menu .text-red-500 .p-menu-item-icon {
-  color: inherit !important;
+.p-menu .p-menu-item.text-red-500 .p-menu-item-content,
+.p-menu .p-menu-item.text-red-500 .p-menu-item-label,
+.p-menu .p-menu-item.text-red-500 .p-menu-item-icon {
+  color: inherit;
 }
 
 /* Affiliation timeline dialog: make the component host element flex so the inner wrapper can take full height */
