@@ -3,7 +3,7 @@
 
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
-import { isBoardScopedPersona, isProjectScopedPersona, PersonaType } from '@lfx-one/shared/interfaces';
+import { isBoardScopedPersona, isProjectScopedPersona, PersonaType, VALID_PERSONAS } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
 import { CookieRegistryService } from './cookie-registry.service';
@@ -97,7 +97,7 @@ export class PersonaService {
       const stored = this.cookieService.get(PERSONA_COOKIE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as PersistedPersonaState;
-        if (parsed.primary && parsed.all?.length > 0) {
+        if (parsed.primary && VALID_PERSONAS.has(parsed.primary) && parsed.all?.length > 0 && parsed.all.every((p) => VALID_PERSONAS.has(p))) {
           return parsed;
         }
       }

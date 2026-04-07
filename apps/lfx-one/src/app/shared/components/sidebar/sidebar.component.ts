@@ -156,16 +156,19 @@ export class SidebarComponent {
   private initSelectorProjects(): Signal<Project[]> {
     return computed(() => {
       const all = this.projects();
+      if (all.length === 0) {
+        return all;
+      }
+
       const activeLens = this.lensService.activeLens();
 
       // Determine if the current lens has multi-access
-      const hasMultiAccess =
-        activeLens === 'foundation' ? this.personaService.multiFoundation() : this.personaService.multiProject();
+      const hasMultiAccess = activeLens === 'foundation' ? this.personaService.multiFoundation() : this.personaService.multiProject();
 
       if (!hasMultiAccess) {
         // Single access — pass only the selected project for read-only display
         const selected = this.selectedProject();
-        return selected ? [selected] : all.slice(0, 1);
+        return selected ? [selected] : [all[0]];
       }
 
       return all;

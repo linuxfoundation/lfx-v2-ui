@@ -7,6 +7,9 @@
  */
 export type PersonaType = 'core-developer' | 'maintainer' | 'projects' | 'board-member' | 'executive-director';
 
+/** All valid persona type values — used for runtime validation (e.g., cookie deserialization) */
+export const VALID_PERSONAS: ReadonlySet<string> = new Set<string>(['core-developer', 'maintainer', 'projects', 'board-member', 'executive-director']);
+
 /** Board-scoped personas that see foundation-level dashboards */
 export const BOARD_SCOPED_PERSONAS: ReadonlySet<PersonaType> = new Set(['board-member', 'executive-director']);
 
