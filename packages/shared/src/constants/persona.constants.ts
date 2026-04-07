@@ -7,28 +7,50 @@ import { DevPersonaPreset, PersonaOption } from '../interfaces';
 export const PERSONA_COOKIE_KEY = 'lfx-active-persona-preset';
 
 /**
- * Persona options available for user selection
+ * Persona options available for user selection in the dev toolbar
  */
 export const PERSONA_OPTIONS: PersonaOption[] = [
-  // {
-  //   value: 'contributor',
-  //   label: 'Contributor',
-  //   description: 'New streamlined developer experience',
-  // },
+  // ── Project personas ──────────────────────────────────────────────────────
+  {
+    value: 'contributor',
+    label: 'Contributor',
+    description: 'General contributor to a project',
+  },
   {
     value: 'maintainer',
     label: 'Maintainer',
-    description: 'Project maintainer focused experience',
+    description: 'Project maintainer (1 project)',
   },
   {
-    value: 'board-member',
-    label: 'Board Member',
-    description: 'Board member focused experience',
+    value: 'maintainer-admin',
+    label: 'Maint+Admin',
+    description: 'Maintainer with governance access (votes, surveys, permissions)',
   },
   {
-    value: 'executive-director',
-    label: 'Executive Director',
-    description: 'Executive director focused experience',
+    value: 'maintainer-board',
+    label: 'Maint+Board',
+    description: 'Maintainer who is also a board member — sees both Project and Foundation lenses',
+  },
+  // ── Governance personas ───────────────────────────────────────────────────
+  {
+    value: 'board-1',
+    label: 'Board (1)',
+    description: 'Board member scoped to a single foundation',
+  },
+  {
+    value: 'board-multi',
+    label: 'Board (multi)',
+    description: 'Board member across multiple foundations',
+  },
+  {
+    value: 'ed-1',
+    label: 'ED (1)',
+    description: 'Executive director scoped to a single foundation',
+  },
+  {
+    value: 'ed-multi',
+    label: 'ED (multi)',
+    description: 'Executive director across multiple foundations',
   },
 ];
 
