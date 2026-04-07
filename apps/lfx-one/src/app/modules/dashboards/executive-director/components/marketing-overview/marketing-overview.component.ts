@@ -275,15 +275,12 @@ export class MarketingOverviewComponent {
   private initFilteredCards(): Signal<DashboardMetricCard[]> {
     return computed(() => {
       const filter = this.selectedFilter();
-      const allCards = [
-        ...this.northStarCards().map((card) => ({ card, category: 'northStar' })),
-        ...this.marketingCards().map((card) => ({ card, category: 'marketing' })),
-      ];
+      const allCards = [...this.northStarCards(), ...this.marketingCards()];
 
       if (filter === 'all') {
-        return allCards.map((item) => item.card);
+        return allCards;
       }
-      return allCards.filter((item) => item.category === filter).map((item) => item.card);
+      return allCards.filter((card) => card.category === filter);
     });
   }
 
