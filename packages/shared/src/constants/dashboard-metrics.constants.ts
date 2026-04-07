@@ -6,7 +6,7 @@ import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
 
-import type { DashboardMetricCard } from '../interfaces';
+import type { DashboardMetricCard, FilterPillOption } from '../interfaces';
 // ============================================
 // Marketing Action Icon Map
 // ============================================
@@ -225,6 +225,15 @@ export const MARKETING_OVERVIEW_METRICS: DashboardMetricCard[] = [
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
     drawerType: DashboardDrawerType.MarketingSocialMedia,
   },
+];
+
+/**
+ * Filter pill options for the marketing overview section
+ */
+export const MARKETING_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'northStar', label: 'North Star' },
+  { id: 'marketing', label: 'Marketing' },
 ];
 
 // ============================================

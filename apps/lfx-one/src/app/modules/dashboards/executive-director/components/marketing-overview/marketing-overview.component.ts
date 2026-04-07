@@ -5,16 +5,16 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, 
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 
-import { MARKETING_OVERVIEW_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
+import { MARKETING_FILTER_OPTIONS, MARKETING_OVERVIEW_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
 import { lfxColors } from '@lfx-one/shared/constants';
 import {
   DashboardDrawerType,
   DashboardMetricCard,
   EmailCtrResponse,
   EngagedCommunitySizeResponse,
-  FilterPillOption,
   FlywheelConversionResponse,
   MemberAcquisitionResponse,
   MemberRetentionResponse,
@@ -26,7 +26,6 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 
-import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
 
@@ -70,22 +69,16 @@ export class MarketingOverviewComponent {
   protected readonly marketingDataLoading = signal(true);
   private readonly browserReady = signal(false);
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
+  public readonly selectedFilter = signal<string>('all');
 
   // === Observables ===
   private readonly selectedFoundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(
     map((foundation) => ({ slug: foundation?.slug || '', name: foundation?.name || '' }))
   );
 
-  // === Filter ===
-  public readonly selectedFilter = signal<string>('all');
-  public readonly filterOptions: FilterPillOption[] = [
-    { id: 'all', label: 'All' },
-    { id: 'northStar', label: 'North Star' },
-    { id: 'marketing', label: 'Marketing' },
-  ];
-
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
+  protected readonly filterOptions = MARKETING_FILTER_OPTIONS;
 
   // === Computed Signals ===
   protected readonly marketingInsights: Signal<string[]> = this.initMarketingInsights();
@@ -102,7 +95,7 @@ export class MarketingOverviewComponent {
   protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
   protected readonly northStarCards: Signal<DashboardMetricCard[]> = this.initNorthStarCards();
   protected readonly filteredCards: Signal<DashboardMetricCard[]> = this.initFilteredCards();
-  protected readonly showInsightsCard = computed(() => this.selectedFilter() === 'all' || this.selectedFilter() === 'marketing');
+  protected readonly showInsightsCard: Signal<boolean> = this.initShowInsightsCard();
   protected readonly formatNumber = formatNumber;
   protected readonly noTooltipChartOptions = NO_TOOLTIP_CHART_OPTIONS;
 
@@ -282,6 +275,10 @@ export class MarketingOverviewComponent {
       }
       return allCards.filter((card) => card.category === filter);
     });
+  }
+
+  private initShowInsightsCard(): Signal<boolean> {
+    return computed(() => this.selectedFilter() === 'all' || this.selectedFilter() === 'marketing');
   }
 
   private initMarketingData(): Signal<{

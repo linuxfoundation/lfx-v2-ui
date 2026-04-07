@@ -202,6 +202,7 @@
           <h3 class="text-sm font-semibold text-gray-900">Followers by Platform</h3>
           <p class="text-sm text-gray-600">Distribution of followers across social media platforms</p>
         </div>
+        <!-- Show platform breakdown chart only when multiple platforms exist (single bar isn't useful for comparison) -->
         @if (drawerData().platforms.length > 1) {
           <div class="h-[240px]" data-testid="social-media-drawer-platform-chart">
             <lfx-chart type="bar" [data]="platformChartData()" [options]="platformChartOptions" height="100%"></lfx-chart>
