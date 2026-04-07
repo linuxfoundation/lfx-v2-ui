@@ -15,6 +15,14 @@ export function isBoardScopedPersona(persona: PersonaType): boolean {
   return BOARD_SCOPED_PERSONAS.has(persona);
 }
 
+/** Project-scoped personas that see project-level dashboards */
+export const PROJECT_SCOPED_PERSONAS: ReadonlySet<PersonaType> = new Set(['maintainer', 'core-developer', 'projects']);
+
+/** Check if a persona value is project-scoped (sees project-level dashboards) */
+export function isProjectScopedPersona(persona: PersonaType): boolean {
+  return PROJECT_SCOPED_PERSONAS.has(persona);
+}
+
 /**
  * Persona option configuration
  * @description Structure for persona selection dropdown options

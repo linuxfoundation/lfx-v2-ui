@@ -3,6 +3,9 @@
 
 import { PersonaOption } from '../interfaces';
 
+/** Cookie key for persisting the active persona preset */
+export const PERSONA_COOKIE_KEY = 'lfx-active-persona-preset';
+
 /**
  * Persona options available for user selection
  */
