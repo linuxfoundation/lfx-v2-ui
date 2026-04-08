@@ -34,7 +34,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Pass a 2-hour performance-based online exam that tests skills and knowledge of Kubernetes cluster administration, including installation, configuration, networking, storage, troubleshooting, and security.',
     category: 'certification',
-    verifyUrl: 'https://www.credly.com/badges/a3f8b2c1-4d92-4e7b-8c3a-1f5e9d0b2a47/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/certified-kubernetes-administrator',
     isVerified: true,
   },
@@ -51,7 +51,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Pass a 2-hour performance-based exam demonstrating ability to perform common Linux system administration tasks including user management, file permissions, networking, storage, and service configuration.',
     category: 'certification',
-    verifyUrl: 'https://www.credly.com/badges/b7e1d4a9-2f83-4c5b-9d1e-3a8f0c7b4e62/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/linux-foundation-certified-sysadmin',
     isVerified: true,
   },
@@ -68,7 +68,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Pass a 2-hour online exam covering cluster setup and hardening, system hardening, microservice vulnerabilities, supply chain security, and runtime monitoring. Prerequisite: active CKA certification.',
     category: 'certification',
-    verifyUrl: 'https://www.credly.com/badges/c2a5e8f3-6b74-4d1a-8e2c-5f9b0d3a7c85/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/certified-kubernetes-security-specialist',
   },
   // ── Maintainer ──────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Nominated and approved by existing project maintainers after demonstrating consistent, high-quality code contributions, active participation in code reviews, and leadership in project discussions over a sustained period.',
     category: 'maintainer',
-    verifyUrl: 'https://www.credly.com/badges/d9c3f7a1-5e28-4b6d-a3c9-7f2e0b8d1e43/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/open-source-project-maintainer',
     isVerified: true,
   },
@@ -103,7 +103,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Submit a talk or workshop proposal through the official CFP process, receive acceptance by the KubeCon program committee, and successfully deliver the session at the event.',
     category: 'speaking',
-    verifyUrl: 'https://www.credly.com/badges/e4b8d2f6-3a71-4c9e-b5d4-8a1c0f7e3b29/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/kubecon-cloudnativecon-speaker',
   },
   {
@@ -118,7 +118,7 @@ const MOCK_BADGES: Badge[] = [
     topics: ['Open Source', 'Linux', 'Public Speaking', 'Community', 'Technology'],
     earningCriteria: 'Submit a session proposal through the CFP process and be selected by the Open Source Summit program committee to present at the event.',
     category: 'speaking',
-    verifyUrl: 'https://www.credly.com/badges/f1d7c3e9-4b82-4a5f-c8e1-6d3b9a0f2c74/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/open-source-summit-speaker',
   },
   // ── Event Participation ─────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Register and attend KubeCon + CloudNativeCon as an in-person or virtual participant. The badge is automatically issued upon verified event registration and check-in.',
     category: 'event-participation',
-    verifyUrl: 'https://www.credly.com/badges/07e5f9a4-8c63-4b2d-d6f0-1e9a3c8b5d71/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/kubecon-cloudnativecon-attendee',
   },
   // ── Project Contribution ────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ const MOCK_BADGES: Badge[] = [
     topics: ['Open Source', 'Cloud Native', 'Contributions', 'GitHub', 'CNCF'],
     earningCriteria: 'Make verified contributions to one or more CNCF-graduated or incubating projects, verified through GitHub contribution history.',
     category: 'project-contribution',
-    verifyUrl: 'https://www.credly.com/badges/18f6a0b7-9d54-4e3c-e7b2-2f0c4d9a8e36/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/cncf-individual-contributor',
   },
   // ── Program Committee ───────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ const MOCK_BADGES: Badge[] = [
     earningCriteria:
       'Be nominated and selected to serve as a program committee member for the Open Source Summit. Responsibilities include reviewing CFP submissions, scoring proposals, and participating in selection discussions.',
     category: 'program-committee',
-    verifyUrl: 'https://www.credly.com/badges/29a7b1c8-0e65-4f4d-f8c3-3a1d5e0b9f47/public_url',
+    verifyUrl: 'https://training.linuxfoundation.org/certification/verify/',
     credlyBadgeUrl: 'https://www.credly.com/org/the-linux-foundation/badge/program-committee-member-open-source-summit',
   },
 ];
