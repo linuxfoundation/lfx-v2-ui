@@ -43,6 +43,7 @@ export class OrganizationService {
    * @returns Observable of the resolved CDP organization
    */
   public resolveOrganization(name: string, domain: string, logo?: string): Observable<CdpOrganization> {
+    // Drop empty-string logos — they're not meaningful URLs
     return this.http.post<CdpOrganization>(`${this.baseUrl}/resolve`, { name, domain, ...(logo ? { logo } : {}) });
   }
 }

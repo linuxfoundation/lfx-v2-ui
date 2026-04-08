@@ -78,8 +78,8 @@ export class OrganizationController {
         return;
       }
 
-      if (logo !== undefined && typeof logo !== 'string') {
-        const validationError = ServiceValidationError.forField('logo', 'Organization logo must be a string', {
+      if (logo !== undefined && (typeof logo !== 'string' || !logo.startsWith('https://'))) {
+        const validationError = ServiceValidationError.forField('logo', 'Organization logo must be an https URL', {
           operation: 'resolve_organization',
           service: 'organization_controller',
           path: req.path,
