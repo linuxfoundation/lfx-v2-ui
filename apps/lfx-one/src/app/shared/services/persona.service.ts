@@ -60,7 +60,19 @@ export class PersonaService {
     this.hasProjectRole = this.initHasProjectRole();
 
     // Refresh persona data from API after hydration (browser only)
-    afterNextRender(() => this.refreshFromApi());
+    // Skip if cookie was loaded — SSR already set fresh data; avoids signal flash
+    afterNextRender(() => {
+      if (!stored) {
+        this.refreshFromApi();
+      }
+    });
+  }
+
+  /**
+   * Switch the primary persona while preserving current multi-persona state
+   */
+  public setPersona(persona: PersonaType): void {
+    this.setPersonas(persona, this.allPersonas(), this.multiProject(), this.multiFoundation());
   }
 
   /**
@@ -105,16 +117,7 @@ export class PersonaService {
         // Update persona state if API returned data — reuse setPersonas() for
         // consistent side effects (board-scoped project clearing, cookie persistence)
         if (response.personas.length > 0) {
-          const primary = response.personas[0];
-          const uniqueProjectUids = new Set(
-            Object.values(response.personaProjects)
-              .flat()
-              .map((p) => p?.projectUid)
-              .filter(Boolean)
-          );
-          const multiProject = uniqueProjectUids.size > 1;
-
-          this.setPersonas(primary, response.personas, multiProject, response.multiFoundation);
+          this.setPersonas(response.personas[0], response.personas, response.multiProject, response.multiFoundation);
         }
       });
   }

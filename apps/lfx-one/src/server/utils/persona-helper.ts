@@ -10,7 +10,9 @@ import { logger } from '../services/logger.service';
 import { PersonaDetectionService } from '../services/persona-detection.service';
 
 const DEFAULT_PERSONA: PersonaType = 'contributor';
-const personaDetectionService = new PersonaDetectionService();
+
+/** Shared singleton — reused by both SSR helper and persona controller */
+export const personaDetectionService = new PersonaDetectionService();
 
 /**
  * Resolve persona for SSR rendering using hybrid cookie-gated strategy:
@@ -72,13 +74,7 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
     const cookieState: PersistedPersonaState = {
       primary: persona,
       all: personas,
-      multiProject:
-        new Set(
-          Object.values(personaResult.personaProjects)
-            .flat()
-            .map((p) => p?.projectUid)
-            .filter(Boolean)
-        ).size > 1,
+      multiProject: personaResult.multiProject,
       multiFoundation: personaResult.multiFoundation,
     };
     res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {

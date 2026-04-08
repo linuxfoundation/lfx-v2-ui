@@ -23,8 +23,8 @@ const PERSONA_PRIORITY: PersonaType[] = ['board-member', 'executive-director', '
  * and enriching results with project data for UI consumption
  */
 export class PersonaDetectionService {
-  private natsService: NatsService;
-  private projectService: ProjectService;
+  private readonly natsService: NatsService;
+  private readonly projectService: ProjectService;
 
   public constructor() {
     this.natsService = new NatsService();
@@ -57,6 +57,7 @@ export class PersonaDetectionService {
         personaProjects: {},
         personas: ['contributor'],
         projects: [],
+        multiProject: false,
         multiFoundation: false,
         error: detectionResponse.error.message,
       };
@@ -69,6 +70,7 @@ export class PersonaDetectionService {
         personaProjects: {},
         personas: ['contributor'],
         projects: [],
+        multiProject: false,
         multiFoundation: false,
         error: null,
       };
@@ -83,8 +85,10 @@ export class PersonaDetectionService {
     // Collect all unique personas sorted by priority
     const personas = this.collectUniquePersonas(enrichedProjects);
 
-    // Determine multiFoundation: count distinct foundation roots
-    // A project with no parent_uid IS a foundation; otherwise its parent_uid is the foundation
+    // Compute multi-access flags from enriched projects
+    const uniqueProjectUids = new Set(enrichedProjects.map((p) => p.projectUid));
+    const multiProject = uniqueProjectUids.size > 1;
+
     const foundationUids = new Set(enrichedProjects.map((p) => p.parentProjectUid || p.projectUid));
     const multiFoundation = foundationUids.size > 1;
 
@@ -99,6 +103,7 @@ export class PersonaDetectionService {
       personaProjects,
       personas,
       projects: enrichedProjects,
+      multiProject,
       multiFoundation,
       error: null,
     };

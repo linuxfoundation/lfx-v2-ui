@@ -76,6 +76,8 @@ export interface PersonaApiResponse {
   personas: PersonaType[];
   /** Project-centric view with full detection details */
   projects: EnrichedPersonaProject[];
+  /** Whether the user has access to multiple distinct projects */
+  multiProject: boolean;
   /** Whether the user has access to projects under multiple foundations */
   multiFoundation: boolean;
   /** Error message if the persona detection failed */
