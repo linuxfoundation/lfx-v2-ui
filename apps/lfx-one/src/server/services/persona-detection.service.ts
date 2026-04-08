@@ -57,6 +57,7 @@ export class PersonaDetectionService {
         personaProjects: {},
         personas: ['contributor'],
         projects: [],
+        multiFoundation: false,
         error: detectionResponse.error.message,
       };
     }
@@ -68,6 +69,7 @@ export class PersonaDetectionService {
         personaProjects: {},
         personas: ['contributor'],
         projects: [],
+        multiFoundation: false,
         error: null,
       };
     }
@@ -81,16 +83,23 @@ export class PersonaDetectionService {
     // Collect all unique personas sorted by priority
     const personas = this.collectUniquePersonas(enrichedProjects);
 
+    // Determine multiFoundation: count distinct foundation roots
+    // A project with no parent_uid IS a foundation; otherwise its parent_uid is the foundation
+    const foundationUids = new Set(enrichedProjects.map((p) => p.parentProjectUid || p.projectUid));
+    const multiFoundation = foundationUids.size > 1;
+
     logger.debug(req, 'get_personas', 'Persona detection complete', {
       project_count: enrichedProjects.length,
       persona_count: personas.length,
       personas,
+      foundation_count: foundationUids.size,
     });
 
     return {
       personaProjects,
       personas,
       projects: enrichedProjects,
+      multiFoundation,
       error: null,
     };
   }
@@ -105,7 +114,19 @@ export class PersonaDetectionService {
       const response = await this.natsService.request(NatsSubjects.PERSONAS_GET, codec.encode(payload), { timeout: 5000 });
       const decoded = codec.decode(response.data);
 
-      return JSON.parse(decoded) as PersonaDetectionResponse;
+      const parsed = JSON.parse(decoded);
+
+      // Validate response shape — normalize malformed fields to prevent downstream crashes
+      return {
+        projects: Array.isArray(parsed?.projects)
+          ? parsed.projects.map((p: Record<string, unknown>) => ({
+              project_uid: p['project_uid'] || '',
+              project_slug: p['project_slug'] || '',
+              detections: Array.isArray(p['detections']) ? p['detections'] : [],
+            }))
+          : [],
+        error: parsed?.error ?? null,
+      } as PersonaDetectionResponse;
     } catch (error) {
       logger.warning(req, 'fetch_persona_detections', 'NATS persona detection failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -122,12 +143,14 @@ export class PersonaDetectionService {
     const results = await Promise.allSettled(
       response.projects.map(async (project) => {
         let projectName: string | null = null;
+        let parentProjectUid: string | null = null;
 
         try {
           const projectData = await this.projectService.getProjectById(req, project.project_uid, false);
           projectName = projectData?.name || null;
+          parentProjectUid = projectData?.parent_uid || null;
         } catch {
-          logger.debug(req, 'enrich_project_name', 'Failed to fetch project name, using null', {
+          logger.debug(req, 'enrich_project_name', 'Failed to fetch project data, using null', {
             project_uid: project.project_uid,
           });
         }
@@ -138,6 +161,7 @@ export class PersonaDetectionService {
           projectUid: project.project_uid,
           projectSlug: project.project_slug,
           projectName,
+          parentProjectUid,
           detections: project.detections,
           personas,
         } as EnrichedPersonaProject;

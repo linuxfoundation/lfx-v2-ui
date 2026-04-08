@@ -1078,7 +1078,7 @@ export class RecentProgressComponent {
         return allCards.filter((item) => item.category === filter).map((item) => item.card);
       }
 
-      // Core developer - no filtering, just materialize card values
+      // Contributor - no filtering, just materialize card values
       return [this.activeWeeksStreakCard(), this.pullRequestsMergedCard(), this.codeCommitsCard()];
     });
   }

@@ -3,6 +3,7 @@
 
 import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
 import type { PersistedPersonaState, PersonaType, SsrPersonaResult } from '@lfx-one/shared/interfaces';
+import { VALID_PERSONAS } from '@lfx-one/shared/interfaces';
 import { Request, Response } from 'express';
 
 import { logger } from '../services/logger.service';
@@ -42,7 +43,7 @@ function resolveFromCookie(req: Request, cookieHeader: string): SsrPersonaResult
         return { persona: DEFAULT_PERSONA, personas: [DEFAULT_PERSONA] };
       }
       const parsed = JSON.parse(decoded) as PersistedPersonaState;
-      if (parsed.primary && parsed.all?.length > 0) {
+      if (parsed.primary && VALID_PERSONAS.has(parsed.primary) && parsed.all?.length > 0 && parsed.all.every((p) => VALID_PERSONAS.has(p))) {
         return {
           persona: parsed.primary,
           personas: parsed.all,
@@ -78,7 +79,7 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
             .map((p) => p?.projectUid)
             .filter(Boolean)
         ).size > 1,
-      multiFoundation: false,
+      multiFoundation: personaResult.multiFoundation,
     };
     res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
       maxAge: 30 * 24 * 60 * 60 * 1000,

@@ -51,6 +51,8 @@ export interface EnrichedPersonaProject {
   projectUid: string;
   projectSlug: string;
   projectName: string | null;
+  /** Parent project UID (null if this is a top-level foundation) */
+  parentProjectUid: string | null;
   detections: PersonaDetection[];
   personas: PersonaType[];
 }
@@ -74,6 +76,8 @@ export interface PersonaApiResponse {
   personas: PersonaType[];
   /** Project-centric view with full detection details */
   projects: EnrichedPersonaProject[];
+  /** Whether the user has access to projects under multiple foundations */
+  multiFoundation: boolean;
   /** Error message if the persona detection failed */
   error: string | null;
 }

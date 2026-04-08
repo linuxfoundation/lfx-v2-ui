@@ -102,7 +102,8 @@ export class PersonaService {
         console.info('[PersonaService] Persona detection response:', response);
         this.personaProjects.set(response.personaProjects);
 
-        // Update persona state if API returned data
+        // Update persona state if API returned data — reuse setPersonas() for
+        // consistent side effects (board-scoped project clearing, cookie persistence)
         if (response.personas.length > 0) {
           const primary = response.personas[0];
           const uniqueProjectUids = new Set(
@@ -113,16 +114,7 @@ export class PersonaService {
           );
           const multiProject = uniqueProjectUids.size > 1;
 
-          this.currentPersona.set(primary);
-          this.allPersonas.set(response.personas);
-          this.multiProject.set(multiProject);
-
-          this.persistToCookie({
-            primary,
-            all: response.personas,
-            multiProject,
-            multiFoundation: this.multiFoundation(),
-          });
+          this.setPersonas(primary, response.personas, multiProject, response.multiFoundation);
         }
       });
   }
