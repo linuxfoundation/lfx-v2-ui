@@ -9,6 +9,7 @@ import { logger } from '../services/logger.service';
 import { PersonaDetectionService } from '../services/persona-detection.service';
 
 const DEFAULT_PERSONA: PersonaType = 'contributor';
+const personaDetectionService = new PersonaDetectionService();
 
 /**
  * Resolve persona for SSR rendering using hybrid cookie-gated strategy:
@@ -33,8 +34,14 @@ export async function resolvePersonaForSsr(req: Request, res: Response): Promise
 function resolveFromCookie(req: Request, cookieHeader: string): SsrPersonaResult {
   try {
     const cookieMatch = cookieHeader.match(new RegExp(`${PERSONA_COOKIE_KEY}=([^;]+)`));
-    if (cookieMatch) {
-      const parsed = JSON.parse(decodeURIComponent(cookieMatch[1])) as PersistedPersonaState;
+    if (cookieMatch?.[1]) {
+      let decoded: string;
+      try {
+        decoded = decodeURIComponent(cookieMatch[1]);
+      } catch {
+        return { persona: DEFAULT_PERSONA, personas: [DEFAULT_PERSONA] };
+      }
+      const parsed = JSON.parse(decoded) as PersistedPersonaState;
       if (parsed.primary && parsed.all?.length > 0) {
         return {
           persona: parsed.primary,
@@ -55,7 +62,6 @@ function resolveFromCookie(req: Request, cookieHeader: string): SsrPersonaResult
  */
 async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaResult> {
   try {
-    const personaDetectionService = new PersonaDetectionService();
     const personaResult = await personaDetectionService.getPersonas(req);
 
     const persona = personaResult.personas.length > 0 ? personaResult.personas[0] : DEFAULT_PERSONA;
