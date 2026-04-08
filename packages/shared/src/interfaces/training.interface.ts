@@ -85,3 +85,53 @@ export interface TrainingEnrollment {
   /** URL slug for the specific course page; null if unavailable */
   courseSlug: string | null;
 }
+
+/**
+ * A redeemable discount coupon issued via the LFX rewards system
+ */
+export interface RewardCoupon {
+  /** Unique coupon identifier */
+  id: string;
+  /** Coupon code string (e.g., "LFX-CKA-20") */
+  code: string;
+  /** Short heading for the coupon (e.g., "20% Off CKA Exam") */
+  title: string;
+  /** Human-readable description of what the coupon applies to */
+  description: string;
+  /** ISO date string for when the coupon expires */
+  expiryDate: string;
+}
+
+/**
+ * An active reward incentive the user can work toward
+ */
+export interface RewardIncentive {
+  /** Unique incentive identifier */
+  id: string;
+  /** Font Awesome icon class (e.g., "fa-light fa-star") */
+  icon: string;
+  /** Incentive title (e.g., "Course Completion Bonus") */
+  title: string;
+  /** Short description of how to earn it */
+  description: string;
+  /** What the user earns (e.g., "500 Points", "Free Retake Voucher") */
+  rewardLabel: string;
+  /** Numeric progress toward completion; null if not applicable */
+  progress: { current: number; total: number } | null;
+  /** Status label shown when no numeric progress (e.g., "Pending") */
+  statusLabel: string | null;
+}
+
+/**
+ * Aggregated rewards data for the current user
+ */
+export interface RewardsData {
+  /** Total accumulated reward points */
+  points: number;
+  /** Points threshold for the next reward milestone */
+  nextRewardPoints: number;
+  /** Available redeemable coupons */
+  coupons: RewardCoupon[];
+  /** Active incentives the user is working toward */
+  incentives: RewardIncentive[];
+}

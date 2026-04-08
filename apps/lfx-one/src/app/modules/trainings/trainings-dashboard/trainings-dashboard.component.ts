@@ -3,9 +3,10 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { ChangeDetectionStrategy, Component, inject, signal, Signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Certification, FilterPillOption, TrainingEnrollment } from '@lfx-one/shared/interfaces';
+import { Certification, FilterPillOption, RewardCoupon, RewardIncentive, RewardsData, TrainingEnrollment } from '@lfx-one/shared/interfaces';
 import { CERTIFICATION_PRODUCT_TYPE, TRAINING_PRODUCT_TYPE } from '@lfx-one/shared/constants';
 
 import { ButtonComponent } from '@components/button/button.component';
@@ -42,7 +43,7 @@ const USEFUL_LINKS = [
 
 @Component({
   selector: 'lfx-trainings-dashboard',
-  imports: [ButtonComponent, CertificationCardComponent, FilterPillsComponent, TrainingCardComponent],
+  imports: [ButtonComponent, CertificationCardComponent, DatePipe, DecimalPipe, FilterPillsComponent, TrainingCardComponent],
   templateUrl: './trainings-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -57,15 +58,42 @@ export class TrainingsDashboardComponent {
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
   protected readonly activeTab = signal<string>('certifications');
+  protected readonly copiedCouponId = signal<string | null>(null);
+
+  // ─── Rewards mock data (until backend endpoint is available) ───────────────
+  private readonly rewards = signal<RewardsData>({
+    points: 0,
+    nextRewardPoints: 1000,
+    coupons: [],
+    incentives: [],
+  });
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly certifications: Signal<Certification[] | undefined> = this.initCertifications();
   protected readonly enrollments: Signal<TrainingEnrollment[] | undefined> = this.initEnrollments();
   protected readonly completedTrainings: Signal<Certification[] | undefined> = this.initCompletedTrainings();
+  protected readonly rewardPoints: Signal<number> = this.initRewardPoints();
+  protected readonly nextRewardPoints: Signal<number> = this.initNextRewardPoints();
+  protected readonly rewardProgressPercent: Signal<number> = this.initRewardProgressPercent();
+  protected readonly coupons: Signal<RewardCoupon[]> = this.initCoupons();
+  protected readonly incentives: Signal<RewardIncentive[]> = this.initIncentives();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {
     this.activeTab.set(tabId);
+  }
+
+  protected copyCode(code: string, id: string): void {
+    navigator.clipboard.writeText(code).then(() => {
+      this.copiedCouponId.set(id);
+      setTimeout(() => this.copiedCouponId.set(null), 2000);
+    });
+  }
+
+  protected isExpiringCoupon(coupon: RewardCoupon): boolean {
+    const expiry = new Date(coupon.expiryDate);
+    const daysUntilExpiry = (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    return daysUntilExpiry <= 30;
   }
 
   // ─── Private Initializers ──────────────────────────────────────────────────
@@ -79,5 +107,28 @@ export class TrainingsDashboardComponent {
 
   private initCompletedTrainings(): Signal<Certification[] | undefined> {
     return toSignal(this.trainingService.getCertifications(TRAINING_PRODUCT_TYPE));
+  }
+
+  private initRewardPoints(): Signal<number> {
+    return computed(() => this.rewards().points);
+  }
+
+  private initNextRewardPoints(): Signal<number> {
+    return computed(() => this.rewards().nextRewardPoints);
+  }
+
+  private initRewardProgressPercent(): Signal<number> {
+    return computed(() => {
+      const r = this.rewards();
+      return Math.min(100, Math.round((r.points / r.nextRewardPoints) * 100));
+    });
+  }
+
+  private initCoupons(): Signal<RewardCoupon[]> {
+    return computed(() => this.rewards().coupons);
+  }
+
+  private initIncentives(): Signal<RewardIncentive[]> {
+    return computed(() => this.rewards().incentives);
   }
 }
