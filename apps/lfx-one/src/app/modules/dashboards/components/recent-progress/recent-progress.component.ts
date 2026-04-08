@@ -105,10 +105,6 @@ export class RecentProgressComponent {
     { id: 'projectHealth', label: 'Project Health' },
   ];
 
-  protected setFilter(filter: string): void {
-    this.selectedFilter.set(filter);
-  }
-
   private getMetricConfig(title: string): DashboardMetricCard {
     const persona = this.personaService.currentPersona();
     const baseMetrics = persona === 'maintainer' ? MAINTAINER_PROGRESS_METRICS : CORE_DEVELOPER_PROGRESS_METRICS;

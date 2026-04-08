@@ -114,10 +114,6 @@ export class FoundationHealthComponent {
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
   protected readonly DashboardDrawerType = DashboardDrawerType;
 
-  public handleFilterChange(filter: string): void {
-    this.selectedFilter.set(filter);
-  }
-
   public handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
   }

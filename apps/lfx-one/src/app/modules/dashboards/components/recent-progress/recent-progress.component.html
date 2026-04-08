@@ -11,7 +11,7 @@
 
       <!-- Filter Pills - Only show for maintainers -->
       @if (showFilterPills()) {
-        <lfx-filter-pills [options]="filterOptions" [selectedFilter]="selectedFilter()" (filterChange)="setFilter($event)" />
+        <lfx-filter-pills [options]="filterOptions" [(selectedFilter)]="selectedFilter" />
       }
     </div>
 

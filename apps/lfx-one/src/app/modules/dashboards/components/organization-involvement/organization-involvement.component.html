@@ -12,7 +12,7 @@
 
       <div class="flex flex-wrap items-center gap-2">
         <!-- Filter Pills -->
-        <lfx-filter-pills [options]="filterOptions" [selectedFilter]="selectedFilter()" (filterChange)="handleFilterChange($event)"></lfx-filter-pills>
+        <lfx-filter-pills [options]="filterOptions" [(selectedFilter)]="selectedFilter"></lfx-filter-pills>
       </div>
     </div>
 

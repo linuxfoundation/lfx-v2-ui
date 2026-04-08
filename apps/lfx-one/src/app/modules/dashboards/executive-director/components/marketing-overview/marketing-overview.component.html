@@ -10,11 +10,7 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <lfx-filter-pills
-          [options]="filterOptions"
-          [selectedFilter]="selectedFilter()"
-          (filterChange)="handleFilterChange($event)"
-          data-testid="marketing-overview-filters"></lfx-filter-pills>
+        <lfx-filter-pills [options]="filterOptions" [(selectedFilter)]="selectedFilter" data-testid="marketing-overview-filters"></lfx-filter-pills>
       </div>
     </div>
 

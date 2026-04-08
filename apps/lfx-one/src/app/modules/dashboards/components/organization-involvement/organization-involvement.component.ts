@@ -106,10 +106,6 @@ export class OrganizationInvolvementComponent {
   // Filtered cards - materializes card values while benefiting from individual signal memoization
   public readonly primaryMetrics = this.initializePrimaryMetrics();
 
-  public handleFilterChange(filter: string): void {
-    this.selectedFilter.set(filter);
-  }
-
   protected handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
   }

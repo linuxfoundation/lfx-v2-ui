@@ -22,7 +22,6 @@ import {
   SocialReachResponse,
   WebActivitiesSummaryResponse,
 } from '@lfx-one/shared/interfaces';
-import type { MetricCategory } from '@lfx-one/shared/interfaces';
 
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
@@ -71,7 +70,7 @@ export class MarketingOverviewComponent {
   protected readonly marketingDataLoading = signal(true);
   private readonly browserReady = signal(false);
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
-  public readonly selectedFilter = signal<'all' | MetricCategory>('all');
+  public readonly selectedFilter = signal<string>('all');
 
   // === Observables ===
   private readonly selectedFoundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(
@@ -172,10 +171,6 @@ export class MarketingOverviewComponent {
 
   public handleDrawerClose(): void {
     this.activeDrawer.set(null);
-  }
-
-  public handleFilterChange(filter: string): void {
-    this.selectedFilter.set(filter as 'all' | MetricCategory);
   }
 
   // === Private Initializers ===
