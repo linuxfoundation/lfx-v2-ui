@@ -60,9 +60,10 @@ export class PersonaService {
     this.hasProjectRole = this.initHasProjectRole();
 
     // Refresh persona data from API after hydration (browser only)
-    // Skip if cookie was loaded — SSR already set fresh data; avoids signal flash
+    // Skip if cookie was loaded AND personaProjects is already populated;
+    // cookie only stores primary/all/multi* — personaProjects needs the API
     afterNextRender(() => {
-      if (!stored) {
+      if (!stored || Object.keys(this.personaProjects()).length === 0) {
         this.refreshFromApi();
       }
     });

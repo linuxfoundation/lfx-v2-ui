@@ -70,20 +70,22 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
     const persona = personaResult.personas.length > 0 ? personaResult.personas[0] : DEFAULT_PERSONA;
     const personas = personaResult.personas.length > 0 ? personaResult.personas : [DEFAULT_PERSONA];
 
-    // Set cookie so subsequent SSR requests use the non-blocking path
-    const cookieState: PersistedPersonaState = {
-      primary: persona,
-      all: personas,
-      multiProject: personaResult.multiProject,
-      multiFoundation: personaResult.multiFoundation,
-    };
-    res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-      path: '/',
-      sameSite: 'lax',
-      secure: process.env['NODE_ENV'] === 'production',
-      httpOnly: false,
-    });
+    // Only cache when detection succeeded — don't pin user to contributor on transient NATS failure
+    if (!personaResult.error) {
+      const cookieState: PersistedPersonaState = {
+        primary: persona,
+        all: personas,
+        multiProject: personaResult.multiProject,
+        multiFoundation: personaResult.multiFoundation,
+      };
+      res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env['NODE_ENV'] === 'production',
+        httpOnly: false,
+      });
+    }
 
     logger.debug(req, 'ssr_persona', 'Persona resolved via NATS for first-time SSR', {
       persona,
