@@ -94,7 +94,9 @@ export class DevToolbarComponent {
         } else {
           // Project-scoped: keep current project if set, otherwise select first non-TLF project
           const currentProject = this.projectContextService.selectedProject();
-          if (!currentProject) {
+          if (currentProject) {
+            this.form.get('selectedProjectUid')?.setValue(currentProject.uid, { emitEvent: false });
+          } else {
             const firstProject = this.projectContextService.availableProjects.find((p) => p.slug !== 'tlf');
             if (firstProject) {
               this.projectContextService.setProject(firstProject);
