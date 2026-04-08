@@ -152,6 +152,7 @@
             styleClass="w-full"
             label="See Meeting Details"
             [routerLink]="meetingDetailUrl()"
+            [queryParams]="meetingDetailQueryParams()"
             type="button"
             [outlined]="true"
             data-testid="dashboard-meeting-card-see-button" />

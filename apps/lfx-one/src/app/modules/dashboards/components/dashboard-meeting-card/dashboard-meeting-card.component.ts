@@ -63,6 +63,7 @@ export class DashboardMeetingCardComponent {
   public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
   public readonly isRecurring: Signal<boolean> = this.initIsRecurring();
   public readonly meetingDetailUrl: Signal<string> = this.initMeetingDetailUrl();
+  public readonly meetingDetailQueryParams: Signal<Record<string, string>> = this.initMeetingDetailQueryParams();
   public readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
 
   public constructor() {
@@ -265,16 +266,14 @@ export class DashboardMeetingCardComponent {
       if (override) {
         return override;
       }
+      return `/meetings/${this.meeting().id}`;
+    });
+  }
 
+  private initMeetingDetailQueryParams(): Signal<Record<string, string>> {
+    return computed((): Record<string, string> => {
       const meeting = this.meeting();
-      const params = new URLSearchParams();
-
-      if (meeting.password) {
-        params.set('password', meeting.password);
-      }
-
-      const queryString = params.toString();
-      return queryString ? `/meetings/${meeting.id}?${queryString}` : `/meetings/${meeting.id}`;
+      return meeting.password ? { password: meeting.password } : {};
     });
   }
 
@@ -286,7 +285,9 @@ export class DashboardMeetingCardComponent {
             return of(null);
           }
           // Skip for upcoming meetings — no recording exists yet
-          if (new Date(meeting.start_time).getTime() > Date.now()) {
+          // Use occurrence start time for recurring meetings, fall back to meeting start time
+          const startTime = this.occurrence()?.start_time || meeting.start_time;
+          if (new Date(startTime).getTime() > Date.now()) {
             return of(null);
           }
           return this.meetingService.getPastMeetingRecording(meeting.id).pipe(

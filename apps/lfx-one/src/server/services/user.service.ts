@@ -486,13 +486,13 @@ export class UserService {
 
   /**
    * Fetches past meetings for the current user, optionally filtered by project
-   * Gets all registrant records for the user, then fetches past meetings
-   * matching the user's registered meeting IDs via query service tags.
+   * Queries v1_past_meeting_participant by email to find composite meeting IDs,
+   * then fetches each past meeting via ITX endpoint.
    * @param req - Express request object
-   * @param email - User's email address for registrant lookup
+   * @param email - User's email address for participant lookup
    * @param projectUid - Optional project UID to filter meetings by
    * @param limit - Optional limit on number of past meetings to return
-   * @returns Array of PastMeeting objects the user was registered for
+   * @returns Array of PastMeeting objects the user participated in
    */
   public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number): Promise<PastMeeting[]> {
     // Step 1: Get past meeting participant records for this user via query service

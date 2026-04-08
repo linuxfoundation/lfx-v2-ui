@@ -139,9 +139,8 @@ export class UserService {
   }
 
   /**
-   * Gets all meetings for the current authenticated user filtered by project
-   * Returns meetings the user is registered for or has access to
-   * @param projectUid - Project UID to filter meetings by
+   * Gets all meetings for the current authenticated user
+   * Returns meetings the user is registered for across all projects
    * @param limit - Optional limit on number of meetings to return
    */
   public getUserMeetings(limit?: number): Observable<Meeting[]> {
