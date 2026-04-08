@@ -64,7 +64,7 @@ export class MainLayoutComponent {
       isSection: true,
       expanded: true,
       items: [
-        { label: 'Trainings & Certs', icon: 'fa-light fa-graduation-cap', routerLink: '/me/training' },
+        { label: 'Training & Certifications', icon: 'fa-light fa-graduation-cap', routerLink: '/me/training' },
         { label: 'Mentorships', icon: 'fa-light fa-chalkboard-teacher', routerLink: '/me/mentorships' },
         { label: 'Badges', icon: 'fa-light fa-award', routerLink: '/me/badges' },
       ],

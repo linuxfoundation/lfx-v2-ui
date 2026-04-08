@@ -19,8 +19,7 @@ const CATEGORY_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'program-committee', label: 'Program Committee' },
 ];
 
-const PAGE_SUBTITLE =
-  'Badges recognize achievements in community engagement, event participation, and project contributions. LFX One displays these recognitions as part of your professional identity.';
+const PAGE_SUBTITLE = 'Badges recognize achievements in community engagement, event participation, and project contributions.';
 
 @Component({
   selector: 'lfx-badges-dashboard',

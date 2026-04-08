@@ -133,24 +133,30 @@
         <div class="flex flex-col gap-6" data-testid="rewards-tab">
           <!-- Section header -->
           <div>
-            <h2 class="text-[16px] font-semibold text-gray-900">Education Rewards</h2>
+            <h2 class="flex items-center gap-2">
+              <i class="fa-light fa-star text-lg"></i>
+              <span>Education Rewards</span>
+            </h2>
             <p class="text-sm text-gray-500 mt-1">Incentives and rewards earned through training and certification programs.</p>
           </div>
 
-          <!-- Top row: Points + Active Incentives -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Total Reward Points -->
-            <div class="bg-white rounded-xl border shadow-sm p-[20px] flex flex-col gap-3" data-testid="rewards-points-card">
-              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Reward Points</p>
-              <div class="flex items-baseline gap-1.5">
-                <span class="text-4xl font-bold text-gray-900" data-testid="rewards-points-value">{{ rewardPoints() | number }}</span>
-                <span class="text-base font-normal text-gray-500">pts</span>
+          <!-- Total Reward Points — full width -->
+          <div class="bg-white rounded-xl border shadow-sm p-[20px] flex flex-col gap-4" data-testid="rewards-points-card">
+            <div class="flex items-start gap-8">
+              <!-- Left: points -->
+              <div class="flex flex-col gap-1">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Reward Points</p>
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-4xl font-bold text-gray-900" data-testid="rewards-points-value">{{ rewardPoints() | number }}</span>
+                  <span class="text-base font-normal text-gray-500">pts</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Earn points by completing training modules and passing certification exams.</p>
               </div>
-              <!-- Progress to next reward -->
-              <div class="flex flex-col gap-1.5">
+              <!-- Right: progress bar occupying ~50% of card -->
+              <div class="w-1/2 flex flex-col gap-1.5 pt-1 ml-auto">
                 <div class="flex items-center justify-between text-xs text-gray-500">
-                  <span>Next reward: {{ nextRewardPoints() | number }} pts</span>
-                  <span>{{ rewardProgressPercent() }}%</span>
+                  <span>Next reward at {{ nextRewardPoints() | number }} pts</span>
+                  <span class="font-medium text-gray-700">{{ rewardProgressPercent() }}%</span>
                 </div>
                 <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
@@ -159,18 +165,32 @@
                     data-testid="rewards-progress-bar"></div>
                 </div>
               </div>
-              <p class="text-xs text-blue-600">Earn points by completing training modules and passing certification exams.</p>
             </div>
 
-            <!-- Active Incentives -->
-            <div class="bg-white rounded-xl border shadow-sm p-[20px] flex flex-col gap-4" data-testid="rewards-incentives-card">
-              <div class="flex items-center gap-2">
-                <i class="fa-light fa-trophy text-blue-500"></i>
-                <h3 class="text-[14px] font-semibold text-gray-900">Active Incentives</h3>
+            <!-- Scope & Usage inside the card -->
+            <div class="flex gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg" data-testid="rewards-scope-info">
+              <i class="fa-solid fa-circle-info text-blue-400 flex-shrink-0 mt-0.5"></i>
+              <div class="flex flex-col gap-0.5">
+                <p class="text-xs font-semibold text-blue-700 uppercase tracking-wide">Scope &amp; Usage</p>
+                <p class="text-xs text-blue-600">
+                  Rewards and coupons shown here are exclusively for use within the Linux Foundation Education &amp; Training platform. Points are earned based
+                  on verified learning progress and cannot be exchanged for cash or non-training services.
+                </p>
               </div>
-              <ul class="flex flex-col divide-y divide-gray-100">
+            </div>
+          </div>
+
+          <!-- Active Incentives + My Coupons side by side (cardless sections) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Active Incentives -->
+            <div class="flex flex-col gap-4" data-testid="rewards-incentives-section">
+              <h2 class="flex items-center gap-2">
+                <i class="fa-light fa-trophy text-lg"></i>
+                <span>Active Incentives</span>
+              </h2>
+              <div class="flex flex-col gap-3">
                 @for (incentive of incentives(); track incentive.id) {
-                  <li class="flex items-start gap-3 py-3 first:pt-0 last:pb-0" data-testid="incentive-item">
+                  <div class="flex items-start gap-3 p-4 bg-white border rounded-xl shadow-md transition-all" data-testid="incentive-item">
                     <i class="{{ incentive.icon }} text-amber-400 mt-0.5 flex-shrink-0"></i>
                     <div class="flex-1 min-w-0 flex flex-col gap-1">
                       <p class="text-sm font-semibold text-gray-900 leading-snug">{{ incentive.title }}</p>
@@ -186,78 +206,66 @@
                         {{ incentive.statusLabel }}
                       }
                     </div>
-                  </li>
-                }
-              </ul>
-            </div>
-          </div>
-
-          <!-- My Coupons -->
-          <div class="flex flex-col gap-4" data-testid="rewards-coupons-section">
-            <div class="flex items-center gap-2">
-              <i class="fa-light fa-tag text-blue-500"></i>
-              <h3 class="text-[14px] font-semibold text-gray-900">My Coupons</h3>
-            </div>
-
-            @if (coupons().length === 0) {
-              <p class="text-sm text-gray-400 italic" data-testid="rewards-no-coupons">No coupons available at the moment.</p>
-            } @else {
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="coupons-grid">
-                @for (coupon of coupons(); track coupon.id) {
-                  <div class="border border-dashed border-gray-300 rounded-xl p-4 flex flex-col gap-3" data-testid="coupon-card">
-                    <!-- Header: icon + title/desc + Available chip -->
-                    <div class="flex items-start gap-3">
-                      <div class="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <i class="fa-light fa-gift text-gray-400"></i>
-                      </div>
-                      <div class="flex-1 min-w-0 flex flex-col gap-0.5">
-                        <div class="flex items-start justify-between gap-2">
-                          <p class="text-sm font-semibold text-gray-900 leading-snug">{{ coupon.title }}</p>
-                          <span
-                            class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 border border-green-200 text-green-700 whitespace-nowrap">
-                            Available
-                          </span>
-                        </div>
-                        <p class="text-xs text-gray-500">{{ coupon.description }}</p>
-                      </div>
-                    </div>
-
-                    <!-- Code row -->
-                    <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                      <code class="text-sm font-mono text-gray-800" data-testid="coupon-code">{{ coupon.code }}</code>
-                      <button
-                        type="button"
-                        class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors focus:outline-none"
-                        (click)="copyCode(coupon.code, coupon.id)"
-                        [attr.aria-label]="'Copy coupon code ' + coupon.code"
-                        data-testid="coupon-copy-btn">
-                        @if (copiedCouponId() === coupon.id) {
-                          ✓ COPIED
-                        } @else {
-                          COPY CODE
-                        }
-                      </button>
-                    </div>
-
-                    <!-- Expiry -->
-                    <p class="text-xs" [class]="isExpiringCoupon(coupon) ? 'text-amber-600' : 'text-gray-400'" data-testid="coupon-expiry">
-                      Expires: {{ coupon.expiryDate | date: 'MMM d, y' }}
-                    </p>
                   </div>
                 }
               </div>
-            }
+            </div>
 
-            <!-- Scope & usage info box -->
-            <div class="flex gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="rewards-scope-info">
-              <i class="fa-solid fa-circle-info text-blue-500 flex-shrink-0 mt-0.5"></i>
-              <div class="flex flex-col gap-1">
-                <p class="text-xs font-semibold text-blue-700 uppercase tracking-wide">Scope &amp; Usage</p>
-                <p class="text-xs text-blue-700">
-                  Rewards and coupons shown here are exclusively for use within the Linux Foundation Education &amp; Training platform. Points are earned based
-                  on verified learning progress and cannot be exchanged for cash or non-training services.
-                </p>
-              </div>
+            <!-- My Coupons -->
+            <div class="flex flex-col gap-4" data-testid="rewards-coupons-section">
+              <h2 class="flex items-center gap-2">
+                <i class="fa-light fa-tag text-lg"></i>
+                <span>My Coupons</span>
+              </h2>
+
+              @if (coupons().length === 0) {
+                <p class="text-sm text-gray-400 italic" data-testid="rewards-no-coupons">No coupons available at the moment.</p>
+              } @else {
+                <div class="flex flex-col gap-3" data-testid="coupons-list">
+                  @for (coupon of coupons(); track coupon.id) {
+                    <div class="bg-white border border-dashed border-gray-300 rounded-xl flex items-stretch overflow-hidden" data-testid="coupon-card">
+                      <!-- Left: gift icon with full-height gray background -->
+                      <div class="flex-shrink-0 flex items-center justify-center bg-gray-100 px-4">
+                        <i class="fa-light fa-gift text-gray-400"></i>
+                      </div>
+
+                      <!-- Right: content -->
+                      <div class="flex-1 min-w-0 flex flex-col gap-2 p-4">
+                        <!-- Title + Available -->
+                        <div class="flex items-start justify-between gap-2">
+                          <p class="text-sm font-semibold text-gray-900 leading-snug">{{ coupon.title }}</p>
+                          <span
+                            class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-600 whitespace-nowrap">
+                            Available
+                          </span>
+                        </div>
+                        <!-- Description -->
+                        <p class="text-xs text-gray-500">{{ coupon.description }}</p>
+                        <!-- Code row -->
+                        <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                          <code class="text-sm font-mono font-semibold text-gray-800" data-testid="coupon-code">{{ coupon.code }}</code>
+                          <button
+                            type="button"
+                            class="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors focus:outline-none"
+                            (click)="copyCode(coupon.code, coupon.id)"
+                            [attr.aria-label]="'Copy coupon code ' + coupon.code"
+                            data-testid="coupon-copy-btn">
+                            @if (copiedCouponId() === coupon.id) {
+                              ✓ COPIED
+                            } @else {
+                              COPY CODE
+                            }
+                          </button>
+                        </div>
+                        <!-- Expiry -->
+                        <p class="text-xs" [class]="isExpiringCoupon(coupon) ? 'text-amber-600' : 'text-gray-400'" data-testid="coupon-expiry">
+                          Expires: {{ coupon.expiryDate | date: 'MMM d, y' }}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -265,11 +273,11 @@
     </div>
 
     <!-- ── Right / Sidebar column ─────────────────────────────────────────── -->
-    <div class="w-full lg:w-80 flex-shrink-0" data-testid="trainings-sidebar">
-      <!-- Resources card -->
-      <div class="bg-white rounded-xl border shadow-md p-[20px] flex flex-col gap-4" data-testid="trainings-resources">
-        <h2 class="text-[14px] font-semibold text-gray-900">Resources</h2>
-        <ul class="flex flex-col gap-3" data-testid="trainings-links-list">
+    <div class="w-full lg:w-64 flex-shrink-0 border-l border-gray-200 pl-6" data-testid="trainings-sidebar">
+      <!-- Useful links -->
+      <div class="flex flex-col gap-4" data-testid="trainings-useful-links">
+        <h2 class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Useful links</h2>
+        <ul class="flex flex-col gap-4" data-testid="trainings-links-list">
           @for (link of usefulLinks; track link.url) {
             <li class="flex flex-col gap-1" data-testid="trainings-link-item">
               <a

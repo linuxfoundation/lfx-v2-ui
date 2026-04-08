@@ -3,17 +3,17 @@
 
 <div class="bg-white rounded-xl border shadow-md hover:border-blue-500 transition-all h-full flex flex-col" data-testid="badge-card">
   <div class="p-[20px] flex flex-col h-full">
-    <!-- Top row: logo (left, mb-4) + category pill + verified side-by-side (right) -->
+    <!-- Top row: logo (left) + category pill + verified side-by-side (right) -->
     <div class="flex items-start gap-3 mb-[20px]">
-      <!-- Badge logo / fallback icon — 16px margin bottom separates it from the name -->
+      <!-- Badge logo / fallback icon -->
       <div
         class="flex-shrink-0 w-16 h-16 flex items-center justify-center overflow-hidden"
-        [class]="hasImage() ? '' : 'rounded-lg bg-gray-50 border border-gray-100'"
+        [class]="hasImage() ? '' : 'rounded-lg bg-blue-100 border border-blue-200'"
         data-testid="badge-card-image-container">
         @if (hasImage()) {
           <img [src]="badge().imageUrl" [alt]="badge().name" class="w-16 h-16 object-contain" data-testid="badge-card-image" />
         } @else {
-          <i class="fa-light fa-award text-3xl text-gray-400" data-testid="badge-card-icon-fallback"></i>
+          <i class="fa-light fa-award text-3xl text-blue-400" data-testid="badge-card-icon-fallback"></i>
         }
       </div>
 
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <!-- Badge name (14px) -->
+    <!-- Badge name -->
     <h3 class="text-[14px] font-semibold text-gray-900 leading-snug mb-3" data-testid="badge-card-name">{{ badge().name }}</h3>
 
     <!-- Description -->
@@ -68,23 +68,11 @@
     <!-- Spacer -->
     <div class="flex-1"></div>
 
-    <!-- Action Buttons — 16px margin top -->
-    <div class="flex gap-2 mt-[20px]" data-testid="badge-card-actions">
-      <lfx-button
-        class="w-full"
-        severity="secondary"
-        styleClass="w-full !text-xs !h-7 !py-0"
-        label="Know more"
-        [href]="badge().credlyBadgeUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-        [outlined]="true"
-        data-testid="badge-card-know-more-button" />
-
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-3 mt-[20px]" data-testid="badge-card-actions">
       @if (!badge().isVerified) {
         <lfx-button
-          class="w-full"
-          styleClass="w-full !text-xs !h-7 !py-0"
+          styleClass="!text-xs !h-7 !py-0 !border"
           label="Verify Badge"
           [href]="badge().verifyUrl"
           target="_blank"
@@ -92,6 +80,17 @@
           [outlined]="true"
           data-testid="badge-card-verify-button" />
       }
+      <lfx-button
+        severity="secondary"
+        styleClass="!text-xs !h-7 !py-0"
+        label="View in Credly"
+        icon="fa-light fa-arrow-up-right-from-square"
+        iconPos="right"
+        [href]="badge().credlyBadgeUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        [outlined]="true"
+        data-testid="badge-card-know-more-button" />
     </div>
   </div>
 </div>
