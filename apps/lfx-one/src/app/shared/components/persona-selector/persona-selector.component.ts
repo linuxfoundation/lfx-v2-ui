@@ -52,7 +52,7 @@ export class PersonaSelectorComponent {
           }
         }
 
-        this.personaService.setPersona(value);
+        this.personaService.setPersonas(value, this.personaService.allPersonas(), this.personaService.multiProject(), this.personaService.multiFoundation());
       });
   }
 }
