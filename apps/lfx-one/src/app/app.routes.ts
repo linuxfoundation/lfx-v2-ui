@@ -11,8 +11,29 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
+      // Me Lens dashboard (root route)
       {
         path: '',
+        pathMatch: 'full',
+        data: { lens: 'me' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Foundation Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'foundation/overview',
+        data: { lens: 'foundation' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Project Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'project/overview',
+        data: { lens: 'project' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Org Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'org',
+        data: { lens: 'org' },
         loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
