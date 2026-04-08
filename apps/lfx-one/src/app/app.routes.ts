@@ -84,7 +84,10 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
       },
       { path: 'me/actions', component: PlaceholderPageComponent, data: { title: 'My Actions' } },
-      { path: 'me/badges', component: PlaceholderPageComponent, data: { title: 'Badges' } },
+      {
+        path: 'me/badges',
+        loadChildren: () => import('./modules/badges/badges.routes').then((m) => m.BADGE_ROUTES),
+      },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
       { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
       // Foundation lens — overview + real implementation + placeholder pages

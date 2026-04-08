@@ -109,3 +109,6 @@ export * from './my-event.interface';
 
 // Training interfaces
 export * from './training.interface';
+
+// Badge interfaces
+export * from './badge.interface';
