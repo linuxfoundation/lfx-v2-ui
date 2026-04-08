@@ -3,7 +3,7 @@
 
 <div class="bg-white rounded-xl border shadow-md hover:border-blue-500 transition-all h-full flex flex-col" data-testid="badge-card">
   <div class="p-4 flex flex-col gap-3 h-full">
-    <!-- Top row: logo (left, no border/bg when image) + category pill + verified (right) -->
+    <!-- Top row: logo (left) + category pill + verified side-by-side (right) -->
     <div class="flex items-start gap-3">
       <!-- Badge logo / fallback icon -->
       <div
@@ -17,11 +17,11 @@
         }
       </div>
 
-      <!-- Spacer to push pills to the right -->
+      <!-- Spacer -->
       <div class="flex-1"></div>
 
-      <!-- Category pill + Verified label stacked to the top-right -->
-      <div class="flex-shrink-0 flex flex-col items-end gap-1.5" data-testid="badge-card-badges">
+      <!-- Category pill + Verified side by side -->
+      <div class="flex-shrink-0 flex flex-row items-start gap-1.5" data-testid="badge-card-badges">
         <span
           class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-700 whitespace-nowrap"
           data-testid="badge-card-category">
@@ -38,25 +38,8 @@
       </div>
     </div>
 
-    <!-- Badge name + issuer below logo -->
-    <div class="flex flex-col gap-0.5">
-      <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="badge-card-name">{{ badge().name }}</h3>
-      <p class="text-xs text-gray-500" data-testid="badge-card-issued-by">{{ badge().issuedBy }}</p>
-    </div>
-
-    <!-- Issued date + Credential ID (label above value) -->
-    <div class="flex flex-col gap-2 text-xs" data-testid="badge-card-meta">
-      <div class="flex flex-col gap-0.5">
-        <span class="text-gray-400">Issued:</span>
-        <span class="text-gray-700">{{ badge().issuedDate | date: 'MMMM d, y' }}</span>
-      </div>
-      <div class="flex flex-col gap-0.5 min-w-0">
-        <span class="text-gray-400">Credential ID:</span>
-        <span class="text-gray-500 font-mono truncate" [title]="badge().credentialId" data-testid="badge-card-credential-id">
-          {{ badge().credentialId }}
-        </span>
-      </div>
-    </div>
+    <!-- Badge name (14px) -->
+    <h3 class="text-[14px] font-semibold text-gray-900 leading-snug" data-testid="badge-card-name">{{ badge().name }}</h3>
 
     <!-- Description -->
     <p class="text-sm text-gray-600 line-clamp-3" data-testid="badge-card-description">{{ badge().description }}</p>
@@ -72,12 +55,29 @@
       </div>
     }
 
+    <!-- Issued by / Issued on / Credential ID -->
+    <div class="flex flex-col gap-2 text-xs" data-testid="badge-card-meta">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-gray-400">Issued by:</span>
+        <span class="text-gray-700">{{ badge().issuedBy }}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-gray-400">Issued on:</span>
+        <span class="text-gray-700">{{ badge().issuedDate | date: 'MMMM d, y' }}</span>
+      </div>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-gray-400">Credential ID:</span>
+        <span class="text-gray-500 font-mono truncate" [title]="badge().credentialId" data-testid="badge-card-credential-id">
+          {{ badge().credentialId }}
+        </span>
+      </div>
+    </div>
+
     <!-- Spacer -->
     <div class="flex-1"></div>
 
-    <!-- Action Buttons — no separator, smaller -->
+    <!-- Action Buttons -->
     <div class="flex gap-2" data-testid="badge-card-actions">
-      <!-- Know More -->
       <lfx-button
         class="w-full"
         severity="secondary"
@@ -89,7 +89,6 @@
         [outlined]="true"
         data-testid="badge-card-know-more-button" />
 
-      <!-- Verify Badge — hidden for verified badges, blue outlined -->
       @if (!badge().isVerified) {
         <lfx-button
           class="w-full"
