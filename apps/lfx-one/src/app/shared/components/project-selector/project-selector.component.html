@@ -77,7 +77,9 @@
                 <div class="flex items-center gap-2">
                   <p class="font-medium text-sm text-gray-900">{{ project.name }}</p>
                   @if (sublabel()) {
-                    <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{ sublabel() }}</span>
+                    <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{
+                      sublabel()
+                    }}</span>
                   }
                 </div>
                 <p class="text-xs text-gray-500 line-clamp-1">{{ project.description }}</p>
@@ -106,7 +108,9 @@
                   <div class="flex items-center gap-2">
                     <p class="font-medium text-sm text-gray-900 mb-0">{{ foundation.name }}</p>
                     @if (sublabel()) {
-                      <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{ sublabel() }}</span>
+                      <span class="inline-block text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4 whitespace-nowrap">{{
+                        sublabel()
+                      }}</span>
                     }
                   </div>
                   <p class="text-xs text-gray-500 line-clamp-1">{{ foundation.description }}</p>
@@ -169,4 +173,3 @@
     </div>
   </div>
 }
-

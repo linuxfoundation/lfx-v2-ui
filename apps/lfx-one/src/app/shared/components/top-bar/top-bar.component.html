@@ -49,13 +49,8 @@
               class="absolute right-0 top-full mt-1 w-60 bg-white border border-gray-200 rounded-lg shadow-md z-50 py-1 max-h-72 overflow-y-auto"
               data-testid="foundation-dropdown-panel">
               <!-- All foundations -->
-              <button
-                type="button"
-                class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2"
-                (click)="onSelectFoundation(null)">
-                <i
-                  class="fa-light fa-check text-blue-600 text-[10px] w-3 flex-shrink-0"
-                  [class.opacity-0]="!!selectedFoundation()"></i>
+              <button type="button" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2" (click)="onSelectFoundation(null)">
+                <i class="fa-light fa-check text-blue-600 text-[10px] w-3 flex-shrink-0" [class.opacity-0]="!!selectedFoundation()"></i>
                 <span class="text-gray-700">All foundations</span>
               </button>
 
@@ -98,13 +93,8 @@
               class="absolute right-0 top-full mt-1 w-60 bg-white border border-gray-200 rounded-lg shadow-md z-50 py-1 max-h-72 overflow-y-auto"
               data-testid="project-dropdown-panel">
               <!-- All projects -->
-              <button
-                type="button"
-                class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2"
-                (click)="onSelectProject(null)">
-                <i
-                  class="fa-light fa-check text-blue-600 text-[10px] w-3 flex-shrink-0"
-                  [class.opacity-0]="!!activeSelectedProject()"></i>
+              <button type="button" class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2" (click)="onSelectProject(null)">
+                <i class="fa-light fa-check text-blue-600 text-[10px] w-3 flex-shrink-0" [class.opacity-0]="!!activeSelectedProject()"></i>
                 <span class="text-gray-700">All projects</span>
               </button>
 

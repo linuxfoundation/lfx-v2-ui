@@ -296,5 +296,3 @@ export class SidebarComponent {
     return false;
   }
 }
-
-

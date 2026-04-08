@@ -57,7 +57,6 @@ export class ProjectSelectorComponent implements OnDestroy {
     this.detachOutsideClickListener();
   }
 
-
   protected selectProject(project: Project): void {
     this.projectChange.emit(project);
     this.closePanel();
@@ -124,13 +123,9 @@ export class ProjectSelectorComponent implements OnDestroy {
       const allProjects = this.projects();
       const query = this.searchQuery().toLowerCase().trim();
       const validProjectIds = new Set(allProjects.map((p) => p.uid));
-      const childProjects = allProjects.filter(
-        (p) => p.parent_uid && p.parent_uid !== '' && validProjectIds.has(p.parent_uid)
-      );
+      const childProjects = allProjects.filter((p) => p.parent_uid && p.parent_uid !== '' && validProjectIds.has(p.parent_uid));
       if (!query) return childProjects;
-      return childProjects.filter(
-        (p) => p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query)
-      );
+      return childProjects.filter((p) => p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query));
     });
   }
 
@@ -227,6 +222,3 @@ export class ProjectSelectorComponent implements OnDestroy {
     });
   }
 }
-
-
-

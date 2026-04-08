@@ -215,9 +215,7 @@ export class MainLayoutComponent {
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
       case 'project':
-        return this.personaService.currentPersona() === 'maintainer-admin'
-          ? this.maintainerAdminProjectLensItems
-          : this.projectLensItems;
+        return this.personaService.currentPersona() === 'maintainer-admin' ? this.maintainerAdminProjectLensItems : this.projectLensItems;
       case 'foundation':
         return this.foundationLensItems;
       case 'org':
@@ -277,5 +275,3 @@ export class MainLayoutComponent {
     }
   }
 }
-
-

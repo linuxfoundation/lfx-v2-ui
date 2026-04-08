@@ -23,7 +23,7 @@ interface BreadcrumbState {
 }
 
 // Ordered longest-first so prefix matching picks the most specific path
-const ROUTE_LABELS: Array<{ path: string; label: string }> = [
+const ROUTE_LABELS: { path: string; label: string }[] = [
   { path: '/me/overview', label: 'Overview' },
   { path: '/me/actions', label: 'My Actions' },
   { path: '/me/events', label: 'My Events' },

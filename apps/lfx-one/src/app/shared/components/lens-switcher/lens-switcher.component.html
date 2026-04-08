@@ -3,11 +3,7 @@
 
 <div class="flex flex-col items-center h-full bg-blue-900 py-4" data-testid="lens-switcher">
   <!-- LF Logo -->
-  <button
-    type="button"
-    (click)="setLens('me')"
-    class="mb-4 flex items-center justify-center px-3 focus:outline-none"
-    aria-label="Go to My Dashboard">
+  <button type="button" (click)="setLens('me')" class="mb-4 flex items-center justify-center px-3 focus:outline-none" aria-label="Go to My Dashboard">
     <img src="/images/logo_lf_white.svg" alt="Linux Foundation" class="w-[24px] h-[24px]" />
   </button>
 
@@ -136,14 +132,10 @@
 
     <!-- Sign out -->
     <div class="py-1">
-      <a
-        href="/logout"
-        data-testid="lens-logout"
-        class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+      <a href="/logout" data-testid="lens-logout" class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
         <i class="fa-light fa-arrow-right-from-bracket w-4 text-gray-400"></i>
         <span>Sign out</span>
       </a>
     </div>
   </div>
 }
-
