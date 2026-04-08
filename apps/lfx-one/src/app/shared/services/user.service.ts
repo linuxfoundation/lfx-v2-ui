@@ -15,6 +15,7 @@ import {
   EmailPreferences,
   EnrichedIdentity,
   Meeting,
+  PastMeeting,
   ProfileAuthStatus,
   ProfileUpdateRequest,
   SendEmailVerificationResponse,
@@ -151,6 +152,24 @@ export class UserService {
     return this.http.get<Meeting[]>('/api/user/meetings', { params }).pipe(
       catchError((error) => {
         console.error('Failed to load user meetings:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Gets past meetings for the current authenticated user filtered by project
+   * @param projectUid - Project UID to filter meetings by
+   * @param limit - Optional limit on number of past meetings to return
+   */
+  public getUserPastMeetings(projectUid: string, limit?: number): Observable<PastMeeting[]> {
+    const params: Record<string, string> = { projectUid };
+    if (limit !== undefined) {
+      params['limit'] = limit.toString();
+    }
+    return this.http.get<PastMeeting[]>('/api/user/past-meetings', { params }).pipe(
+      catchError((error) => {
+        console.error('Failed to load user past meetings:', error);
         return of([]);
       })
     );
