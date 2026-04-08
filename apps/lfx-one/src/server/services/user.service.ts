@@ -10,6 +10,7 @@ import {
   MeetingOccurrence,
   MeetingRegistrant,
   PastMeeting,
+  PastMeetingParticipant,
   PendingActionItem,
   PersonaType,
   ProjectItem,
@@ -462,112 +463,119 @@ export class UserService {
   }
 
   /**
-   * Fetches all meetings for the current user filtered by project
+   * Fetches meetings for the current user, optionally filtered by project
    * Uses a reverse-query approach: first gets all registrant records for the user,
    * then fetches only those meetings by ID — avoids the N+1 query problem.
    * @param req - Express request object
    * @param email - User's email address for registrant lookup
-   * @param projectUid - Project UID to filter meetings by
+   * @param projectUid - Optional project UID to filter meetings by
    * @param limit - Optional limit on number of meetings to return
    * @returns Array of Meeting objects the user is registered for
    */
-  public async getUserMeetings(req: Request, email: string, projectUid: string, limit?: number): Promise<Meeting[]> {
-    // Step 1: Get all meeting IDs the user is registered for
+  public async getUserMeetings(req: Request, email: string, projectUid?: string, limit?: number): Promise<Meeting[]> {
     const meetingIds = await this.getUserRegisteredMeetingIds(req, email);
 
-    logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', {
-      meeting_count: meetingIds.size,
-    });
+    logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', { meeting_count: meetingIds.size });
 
     if (meetingIds.size === 0) {
       return [];
     }
 
-    // Step 2: Fetch each meeting by ID and filter to the requested project
-    const meetingFetches = Array.from(meetingIds).map(async (meetingId) => {
+    return this.fetchByIdFilterAndLimit<Meeting>(req, meetingIds, '/itx/meetings', 'get_user_meetings', projectUid, limit);
+  }
+
+  /**
+   * Fetches past meetings for the current user, optionally filtered by project
+   * Gets all registrant records for the user, then fetches past meetings
+   * matching the user's registered meeting IDs via query service tags.
+   * @param req - Express request object
+   * @param email - User's email address for registrant lookup
+   * @param projectUid - Optional project UID to filter meetings by
+   * @param limit - Optional limit on number of past meetings to return
+   * @returns Array of PastMeeting objects the user was registered for
+   */
+  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number): Promise<PastMeeting[]> {
+    // Step 1: Get past meeting participant records for this user via query service
+    const normalizedEmail = email.toLowerCase();
+    const participantParams: Record<string, any> = {
+      type: 'v1_past_meeting_participant',
+      tags: `email:${normalizedEmail}`,
+      page_size: 100,
+    };
+
+    // M2M token required: participant queries search across all participants in the index
+    const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      { ...participantParams, sort: 'updated_desc' },
+      undefined,
+      headers
+    );
+    const participants = resources.map((r) => r.data);
+
+    // Deduplicate by meeting_and_occurrence_id (composite ID like "99152950841-1630560600000")
+    const pastMeetingIds = [...new Set(participants.map((p) => p.meeting_and_occurrence_id).filter(Boolean))];
+
+    if (pastMeetingIds.length === 0) {
+      return [];
+    }
+
+    // Step 2: Fetch each past meeting and filter/limit
+    return this.fetchByIdFilterAndLimit<PastMeeting>(req, pastMeetingIds, '/itx/past_meetings', 'get_user_past_meetings', projectUid, limit);
+  }
+
+  /**
+   * Fetches resources by ID in parallel, filters by project, and applies limit.
+   * Shared by getUserMeetings and getUserPastMeetings.
+   */
+  private async fetchByIdFilterAndLimit<T extends { id: string; project_uid?: string }>(
+    req: Request,
+    ids: string[] | Set<string>,
+    endpoint: string,
+    operation: string,
+    projectUid?: string,
+    limit?: number
+  ): Promise<T[]> {
+    const results: T[] = [];
+
+    const fetches = Array.from(ids).map(async (id) => {
       try {
-        const { data: meetings } = await this.meetingService.getMeetings(req, { tags: meetingId }, 'v1_meeting', true);
-        return meetings[0] ?? null;
-      } catch {
-        logger.warning(req, 'get_user_meetings', 'Failed to fetch meeting by ID, skipping', { meeting_id: meetingId });
+        const resource = await this.microserviceProxy.proxyRequest<T>(req, 'LFX_V2_SERVICE', `${endpoint}/${id}`, 'GET');
+        resource.id = resource.id || id;
+        return resource;
+      } catch (error) {
+        logger.warning(req, operation, 'Skipping resource — upstream fetch failed', {
+          resource_id: id,
+          error: error instanceof Error ? error.message : String(error),
+        });
         return null;
       }
     });
 
-    const allMeetings = (await Promise.all(meetingFetches)).filter((m): m is Meeting => m !== null);
+    for (const result of await Promise.all(fetches)) {
+      if (result !== null) {
+        results.push(result);
+      }
+    }
 
-    // Step 3: Filter to the requested project
-    let filteredMeetings = allMeetings.filter((m) => m.project_uid === projectUid);
+    let filtered = projectUid ? results.filter((r) => r.project_uid === projectUid) : results;
 
-    logger.debug(req, 'get_user_meetings', 'Filtered meetings to project', {
-      total_fetched: allMeetings.length,
-      project_filtered: filteredMeetings.length,
-      project_uid: projectUid,
+    logger.debug(req, operation, 'Filtered results', {
+      total_fetched: results.length,
+      filtered: filtered.length,
+      project_uid: projectUid ?? 'all',
     });
 
-    // Step 4: Apply limit if specified
     if (limit !== undefined && limit > 0) {
-      filteredMeetings = filteredMeetings.slice(0, limit);
+      filtered = filtered.slice(0, limit);
     }
 
-    return filteredMeetings;
-  }
-
-  /**
-   * Fetches past meetings for the current user filtered by project
-   * Gets all registrant records for the user, then fetches past meetings
-   * for the project and filters to only those matching the user's registered meeting IDs.
-   * @param req - Express request object
-   * @param email - User's email address for registrant lookup
-   * @param projectUid - Project UID to filter meetings by
-   * @param limit - Optional limit on number of past meetings to return
-   * @returns Array of PastMeeting objects the user was registered for
-   */
-  public async getUserPastMeetings(req: Request, email: string, projectUid: string, limit?: number): Promise<PastMeeting[]> {
-    // Step 1: Get all meeting IDs the user is registered for
-    const meetingIds = await this.getUserRegisteredMeetingIds(req, email);
-
-    logger.debug(req, 'get_user_past_meetings', 'Found registered meeting IDs for user', {
-      meeting_count: meetingIds.size,
-    });
-
-    if (meetingIds.size === 0) {
-      return [];
-    }
-
-    // Step 2: Fetch all past meetings for the project
-    const params: Record<string, any> = {
-      type: 'v1_past_meeting',
-      tags: `project_uid:${projectUid}`,
-      page_size: 100,
-    };
-
-    const allPastMeetings = await fetchAllQueryResources<PastMeeting>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        ...params,
-        ...(pageToken && { page_token: pageToken }),
-      })
-    );
-
-    logger.debug(req, 'get_user_past_meetings', 'Fetched project past meetings', {
-      total_past_meetings: allPastMeetings.length,
-      project_uid: projectUid,
-    });
-
-    // Step 3: Filter to only past meetings for meetings the user is registered for
-    let filteredMeetings = allPastMeetings.filter((pm) => meetingIds.has(pm.meeting_id));
-
-    logger.debug(req, 'get_user_past_meetings', 'Filtered past meetings to user registrations', {
-      total_fetched: allPastMeetings.length,
-      user_filtered: filteredMeetings.length,
-    });
-
-    // Step 4: Apply limit if specified
-    if (limit !== undefined && limit > 0) {
-      filteredMeetings = filteredMeetings.slice(0, limit);
-    }
-
-    return filteredMeetings;
+    return filtered;
   }
 
   /**
@@ -578,6 +586,8 @@ export class UserService {
    * @returns Set of meeting IDs the user is registered for
    */
   private async getUserRegisteredMeetingIds(req: Request, email: string): Promise<Set<string>> {
+    const normalizedEmail = email.toLowerCase();
+
     // M2M token required: registrant queries search across all registrants in the index,
     // which requires application-level credentials (user tokens lack cross-registrant read access)
     const m2mToken = await generateM2MToken(req);
@@ -587,11 +597,11 @@ export class UserService {
     const emailParams: Record<string, any> = {
       type: 'v1_meeting_registrant',
       parent: '',
-      tags: `email:${email}`,
+      tags: `email:${normalizedEmail}`,
       page_size: 100,
     };
 
-    logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by email', { email });
+    logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by email', { email: normalizedEmail });
 
     const emailRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
@@ -671,8 +681,9 @@ export class UserService {
       }),
     ]);
 
-    // Transform meetings to actions (within 2 weeks)
-    const meetingActions = this.transformMeetingsToActions(meetings);
+    // Filter to board meetings only, then transform to actions (within 2 weeks)
+    const boardMeetings = meetings.filter((m) => m.meeting_type?.toLowerCase() === 'board');
+    const meetingActions = this.transformMeetingsToActions(boardMeetings);
 
     return [...surveys, ...meetingActions];
   }

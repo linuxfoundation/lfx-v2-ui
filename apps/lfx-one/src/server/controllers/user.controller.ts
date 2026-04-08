@@ -93,10 +93,9 @@ export class UserController {
   }
 
   /**
-   * GET /api/user/meetings - Get all meetings for the authenticated user
-   * Returns meetings the user is registered for or has access to, filtered by project
-   * TODO: DEMO - Revisit this after the demo as this is not an efficient way of getting current users meetings
-   * @query projectUid - Required project UID to filter meetings
+   * GET /api/user/meetings - Get meetings for the authenticated user
+   * Returns meetings the user is registered for, optionally filtered by project
+   * @query projectUid - Optional project UID to filter meetings
    * @query limit - Optional limit on number of meetings to return
    */
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -106,18 +105,7 @@ export class UserController {
     });
 
     try {
-      // Extract and validate projectUid
       const projectUid = req.query['projectUid'] as string | undefined;
-      if (!projectUid) {
-        const validationError = ServiceValidationError.forField('projectUid', 'projectUid query parameter is required', {
-          operation: 'get_user_meetings',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
 
       // Extract user email from OIDC (lowercased for consistent tag matching)
       const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
@@ -167,8 +155,8 @@ export class UserController {
 
   /**
    * GET /api/user/past-meetings - Get past meetings for the authenticated user
-   * Returns past meetings the user was registered for, filtered by project
-   * @query projectUid - Required project UID to filter meetings
+   * Returns past meetings the user was registered for, optionally filtered by project
+   * @query projectUid - Optional project UID to filter meetings
    * @query limit - Optional limit on number of past meetings to return
    */
   public async getUserPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -178,18 +166,7 @@ export class UserController {
     });
 
     try {
-      // Extract and validate projectUid
       const projectUid = req.query['projectUid'] as string | undefined;
-      if (!projectUid) {
-        const validationError = ServiceValidationError.forField('projectUid', 'projectUid query parameter is required', {
-          operation: 'get_user_past_meetings',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
 
       // Extract user email from OIDC (lowercased for consistent tag matching)
       const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();

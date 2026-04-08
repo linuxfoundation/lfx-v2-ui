@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -12,7 +12,7 @@ import { MeetingService } from '@services/meeting.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, Observable, of, switchMap, tap } from 'rxjs';
 
 import type { Meeting, MeetingWithOccurrence, PastMeeting } from '@lfx-one/shared/interfaces';
 
@@ -46,64 +46,66 @@ export class MyMeetingsComponent {
   // Computed: Last past meeting
   protected readonly lastMeeting: Signal<PastMeeting | null> = this.initLastMeeting();
 
-  // Header text based on lens
+  // Text based on lens
   protected readonly sectionTitle = computed(() => (this.activeLens() === 'me' ? 'My Meetings' : 'Meetings'));
+  protected readonly emptyPastText = computed(() => (this.activeLens() === 'me' ? 'Your past meetings will appear here.' : 'No past meetings found.'));
+  protected readonly emptyUpcomingText = computed(() =>
+    this.activeLens() === 'me' ? 'Your scheduled meetings will appear here.' : 'No upcoming meetings found.'
+  );
 
   private initRawMeetings() {
-    const project$ = toObservable(this.selectedProject);
-    const lens$ = toObservable(this.activeLens);
-
-    return toSignal(
-      combineLatest([project$, lens$]).pipe(
-        tap(() => this.upcomingLoading.set(true)),
-        switchMap(([project, lens]) => {
-          if (!project?.uid || lens === 'org') {
-            this.upcomingLoading.set(false);
-            return of([]);
-          }
-
-          const meetings$ =
-            lens === 'me' ? this.userService.getUserMeetings(project.uid, 100) : this.meetingService.getUpcomingMeetingsByProject(project.uid, 100);
-
-          return meetings$.pipe(
-            tap(() => this.upcomingLoading.set(false)),
-            catchError(() => {
-              this.upcomingLoading.set(false);
-              return of([]);
-            })
-          );
-        })
-      ),
-      { initialValue: [] as Meeting[] }
+    return this.initLensSwitchedData<Meeting>(
+      this.upcomingLoading,
+      () => this.userService.getUserMeetings(100),
+      (uid) => this.meetingService.getUpcomingMeetingsByProject(uid, 100)
     );
   }
 
   private initRawPastMeetings() {
+    return this.initLensSwitchedData<PastMeeting>(
+      this.pastLoading,
+      () => this.userService.getUserPastMeetings(50),
+      (uid) => this.meetingService.getPastMeetingsByProject(uid, 50)
+    );
+  }
+
+  private initLensSwitchedData<T>(
+    loading: WritableSignal<boolean>,
+    meFetcher: () => Observable<T[]>,
+    projectFetcher: (projectUid: string) => Observable<T[]>
+  ): Signal<T[]> {
     const project$ = toObservable(this.selectedProject);
     const lens$ = toObservable(this.activeLens);
 
     return toSignal(
       combineLatest([project$, lens$]).pipe(
-        tap(() => this.pastLoading.set(true)),
+        tap(() => loading.set(true)),
         switchMap(([project, lens]) => {
-          if (!project?.uid || lens === 'org') {
-            this.pastLoading.set(false);
-            return of([]);
+          if (lens === 'org') {
+            loading.set(false);
+            return of([] as T[]);
           }
 
-          const pastMeetings$ =
-            lens === 'me' ? this.userService.getUserPastMeetings(project.uid, 50) : this.meetingService.getPastMeetingsByProject(project.uid, 50);
+          let source$: Observable<T[]>;
+          if (lens === 'me') {
+            source$ = meFetcher();
+          } else if (project?.uid) {
+            source$ = projectFetcher(project.uid);
+          } else {
+            loading.set(false);
+            return of([] as T[]);
+          }
 
-          return pastMeetings$.pipe(
-            tap(() => this.pastLoading.set(false)),
+          return source$.pipe(
+            tap(() => loading.set(false)),
             catchError(() => {
-              this.pastLoading.set(false);
-              return of([]);
+              loading.set(false);
+              return of([] as T[]);
             })
           );
         })
       ),
-      { initialValue: [] as PastMeeting[] }
+      { initialValue: [] as T[] }
     );
   }
 

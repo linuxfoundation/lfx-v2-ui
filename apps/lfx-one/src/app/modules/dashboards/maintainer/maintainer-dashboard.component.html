@@ -2,8 +2,13 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8" data-testid="dashboard-container">
-  <!-- Foundation Project -->
-  @if (selectedProject()) {
+  <!-- Page Header -->
+  @if (isMeLens()) {
+    <div class="mb-6" data-testid="me-lens-header">
+      <h1>My LFX Overview</h1>
+      <p class="mt-1 text-sm text-gray-500">Cross-foundation dashboard — your activity, meetings, and actions across all foundations.</p>
+    </div>
+  } @else if (selectedProject()) {
     <div class="mb-6 flex items-center gap-4" data-testid="foundation-project">
       <h1>{{ selectedProject()?.name }} Overview</h1>
     </div>
@@ -82,19 +87,21 @@
       </section>
     }
 
-    <!-- My Projects - Full Width (below fold) -->
-    @defer (on viewport) {
-      <lfx-my-projects />
-    } @placeholder {
-      <div data-testid="dashboard-my-projects-placeholder">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
-            <p-skeleton width="6rem" height="1rem" />
+    <!-- My Projects - Full Width (below fold, project lens only) -->
+    @if (showProjects()) {
+      @defer (on viewport) {
+        <lfx-my-projects />
+      } @placeholder {
+        <div data-testid="dashboard-my-projects-placeholder">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
+              <p-skeleton width="6rem" height="1rem" />
+            </div>
           </div>
+          <p-skeleton width="100%" height="200px" borderRadius="8px" />
         </div>
-        <p-skeleton width="100%" height="200px" borderRadius="8px" />
-      </div>
+      }
     }
   </div>
 </div>

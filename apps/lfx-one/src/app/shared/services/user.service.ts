@@ -144,8 +144,8 @@ export class UserService {
    * @param projectUid - Project UID to filter meetings by
    * @param limit - Optional limit on number of meetings to return
    */
-  public getUserMeetings(projectUid: string, limit?: number): Observable<Meeting[]> {
-    const params: Record<string, string> = { projectUid };
+  public getUserMeetings(limit?: number): Observable<Meeting[]> {
+    const params: Record<string, string> = {};
     if (limit !== undefined) {
       params['limit'] = limit.toString();
     }
@@ -158,12 +158,11 @@ export class UserService {
   }
 
   /**
-   * Gets past meetings for the current authenticated user filtered by project
-   * @param projectUid - Project UID to filter meetings by
+   * Gets past meetings for the current authenticated user
    * @param limit - Optional limit on number of past meetings to return
    */
-  public getUserPastMeetings(projectUid: string, limit?: number): Observable<PastMeeting[]> {
-    const params: Record<string, string> = { projectUid };
+  public getUserPastMeetings(limit?: number): Observable<PastMeeting[]> {
+    const params: Record<string, string> = {};
     if (limit !== undefined) {
       params['limit'] = limit.toString();
     }

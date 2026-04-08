@@ -24,7 +24,9 @@ export class MaintainerDashboardComponent {
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly lensService = inject(LensService);
 
+  protected readonly isMeLens = computed(() => this.lensService.activeLens() === 'me');
   protected readonly showMeetings = computed(() => this.lensService.activeLens() !== 'org');
+  protected readonly showProjects = computed(() => this.lensService.activeLens() === 'project');
 
   public readonly selectedProject = computed(() => this.projectContextService.selectedFoundation() || this.projectContextService.selectedProject());
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
