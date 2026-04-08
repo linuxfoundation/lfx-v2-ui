@@ -1,76 +1,105 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card styleClass="h-full flex flex-col" data-testid="badge-card">
-  <div class="flex flex-col gap-4 h-full">
-    <!-- Badge Image + Category -->
-    <div class="flex flex-col items-center gap-3 pt-2">
-      <img [src]="badge().imageUrl" [alt]="badge().name" class="w-24 h-24 object-contain rounded-md" data-testid="badge-card-image" />
-      <lfx-tag [value]="categoryLabel()" [severity]="categorySeverity()" [rounded]="true" data-testid="badge-card-category" />
+<div class="bg-white rounded-xl border shadow-md hover:border-blue-500 transition-all h-full flex flex-col" data-testid="badge-card">
+  <div class="p-4 flex flex-col gap-3 h-full">
+    <!-- Top row: logo + name (left) + category pill + verified (right) -->
+    <div class="flex items-start gap-3">
+      <!-- Badge logo / fallback icon -->
+      <div
+        class="flex-shrink-0 w-16 h-16 flex items-center justify-center rounded-lg bg-gray-50 border border-gray-100 overflow-hidden"
+        data-testid="badge-card-image-container">
+        @if (hasImage()) {
+          <img [src]="badge().imageUrl" [alt]="badge().name" class="w-16 h-16 object-contain" data-testid="badge-card-image" />
+        } @else {
+          <i class="fa-light fa-award text-3xl text-gray-400" data-testid="badge-card-icon-fallback"></i>
+        }
+      </div>
+
+      <!-- Name + issuer -->
+      <div class="flex-1 min-w-0 pt-0.5">
+        <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="badge-card-name">{{ badge().name }}</h3>
+        <p class="text-xs text-gray-500 mt-0.5 truncate" data-testid="badge-card-issued-by">{{ badge().issuedBy }}</p>
+      </div>
+
+      <!-- Category pill + Verified label stacked to the top-right -->
+      <div class="flex-shrink-0 flex flex-col items-end gap-1.5" data-testid="badge-card-badges">
+        <span
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-700 whitespace-nowrap"
+          data-testid="badge-card-category">
+          {{ categoryLabel() }}
+        </span>
+        @if (badge().isVerified) {
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 border border-blue-200 text-blue-600 whitespace-nowrap"
+            data-testid="badge-card-verified">
+            <i class="fa-solid fa-circle-check text-[10px]"></i>
+            Verified
+          </span>
+        }
+      </div>
     </div>
 
-    <!-- Name -->
-    <h3 class="text-base font-semibold text-gray-900 text-center leading-snug" data-testid="badge-card-name">
-      {{ badge().name }}
-    </h3>
-
-    <!-- Description -->
-    <p class="text-sm text-gray-600 line-clamp-3" data-testid="badge-card-description">
-      {{ badge().description }}
-    </p>
-
-    <!-- Meta: Issued By + Issued Date + Credential ID -->
-    <div class="flex flex-col gap-2 text-sm" data-testid="badge-card-meta">
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Issued by</span>
-        <span class="text-gray-700 font-medium">{{ badge().issuedBy }}</span>
-      </div>
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Issued</span>
+    <!-- Issued date + Credential ID -->
+    <div class="flex flex-col gap-1.5 text-xs" data-testid="badge-card-meta">
+      <div class="flex items-center gap-1.5">
+        <span class="text-gray-400">Issued:</span>
         <span class="text-gray-700">{{ badge().issuedDate | date: 'MMMM d, y' }}</span>
       </div>
-      <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Credential ID</span>
-        <span class="text-gray-500 font-mono text-xs truncate" [title]="badge().credentialId" data-testid="badge-card-credential-id">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="text-gray-400 flex-shrink-0">Credential ID:</span>
+        <span class="text-gray-500 font-mono truncate" [title]="badge().credentialId" data-testid="badge-card-credential-id">
           {{ badge().credentialId }}
         </span>
       </div>
     </div>
 
+    <!-- Description -->
+    <p class="text-sm text-gray-600 line-clamp-3" data-testid="badge-card-description">{{ badge().description }}</p>
+
     <!-- Topics -->
     @if (badge().topics.length > 0) {
-      <div class="flex flex-col gap-1.5" data-testid="badge-card-topics">
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Topics</span>
-        <div class="flex flex-wrap gap-1.5">
-          @for (topic of badge().topics; track topic) {
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-              {{ topic }}
-            </span>
-          }
-        </div>
+      <div class="flex flex-wrap gap-1.5" data-testid="badge-card-topics">
+        @for (topic of badge().topics; track topic) {
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+            {{ topic }}
+          </span>
+        }
       </div>
     }
 
-    <!-- Earning Criteria -->
-    <div class="flex flex-col gap-1.5" data-testid="badge-card-criteria">
-      <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Earning Criteria</span>
-      <p class="text-xs text-gray-500 line-clamp-3">{{ badge().earningCriteria }}</p>
-    </div>
-
-    <!-- Spacer to push button to bottom -->
+    <!-- Spacer -->
     <div class="flex-1"></div>
 
-    <!-- Verify Button -->
-    <div class="border-t border-gray-100 pt-4" data-testid="badge-card-verify">
+    <!-- Action Buttons — meeting-card style -->
+    <div class="flex gap-2 pt-3 border-t border-gray-100" data-testid="badge-card-actions">
+      <!-- Know More -->
       <lfx-button
-        label="Verify Badge"
-        icon="fa-light fa-arrow-up-right-from-square"
-        [outlined]="true"
-        [fluid]="true"
-        [href]="badge().verifyUrl"
+        class="w-full"
+        severity="secondary"
+        size="small"
+        styleClass="w-full"
+        label="Know more"
+        [href]="badge().credlyBadgeUrl"
         target="_blank"
         rel="noopener noreferrer"
-        data-testid="badge-card-verify-button" />
+        [outlined]="true"
+        data-testid="badge-card-know-more-button" />
+
+      <!-- Verify Badge — hidden for verified badges -->
+      @if (!badge().isVerified) {
+        <lfx-button
+          class="w-full"
+          severity="secondary"
+          size="small"
+          styleClass="w-full"
+          label="Verify Badge"
+          [href]="badge().verifyUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          [outlined]="true"
+          data-testid="badge-card-verify-button" />
+      }
     </div>
   </div>
-</lfx-card>
+</div>

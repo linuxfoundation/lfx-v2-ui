@@ -32,6 +32,10 @@ export interface Badge {
   earningCriteria: string;
   /** Classification of the badge type */
   category: BadgeCategory;
-  /** External Credly verification URL */
+  /** External Credly URL for the specific earned credential (verification) */
   verifyUrl: string;
+  /** External Credly URL for the badge type/program page (know more) */
+  credlyBadgeUrl: string;
+  /** Whether the credential has been externally verified via Credly */
+  isVerified?: boolean;
 }

@@ -3,11 +3,9 @@
 
 import { DatePipe } from '@angular/common';
 import { Component, computed, input, Signal } from '@angular/core';
-import { Badge, BadgeCategory, TagProps } from '@lfx-one/shared/interfaces';
+import { Badge, BadgeCategory } from '@lfx-one/shared/interfaces';
 
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
-import { TagComponent } from '@components/tag/tag.component';
 
 /** Human-readable label for each badge category */
 const CATEGORY_LABELS: Record<BadgeCategory, string> = {
@@ -19,19 +17,9 @@ const CATEGORY_LABELS: Record<BadgeCategory, string> = {
   'program-committee': 'Program Committee',
 };
 
-/** PrimeNG tag severity per badge category */
-const CATEGORY_SEVERITIES: Record<BadgeCategory, TagProps['severity']> = {
-  certification: 'info',
-  speaking: 'warn',
-  'event-participation': 'secondary',
-  'project-contribution': 'contrast',
-  maintainer: 'success',
-  'program-committee': 'danger',
-};
-
 @Component({
   selector: 'lfx-badge-card',
-  imports: [CardComponent, TagComponent, ButtonComponent, DatePipe],
+  imports: [ButtonComponent, DatePipe],
   templateUrl: './badge-card.component.html',
 })
 export class BadgeCardComponent {
@@ -40,14 +28,14 @@ export class BadgeCardComponent {
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly categoryLabel: Signal<string> = this.initCategoryLabel();
-  protected readonly categorySeverity: Signal<TagProps['severity']> = this.initCategorySeverity();
+  protected readonly hasImage: Signal<boolean> = this.initHasImage();
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initCategoryLabel(): Signal<string> {
     return computed(() => CATEGORY_LABELS[this.badge().category]);
   }
 
-  private initCategorySeverity(): Signal<TagProps['severity']> {
-    return computed(() => CATEGORY_SEVERITIES[this.badge().category]);
+  private initHasImage(): Signal<boolean> {
+    return computed(() => !!this.badge().imageUrl);
   }
 }

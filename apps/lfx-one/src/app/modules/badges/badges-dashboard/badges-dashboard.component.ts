@@ -2,26 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { Badge, BadgeCategory } from '@lfx-one/shared/interfaces';
+import { Badge, BadgeCategory, FilterPillOption } from '@lfx-one/shared/interfaces';
 
 import { ButtonComponent } from '@components/button/button.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { BadgeCardComponent } from '../components/badge-card/badge-card.component';
 import { BadgeService } from '../badge.service';
 
-/** Represents a filter option in the category tab bar */
-interface CategoryFilter {
-  label: string;
-  value: BadgeCategory | 'all';
-}
-
-const CATEGORY_FILTERS: CategoryFilter[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Certifications', value: 'certification' },
-  { label: 'Maintainer', value: 'maintainer' },
-  { label: 'Speaking', value: 'speaking' },
-  { label: 'Event Participation', value: 'event-participation' },
-  { label: 'Contributions', value: 'project-contribution' },
-  { label: 'Program Committee', value: 'program-committee' },
+const CATEGORY_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'certification', label: 'Certifications' },
+  { id: 'maintainer', label: 'Maintainer' },
+  { id: 'speaking', label: 'Speaking' },
+  { id: 'event-participation', label: 'Event Participation' },
+  { id: 'project-contribution', label: 'Contributions' },
+  { id: 'program-committee', label: 'Program Committee' },
 ];
 
 const PAGE_SUBTITLE =
@@ -29,7 +24,7 @@ const PAGE_SUBTITLE =
 
 @Component({
   selector: 'lfx-badges-dashboard',
-  imports: [BadgeCardComponent, ButtonComponent],
+  imports: [BadgeCardComponent, ButtonComponent, FilterPillsComponent],
   templateUrl: './badges-dashboard.component.html',
 })
 export class BadgesDashboardComponent {
@@ -38,10 +33,10 @@ export class BadgesDashboardComponent {
 
   // ─── Configuration ─────────────────────────────────────────────────────────
   protected readonly subtitle = PAGE_SUBTITLE;
-  protected readonly categoryFilters = CATEGORY_FILTERS;
+  protected readonly filterOptions = CATEGORY_FILTER_OPTIONS;
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
-  protected readonly activeFilter = signal<BadgeCategory | 'all'>('all');
+  protected readonly activeFilter = signal<string>('all');
   private readonly allBadges = signal<Badge[]>(this.badgeService.getBadges());
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
@@ -49,18 +44,14 @@ export class BadgesDashboardComponent {
   protected readonly isEmpty: Signal<boolean> = this.initIsEmpty();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
-  protected setFilter(value: BadgeCategory | 'all'): void {
-    this.activeFilter.set(value);
-  }
-
-  protected isFilterActive(value: BadgeCategory | 'all'): boolean {
-    return this.activeFilter() === value;
+  protected onFilterChange(filterId: string): void {
+    this.activeFilter.set(filterId);
   }
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initFilteredBadges(): Signal<Badge[]> {
     return computed(() => {
-      const filter = this.activeFilter();
+      const filter = this.activeFilter() as BadgeCategory | 'all';
       const badges = this.allBadges();
       return filter === 'all' ? badges : badges.filter((b) => b.category === filter);
     });

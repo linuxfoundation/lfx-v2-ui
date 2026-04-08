@@ -30,23 +30,9 @@
         data-testid="badges-empty-cta" />
     </div>
   } @else {
-    <!-- Category Filter Bar -->
-    <div class="flex flex-wrap gap-2 mb-6" role="group" aria-label="Filter badges by category" data-testid="badges-filter-bar">
-      @for (filter of categoryFilters; track filter.value) {
-        <button
-          type="button"
-          class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-          [class]="
-            isFilterActive(filter.value)
-              ? 'bg-blue-600 border-blue-600 text-white'
-              : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
-          "
-          (click)="setFilter(filter.value)"
-          [attr.aria-pressed]="isFilterActive(filter.value)"
-          data-testid="badges-filter-button">
-          {{ filter.label }}
-        </button>
-      }
+    <!-- Category Filter Pills — same component as Recent Progress -->
+    <div class="mb-6" data-testid="badges-filter-bar">
+      <lfx-filter-pills [options]="filterOptions" [selectedFilter]="activeFilter()" (filterChange)="onFilterChange($event)" />
     </div>
 
     <!-- Badge Count -->
@@ -66,7 +52,7 @@
       <div class="flex flex-col items-center justify-center py-16 text-center gap-3" data-testid="badges-no-results">
         <i class="fa-light fa-filter-slash text-4xl text-gray-300"></i>
         <p class="text-gray-500 text-sm">No badges in this category yet.</p>
-        <button type="button" class="text-sm text-blue-600 hover:underline focus:outline-none" (click)="setFilter('all')">Show all badges</button>
+        <button type="button" class="text-sm text-blue-600 hover:underline focus:outline-none" (click)="onFilterChange('all')">Show all badges</button>
       </div>
     }
   }
