@@ -3,11 +3,12 @@
 
 <div class="bg-white rounded-xl border shadow-md hover:border-blue-500 transition-all h-full flex flex-col" data-testid="badge-card">
   <div class="p-4 flex flex-col gap-3 h-full">
-    <!-- Top row: logo + name (left) + category pill + verified (right) -->
+    <!-- Top row: logo (left, no border/bg when image) + category pill + verified (right) -->
     <div class="flex items-start gap-3">
       <!-- Badge logo / fallback icon -->
       <div
-        class="flex-shrink-0 w-16 h-16 flex items-center justify-center rounded-lg bg-gray-50 border border-gray-100 overflow-hidden"
+        class="flex-shrink-0 w-16 h-16 flex items-center justify-center overflow-hidden"
+        [class]="hasImage() ? '' : 'rounded-lg bg-gray-50 border border-gray-100'"
         data-testid="badge-card-image-container">
         @if (hasImage()) {
           <img [src]="badge().imageUrl" [alt]="badge().name" class="w-16 h-16 object-contain" data-testid="badge-card-image" />
@@ -16,11 +17,8 @@
         }
       </div>
 
-      <!-- Name + issuer -->
-      <div class="flex-1 min-w-0 pt-0.5">
-        <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="badge-card-name">{{ badge().name }}</h3>
-        <p class="text-xs text-gray-500 mt-0.5 truncate" data-testid="badge-card-issued-by">{{ badge().issuedBy }}</p>
-      </div>
+      <!-- Spacer to push pills to the right -->
+      <div class="flex-1"></div>
 
       <!-- Category pill + Verified label stacked to the top-right -->
       <div class="flex-shrink-0 flex flex-col items-end gap-1.5" data-testid="badge-card-badges">
@@ -40,14 +38,20 @@
       </div>
     </div>
 
-    <!-- Issued date + Credential ID -->
-    <div class="flex flex-col gap-1.5 text-xs" data-testid="badge-card-meta">
-      <div class="flex items-center gap-1.5">
+    <!-- Badge name + issuer below logo -->
+    <div class="flex flex-col gap-0.5">
+      <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="badge-card-name">{{ badge().name }}</h3>
+      <p class="text-xs text-gray-500" data-testid="badge-card-issued-by">{{ badge().issuedBy }}</p>
+    </div>
+
+    <!-- Issued date + Credential ID (label above value) -->
+    <div class="flex flex-col gap-2 text-xs" data-testid="badge-card-meta">
+      <div class="flex flex-col gap-0.5">
         <span class="text-gray-400">Issued:</span>
         <span class="text-gray-700">{{ badge().issuedDate | date: 'MMMM d, y' }}</span>
       </div>
-      <div class="flex items-center gap-1.5 min-w-0">
-        <span class="text-gray-400 flex-shrink-0">Credential ID:</span>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-gray-400">Credential ID:</span>
         <span class="text-gray-500 font-mono truncate" [title]="badge().credentialId" data-testid="badge-card-credential-id">
           {{ badge().credentialId }}
         </span>
@@ -71,14 +75,13 @@
     <!-- Spacer -->
     <div class="flex-1"></div>
 
-    <!-- Action Buttons — meeting-card style -->
-    <div class="flex gap-2 pt-3 border-t border-gray-100" data-testid="badge-card-actions">
+    <!-- Action Buttons — no separator, smaller -->
+    <div class="flex gap-2" data-testid="badge-card-actions">
       <!-- Know More -->
       <lfx-button
         class="w-full"
         severity="secondary"
-        size="small"
-        styleClass="w-full"
+        styleClass="w-full !text-xs !h-7 !py-0"
         label="Know more"
         [href]="badge().credlyBadgeUrl"
         target="_blank"
@@ -86,13 +89,11 @@
         [outlined]="true"
         data-testid="badge-card-know-more-button" />
 
-      <!-- Verify Badge — hidden for verified badges -->
+      <!-- Verify Badge — hidden for verified badges, blue outlined -->
       @if (!badge().isVerified) {
         <lfx-button
           class="w-full"
-          severity="secondary"
-          size="small"
-          styleClass="w-full"
+          styleClass="w-full !text-xs !h-7 !py-0"
           label="Verify Badge"
           [href]="badge().verifyUrl"
           target="_blank"
