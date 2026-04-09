@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
+import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MeetingRegistrantsDisplayComponent } from '@app/modules/meetings/components/meeting-registrants-display/meeting-registrants-display.component';
+import { MeetingSummaryModalComponent } from '@app/modules/meetings/components/meeting-summary-modal/meeting-summary-modal.component';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -53,6 +55,8 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
   selector: 'lfx-meeting-join',
   imports: [
     ClipboardModule,
+    DatePipe,
+    NgClass,
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,
@@ -72,7 +76,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
     MarkdownRendererComponent,
     DynamicDialogModule,
   ],
-  providers: [],
+  providers: [DialogService],
   templateUrl: './meeting-join.component.html',
 })
 export class MeetingJoinComponent {
@@ -127,6 +131,13 @@ export class MeetingJoinComponent {
   public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
   public primaryRecordingUrl: Signal<string | null>;
   public transcriptUrl: Signal<string | null>;
+  public currentAttachments = computed(() => (this.loadedViaPastMeetingId() ? this.pastMeetingAttachments() : this.attachments()));
+  public materialFiles = computed(() => this.currentAttachments().filter((a) => a.type === 'file'));
+  public materialLinks = computed(() => this.currentAttachments().filter((a) => a.type === 'link'));
+  public hasRecentlyUpdatedMaterials = computed(() => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return this.currentAttachments().some((a) => a.updated_at && new Date(a.updated_at) > sevenDaysAgo);
+  });
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -213,7 +224,7 @@ export class MeetingJoinComponent {
     this.showMyRsvp.set(!this.showMyRsvp());
   }
 
-  public downloadAttachment(attachment: MeetingAttachment): void {
+  public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
     this.meetingService
       .getMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid)
       .pipe(take(1))
@@ -256,6 +267,44 @@ export class MeetingJoinComponent {
         this.refreshTrigger$.next();
       }
     });
+  }
+
+  public openSummaryModal(): void {
+    const summary = this.pastMeetingSummary();
+    if (!summary) return;
+
+    this.dialogService.open(MeetingSummaryModalComponent, {
+      header: 'AI Summary',
+      width: '700px',
+      modal: true,
+      closable: true,
+      dismissableMask: true,
+      data: { summary },
+    });
+  }
+
+  protected getFileTypeDisplay(attachment: MeetingAttachment | PastMeetingAttachment): {
+    icon: string;
+    bgColor: string;
+    textColor: string;
+    label: string;
+  } {
+    const ext = (attachment.file_name || attachment.name || '').split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return { icon: 'fa-light fa-file-pdf', bgColor: 'bg-red-100', textColor: 'text-red-600', label: 'PDF' };
+      case 'xlsx':
+      case 'xls':
+        return { icon: 'fa-light fa-file-spreadsheet', bgColor: 'bg-green-100', textColor: 'text-green-600', label: 'XLSX' };
+      case 'docx':
+      case 'doc':
+        return { icon: 'fa-light fa-file-word', bgColor: 'bg-blue-100', textColor: 'text-blue-600', label: 'DOCX' };
+      case 'pptx':
+      case 'ppt':
+        return { icon: 'fa-light fa-file-powerpoint', bgColor: 'bg-orange-100', textColor: 'text-orange-600', label: 'PPTX' };
+      default:
+        return { icon: 'fa-light fa-file', bgColor: 'bg-gray-100', textColor: 'text-gray-600', label: ext?.toUpperCase() || 'FILE' };
+    }
   }
 
   private initializeAutoJoin(): void {
@@ -320,34 +369,9 @@ export class MeetingJoinComponent {
             return EMPTY;
           }
 
-          // Check if this is a past meeting occurrence ID (format: meetingId-timestamp)
-          if (this.isPastMeetingOccurrenceId(meetingId)) {
-            this.loadedViaPastMeetingId.set(true);
-            return this.meetingService.getPastMeetingById(meetingId).pipe(
-              map((pastMeeting: PastMeeting) => ({
-                meeting: pastMeeting as Meeting,
-                project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
-              })),
-              catchError((error) => {
-                if (error.status === 401) {
-                  this.router.navigate(['/login'], { queryParams: { returnTo: `/meetings/${meetingId}` } });
-                } else if ([404, 403, 400].includes(error.status)) {
-                  this.router.navigate(['/meetings/not-found']);
-                }
-                return EMPTY;
-              })
-            );
-          }
-
+          // Try public meeting endpoint first, fall back to past-meeting endpoint on failure
           this.loadedViaPastMeetingId.set(false);
-          return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
-            catchError((error) => {
-              if ([404, 403, 400].includes(error.status)) {
-                this.router.navigate(['/meetings/not-found']);
-              }
-              return EMPTY;
-            })
-          );
+          return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(catchError(() => this.loadPastMeeting(meetingId)));
         }),
         map((res) => ({ ...res.meeting, project: res.project })),
         tap((res) => {
@@ -357,10 +381,23 @@ export class MeetingJoinComponent {
     ) as Signal<Meeting & { project: Project }>;
   }
 
-  private isPastMeetingOccurrenceId(id: string): boolean {
-    // Past meeting occurrence IDs have format: meetingId-timestamp (e.g., 95580361604-1775745000000)
-    const parts = id.split('-');
-    return parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d{13}$/.test(parts[1]);
+  private loadPastMeeting(meetingId: string): Observable<{ meeting: Meeting; project: Project }> {
+    this.loadedViaPastMeetingId.set(true);
+    return this.meetingService.getPastMeetingById(meetingId).pipe(
+      map((pastMeeting: PastMeeting) => ({
+        meeting: pastMeeting as Meeting,
+        project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
+      })),
+      catchError((error) => {
+        this.loadedViaPastMeetingId.set(false);
+        if (error.status === 401) {
+          this.router.navigate(['/login'], { queryParams: { returnTo: `/meetings/${meetingId}` } });
+        } else {
+          this.router.navigate(['/meetings/not-found']);
+        }
+        return EMPTY;
+      })
+    );
   }
 
   private initializeCurrentOccurrence(): Signal<MeetingOccurrence | null> {
