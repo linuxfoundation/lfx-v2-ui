@@ -32,6 +32,7 @@ import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import personaRouter from './routes/persona.route';
+import subscriptionsRouter from './routes/subscriptions.route';
 import surveysRouter from './routes/surveys.route';
 import trainingRouter from './routes/training.route';
 import userRouter from './routes/user.route';
@@ -193,6 +194,7 @@ app.use('/api/surveys', surveysRouter);
 app.use('/api/copilot', copilotRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/training', trainingRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);

@@ -77,6 +77,7 @@ export class MainLayoutComponent {
         { label: 'My Profile', icon: 'fa-light fa-user', routerLink: '/profile', exactMatch: false },
         { label: 'Settings', icon: 'fa-light fa-gear', routerLink: '/settings' },
         { label: 'Transactions', icon: 'fa-light fa-receipt', routerLink: '/me/transactions' },
+        { label: 'Subscriptions', icon: 'fa-light fa-bell', routerLink: '/me/subscriptions' },
       ],
     },
   ];

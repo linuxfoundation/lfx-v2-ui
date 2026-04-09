@@ -112,3 +112,6 @@ export * from './training.interface';
 
 // Badge interfaces
 export * from './badge.interface';
+
+// Subscription interfaces
+export * from './subscription.interface';

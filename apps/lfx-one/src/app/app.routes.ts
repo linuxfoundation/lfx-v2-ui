@@ -88,6 +88,10 @@ export const routes: Routes = [
         path: 'me/badges',
         loadChildren: () => import('./modules/badges/badges.routes').then((m) => m.BADGE_ROUTES),
       },
+      {
+        path: 'me/subscriptions',
+        loadChildren: () => import('./modules/subscriptions/subscriptions.routes').then((m) => m.SUBSCRIPTION_ROUTES),
+      },
       { path: 'me/easycla', component: PlaceholderPageComponent, data: { title: 'EasyCLA' } },
       { path: 'me/transactions', component: PlaceholderPageComponent, data: { title: 'Transactions' } },
       // Foundation lens — overview + real implementation + placeholder pages
