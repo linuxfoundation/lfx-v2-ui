@@ -150,7 +150,10 @@ export class SidebarComponent {
       return;
     }
 
-    this.projectContextService.setFoundation(toProjectContext(detectedProjects[0]));
+    const validProjectIds = new Set(detectedProjects.map((p) => p.projectUid));
+    const defaultFoundation = detectedProjects.find((p) => isFoundationProject(p, validProjectIds)) ?? detectedProjects[0];
+
+    this.projectContextService.setFoundation(toProjectContext(defaultFoundation));
   }
 
   private isExternalUrl(url: string): boolean {

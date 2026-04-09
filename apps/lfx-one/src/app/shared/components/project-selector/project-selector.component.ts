@@ -50,7 +50,7 @@ export class ProjectSelectorComponent {
   private initializeDisplayName() {
     return computed(() => {
       const project = this.selectedProject();
-      return project?.projectName?.trim() ?? 'Select Project';
+      return project?.projectName?.trim() || 'Select Project';
     });
   }
 
@@ -77,10 +77,7 @@ export class ProjectSelectorComponent {
 
       const foundationsWithMatchingChildren = foundationList.filter((foundation) => {
         const children = allProjects.filter(
-          (p) =>
-            p.parentProjectUid === foundation.projectUid &&
-            ids.has(p.parentProjectUid!) &&
-            (p.projectName?.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query))
+          (p) => p.parentProjectUid === foundation.projectUid && (p.projectName?.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query))
         );
         return children.length > 0;
       });

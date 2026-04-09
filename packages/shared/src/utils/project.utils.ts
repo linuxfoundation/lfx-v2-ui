@@ -9,7 +9,7 @@ import type { EnrichedPersonaProject, ProjectContext } from '../interfaces';
 export function toProjectContext(project: EnrichedPersonaProject): ProjectContext {
   return {
     uid: project.projectUid,
-    name: project.projectName || '',
+    name: project.projectName || project.projectSlug,
     slug: project.projectSlug,
   };
 }

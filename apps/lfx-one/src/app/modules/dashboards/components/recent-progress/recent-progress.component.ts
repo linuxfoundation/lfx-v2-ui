@@ -20,7 +20,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, of, switchMap, tap } from 'rxjs';
 
 import type {
   ActiveWeeksStreakResponse,
@@ -749,8 +749,12 @@ export class RecentProgressComponent {
 
   private initializeProjectIssuesResolutionData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, projectIssuesResolution: false }));
+            return [{ data: [], totalOpenedIssues: 0, totalClosedIssues: 0, resolutionRatePct: 0, medianDaysToClose: 0, totalDays: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, projectIssuesResolution: false }));
             return [{ data: [], totalOpenedIssues: 0, totalClosedIssues: 0, resolutionRatePct: 0, medianDaysToClose: 0, totalDays: 0 }];
@@ -781,8 +785,12 @@ export class RecentProgressComponent {
 
   private initializeProjectPullRequestsWeeklyData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: false }));
+            return [{ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: false }));
             return [{ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 }];
@@ -811,8 +819,12 @@ export class RecentProgressComponent {
 
   private initializeContributorsMentoredData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, contributorsMentored: false }));
+            return [{ data: [], totalMentored: 0, avgWeeklyNew: 0, totalWeeks: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, contributorsMentored: false }));
             return [{ data: [], totalMentored: 0, avgWeeklyNew: 0, totalWeeks: 0 }];
@@ -840,8 +852,12 @@ export class RecentProgressComponent {
 
   private initializeUniqueContributorsWeeklyData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: false }));
+            return [{ data: [], totalUniqueContributors: 0, avgUniqueContributors: 0, totalWeeks: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: false }));
             return [{ data: [], totalUniqueContributors: 0, avgUniqueContributors: 0, totalWeeks: 0 }];
@@ -870,8 +886,12 @@ export class RecentProgressComponent {
 
   private initializeHealthMetricsDailyData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, healthMetricsDaily: false }));
+            return [{ data: [], currentAvgHealthScore: 0, totalDays: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, healthMetricsDaily: false }));
             return [{ data: [], currentAvgHealthScore: 0, totalDays: 0 }];
@@ -899,8 +919,12 @@ export class RecentProgressComponent {
 
   private initializeCodeCommitsDailyData() {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
+      combineLatest([toObservable(this.projectSlug), toObservable(this.personaService.currentPersona)]).pipe(
+        switchMap(([projectSlug, persona]) => {
+          if (persona !== 'maintainer') {
+            this.loadingState.update((state) => ({ ...state, codeCommitsDaily: false }));
+            return [{ data: [], totalCommits: 0, totalDays: 0 }];
+          }
           if (!projectSlug) {
             this.loadingState.update((state) => ({ ...state, codeCommitsDaily: false }));
             return [{ data: [], totalCommits: 0, totalDays: 0 }];

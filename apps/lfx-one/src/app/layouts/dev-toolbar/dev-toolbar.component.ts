@@ -46,11 +46,8 @@ export class DevToolbarComponent {
   /** Label for the project/foundation selector */
   protected readonly selectorLabel = computed(() => (isBoardScopedPersona(this.activePreset().primary) ? 'Foundation:' : 'Project:'));
 
-  /** Hide project and organization selectors on the "Me" lens */
-  protected readonly showProjectSelector = computed(() => {
-    const lens = this.lensService.activeLens();
-    return lens === 'project' || lens === 'foundation';
-  });
+  /** Hide project selector on the "Me" lens */
+  protected readonly showProjectSelector = computed(() => this.lensService.activeLens() !== 'me');
 
   /** Organization selector is only relevant on the foundation lens */
   protected readonly isFoundationLens = computed(() => this.lensService.activeLens() === 'foundation');
