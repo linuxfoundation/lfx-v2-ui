@@ -1,19 +1,17 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { FilterPillOption, UserEmail, UserSubscription } from '@lfx-one/shared/interfaces';
-import { catchError, filter, of, startWith, switchMap } from 'rxjs';
-
 import { DecimalPipe } from '@angular/common';
+import { Component, computed, inject, Signal, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FilterPillOption, UserSubscription } from '@lfx-one/shared/interfaces';
+import { startWith } from 'rxjs';
 
 import { ButtonComponent } from '@components/button/button.component';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { SelectComponent } from '@components/select/select.component';
-import { SubscriptionService } from '@services/subscription.service';
-import { UserService } from '@services/user.service';
+import { SubscriptionMockService } from '../subscription-mock.service';
 
 const TAB_OPTIONS: FilterPillOption[] = [
   { id: 'my-subscriptions', label: 'My Subscriptions' },
@@ -38,27 +36,24 @@ interface SubscriptionGroup {
 })
 export class SubscriptionsDashboardComponent {
   // ─── Private Injections ────────────────────────────────────────────────────
-  private readonly userService = inject(UserService);
-  private readonly subscriptionService = inject(SubscriptionService);
+  private readonly mockService = inject(SubscriptionMockService);
 
   // ─── Configuration ─────────────────────────────────────────────────────────
   protected readonly tabOptions = TAB_OPTIONS;
 
   // ─── Forms ─────────────────────────────────────────────────────────────────
   protected readonly emailForm = new FormGroup({
-    email: new FormControl<string>(''),
+    email: new FormControl<string>(this.mockService.getEmails()[0] ?? ''),
   });
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
   protected readonly activeTab = signal<string>('my-subscriptions');
   protected readonly togglingListId = signal<string | null>(null);
-  private readonly refreshTrigger = signal(0);
+  private readonly subscriptionsState = signal<UserSubscription[]>([]);
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly emailOptions: Signal<EmailOption[]> = this.initEmailOptions();
   protected readonly selectedEmail: Signal<string> = this.initSelectedEmail();
-  protected readonly subscriptions: Signal<UserSubscription[]> = this.initSubscriptions();
-  protected readonly loading: Signal<boolean> = this.initLoading();
   protected readonly subscriptionGroups: Signal<SubscriptionGroup[]> = this.initSubscriptionGroups();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
@@ -66,97 +61,55 @@ export class SubscriptionsDashboardComponent {
     this.activeTab.set(tabId);
   }
 
-  protected async toggleSubscription(list: UserSubscription): Promise<void> {
-    if (this.togglingListId()) return;
-
-    const email = this.selectedEmail();
-    if (!email) return;
-
-    this.togglingListId.set(list.mailing_list_uid);
-
-    if (list.subscribed && list.member_uid) {
-      this.subscriptionService
-        .unsubscribe(list.mailing_list_uid, list.member_uid)
-        .pipe(catchError(() => of(null)))
-        .subscribe(() => {
-          this.togglingListId.set(null);
-          this.refreshSubscriptions();
-        });
-    } else if (!list.subscribed) {
-      this.subscriptionService
-        .subscribe(list.mailing_list_uid, email)
-        .pipe(catchError(() => of(null)))
-        .subscribe(() => {
-          this.togglingListId.set(null);
-          this.refreshSubscriptions();
-        });
-    } else {
-      this.togglingListId.set(null);
-    }
+  protected onEmailChange(): void {
+    const email = this.emailForm.get('email')!.value ?? '';
+    this.loadSubscriptions(email);
   }
 
-  private refreshSubscriptions(): void {
-    this.refreshTrigger.update((n) => n + 1);
+  protected toggleSubscription(list: UserSubscription): void {
+    if (this.togglingListId()) return;
+    this.togglingListId.set(list.mailing_list_uid);
+
+    // Optimistic update — toggle subscribed state in local signal
+    this.subscriptionsState.update((subs) =>
+      subs.map((s) => {
+        if (s.mailing_list_uid !== list.mailing_list_uid) return s;
+        return s.subscribed ? { ...s, subscribed: false, member_uid: undefined } : { ...s, subscribed: true, member_uid: `member-mock-${s.mailing_list_uid}` };
+      })
+    );
+
+    // Simulate async operation
+    setTimeout(() => this.togglingListId.set(null), 600);
+  }
+
+  // ─── Private Helpers ───────────────────────────────────────────────────────
+  private loadSubscriptions(email: string): void {
+    if (!email) {
+      this.subscriptionsState.set([]);
+      return;
+    }
+    this.subscriptionsState.set(this.mockService.getSubscriptions(email).subscriptions);
   }
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initEmailOptions(): Signal<EmailOption[]> {
-    const emails$ = this.userService.getUserEmails().pipe(catchError(() => of({ emails: [] as UserEmail[], preferences: null })));
-    const emails = toSignal(emails$, { initialValue: { emails: [] as UserEmail[], preferences: null } });
-    return computed(() =>
-      (emails().emails ?? []).map((e) => ({
-        label: e.email,
-        value: e.email,
-      }))
-    );
+    return signal(this.mockService.getEmails().map((e) => ({ label: e, value: e })));
   }
 
   private initSelectedEmail(): Signal<string> {
     const emailControl = this.emailForm.get('email')!;
-    const valueChange$ = emailControl.valueChanges.pipe(startWith(emailControl.value));
-    return toSignal(valueChange$, { initialValue: '' }) as Signal<string>;
-  }
+    const value$ = emailControl.valueChanges.pipe(startWith(emailControl.value));
+    const raw = toSignal(value$, { initialValue: emailControl.value });
 
-  private initSubscriptions(): Signal<UserSubscription[]> {
-    const result = toSignal(
-      toObservable(this.selectedEmail).pipe(
-        filter((email) => !!email),
-        switchMap((email) =>
-          toObservable(this.refreshTrigger).pipe(
-            switchMap(() => this.subscriptionService.getUserSubscriptions(email!).pipe(catchError(() => of({ email: email!, subscriptions: [] }))))
-          )
-        )
-      ),
-      { initialValue: null }
-    );
-    return computed(() => result()?.subscriptions ?? []);
-  }
+    // Load initial data for the pre-selected email
+    this.loadSubscriptions(emailControl.value ?? '');
 
-  private initLoading(): Signal<boolean> {
-    const fetching = toSignal(
-      toObservable(this.selectedEmail).pipe(
-        switchMap((email) => {
-          if (!email) return of(false);
-          return toObservable(this.refreshTrigger).pipe(
-            switchMap(() =>
-              this.subscriptionService.getUserSubscriptions(email).pipe(
-                switchMap(() => of(false)),
-                startWith(true),
-                catchError(() => of(false))
-              )
-            )
-          );
-        }),
-        startWith(false)
-      ),
-      { initialValue: false }
-    );
-    return computed(() => fetching() ?? false);
+    return computed(() => raw() ?? '');
   }
 
   private initSubscriptionGroups(): Signal<SubscriptionGroup[]> {
     return computed(() => {
-      const subs = this.subscriptions();
+      const subs = this.subscriptionsState();
       const map = new Map<string, SubscriptionGroup>();
       for (const sub of subs) {
         if (!map.has(sub.project_uid)) {

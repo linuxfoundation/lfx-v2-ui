@@ -21,6 +21,7 @@
         placeholder="Select an email address"
         [filter]="false"
         styleClass="w-full"
+        (onChange)="onEmailChange()"
         data-testid="subscriptions-email-select" />
     </div>
   </div>
@@ -40,16 +41,6 @@
           <h2 class="text-lg font-semibold text-gray-700">Select an email to continue</h2>
           <p class="text-gray-500 text-sm">Choose an email address above to see which mailing lists it is subscribed to.</p>
         </div>
-      </div>
-    } @else if (loading()) {
-      <!-- Loading state -->
-      <div class="flex flex-col gap-4" data-testid="subscriptions-loading">
-        @for (_ of [1, 2, 3]; track $index) {
-          <div class="bg-white rounded-xl border p-5 flex flex-col gap-3 animate-pulse">
-            <div class="h-4 bg-gray-100 rounded w-1/3"></div>
-            <div class="h-3 bg-gray-100 rounded w-2/3"></div>
-          </div>
-        }
       </div>
     } @else if (subscriptionGroups().length === 0) {
       <!-- Empty state -->
