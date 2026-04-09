@@ -326,7 +326,9 @@ export class MeetingJoinComponent {
                 project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
               })),
               catchError((error) => {
-                if ([404, 403, 400].includes(error.status)) {
+                if (error.status === 401) {
+                  this.router.navigate(['/login'], { queryParams: { returnTo: `/meetings/${meetingId}` } });
+                } else if ([404, 403, 400].includes(error.status)) {
                   this.router.navigate(['/meetings/not-found']);
                 }
                 return EMPTY;
@@ -610,9 +612,10 @@ export class MeetingJoinComponent {
   private initializePastMeetingSummary(): Signal<PastMeetingSummary | null> {
     return toSignal(
       combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
-        switchMap(([, meeting]) => this.meetingService.getPastMeetingSummary(meeting.id)),
-        catchError(() => of(null))
+        switchMap(([isPastId, meeting]) => {
+          if (!isPastId || !meeting?.id) return of(null);
+          return this.meetingService.getPastMeetingSummary(meeting.id).pipe(catchError(() => of(null)));
+        })
       ),
       { initialValue: null }
     );
@@ -621,9 +624,10 @@ export class MeetingJoinComponent {
   private initializePastMeetingRecording(): Signal<PastMeetingRecording | null> {
     return toSignal(
       combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
-        switchMap(([, meeting]) => this.meetingService.getPastMeetingRecording(meeting.id)),
-        catchError(() => of(null))
+        switchMap(([isPastId, meeting]) => {
+          if (!isPastId || !meeting?.id) return of(null);
+          return this.meetingService.getPastMeetingRecording(meeting.id).pipe(catchError(() => of(null)));
+        })
       ),
       { initialValue: null }
     );
@@ -632,9 +636,10 @@ export class MeetingJoinComponent {
   private initializePastMeetingAttachments(): Signal<PastMeetingAttachment[]> {
     return toSignal(
       combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
-        switchMap(([, meeting]) => this.meetingService.getPastMeetingAttachments(meeting.id)),
-        catchError(() => of([] as PastMeetingAttachment[]))
+        switchMap(([isPastId, meeting]) => {
+          if (!isPastId || !meeting?.id) return of([] as PastMeetingAttachment[]);
+          return this.meetingService.getPastMeetingAttachments(meeting.id).pipe(catchError(() => of([] as PastMeetingAttachment[])));
+        })
       ),
       { initialValue: [] }
     );

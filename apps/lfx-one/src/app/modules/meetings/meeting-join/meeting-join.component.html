@@ -202,7 +202,7 @@
                   </div>
                 </div>
               }
-            } @else if (authenticated() && meeting().organizer) {
+            } @else if (authenticated() && !isPastMeeting() && meeting().organizer) {
               <!-- RSVP Section - Future Meeting (Authenticated Organizers) -->
               <div class="w-full md:w-[296px] flex flex-col gap-2">
                 @if (canToggleRsvpView() && showMyRsvp()) {
@@ -234,7 +234,7 @@
                   </lfx-button>
                 }
               </div>
-            } @else if (authenticated()) {
+            } @else if (authenticated() && !isPastMeeting()) {
               <!-- RSVP Container - Future Meeting (Authenticated Non-Organizers) -->
               <div class="w-full md:w-[296px]">
                 @if (isInvited()) {
