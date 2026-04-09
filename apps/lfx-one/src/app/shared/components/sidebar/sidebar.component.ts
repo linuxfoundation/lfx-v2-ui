@@ -3,6 +3,7 @@
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, Signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
@@ -15,6 +16,7 @@ import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'lfx-sidebar',
@@ -37,7 +39,7 @@ export class SidebarComponent {
   public readonly showMeSelector = input<boolean>(false);
   public readonly mobile = input<boolean>(false);
 
-  protected readonly projects: Signal<EnrichedPersonaProject[]> = this.initProjects();
+  protected readonly projects = computed(() => this.personaService.detectedProjects());
   protected readonly selectorProjects = this.initSelectorProjects();
   protected readonly selectedProject: Signal<EnrichedPersonaProject | null> = this.initSelectedProject();
 
@@ -68,6 +70,18 @@ export class SidebarComponent {
     }))
   );
 
+  public constructor() {
+    toObservable(this.projects)
+      .pipe(
+        filter((projects) => projects.length > 0),
+        takeUntilDestroyed()
+      )
+      .subscribe((detectedProjects) => {
+        this.projectContextService.availableProjects = detectedProjects.map(toProjectContext);
+        this.setDefaultProjectIfNeeded(detectedProjects);
+      });
+  }
+
   protected onProjectChange(project: EnrichedPersonaProject): void {
     const validProjectIds = new Set(this.projects().map((p) => p.projectUid));
 
@@ -76,19 +90,6 @@ export class SidebarComponent {
     } else {
       this.projectContextService.setProject(toProjectContext(project));
     }
-  }
-
-  private initProjects(): Signal<EnrichedPersonaProject[]> {
-    return computed(() => {
-      const detectedProjects = this.personaService.detectedProjects();
-
-      if (detectedProjects.length > 0) {
-        this.projectContextService.availableProjects = detectedProjects.map(toProjectContext);
-        this.setDefaultProjectIfNeeded(detectedProjects);
-      }
-
-      return detectedProjects;
-    });
   }
 
   private initSelectedProject(): Signal<EnrichedPersonaProject | null> {
