@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
+import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -53,6 +54,8 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
   selector: 'lfx-meeting-join',
   imports: [
     ClipboardModule,
+    DatePipe,
+    NgClass,
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,
@@ -124,6 +127,13 @@ export class MeetingJoinComponent {
   public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
   public primaryRecordingUrl: Signal<string | null>;
   public transcriptUrl: Signal<string | null>;
+  public currentAttachments = computed(() => (this.loadedViaPastMeetingId() ? this.pastMeetingAttachments() : this.attachments()));
+  public materialFiles = computed(() => this.currentAttachments().filter((a) => a.type === 'file'));
+  public materialLinks = computed(() => this.currentAttachments().filter((a) => a.type === 'link'));
+  public hasRecentlyUpdatedMaterials = computed(() => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return this.currentAttachments().some((a) => a.updated_at && new Date(a.updated_at) > sevenDaysAgo);
+  });
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -210,7 +220,7 @@ export class MeetingJoinComponent {
     this.showMyRsvp.set(!this.showMyRsvp());
   }
 
-  public downloadAttachment(attachment: MeetingAttachment): void {
+  public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
     this.meetingService
       .getMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid)
       .pipe(take(1))
@@ -253,6 +263,30 @@ export class MeetingJoinComponent {
         this.refreshTrigger$.next();
       }
     });
+  }
+
+  protected getFileTypeDisplay(attachment: MeetingAttachment | PastMeetingAttachment): {
+    icon: string;
+    bgColor: string;
+    textColor: string;
+    label: string;
+  } {
+    const ext = (attachment.file_name || attachment.name || '').split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return { icon: 'fa-light fa-file-pdf', bgColor: 'bg-red-100', textColor: 'text-red-600', label: 'PDF' };
+      case 'xlsx':
+      case 'xls':
+        return { icon: 'fa-light fa-file-spreadsheet', bgColor: 'bg-green-100', textColor: 'text-green-600', label: 'XLSX' };
+      case 'docx':
+      case 'doc':
+        return { icon: 'fa-light fa-file-word', bgColor: 'bg-blue-100', textColor: 'text-blue-600', label: 'DOCX' };
+      case 'pptx':
+      case 'ppt':
+        return { icon: 'fa-light fa-file-powerpoint', bgColor: 'bg-orange-100', textColor: 'text-orange-600', label: 'PPTX' };
+      default:
+        return { icon: 'fa-light fa-file', bgColor: 'bg-gray-100', textColor: 'text-gray-600', label: ext?.toUpperCase() || 'FILE' };
+    }
   }
 
   private initializeAutoJoin(): void {
