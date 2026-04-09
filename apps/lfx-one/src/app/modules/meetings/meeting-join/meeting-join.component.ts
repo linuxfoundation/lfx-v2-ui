@@ -19,10 +19,15 @@ import {
   canJoinMeeting,
   DEFAULT_MEETING_TYPE_CONFIG,
   getCurrentOrNextOccurrence,
+  hasMeetingEnded,
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
   MEETING_TYPE_CONFIGS,
+  PastMeeting,
+  PastMeetingAttachment,
+  PastMeetingRecording,
+  PastMeetingSummary,
   Project,
   TagSeverity,
   User,
@@ -110,6 +115,12 @@ export class MeetingJoinComponent {
   public meetingTitle: Signal<string>;
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
+  public isPastMeeting: Signal<boolean>;
+  public pastMeetingSummary: Signal<PastMeetingSummary | null>;
+  public pastMeetingRecording: Signal<PastMeetingRecording | null>;
+  public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
+  public primaryRecordingUrl: Signal<string | null>;
+  public transcriptUrl: Signal<string | null>;
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -131,6 +142,12 @@ export class MeetingJoinComponent {
     this.meetingTitle = this.initializeMeetingTitle();
     this.meetingDescription = this.initializeMeetingDescription();
     this.hasAiCompanion = this.initializeHasAiCompanion();
+    this.isPastMeeting = this.initializeIsPastMeeting();
+    this.pastMeetingSummary = this.initializePastMeetingSummary();
+    this.pastMeetingRecording = this.initializePastMeetingRecording();
+    this.pastMeetingAttachments = this.initializePastMeetingAttachments();
+    this.primaryRecordingUrl = this.initializePrimaryRecordingUrl();
+    this.transcriptUrl = this.initializeTranscriptUrl();
 
     // Initialize invited/registration signals
     this.isInvited = this.initializeIsInvited();
@@ -291,23 +308,38 @@ export class MeetingJoinComponent {
         switchMap(([params, queryParams]) => {
           const meetingId = params.get('id');
           this.password.set(queryParams.get('password'));
-          if (meetingId) {
-            return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
+
+          if (!meetingId) {
+            this.router.navigate(['/meetings/not-found']);
+            return of({} as { meeting: Meeting; project: Project });
+          }
+
+          // Check if this is a past meeting occurrence ID (format: meetingId-timestamp)
+          if (this.isPastMeetingOccurrenceId(meetingId)) {
+            return this.meetingService.getPastMeetingById(meetingId).pipe(
+              map((pastMeeting: PastMeeting) => ({
+                meeting: pastMeeting as Meeting,
+                project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
+              })),
               catchError((error) => {
-                // If 404, navigate to not found page
                 if ([404, 403, 400].includes(error.status)) {
                   this.router.navigate(['/meetings/not-found']);
                   return of({} as { meeting: Meeting; project: Project });
                 }
-                // Re-throw other errors
                 throw error;
               })
             );
           }
 
-          // If no meeting ID, redirect to not found
-          this.router.navigate(['/meetings/not-found']);
-          return of({} as { meeting: Meeting; project: Project });
+          return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
+            catchError((error) => {
+              if ([404, 403, 400].includes(error.status)) {
+                this.router.navigate(['/meetings/not-found']);
+                return of({} as { meeting: Meeting; project: Project });
+              }
+              throw error;
+            })
+          );
         }),
         map((res) => ({ ...res.meeting, project: res.project })),
         tap((res) => {
@@ -315,6 +347,12 @@ export class MeetingJoinComponent {
         })
       )
     ) as Signal<Meeting & { project: Project }>;
+  }
+
+  private isPastMeetingOccurrenceId(id: string): boolean {
+    // Past meeting occurrence IDs have format: meetingId-timestamp (e.g., 95580361604-1775745000000)
+    const parts = id.split('-');
+    return parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d{13}$/.test(parts[1]);
   }
 
   private initializeCurrentOccurrence(): Signal<MeetingOccurrence | null> {
@@ -554,6 +592,74 @@ export class MeetingJoinComponent {
   private initializeEmailError(): Signal<boolean> {
     return computed(() => {
       return this.joinUrlError()?.toLowerCase().includes('email address is not registered for this restricted meeting') ?? false;
+    });
+  }
+
+  private initializeIsPastMeeting(): Signal<boolean> {
+    return computed(() => {
+      const meeting = this.meeting();
+      const occurrence = this.currentOccurrence();
+      if (!meeting?.start_time) return false;
+      return hasMeetingEnded(meeting, occurrence ?? undefined);
+    });
+  }
+
+  private initializePastMeetingSummary(): Signal<PastMeetingSummary | null> {
+    return toSignal(
+      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
+        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+        switchMap(([, meeting]) => this.meetingService.getPastMeetingSummary(meeting.id)),
+        catchError(() => of(null))
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializePastMeetingRecording(): Signal<PastMeetingRecording | null> {
+    return toSignal(
+      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
+        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+        switchMap(([, meeting]) => this.meetingService.getPastMeetingRecording(meeting.id)),
+        catchError(() => of(null))
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializePastMeetingAttachments(): Signal<PastMeetingAttachment[]> {
+    return toSignal(
+      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
+        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+        switchMap(([, meeting]) => this.meetingService.getPastMeetingAttachments(meeting.id)),
+        catchError(() => of([] as PastMeetingAttachment[]))
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initializePrimaryRecordingUrl(): Signal<string | null> {
+    return computed(() => {
+      const recording = this.pastMeetingRecording();
+      if (!recording?.recording_files?.length) return null;
+
+      const videoFiles = recording.recording_files.filter((f) => f.file_type !== 'TRANSCRIPT');
+      if (!videoFiles.length) return null;
+
+      const primary =
+        videoFiles.find((f) => f.recording_type === 'shared_screen_with_speaker_view') ??
+        videoFiles.reduce((largest, file) => (file.file_size > largest.file_size ? file : largest), videoFiles[0]);
+
+      return primary?.play_url ?? null;
+    });
+  }
+
+  private initializeTranscriptUrl(): Signal<string | null> {
+    return computed(() => {
+      const recording = this.pastMeetingRecording();
+      if (!recording?.recording_files?.length) return null;
+
+      const transcript = recording.recording_files.find((f) => f.file_type === 'TRANSCRIPT');
+      return transcript?.download_url ?? null;
     });
   }
 }

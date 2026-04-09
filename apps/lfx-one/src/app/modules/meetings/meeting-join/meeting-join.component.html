@@ -147,7 +147,12 @@
                 </div>
               </div>
               <!-- Alert Banner -->
-              @if (messageSeverity() === 'warn') {
+              @if (isPastMeeting()) {
+                <div class="bg-gray-50 border border-gray-300 rounded px-3 py-2 flex items-center gap-2" [attr.data-testid]="'meeting-alert-past'">
+                  <i class="fa-light fa-clock-rotate-left text-gray-500 text-base"></i>
+                  <p class="text-sm text-gray-700">This meeting has ended.</p>
+                </div>
+              } @else if (messageSeverity() === 'warn') {
                 <div class="bg-amber-50 border border-amber-500/50 rounded px-3 py-2 flex items-center gap-2" [attr.data-testid]="'meeting-alert-warn'">
                   <i class="fa-light fa-clock text-amber-500 text-base"></i>
                   <p class="text-sm text-amber-900">{{ alertMessage() }}</p>
@@ -209,7 +214,7 @@
                     [meeting]="meeting()"
                     [project]="project()"
                     [currentOccurrence]="currentOccurrence()"
-                    [pastMeeting]="false"
+                    [pastMeeting]="isPastMeeting()"
                     [showAddButton]="true"
                     [additionalRegistrantsCount]="0"
                     backgroundColor="bg-gray-50"
@@ -282,7 +287,7 @@
             </ng-template>
             <lfx-meeting-registrants-display
               [meeting]="meeting()"
-              [pastMeeting]="false"
+              [pastMeeting]="isPastMeeting()"
               [showAddRegistrant]="false"
               [myMeetingRegistrants]="true"
               [visible]="showRegistrants()">
@@ -313,54 +318,98 @@
             </div>
 
             <!-- Right: Resources Card (fixed width) -->
-            <div class="w-full md:w-[296px]">
+            <div class="w-full md:w-[296px]" data-testid="past-meeting-resources">
               @defer (on idle) {
                 <div class="bg-gray-50 border border-gray-200 rounded-md p-3" [attr.data-testid]="'resources-card'">
                   <!-- Resources Header -->
                   <div class="flex items-center gap-2 mb-2">
                     <i class="fa-light fa-paperclip text-gray-500 text-xs"></i>
                     <h3 class="text-gray-600 text-sm font-normal">Resources</h3>
-                    @if (attachments().length > 0) {
+                    @if (isPastMeeting() && pastMeetingAttachments().length > 0) {
+                      <span class="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-200/80 px-1.5 py-0.5 rounded-full">
+                        {{ pastMeetingAttachments().length }}
+                      </span>
+                    } @else if (!isPastMeeting() && attachments().length > 0) {
                       <span class="inline-flex items-center text-[10px] font-medium text-gray-500 bg-gray-200/80 px-1.5 py-0.5 rounded-full">
                         {{ attachments().length }}
                       </span>
                     }
                   </div>
 
-                  <!-- Resources List -->
-                  @if (attachments().length > 0) {
-                    <div class="flex flex-col gap-2">
-                      @for (attachment of attachments(); track attachment.uid; let i = $index) {
-                        @if (attachment.type === 'link') {
-                          <a
-                            [href]="attachment.link"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
-                            [attr.data-testid]="'meeting-resource-' + i">
-                            <i class="fa-light fa-arrow-up-right-from-square text-3xl text-black w-8 flex-shrink-0"></i>
-                            <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{
-                              attachment.name
-                            }}</span>
-                          </a>
-                        } @else {
-                          <a
-                            (click)="downloadAttachment(attachment)"
-                            class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
-                            [attr.data-testid]="'meeting-resource-file-' + i">
-                            <i class="fa-light fa-file-arrow-down text-3xl text-black w-8 flex-shrink-0"></i>
-                            <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{
-                              attachment.name
-                            }}</span>
-                          </a>
+                  <!-- Past Meeting Resources List -->
+                  @if (isPastMeeting()) {
+                    @if (pastMeetingAttachments().length > 0) {
+                      <div class="flex flex-col gap-2">
+                        @for (attachment of pastMeetingAttachments(); track attachment.uid; let i = $index) {
+                          @if (attachment.type === 'link') {
+                            <a
+                              [href]="attachment.link"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
+                              [attr.data-testid]="'past-meeting-resource-' + i">
+                              <i class="fa-light fa-arrow-up-right-from-square text-3xl text-black w-8 flex-shrink-0"></i>
+                              <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{
+                                attachment.name
+                              }}</span>
+                            </a>
+                          } @else {
+                            <a
+                              [href]="attachment.file_url"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
+                              [attr.data-testid]="'past-meeting-resource-file-' + i">
+                              <i class="fa-light fa-file-arrow-down text-3xl text-black w-8 flex-shrink-0"></i>
+                              <div class="flex flex-col flex-1 overflow-hidden">
+                                <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap font-inter">{{ attachment.name }}</span>
+                                @if (attachment.file_size) {
+                                  <span class="text-xs text-gray-500">{{ (attachment.file_size / 1024 / 1024).toFixed(1) }} MB</span>
+                                }
+                              </div>
+                            </a>
+                          }
                         }
-                      }
-                    </div>
-                  } @else {
-                    @if (!authenticated() && meeting().visibility === 'private') {
-                      <p class="text-sm text-gray-500 italic">If you have been invited to this meeting, resources may be available when you sign in.</p>
+                      </div>
                     } @else {
                       <p class="text-sm text-gray-500 italic">No resources available</p>
+                    }
+                  } @else {
+                    <!-- Future Meeting Resources List -->
+                    @if (attachments().length > 0) {
+                      <div class="flex flex-col gap-2">
+                        @for (attachment of attachments(); track attachment.uid; let i = $index) {
+                          @if (attachment.type === 'link') {
+                            <a
+                              [href]="attachment.link"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
+                              [attr.data-testid]="'meeting-resource-' + i">
+                              <i class="fa-light fa-arrow-up-right-from-square text-3xl text-black w-8 flex-shrink-0"></i>
+                              <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{
+                                attachment.name
+                              }}</span>
+                            </a>
+                          } @else {
+                            <a
+                              (click)="downloadAttachment(attachment)"
+                              class="bg-gray-200 hover:bg-gray-300 rounded px-3 py-2 flex items-center gap-3 min-w-[180px] transition-colors cursor-pointer"
+                              [attr.data-testid]="'meeting-resource-file-' + i">
+                              <i class="fa-light fa-file-arrow-down text-3xl text-black w-8 flex-shrink-0"></i>
+                              <span class="text-sm text-gray-950 overflow-ellipsis overflow-hidden whitespace-nowrap flex-1 font-inter">{{
+                                attachment.name
+                              }}</span>
+                            </a>
+                          }
+                        }
+                      </div>
+                    } @else {
+                      @if (!authenticated() && meeting().visibility === 'private') {
+                        <p class="text-sm text-gray-500 italic">If you have been invited to this meeting, resources may be available when you sign in.</p>
+                      } @else {
+                        <p class="text-sm text-gray-500 italic">No resources available</p>
+                      }
                     }
                   }
                 </div>
@@ -369,6 +418,74 @@
               }
             </div>
           </div>
+
+          <!-- Past Meeting: AI Summary Section -->
+          @if (pastMeetingSummary(); as summary) {
+            <div class="mt-4" data-testid="past-meeting-summary">
+              @if (summary.approved) {
+                <lfx-card class="rounded-[12.75px]">
+                  <div class="flex items-center gap-2 mb-3">
+                    <i class="fa-light fa-sparkles text-purple-500 text-sm"></i>
+                    <h3 class="text-gray-700 text-sm font-medium">AI Summary</h3>
+                  </div>
+                  <div class="text-sm text-gray-700 leading-relaxed" [innerHTML]="summary.summary_data.edited_content || summary.summary_data.content"></div>
+                </lfx-card>
+              } @else if (summary.requires_approval) {
+                <lfx-card class="rounded-[12.75px]">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-light fa-sparkles text-gray-400 text-sm"></i>
+                    <span class="text-sm text-gray-500 italic">Summary pending approval</span>
+                  </div>
+                </lfx-card>
+              }
+            </div>
+          }
+
+          <!-- Past Meeting: Recording Section -->
+          @if (primaryRecordingUrl()) {
+            <div class="mt-4" data-testid="past-meeting-recording">
+              <lfx-card class="rounded-[12.75px]">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-light fa-video text-blue-500 text-sm"></i>
+                    <h3 class="text-gray-700 text-sm font-medium">Recording</h3>
+                  </div>
+                  <a
+                    [href]="primaryRecordingUrl()"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
+                    data-testid="view-recording-link">
+                    <i class="fa-light fa-play"></i>
+                    <span>View Recording</span>
+                  </a>
+                </div>
+              </lfx-card>
+            </div>
+          }
+
+          <!-- Past Meeting: Transcript Section -->
+          @if (transcriptUrl()) {
+            <div class="mt-4" data-testid="past-meeting-transcript">
+              <lfx-card class="rounded-[12.75px]">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-light fa-file-lines text-blue-500 text-sm"></i>
+                    <h3 class="text-gray-700 text-sm font-medium">Transcript</h3>
+                  </div>
+                  <a
+                    [href]="transcriptUrl()"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 text-sm text-primary hover:underline cursor-pointer"
+                    data-testid="download-transcript-link">
+                    <i class="fa-light fa-download"></i>
+                    <span>Download Transcript</span>
+                  </a>
+                </div>
+              </lfx-card>
+            </div>
+          }
 
           <!-- Footer Divider -->
           <hr class="border-gray-200 my-4" />
