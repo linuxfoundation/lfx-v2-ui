@@ -12,6 +12,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { HeaderComponent } from '@components/header/header.component';
+import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { environment } from '@environments/environment';
 import {
@@ -42,7 +43,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, debounceTime, EMPTY, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import { GuestFormComponent } from '../components/guest-form/guest-form.component';
 import { MeetingRsvpDetailsComponent } from '../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -68,6 +69,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
     LinkifyPipe,
     ExpandableTextComponent,
     HeaderComponent,
+    MarkdownRendererComponent,
     DynamicDialogModule,
   ],
   providers: [],
@@ -116,6 +118,7 @@ export class MeetingJoinComponent {
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
   public isPastMeeting: Signal<boolean>;
+  public loadedViaPastMeetingId = signal(false);
   public pastMeetingSummary: Signal<PastMeetingSummary | null>;
   public pastMeetingRecording: Signal<PastMeetingRecording | null>;
   public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
@@ -311,11 +314,12 @@ export class MeetingJoinComponent {
 
           if (!meetingId) {
             this.router.navigate(['/meetings/not-found']);
-            return of({} as { meeting: Meeting; project: Project });
+            return EMPTY;
           }
 
           // Check if this is a past meeting occurrence ID (format: meetingId-timestamp)
           if (this.isPastMeetingOccurrenceId(meetingId)) {
+            this.loadedViaPastMeetingId.set(true);
             return this.meetingService.getPastMeetingById(meetingId).pipe(
               map((pastMeeting: PastMeeting) => ({
                 meeting: pastMeeting as Meeting,
@@ -324,20 +328,19 @@ export class MeetingJoinComponent {
               catchError((error) => {
                 if ([404, 403, 400].includes(error.status)) {
                   this.router.navigate(['/meetings/not-found']);
-                  return of({} as { meeting: Meeting; project: Project });
                 }
-                throw error;
+                return EMPTY;
               })
             );
           }
 
+          this.loadedViaPastMeetingId.set(false);
           return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
             catchError((error) => {
               if ([404, 403, 400].includes(error.status)) {
                 this.router.navigate(['/meetings/not-found']);
-                return of({} as { meeting: Meeting; project: Project });
               }
-              throw error;
+              return EMPTY;
             })
           );
         }),
@@ -606,8 +609,8 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingSummary(): Signal<PastMeetingSummary | null> {
     return toSignal(
-      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
-        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
+        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
         switchMap(([, meeting]) => this.meetingService.getPastMeetingSummary(meeting.id)),
         catchError(() => of(null))
       ),
@@ -617,8 +620,8 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingRecording(): Signal<PastMeetingRecording | null> {
     return toSignal(
-      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
-        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
+        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
         switchMap(([, meeting]) => this.meetingService.getPastMeetingRecording(meeting.id)),
         catchError(() => of(null))
       ),
@@ -628,8 +631,8 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingAttachments(): Signal<PastMeetingAttachment[]> {
     return toSignal(
-      combineLatest([toObservable(this.isPastMeeting), toObservable(this.meeting)]).pipe(
-        filter(([isPast, meeting]) => isPast && !!meeting?.id),
+      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
+        filter(([isPastId, meeting]) => isPastId && !!meeting?.id),
         switchMap(([, meeting]) => this.meetingService.getPastMeetingAttachments(meeting.id)),
         catchError(() => of([] as PastMeetingAttachment[]))
       ),
@@ -640,16 +643,14 @@ export class MeetingJoinComponent {
   private initializePrimaryRecordingUrl(): Signal<string | null> {
     return computed(() => {
       const recording = this.pastMeetingRecording();
-      if (!recording?.recording_files?.length) return null;
+      if (!recording?.sessions?.length) return null;
 
-      const videoFiles = recording.recording_files.filter((f) => f.file_type !== 'TRANSCRIPT');
-      if (!videoFiles.length) return null;
+      const sessionsWithShareUrl = recording.sessions.filter((s) => !!s.share_url);
+      if (!sessionsWithShareUrl.length) return null;
 
-      const primary =
-        videoFiles.find((f) => f.recording_type === 'shared_screen_with_speaker_view') ??
-        videoFiles.reduce((largest, file) => (file.file_size > largest.file_size ? file : largest), videoFiles[0]);
+      const primary = sessionsWithShareUrl.reduce((largest, session) => (session.total_size > largest.total_size ? session : largest), sessionsWithShareUrl[0]);
 
-      return primary?.play_url ?? null;
+      return primary.share_url ?? null;
     });
   }
 
