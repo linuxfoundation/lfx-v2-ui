@@ -1,0 +1,51 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<!-- Generated with [Claude Code](https://claude.ai/code) -->
+
+<div class="flex flex-col" data-testid="travel-fund-application-dialog">
+  <!-- Step indicator -->
+  <div class="flex items-center px-1 pb-5" data-testid="travel-fund-step-indicator">
+    @for (s of steps; track s.id; let last = $last) {
+      <div class="flex items-center" [class.flex-1]="!last">
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Circle -->
+          <div
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+            [class.bg-blue-600]="isStepActive(s.id) || isStepCompleted(s.id)"
+            [class.text-white]="isStepActive(s.id) || isStepCompleted(s.id)"
+            [class.border-2]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [class.border-gray-300]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [class.text-gray-400]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [attr.data-testid]="'travel-fund-step-circle-' + s.number">
+            {{ s.number }}
+          </div>
+          <!-- Label -->
+          <span
+            class="text-sm whitespace-nowrap"
+            [class.font-semibold]="isStepActive(s.id)"
+            [class.text-gray-900]="isStepActive(s.id)"
+            [class.text-gray-400]="!isStepActive(s.id)"
+            [attr.data-testid]="'travel-fund-step-label-' + s.number">
+            {{ s.label }}
+          </span>
+        </div>
+        <!-- Connecting line -->
+        @if (!last) {
+          <div class="mx-3 h-px flex-1 bg-gray-200"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Step content -->
+  @if (step() === 'select-event') {
+    <lfx-event-selection [(selectedEvent)]="selectedEvent" />
+  }
+
+  <!-- Footer -->
+  <div class="mt-5 flex items-center justify-between border-t border-gray-100 pt-4" data-testid="travel-fund-footer">
+    <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-700" (click)="onCancel()" data-testid="travel-fund-cancel">Cancel</button>
+    <lfx-button label="Next Step" severity="primary" size="small" [disabled]="!selectedEvent()" (onClick)="onNextStep()" data-testid="travel-fund-next-step" />
+  </div>
+</div>

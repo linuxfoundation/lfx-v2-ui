@@ -21,6 +21,7 @@ import {
   GetEventOrganizationsOptions,
   GetEventRequestsOptions,
   GetEventsOptions,
+  GetUpcomingCountriesResponse,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
@@ -59,6 +60,10 @@ export class EventsController {
       const rawMyEventStatus = req.query['status'] ? String(req.query['status']) : undefined;
       const status = rawMyEventStatus && VALID_MY_EVENT_STATUS_VALUES.has(rawMyEventStatus) ? rawMyEventStatus : undefined;
       const sortField = req.query['sortField'] ? String(req.query['sortField']) : undefined;
+      const registeredFirst = req.query['registeredFirst'] === 'true';
+      const startDateFrom = req.query['startDateFrom'] ? String(req.query['startDateFrom']) : undefined;
+      const startDateTo = req.query['startDateTo'] ? String(req.query['startDateTo']) : undefined;
+      const country = req.query['country'] ? String(req.query['country']) : undefined;
 
       const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
       const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
@@ -81,6 +86,10 @@ export class EventsController {
         pageSize,
         offset,
         sortOrder,
+        registeredFirst,
+        startDateFrom,
+        startDateTo,
+        country,
       });
 
       logger.success(req, 'get_my_events', startTime, {
@@ -224,49 +233,17 @@ export class EventsController {
     );
   }
 
-  private async handleEventRequestsEndpoint(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-    operationName: string,
-    fetchFn: (req: Request, userEmail: string, options: GetEventRequestsOptions) => Promise<VisaRequestsResponse>
-  ): Promise<void> {
-    const startTime = logger.startOperation(req, operationName, {
-      has_query: Object.keys(req.query).length > 0,
-    });
+  /**
+   * GET /api/events/countries
+   * Get distinct country names for upcoming events (for the location filter dropdown)
+   */
+  public async getUpcomingCountries(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_upcoming_countries', {});
 
     try {
-      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+      const response: GetUpcomingCountriesResponse = await this.eventsService.getUpcomingCountries(req);
 
-      if (!userEmail) {
-        throw new AuthenticationError('User authentication required', { operation: operationName });
-      }
-
-      const rawPageSize = parseInt(String(req.query['pageSize'] ?? DEFAULT_EVENTS_PAGE_SIZE), 10);
-      const rawOffset = parseInt(String(req.query['offset'] ?? 0), 10);
-      const rawSortOrder = String(req.query['sortOrder'] ?? 'DESC').toUpperCase() as EventSortOrder;
-
-      const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
-      const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
-      const sortOrder: EventSortOrder = VALID_EVENT_SORT_ORDERS.includes(rawSortOrder) ? rawSortOrder : 'DESC';
-
-      const options: GetEventRequestsOptions = {
-        eventId: req.query['eventId'] ? String(req.query['eventId']) : undefined,
-        projectName: req.query['projectName'] ? String(req.query['projectName']) : undefined,
-        searchQuery: req.query['searchQuery'] ? String(req.query['searchQuery']).trim() : undefined,
-        status: req.query['status'] ? String(req.query['status']) : undefined,
-        sortField: req.query['sortField'] ? String(req.query['sortField']) : undefined,
-        pageSize,
-        offset,
-        sortOrder,
-      };
-
-      const response = await fetchFn(req, userEmail, options);
-
-      logger.success(req, operationName, startTime, {
-        result_count: response.data.length,
-        total: response.total,
-      });
+      logger.success(req, 'get_upcoming_countries', startTime, { result_count: response.data.length });
 
       res.json(response);
     } catch (error) {
@@ -317,6 +294,56 @@ export class EventsController {
       res.setHeader('Content-Disposition', `attachment; filename="certificate-${safeEventId}.pdf"`);
       res.setHeader('Content-Length', pdfBuffer.length);
       res.send(pdfBuffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  private async handleEventRequestsEndpoint(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    operationName: string,
+    fetchFn: (req: Request, userEmail: string, options: GetEventRequestsOptions) => Promise<VisaRequestsResponse>
+  ): Promise<void> {
+    const startTime = logger.startOperation(req, operationName, {
+      has_query: Object.keys(req.query).length > 0,
+    });
+
+    try {
+      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+
+      if (!userEmail) {
+        throw new AuthenticationError('User authentication required', { operation: operationName });
+      }
+
+      const rawPageSize = parseInt(String(req.query['pageSize'] ?? DEFAULT_EVENTS_PAGE_SIZE), 10);
+      const rawOffset = parseInt(String(req.query['offset'] ?? 0), 10);
+      const rawSortOrder = String(req.query['sortOrder'] ?? 'DESC').toUpperCase() as EventSortOrder;
+
+      const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
+      const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+      const sortOrder: EventSortOrder = VALID_EVENT_SORT_ORDERS.includes(rawSortOrder) ? rawSortOrder : 'DESC';
+
+      const options: GetEventRequestsOptions = {
+        eventId: req.query['eventId'] ? String(req.query['eventId']) : undefined,
+        projectName: req.query['projectName'] ? String(req.query['projectName']) : undefined,
+        searchQuery: req.query['searchQuery'] ? String(req.query['searchQuery']).trim() : undefined,
+        status: req.query['status'] ? String(req.query['status']) : undefined,
+        sortField: req.query['sortField'] ? String(req.query['sortField']) : undefined,
+        pageSize,
+        offset,
+        sortOrder,
+      };
+
+      const response = await fetchFn(req, userEmail, options);
+
+      logger.success(req, operationName, startTime, {
+        result_count: response.data.length,
+        total: response.total,
+      });
+
+      res.json(response);
     } catch (error) {
       next(error);
     }

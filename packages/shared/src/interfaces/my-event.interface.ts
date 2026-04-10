@@ -25,6 +25,8 @@ export interface MyEvent {
   registrationUrl: string | null;
   /** Foundation short name (e.g. "CNCF", "OpenSSF") */
   foundation: string;
+  /** ISO 8601 event start date string (e.g. "2026-11-10T00:00:00.000Z") — used for date-range filtering */
+  startDate: string;
   /** Human-readable date string (e.g. "Nov 10–13, 2026") */
   date: string;
   /** Human-readable location string (e.g. "Salt Lake City, UT") */
@@ -203,6 +205,14 @@ export interface GetMyEventsParams {
   pageSize?: number;
   offset?: number;
   sortOrder?: 'ASC' | 'DESC';
+  /** When true, registered events are sorted before unregistered events */
+  registeredFirst?: boolean;
+  /** ISO 8601 date string — include only events starting on or after this date */
+  startDateFrom?: string;
+  /** ISO 8601 date string — include only events starting on or before this date */
+  startDateTo?: string;
+  /** Filter events by country (e.g. "United States") */
+  country?: string;
 }
 
 /**
@@ -347,6 +357,21 @@ export interface GetMyEventsOptions {
   pageSize: number;
   offset: number;
   sortOrder: EventSortOrder;
+  /** When true, registered events are sorted before unregistered events */
+  registeredFirst?: boolean;
+  /** ISO 8601 date string — include only events starting on or after this date */
+  startDateFrom?: string;
+  /** ISO 8601 date string — include only events starting on or before this date */
+  startDateTo?: string;
+  /** Filter events by country (e.g. "United States") */
+  country?: string;
+}
+
+/**
+ * Response for distinct event countries
+ */
+export interface GetUpcomingCountriesResponse {
+  data: string[];
 }
 
 /**

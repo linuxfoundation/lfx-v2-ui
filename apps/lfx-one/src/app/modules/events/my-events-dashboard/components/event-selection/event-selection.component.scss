@@ -1,0 +1,35 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+// Generated with [Claude Code](https://claude.ai/code)
+
+.events-scroll-area {
+  max-height: 340px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #e2e8f0;
+    border-radius: 3px;
+  }
+}
+
+.event-card {
+  cursor: default;
+
+  &.registered {
+    cursor: pointer;
+  }
+
+  &.selected {
+    @apply border-blue-500;
+  }
+}

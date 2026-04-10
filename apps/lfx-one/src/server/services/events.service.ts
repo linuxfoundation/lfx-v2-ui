@@ -19,6 +19,7 @@ import {
   GetEventRequestsOptions,
   GetEventsOptions,
   GetMyEventsOptions,
+  GetUpcomingCountriesResponse,
   MyEvent,
   MyEventOrganizationsResponse,
   MyEventRow,
@@ -41,7 +42,22 @@ export class EventsService {
   }
 
   public async getMyEvents(req: Request, userEmail: string, options: GetMyEventsOptions): Promise<MyEventsResponse> {
-    const { isPast, eventId, projectName, searchQuery, role, status, sortField: rawSortField, pageSize, offset, sortOrder } = options;
+    const {
+      isPast,
+      eventId,
+      projectName,
+      searchQuery,
+      role,
+      status,
+      sortField: rawSortField,
+      pageSize,
+      offset,
+      sortOrder,
+      registeredFirst,
+      startDateFrom,
+      startDateTo,
+      country,
+    } = options;
     const sortField = rawSortField && VALID_EVENT_SORT_FIELDS.has(rawSortField) ? rawSortField : DEFAULT_EVENT_SORT_FIELD;
     const normalizedSortOrder: EventSortOrder = sortOrder === 'DESC' ? 'DESC' : 'ASC';
     const normalizedPageSize = Number.isInteger(pageSize) && pageSize > 0 ? pageSize : 10;
@@ -69,6 +85,9 @@ export class EventsService {
       const searchQueryFilter = searchQuery ? 'AND e.EVENT_NAME ILIKE ?' : '';
       const roleFilterResult = role ? this.buildUpcomingRoleFilter(role) : { filter: '', binds: [] as string[] };
       const statusFilterResult = status ? this.buildUpcomingStatusFilter(status) : { filter: '', binds: [] as string[] };
+      const startDateFromFilter = startDateFrom ? 'AND e.EVENT_START_DATE >= ?' : '';
+      const startDateToFilter = startDateTo ? 'AND e.EVENT_START_DATE <= ?' : '';
+      const countryFilter = country ? 'AND e.EVENT_COUNTRY = ?' : '';
 
       sql = `
         WITH all_upcoming AS (
@@ -140,7 +159,10 @@ export class EventsService {
           ${searchQueryFilter}
           ${roleFilterResult.filter}
           ${statusFilterResult.filter}
-        ORDER BY ${sortField} ${normalizedSortOrder}
+          ${startDateFromFilter}
+          ${startDateToFilter}
+          ${countryFilter}
+        ORDER BY ${registeredFirst ? 'IS_REGISTERED DESC, ' : ''}${sortField} ${normalizedSortOrder}
         LIMIT ${normalizedPageSize} OFFSET ${normalizedOffset}
       `;
 
@@ -151,6 +173,9 @@ export class EventsService {
       if (searchQuery) binds.push(`%${searchQuery}%`);
       binds.push(...roleFilterResult.binds);
       binds.push(...statusFilterResult.binds);
+      if (startDateFrom) binds.push(startDateFrom);
+      if (startDateTo) binds.push(startDateTo);
+      if (country) binds.push(country);
     } else {
       // Past tab (or no isPast filter): show only the user's own registered events.
       const isPastFilter = isPast !== undefined ? `AND IS_PAST_EVENT = ${isPast ? 'TRUE' : 'FALSE'}` : '';
@@ -384,6 +409,34 @@ export class EventsService {
     return { data };
   }
 
+  public async getUpcomingCountries(req: Request): Promise<GetUpcomingCountriesResponse> {
+    logger.debug(req, 'get_upcoming_countries', 'Fetching distinct countries for upcoming events');
+
+    const sql = `
+      SELECT DISTINCT EVENT_COUNTRY
+      FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
+      WHERE IS_PAST_EVENT = FALSE
+        AND EVENT_COUNTRY IS NOT NULL
+      ORDER BY EVENT_COUNTRY
+    `;
+
+    let result;
+    try {
+      result = await this.snowflakeService.execute<{ EVENT_COUNTRY: string }>(sql, []);
+    } catch (error) {
+      logger.warning(req, 'get_upcoming_countries', 'Snowflake query failed, returning empty countries', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { data: [] };
+    }
+
+    const data = result.rows.map((row) => row.EVENT_COUNTRY);
+
+    logger.debug(req, 'get_upcoming_countries', 'Fetched countries', { count: data.length });
+
+    return { data };
+  }
+
   public async getVisaRequests(req: Request, userEmail: string, options: GetEventRequestsOptions): Promise<VisaRequestsResponse> {
     return this.executeEventRequestsQuery(req, userEmail, options, 'VL_REQUEST_STATUS', 'VL_APPLICATION_DATE', 'get_visa_requests');
   }
@@ -583,6 +636,7 @@ export class EventsService {
       url: row.EVENT_URL ?? '',
       registrationUrl: row.EVENT_REGISTRATION_URL ?? null,
       foundation: row.PROJECT_NAME,
+      startDate: new Date(row.EVENT_START_DATE).toISOString(),
       date: this.formatDateRange(row.EVENT_START_DATE, row.EVENT_END_DATE),
       location: this.formatLocation(row.EVENT_LOCATION, row.EVENT_CITY, row.EVENT_COUNTRY),
       role: row.USER_ROLE ?? '',

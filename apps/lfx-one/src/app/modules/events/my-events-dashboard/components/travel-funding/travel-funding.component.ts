@@ -11,15 +11,19 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import { PageChangeEvent, TagSeverity, TravelFundRequestsResponse } from '@lfx-one/shared/interfaces';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
 
 @Component({
   selector: 'lfx-travel-funding',
-  imports: [TableComponent, TagComponent, ButtonComponent],
+  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule],
+  providers: [DialogService],
   templateUrl: './travel-funding.component.html',
 })
 export class TravelFundingComponent {
   private readonly eventsService = inject(EventsService);
+  private readonly dialogService = inject(DialogService);
 
   public readonly searchQuery = input<string>('');
   public readonly status = input<string | null>(null);
@@ -58,6 +62,16 @@ export class TravelFundingComponent {
       .subscribe(() => {
         this.page.set({ offset: 0, pageSize: this.page().pageSize });
       });
+  }
+
+  public openApplicationDialog(): void {
+    this.dialogService.open(TravelFundApplicationDialogComponent, {
+      header: 'Travel Funding Application',
+      width: '800px',
+      modal: true,
+      closable: true,
+      closeOnEscape: true,
+    });
   }
 
   protected onPageChange(event: { first: number; rows: number }): void {
