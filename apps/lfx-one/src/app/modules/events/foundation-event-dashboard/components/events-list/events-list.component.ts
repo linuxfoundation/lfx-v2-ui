@@ -6,7 +6,7 @@ import { Component, computed, inject, input, Signal, signal, WritableSignal } fr
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
-import { EventsResponse, EventTab, EventTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import { EventStatusFilter, EventsResponse, EventTab, EventTabId, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { EventsTableComponent } from '../events-table/events-table.component';
@@ -115,7 +115,7 @@ export class EventsListComponent {
           ...pageSignal(),
           foundation: this.foundation(),
           searchQuery: this.searchQuery() || undefined,
-          status: this.status() ?? undefined,
+          status: (this.status() ?? undefined) as EventStatusFilter | undefined,
           sortField: sortFieldSignal(),
           sortOrder: sortOrderSignal(),
         }))

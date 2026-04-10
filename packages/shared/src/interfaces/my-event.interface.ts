@@ -4,6 +4,14 @@
 import { OffsetPaginatedResponse } from './api.interface';
 
 /**
+ * The set of valid status filter values for foundation events.
+ * Raw EVENT_STATUS DB values ('Active', 'Planned', 'Pending', 'Completed') are passed
+ * directly as SQL bind parameters. 'coming-soon' is a synthetic sentinel that the server
+ * maps to `EVENT_STATUS IN ('Pending', 'Planned')`.
+ */
+export type EventStatusFilter = 'Active' | 'Planned' | 'Pending' | 'Completed' | 'coming-soon';
+
+/**
  * Event item for the My Events dashboard
  */
 export interface MyEvent {
@@ -200,8 +208,8 @@ export interface GetEventsParams {
   eventId?: string;
   projectNames?: string[];
   searchQuery?: string;
-  /** Filter by EVENT_STATUS value (e.g. "Active", "Planned", "Completed", "Pending") */
-  status?: string;
+  /** Filter by event status. See {@link EventStatusFilter} for supported values. */
+  status?: EventStatusFilter;
   sortField?: string;
   pageSize?: number;
   offset?: number;
@@ -271,8 +279,8 @@ export interface GetEventsOptions {
   eventId?: string;
   projectNames?: string[];
   searchQuery?: string;
-  /** Filter by EVENT_STATUS value (e.g. "Active", "Planned", "Completed", "Pending") */
-  status?: string;
+  /** Filter by event status. See {@link EventStatusFilter} for supported values. */
+  status?: EventStatusFilter;
   sortField?: string;
   pageSize: number;
   offset: number;

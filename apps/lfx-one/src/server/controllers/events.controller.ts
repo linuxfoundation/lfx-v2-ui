@@ -9,7 +9,7 @@ import { AuthenticationError, ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { CertificateService } from '../services/certificate.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, MAX_EVENTS_PAGE_SIZE, VALID_EVENT_SORT_ORDERS, VALID_EVENT_STATUS_VALUES } from '@lfx-one/shared/constants';
-import { EventSortOrder, GetEventOrganizationsOptions, GetEventsOptions } from '@lfx-one/shared/interfaces';
+import { EventSortOrder, EventStatusFilter, GetEventOrganizationsOptions, GetEventsOptions } from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
 
 export class EventsController {
@@ -106,7 +106,7 @@ export class EventsController {
       }
       const searchQuery = req.query['searchQuery'] ? String(req.query['searchQuery']).trim() : undefined;
       const rawStatus = req.query['status'] ? String(req.query['status']) : undefined;
-      const status = rawStatus && VALID_EVENT_STATUS_VALUES.has(rawStatus) ? rawStatus : undefined;
+      const status = rawStatus && VALID_EVENT_STATUS_VALUES.has(rawStatus) ? (rawStatus as EventStatusFilter) : undefined;
       const sortField = req.query['sortField'] ? String(req.query['sortField']) : undefined;
 
       const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
