@@ -1,10 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NavigationEnd, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { ACCOUNTS, DEV_PERSONA_PRESETS } from '@lfx-one/shared/constants';
@@ -12,9 +11,10 @@ import { Account, DevPersonaPreset, isBoardScopedPersona } from '@lfx-one/shared
 import { AccountContextService } from '@services/account-context.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
+import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { filter, map, skip, startWith } from 'rxjs';
+import { skip } from 'rxjs';
 
 @Component({
   selector: 'lfx-dev-toolbar',
@@ -27,8 +27,8 @@ export class DevToolbarComponent {
   protected readonly projectContextService = inject(ProjectContextService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly cookieRegistry = inject(CookieRegistryService);
+  private readonly lensService = inject(LensService);
   private readonly featureFlagService = inject(FeatureFlagService);
-  private readonly router = inject(Router);
 
   // Feature flags
   protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
@@ -46,8 +46,11 @@ export class DevToolbarComponent {
   /** Label for the project/foundation selector */
   protected readonly selectorLabel = computed(() => (isBoardScopedPersona(this.activePreset().primary) ? 'Foundation:' : 'Project:'));
 
-  // Check if we're on the board dashboard page
-  protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
+  /** Hide project selector on the "Me" lens */
+  protected readonly showProjectSelector = computed(() => this.lensService.activeLens() !== 'me');
+
+  /** Organization selector is only relevant on the foundation lens */
+  protected readonly isFoundationLens = computed(() => this.lensService.activeLens() === 'foundation');
 
   // Form for persona selector and organization selector
   public form: FormGroup;
@@ -62,11 +65,7 @@ export class DevToolbarComponent {
     this.form = new FormGroup({
       persona: new FormControl<string>(initialPreset.value, [Validators.required]),
       selectedAccountId: new FormControl<string>(this.accountContextService.selectedAccount().accountId),
-      selectedProjectUid: new FormControl<string>(
-        isBoardScopedPersona(currentPersona)
-          ? this.projectContextService.selectedFoundation()?.uid || ''
-          : this.projectContextService.selectedProject()?.uid || this.projectContextService.selectedFoundation()?.uid || ''
-      ),
+      selectedProjectUid: new FormControl<string>(this.projectContextService.activeContextUid()),
     });
 
     // Subscribe to persona preset changes
@@ -83,7 +82,7 @@ export class DevToolbarComponent {
 
         if (isBoardScopedPersona(preset.primary)) {
           // Board/ED: default to TLF foundation
-          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+          const tlfProject = this.projectContextService.availableProjects().find((p) => p.slug === 'tlf');
           if (tlfProject) {
             this.projectContextService.setFoundation({ uid: tlfProject.uid, name: tlfProject.name, slug: tlfProject.slug });
             this.form.get('selectedProjectUid')?.setValue(tlfProject.uid, { emitEvent: false });
@@ -94,7 +93,7 @@ export class DevToolbarComponent {
           if (currentProject) {
             this.form.get('selectedProjectUid')?.setValue(currentProject.uid, { emitEvent: false });
           } else {
-            const firstProject = this.projectContextService.availableProjects.find((p) => p.slug !== 'tlf');
+            const firstProject = this.projectContextService.availableProjects().find((p) => p.slug !== 'tlf');
             if (firstProject) {
               this.projectContextService.setProject(firstProject);
               this.form.get('selectedProjectUid')?.setValue(firstProject.uid, { emitEvent: false });
@@ -127,12 +126,19 @@ export class DevToolbarComponent {
         }
       });
 
+    // Sync form when active context changes externally (e.g., lens switch, sidebar selection)
+    toObservable(this.projectContextService.activeContext)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe((ctx) => {
+        this.form.get('selectedProjectUid')?.setValue(ctx?.uid || '', { emitEvent: false });
+      });
+
     // Subscribe to project/foundation selection changes
     this.form
       .get('selectedProjectUid')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((uid: string) => {
-        const project = this.projectContextService.availableProjects.find((p) => p.uid === uid);
+        const project = this.projectContextService.availableProjects().find((p) => p.uid === uid);
         if (project) {
           if (isBoardScopedPersona(this.personaService.currentPersona())) {
             this.projectContextService.setFoundation(project);
@@ -162,18 +168,6 @@ export class DevToolbarComponent {
       ) ??
       DEV_PERSONA_PRESETS.find((p) => p.primary === persona) ??
       DEV_PERSONA_PRESETS[1]
-    );
-  }
-
-  private initIsOnBoardDashboard(): Signal<boolean> {
-    return toSignal(
-      this.router.events.pipe(
-        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        map((event) => event.urlAfterRedirects),
-        startWith(this.router.url),
-        map((url) => url === '/' || url.startsWith('/?'))
-      ),
-      { initialValue: this.router.url === '/' }
     );
   }
 }

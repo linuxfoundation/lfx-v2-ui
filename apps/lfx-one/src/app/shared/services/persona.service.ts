@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { afterNextRender, computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
 import {
+  EnrichedPersonaProject,
   isBoardScopedPersona,
   isProjectScopedPersona,
   PersistedPersonaState,
@@ -17,14 +18,12 @@ import { SsrCookieService } from 'ngx-cookie-service-ssr';
 import { catchError, of, take } from 'rxjs';
 
 import { CookieRegistryService } from './cookie-registry.service';
-import { ProjectContextService } from './project-context.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PersonaService {
   private readonly http = inject(HttpClient);
-  private readonly projectContextService = inject(ProjectContextService);
   private readonly cookieService = inject(SsrCookieService);
   private readonly cookieRegistry = inject(CookieRegistryService);
 
@@ -39,6 +38,9 @@ export class PersonaService {
 
   /** Persona-to-project mapping from the persona detection service */
   public readonly personaProjects: WritableSignal<Partial<Record<PersonaType, PersonaProject[]>>>;
+
+  /** Full enriched projects from persona detection — source of truth for sidebar hierarchy */
+  public readonly detectedProjects: WritableSignal<EnrichedPersonaProject[]>;
 
   public readonly isBoardScoped: Signal<boolean>;
 
@@ -55,6 +57,7 @@ export class PersonaService {
     this.multiProject = signal<boolean>(stored?.multiProject ?? false);
     this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
     this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>({});
+    this.detectedProjects = signal<EnrichedPersonaProject[]>([]);
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
     this.hasBoardRole = this.initHasBoardRole();
     this.hasProjectRole = this.initHasProjectRole();
@@ -86,10 +89,6 @@ export class PersonaService {
     this.multiProject.set(multiProject);
     this.multiFoundation.set(multiFoundation);
     this.persistToCookie({ primary, all, multiProject, multiFoundation });
-
-    if (this.isBoardScoped()) {
-      this.projectContextService.clearProject();
-    }
   }
 
   /**
@@ -114,6 +113,7 @@ export class PersonaService {
 
         console.info('[PersonaService] Persona detection response:', response);
         this.personaProjects.set(response.personaProjects);
+        this.detectedProjects.set(response.projects);
 
         // Update persona state if API returned data — reuse setPersonas() for
         // consistent side effects (board-scoped project clearing, cookie persistence)

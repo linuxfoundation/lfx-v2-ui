@@ -14,7 +14,6 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ExpandableTextComponent } from '@components/expandable-text/expandable-text.component';
 import { HeaderComponent } from '@components/header/header.component';
-import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { environment } from '@environments/environment';
 import {
@@ -27,14 +26,15 @@ import {
   MeetingAttachment,
   MeetingOccurrence,
   MEETING_TYPE_CONFIGS,
-  PastMeeting,
   PastMeetingAttachment,
   PastMeetingRecording,
   PastMeetingSummary,
   Project,
+  PublicPastMeetingResponse,
   TagSeverity,
   User,
 } from '@lfx-one/shared';
+import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
@@ -74,7 +74,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
     LinkifyPipe,
     ExpandableTextComponent,
     HeaderComponent,
-    MarkdownRendererComponent,
+    FileTypeDisplayPipe,
     DynamicDialogModule,
   ],
   providers: [DialogService],
@@ -120,31 +120,33 @@ export class MeetingJoinComponent {
   // Tracks whether the meeting was loaded via the past-meetings API (occurrence ID in URL).
   // Distinct from isPastMeeting (time-based): isPastMeeting drives UI state (banner, RSVP guards),
   // while loadedViaPastMeetingId gates which API endpoints to call for data (summary, recording, attachments).
-  public loadedViaPastMeetingId = signal(false);
+  protected loadedViaPastMeetingId = signal(false);
+  protected pastMeetingFullAccess = signal(false);
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   public emailError: Signal<boolean>;
 
   public meetingTitle: Signal<string>;
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
-  public isPastMeeting: Signal<boolean>;
-  public pastMeetingSummary: Signal<PastMeetingSummary | null>;
-  public pastMeetingRecording: Signal<PastMeetingRecording | null>;
-  public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
-  public primaryRecordingUrl: Signal<string | null>;
-  public transcriptUrl: Signal<string | null>;
-  public currentAttachments = computed(() => (this.loadedViaPastMeetingId() ? this.pastMeetingAttachments() : this.attachments()));
-  public materialFiles = computed(() => this.currentAttachments().filter((a) => a.type === 'file'));
-  public materialLinks = computed(() => this.currentAttachments().filter((a) => a.type === 'link'));
-  public hasRecentlyUpdatedMaterials = computed(() => {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  protected isPastMeeting: Signal<boolean>;
+  protected pastMeetingSummary: Signal<PastMeetingSummary | null>;
+  private pastMeetingRecording: Signal<PastMeetingRecording | null>;
+  protected pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
+  protected primaryRecordingUrl: Signal<string | null>;
+  protected transcriptUrl: Signal<string | null>;
+  protected currentAttachments = computed(() => (this.pastMeetingFullAccess() ? this.pastMeetingAttachments() : this.attachments()));
+  protected materialFiles = computed(() => this.currentAttachments().filter((a) => a.type === 'file'));
+  protected materialLinks = computed(() => this.currentAttachments().filter((a) => a.type === 'link'));
+  protected hasRecentlyUpdatedMaterials = computed(() => {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = new Date(Date.now() - SEVEN_DAYS_MS);
     return this.currentAttachments().some((a) => a.updated_at && new Date(a.updated_at) > sevenDaysAgo);
   });
   // RSVP summary counts from meeting object
-  public rsvpAcceptedCount = computed(() => this.meeting()?.registrants_accepted_count ?? 0);
-  public rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
-  public rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
-  public hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
+  protected rsvpAcceptedCount = computed(() => this.meeting()?.registrants_accepted_count ?? 0);
+  protected rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
+  protected rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
+  protected hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -294,30 +296,6 @@ export class MeetingJoinComponent {
     });
   }
 
-  protected getFileTypeDisplay(attachment: MeetingAttachment | PastMeetingAttachment): {
-    icon: string;
-    bgColor: string;
-    textColor: string;
-    label: string;
-  } {
-    const ext = (attachment.file_name || attachment.name || '').split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'pdf':
-        return { icon: 'fa-light fa-file-pdf', bgColor: 'bg-red-100', textColor: 'text-red-600', label: 'PDF' };
-      case 'xlsx':
-      case 'xls':
-        return { icon: 'fa-light fa-file-spreadsheet', bgColor: 'bg-green-100', textColor: 'text-green-600', label: 'XLSX' };
-      case 'docx':
-      case 'doc':
-        return { icon: 'fa-light fa-file-word', bgColor: 'bg-blue-100', textColor: 'text-blue-600', label: 'DOCX' };
-      case 'pptx':
-      case 'ppt':
-        return { icon: 'fa-light fa-file-powerpoint', bgColor: 'bg-orange-100', textColor: 'text-orange-600', label: 'PPTX' };
-      default:
-        return { icon: 'fa-light fa-file', bgColor: 'bg-gray-100', textColor: 'text-gray-600', label: ext?.toUpperCase() || 'FILE' };
-    }
-  }
-
   private initializeAutoJoin(): void {
     // Use toObservable to create an Observable from the signals, then subscribe once
     // This executes only when all conditions are met
@@ -381,9 +359,53 @@ export class MeetingJoinComponent {
             return EMPTY;
           }
 
-          // Try public meeting endpoint first, fall back to past-meeting endpoint on failure
+          // Check if this is a past meeting occurrence ID (format: meetingId-timestamp)
+          if (this.isPastMeetingOccurrenceId(meetingId)) {
+            this.loadedViaPastMeetingId.set(true);
+            return this.meetingService.getPublicPastMeeting(meetingId).pipe(
+              tap((res: PublicPastMeetingResponse) => {
+                this.pastMeetingFullAccess.set(res.full_access);
+              }),
+              map((res: PublicPastMeetingResponse) => ({
+                meeting: res.meeting as Meeting,
+                project: res.project as Project,
+              })),
+              catchError((error) => {
+                if ([404, 403, 400].includes(error.status)) {
+                  this.router.navigate(['/meetings/not-found']);
+                }
+                return EMPTY;
+              })
+            );
+          }
+
+          // No hyphen — could be upcoming or past. Try upcoming first.
           this.loadedViaPastMeetingId.set(false);
-          return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(catchError(() => this.loadPastMeeting(meetingId)));
+          this.pastMeetingFullAccess.set(false);
+          return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
+            catchError((error) => {
+              if (error.status === 404) {
+                return this.meetingService.getPublicPastMeeting(meetingId).pipe(
+                  tap((res: PublicPastMeetingResponse) => {
+                    this.loadedViaPastMeetingId.set(true);
+                    this.pastMeetingFullAccess.set(res.full_access);
+                  }),
+                  map((res: PublicPastMeetingResponse) => ({
+                    meeting: res.meeting as Meeting,
+                    project: res.project as Project,
+                  })),
+                  catchError(() => {
+                    this.router.navigate(['/meetings/not-found']);
+                    return EMPTY;
+                  })
+                );
+              }
+              if ([403, 400].includes(error.status)) {
+                this.router.navigate(['/meetings/not-found']);
+              }
+              return EMPTY;
+            })
+          );
         }),
         map((res) => ({ ...res.meeting, project: res.project })),
         tap((res) => {
@@ -393,31 +415,9 @@ export class MeetingJoinComponent {
     ) as Signal<Meeting & { project: Project }>;
   }
 
-  private loadPastMeeting(meetingId: string): Observable<{ meeting: Meeting; project: Project }> {
-    this.loadedViaPastMeetingId.set(true);
-    return this.meetingService.getPastMeetingById(meetingId).pipe(
-      switchMap((pastMeeting: PastMeeting) => {
-        const fallbackProject = { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project;
-        if (!pastMeeting.project_slug) {
-          return of({ meeting: pastMeeting as Meeting, project: fallbackProject });
-        }
-        return this.projectService.getProject(pastMeeting.project_slug, false).pipe(
-          map((fullProject) => ({
-            meeting: pastMeeting as Meeting,
-            project: fullProject ?? fallbackProject,
-          }))
-        );
-      }),
-      catchError((error) => {
-        this.loadedViaPastMeetingId.set(false);
-        if (error.status === 401) {
-          this.router.navigate(['/login'], { queryParams: { returnTo: `/meetings/${meetingId}` } });
-        } else {
-          this.router.navigate(['/meetings/not-found']);
-        }
-        return EMPTY;
-      })
-    );
+  private isPastMeetingOccurrenceId(id: string): boolean {
+    const parts = id.split('-');
+    return parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d{13}$/.test(parts[1]);
   }
 
   private initializeCurrentOccurrence(): Signal<MeetingOccurrence | null> {
@@ -598,7 +598,11 @@ export class MeetingJoinComponent {
   private initializeAttachments(): Signal<MeetingAttachment[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id),
+        filter((meeting) => {
+          if (!meeting?.id) return false;
+          if (meeting.visibility === 'public' && !meeting.restricted) return true;
+          return this.authenticated();
+        }),
         switchMap((meeting) => this.meetingService.getMeetingAttachments(meeting.id)),
         catchError(() => of([] as MeetingAttachment[]))
       ),
@@ -671,9 +675,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingSummary(): Signal<PastMeetingSummary | null> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of(null);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of(null);
           return this.meetingService.getPastMeetingSummary(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -683,9 +687,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingRecording(): Signal<PastMeetingRecording | null> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of(null);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of(null);
           return this.meetingService.getPastMeetingRecording(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -695,9 +699,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingAttachments(): Signal<PastMeetingAttachment[]> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of([] as PastMeetingAttachment[]);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of([] as PastMeetingAttachment[]);
           return this.meetingService.getPastMeetingAttachments(meeting.id).pipe(catchError(() => of([] as PastMeetingAttachment[])));
         })
       ),
