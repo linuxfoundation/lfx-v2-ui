@@ -25,7 +25,6 @@ import {
   MeetingAttachment,
   MeetingOccurrence,
   MEETING_TYPE_CONFIGS,
-  PastMeeting,
   PastMeetingAttachment,
   PastMeetingRecording,
   PastMeetingSummary,
@@ -122,6 +121,7 @@ export class MeetingJoinComponent {
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
   public isPastMeeting: Signal<boolean>;
+  public pastMeetingFullAccess = signal(false);
   public pastMeetingSummary: Signal<PastMeetingSummary | null>;
   public pastMeetingRecording: Signal<PastMeetingRecording | null>;
   public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
@@ -323,15 +323,17 @@ export class MeetingJoinComponent {
           // Check if this is a past meeting occurrence ID (format: meetingId-timestamp)
           if (this.isPastMeetingOccurrenceId(meetingId)) {
             this.loadedViaPastMeetingId.set(true);
-            return this.meetingService.getPastMeetingById(meetingId).pipe(
-              map((pastMeeting: PastMeeting) => ({
-                meeting: pastMeeting as Meeting,
-                project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
+            return this.meetingService.getPublicPastMeeting(meetingId).pipe(
+              tap((res) => {
+                console.log('[MeetingJoin] Public past meeting response:', { full_access: res.full_access, meeting_id: res.meeting?.id, visibility: res.meeting?.visibility, restricted: res.meeting?.restricted });
+                this.pastMeetingFullAccess.set(res.full_access);
+              }),
+              map((res) => ({
+                meeting: res.meeting as Meeting,
+                project: res.project as Project,
               })),
               catchError((error) => {
-                if (error.status === 401) {
-                  this.router.navigate(['/login'], { queryParams: { returnTo: `/meetings/${meetingId}` } });
-                } else if ([404, 403, 400].includes(error.status)) {
+                if ([404, 403, 400].includes(error.status)) {
                   this.router.navigate(['/meetings/not-found']);
                 }
                 return EMPTY;
@@ -614,9 +616,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingSummary(): Signal<PastMeetingSummary | null> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of(null);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id) return of(null);
           return this.meetingService.getPastMeetingSummary(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -626,9 +628,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingRecording(): Signal<PastMeetingRecording | null> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of(null);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id) return of(null);
           return this.meetingService.getPastMeetingRecording(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -638,9 +640,9 @@ export class MeetingJoinComponent {
 
   private initializePastMeetingAttachments(): Signal<PastMeetingAttachment[]> {
     return toSignal(
-      combineLatest([toObservable(this.loadedViaPastMeetingId), toObservable(this.meeting)]).pipe(
-        switchMap(([isPastId, meeting]) => {
-          if (!isPastId || !meeting?.id) return of([] as PastMeetingAttachment[]);
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id) return of([] as PastMeetingAttachment[]);
           return this.meetingService.getPastMeetingAttachments(meeting.id).pipe(catchError(() => of([] as PastMeetingAttachment[])));
         })
       ),

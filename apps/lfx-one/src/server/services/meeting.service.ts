@@ -607,6 +607,32 @@ export class MeetingService {
   }
 
   /**
+   * Checks if a user was a participant in a past meeting by email
+   */
+  public async isUserPastMeetingParticipant(req: Request, pastMeetingUid: string, email: string): Promise<boolean> {
+    logger.debug(req, 'is_user_past_meeting_participant', 'Checking if user was a past meeting participant', {
+      past_meeting_id: pastMeetingUid,
+      email,
+    });
+
+    const params = {
+      type: 'v1_past_meeting_participant',
+      tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `email:${email}`],
+      page_size: 1,
+    };
+
+    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+      req,
+      'LFX_V2_SERVICE',
+      '/query/resources',
+      'GET',
+      params
+    );
+
+    return resources.length > 0;
+  }
+
+  /**
    * Fetches past meeting recording by past meeting UID
    */
   public async getPastMeetingRecording(req: Request, pastMeetingUid: string): Promise<PastMeetingRecording | null> {
