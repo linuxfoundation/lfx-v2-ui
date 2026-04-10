@@ -59,7 +59,7 @@ export class MeetingsTopBarComponent implements OnInit {
   public ngOnInit(): void {
     const initial = this.initialTimeFilter();
     if (initial !== 'upcoming') {
-      this.searchForm.get('timeFilter')?.setValue(initial, { emitEvent: true });
+      this.searchForm.get('timeFilter')?.setValue(initial, { emitEvent: false });
     }
   }
 

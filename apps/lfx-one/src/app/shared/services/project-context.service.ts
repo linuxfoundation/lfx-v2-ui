@@ -100,11 +100,11 @@ export class ProjectContextService {
       }
     }
 
-    // Project slot — pick from project-scoped persona projects
+    // Project slot — pick from project-scoped persona projects, prefer child projects over foundations
     if (!this.projectSelection() || !detectedProjects.some((p) => p.projectUid === this.projectSelection()?.uid)) {
       const projectUids = this.getPersonaProjectUids(personaProjects, PROJECT_SCOPED_PERSONAS);
       const defaultProject =
-        detectedProjects.find((p) => projectUids.has(p.projectUid) && isFoundationProject(p, validProjectIds)) ??
+        detectedProjects.find((p) => projectUids.has(p.projectUid) && !isFoundationProject(p, validProjectIds)) ??
         detectedProjects.find((p) => projectUids.has(p.projectUid)) ??
         detectedProjects[0];
       if (defaultProject) {
