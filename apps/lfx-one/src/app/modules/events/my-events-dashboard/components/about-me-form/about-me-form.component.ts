@@ -10,6 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { COUNTRIES } from '@lfx-one/shared/constants';
+import { TravelFundAboutMe } from '@lfx-one/shared/interfaces';
 
 const YES_NO_OPTIONS = [
   { label: 'Yes', value: 'yes' },
@@ -28,6 +29,7 @@ export class AboutMeFormComponent {
   private readonly fb = inject(NonNullableFormBuilder);
 
   public readonly formValidityChange = output<boolean>();
+  public readonly formChange = output<TravelFundAboutMe>();
 
   public readonly form = this.fb.group({
     firstName: ['', Validators.required],
@@ -66,5 +68,31 @@ export class AboutMeFormComponent {
     this.form.statusChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.formValidityChange.emit(this.form.valid);
     });
+
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.formChange.emit(this.buildFormValue());
+    });
+  }
+
+  private buildFormValue(): TravelFundAboutMe {
+    const raw = this.form.getRawValue();
+    return {
+      firstName: raw.firstName,
+      lastName: raw.lastName,
+      email: raw.email,
+      citizenshipCountry: raw.citizenshipCountry,
+      profileLink: raw.profileLink,
+      company: raw.company,
+      canReceiveFunds: raw.canReceiveFunds,
+      travelFromCountry: raw.travelFromCountry,
+      openSourceInvolvement: raw.openSourceInvolvement,
+      isLgbtqia: raw.isLgbtqia,
+      isWoman: raw.isWoman,
+      isPersonWithDisability: raw.isPersonWithDisability,
+      isDiversityOther: raw.isDiversityOther,
+      preferNotToAnswer: raw.preferNotToAnswer,
+      attendingForCompany: raw.attendingForCompany,
+      willingToBlog: raw.willingToBlog,
+    };
   }
 }

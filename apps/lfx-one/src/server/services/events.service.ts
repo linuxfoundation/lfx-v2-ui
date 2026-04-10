@@ -24,6 +24,8 @@ import {
   MyEventOrganizationsResponse,
   MyEventRow,
   MyEventsResponse,
+  TravelFundApplication,
+  TravelFundApplicationResponse,
   TravelFundRequestsResponse,
   VisaRequest,
   VisaRequestRow,
@@ -670,6 +672,20 @@ export class EventsService {
     const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return `${startStr} – ${endStr}`;
+  }
+
+  /**
+   * Stub: Submit a travel fund application.
+   * TODO: Replace with upstream microservice call once the API is available.
+   */
+  public async submitTravelFundApplication(req: Request, payload: TravelFundApplication): Promise<TravelFundApplicationResponse> {
+    logger.debug(req, 'submit_travel_fund_application', 'Received travel fund application', {
+      event_id: payload.eventId,
+      event_name: payload.eventName,
+      estimated_total: payload.expenses.estimatedTotal,
+    });
+
+    return { success: true, message: 'Your travel fund application has been submitted successfully.' };
   }
 
   private formatLocation(location: string | null, city: string | null, country: string | null): string {

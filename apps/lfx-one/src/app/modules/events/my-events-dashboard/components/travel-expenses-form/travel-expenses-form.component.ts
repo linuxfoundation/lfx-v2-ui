@@ -7,6 +7,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
+import { TravelFundExpenses } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-travel-expenses-form',
@@ -19,6 +20,7 @@ export class TravelExpensesFormComponent {
   private readonly fb = inject(NonNullableFormBuilder);
 
   public readonly formValidityChange = output<boolean>();
+  public readonly formChange = output<TravelFundExpenses>();
 
   public readonly form = this.fb.group({
     airfareCost: ['0'],
@@ -43,5 +45,25 @@ export class TravelExpensesFormComponent {
     this.form.statusChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.formValidityChange.emit(this.form.valid);
     });
+
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.formChange.emit(this.buildExpensesValue());
+    });
+  }
+
+  private buildExpensesValue(): TravelFundExpenses {
+    const raw = this.form.getRawValue();
+    const airfareCost = parseFloat(raw.airfareCost) || 0;
+    const hotelCost = parseFloat(raw.hotelCost) || 0;
+    const groundTransportCost = parseFloat(raw.groundTransportCost) || 0;
+    return {
+      airfareCost,
+      airfareNotes: raw.airfareNotes,
+      hotelCost,
+      hotelNotes: raw.hotelNotes,
+      groundTransportCost,
+      groundTransportNotes: raw.groundTransportNotes,
+      estimatedTotal: airfareCost + hotelCost + groundTransportCost,
+    };
   }
 }

@@ -106,3 +106,6 @@ export * from './persona-detection.interface';
 
 // My Event interfaces
 export * from './my-event.interface';
+
+// Travel fund application interfaces
+export * from './travel-fund-application.interface';

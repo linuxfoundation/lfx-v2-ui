@@ -1,9 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
-import { MyEvent } from '@lfx-one/shared/interfaces';
+import { MyEvent, TravelFundAboutMe, TravelFundApplication, TravelFundExpenses } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
 import { TravelFundTermsComponent } from '../travel-fund-terms/travel-fund-terms.component';
@@ -23,10 +26,16 @@ const STEP_ORDER: TravelFundStep[] = ['select-event', 'terms', 'about-me', 'expe
 })
 export class TravelFundApplicationDialogComponent {
   private readonly ref = inject(DynamicDialogRef);
+  private readonly eventsService = inject(EventsService);
+  private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public step = signal<TravelFundStep>('select-event');
   public selectedEvent = signal<MyEvent | null>(null);
   public aboutMeFormValid = signal(false);
+  public aboutMeData = signal<TravelFundAboutMe | null>(null);
+  public expensesData = signal<TravelFundExpenses | null>(null);
+  public submitting = signal(false);
 
   public readonly isNextDisabled = computed(() => {
     if (this.step() === 'select-event') return !this.selectedEvent();
@@ -56,7 +65,43 @@ export class TravelFundApplicationDialogComponent {
   }
 
   public onSubmitApplication(): void {
-    this.ref.close({ submitted: true });
+    const event = this.selectedEvent();
+    const aboutMe = this.aboutMeData();
+
+    if (!event || !aboutMe) return;
+
+    const payload: TravelFundApplication = {
+      eventId: event.id,
+      eventName: event.name,
+      termsAccepted: true,
+      aboutMe,
+      expenses: this.expensesData() ?? {
+        airfareCost: 0,
+        airfareNotes: '',
+        hotelCost: 0,
+        hotelNotes: '',
+        groundTransportCost: 0,
+        groundTransportNotes: '',
+        estimatedTotal: 0,
+      },
+    };
+
+    this.submitting.set(true);
+
+    this.eventsService
+      .submitTravelFundApplication(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Your travel fund application has been submitted successfully.',
+          });
+          this.ref.close({ submitted: true });
+        },
+        error: () => this.submitting.set(false),
+      });
   }
 
   public onCancel(): void {

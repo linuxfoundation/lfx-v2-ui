@@ -16,10 +16,12 @@ import {
   GetUpcomingCountriesResponse,
   MyEventOrganizationsResponse,
   MyEventsResponse,
+  TravelFundApplication,
+  TravelFundApplicationResponse,
   TravelFundRequestsResponse,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, Observable, of, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -109,6 +111,10 @@ export class EventsService {
 
   public getUpcomingCountries(): Observable<GetUpcomingCountriesResponse> {
     return this.http.get<GetUpcomingCountriesResponse>('/api/events/countries').pipe(catchError(() => of({ data: [] as string[] })));
+  }
+
+  public submitTravelFundApplication(payload: TravelFundApplication): Observable<TravelFundApplicationResponse> {
+    return this.http.post<TravelFundApplicationResponse>('/api/events/travel-fund-applications', payload).pipe(take(1));
   }
 
   public getCertificate(params: GetCertificateParams): Observable<Blob | null> {
