@@ -261,7 +261,7 @@
               </div>
             } @else if (isPastMeeting()) {
               <!-- Meeting Tools — Past Meeting (right column) -->
-              <div class="w-full md:w-[296px]" data-testid="past-meeting-tools">
+              <div class="w-full md:w-[296px]" data-testid="meeting-tools">
                 <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div class="flex flex-col gap-1 mb-3">
                     <h3 class="text-gray-700 text-sm font-medium">Meeting Tools</h3>
@@ -418,18 +418,20 @@
                     <p class="text-[11px] text-gray-400">Materials intended for review before the meeting.</p>
                     @if (materialFiles().length > 0) {
                       @for (attachment of materialFiles(); track attachment.uid; let i = $index) {
-                        <a
+                        @let fileType = getFileTypeDisplay(attachment);
+                        <button
+                          type="button"
                           (click)="downloadAttachment(attachment)"
-                          class="bg-white border border-gray-200 hover:border-gray-300 rounded-lg p-3 flex items-center gap-3 transition-colors cursor-pointer"
+                          class="bg-white border border-gray-200 hover:border-gray-300 rounded-lg p-3 flex items-center gap-3 transition-colors cursor-pointer w-full text-left"
                           [attr.data-testid]="'meeting-material-file-' + i">
-                          <div class="w-9 h-9 rounded flex items-center justify-center flex-shrink-0" [ngClass]="[getFileTypeDisplay(attachment).bgColor]">
-                            <i [ngClass]="[getFileTypeDisplay(attachment).icon, getFileTypeDisplay(attachment).textColor]" class="text-base"></i>
+                          <div class="w-9 h-9 rounded flex items-center justify-center flex-shrink-0" [ngClass]="[fileType.bgColor]">
+                            <i [ngClass]="[fileType.icon, fileType.textColor]" class="text-base"></i>
                           </div>
                           <div class="flex flex-col flex-1 overflow-hidden gap-0.5">
                             <span class="text-sm text-gray-900 overflow-ellipsis overflow-hidden whitespace-nowrap font-inter">{{ attachment.name }}</span>
                             <div class="flex items-center gap-2">
                               <span class="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">{{
-                                getFileTypeDisplay(attachment).label
+                                fileType.label
                               }}</span>
                               @if (attachment.updated_at || attachment.created_at) {
                                 <span class="text-xs text-gray-400">{{ attachment.updated_at || attachment.created_at | date: 'MMM d, yyyy' }}</span>
@@ -437,7 +439,7 @@
                             </div>
                           </div>
                           <i class="fa-light fa-arrow-up-right-from-square text-gray-400 text-xs flex-shrink-0"></i>
-                        </a>
+                        </button>
                       }
                     } @else {
                       @if (!authenticated() && meeting().visibility === 'private') {
