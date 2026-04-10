@@ -104,6 +104,9 @@ export async function checkPastMeetingAccess(req: Request, meeting: PastMeeting,
 
   // Non-authenticated users cannot access non-public meetings
   if (!req.oidc?.isAuthenticated()) {
+    logger.debug(req, 'check_past_meeting_access', 'Unauthenticated user denied access to non-public meeting', {
+      past_meeting_id: meeting.id,
+    });
     return false;
   }
 

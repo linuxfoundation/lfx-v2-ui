@@ -24,6 +24,7 @@ import {
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
+  MeetingResourceItem,
   MEETING_TYPE_CONFIGS,
   PastMeetingAttachment,
   PastMeetingRecording,
@@ -32,6 +33,7 @@ import {
   TagSeverity,
   User,
 } from '@lfx-one/shared';
+import { FileSizePipe } from '@pipes/file-size.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
@@ -70,6 +72,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
     HeaderComponent,
     MarkdownRendererComponent,
     DynamicDialogModule,
+    FileSizePipe,
   ],
   providers: [],
   templateUrl: './meeting-join.component.html',
@@ -113,20 +116,21 @@ export class MeetingJoinComponent {
   // Tracks whether the meeting was loaded via the past-meetings API (occurrence ID in URL).
   // Distinct from isPastMeeting (time-based): isPastMeeting drives UI state (banner, RSVP guards),
   // while loadedViaPastMeetingId gates which API endpoints to call for data (summary, recording, attachments).
-  public loadedViaPastMeetingId = signal(false);
+  protected loadedViaPastMeetingId = signal(false);
+  protected pastMeetingFullAccess = signal(false);
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   public emailError: Signal<boolean>;
 
   public meetingTitle: Signal<string>;
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
-  public isPastMeeting: Signal<boolean>;
-  public pastMeetingFullAccess = signal(false);
-  public pastMeetingSummary: Signal<PastMeetingSummary | null>;
-  public pastMeetingRecording: Signal<PastMeetingRecording | null>;
-  public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
-  public primaryRecordingUrl: Signal<string | null>;
-  public transcriptUrl: Signal<string | null>;
+  protected isPastMeeting: Signal<boolean>;
+  protected pastMeetingSummary: Signal<PastMeetingSummary | null>;
+  private pastMeetingRecording: Signal<PastMeetingRecording | null>;
+  protected pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
+  protected primaryRecordingUrl: Signal<string | null>;
+  protected transcriptUrl: Signal<string | null>;
+  protected displayResources: Signal<MeetingResourceItem[]>;
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -154,6 +158,7 @@ export class MeetingJoinComponent {
     this.pastMeetingAttachments = this.initializePastMeetingAttachments();
     this.primaryRecordingUrl = this.initializePrimaryRecordingUrl();
     this.transcriptUrl = this.initializeTranscriptUrl();
+    this.displayResources = this.initializeDisplayResources();
 
     // Initialize invited/registration signals
     this.isInvited = this.initializeIsInvited();
@@ -213,7 +218,7 @@ export class MeetingJoinComponent {
     this.showMyRsvp.set(!this.showMyRsvp());
   }
 
-  public downloadAttachment(attachment: MeetingAttachment): void {
+  public downloadAttachment(attachment: Pick<MeetingAttachment, 'uid'>): void {
     this.meetingService
       .getMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid)
       .pipe(take(1))
@@ -340,11 +345,29 @@ export class MeetingJoinComponent {
             );
           }
 
+          // No hyphen — could be upcoming or past. Try upcoming first.
           this.loadedViaPastMeetingId.set(false);
           this.pastMeetingFullAccess.set(false);
           return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
             catchError((error) => {
-              if ([404, 403, 400].includes(error.status)) {
+              // If upcoming meeting not found, try as a past meeting
+              if (error.status === 404) {
+                return this.meetingService.getPublicPastMeeting(meetingId).pipe(
+                  tap((res) => {
+                    this.loadedViaPastMeetingId.set(true);
+                    this.pastMeetingFullAccess.set(res.full_access);
+                  }),
+                  map((res) => ({
+                    meeting: res.meeting as Meeting,
+                    project: res.project as Project,
+                  })),
+                  catchError(() => {
+                    this.router.navigate(['/meetings/not-found']);
+                    return EMPTY;
+                  })
+                );
+              }
+              if ([403, 400].includes(error.status)) {
                 this.router.navigate(['/meetings/not-found']);
               }
               return EMPTY;
@@ -676,6 +699,29 @@ export class MeetingJoinComponent {
 
       const transcript = recording.recording_files.find((f) => f.file_type === 'TRANSCRIPT');
       return transcript?.download_url ?? null;
+    });
+  }
+
+  private initializeDisplayResources(): Signal<MeetingResourceItem[]> {
+    return computed(() => {
+      if (this.pastMeetingFullAccess()) {
+        return this.pastMeetingAttachments().map((a) => ({
+          uid: a.uid,
+          type: a.type,
+          name: a.name,
+          link: a.link,
+          fileUrl: a.file_url,
+          fileSize: a.file_size,
+          isPastMeeting: true,
+        }));
+      }
+      return this.attachments().map((a) => ({
+        uid: a.uid,
+        type: a.type,
+        name: a.name,
+        link: a.link,
+        isPastMeeting: false,
+      }));
     });
   }
 }

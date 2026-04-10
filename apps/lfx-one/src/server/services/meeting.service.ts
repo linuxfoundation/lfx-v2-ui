@@ -651,6 +651,9 @@ export class MeetingService {
       if (resources.length > 0) return true;
     }
 
+    logger.debug(req, 'is_user_past_meeting_participant', 'Participant check complete — no match found', {
+      past_meeting_id: pastMeetingUid,
+    });
     return false;
   }
 
