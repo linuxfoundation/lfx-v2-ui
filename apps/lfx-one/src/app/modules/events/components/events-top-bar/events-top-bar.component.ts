@@ -7,7 +7,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { FilterOption } from '@lfx-one/shared/interfaces';
-import { combineLatest, debounceTime, map, skip, switchMap, tap } from 'rxjs';
+import { combineLatest, debounceTime, finalize, map, of, skip, switchMap } from 'rxjs';
 import { EventsService } from '@app/shared/services/events.service';
 import { EVENT_ROLE_OPTIONS, MY_EVENT_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 
@@ -71,17 +71,22 @@ export class EventsTopBarComponent {
   }
 
   private initFoundationOptions(): Signal<FilterOption[]> {
+    const defaultOptions = [{ label: 'All Foundations', value: null }] as FilterOption[];
     return toSignal(
-      combineLatest([toObservable(this.projectName), toObservable(this.isPast)]).pipe(
-        tap(() => this.foundationOptionsLoading.set(true)),
-        switchMap(([projectName, isPast]) =>
-          this.eventsService.getEventOrganizations({ projectName, isPast }).pipe(
-            tap(() => this.foundationOptionsLoading.set(false)),
-            map(({ data }) => [{ label: 'All Foundations', value: null }, ...data.map((name) => ({ label: name, value: name }))])
-          )
-        )
+      combineLatest([toObservable(this.projectName), toObservable(this.isPast), toObservable(this.isFoundationFilter)]).pipe(
+        switchMap(([projectName, isPast, isFoundationFilter]) => {
+          if (!isFoundationFilter) {
+            // Foundation dropdown is not rendered — skip the API call entirely.
+            return of(defaultOptions);
+          }
+          this.foundationOptionsLoading.set(true);
+          return this.eventsService.getEventOrganizations({ projectName, isPast }).pipe(
+            map(({ data }) => [{ label: 'All Foundations', value: null }, ...data.map((name) => ({ label: name, value: name }))]),
+            finalize(() => this.foundationOptionsLoading.set(false))
+          );
+        })
       ),
-      { initialValue: [{ label: 'All Foundations', value: null }] as FilterOption[] }
+      { initialValue: defaultOptions }
     );
   }
 }

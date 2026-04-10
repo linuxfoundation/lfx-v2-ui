@@ -3,8 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { DEFAULT_EVENT_SORT_FIELD, VALID_EVENT_SORT_FIELDS } from '@lfx-one/shared/constants';
-import { FoundationEventStatus } from '@lfx-one/shared/enums';
+import { COMING_SOON_SENTINEL, DEFAULT_EVENT_SORT_FIELD, VALID_EVENT_SORT_FIELDS } from '@lfx-one/shared/constants';
 import {
   EventRow,
   EventSortOrder,
@@ -242,7 +241,7 @@ export class EventsService {
     const projectNamesFilter = projectNames && projectNames.length > 0 ? `AND PROJECT_NAME IN (${projectNames.map(() => '?').join(', ')})` : '';
     const searchQueryFilter = searchQuery ? 'AND EVENT_NAME ILIKE ?' : '';
     let statusFilter = '';
-    if (status === 'coming-soon') {
+    if (status === COMING_SOON_SENTINEL) {
       statusFilter = "AND EVENT_STATUS IN ('Pending', 'Planned')";
     } else if (status) {
       statusFilter = 'AND EVENT_STATUS = ?';
@@ -293,7 +292,7 @@ export class EventsService {
     if (eventId) binds.push(eventId);
     if (projectNames && projectNames.length > 0) binds.push(...projectNames);
     if (searchQuery) binds.push(`%${searchQuery}%`);
-    if (status && status !== 'coming-soon') binds.push(status);
+    if (status && status !== COMING_SOON_SENTINEL) binds.push(status);
 
     logger.debug(req, 'get_events', 'Executing events query', { bind_count: binds.length });
 
@@ -451,22 +450,10 @@ export class EventsService {
       registrationUrl: row.EVENT_REGISTRATION_URL ?? null,
       date: this.formatDateRange(row.EVENT_START_DATE, row.EVENT_END_DATE),
       location: this.formatLocation(row.EVENT_LOCATION, row.EVENT_CITY, row.EVENT_COUNTRY),
-      status: this.mapEventStatus(row.EVENT_STATUS),
+      status: row.EVENT_STATUS ?? null,
       isPast: row.IS_PAST_EVENT,
       attendees: row.ATTENDEES ?? null,
     };
-  }
-
-  private mapEventStatus(raw: string | null): string | null {
-    switch (raw) {
-      case FoundationEventStatus.ACTIVE:
-        return FoundationEventStatus.REGISTRATION_OPEN;
-      case FoundationEventStatus.PENDING:
-      case FoundationEventStatus.PLANNED:
-        return FoundationEventStatus.COMING_SOON;
-      default:
-        return raw;
-    }
   }
 
   private mapRowToEvent(row: MyEventRow): MyEvent {

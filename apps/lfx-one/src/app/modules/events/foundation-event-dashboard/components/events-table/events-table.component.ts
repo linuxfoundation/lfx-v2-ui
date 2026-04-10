@@ -46,11 +46,15 @@ export class EventsTableComponent {
 
   protected readonly eventsWithActions = computed<FoundationEventWithActions[]>(() => {
     const isPast = this.isPastEvents();
-    return this.eventsResponse().data.map((event) => ({
-      ...event,
-      actionLabel: isPast ? 'View Recap' : this.resolveActionLabel(event.status),
-      isOutlined: !isPast && event.status === FoundationEventStatus.COMING_SOON,
-    }));
+    return this.eventsResponse().data.map((event) => {
+      const displayStatus = this.mapFoundationEventStatus(event.status);
+      return {
+        ...event,
+        displayStatus,
+        actionLabel: isPast ? 'View Recap' : this.resolveActionLabel(displayStatus),
+        isOutlined: !isPast && displayStatus === FoundationEventStatus.COMING_SOON,
+      };
+    });
   });
 
   protected onPageChange(event: { first: number; rows: number }): void {
@@ -61,14 +65,26 @@ export class EventsTableComponent {
     this.sortChange.emit({ field });
   }
 
-  private resolveActionLabel(status: string | null): string {
-    switch (status) {
+  private resolveActionLabel(displayStatus: string | null): string {
+    switch (displayStatus) {
       case FoundationEventStatus.COMING_SOON:
         return 'Notify Me';
       case FoundationEventStatus.COMPLETED:
         return 'View Recap';
       default:
         return 'Register';
+    }
+  }
+
+  private mapFoundationEventStatus(raw: string | null): string | null {
+    switch (raw) {
+      case FoundationEventStatus.ACTIVE:
+        return FoundationEventStatus.REGISTRATION_OPEN;
+      case FoundationEventStatus.PENDING:
+      case FoundationEventStatus.PLANNED:
+        return FoundationEventStatus.COMING_SOON;
+      default:
+        return raw;
     }
   }
 }

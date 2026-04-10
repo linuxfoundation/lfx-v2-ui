@@ -30,7 +30,11 @@ export const FOUNDATION_EVENT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'Registration Open', value: 'Active' }, // raw DB value; displayed as 'Registration Open'
 ];
 
-export const VALID_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['Active', 'Planned', 'Pending', 'Completed', 'coming-soon']);
+/** Sentinel status value that maps server-side to `EVENT_STATUS IN ('Pending', 'Planned')`. */
+export const COMING_SOON_SENTINEL = 'coming-soon';
+
+export const VALID_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['Active', 'Planned', 'Pending', 'Completed', COMING_SOON_SENTINEL]);
+export const VALID_MY_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['registered', 'attended', 'not-registered']);
 export const VALID_EVENT_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'PROJECT_NAME', 'EVENT_START_DATE', 'EVENT_CITY']);
 export const DEFAULT_EVENT_SORT_FIELD = 'EVENT_START_DATE';
 export const VALID_EVENT_SORT_ORDERS: readonly string[] = ['ASC', 'DESC'];

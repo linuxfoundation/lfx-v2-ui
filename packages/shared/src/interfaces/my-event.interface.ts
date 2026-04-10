@@ -118,7 +118,7 @@ export interface FoundationEvent {
   date: string;
   /** Human-readable location string (e.g. "Salt Lake City, UT") */
   location: string;
-  /** Event status (e.g. "Published", "Cancelled") */
+  /** Raw EVENT_STATUS value from the database (e.g. 'Active', 'Planned', 'Completed') */
   status: string | null;
   /** Whether the event is in the past */
   isPast: boolean;
@@ -130,6 +130,8 @@ export interface FoundationEvent {
  * Foundation event with computed action properties for the events table
  */
 export interface FoundationEventWithActions extends FoundationEvent {
+  /** Display label derived from raw status (e.g. 'Active' → 'Registration Open') */
+  displayStatus: string | null;
   actionLabel: string;
   isOutlined: boolean;
 }
