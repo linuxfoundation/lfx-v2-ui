@@ -10,7 +10,7 @@ import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
 
 const CERTIFICATES_QUERY = `
-  SELECT _KEY, CERTIFICATE_ID, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
+  SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL
   FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
   WHERE USER_NAME = ?
@@ -47,7 +47,7 @@ export class TrainingService {
   private mapRowToCertification(row: CertificateRow): Certification {
     return {
       id: row._KEY,
-      certificateId: row.CERTIFICATE_ID,
+      certificateId: row.IDENTIFIER,
       name: row.COURSE_NAME,
       description: row.COURSE_GROUP_DESCRIPTION ?? '',
       imageUrl: row.LOGO_URL ?? '',

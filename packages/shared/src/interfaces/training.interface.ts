@@ -12,7 +12,7 @@ export type CertificationStatus = 'active' | 'expired';
 export interface Certification {
   /** Unique record identifier (_KEY) */
   id: string;
-  /** Certificate identifier */
+  /** Certificate identifier (from IDENTIFIER column) */
   certificateId: string;
   /** Full certification/course name */
   name: string;
@@ -37,7 +37,7 @@ export interface Certification {
  */
 export interface CertificateRow {
   _KEY: string;
-  CERTIFICATE_ID: string;
+  IDENTIFIER: string;
   COURSE_NAME: string;
   COURSE_GROUP_DESCRIPTION: string;
   LOGO_URL: string;
