@@ -111,6 +111,10 @@ export class MeetingJoinComponent {
   private hasAutoJoined: WritableSignal<boolean> = signal<boolean>(false);
   public showRegistrants: WritableSignal<boolean> = signal<boolean>(false);
   public showGuestForm: WritableSignal<boolean> = signal<boolean>(false);
+  // Tracks whether the meeting was loaded via the past-meetings API (occurrence ID in URL).
+  // Distinct from isPastMeeting (time-based): isPastMeeting drives UI state (banner, RSVP guards),
+  // while loadedViaPastMeetingId gates which API endpoints to call for data (summary, recording, attachments).
+  public loadedViaPastMeetingId = signal(false);
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   public emailError: Signal<boolean>;
 
@@ -118,7 +122,6 @@ export class MeetingJoinComponent {
   public meetingDescription: Signal<string>;
   public hasAiCompanion: Signal<boolean>;
   public isPastMeeting: Signal<boolean>;
-  public loadedViaPastMeetingId = signal(false);
   public pastMeetingSummary: Signal<PastMeetingSummary | null>;
   public pastMeetingRecording: Signal<PastMeetingRecording | null>;
   public pastMeetingAttachments: Signal<PastMeetingAttachment[]>;
