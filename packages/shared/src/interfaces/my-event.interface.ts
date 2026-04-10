@@ -253,6 +253,29 @@ export interface CertificateData {
 }
 
 /**
+ * Visa letter request item for the My Events visa-letters tab
+ */
+export interface VisaRequest {
+  /** Unique event identifier */
+  id: string;
+  /** Event display name */
+  name: string;
+  /** External event URL */
+  url: string;
+  /** Human-readable location string (e.g. "Salt Lake City, UT") */
+  location: string;
+  /** Human-readable application date string (e.g. "Jan 15, 2026") */
+  applicationDate: string;
+  /** Visa letter request status (e.g. "Pending", "Approved", "Denied") */
+  status: string;
+}
+
+/**
+ * Paginated API response for visa letter requests
+ */
+export type VisaRequestsResponse = OffsetPaginatedResponse<VisaRequest>;
+
+/**
  * Valid sort order values for event queries
  */
 export type EventSortOrder = 'ASC' | 'DESC';

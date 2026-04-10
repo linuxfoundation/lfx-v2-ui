@@ -10,10 +10,11 @@ import { EventTab, EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEven
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { EventsTableComponent } from '../events-table/events-table.component';
+import { VisaRequestComponent } from '../visa-request/visa-request.component';
 
 @Component({
   selector: 'lfx-events-list',
-  imports: [NgClass, EventsTableComponent],
+  imports: [NgClass, EventsTableComponent, VisaRequestComponent],
   templateUrl: './events-list.component.html',
 })
 export class EventsListComponent {
