@@ -14,7 +14,7 @@
   <!-- Content -->
   @if (isStructured) {
     <div class="flex flex-col gap-4" data-testid="summary-structured">
-      @for (section of sections; track section.heading) {
+      @for (section of sections; track $index) {
         <div class="border-l-4 pl-4 py-2" [ngClass]="section.borderColor" [attr.data-testid]="'summary-section-' + $index">
           <div class="flex items-center gap-2 mb-2">
             <i [ngClass]="[section.icon, section.iconColor]" class="text-sm"></i>

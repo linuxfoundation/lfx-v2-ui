@@ -140,6 +140,11 @@ export class MeetingJoinComponent {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return this.currentAttachments().some((a) => a.updated_at && new Date(a.updated_at) > sevenDaysAgo);
   });
+  // RSVP summary counts from meeting object
+  public rsvpAcceptedCount = computed(() => this.meeting()?.registrants_accepted_count ?? 0);
+  public rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
+  public rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
+  public hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -220,6 +225,10 @@ export class MeetingJoinComponent {
   public onEmailErrorClick(): void {
     this.joinUrlError.set(null);
     this.showGuestForm.set(true);
+  }
+
+  public onShowMembersPlaceholder(): void {
+    console.warn('Show Members clicked — attendees drawer coming in Phase 4');
   }
 
   public onRsvpViewToggle(): void {
@@ -362,6 +371,7 @@ export class MeetingJoinComponent {
   private initializeMeeting() {
     return toSignal<Meeting & { project: Project }>(
       combineLatest([this.activatedRoute.paramMap, this.activatedRoute.queryParamMap, this.refreshTrigger$]).pipe(
+        debounceTime(0), // Coalesce rapid SSR hydration emissions so the fallback chain isn't canceled
         switchMap(([params, queryParams]) => {
           const meetingId = params.get('id');
           this.password.set(queryParams.get('password'));
