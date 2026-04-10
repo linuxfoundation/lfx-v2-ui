@@ -39,6 +39,7 @@ import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { MeetingService } from '@services/meeting.service';
+import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
@@ -85,6 +86,7 @@ export class MeetingJoinComponent {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly meetingService = inject(MeetingService);
+  private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
   private readonly dialogService = inject(DialogService);
@@ -384,10 +386,18 @@ export class MeetingJoinComponent {
   private loadPastMeeting(meetingId: string): Observable<{ meeting: Meeting; project: Project }> {
     this.loadedViaPastMeetingId.set(true);
     return this.meetingService.getPastMeetingById(meetingId).pipe(
-      map((pastMeeting: PastMeeting) => ({
-        meeting: pastMeeting as Meeting,
-        project: { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project,
-      })),
+      switchMap((pastMeeting: PastMeeting) => {
+        const fallbackProject = { name: pastMeeting.project_name, slug: pastMeeting.project_slug } as Project;
+        if (!pastMeeting.project_slug) {
+          return of({ meeting: pastMeeting as Meeting, project: fallbackProject });
+        }
+        return this.projectService.getProject(pastMeeting.project_slug, false).pipe(
+          map((fullProject) => ({
+            meeting: pastMeeting as Meeting,
+            project: fullProject ?? fallbackProject,
+          }))
+        );
+      }),
       catchError((error) => {
         this.loadedViaPastMeetingId.set(false);
         if (error.status === 401) {
