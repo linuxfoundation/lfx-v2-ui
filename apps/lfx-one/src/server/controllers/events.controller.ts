@@ -23,6 +23,7 @@ import {
   GetEventsOptions,
   GetUpcomingCountriesResponse,
   TravelFundApplication,
+  VisaRequestApplication,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
@@ -300,6 +301,62 @@ export class EventsController {
     }
   }
 
+  /**
+   * POST /api/events/visa-applications
+   * Submit a visa letter application
+   * TODO: Wire to upstream microservice once available.
+   */
+  public async submitVisaRequestApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'submit_visa_request_application', {});
+
+    try {
+      const payload = req.body as VisaRequestApplication;
+
+      if (!payload?.eventId) {
+        throw ServiceValidationError.forField('eventId', 'eventId is required', { operation: 'submit_visa_request_application' });
+      }
+
+      if (!payload?.applicantInfo) {
+        throw ServiceValidationError.forField('applicantInfo', 'applicantInfo is required', { operation: 'submit_visa_request_application' });
+      }
+
+      const result = await this.eventsService.submitVisaRequestApplication(req, payload);
+      logger.success(req, 'submit_visa_request_application', startTime, { event_id: payload.eventId });
+      res.json(result);
+    } catch (error) {
+      logger.error(req, 'submit_visa_request_application', startTime, error, {});
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/events/travel-fund-applications
+   * Submit a travel fund application
+   * TODO: Wire to upstream microservice once available.
+   */
+  public async submitTravelFundApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'submit_travel_fund_application', {});
+
+    try {
+      const payload = req.body as TravelFundApplication;
+
+      if (!payload?.eventId) {
+        throw ServiceValidationError.forField('eventId', 'eventId is required', { operation: 'submit_travel_fund_application' });
+      }
+
+      if (!payload?.aboutMe) {
+        throw ServiceValidationError.forField('aboutMe', 'aboutMe is required', { operation: 'submit_travel_fund_application' });
+      }
+
+      const result = await this.eventsService.submitTravelFundApplication(req, payload);
+      logger.success(req, 'submit_travel_fund_application', startTime, { event_id: payload.eventId });
+      res.json(result);
+    } catch (error) {
+      logger.error(req, 'submit_travel_fund_application', startTime, error, {});
+      next(error);
+    }
+  }
+
   private async handleEventRequestsEndpoint(
     req: Request,
     res: Response,
@@ -350,31 +407,4 @@ export class EventsController {
     }
   }
 
-  /**
-   * POST /api/events/travel-fund-applications
-   * Submit a travel fund application
-   * TODO: Wire to upstream microservice once available.
-   */
-  public async submitTravelFundApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'submit_travel_fund_application', {});
-
-    try {
-      const payload = req.body as TravelFundApplication;
-
-      if (!payload?.eventId) {
-        throw ServiceValidationError.forField('eventId', 'eventId is required', { operation: 'submit_travel_fund_application' });
-      }
-
-      if (!payload?.aboutMe) {
-        throw ServiceValidationError.forField('aboutMe', 'aboutMe is required', { operation: 'submit_travel_fund_application' });
-      }
-
-      const result = await this.eventsService.submitTravelFundApplication(req, payload);
-      logger.success(req, 'submit_travel_fund_application', startTime, { event_id: payload.eventId });
-      res.json(result);
-    } catch (error) {
-      logger.error(req, 'submit_travel_fund_application', startTime, error, {});
-      next(error);
-    }
-  }
 }

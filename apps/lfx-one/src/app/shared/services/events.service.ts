@@ -19,6 +19,8 @@ import {
   TravelFundApplication,
   TravelFundApplicationResponse,
   TravelFundRequestsResponse,
+  VisaRequestApplication,
+  VisaRequestApplicationResponse,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of, take } from 'rxjs';
@@ -111,6 +113,10 @@ export class EventsService {
 
   public getUpcomingCountries(): Observable<GetUpcomingCountriesResponse> {
     return this.http.get<GetUpcomingCountriesResponse>('/api/events/countries').pipe(catchError(() => of({ data: [] as string[] })));
+  }
+
+  public submitVisaRequestApplication(payload: VisaRequestApplication): Observable<VisaRequestApplicationResponse> {
+    return this.http.post<VisaRequestApplicationResponse>('/api/events/visa-applications', payload).pipe(take(1));
   }
 
   public submitTravelFundApplication(payload: TravelFundApplication): Observable<TravelFundApplicationResponse> {

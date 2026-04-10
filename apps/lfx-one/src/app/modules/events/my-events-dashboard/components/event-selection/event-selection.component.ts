@@ -12,7 +12,7 @@ import { MyEvent } from '@lfx-one/shared/interfaces';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { catchError, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, debounceTime, finalize, of, skip } from 'rxjs';
 
 type TimeFilterValue = 'any' | 'this-month' | 'next-3-months';
 

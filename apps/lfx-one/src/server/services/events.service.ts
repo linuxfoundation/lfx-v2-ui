@@ -28,6 +28,8 @@ import {
   TravelFundApplicationResponse,
   TravelFundRequestsResponse,
   VisaRequest,
+  VisaRequestApplication,
+  VisaRequestApplicationResponse,
   VisaRequestRow,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
@@ -449,6 +451,33 @@ export class EventsService {
     return this.executeEventRequestsQuery(req, userEmail, options, 'TF_REQUEST_STATUS', 'TF_APPLICATION_DATE', 'get_travel_fund_requests');
   }
 
+  /**
+   * Stub: Submit a visa letter application.
+   * TODO: Replace with upstream microservice call once the API is available.
+   */
+  public async submitVisaRequestApplication(req: Request, payload: VisaRequestApplication): Promise<VisaRequestApplicationResponse> {
+    logger.debug(req, 'submit_visa_request_application', 'Received visa letter application', {
+      event_id: payload.eventId,
+      event_name: payload.eventName,
+    });
+
+    return { success: true, message: 'Your visa letter application has been submitted successfully.' };
+  }
+
+  /**
+   * Stub: Submit a travel fund application.
+   * TODO: Replace with upstream microservice call once the API is available.
+   */
+  public async submitTravelFundApplication(req: Request, payload: TravelFundApplication): Promise<TravelFundApplicationResponse> {
+    logger.debug(req, 'submit_travel_fund_application', 'Received travel fund application', {
+      event_id: payload.eventId,
+      event_name: payload.eventName,
+      estimated_total: payload.expenses.estimatedTotal,
+    });
+
+    return { success: true, message: 'Your travel fund application has been submitted successfully.' };
+  }
+
   private async executeEventRequestsQuery(
     req: Request,
     userEmail: string,
@@ -674,20 +703,6 @@ export class EventsService {
     const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     return `${startStr} – ${endStr}`;
-  }
-
-  /**
-   * Stub: Submit a travel fund application.
-   * TODO: Replace with upstream microservice call once the API is available.
-   */
-  public async submitTravelFundApplication(req: Request, payload: TravelFundApplication): Promise<TravelFundApplicationResponse> {
-    logger.debug(req, 'submit_travel_fund_application', 'Received travel fund application', {
-      event_id: payload.eventId,
-      event_name: payload.eventName,
-      estimated_total: payload.expenses.estimatedTotal,
-    });
-
-    return { success: true, message: 'Your travel fund application has been submitted successfully.' };
   }
 
   private formatLocation(location: string | null, city: string | null, country: string | null): string {

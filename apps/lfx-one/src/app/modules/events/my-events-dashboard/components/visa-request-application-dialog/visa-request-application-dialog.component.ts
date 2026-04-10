@@ -1,9 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
-import { MyEvent, VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
+import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
 import { VisaRequestApplyFormComponent } from '../visa-request-apply-form/visa-request-apply-form.component';
@@ -22,6 +25,9 @@ const STEP_ORDER: VisaRequestStep[] = ['select-event', 'terms', 'apply'];
 })
 export class VisaRequestApplicationDialogComponent {
   private readonly ref = inject(DynamicDialogRef);
+  private readonly eventsService = inject(EventsService);
+  private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public step = signal<VisaRequestStep>('select-event');
   public selectedEvent = signal<MyEvent | null>(null);
@@ -56,8 +62,34 @@ export class VisaRequestApplicationDialogComponent {
   }
 
   public onSubmitApplication(): void {
-    // TODO: wire up to submit endpoint once available
-    this.ref.close({ submitted: true });
+    const event = this.selectedEvent();
+    const applicantInfo = this.applicantData();
+
+    if (!event || !applicantInfo) return;
+
+    const payload: VisaRequestApplication = {
+      eventId: event.id,
+      eventName: event.name,
+      termsAccepted: true,
+      applicantInfo,
+    };
+
+    this.submitting.set(true);
+
+    this.eventsService
+      .submitVisaRequestApplication(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Your visa letter application has been submitted successfully.',
+          });
+          this.ref.close({ submitted: true });
+        },
+        error: () => this.submitting.set(false),
+      });
   }
 
   public onCancel(): void {
