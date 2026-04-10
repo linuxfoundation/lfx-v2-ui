@@ -43,11 +43,8 @@
       (sortChange)="onPastSortChange($event)"
       data-testid="events-past-table" />
   } @else if (activeTab() === 'visa-letters') {
-    <lfx-visa-request data-testid="visa-requests-table" />
-  } @else {
-    <div class="flex flex-col items-center justify-center py-16 gap-3 text-gray-400" data-testid="events-coming-soon">
-      <i class="fa-light fa-clock text-3xl"></i>
-      <p class="text-sm">Coming soon</p>
-    </div>
+    <lfx-visa-request [searchQuery]="searchQuery()" [status]="status()" data-testid="visa-requests-table" />
+  } @else if (activeTab() === 'travel-funding') {
+    <lfx-travel-funding [searchQuery]="searchQuery()" [status]="status()" data-testid="travel-funding-table" />
   }
 </div>

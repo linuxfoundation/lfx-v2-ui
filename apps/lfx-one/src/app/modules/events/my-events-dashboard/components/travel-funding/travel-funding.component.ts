@@ -1,22 +1,24 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import { Component, computed, inject, input, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
-import { PageChangeEvent, TagSeverity, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
+import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
+import { PageChangeEvent, TagSeverity, TravelFundRequestsResponse } from '@lfx-one/shared/interfaces';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
 
 @Component({
-  selector: 'lfx-visa-request',
+  selector: 'lfx-travel-funding',
   imports: [TableComponent, TagComponent, ButtonComponent],
-  templateUrl: './visa-request.component.html',
+  templateUrl: './travel-funding.component.html',
 })
-export class VisaRequestComponent {
+export class TravelFundingComponent {
   private readonly eventsService = inject(EventsService);
 
   public readonly searchQuery = input<string>('');
@@ -27,7 +29,7 @@ export class VisaRequestComponent {
   protected readonly sortOrder = signal<'ASC' | 'DESC'>('DESC');
   protected readonly page = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
 
-  protected readonly visaRequestsResponse: Signal<VisaRequestsResponse> = this.initVisaRequests();
+  protected readonly travelFundRequestsResponse: Signal<TravelFundRequestsResponse> = this.initTravelFundRequests();
 
   protected readonly statusSeverityMap: Partial<Record<string, TagSeverity>> = {
     Submitted: 'info',
@@ -73,7 +75,7 @@ export class VisaRequestComponent {
     this.page.set({ offset: 0, pageSize: this.page().pageSize });
   }
 
-  private initVisaRequests(): Signal<VisaRequestsResponse> {
+  private initTravelFundRequests(): Signal<TravelFundRequestsResponse> {
     return toSignal(
       toObservable(
         computed(() => ({
@@ -86,13 +88,13 @@ export class VisaRequestComponent {
       ).pipe(
         tap(() => this.loading.set(true)),
         switchMap(({ offset, pageSize, searchQuery, status, sortField, sortOrder }) =>
-          this.eventsService.getVisaRequests({ offset, pageSize, searchQuery, status, sortField, sortOrder }).pipe(
-            catchError(() => of(EMPTY_VISA_REQUESTS_RESPONSE)),
+          this.eventsService.getTravelFundRequests({ offset, pageSize, searchQuery, status, sortField, sortOrder }).pipe(
+            catchError(() => of(EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE)),
             finalize(() => this.loading.set(false))
           )
         )
       ),
-      { initialValue: EMPTY_VISA_REQUESTS_RESPONSE }
+      { initialValue: EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE }
     );
   }
 }

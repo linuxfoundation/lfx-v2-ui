@@ -1,12 +1,16 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-<<<<<<< Updated upstream
 import { FoundationEventStatus } from '../enums';
-import { FilterOption, MyEventsResponse, EventsResponse, MyEventOrganizationsResponse, TagSeverity } from '../interfaces';
-=======
-import { FilterOption, MyEventsResponse, EventsResponse, MyEventOrganizationsResponse, VisaRequestsResponse } from '../interfaces';
->>>>>>> Stashed changes
+import {
+  FilterOption,
+  MyEventsResponse,
+  EventsResponse,
+  MyEventOrganizationsResponse,
+  TagSeverity,
+  TravelFundRequestsResponse,
+  VisaRequestsResponse,
+} from '../interfaces';
 
 export const EVENT_ROLE_OPTIONS: FilterOption[] = [
   { label: 'All Roles', value: null },
@@ -21,6 +25,14 @@ export const MY_EVENT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'Registered', value: 'registered' },
   { label: 'Attended', value: 'attended' },
   { label: 'Not Registered', value: 'not-registered' },
+];
+
+export const VISA_REQUEST_STATUS_OPTIONS: FilterOption[] = [
+  { label: 'All Statuses', value: null },
+  { label: 'Submitted', value: 'Submitted' },
+  { label: 'Approved', value: 'Approved' },
+  { label: 'Denied', value: 'Denied' },
+  { label: 'Expired', value: 'Expired' },
 ];
 
 /**
@@ -48,6 +60,8 @@ export const FOUNDATION_EVENT_STATUS_SEVERITY_MAP: Partial<Record<string, TagSev
 };
 
 export const VALID_EVENT_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'PROJECT_NAME', 'EVENT_START_DATE', 'EVENT_CITY']);
+export const VALID_VISA_REQUEST_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'EVENT_CITY', 'APPLICATION_DATE']);
+export const DEFAULT_VISA_REQUEST_SORT_FIELD = 'APPLICATION_DATE';
 export const DEFAULT_EVENT_SORT_FIELD = 'EVENT_START_DATE';
 export const VALID_EVENT_SORT_ORDERS: readonly string[] = ['ASC', 'DESC'];
 export const DEFAULT_EVENTS_PAGE_SIZE = 10;
@@ -57,3 +71,4 @@ export const EMPTY_MY_EVENTS_RESPONSE: MyEventsResponse = { data: [], total: 0, 
 export const EMPTY_EVENTS_RESPONSE: EventsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };
 export const EMPTY_ORGANIZATIONS_RESPONSE: MyEventOrganizationsResponse = { data: [] };
 export const EMPTY_VISA_REQUESTS_RESPONSE: VisaRequestsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };
+export const EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE: TravelFundRequestsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };

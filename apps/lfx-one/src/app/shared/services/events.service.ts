@@ -5,15 +5,18 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY_ORGANIZATIONS_RESPONSE } from '@lfx-one/shared/constants';
+import { EMPTY_ORGANIZATIONS_RESPONSE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import {
   EventsResponse,
   GetCertificateParams,
   GetEventOrganizationsParams,
+  GetEventRequestsParams,
   GetEventsParams,
   GetMyEventsParams,
   MyEventOrganizationsResponse,
   MyEventsResponse,
+  TravelFundRequestsResponse,
+  VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -69,6 +72,34 @@ export class EventsService {
     return this.http
       .get<MyEventOrganizationsResponse>('/api/events/organizations', { params: httpParams })
       .pipe(catchError(() => of(EMPTY_ORGANIZATIONS_RESPONSE)));
+  }
+
+  public getVisaRequests(params: GetEventRequestsParams = {}): Observable<VisaRequestsResponse> {
+    let httpParams = new HttpParams();
+
+    if (params.searchQuery) httpParams = httpParams.set('searchQuery', params.searchQuery);
+    if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
+    if (params.pageSize) httpParams = httpParams.set('pageSize', String(params.pageSize));
+    if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
+    if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+
+    return this.http.get<VisaRequestsResponse>('/api/events/visa-requests', { params: httpParams }).pipe(catchError(() => of(EMPTY_VISA_REQUESTS_RESPONSE)));
+  }
+
+  public getTravelFundRequests(params: GetEventRequestsParams = {}): Observable<TravelFundRequestsResponse> {
+    let httpParams = new HttpParams();
+
+    if (params.searchQuery) httpParams = httpParams.set('searchQuery', params.searchQuery);
+    if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
+    if (params.pageSize) httpParams = httpParams.set('pageSize', String(params.pageSize));
+    if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
+    if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+
+    return this.http
+      .get<TravelFundRequestsResponse>('/api/events/travel-fund-requests', { params: httpParams })
+      .pipe(catchError(() => of(EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE)));
   }
 
   public getCertificate(params: GetCertificateParams): Observable<Blob | null> {

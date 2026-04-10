@@ -15,7 +15,14 @@ import {
   VALID_EVENT_STATUS_VALUES,
   VALID_MY_EVENT_STATUS_VALUES,
 } from '@lfx-one/shared/constants';
-import { EventSortOrder, EventStatusFilter, GetEventOrganizationsOptions, GetEventsOptions } from '@lfx-one/shared/interfaces';
+import {
+  EventSortOrder,
+  EventStatusFilter,
+  GetEventOrganizationsOptions,
+  GetEventRequestsOptions,
+  GetEventsOptions,
+  VisaRequestsResponse,
+} from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
 
 export class EventsController {
@@ -187,6 +194,78 @@ export class EventsController {
 
       logger.success(req, 'get_event_organizations', startTime, {
         result_count: response.data.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/events/visa-requests
+   * Get paginated visa letter requests for the authenticated user
+   * Query params: eventId (string), projectName (string), searchQuery (string), status (string),
+   *               sortField (string), pageSize (number), offset (number), sortOrder (ASC|DESC)
+   */
+  public async getVisaRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+    return this.handleEventRequestsEndpoint(req, res, next, 'get_visa_requests', (r, email, opts) => this.eventsService.getVisaRequests(r, email, opts));
+  }
+
+  /**
+   * GET /api/events/travel-fund-requests
+   * Get paginated travel fund requests for the authenticated user
+   * Query params: eventId (string), projectName (string), searchQuery (string), status (string),
+   *               sortField (string), pageSize (number), offset (number), sortOrder (ASC|DESC)
+   */
+  public async getTravelFundRequests(req: Request, res: Response, next: NextFunction): Promise<void> {
+    return this.handleEventRequestsEndpoint(req, res, next, 'get_travel_fund_requests', (r, email, opts) =>
+      this.eventsService.getTravelFundRequests(r, email, opts)
+    );
+  }
+
+  private async handleEventRequestsEndpoint(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    operationName: string,
+    fetchFn: (req: Request, userEmail: string, options: GetEventRequestsOptions) => Promise<VisaRequestsResponse>
+  ): Promise<void> {
+    const startTime = logger.startOperation(req, operationName, {
+      has_query: Object.keys(req.query).length > 0,
+    });
+
+    try {
+      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+
+      if (!userEmail) {
+        throw new AuthenticationError('User authentication required', { operation: operationName });
+      }
+
+      const rawPageSize = parseInt(String(req.query['pageSize'] ?? DEFAULT_EVENTS_PAGE_SIZE), 10);
+      const rawOffset = parseInt(String(req.query['offset'] ?? 0), 10);
+      const rawSortOrder = String(req.query['sortOrder'] ?? 'DESC').toUpperCase() as EventSortOrder;
+
+      const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
+      const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+      const sortOrder: EventSortOrder = VALID_EVENT_SORT_ORDERS.includes(rawSortOrder) ? rawSortOrder : 'DESC';
+
+      const options: GetEventRequestsOptions = {
+        eventId: req.query['eventId'] ? String(req.query['eventId']) : undefined,
+        projectName: req.query['projectName'] ? String(req.query['projectName']) : undefined,
+        searchQuery: req.query['searchQuery'] ? String(req.query['searchQuery']).trim() : undefined,
+        status: req.query['status'] ? String(req.query['status']) : undefined,
+        sortField: req.query['sortField'] ? String(req.query['sortField']) : undefined,
+        pageSize,
+        offset,
+        sortOrder,
+      };
+
+      const response = await fetchFn(req, userEmail, options);
+
+      logger.success(req, operationName, startTime, {
+        result_count: response.data.length,
+        total: response.total,
       });
 
       res.json(response);

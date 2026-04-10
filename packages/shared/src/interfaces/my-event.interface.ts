@@ -178,6 +178,18 @@ export interface EventTab {
 }
 
 /**
+ * Parameters for fetching event requests (visa letters or travel fund) from the API
+ */
+export interface GetEventRequestsParams {
+  searchQuery?: string;
+  status?: string;
+  sortField?: string;
+  pageSize?: number;
+  offset?: number;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+/**
  * Parameters for fetching my events from the API
  */
 export interface GetMyEventsParams {
@@ -253,6 +265,23 @@ export interface CertificateData {
 }
 
 /**
+ * Raw row returned from ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS for visa letter requests
+ */
+export interface VisaRequestRow {
+  EVENT_ID: string;
+  EVENT_NAME: string;
+  EVENT_URL: string | null;
+  EVENT_LOCATION: string | null;
+  EVENT_CITY: string | null;
+  EVENT_COUNTRY: string | null;
+  /** Date the visa letter was applied for */
+  APPLICATION_DATE: Date | string | null;
+  /** Visa letter request status (e.g. "Pending", "Approved", "Denied") */
+  REQUEST_STATUS: string;
+  TOTAL_RECORDS: number;
+}
+
+/**
  * Visa letter request item for the My Events visa-letters tab
  */
 export interface VisaRequest {
@@ -276,9 +305,33 @@ export interface VisaRequest {
 export type VisaRequestsResponse = OffsetPaginatedResponse<VisaRequest>;
 
 /**
+ * Travel fund request item — identical shape to VisaRequest (event name, location, application date, status)
+ */
+export type TravelFundRequest = VisaRequest;
+
+/**
+ * Paginated API response for travel fund requests
+ */
+export type TravelFundRequestsResponse = OffsetPaginatedResponse<TravelFundRequest>;
+
+/**
  * Valid sort order values for event queries
  */
 export type EventSortOrder = 'ASC' | 'DESC';
+
+/**
+ * Server-side options for fetching event requests (visa letters or travel fund) — required pagination/sort fields
+ */
+export interface GetEventRequestsOptions {
+  eventId?: string;
+  projectName?: string;
+  searchQuery?: string;
+  status?: string;
+  sortField?: string;
+  pageSize: number;
+  offset: number;
+  sortOrder: EventSortOrder;
+}
 
 /**
  * Server-side options for fetching user events (required pagination/sort fields)
