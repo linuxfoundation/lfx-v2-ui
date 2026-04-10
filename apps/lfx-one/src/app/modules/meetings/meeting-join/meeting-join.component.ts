@@ -325,7 +325,6 @@ export class MeetingJoinComponent {
             this.loadedViaPastMeetingId.set(true);
             return this.meetingService.getPublicPastMeeting(meetingId).pipe(
               tap((res) => {
-                console.log('[MeetingJoin] Public past meeting response:', { full_access: res.full_access, meeting_id: res.meeting?.id, visibility: res.meeting?.visibility, restricted: res.meeting?.restricted });
                 this.pastMeetingFullAccess.set(res.full_access);
               }),
               map((res) => ({
@@ -342,6 +341,7 @@ export class MeetingJoinComponent {
           }
 
           this.loadedViaPastMeetingId.set(false);
+          this.pastMeetingFullAccess.set(false);
           return this.meetingService.getPublicMeeting(meetingId, this.password()).pipe(
             catchError((error) => {
               if ([404, 403, 400].includes(error.status)) {
@@ -543,7 +543,12 @@ export class MeetingJoinComponent {
   private initializeAttachments(): Signal<MeetingAttachment[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id),
+        filter((meeting) => {
+          if (!meeting?.id) return false;
+          // Public meetings can fetch attachments without auth; private meetings require it
+          if (meeting.visibility === 'public' && !meeting.restricted) return true;
+          return this.authenticated();
+        }),
         switchMap((meeting) => this.meetingService.getMeetingAttachments(meeting.id)),
         catchError(() => of([] as MeetingAttachment[]))
       ),
@@ -618,7 +623,7 @@ export class MeetingJoinComponent {
     return toSignal(
       combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
         switchMap(([hasAccess, meeting]) => {
-          if (!hasAccess || !meeting?.id) return of(null);
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of(null);
           return this.meetingService.getPastMeetingSummary(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -630,7 +635,7 @@ export class MeetingJoinComponent {
     return toSignal(
       combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
         switchMap(([hasAccess, meeting]) => {
-          if (!hasAccess || !meeting?.id) return of(null);
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of(null);
           return this.meetingService.getPastMeetingRecording(meeting.id).pipe(catchError(() => of(null)));
         })
       ),
@@ -642,7 +647,7 @@ export class MeetingJoinComponent {
     return toSignal(
       combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
         switchMap(([hasAccess, meeting]) => {
-          if (!hasAccess || !meeting?.id) return of([] as PastMeetingAttachment[]);
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of([] as PastMeetingAttachment[]);
           return this.meetingService.getPastMeetingAttachments(meeting.id).pipe(catchError(() => of([] as PastMeetingAttachment[])));
         })
       ),

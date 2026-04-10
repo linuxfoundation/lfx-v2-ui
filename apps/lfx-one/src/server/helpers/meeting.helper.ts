@@ -120,7 +120,7 @@ export async function checkPastMeetingAccess(req: Request, meeting: PastMeeting,
 
   // Run registrant, participant, and committee checks in parallel
   const registrantCheck = isUserInvitedToMeeting(req, meeting.meeting_id, email, m2mToken);
-  const participantCheck = meetingService.isUserPastMeetingParticipant(req, meeting.id, email);
+  const participantCheck = meetingService.isUserPastMeetingParticipant(req, meeting.id, email, username ?? undefined);
 
   const committeeChecks: Promise<boolean>[] = [];
   if (username && meeting.committees?.length) {
