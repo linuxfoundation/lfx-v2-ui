@@ -76,6 +76,9 @@ jobs:
             BUILD_ENV=development
             APP_VERSION=pr-${{ github.event.pull_request.number }}
 
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
       - name: Restart Kubernetes deployment
         env:
           KUBECONFIG_DATA: ${{ secrets.DEV_KUBECONFIG }}
