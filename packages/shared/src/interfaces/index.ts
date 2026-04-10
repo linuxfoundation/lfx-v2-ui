@@ -109,3 +109,6 @@ export * from './my-event.interface';
 
 // Travel fund application interfaces
 export * from './travel-fund-application.interface';
+
+// Visa request application interfaces
+export * from './visa-request-application.interface';

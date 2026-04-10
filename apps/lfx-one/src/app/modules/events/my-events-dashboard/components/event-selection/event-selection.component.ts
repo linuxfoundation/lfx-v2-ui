@@ -90,7 +90,7 @@ export class EventSelectionComponent {
     this.loadingMore.set(true);
 
     this.eventsService
-      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: this.currentOffset, registeredFirst: true, ...this.activeFilters() })
+      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: this.currentOffset, registeredOnly: true, ...this.activeFilters() })
       .pipe(
         catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
         finalize(() => this.loadingMore.set(false)),
@@ -107,7 +107,7 @@ export class EventSelectionComponent {
     this.currentOffset = 0;
 
     this.eventsService
-      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: 0, registeredFirst: true, ...this.activeFilters() })
+      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: 0, registeredOnly: true, ...this.activeFilters() })
       .pipe(
         catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
         finalize(() => this.loading.set(false)),

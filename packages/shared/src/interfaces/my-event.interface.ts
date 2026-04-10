@@ -205,8 +205,8 @@ export interface GetMyEventsParams {
   pageSize?: number;
   offset?: number;
   sortOrder?: 'ASC' | 'DESC';
-  /** When true, registered events are sorted before unregistered events */
-  registeredFirst?: boolean;
+  /** When true, only events the user has registered for are returned */
+  registeredOnly?: boolean;
   /** ISO 8601 date string — include only events starting on or after this date */
   startDateFrom?: string;
   /** ISO 8601 date string — include only events starting on or before this date */
@@ -357,8 +357,8 @@ export interface GetMyEventsOptions {
   pageSize: number;
   offset: number;
   sortOrder: EventSortOrder;
-  /** When true, registered events are sorted before unregistered events */
-  registeredFirst?: boolean;
+  /** When true, only events the user has registered for are returned */
+  registeredOnly?: boolean;
   /** ISO 8601 date string — include only events starting on or after this date */
   startDateFrom?: string;
   /** ISO 8601 date string — include only events starting on or before this date */

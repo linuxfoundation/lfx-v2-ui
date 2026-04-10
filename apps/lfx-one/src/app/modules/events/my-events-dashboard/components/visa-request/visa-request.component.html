@@ -2,7 +2,13 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="flex justify-end my-4 pr-4">
-  <lfx-button label="New Letter Application" icon="fa-light fa-plus" severity="primary" size="small" [attr.data-testid]="'visa-request-discover-button'" />
+  <lfx-button
+    label="New Letter Application"
+    icon="fa-light fa-plus"
+    severity="primary"
+    size="small"
+    (onClick)="openApplicationDialog()"
+    [attr.data-testid]="'visa-request-discover-button'" />
 </div>
 <lfx-table
   [value]="visaRequestsResponse().data"

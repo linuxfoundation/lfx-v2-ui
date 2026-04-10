@@ -33,17 +33,16 @@
     } @else if (allEvents().length === 0) {
       <div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
         <i class="fa-light fa-calendar-xmark text-3xl text-gray-300"></i>
-        <p class="text-sm text-gray-500">No events found</p>
-        <p class="text-xs text-gray-400">Try adjusting your filters</p>
+        <p class="text-sm text-gray-500">No registered events found</p>
+        <p class="text-xs text-gray-400">Register for an event to apply for a visa letter</p>
       </div>
     } @else {
       <div class="grid grid-cols-3 gap-3">
         @for (event of allEvents(); track event.id) {
           <div
-            class="event-card flex flex-col gap-2 rounded-lg border border-gray-200 p-3 transition-colors"
-            [class.registered]="event.isRegistered"
-            [class.selected]="event.isRegistered && selectedEvent()?.id === event.id"
-            (click)="event.isRegistered && onSelectEvent(event)"
+            class="event-card registered flex flex-col gap-2 rounded-lg border border-gray-200 p-3 transition-colors"
+            [class.selected]="selectedEvent()?.id === event.id"
+            (click)="onSelectEvent(event)"
             [attr.data-testid]="'event-selection-card-' + event.id">
             <!-- Event name -->
             <p class="text-sm font-semibold leading-snug text-gray-900" [attr.data-testid]="'event-selection-name-' + event.id">
@@ -59,10 +58,10 @@
               <i class="fa-light fa-location-dot shrink-0"></i>
               <span>{{ event.location }}</span>
             </div>
-            <!-- Button: Selected | Select | Register -->
-            @if (event.isRegistered && selectedEvent()?.id === event.id) {
+            <!-- Button: Selected | Select -->
+            @if (selectedEvent()?.id === event.id) {
               <lfx-button label="Selected" severity="primary" size="small" [fluid]="true" [attr.data-testid]="'event-selection-selected-' + event.id" />
-            } @else if (event.isRegistered) {
+            } @else {
               <lfx-button
                 label="Select"
                 [text]="true"
@@ -70,16 +69,6 @@
                 [fluid]="true"
                 (onClick)="onSelectEvent(event); $event.stopPropagation()"
                 [attr.data-testid]="'event-selection-select-' + event.id" />
-            } @else {
-              <lfx-button
-                label="Register"
-                [text]="true"
-                size="small"
-                [fluid]="true"
-                [href]="event.registrationUrl ?? event.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                [attr.data-testid]="'event-selection-register-' + event.id" />
             }
           </div>
         }

@@ -9,15 +9,19 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import { PageChangeEvent, TagSeverity, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
+import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
 
 @Component({
   selector: 'lfx-visa-request',
-  imports: [TableComponent, TagComponent, ButtonComponent],
+  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule],
+  providers: [DialogService],
   templateUrl: './visa-request.component.html',
 })
 export class VisaRequestComponent {
   private readonly eventsService = inject(EventsService);
+  private readonly dialogService = inject(DialogService);
 
   public readonly searchQuery = input<string>('');
   public readonly status = input<string | null>(null);
@@ -56,6 +60,16 @@ export class VisaRequestComponent {
       .subscribe(() => {
         this.page.set({ offset: 0, pageSize: this.page().pageSize });
       });
+  }
+
+  public openApplicationDialog(): void {
+    this.dialogService.open(VisaRequestApplicationDialogComponent, {
+      header: 'Visa Letter Application',
+      width: '800px',
+      modal: true,
+      closable: true,
+      closeOnEscape: true,
+    });
   }
 
   protected onPageChange(event: { first: number; rows: number }): void {

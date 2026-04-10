@@ -61,7 +61,7 @@ export class EventsController {
       const rawMyEventStatus = req.query['status'] ? String(req.query['status']) : undefined;
       const status = rawMyEventStatus && VALID_MY_EVENT_STATUS_VALUES.has(rawMyEventStatus) ? rawMyEventStatus : undefined;
       const sortField = req.query['sortField'] ? String(req.query['sortField']) : undefined;
-      const registeredFirst = req.query['registeredFirst'] === 'true';
+      const registeredOnly = req.query['registeredOnly'] === 'true';
       const startDateFrom = req.query['startDateFrom'] ? String(req.query['startDateFrom']) : undefined;
       const startDateTo = req.query['startDateTo'] ? String(req.query['startDateTo']) : undefined;
       const country = req.query['country'] ? String(req.query['country']) : undefined;
@@ -87,7 +87,7 @@ export class EventsController {
         pageSize,
         offset,
         sortOrder,
-        registeredFirst,
+        registeredOnly,
         startDateFrom,
         startDateTo,
         country,

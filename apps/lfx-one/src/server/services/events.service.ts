@@ -55,7 +55,7 @@ export class EventsService {
       pageSize,
       offset,
       sortOrder,
-      registeredFirst,
+      registeredOnly,
       startDateFrom,
       startDateTo,
       country,
@@ -90,6 +90,7 @@ export class EventsService {
       const startDateFromFilter = startDateFrom ? 'AND e.EVENT_START_DATE >= ?' : '';
       const startDateToFilter = startDateTo ? 'AND e.EVENT_START_DATE <= ?' : '';
       const countryFilter = country ? 'AND e.EVENT_COUNTRY = ?' : '';
+      const registeredOnlyFilter = registeredOnly ? 'AND r.EVENT_ID IS NOT NULL' : '';
 
       sql = `
         WITH all_upcoming AS (
@@ -164,7 +165,8 @@ export class EventsService {
           ${startDateFromFilter}
           ${startDateToFilter}
           ${countryFilter}
-        ORDER BY ${registeredFirst ? 'IS_REGISTERED DESC, ' : ''}${sortField} ${normalizedSortOrder}
+          ${registeredOnlyFilter}
+        ORDER BY ${sortField} ${normalizedSortOrder}
         LIMIT ${normalizedPageSize} OFFSET ${normalizedOffset}
       `;
 

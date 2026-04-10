@@ -42,7 +42,7 @@ export class EventsService {
     if (params.pageSize) httpParams = httpParams.set('pageSize', String(params.pageSize));
     if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
     if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
-    if (params.registeredFirst) httpParams = httpParams.set('registeredFirst', 'true');
+    if (params.registeredOnly) httpParams = httpParams.set('registeredOnly', 'true');
     if (params.startDateFrom) httpParams = httpParams.set('startDateFrom', params.startDateFrom);
     if (params.startDateTo) httpParams = httpParams.set('startDateTo', params.startDateTo);
     if (params.country) httpParams = httpParams.set('country', params.country);

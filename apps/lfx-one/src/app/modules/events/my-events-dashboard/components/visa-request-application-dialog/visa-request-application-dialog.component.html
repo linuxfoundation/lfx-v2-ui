@@ -1,0 +1,85 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<div class="flex flex-col" data-testid="visa-request-application-dialog">
+  <!-- Step indicator -->
+  <div class="flex items-center px-1 pb-5" data-testid="visa-request-step-indicator">
+    @for (s of steps; track s.id; let last = $last) {
+      <div class="flex items-center" [class.flex-1]="!last">
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Circle -->
+          <div
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+            [class.bg-blue-600]="isStepActive(s.id) || isStepCompleted(s.id)"
+            [class.text-white]="isStepActive(s.id) || isStepCompleted(s.id)"
+            [class.border-2]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [class.border-gray-300]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [class.text-gray-400]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [attr.data-testid]="'visa-request-step-circle-' + s.number">
+            @if (isStepCompleted(s.id)) {
+              <i class="fa-light fa-check text-sm"></i>
+            } @else {
+              {{ s.number }}
+            }
+          </div>
+          <!-- Label -->
+          <span
+            class="text-sm whitespace-nowrap"
+            [class.font-semibold]="isStepActive(s.id)"
+            [class.text-gray-900]="isStepActive(s.id)"
+            [class.text-gray-400]="!isStepActive(s.id)"
+            [attr.data-testid]="'visa-request-step-label-' + s.number">
+            {{ s.label }}
+          </span>
+        </div>
+        <!-- Connecting line -->
+        @if (!last) {
+          <div class="mx-3 h-px flex-1 bg-gray-200"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Step content -->
+  @if (step() === 'select-event') {
+    <div class="scroll-area overflow-y-auto pr-1">
+      <lfx-event-selection [(selectedEvent)]="selectedEvent" />
+    </div>
+  }
+  @if (step() === 'terms') {
+    <lfx-visa-request-terms />
+  }
+  @if (step() === 'apply') {
+    <lfx-visa-request-apply-form (formValidityChange)="applyFormValid.set($event)" (formChange)="applicantData.set($event)" />
+  }
+
+  <!-- Footer -->
+  <div class="mt-5 flex items-center justify-between border-t border-gray-100 pt-4" data-testid="visa-request-footer">
+    <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-700" (click)="onCancel()" data-testid="visa-request-cancel">Cancel</button>
+    <div class="flex items-center gap-2">
+      @if (step() !== 'select-event') {
+        <lfx-button label="Previous Step" [outlined]="true" size="small" (onClick)="onPreviousStep()" data-testid="visa-request-previous-step" />
+      }
+      @if (step() === 'terms') {
+        <lfx-button label="I Agree" severity="primary" size="small" (onClick)="onNextStep()" data-testid="visa-request-agree" />
+      } @else if (step() === 'apply') {
+        <lfx-button
+          label="Submit Application"
+          severity="primary"
+          size="small"
+          [disabled]="isNextDisabled() || submitting()"
+          [loading]="submitting()"
+          (onClick)="onSubmitApplication()"
+          data-testid="visa-request-submit" />
+      } @else {
+        <lfx-button
+          label="Next Step"
+          severity="primary"
+          size="small"
+          [disabled]="isNextDisabled()"
+          (onClick)="onNextStep()"
+          data-testid="visa-request-next-step" />
+      }
+    </div>
+  </div>
+</div>
