@@ -89,9 +89,9 @@
     </div>
 
     <!-- ── Right / Sidebar column ─────────────────────────────────────────── -->
-    <div class="w-full lg:w-64 flex-shrink-0 border-l border-gray-200 pl-6" data-testid="trainings-sidebar">
+    <div class="w-full lg:w-64 flex-shrink-0 lg:border-l lg:border-gray-200 lg:pl-6" data-testid="trainings-sidebar">
       <div class="flex flex-col gap-4" data-testid="trainings-useful-links">
-        <h2 class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Useful links</h2>
+        <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Useful links</h2>
         <ul class="flex flex-col gap-4" data-testid="trainings-links-list">
           @for (link of usefulLinks; track link.url) {
             <li class="flex flex-col gap-1" data-testid="trainings-link-item">

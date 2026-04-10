@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { Component, inject, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Certification, FilterPillOption } from '@lfx-one/shared/interfaces';
 
@@ -37,6 +37,7 @@ const USEFUL_LINKS = [
   selector: 'lfx-trainings-dashboard',
   imports: [ButtonComponent, CertificationCardComponent, FilterPillsComponent],
   templateUrl: './trainings-dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TrainingsDashboardComponent {
   // ─── Private Injections ────────────────────────────────────────────────────

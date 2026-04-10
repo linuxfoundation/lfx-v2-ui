@@ -4,7 +4,7 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, input, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { Certification } from '@lfx-one/shared/interfaces';
 
 import { ButtonComponent } from '@components/button/button.component';
@@ -15,6 +15,7 @@ const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
   selector: 'lfx-certification-card',
   imports: [ButtonComponent, DatePipe],
   templateUrl: './certification-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CertificationCardComponent {
   // ─── Inputs ────────────────────────────────────────────────────────────────
