@@ -80,6 +80,7 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Restart Kubernetes deployment
+        id: restart
         env:
           KUBECONFIG_DATA: ${{ secrets.DEV_KUBECONFIG }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -93,18 +94,30 @@ jobs:
           if kubectl --context lfx-v2-dev -n "$NAMESPACE" get deployment "$DEPLOYMENT" &>/dev/null; then
             echo "Restarting deployment $DEPLOYMENT in namespace $NAMESPACE..."
             kubectl --context lfx-v2-dev -n "$NAMESPACE" rollout restart deployment/"$DEPLOYMENT"
-            echo "Rollout restart issued for $DEPLOYMENT"
+            echo "Waiting for rollout to complete..."
+            kubectl --context lfx-v2-dev -n "$NAMESPACE" rollout status deployment/"$DEPLOYMENT" --timeout=5m
+            RESTART_TIME=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+            echo "restarted=true" >> "$GITHUB_OUTPUT"
+            echo "restart_time=${RESTART_TIME}" >> "$GITHUB_OUTPUT"
+            echo "Rollout complete at ${RESTART_TIME}"
           else
+            echo "restarted=false" >> "$GITHUB_OUTPUT"
             echo "Deployment $DEPLOYMENT not found in $NAMESPACE — skipping restart (may be initial deploy)"
           fi
 
           rm -f /tmp/kubeconfig
 
       - name: Comment deployment URL on PR
+        env:
+          RESTARTED: ${{ steps.restart.outputs.restarted }}
+          RESTART_TIME: ${{ steps.restart.outputs.restart_time }}
         uses: actions/github-script@v7
         with:
           script: |
             const deploymentUrl = `https://ui-pr-${{ github.event.pull_request.number }}.dev.v2.cluster.linuxfound.info`;
+            const restarted = process.env.RESTARTED === 'true';
+            const restartTime = process.env.RESTART_TIME;
+            const restartLine = restarted ? `\n            - Pods restarted: ${restartTime}` : '';
             const comment = `## 🚀 Deployment Status
 
             Your branch has been deployed to: ${deploymentUrl}
@@ -112,7 +125,7 @@ jobs:
             **Deployment Details:**
             - Environment: Development
             - Namespace: ui-pr-${{ github.event.pull_request.number }}
-            - ArgoCD App: ui-pr-${{ github.event.pull_request.number }}
+            - ArgoCD App: ui-pr-${{ github.event.pull_request.number }}${restartLine}
 
             The deployment will be automatically removed when this PR is closed.`;
 
