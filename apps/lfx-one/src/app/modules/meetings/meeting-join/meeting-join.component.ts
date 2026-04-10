@@ -95,8 +95,8 @@ export class MeetingJoinComponent {
   public authenticated: WritableSignal<boolean>;
   public user: Signal<User | null> = this.userService.user;
   public joinForm: FormGroup;
-  public project: WritableSignal<Project | null> = signal<Project | null>(null);
-  public meeting: Signal<Meeting & { project: Project }>;
+  public project: WritableSignal<Partial<Project> | null> = signal<Partial<Project> | null>(null);
+  public meeting: Signal<Meeting & { project: Partial<Project> }>;
   public currentOccurrence: Signal<MeetingOccurrence | null>;
   public meetingTypeBadge: Signal<{
     severity: TagSeverity;
@@ -230,7 +230,7 @@ export class MeetingJoinComponent {
   }
 
   public onShowMembersPlaceholder(): void {
-    console.warn('Show Members clicked — attendees drawer coming in Phase 4');
+    // TODO: Phase 4 — attendees drawer
   }
 
   public onRsvpViewToggle(): void {
@@ -347,7 +347,7 @@ export class MeetingJoinComponent {
   }
 
   private initializeMeeting() {
-    return toSignal<Meeting & { project: Project }>(
+    return toSignal<Meeting & { project: Partial<Project> }>(
       combineLatest([this.activatedRoute.paramMap, this.activatedRoute.queryParamMap, this.refreshTrigger$]).pipe(
         debounceTime(0), // Coalesce rapid SSR hydration emissions so the fallback chain isn't canceled
         switchMap(([params, queryParams]) => {
@@ -367,8 +367,8 @@ export class MeetingJoinComponent {
                 this.pastMeetingFullAccess.set(res.full_access);
               }),
               map((res: PublicPastMeetingResponse) => ({
-                meeting: res.meeting as Meeting,
-                project: res.project as Project,
+                meeting: res.meeting,
+                project: res.project as Partial<Project>,
               })),
               catchError((error) => {
                 if ([404, 403, 400].includes(error.status)) {
@@ -391,8 +391,8 @@ export class MeetingJoinComponent {
                     this.pastMeetingFullAccess.set(res.full_access);
                   }),
                   map((res: PublicPastMeetingResponse) => ({
-                    meeting: res.meeting as Meeting,
-                    project: res.project as Project,
+                    meeting: res.meeting,
+                    project: res.project as Partial<Project>,
                   })),
                   catchError(() => {
                     this.router.navigate(['/meetings/not-found']);
@@ -412,7 +412,7 @@ export class MeetingJoinComponent {
           this.project.set(res.project);
         })
       )
-    ) as Signal<Meeting & { project: Project }>;
+    ) as Signal<Meeting & { project: Partial<Project> }>;
   }
 
   private isPastMeetingOccurrenceId(id: string): boolean {

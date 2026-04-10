@@ -4,16 +4,8 @@
 import { NgClass } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
-import { PastMeetingSummary } from '@lfx-one/shared';
+import { PastMeetingSummary, SummarySection } from '@lfx-one/shared';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
-
-interface SummarySection {
-  heading: string;
-  content: string;
-  icon: string;
-  borderColor: string;
-  iconColor: string;
-}
 
 @Component({
   selector: 'lfx-meeting-summary-modal',
@@ -38,8 +30,8 @@ export class MeetingSummaryModalComponent {
     const sections: SummarySection[] = [];
     for (let i = 0; i < matches.length; i++) {
       const heading = matches[i][1].trim();
-      const startIndex = matches[i].index! + matches[i][0].length;
-      const endIndex = i + 1 < matches.length ? matches[i + 1].index! : markdown.length;
+      const startIndex = (matches[i].index ?? 0) + matches[i][0].length;
+      const endIndex = i + 1 < matches.length ? (matches[i + 1].index ?? markdown.length) : markdown.length;
       const content = markdown.slice(startIndex, endIndex).trim();
 
       sections.push({ heading, content, ...this.getSectionStyle(heading) });

@@ -120,30 +120,42 @@
                 <div class="flex flex-wrap gap-2 items-center">
                   <!-- Recording Badge -->
                   @if (meeting().recording_enabled) {
-                    <span class="inline-flex items-center gap-1 text-sm text-red-500" data-testid="meeting-badge-recording">
-                      <i class="fa-light fa-video"></i> Recording
-                    </span>
+                    <lfx-tag
+                      value="Recording"
+                      severity="secondary"
+                      icon="fa-light fa-video"
+                      styleClass="!text-red-500"
+                      data-testid="meeting-badge-recording"></lfx-tag>
                   }
 
                   <!-- Transcripts Badge -->
                   @if (meeting().transcript_enabled) {
-                    <span class="inline-flex items-center gap-1 text-sm text-teal-600" data-testid="meeting-badge-transcripts">
-                      <i class="fa-light fa-file-lines"></i> Transcripts
-                    </span>
+                    <lfx-tag
+                      value="Transcripts"
+                      severity="secondary"
+                      icon="fa-light fa-file-lines"
+                      styleClass="!text-teal-600"
+                      data-testid="meeting-badge-transcripts"></lfx-tag>
                   }
 
                   <!-- YouTube Upload Badge -->
                   @if (meeting().youtube_upload_enabled) {
-                    <span class="inline-flex items-center gap-1 text-sm text-amber-600" data-testid="meeting-badge-youtube">
-                      <i class="fa-light fa-upload"></i> YouTube Upload
-                    </span>
+                    <lfx-tag
+                      value="YouTube Upload"
+                      severity="secondary"
+                      icon="fa-light fa-upload"
+                      styleClass="!text-amber-600"
+                      data-testid="meeting-badge-youtube"></lfx-tag>
                   }
 
                   <!-- AI Summary Badge -->
                   @if (hasAiCompanion()) {
-                    <span class="inline-flex items-center gap-1 text-sm text-purple-500" data-testid="meeting-badge-ai-summary">
-                      <i class="fa-light fa-sparkles"></i> AI Summary
-                    </span>
+                    <lfx-tag
+                      value="AI Summary"
+                      severity="secondary"
+                      icon="fa-light fa-sparkles"
+                      styleClass="!text-purple-500"
+                      data-testid="meeting-badge-ai-summary"></lfx-tag>
                   }
                 </div>
 
