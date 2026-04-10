@@ -42,7 +42,7 @@ export interface CertificateRow {
   CERTIFICATE_ID: string;
   COURSE_NAME: string;
   CODE: string;
-  COURSE_DESCRIPTION: string;
+  COURSE_GROUP_DESCRIPTION: string;
   LOGO_URL: string;
   PROJECT_NAME: string;
   ISSUED_TS: string;

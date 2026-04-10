@@ -10,7 +10,7 @@ import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
 
 const CERTIFICATES_QUERY = `
-  SELECT _KEY, CERTIFICATE_ID, COURSE_NAME, CODE, COURSE_DESCRIPTION,
+  SELECT _KEY, CERTIFICATE_ID, COURSE_NAME, CODE, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL
   FROM ANALYTICS.PLATINUM_LFX_ONE.CERTIFICATES
   WHERE USER_NAME = ?
@@ -64,7 +64,7 @@ export class TrainingService {
       certificateId: row.CERTIFICATE_ID,
       name: row.COURSE_NAME,
       code: row.CODE ?? '',
-      description: row.COURSE_DESCRIPTION ?? '',
+      description: row.COURSE_GROUP_DESCRIPTION ?? '',
       imageUrl: row.LOGO_URL ?? '',
       issuedBy: row.PROJECT_NAME ?? '',
       issuedDate: row.ISSUED_TS,
