@@ -17,10 +17,11 @@ import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
-import { apiRateLimiter } from './middleware/rate-limit.middleware';
+import { apiRateLimiter, authRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import copilotRouter from './routes/copilot.route';
+import eventsRouter from './routes/events.route';
 import mailingListsRouter from './routes/mailing-lists.route';
 import meetingsRouter from './routes/meetings.route';
 import organizationsRouter from './routes/organizations.route';
@@ -164,9 +165,9 @@ app.use('/login', (req: Request, res: Response) => {
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
 
-// Apply rate limiting to all API and auth routes
+// Apply rate limiting to API routes
 app.use('/api/', apiRateLimiter);
-app.use('/login', apiRateLimiter);
+app.use('/login', authRateLimiter);
 
 // Mount API routes after authentication middleware
 // Public API routes
@@ -188,16 +189,17 @@ app.use('/api/user', personaRouter);
 app.use('/api/votes', votesRouter);
 app.use('/api/surveys', surveysRouter);
 app.use('/api/copilot', copilotRouter);
+app.use('/api/events', eventsRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
 
 // Flow C: Profile auth callback at /passwordless/callback (registered in Auth0 Profile Client)
 const profileCallbackController = new ProfileController();
-app.get('/passwordless/callback', apiRateLimiter, (req, res) => profileCallbackController.handleProfileAuthCallback(req, res));
+app.get('/passwordless/callback', authRateLimiter, (req, res) => profileCallbackController.handleProfileAuthCallback(req, res));
 
 // Social identity verification callback (GitHub/LinkedIn OAuth redirect)
-app.get('/social/callback', apiRateLimiter, (req, res) => profileCallbackController.handleSocialCallback(req, res));
+app.get('/social/callback', authRateLimiter, (req, res) => profileCallbackController.handleSocialCallback(req, res));
 
 /**
  * Handle all other requests by rendering the Angular application.
