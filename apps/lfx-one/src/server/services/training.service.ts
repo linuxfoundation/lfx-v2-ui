@@ -35,6 +35,13 @@ export class TrainingService {
       logger.warning(req, 'get_certifications', 'Snowflake query failed, returning empty certifications', {
         error: error instanceof Error ? error.message : String(error),
       });
+
+      // TODO: Remove once ANALYTICS.PLATINUM_LFX_ONE.CERTIFICATES table is populated
+      if (process.env['NODE_ENV'] !== 'production') {
+        logger.debug(req, 'get_certifications', 'Snowflake query failed, returning mock data (non-production)');
+        return this.getMockCertifications();
+      }
+
       return [];
     }
 
