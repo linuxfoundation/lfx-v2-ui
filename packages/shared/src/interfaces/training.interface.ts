@@ -33,7 +33,7 @@ export interface Certification {
 }
 
 /**
- * Snowflake row shape for ANALYTICS.PLATINUM_LFX_ONE.CERTIFICATES
+ * Snowflake row shape for ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
  */
 export interface CertificateRow {
   _KEY: string;

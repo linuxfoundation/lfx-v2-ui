@@ -63,5 +63,4 @@ export class TrainingService {
     if (!expirationDate) return 'active';
     return new Date(expirationDate) < new Date() ? 'expired' : 'active';
   }
-
 }
