@@ -9,11 +9,10 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
 
-// TODO: Replace dev table with ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES once prod table is created
 const CERTIFICATES_QUERY = `
   SELECT _KEY, CERTIFICATE_ID, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL
-  FROM ANALYTICS_DEV.LF_MICHAL_PLATINUM_LFX_ONE.USER_CERTIFICATES
+  FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
   WHERE USER_NAME = ?
   ORDER BY ISSUED_TS DESC
 `;
