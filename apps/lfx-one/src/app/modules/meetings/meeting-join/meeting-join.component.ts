@@ -225,23 +225,23 @@ export class MeetingJoinComponent {
   }
 
   public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
-    this.meetingService
-      .getMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid)
-      .pipe(take(1))
-      .subscribe({
-        next: (res) => {
-          const newWindow = window.open(res.download_url, '_blank', 'noopener,noreferrer');
-          if (newWindow) {
-            newWindow.opener = null;
-          }
-        },
-        error: () =>
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Download Failed',
-            detail: 'Unable to download the attachment. Please try again.',
-          }),
-      });
+    const download$ = this.loadedViaPastMeetingId()
+      ? this.meetingService.getPastMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid)
+      : this.meetingService.getMeetingAttachmentDownloadUrl(this.meeting().id, attachment.uid);
+    download$.pipe(take(1)).subscribe({
+      next: (res) => {
+        const newWindow = window.open(res.download_url, '_blank', 'noopener,noreferrer');
+        if (newWindow) {
+          newWindow.opener = null;
+        }
+      },
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Download Failed',
+          detail: 'Unable to download the attachment. Please try again.',
+        }),
+    });
   }
 
   public registerForMeeting(): void {
