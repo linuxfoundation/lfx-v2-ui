@@ -32,7 +32,7 @@
       </div>
 
       <!-- Description -->
-      <p class="text-sm text-gray-600 line-clamp-2" data-testid="cert-card-description">{{ cert().description }}</p>
+      <p class="text-sm text-gray-600 line-clamp-2" [title]="cert().description" data-testid="cert-card-description">{{ cert().description }}</p>
 
       <!-- Bottom row: meta fields + download button -->
       <div class="flex items-end justify-between gap-4 border-t border-gray-100 pt-3" data-testid="cert-card-meta-row">
