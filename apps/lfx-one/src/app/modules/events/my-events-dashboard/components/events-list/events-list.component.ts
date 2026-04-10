@@ -8,7 +8,7 @@ import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { EventTab, EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { EventsTableComponent } from '../events-table/events-table.component';
 
 @Component({
@@ -127,6 +127,7 @@ export class EventsListComponent {
           sortOrder: sortOrderSignal(),
         }))
       ).pipe(
+        debounceTime(0),
         tap(() => loadingSignal.set(true)),
         switchMap(({ offset, pageSize, projectName, searchQuery, role, status, sortField, sortOrder }) =>
           this.eventsService.getMyEvents({ isPast, offset, pageSize, projectName, searchQuery, role, status, sortField, sortOrder }).pipe(

@@ -7,7 +7,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { FilterOption } from '@lfx-one/shared/interfaces';
-import { combineLatest, debounceTime, finalize, map, of, skip, switchMap } from 'rxjs';
+import { combineLatest, debounceTime, distinctUntilChanged, finalize, map, of, shareReplay, skip, switchMap } from 'rxjs';
 import { EventsService } from '@app/shared/services/events.service';
 import { EVENT_ROLE_OPTIONS, MY_EVENT_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 
@@ -74,6 +74,7 @@ export class EventsTopBarComponent {
     const defaultOptions = [{ label: 'All Foundations', value: null }] as FilterOption[];
     return toSignal(
       combineLatest([toObservable(this.projectName), toObservable(this.isPast), toObservable(this.isFoundationFilter)]).pipe(
+        distinctUntilChanged((a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2]),
         switchMap(([projectName, isPast, isFoundationFilter]) => {
           if (!isFoundationFilter) {
             // Foundation dropdown is not rendered — skip the API call and clear loading.
@@ -85,7 +86,8 @@ export class EventsTopBarComponent {
             map(({ data }) => [{ label: 'All Foundations', value: null }, ...data.map((name) => ({ label: name, value: name }))]),
             finalize(() => this.foundationOptionsLoading.set(false))
           );
-        })
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
       ),
       { initialValue: defaultOptions }
     );

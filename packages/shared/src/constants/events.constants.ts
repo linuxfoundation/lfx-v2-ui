@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { FilterOption, MyEventsResponse, EventsResponse, MyEventOrganizationsResponse } from '../interfaces';
+import { FoundationEventStatus } from '../enums';
+import { FilterOption, MyEventsResponse, EventsResponse, MyEventOrganizationsResponse, TagSeverity } from '../interfaces';
 
 export const EVENT_ROLE_OPTIONS: FilterOption[] = [
   { label: 'All Roles', value: null },
@@ -35,6 +36,13 @@ export const COMING_SOON_SENTINEL = 'coming-soon';
 
 export const VALID_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['Active', 'Planned', 'Pending', 'Completed', COMING_SOON_SENTINEL]);
 export const VALID_MY_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['registered', 'attended', 'not-registered']);
+/** Severity map for foundation event display statuses, used by the events table tag component. */
+export const FOUNDATION_EVENT_STATUS_SEVERITY_MAP: Partial<Record<string, TagSeverity>> = {
+  [FoundationEventStatus.REGISTRATION_OPEN]: 'warn',
+  [FoundationEventStatus.COMING_SOON]: 'secondary',
+  [FoundationEventStatus.COMPLETED]: 'success',
+};
+
 export const VALID_EVENT_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'PROJECT_NAME', 'EVENT_START_DATE', 'EVENT_CITY']);
 export const DEFAULT_EVENT_SORT_FIELD = 'EVENT_START_DATE';
 export const VALID_EVENT_SORT_ORDERS: readonly string[] = ['ASC', 'DESC'];

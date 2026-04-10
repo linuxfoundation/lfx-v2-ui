@@ -6,8 +6,9 @@ import { Component, computed, input, output } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { FOUNDATION_EVENT_STATUS_SEVERITY_MAP } from '@lfx-one/shared/constants';
 import { FoundationEventStatus } from '@lfx-one/shared/enums';
-import { EventsResponse, FoundationEventWithActions, PageChangeEvent, SortChangeEvent, TagSeverity } from '@lfx-one/shared/interfaces';
+import { EventsResponse, FoundationEventWithActions, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-foundation-events-table',
@@ -24,11 +25,7 @@ export class EventsTableComponent {
   public readonly pageChange = output<PageChangeEvent>();
   public readonly sortChange = output<SortChangeEvent>();
 
-  protected readonly statusSeverityMap: Partial<Record<string, TagSeverity>> = {
-    [FoundationEventStatus.REGISTRATION_OPEN]: 'warn',
-    [FoundationEventStatus.COMING_SOON]: 'secondary',
-    [FoundationEventStatus.COMPLETED]: 'success',
-  };
+  protected readonly statusSeverityMap = FOUNDATION_EVENT_STATUS_SEVERITY_MAP;
 
   protected readonly sortIcons = computed(() => {
     const field = this.sortField();
