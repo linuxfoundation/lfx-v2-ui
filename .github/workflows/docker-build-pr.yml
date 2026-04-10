@@ -12,6 +12,7 @@ permissions:
   packages: write
   pull-requests: write
   issues: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -74,6 +75,27 @@ jobs:
           build-args: |
             BUILD_ENV=development
             APP_VERSION=pr-${{ github.event.pull_request.number }}
+
+      - name: Restart Kubernetes deployment
+        env:
+          KUBECONFIG_DATA: ${{ secrets.DEV_KUBECONFIG }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+          NAMESPACE="ui-pr-${PR_NUMBER}"
+          DEPLOYMENT="ui-pr-${PR_NUMBER}-lfx-v2-ui"
+
+          if kubectl --context lfx-v2-dev -n "$NAMESPACE" get deployment "$DEPLOYMENT" &>/dev/null; then
+            echo "Restarting deployment $DEPLOYMENT in namespace $NAMESPACE..."
+            kubectl --context lfx-v2-dev -n "$NAMESPACE" rollout restart deployment/"$DEPLOYMENT"
+            echo "Rollout restart issued for $DEPLOYMENT"
+          else
+            echo "Deployment $DEPLOYMENT not found in $NAMESPACE — skipping restart (may be initial deploy)"
+          fi
+
+          rm -f /tmp/kubeconfig
 
       - name: Comment deployment URL on PR
         uses: actions/github-script@v7
