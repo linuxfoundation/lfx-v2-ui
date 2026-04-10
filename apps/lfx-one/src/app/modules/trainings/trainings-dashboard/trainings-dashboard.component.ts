@@ -12,8 +12,7 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { TrainingService } from '@shared/services/training.service';
 import { CertificationCardComponent } from '../components/certification-card/certification-card.component';
 
-const PAGE_SUBTITLE =
-  'Track your Linux Foundation learning journey — active certifications, enrolled courses, rewards, and resources all in one place.';
+const PAGE_SUBTITLE = 'Track your Linux Foundation learning journey — active certifications, enrolled courses, rewards, and resources all in one place.';
 
 const TAB_OPTIONS: FilterPillOption[] = [
   { id: 'certifications', label: 'Certifications' },
@@ -52,7 +51,7 @@ export class TrainingsDashboardComponent {
   protected readonly activeTab = signal<string>('certifications');
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
-  protected readonly certifications: Signal<Certification[]> = this.initCertifications();
+  protected readonly certifications: Signal<Certification[] | undefined> = this.initCertifications();
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {
@@ -60,7 +59,7 @@ export class TrainingsDashboardComponent {
   }
 
   // ─── Private Initializers ──────────────────────────────────────────────────
-  private initCertifications(): Signal<Certification[]> {
-    return toSignal(this.trainingService.getCertifications(), { initialValue: [] });
+  private initCertifications(): Signal<Certification[] | undefined> {
+    return toSignal(this.trainingService.getCertifications());
   }
 }
