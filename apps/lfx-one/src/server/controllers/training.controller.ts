@@ -30,7 +30,8 @@ export class TrainingController {
       }
 
       const username = stripAuthPrefix(rawUsername);
-      const certifications = await this.trainingService.getCertifications(req, username);
+      // TODO: Remove hardcoded username override — testing with user who has 20+ certs
+      const certifications = await this.trainingService.getCertifications(req, 'zuzcncf');
 
       logger.success(req, 'get_certifications', startTime, {
         result_count: certifications.length,

@@ -16,8 +16,6 @@ export interface Certification {
   certificateId: string;
   /** Full certification/course name */
   name: string;
-  /** Short code (e.g. "CKA", "LFCS") */
-  code: string;
   /** Description of what the certification covers */
   description: string;
   /** Certification seal/logo image URL */
@@ -41,7 +39,6 @@ export interface CertificateRow {
   _KEY: string;
   CERTIFICATE_ID: string;
   COURSE_NAME: string;
-  CODE: string;
   COURSE_GROUP_DESCRIPTION: string;
   LOGO_URL: string;
   PROJECT_NAME: string;
