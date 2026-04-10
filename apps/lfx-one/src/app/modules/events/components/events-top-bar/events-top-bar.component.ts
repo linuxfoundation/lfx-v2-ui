@@ -7,7 +7,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { FilterOption } from '@lfx-one/shared/interfaces';
-import { combineLatest, debounceTime, map, switchMap, tap } from 'rxjs';
+import { combineLatest, debounceTime, map, skip, switchMap, tap } from 'rxjs';
 import { EventsService } from '@app/shared/services/events.service';
 import { EVENT_ROLE_OPTIONS, MY_EVENT_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 
@@ -19,7 +19,7 @@ import { EVENT_ROLE_OPTIONS, MY_EVENT_STATUS_OPTIONS } from '@lfx-one/shared/con
 export class EventsTopBarComponent {
   private readonly eventsService = inject(EventsService);
 
-  public isFoundationFilter = input<boolean>(false);
+  public readonly isFoundationFilter = input<boolean>(false);
   public readonly showRoleFilter = input<boolean>(true);
   public readonly projectName = input<string | undefined>(undefined);
   /** When true, foundation options are scoped to the user's registered past events */
@@ -55,6 +55,15 @@ export class EventsTopBarComponent {
     searchControl?.valueChanges.pipe(debounceTime(500), takeUntilDestroyed()).subscribe((value) => {
       this.searchQueryChange.emit(value || '');
     });
+
+    // Clear the foundation dropdown when the tab changes (isPast flips).
+    // emitEvent: false prevents a spurious foundationChange output that would conflict
+    // with the dashboard's own selectedFoundation reset.
+    toObservable(this.isPast)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe(() => {
+        this.searchForm.get('foundation')?.setValue(null, { emitEvent: false });
+      });
   }
 
   public clearSearch(): void {

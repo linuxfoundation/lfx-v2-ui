@@ -18,13 +18,19 @@ export const MY_EVENT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'Not Registered', value: 'not-registered' },
 ];
 
+/**
+ * Status filter options for Foundation Lens events.
+ * Values are raw EVENT_STATUS DB values except 'coming-soon', which is a sentinel
+ * that the server maps to `IN ('Pending', 'Planned')` rather than a parameterized bind.
+ */
 export const FOUNDATION_EVENT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'All Statuses', value: null },
-  { label: 'Coming Soon', value: 'coming-soon' },
+  { label: 'Coming Soon', value: 'coming-soon' }, // sentinel — maps to Pending + Planned in SQL
   { label: 'Completed', value: 'Completed' },
-  { label: 'Registration Open', value: 'Active' },
+  { label: 'Registration Open', value: 'Active' }, // raw DB value; displayed as 'Registration Open'
 ];
 
+export const VALID_EVENT_STATUS_VALUES: ReadonlySet<string> = new Set(['Active', 'Planned', 'Pending', 'Completed', 'coming-soon']);
 export const VALID_EVENT_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'PROJECT_NAME', 'EVENT_START_DATE', 'EVENT_CITY']);
 export const DEFAULT_EVENT_SORT_FIELD = 'EVENT_START_DATE';
 export const VALID_EVENT_SORT_ORDERS: readonly string[] = ['ASC', 'DESC'];

@@ -4,6 +4,7 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { DEFAULT_EVENT_SORT_FIELD, VALID_EVENT_SORT_FIELDS } from '@lfx-one/shared/constants';
+import { FoundationEventStatus } from '@lfx-one/shared/enums';
 import {
   EventRow,
   EventSortOrder,
@@ -458,11 +459,11 @@ export class EventsService {
 
   private mapEventStatus(raw: string | null): string | null {
     switch (raw) {
-      case 'Active':
-        return 'Registration Open';
-      case 'Pending':
-      case 'Planned':
-        return 'Coming Soon';
+      case FoundationEventStatus.ACTIVE:
+        return FoundationEventStatus.REGISTRATION_OPEN;
+      case FoundationEventStatus.PENDING:
+      case FoundationEventStatus.PLANNED:
+        return FoundationEventStatus.COMING_SOON;
       default:
         return raw;
     }
