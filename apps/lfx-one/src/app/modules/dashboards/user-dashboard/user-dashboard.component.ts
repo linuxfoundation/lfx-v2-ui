@@ -10,7 +10,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { BehaviorSubject, catchError, of, switchMap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
 import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
@@ -46,14 +46,15 @@ export class UserDashboardComponent {
 
   private initBoardActions(): Signal<PendingActionItem[]> {
     const project$ = toObservable(this.projectContextService.activeContext);
+    const isBoardScoped$ = toObservable(this.isBoardScoped);
 
     return toSignal(
       this.refresh$.pipe(
         takeUntilDestroyed(),
         switchMap(() => {
-          return project$.pipe(
-            switchMap((project) => {
-              if (!project?.slug || !project?.uid) {
+          return combineLatest([project$, isBoardScoped$]).pipe(
+            switchMap(([project, isBoardScoped]) => {
+              if (!isBoardScoped || !project?.slug || !project?.uid) {
                 return of([]);
               }
 

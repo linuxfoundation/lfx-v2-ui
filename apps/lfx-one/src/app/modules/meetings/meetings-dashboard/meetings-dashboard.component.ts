@@ -319,12 +319,11 @@ export class MeetingsDashboardComponent {
 
   private initializeRawUserMeetings(): Signal<Meeting[]> {
     const lens$ = toObservable(this.activeLens);
-    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([lens$, timeFilter$, this.refresh$]).pipe(
-        switchMap(([lens, timeFilter]) => {
-          if (lens !== 'me' || timeFilter !== 'upcoming') {
+      combineLatest([lens$, this.refresh$]).pipe(
+        switchMap(([lens]) => {
+          if (lens !== 'me') {
             return of([] as Meeting[]);
           }
           this.meetingsLoading.set(true);
@@ -343,12 +342,11 @@ export class MeetingsDashboardComponent {
 
   private initializeRawUserPastMeetings(): Signal<PastMeeting[]> {
     const lens$ = toObservable(this.activeLens);
-    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([lens$, timeFilter$, this.refresh$]).pipe(
-        switchMap(([lens, timeFilter]) => {
-          if (lens !== 'me' || timeFilter !== 'past') {
+      combineLatest([lens$, this.refresh$]).pipe(
+        switchMap(([lens]) => {
+          if (lens !== 'me') {
             return of([] as PastMeeting[]);
           }
           this.pastMeetingsLoading.set(true);
