@@ -176,7 +176,7 @@ export class MeetingsDashboardComponent {
         if (lens !== 'me' || timeFilter !== 'upcoming') {
           return of<PageResult<Meeting>>({ data: [], page_token: undefined, reset: true });
         }
-        const filtered = this.filterMeetingsClientSide(rawMeetings, searchQuery, meetingType);
+        const filtered = this.filterBySearchAndType(rawMeetings, searchQuery, meetingType);
         return of<PageResult<Meeting>>({ data: filtered, page_token: undefined, reset: true });
       })
     );
@@ -251,7 +251,7 @@ export class MeetingsDashboardComponent {
         if (lens !== 'me' || timeFilter !== 'past') {
           return of<PageResult<PastMeeting>>({ data: [], page_token: undefined, reset: true });
         }
-        const filtered = this.filterPastMeetingsClientSide(rawPastMeetings, searchQuery, meetingType);
+        const filtered = this.filterBySearchAndType(rawPastMeetings, searchQuery, meetingType);
         return of<PageResult<PastMeeting>>({ data: filtered, page_token: undefined, reset: true });
       })
     );
@@ -400,20 +400,8 @@ export class MeetingsDashboardComponent {
     });
   }
 
-  private filterMeetingsClientSide(meetings: Meeting[], searchQuery: string, meetingType: string | null): Meeting[] {
-    let filtered = meetings;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((m) => m.title?.toLowerCase().includes(query));
-    }
-    if (meetingType) {
-      filtered = filtered.filter((m) => m.meeting_type === meetingType);
-    }
-    return filtered;
-  }
-
-  private filterPastMeetingsClientSide(meetings: PastMeeting[], searchQuery: string, meetingType: string | null): PastMeeting[] {
-    let filtered = meetings;
+  private filterBySearchAndType<T extends { title?: string; meeting_type?: string | null }>(items: T[], searchQuery: string, meetingType: string | null): T[] {
+    let filtered = items;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((m) => m.title?.toLowerCase().includes(query));

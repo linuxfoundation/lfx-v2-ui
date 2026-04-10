@@ -29,17 +29,12 @@ export class UserDashboardComponent {
   private readonly projectService = inject(ProjectService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
-  protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
-
   public readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  // Board-scoped: API-fetched actions
+  private readonly rawContributorActions = signal<PendingActionItem[]>(CONTRIBUTOR_ACTION_ITEMS);
+
+  protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
   private readonly rawBoardActions: Signal<PendingActionItem[]> = this.initBoardActions();
-
-  // Contributor/Maintainer: static actions
-  private readonly rawContributorActions = signal(CONTRIBUTOR_ACTION_ITEMS);
-
-  // Unified pending actions: pick based on persona, filter hidden, limit to 2
   public readonly pendingActions: Signal<PendingActionItem[]> = computed(() => {
     const raw = this.isBoardScoped() ? this.rawBoardActions() : this.rawContributorActions();
     return raw.filter((item) => !this.hiddenActionsService.isActionHidden(item)).slice(0, 2);
@@ -50,7 +45,7 @@ export class UserDashboardComponent {
   }
 
   private initBoardActions(): Signal<PendingActionItem[]> {
-    const project$ = toObservable(computed(() => this.projectContextService.activeContext()));
+    const project$ = toObservable(this.projectContextService.activeContext);
 
     return toSignal(
       this.refresh$.pipe(
@@ -62,12 +57,9 @@ export class UserDashboardComponent {
                 return of([]);
               }
 
-              return this.projectService.getPendingActions(project.slug, project.uid, this.personaService.currentPersona()).pipe(
-                catchError((error) => {
-                  console.error('Failed to fetch pending actions:', error);
-                  return of([]);
-                })
-              );
+              return this.projectService
+                .getPendingActions(project.slug, project.uid, this.personaService.currentPersona())
+                .pipe(catchError(() => of([] as PendingActionItem[])));
             })
           );
         })

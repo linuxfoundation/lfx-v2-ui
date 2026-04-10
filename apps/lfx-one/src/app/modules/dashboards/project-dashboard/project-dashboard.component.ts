@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal } from '@angular/core';
+import { PendingActionItem } from '@lfx-one/shared/interfaces';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -22,11 +23,13 @@ export class ProjectDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
+  public readonly refresh$ = new BehaviorSubject<void>(undefined);
+
+  private readonly rawPendingActions = signal<PendingActionItem[]>([]);
+
   public readonly selectedProject = computed(() => this.projectContextService.activeContext());
-  public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
-  private readonly rawMaintainerActions = signal([]);
   public readonly pendingActions = computed(() => {
-    return this.rawMaintainerActions()
+    return this.rawPendingActions()
       .filter((item) => !this.hiddenActionsService.isActionHidden(item))
       .slice(0, 2);
   });
