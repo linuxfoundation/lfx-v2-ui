@@ -25,10 +25,9 @@ export class EventsTableComponent {
   public readonly sortChange = output<SortChangeEvent>();
 
   protected readonly statusSeverityMap: Partial<Record<string, TagSeverity>> = {
-    Planned: 'secondary',
-    Pending: 'secondary',
-    Completed: 'success',
-    Active: 'info',
+    [FoundationEventStatus.REGISTRATION_OPEN]: 'warn',
+    [FoundationEventStatus.COMING_SOON]: 'secondary',
+    [FoundationEventStatus.COMPLETED]: 'success',
   };
 
   protected readonly sortIcons = computed(() => {
@@ -50,7 +49,7 @@ export class EventsTableComponent {
     return this.eventsResponse().data.map((event) => ({
       ...event,
       actionLabel: isPast ? 'View Recap' : this.resolveActionLabel(event.status),
-      isOutlined: !isPast && (event.status === FoundationEventStatus.PLANNED || event.status === FoundationEventStatus.PENDING),
+      isOutlined: !isPast && event.status === FoundationEventStatus.COMING_SOON,
     }));
   });
 
@@ -64,8 +63,7 @@ export class EventsTableComponent {
 
   private resolveActionLabel(status: string | null): string {
     switch (status) {
-      case FoundationEventStatus.PLANNED:
-      case FoundationEventStatus.PENDING:
+      case FoundationEventStatus.COMING_SOON:
         return 'Notify Me';
       case FoundationEventStatus.COMPLETED:
         return 'View Recap';

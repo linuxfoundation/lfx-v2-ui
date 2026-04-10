@@ -18,6 +18,13 @@ export const MY_EVENT_STATUS_OPTIONS: FilterOption[] = [
   { label: 'Not Registered', value: 'not-registered' },
 ];
 
+export const FOUNDATION_EVENT_STATUS_OPTIONS: FilterOption[] = [
+  { label: 'All Statuses', value: null },
+  { label: 'Coming Soon', value: 'coming-soon' },
+  { label: 'Completed', value: 'Completed' },
+  { label: 'Registration Open', value: 'Active' },
+];
+
 export const VALID_EVENT_SORT_FIELDS: ReadonlySet<string> = new Set(['EVENT_NAME', 'PROJECT_NAME', 'EVENT_START_DATE', 'EVENT_CITY']);
 export const DEFAULT_EVENT_SORT_FIELD = 'EVENT_START_DATE';
 export const VALID_EVENT_SORT_ORDERS: readonly string[] = ['ASC', 'DESC'];

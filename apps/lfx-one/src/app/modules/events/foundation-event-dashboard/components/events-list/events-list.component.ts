@@ -22,6 +22,7 @@ export class EventsListComponent {
 
   public readonly foundation = input<string | null>(null);
   public readonly searchQuery = input<string>('');
+  public readonly status = input<string | null>(null);
 
   protected readonly activeTab = signal<EventTabId>('upcoming');
 
@@ -51,7 +52,7 @@ export class EventsListComponent {
 
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
-    combineLatest([toObservable(this.foundation), toObservable(this.searchQuery)])
+    combineLatest([toObservable(this.foundation), toObservable(this.searchQuery), toObservable(this.status)])
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
         this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
@@ -114,12 +115,13 @@ export class EventsListComponent {
           ...pageSignal(),
           foundation: this.foundation(),
           searchQuery: this.searchQuery() || undefined,
+          status: this.status() ?? undefined,
           sortField: sortFieldSignal(),
           sortOrder: sortOrderSignal(),
         }))
       ).pipe(
         tap(() => loadingSignal.set(true)),
-        switchMap(({ offset, pageSize, foundation, searchQuery, sortField, sortOrder }) =>
+        switchMap(({ offset, pageSize, foundation, searchQuery, status, sortField, sortOrder }) =>
           this.eventsService
             .getEvents({
               isPast,
@@ -127,6 +129,7 @@ export class EventsListComponent {
               pageSize,
               projectNames: foundation ? [foundation] : undefined,
               searchQuery,
+              status,
               sortField,
               sortOrder,
             })

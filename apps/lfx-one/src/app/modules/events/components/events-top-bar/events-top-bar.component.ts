@@ -7,7 +7,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { FilterOption } from '@lfx-one/shared/interfaces';
-import { debounceTime, map, switchMap, tap } from 'rxjs';
+import { combineLatest, debounceTime, map, switchMap, tap } from 'rxjs';
 import { EventsService } from '@app/shared/services/events.service';
 import { EVENT_ROLE_OPTIONS, MY_EVENT_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 
@@ -20,7 +20,10 @@ export class EventsTopBarComponent {
   private readonly eventsService = inject(EventsService);
 
   public isFoundationFilter = input<boolean>(false);
+  public readonly showRoleFilter = input<boolean>(true);
   public readonly projectName = input<string | undefined>(undefined);
+  /** When true, foundation options are scoped to the user's registered past events */
+  public readonly isPast = input<boolean>(false);
   public readonly searchQueryChange = output<string>();
 
   public readonly searchForm: FormGroup = new FormGroup({
@@ -36,7 +39,7 @@ export class EventsTopBarComponent {
 
   protected readonly roleOptions = signal<FilterOption[]>(EVENT_ROLE_OPTIONS);
 
-  protected readonly statusOptions = signal<FilterOption[]>(MY_EVENT_STATUS_OPTIONS);
+  public readonly statusOptions = input<FilterOption[]>(MY_EVENT_STATUS_OPTIONS);
 
   protected readonly foundationOptionsLoading = signal(true);
   protected readonly searchValue = signal('');
@@ -60,9 +63,10 @@ export class EventsTopBarComponent {
 
   private initFoundationOptions(): Signal<FilterOption[]> {
     return toSignal(
-      toObservable(this.projectName).pipe(
-        switchMap((projectName) =>
-          this.eventsService.getEventOrganizations({ projectName }).pipe(
+      combineLatest([toObservable(this.projectName), toObservable(this.isPast)]).pipe(
+        tap(() => this.foundationOptionsLoading.set(true)),
+        switchMap(([projectName, isPast]) =>
+          this.eventsService.getEventOrganizations({ projectName, isPast }).pipe(
             tap(() => this.foundationOptionsLoading.set(false)),
             map(({ data }) => [{ label: 'All Foundations', value: null }, ...data.map((name) => ({ label: name, value: name }))])
           )

@@ -188,6 +188,8 @@ export interface GetMyEventsParams {
  */
 export interface GetEventOrganizationsParams {
   projectName?: string;
+  /** When true, returns only foundations from the user's registered past events */
+  isPast?: boolean;
 }
 
 /**
@@ -198,6 +200,8 @@ export interface GetEventsParams {
   eventId?: string;
   projectNames?: string[];
   searchQuery?: string;
+  /** Filter by EVENT_STATUS value (e.g. "Active", "Planned", "Completed", "Pending") */
+  status?: string;
   sortField?: string;
   pageSize?: number;
   offset?: number;
@@ -267,6 +271,8 @@ export interface GetEventsOptions {
   eventId?: string;
   projectNames?: string[];
   searchQuery?: string;
+  /** Filter by EVENT_STATUS value (e.g. "Active", "Planned", "Completed", "Pending") */
+  status?: string;
   sortField?: string;
   pageSize: number;
   offset: number;
@@ -278,4 +284,6 @@ export interface GetEventsOptions {
  */
 export interface GetEventOrganizationsOptions {
   projectName?: string;
+  /** When true, returns only foundations from the authenticated user's registered past events */
+  isPast?: boolean;
 }
