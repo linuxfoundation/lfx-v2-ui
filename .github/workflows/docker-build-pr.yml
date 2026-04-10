@@ -12,7 +12,6 @@ permissions:
   packages: write
   pull-requests: write
   issues: write
-  id-token: write
 
 env:
   REGISTRY: ghcr.io
@@ -85,13 +84,19 @@ jobs:
           KUBECONFIG_DATA: ${{ secrets.DEV_KUBECONFIG }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
-          export KUBECONFIG=/tmp/kubeconfig
+          set -euo pipefail
+          [[ -n "${KUBECONFIG_DATA:-}" ]] || { echo "DEV_KUBECONFIG secret is empty"; exit 1; }
+
+          KUBECONFIG_PATH="$(mktemp)"
+          trap 'rm -f "$KUBECONFIG_PATH"' EXIT
+          echo "$KUBECONFIG_DATA" | base64 -d > "$KUBECONFIG_PATH"
+          export KUBECONFIG="$KUBECONFIG_PATH"
 
           NAMESPACE="ui-pr-${PR_NUMBER}"
           DEPLOYMENT="ui-pr-${PR_NUMBER}-lfx-v2-ui"
 
-          if kubectl --context lfx-v2-dev -n "$NAMESPACE" get deployment "$DEPLOYMENT" &>/dev/null; then
+          existing="$(kubectl --context lfx-v2-dev -n "$NAMESPACE" get deployment "$DEPLOYMENT" --ignore-not-found -o name)"
+          if [[ -n "$existing" ]]; then
             echo "Restarting deployment $DEPLOYMENT in namespace $NAMESPACE..."
             kubectl --context lfx-v2-dev -n "$NAMESPACE" rollout restart deployment/"$DEPLOYMENT"
             echo "Waiting for rollout to complete..."
@@ -104,8 +109,6 @@ jobs:
             echo "restarted=false" >> "$GITHUB_OUTPUT"
             echo "Deployment $DEPLOYMENT not found in $NAMESPACE — skipping restart (may be initial deploy)"
           fi
-
-          rm -f /tmp/kubeconfig
 
       - name: Comment deployment URL on PR
         env:
