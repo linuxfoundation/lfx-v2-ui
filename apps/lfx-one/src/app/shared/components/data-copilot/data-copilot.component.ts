@@ -70,7 +70,7 @@ export class DataCopilotComponent {
   // Context
   private readonly organizationId = computed(() => this.accountContextService.selectedAccount()?.accountId ?? '');
   private readonly organizationName = computed(() => this.accountContextService.selectedAccount()?.accountName ?? '');
-  private readonly foundationContext = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  private readonly foundationContext = computed(() => this.projectContextService.activeContext());
   private readonly foundationSlug = computed(() => this.foundationContext()?.slug ?? '');
   private readonly foundationName = computed(() => this.foundationContext()?.name ?? '');
   private readonly hasCompanyContext = computed(() => this.includeOrganizationId() && !!this.organizationId());

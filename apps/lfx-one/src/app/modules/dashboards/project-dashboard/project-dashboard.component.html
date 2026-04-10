@@ -1,21 +1,21 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<div class="container mx-auto px-4 sm:px-6 lg:px-8" data-testid="dashboard-container">
-  <!-- Foundation Project -->
-  @if (selectedFoundation()) {
-    <div class="mb-6 flex items-center gap-4" data-testid="foundation-project">
-      <h1>{{ selectedFoundation()?.name }} Overview</h1>
+<div class="container mx-auto px-4 sm:px-6 lg:px-8" data-testid="project-dashboard-container">
+  <!-- Page Header -->
+  @if (selectedProject()) {
+    <div class="mb-6 flex items-center gap-4" data-testid="project-dashboard-foundation-project">
+      <h1>{{ selectedProject()?.name }} Overview</h1>
     </div>
   }
 
   <!-- Dashboard Sections -->
-  <div class="flex flex-col gap-6" data-testid="dashboard-sections-grid">
+  <div class="flex flex-col gap-6" data-testid="project-dashboard-sections-grid">
     <!-- Recent Progress - Full Width -->
     @defer (on idle) {
       <lfx-recent-progress />
     } @placeholder {
-      <section data-testid="dashboard-recent-progress-placeholder">
+      <section data-testid="project-dashboard-recent-progress-placeholder">
         <div class="flex items-center justify-between mb-4">
           <p-skeleton width="10rem" height="1.5rem" />
           <div class="flex items-center gap-2">
@@ -45,31 +45,29 @@
       </section>
     }
 
-    <!-- Meetings (hidden on org lens) -->
-    @if (showMeetings()) {
-      @defer (on idle) {
-        <lfx-my-meetings />
-      } @placeholder {
-        <section class="flex flex-col flex-1" data-testid="dashboard-my-meetings-placeholder">
-          <div class="flex items-center justify-between mb-4 h-8">
-            <div class="flex items-center gap-2">
-              <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
-              <p-skeleton width="7rem" height="1rem" />
-            </div>
-            <p-skeleton width="4rem" height="1rem" />
+    <!-- Meetings -->
+    @defer (on idle) {
+      <lfx-my-meetings />
+    } @placeholder {
+      <section class="flex flex-col flex-1" data-testid="project-dashboard-my-meetings-placeholder">
+        <div class="flex items-center justify-between mb-4 h-8">
+          <div class="flex items-center gap-2">
+            <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
+            <p-skeleton width="7rem" height="1rem" />
           </div>
-          <div class="flex flex-col gap-3">
-            <p-skeleton width="100%" height="140px" />
-          </div>
-        </section>
-      }
+          <p-skeleton width="4rem" height="1rem" />
+        </div>
+        <div class="flex flex-col gap-3">
+          <p-skeleton width="100%" height="140px" />
+        </div>
+      </section>
     }
 
     <!-- Pending Actions -->
     @defer (on idle) {
-      <lfx-pending-actions [pendingActions]="contributorActions()" (actionClick)="handleActionClick()" />
+      <lfx-pending-actions [pendingActions]="pendingActions()" (actionClick)="handleActionClick()" />
     } @placeholder {
-      <section class="flex flex-col flex-1" data-testid="dashboard-pending-actions-placeholder">
+      <section class="flex flex-col flex-1" data-testid="project-dashboard-pending-actions-placeholder">
         <div class="flex items-center justify-between mb-4 px-2 h-8">
           <div class="flex items-center gap-2">
             <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
@@ -82,21 +80,19 @@
       </section>
     }
 
-    <!-- My Projects (project lens only) -->
-    @if (showProjects()) {
-      @defer (on viewport) {
-        <lfx-my-projects />
-      } @placeholder {
-        <div data-testid="dashboard-my-projects-placeholder">
-          <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-2">
-              <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
-              <p-skeleton width="6rem" height="1rem" />
-            </div>
+    <!-- My Projects - Full Width (below fold) -->
+    @defer (on viewport) {
+      <lfx-my-projects />
+    } @placeholder {
+      <div data-testid="project-dashboard-my-projects-placeholder">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <p-skeleton width="1.125rem" height="1.125rem" borderRadius="4px" />
+            <p-skeleton width="6rem" height="1rem" />
           </div>
-          <p-skeleton width="100%" height="200px" borderRadius="8px" />
         </div>
-      }
+        <p-skeleton width="100%" height="200px" borderRadius="8px" />
+      </div>
     }
   </div>
 </div>

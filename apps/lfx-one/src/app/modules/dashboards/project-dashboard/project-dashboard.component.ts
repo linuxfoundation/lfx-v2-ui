@@ -3,7 +3,6 @@
 
 import { Component, computed, inject, signal } from '@angular/core';
 import { HiddenActionsService } from '@services/hidden-actions.service';
-import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject } from 'rxjs';
@@ -14,24 +13,19 @@ import { PendingActionsComponent } from '../components/pending-actions/pending-a
 import { RecentProgressComponent } from '../components/recent-progress/recent-progress.component';
 
 @Component({
-  selector: 'lfx-maintainer-dashboard',
+  selector: 'lfx-project-dashboard',
   imports: [RecentProgressComponent, PendingActionsComponent, MyMeetingsComponent, MyProjectsComponent, SkeletonModule],
-  templateUrl: './maintainer-dashboard.component.html',
-  styleUrl: './maintainer-dashboard.component.scss',
+  templateUrl: './project-dashboard.component.html',
+  styleUrl: './project-dashboard.component.scss',
 })
-export class MaintainerDashboardComponent {
+export class ProjectDashboardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly hiddenActionsService = inject(HiddenActionsService);
-  private readonly lensService = inject(LensService);
 
-  protected readonly isMeLens = computed(() => this.lensService.activeLens() === 'me');
-  protected readonly showMeetings = computed(() => this.lensService.activeLens() !== 'org');
-  protected readonly showProjects = computed(() => this.lensService.activeLens() === 'project');
-
-  public readonly selectedProject = computed(() => this.projectContextService.selectedFoundation() || this.projectContextService.selectedProject());
+  public readonly selectedProject = computed(() => this.projectContextService.activeContext());
   public readonly refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
   private readonly rawMaintainerActions = signal([]);
-  public readonly maintainerActions = computed(() => {
+  public readonly pendingActions = computed(() => {
     return this.rawMaintainerActions()
       .filter((item) => !this.hiddenActionsService.isActionHidden(item))
       .slice(0, 2);

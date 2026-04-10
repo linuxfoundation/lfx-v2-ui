@@ -34,7 +34,7 @@ export class CommitteeBasicInfoComponent {
 
   private initializeParentCommitteeOptions(): Signal<{ label: string; value: string | null }[]> {
     // Get project ID from context (project or foundation)
-    const uid = this.projectContextService.getProjectUid() || this.projectContextService.getFoundationId();
+    const uid = this.projectContextService.activeContextUid();
 
     const committees = toSignal(
       this.committeeService.getCommitteesByProject(uid).pipe(
