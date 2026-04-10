@@ -76,7 +76,8 @@ export class EventsTopBarComponent {
       combineLatest([toObservable(this.projectName), toObservable(this.isPast), toObservable(this.isFoundationFilter)]).pipe(
         switchMap(([projectName, isPast, isFoundationFilter]) => {
           if (!isFoundationFilter) {
-            // Foundation dropdown is not rendered — skip the API call entirely.
+            // Foundation dropdown is not rendered — skip the API call and clear loading.
+            this.foundationOptionsLoading.set(false);
             return of(defaultOptions);
           }
           this.foundationOptionsLoading.set(true);
