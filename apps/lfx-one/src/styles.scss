@@ -11,11 +11,11 @@
 
   /* Typography Defaults - Inter on html so it cascades to everything */
   html {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-inter);
   }
 
   h1 {
-    font-family: 'Roboto Slab', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    font-family: var(--font-display);
   }
 
   h2,

@@ -83,7 +83,7 @@
               </div>
             }
           </div>
-        } @else if (enrollments()!.length === 0 && completedTrainings()!.length === 0) {
+        } @else if ((enrollments()?.length ?? 0) === 0 && (completedTrainings()?.length ?? 0) === 0) {
           <!-- Empty state: both sections empty -->
           <div class="flex flex-col items-center justify-center py-20 text-center gap-4" data-testid="trainings-empty-state">
             <i class="fa-light fa-book-open text-6xl text-gray-300"></i>
@@ -103,22 +103,22 @@
         } @else {
           <!-- Content: show non-empty sections only -->
           <div class="flex flex-col gap-8" data-testid="trainings-content">
-            @if (enrollments()!.length > 0) {
+            @if ((enrollments()?.length ?? 0) > 0) {
               <div data-testid="trainings-ongoing-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Ongoing trainings</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-ongoing-list">
-                  @for (enrollment of enrollments()!; track enrollment.id) {
+                  @for (enrollment of (enrollments() ?? []); track enrollment.id) {
                     <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-card-item" />
                   }
                 </div>
               </div>
             }
 
-            @if (completedTrainings()!.length > 0) {
+            @if ((completedTrainings()?.length ?? 0) > 0) {
               <div data-testid="trainings-completed-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Completed trainings</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-completed-list">
-                  @for (cert of completedTrainings()!; track cert.id) {
+                  @for (cert of (completedTrainings() ?? []); track cert.id) {
                     <lfx-training-card [training]="cert" variant="completed" data-testid="training-completed-item" />
                   }
                 </div>

@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { Certification, TrainingEnrollment } from '@lfx-one/shared/interfaces';
 import { CONTINUE_LEARNING_URL } from '@lfx-one/shared/constants';
@@ -12,7 +12,7 @@ import { ButtonComponent } from '@components/button/button.component';
 
 @Component({
   selector: 'lfx-training-card',
-  imports: [ButtonComponent, DatePipe],
+  imports: [ButtonComponent, DatePipe, NgClass],
   templateUrl: './training-card.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -25,22 +25,14 @@ export class TrainingCardComponent {
   protected readonly continueLearningUrl = CONTINUE_LEARNING_URL;
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
-  protected readonly hasImage: Signal<boolean> = this.initHasImage();
-  protected readonly isOngoing: Signal<boolean> = this.initIsOngoing();
+  protected readonly hasImage = computed(() => !!this.training().imageUrl);
+  protected readonly isOngoing = computed(() => this.variant() === 'ongoing');
+  protected readonly dateLabel = computed(() => (this.variant() === 'ongoing' ? 'Enrolled' : 'Completed'));
   protected readonly date: Signal<string> = this.initDate();
-  protected readonly dateLabel: Signal<string> = this.initDateLabel();
   protected readonly levelClasses: Signal<string> = this.initLevelClasses();
   protected readonly downloadUrl: Signal<string | null> = this.initDownloadUrl();
 
   // ─── Private Initializers ──────────────────────────────────────────────────
-  private initHasImage(): Signal<boolean> {
-    return computed(() => !!this.training().imageUrl);
-  }
-
-  private initIsOngoing(): Signal<boolean> {
-    return computed(() => this.variant() === 'ongoing');
-  }
-
   private initDate(): Signal<string> {
     return computed(() => {
       const t = this.training();
@@ -50,10 +42,6 @@ export class TrainingCardComponent {
       }
       return (t as Certification).issuedDate ?? '';
     });
-  }
-
-  private initDateLabel(): Signal<string> {
-    return computed(() => (this.variant() === 'ongoing' ? 'Enrolled' : 'Completed'));
   }
 
   private initLevelClasses(): Signal<string> {

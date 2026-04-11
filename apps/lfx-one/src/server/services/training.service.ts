@@ -4,6 +4,7 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { CertificateRow, Certification, CertificationStatus, EnrollmentRow, TrainingEnrollment } from '@lfx-one/shared/interfaces';
+import { TRAINING_PRODUCT_TYPE } from '@lfx-one/shared/constants';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
@@ -12,7 +13,7 @@ import { SnowflakeService } from './snowflake.service';
 const CERTIFICATES_BASE_QUERY = `
   SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL, LEVEL
-  FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
+  FROM ANALYTICS_DEV.LF_MICHAL_platinum_lfx_one.user_certificates
   WHERE USER_NAME = ?`;
 
 const CERTIFICATES_FILTERED_QUERY = `${CERTIFICATES_BASE_QUERY}
@@ -27,8 +28,8 @@ const CERTIFICATES_UNFILTERED_QUERY = `${CERTIFICATES_BASE_QUERY}
 const ENROLLMENTS_QUERY = `
   SELECT ENROLLMENT_ID, ENROLLMENT_TS, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, LEVEL
-  FROM ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
-  WHERE USER_NAME = ? AND PRODUCT_TYPE = 'Training'
+  FROM ANALYTICS_DEV.LF_MICHAL_platinum_lfx_one.user_course_enrollments
+  WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
   ORDER BY ENROLLMENT_TS DESC
 `;
 
@@ -69,7 +70,7 @@ export class TrainingService {
     let result: { rows: EnrollmentRow[] };
 
     try {
-      result = await this.snowflakeService.execute<EnrollmentRow>(ENROLLMENTS_QUERY, [username]);
+      result = await this.snowflakeService.execute<EnrollmentRow>(ENROLLMENTS_QUERY, [username, TRAINING_PRODUCT_TYPE]);
     } catch (error) {
       logger.warning(req, 'get_enrollments', 'Snowflake query failed, returning empty enrollments', {
         error: error instanceof Error ? error.message : String(error),

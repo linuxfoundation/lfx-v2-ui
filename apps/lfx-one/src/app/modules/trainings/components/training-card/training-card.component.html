@@ -22,7 +22,7 @@
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="training-card-name">{{ training().name }}</h3>
             @if (training().level) {
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ levelClasses() }}" data-testid="training-card-level-badge">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" [ngClass]="levelClasses()" data-testid="training-card-level-badge">
                 {{ training().level }}
               </span>
             }
@@ -32,10 +32,12 @@
 
         @if (isOngoing()) {
           <div class="flex-shrink-0" data-testid="training-card-continue-action">
+            <!-- TODO: link to course-specific URL when available from enrollment data (LFXV2-TODO) -->
+            <!-- TODO: replace !important overrides with a size="sm" input on ButtonComponent (LFXV2-TODO) -->
             <lfx-button
               severity="secondary"
               styleClass="!text-xs !h-8 !py-0"
-              label="Continue Learning"
+              label="Go to Training Portal"
               icon="fa-light fa-arrow-right"
               [href]="continueLearningUrl"
               target="_blank"
@@ -62,6 +64,7 @@
 
         @if (downloadUrl()) {
           <div class="flex-shrink-0" data-testid="training-card-actions">
+            <!-- TODO: replace !important overrides with a size="sm" input on ButtonComponent (LFXV2-TODO) -->
             <lfx-button
               severity="secondary"
               styleClass="!text-xs !h-8 !py-0"
