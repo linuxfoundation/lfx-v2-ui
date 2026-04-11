@@ -1,0 +1,59 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [modal]="true"
+  [showCloseIcon]="false"
+  styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full"
+  data-testid="event-growth-drawer">
+  <!-- Header -->
+  <ng-template #header>
+    <div class="flex items-start justify-between gap-4 w-full" data-testid="event-growth-drawer-header">
+      <div class="flex flex-col gap-1 flex-1">
+        <h2 class="text-lg font-semibold text-gray-900" data-testid="event-growth-drawer-title">Event Growth</h2>
+        <p class="text-sm text-gray-500">Executive Director · North Star Metric</p>
+      </div>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="event-growth-drawer-close" />
+    </div>
+  </ng-template>
+
+  <!-- Content -->
+  <div class="flex flex-col gap-6 pb-2" data-testid="event-growth-drawer-content">
+    <!-- Summary Stats -->
+    <div class="flex gap-4" data-testid="event-growth-drawer-stats">
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Total Attendees</span>
+          <span class="text-2xl font-semibold text-gray-900">8,200</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Events This Quarter</span>
+          <span class="text-2xl font-semibold text-gray-900">12</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">YoY Growth</span>
+          <span class="text-2xl font-semibold text-green-600">+18%</span>
+        </div>
+      </lfx-card>
+    </div>
+
+    <!-- Placeholder -->
+    <div class="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50" data-testid="event-growth-drawer-placeholder">
+      <i class="fa-light fa-circle-info text-gray-400 mt-0.5"></i>
+      <p class="text-sm text-gray-500">Quarterly attendance chart, top events table, and YoY comparison will appear here when connected to live data.</p>
+    </div>
+  </div>
+</p-drawer>

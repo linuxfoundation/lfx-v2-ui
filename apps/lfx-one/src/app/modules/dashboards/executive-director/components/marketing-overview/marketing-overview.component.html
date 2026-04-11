@@ -133,3 +133,49 @@
     <span>Hover over any card for data source details · Prototype with dummy data</span>
   </div>
 </section>
+
+<!-- Drill-Down Drawers -->
+
+<!-- North Star Drawers -->
+<lfx-flywheel-conversion-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarFlywheelConversion"
+  (visibleChange)="handleDrawerClose()"></lfx-flywheel-conversion-drawer>
+
+<lfx-member-acquisition-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"
+  (visibleChange)="handleDrawerClose()"></lfx-member-acquisition-drawer>
+
+<lfx-member-retention-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberRetention"
+  (visibleChange)="handleDrawerClose()"></lfx-member-retention-drawer>
+
+<lfx-engaged-community-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
+  (visibleChange)="handleDrawerClose()"></lfx-engaged-community-drawer>
+
+<lfx-event-growth-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarEventGrowth"
+  (visibleChange)="handleDrawerClose()"></lfx-event-growth-drawer>
+
+<!-- Brand Drawers -->
+<lfx-brand-reach-drawer [visible]="activeDrawer() === DashboardDrawerType.BrandReach" (visibleChange)="handleDrawerClose()"></lfx-brand-reach-drawer>
+
+<lfx-brand-health-drawer [visible]="activeDrawer() === DashboardDrawerType.BrandHealth" (visibleChange)="handleDrawerClose()"></lfx-brand-health-drawer>
+
+<!-- Influence Drawer -->
+<lfx-revenue-impact-drawer [visible]="activeDrawer() === DashboardDrawerType.RevenueImpact" (visibleChange)="handleDrawerClose()"></lfx-revenue-impact-drawer>
+
+<!-- Existing Marketing Drawers (accessible from Brand Reach / Engaged Community drawers in future) -->
+<lfx-website-visits-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.MarketingWebsiteVisits"
+  (visibleChange)="handleDrawerClose()"></lfx-website-visits-drawer>
+
+<lfx-email-ctr-drawer [visible]="activeDrawer() === DashboardDrawerType.MarketingEmailCtr" (visibleChange)="handleDrawerClose()"></lfx-email-ctr-drawer>
+
+<lfx-paid-social-reach-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.MarketingPaidSocialReach"
+  (visibleChange)="handleDrawerClose()"></lfx-paid-social-reach-drawer>
+
+<lfx-social-media-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.MarketingSocialMedia"
+  (visibleChange)="handleDrawerClose()"></lfx-social-media-drawer>

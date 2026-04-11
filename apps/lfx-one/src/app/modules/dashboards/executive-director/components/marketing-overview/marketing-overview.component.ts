@@ -13,10 +13,46 @@ import { DashboardDrawerType, DashboardMetricCard } from '@lfx-one/shared/interf
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { TooltipModule } from 'primeng/tooltip';
 
+import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
+import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
+import { EmailCtrDrawerComponent } from '../email-ctr-drawer/email-ctr-drawer.component';
+import { EngagedCommunityDrawerComponent } from '../engaged-community-drawer/engaged-community-drawer.component';
+import { EventGrowthDrawerComponent } from '../event-growth-drawer/event-growth-drawer.component';
+import { FlywheelConversionDrawerComponent } from '../flywheel-conversion-drawer/flywheel-conversion-drawer.component';
+import { MemberAcquisitionDrawerComponent } from '../member-acquisition-drawer/member-acquisition-drawer.component';
+import { MemberRetentionDrawerComponent } from '../member-retention-drawer/member-retention-drawer.component';
+import { PaidSocialReachDrawerComponent } from '../paid-social-reach-drawer/paid-social-reach-drawer.component';
+import { RevenueImpactDrawerComponent } from '../revenue-impact-drawer/revenue-impact-drawer.component';
+import { SocialMediaDrawerComponent } from '../social-media-drawer/social-media-drawer.component';
+import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-visits-drawer.component';
+
 @Component({
   selector: 'lfx-marketing-overview',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChartComponent, FilterPillsComponent, MetricCardComponent, ScrollShadowDirective, TooltipModule],
+  imports: [
+    ButtonComponent,
+    ChartComponent,
+    FilterPillsComponent,
+    MetricCardComponent,
+    ScrollShadowDirective,
+    TooltipModule,
+
+    // Existing drawers
+    WebsiteVisitsDrawerComponent,
+    EmailCtrDrawerComponent,
+    PaidSocialReachDrawerComponent,
+    SocialMediaDrawerComponent,
+    EngagedCommunityDrawerComponent,
+    MemberAcquisitionDrawerComponent,
+    MemberRetentionDrawerComponent,
+    FlywheelConversionDrawerComponent,
+
+    // New prototype drawers
+    EventGrowthDrawerComponent,
+    BrandReachDrawerComponent,
+    BrandHealthDrawerComponent,
+    RevenueImpactDrawerComponent,
+  ],
   templateUrl: './marketing-overview.component.html',
   styleUrl: './marketing-overview.component.scss',
 })
