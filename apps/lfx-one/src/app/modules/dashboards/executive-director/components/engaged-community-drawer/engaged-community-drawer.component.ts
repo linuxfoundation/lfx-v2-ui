@@ -248,11 +248,11 @@ export class EngagedCommunityDrawerComponent {
     return computed(() => {
       const { breakdown } = this.data();
       return {
-        labels: ['Community', 'Working Groups', 'Certified'],
+        labels: ['Community', 'Newsletter', 'Working Groups', 'Certified'],
         datasets: [
           {
-            data: [breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
-            backgroundColor: [lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
+            data: [breakdown.communityMembers, breakdown.newsletterSubscribers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
+            backgroundColor: [lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300], lfxColors.blue[200]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },
