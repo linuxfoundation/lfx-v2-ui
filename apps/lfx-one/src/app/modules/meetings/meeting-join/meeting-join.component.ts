@@ -43,6 +43,8 @@ import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
+import { ProjectContextService } from '@services/project-context.service';
+import { LensService } from '@services/lens.service';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
@@ -109,6 +111,8 @@ export class MeetingJoinComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
   private readonly committeeService = inject(CommitteeService);
+  private readonly projectContextService = inject(ProjectContextService);
+  private readonly lensService = inject(LensService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -340,6 +344,20 @@ export class MeetingJoinComponent implements OnInit {
         this.refreshTrigger$.next();
       }
     });
+  }
+
+  public navigateToFoundation(): void {
+    const parent = this.parentProject();
+    const project = this.project();
+    const meeting = this.meeting();
+    const uid = parent?.uid || meeting?.project_uid;
+    const name = parent?.name || project?.name || meeting?.project_name || '';
+    const slug = parent?.slug || project?.slug || '';
+    if (uid) {
+      this.projectContextService.setFoundation({ uid, name, slug });
+      this.lensService.setLens('foundation');
+    }
+    window.open('/foundation/overview', '_blank', 'noopener,noreferrer');
   }
 
   public openSummaryModal(): void {
