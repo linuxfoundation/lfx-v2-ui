@@ -9,8 +9,15 @@
 @layer tailwind-base {
   @tailwind base;
 
-  /* Typography Defaults - Apply Inter font family to all text elements */
-  h1,
+  /* Typography Defaults - Inter on html so it cascades to everything */
+  html {
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1 {
+    font-family: 'Roboto Slab', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  }
+
   h2,
   h3,
   h4,
@@ -25,7 +32,7 @@
 
   /* Heading styles - only apply to elements without text or font classes */
   h1:not([class*='text-']):not([class*='font-']) {
-    @apply text-xl font-semibold;
+    @apply text-2xl font-light;
   }
 
   h2:not([class*='text-']):not([class*='font-']) {
