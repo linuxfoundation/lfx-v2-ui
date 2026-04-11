@@ -1,0 +1,124 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [modal]="true"
+  [showCloseIcon]="false"
+  styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full"
+  data-testid="revenue-impact-drawer">
+  <!-- Header -->
+  <ng-template #header>
+    <div class="flex items-start justify-between gap-4 w-full" data-testid="revenue-impact-drawer-header">
+      <div class="flex flex-col gap-1 flex-1">
+        <h2 class="text-lg font-semibold text-gray-900" data-testid="revenue-impact-drawer-title">Marketing Attribution</h2>
+        <p class="text-sm text-gray-500">Executive Director · Influence Metric</p>
+      </div>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="revenue-impact-drawer-close" />
+    </div>
+  </ng-template>
+
+  <!-- Content -->
+  <div class="flex flex-col gap-6 pb-2" data-testid="revenue-impact-drawer-content">
+    <!-- Summary Stats -->
+    <div class="flex gap-4" data-testid="revenue-impact-drawer-stats">
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Pipeline Influenced</span>
+          <span class="text-2xl font-semibold text-gray-900">$2.1M</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Revenue Attributed</span>
+          <span class="text-2xl font-semibold text-gray-900">$5.5M</span>
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Match Rate</span>
+          <span class="text-2xl font-semibold text-gray-900">44%</span>
+        </div>
+      </lfx-card>
+    </div>
+
+    <!-- Attribution Model Comparison -->
+    <div class="flex flex-col gap-4" data-testid="revenue-impact-drawer-attribution">
+      <h3 class="text-sm font-semibold text-gray-900">Attribution Model Comparison</h3>
+      <div class="flex gap-4">
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Linear</span>
+            <span class="text-2xl font-semibold text-gray-900">$5.5M</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">First-Touch</span>
+            <span class="text-2xl font-semibold text-gray-900">$4.8M</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Last-Touch</span>
+            <span class="text-2xl font-semibold text-gray-900">$6.2M</span>
+          </div>
+        </lfx-card>
+      </div>
+    </div>
+
+    <!-- Channel Attribution Breakdown -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="revenue-impact-drawer-engagement">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Channel Attribution Breakdown</h3>
+        <p class="text-sm text-gray-600">Revenue attributed by marketing channel · Last 6 months</p>
+      </div>
+      <div class="flex flex-col gap-3">
+        @for (engagement of engagementTypes; track engagement.type) {
+          <div class="flex flex-col gap-1" data-testid="revenue-impact-drawer-engagement-row">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-gray-900">{{ engagement.type }}</span>
+              <span class="text-sm font-semibold text-gray-900">{{ engagement.percentage }}%</span>
+            </div>
+            <div class="w-full h-2 bg-gray-100 rounded-full">
+              <div class="h-2 bg-blue-500 rounded-full" [style.width.%]="engagement.percentage"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Paid Media Metrics -->
+    <div class="flex flex-col gap-4" data-testid="revenue-impact-drawer-paid-media">
+      <h3 class="text-sm font-semibold text-gray-900">Paid Media Metrics</h3>
+      <div class="flex gap-4">
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">ROAS</span>
+            <span class="text-2xl font-semibold text-green-600">3.2x</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Impressions</span>
+            <span class="text-2xl font-semibold text-gray-900">1.2M</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Ad Spend</span>
+            <span class="text-2xl font-semibold text-gray-900">$180K</span>
+          </div>
+        </lfx-card>
+      </div>
+    </div>
+  </div>
+</p-drawer>

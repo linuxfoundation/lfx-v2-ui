@@ -6,7 +6,7 @@ import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
 
-import type { DashboardMetricCard } from '../interfaces';
+import type { DashboardMetricCard, DualSignalRow, FilterPillOption } from '../interfaces';
 // ============================================
 // Marketing Action Icon Map
 // ============================================
@@ -464,5 +464,170 @@ export const MAINTAINER_PROGRESS_METRICS: DashboardMetricCard[] = [
     testId: 'maintainer-progress-card-code-commits',
     chartData: EMPTY_CHART_DATA,
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+  },
+];
+
+// ============================================
+// ED Dashboard Evolution Prototype (8 Cards)
+// ============================================
+
+/** Helper to build a prototype sparkline dataset */
+function protoSparkline(data: number[], color: string) {
+  return {
+    labels: data.map((_, i) => `M${i + 1}`),
+    datasets: [
+      {
+        data,
+        borderColor: color,
+        backgroundColor: hexToRgba(color, 0.1),
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 0,
+      },
+    ],
+  };
+}
+
+/** Helper to build a dual-signal row with sparkline */
+function protoDualSignal(label: string, value: string, data: number[], color: string, change?: string, trend?: 'up' | 'down'): DualSignalRow {
+  return {
+    label,
+    value,
+    changePercentage: change,
+    trend,
+    chartData: protoSparkline(data, color),
+  };
+}
+
+/**
+ * Filter options for the ED Evolution prototype dashboard
+ */
+export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'memberships', label: 'North Star' },
+  { id: 'brand', label: 'Brand' },
+  { id: 'influence', label: 'Influence' },
+];
+
+/**
+ * ED Evolution prototype — 7 cards with dummy data
+ * 4 North Star + 2 Brand + 1 Influence
+ * Member Retention is merged into the Member Growth drawer.
+ */
+export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
+  // === North Star (4 cards — retention merged into Member Growth drawer) ===
+  {
+    title: 'Flywheel Conversion',
+    icon: 'fa-light fa-arrows-spin',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'ed-evo-flywheel-conversion',
+    customContentType: 'funnel',
+    value: '24.6%',
+    changePercentage: '+2.1% MoM',
+    trend: 'up',
+    subtitle: 'Re-engagement within 90 days · Last 6 months',
+    funnelSteps: [
+      { label: 'Attendees', value: '8.2K' },
+      { label: 'Newsletter', value: '1.4K' },
+      { label: 'Community', value: '890' },
+      { label: 'WG', value: '310' },
+    ],
+    tooltipText:
+      'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event. Funnel: 8,200 → 1,420 → 890 → 310.',
+    drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
+  },
+  {
+    title: 'Member Growth',
+    icon: 'fa-light fa-user-group',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'ed-evo-member-growth',
+    value: '245',
+    changePercentage: '+3.0% MoM',
+    trend: 'up',
+    subtitle: '87.2% retention · NRR 103% · Last 6 months',
+    chartData: protoSparkline([210, 218, 225, 231, 238, 245], lfxColors.blue[500]),
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    tooltipText: 'Total paying corporate members with monthly net new over the last 6 months. Source: Salesforce B2B memberships.',
+    drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
+  },
+  {
+    title: 'Engaged Community',
+    icon: 'fa-light fa-people-group',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'ed-evo-engaged-community',
+    value: '12,400',
+    changePercentage: '+3.2% MoM',
+    trend: 'up',
+    subtitle: '4 channels · Last 6 months',
+    chartData: protoSparkline([10800, 11200, 11500, 11800, 12100, 12400], lfxColors.blue[500]),
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
+    drawerType: DashboardDrawerType.NorthStarEngagedCommunity,
+  },
+  {
+    title: 'Event Growth',
+    icon: 'fa-light fa-calendar-star',
+    chartType: 'line',
+    category: 'memberships',
+    testId: 'ed-evo-event-growth',
+    value: '8,200',
+    changePercentage: '+9.3% MoM',
+    trend: 'up',
+    subtitle: 'Monthly attendees · Last 6 months',
+    chartData: protoSparkline([5200, 5800, 6400, 7100, 7500, 8200], lfxColors.blue[500]),
+    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+    tooltipText: 'Total monthly event attendees over the last 6 months. Source: Event registrations.',
+    drawerType: DashboardDrawerType.NorthStarEventGrowth,
+  },
+
+  // === Brand (2 dual-signal cards) ===
+  {
+    title: 'Brand Reach',
+    icon: 'fa-light fa-signal-bars',
+    chartType: 'line',
+    category: 'brand',
+    testId: 'ed-evo-brand-reach',
+    customContentType: 'dual-signal',
+    dualSignals: [
+      protoDualSignal('Social Followers', '474K', [420, 435, 448, 456, 465, 474], lfxColors.blue[500], '+8.2% MoM', 'up'),
+      protoDualSignal('Monthly Sessions', '360K', [310, 325, 340, 348, 355, 360], lfxColors.violet[500], '+4.1% MoM', 'up'),
+    ],
+    tooltipText: 'Social followers across all platforms (stock) and monthly website sessions (flow). Shown separately — these are different metric types.',
+    drawerType: DashboardDrawerType.BrandReach,
+  },
+  {
+    title: 'Brand Health',
+    icon: 'fa-light fa-heart-pulse',
+    chartType: 'line',
+    category: 'brand',
+    testId: 'ed-evo-brand-health',
+    customContentType: 'dual-signal',
+    dualSignals: [
+      protoDualSignal('Mentions', '2,400', [1800, 1950, 2100, 2200, 2300, 2400], lfxColors.blue[500], '+4.3% MoM', 'up'),
+      protoDualSignal('Positive Sentiment', '72%', [65, 67, 68, 70, 71, 72], lfxColors.emerald[500], '+2pp MoM', 'up'),
+    ],
+    tooltipText: 'Total brand mentions across social and web (Octolens) with sentiment breakdown.',
+    drawerType: DashboardDrawerType.BrandHealth,
+  },
+
+  // === Influence (1 dual-signal card) ===
+  {
+    title: 'Marketing Attribution',
+    icon: 'fa-light fa-money-bill-trend-up',
+    chartType: 'line',
+    category: 'influence',
+    testId: 'ed-evo-revenue-impact',
+    customContentType: 'dual-signal',
+    caption: '$5.5M attributed of $12.3M total (44% match rate)',
+    dualSignals: [
+      protoDualSignal('Pipeline Influenced', '$2.1M', [1200, 1400, 1600, 1800, 1950, 2100], lfxColors.blue[500], '+7.7% MoM', 'up'),
+      protoDualSignal('Revenue Attributed', '$5.5M', [3800, 4200, 4600, 4900, 5200, 5500], lfxColors.emerald[500], '+5.8% MoM', 'up'),
+    ],
+    tooltipText: 'Marketing-influenced pipeline value and multi-touch attributed revenue. Match rate shows measurement confidence.',
+    drawerType: DashboardDrawerType.RevenueImpact,
   },
 ];
