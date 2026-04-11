@@ -7,6 +7,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -21,19 +22,24 @@ import type { ChartData, ChartOptions } from 'chart.js';
 export class EventGrowthDrawerComponent {
   public readonly visible = model<boolean>(false);
 
-  // === Dummy Chart Data ===
-  protected readonly quarterlyChartData: ChartData<'bar'> = {
-    labels: ['Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'],
+  // === Dummy Chart Data (last 6 months) ===
+  protected readonly monthlyChartData: ChartData<'line'> = {
+    labels: ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
     datasets: [
       {
-        data: [6200, 6800, 7500, 8200],
-        backgroundColor: lfxColors.blue[500],
-        borderRadius: 4,
+        data: [5200, 5800, 6400, 7100, 7500, 8200],
+        borderColor: lfxColors.blue[500],
+        backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: lfxColors.blue[500],
       },
     ],
   };
 
-  protected readonly quarterlyChartOptions: ChartOptions<'bar'> = {
+  protected readonly monthlyChartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -61,17 +67,14 @@ export class EventGrowthDrawerComponent {
         },
       },
     },
-    datasets: {
-      bar: { barPercentage: 0.7, categoryPercentage: 0.9 },
-    },
   };
 
   protected readonly topEvents = [
-    { name: 'KubeCon NA 2025', date: 'Nov 2025', attendees: 3200 },
-    { name: 'Open Source Summit EU', date: 'Sep 2025', attendees: 1800 },
-    { name: 'KubeCon EU 2025', date: 'Apr 2025', attendees: 1500 },
-    { name: 'Linux Plumbers Conference', date: 'Aug 2025', attendees: 950 },
-    { name: 'Open Source Summit NA', date: 'Jun 2025', attendees: 750 },
+    { name: 'KubeCon NA 2025', date: 'Nov 2025', attendees: 3200, revenue: 4800000 },
+    { name: 'KubeCon EU 2026', date: 'Apr 2026', attendees: 1500, revenue: 1900000 },
+    { name: 'Open Source Summit NA', date: 'Mar 2026', attendees: 1200, revenue: 1400000 },
+    { name: 'Linux Plumbers Conference', date: 'Feb 2026', attendees: 950, revenue: 680000 },
+    { name: 'Cloud Native Security Con', date: 'Jan 2026', attendees: 750, revenue: 520000 },
   ];
 
   protected onClose(): void {

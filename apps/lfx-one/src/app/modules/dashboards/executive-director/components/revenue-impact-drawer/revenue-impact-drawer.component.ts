@@ -18,10 +18,14 @@ export class RevenueImpactDrawerComponent {
 
   // === Dummy Data ===
   protected readonly engagementTypes = [
-    { type: 'Emails', percentage: 42 },
-    { type: 'Calls', percentage: 28 },
-    { type: 'Meetings', percentage: 18 },
-    { type: 'Events', percentage: 12 },
+    { type: 'Events', percentage: 24 },
+    { type: 'Email Marketing', percentage: 19 },
+    { type: 'Website / Organic Search', percentage: 16 },
+    { type: 'Paid Social', percentage: 13 },
+    { type: 'Organic Social', percentage: 10 },
+    { type: 'Webinars', percentage: 8 },
+    { type: 'Content / SEO', percentage: 6 },
+    { type: 'Partner & Referral', percentage: 4 },
   ];
 
   protected onClose(): void {

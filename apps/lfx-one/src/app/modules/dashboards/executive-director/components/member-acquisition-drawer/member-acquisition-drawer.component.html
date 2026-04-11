@@ -157,6 +157,64 @@
       </div>
     }
 
+    <!-- Membership Pipeline -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-pipeline">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Membership Pipeline</h3>
+        <p class="text-sm text-gray-600">Salesforce pipeline status — current quarter</p>
+      </div>
+      <div class="flex gap-4">
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Open Pipeline</span>
+            <span class="text-2xl font-semibold text-gray-900">$1.8M</span>
+            <span class="text-xs text-gray-400">14 opportunities</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Closed-Won</span>
+            <span class="text-2xl font-semibold text-green-600">$420K</span>
+            <span class="text-xs text-gray-400">8 new members</span>
+          </div>
+        </lfx-card>
+        <lfx-card styleClass="flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-sm text-gray-500">Lost Deals</span>
+            <span class="text-2xl font-semibold text-red-600">$310K</span>
+            <span class="text-xs text-gray-400">5 lost this quarter</span>
+          </div>
+        </lfx-card>
+      </div>
+
+      <!-- Pipeline Deals Table -->
+      <div class="flex flex-col gap-0">
+        <div class="flex items-center justify-between py-2 px-1 text-xs font-semibold text-gray-500 uppercase border-b border-gray-200">
+          <span class="flex-1">Organization</span>
+          <span class="w-16 text-right">Tier</span>
+          <span class="w-20 text-right">Value</span>
+          <span class="w-24 text-right">Stage</span>
+        </div>
+        @for (deal of pipelineDeals; track deal.organization) {
+          <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="member-acquisition-drawer-deal-row">
+            <span class="flex-1 text-sm font-medium text-gray-900">{{ deal.organization }}</span>
+            <span class="w-16 text-right text-sm text-gray-500">{{ deal.tier }}</span>
+            <span class="w-20 text-right text-sm font-semibold text-gray-900">{{ deal.value }}</span>
+            <span
+              class="w-24 text-right text-xs font-medium px-2 py-0.5 rounded-full"
+              [class.bg-green-100]="deal.stage === 'Closed-Won'"
+              [class.text-green-700]="deal.stage === 'Closed-Won'"
+              [class.bg-red-100]="deal.stage === 'Lost'"
+              [class.text-red-700]="deal.stage === 'Lost'"
+              [class.bg-blue-100]="deal.stage !== 'Closed-Won' && deal.stage !== 'Lost'"
+              [class.text-blue-700]="deal.stage !== 'Closed-Won' && deal.stage !== 'Lost'">
+              {{ deal.stage }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
     <!-- Total Members Trend -->
     @if (data().totalMembersMonthlyData.length > 1) {
       <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-total-members-section">

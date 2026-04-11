@@ -32,8 +32,9 @@
     <div class="flex gap-4" data-testid="flywheel-conversion-drawer-stats">
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
-          <span class="text-sm text-gray-500">Conversion Rate</span>
+          <span class="text-sm text-gray-500">Re-engagement Rate</span>
           <span class="text-2xl font-semibold text-gray-900">{{ data().conversionRate }}%</span>
+          <span class="text-xs text-gray-400">Primary metric</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
@@ -57,6 +58,30 @@
           }
         </div>
       </lfx-card>
+    </div>
+
+    <!-- Secondary Metric: First-Ever Rate -->
+    <div class="flex flex-col gap-2 p-4 border border-gray-200 rounded-lg" data-testid="flywheel-conversion-drawer-first-ever">
+      <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm font-semibold text-gray-900">First-Ever Rate (Secondary)</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ firstEverRate }}%</span>
+        </div>
+        <lfx-tag value="New-to-Ecosystem" severity="info" [rounded]="true" />
+      </div>
+      <p class="text-sm text-gray-500">{{ firstEverDescription }}</p>
+    </div>
+
+    <!-- How This Metric Changed -->
+    <div class="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="flywheel-conversion-drawer-metric-change">
+      <i class="fa-light fa-circle-info text-blue-500 mt-0.5"></i>
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-semibold text-blue-900">How this metric changed</span>
+        <p class="text-sm text-blue-700">
+          Previously showed 0.03% using "first-ever" logic — only counted attendees whose first-ever activity fell within 90 days. Now shows re-engagement rate
+          (any activity within 90 days post-event), which better reflects flywheel health. The first-ever rate is shown above as a secondary metric.
+        </p>
+      </div>
     </div>
 
     <!-- FIRST FOLD: Needs Your Attention -->
@@ -133,12 +158,37 @@
       </div>
     }
 
-    <!-- Conversion Funnel Chart -->
+    <!-- Conversion Funnel -->
     <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="flywheel-conversion-drawer-funnel-section">
       <div class="flex flex-col gap-1">
         <h3 class="text-sm font-semibold text-gray-900">Conversion Funnel (90-day window)</h3>
-        <p class="text-sm text-gray-600">Event attendees converting to community or working group membership</p>
+        <p class="text-sm text-gray-600">Event attendees converting through newsletter, community, and working groups</p>
       </div>
+
+      <!-- Step-Down Funnel Numbers -->
+      <div class="flex items-center justify-between gap-2 py-2" data-testid="flywheel-conversion-drawer-funnel-steps">
+        <div class="flex flex-col items-center gap-1 flex-1">
+          <span class="text-xs text-gray-500">Attendees</span>
+          <span class="text-lg font-semibold text-gray-900">{{ formatNumber(data().funnel.eventAttendees) }}</span>
+        </div>
+        <i class="fa-light fa-chevron-right text-gray-300"></i>
+        <div class="flex flex-col items-center gap-1 flex-1">
+          <span class="text-xs text-gray-500">Newsletter</span>
+          <span class="text-lg font-semibold text-gray-900">{{ formatNumber(data().funnel.convertedToNewsletter) }}</span>
+        </div>
+        <i class="fa-light fa-chevron-right text-gray-300"></i>
+        <div class="flex flex-col items-center gap-1 flex-1">
+          <span class="text-xs text-gray-500">Community</span>
+          <span class="text-lg font-semibold text-gray-900">{{ formatNumber(data().funnel.convertedToCommunity) }}</span>
+        </div>
+        <i class="fa-light fa-chevron-right text-gray-300"></i>
+        <div class="flex flex-col items-center gap-1 flex-1">
+          <span class="text-xs text-gray-500">Working Group</span>
+          <span class="text-lg font-semibold text-gray-900">{{ formatNumber(data().funnel.convertedToWorkingGroup) }}</span>
+        </div>
+      </div>
+
+      <!-- Funnel Bar Chart -->
       <div class="h-[200px]" data-testid="flywheel-conversion-drawer-funnel-chart">
         <lfx-chart type="bar" [data]="funnelChartData()" [options]="funnelChartOptions" height="100%"></lfx-chart>
       </div>

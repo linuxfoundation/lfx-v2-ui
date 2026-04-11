@@ -123,23 +123,6 @@ export class EngagedCommunityDrawerComponent {
 
   protected readonly formatNumber = formatNumber;
 
-  /** Hardcoded 6-month email CTR trend for prototype */
-  protected readonly emailTrendChartData = {
-    labels: ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
-    datasets: [
-      {
-        data: [3.4, 3.6, 3.8, 3.9, 4.0, 4.2],
-        borderColor: lfxColors.blue[500],
-        backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-        fill: true,
-        tension: 0.4,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: lfxColors.blue[500],
-      },
-    ],
-  };
-
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
@@ -265,11 +248,11 @@ export class EngagedCommunityDrawerComponent {
     return computed(() => {
       const { breakdown } = this.data();
       return {
-        labels: ['Community', 'Working Groups', 'Certified'],
+        labels: ['Community', 'Newsletter', 'Working Groups', 'Certified'],
         datasets: [
           {
-            data: [breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
-            backgroundColor: [lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
+            data: [breakdown.communityMembers, breakdown.newsletterSubscribers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
+            backgroundColor: [lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300], lfxColors.blue[200]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },
