@@ -511,24 +511,31 @@ export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
 ];
 
 /**
- * ED Evolution prototype — 8 cards with dummy data
- * 5 North Star + 2 Brand + 1 Influence
+ * ED Evolution prototype — 7 cards with dummy data
+ * 4 North Star + 2 Brand + 1 Influence
+ * Member Retention is merged into the Member Growth drawer.
  */
 export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
-  // === North Star (5 cards) ===
+  // === North Star (4 cards — retention merged into Member Growth drawer) ===
   {
     title: 'Flywheel Conversion',
     icon: 'fa-light fa-arrows-spin',
     chartType: 'line',
     category: 'memberships',
     testId: 'ed-evo-flywheel-conversion',
+    customContentType: 'funnel',
     value: '24.6%',
     changePercentage: '+2.1% MoM',
     trend: 'up',
-    subtitle: 'Re-engagement within 90 days post-event',
-    chartData: protoSparkline([18.2, 19.5, 21.0, 22.3, 23.1, 24.6], lfxColors.blue[500]),
-    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    tooltipText: 'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event.',
+    subtitle: 'Re-engagement within 90 days · Last 6 months',
+    funnelSteps: [
+      { label: 'Attendees', value: '8.2K' },
+      { label: 'Newsletter', value: '1.4K' },
+      { label: 'Community', value: '890' },
+      { label: 'WG', value: '310' },
+    ],
+    tooltipText:
+      'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event. Funnel: 8,200 → 1,420 → 890 → 310.',
     drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
   },
   {
@@ -538,28 +545,13 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
     category: 'memberships',
     testId: 'ed-evo-member-growth',
     value: '245',
-    changePercentage: '+8 this quarter',
+    changePercentage: '+3.0% MoM',
     trend: 'up',
-    subtitle: '$420K new member revenue',
+    subtitle: '87.2% retention · NRR 103% · Last 6 months',
     chartData: protoSparkline([210, 218, 225, 231, 238, 245], lfxColors.blue[500]),
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    tooltipText: 'Total paying corporate members and quarterly net new. Source: Salesforce B2B memberships.',
+    tooltipText: 'Total paying corporate members with monthly net new over the last 6 months. Source: Salesforce B2B memberships.',
     drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
-  },
-  {
-    title: 'Member Retention',
-    icon: 'fa-light fa-arrow-rotate-right',
-    chartType: 'line',
-    category: 'memberships',
-    testId: 'ed-evo-member-retention',
-    value: '87.2%',
-    changePercentage: '+1.4% MoM',
-    trend: 'up',
-    subtitle: 'NRR: 103% · Target: 85% ✓',
-    chartData: protoSparkline([83.1, 84.0, 85.2, 85.8, 86.5, 87.2], lfxColors.emerald[500]),
-    chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    tooltipText: 'Annual renewal rate and net revenue retention for paying members. Source: Salesforce membership renewals.',
-    drawerType: DashboardDrawerType.NorthStarMemberRetention,
   },
   {
     title: 'Engaged Community',
@@ -570,7 +562,7 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
     value: '12,400',
     changePercentage: '+3.2% MoM',
     trend: 'up',
-    subtitle: '4 channels',
+    subtitle: '4 channels · Last 6 months',
     chartData: protoSparkline([10800, 11200, 11500, 11800, 12100, 12400], lfxColors.blue[500]),
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
     tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
@@ -579,16 +571,16 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
   {
     title: 'Event Growth',
     icon: 'fa-light fa-calendar-star',
-    chartType: 'bar',
+    chartType: 'line',
     category: 'memberships',
     testId: 'ed-evo-event-growth',
     value: '8,200',
-    changePercentage: '+18% YoY',
+    changePercentage: '+9.3% MoM',
     trend: 'up',
-    subtitle: '12 events this quarter',
+    subtitle: 'Monthly attendees · Last 6 months',
     chartData: protoSparkline([5200, 5800, 6400, 7100, 7500, 8200], lfxColors.blue[500]),
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    tooltipText: 'Total event attendees this quarter with year-over-year growth. Source: Event registrations.',
+    tooltipText: 'Total monthly event attendees over the last 6 months. Source: Event registrations.',
     drawerType: DashboardDrawerType.NorthStarEventGrowth,
   },
 
@@ -615,7 +607,7 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
     testId: 'ed-evo-brand-health',
     customContentType: 'dual-signal',
     dualSignals: [
-      protoDualSignal('Mentions', '2,400', [1800, 1950, 2100, 2200, 2300, 2400], lfxColors.blue[500], '+12% vs 30d', 'up'),
+      protoDualSignal('Mentions', '2,400', [1800, 1950, 2100, 2200, 2300, 2400], lfxColors.blue[500], '+4.3% MoM', 'up'),
       protoDualSignal('Positive Sentiment', '72%', [65, 67, 68, 70, 71, 72], lfxColors.emerald[500], '+2pp MoM', 'up'),
     ],
     tooltipText: 'Total brand mentions across social and web (Octolens) with sentiment breakdown.',
@@ -624,7 +616,7 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
 
   // === Influence (1 dual-signal card) ===
   {
-    title: 'Revenue Impact',
+    title: 'Marketing Attribution',
     icon: 'fa-light fa-money-bill-trend-up',
     chartType: 'line',
     category: 'influence',
@@ -632,8 +624,8 @@ export const ED_EVOLUTION_METRICS: DashboardMetricCard[] = [
     customContentType: 'dual-signal',
     caption: '$5.5M attributed of $12.3M total (44% match rate)',
     dualSignals: [
-      protoDualSignal('Pipeline Influenced', '$2.1M', [1200, 1400, 1600, 1800, 1950, 2100], lfxColors.blue[500], '+15% QoQ', 'up'),
-      protoDualSignal('Revenue Attributed', '$5.5M', [3800, 4200, 4600, 4900, 5200, 5500], lfxColors.emerald[500], '+22% QoQ', 'up'),
+      protoDualSignal('Pipeline Influenced', '$2.1M', [1200, 1400, 1600, 1800, 1950, 2100], lfxColors.blue[500], '+7.7% MoM', 'up'),
+      protoDualSignal('Revenue Attributed', '$5.5M', [3800, 4200, 4600, 4900, 5200, 5500], lfxColors.emerald[500], '+5.8% MoM', 'up'),
     ],
     tooltipText: 'Marketing-influenced pipeline value and multi-touch attributed revenue. Match rate shows measurement confidence.',
     drawerType: DashboardDrawerType.RevenueImpact,
