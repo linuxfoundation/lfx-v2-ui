@@ -48,7 +48,6 @@ export interface CertificateRow {
   EXPIRATION_DATE: string | null;
   DOWNLOAD_URL: string | null;
   LEVEL: string;
-  PRODUCT_TYPE: string;
 }
 
 /**
@@ -57,11 +56,9 @@ export interface CertificateRow {
 export interface EnrollmentRow {
   ENROLLMENT_ID: string;
   ENROLLMENT_TS: string;
-  USER_NAME: string;
   LOGO_URL: string;
   COURSE_NAME: string;
   COURSE_GROUP_DESCRIPTION: string;
-  PRODUCT_TYPE: string;
   PROJECT_NAME: string;
   LEVEL: string;
 }

@@ -44,6 +44,7 @@ export class TrainingCardComponent {
   private initDate(): Signal<string> {
     return computed(() => {
       const t = this.training();
+      // variant='ongoing' → caller passes TrainingEnrollment; variant='completed' → Certification
       if (this.variant() === 'ongoing') {
         return (t as TrainingEnrollment).enrolledDate ?? '';
       }
