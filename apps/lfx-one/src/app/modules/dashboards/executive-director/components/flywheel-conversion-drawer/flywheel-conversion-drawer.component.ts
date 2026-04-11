@@ -120,6 +120,11 @@ export class FlywheelConversionDrawerComponent {
 
   protected readonly formatNumber = formatNumber;
 
+  /** Hardcoded "first-ever" rate for prototype — shows alongside re-engagement as secondary metric */
+  protected readonly firstEverRate = 4.8;
+  protected readonly firstEverDescription =
+    'Attendees whose first-ever newsletter, community, or WG activity falls within 90 days post-event. Stricter than re-engagement — counts only net-new ecosystem participants.';
+
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
@@ -268,10 +273,10 @@ export class FlywheelConversionDrawerComponent {
     return computed(() => {
       const { funnel } = this.data();
       return {
-        labels: ['Event Attendees', 'Converted to Community', 'Converted to WG'],
+        labels: ['Event Attendees', 'Newsletter', 'Community', 'Working Group'],
         datasets: [
           {
-            data: [funnel.eventAttendees, funnel.convertedToCommunity, funnel.convertedToWorkingGroup],
+            data: [funnel.eventAttendees, funnel.convertedToNewsletter, funnel.convertedToCommunity, funnel.convertedToWorkingGroup],
             backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
