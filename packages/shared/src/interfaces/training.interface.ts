@@ -30,6 +30,8 @@ export interface Certification {
   status: CertificationStatus;
   /** URL to download the certificate; null if unavailable */
   downloadUrl: string | null;
+  /** Difficulty level (e.g. Beginner, Intermediate, Advanced) */
+  level: string;
 }
 
 /**
@@ -45,4 +47,41 @@ export interface CertificateRow {
   ISSUED_TS: string;
   EXPIRATION_DATE: string | null;
   DOWNLOAD_URL: string | null;
+  LEVEL: string;
+  PRODUCT_TYPE: string;
+}
+
+/**
+ * Snowflake row shape for ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
+ */
+export interface EnrollmentRow {
+  ENROLLMENT_ID: string;
+  ENROLLMENT_TS: string;
+  USER_NAME: string;
+  LOGO_URL: string;
+  COURSE_NAME: string;
+  COURSE_GROUP_DESCRIPTION: string;
+  PRODUCT_TYPE: string;
+  PROJECT_NAME: string;
+  LEVEL: string;
+}
+
+/**
+ * A training course the user is currently enrolled in
+ */
+export interface TrainingEnrollment {
+  /** ENROLLMENT_ID */
+  id: string;
+  /** COURSE_NAME */
+  name: string;
+  /** COURSE_GROUP_DESCRIPTION */
+  description: string;
+  /** LOGO_URL */
+  imageUrl: string;
+  /** PROJECT_NAME */
+  issuedBy: string;
+  /** ENROLLMENT_TS (ISO string) */
+  enrolledDate: string;
+  /** Difficulty level (e.g. Beginner, Intermediate, Advanced) */
+  level: string;
 }
