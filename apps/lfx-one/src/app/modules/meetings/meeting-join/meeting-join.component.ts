@@ -29,6 +29,7 @@ import {
   MeetingRegistrant,
   MEETING_TYPE_CONFIGS,
   PastMeetingAttachment,
+  PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
   Project,
@@ -49,7 +50,22 @@ import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, EMPTY, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  debounceTime,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  map,
+  Observable,
+  of,
+  startWith,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { GuestFormComponent } from '../components/guest-form/guest-form.component';
 import { MeetingRsvpDetailsComponent } from '../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -152,26 +168,31 @@ export class MeetingJoinComponent implements OnInit {
   protected rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
   protected rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
   protected hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
-  public isMobileViewport = signal(false);
-  public drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
+  protected userInitials = computed(() => {
+    const name = this.user()?.name || 'User';
+    return name.substring(0, 2).toUpperCase();
+  });
+  protected isMobileViewport = signal(false);
+  protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
   // Parent project (foundation) for context display
-  public parentProject: Signal<Project | null>;
+  protected parentProject: Signal<Project | null>;
   // Registrant + committee member list
-  public registrants: Signal<MeetingRegistrant[]>;
-  public committeeMembers: Signal<CommitteeMember[]>;
+  protected registrants: Signal<MeetingRegistrant[]>;
+  protected committeeMembers: Signal<CommitteeMember[]>;
   // Counts from actual data
-  public rsvpMaybeCount = computed(() => this.registrants().filter((r) => r.rsvp?.response === 'maybe').length);
-  public totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
-  // Past meeting attendance stats
-  public participantCount = computed(() => this.meeting()?.participant_count ?? 0);
-  public attendedCount = computed(() => this.meeting()?.attended_count ?? 0);
-  public absentCount = computed(() => this.participantCount() - this.attendedCount());
-  public attendancePercentage = computed(() => {
+  protected totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
+  // Past meeting participants (fetched from API for attendance stats)
+  protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
+  // Past meeting attendance stats (derived from participants)
+  protected participantCount = computed(() => this.pastMeetingParticipants().length);
+  protected attendedCount = computed(() => this.pastMeetingParticipants().filter((p) => p.is_attended).length);
+  protected absentCount = computed(() => this.participantCount() - this.attendedCount());
+  protected attendancePercentage = computed(() => {
     const total = this.participantCount();
     const attended = this.attendedCount();
     return total > 0 ? Math.round((attended / total) * 100) : 0;
   });
-  public hasAttendanceData = computed(() => this.isPastMeeting() && this.participantCount() > 0);
+  protected hasAttendanceData = computed(() => this.isPastMeeting() && this.participantCount() > 0);
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -199,6 +220,7 @@ export class MeetingJoinComponent implements OnInit {
     this.pastMeetingAttachments = this.initializePastMeetingAttachments();
     this.primaryRecordingUrl = this.initializePrimaryRecordingUrl();
     this.transcriptUrl = this.initializeTranscriptUrl();
+    this.pastMeetingParticipants = this.initializePastMeetingParticipants();
 
     // Initialize invited/registration signals
     this.isInvited = this.initializeIsInvited();
@@ -268,7 +290,7 @@ export class MeetingJoinComponent implements OnInit {
   }
 
   public onShowMembersPlaceholder(): void {
-    console.warn('Show Members clicked — attendees drawer coming in Phase 4');
+    this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Attendees list will be available soon.', life: 3000 });
   }
 
   public onRsvpViewToggle(): void {
@@ -641,6 +663,7 @@ export class MeetingJoinComponent implements OnInit {
           if (meeting.visibility === 'public' && !meeting.restricted) return true;
           return this.authenticated();
         }),
+        distinctUntilChanged((a, b) => a.id === b.id),
         switchMap((meeting) => this.meetingService.getMeetingAttachments(meeting.id)),
         catchError(() => of([] as MeetingAttachment[]))
       ),
@@ -747,6 +770,18 @@ export class MeetingJoinComponent implements OnInit {
     );
   }
 
+  private initializePastMeetingParticipants(): Signal<PastMeetingParticipant[]> {
+    return toSignal(
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of([] as PastMeetingParticipant[]);
+          return this.meetingService.getPastMeetingParticipants(meeting.id).pipe(catchError(() => of([] as PastMeetingParticipant[])));
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
   private initializePrimaryRecordingUrl(): Signal<string | null> {
     return computed(() => {
       const recording = this.pastMeetingRecording();
@@ -785,7 +820,7 @@ export class MeetingJoinComponent implements OnInit {
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id),
+        filter((meeting) => !!meeting?.id && this.authenticated()),
         distinctUntilChanged((a, b) => a.id === b.id),
         switchMap((meeting) => {
           if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
@@ -799,7 +834,7 @@ export class MeetingJoinComponent implements OnInit {
   private initializeCommitteeMembers(): Signal<CommitteeMember[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id),
+        filter((meeting) => !!meeting?.id && this.authenticated()),
         distinctUntilChanged((a, b) => a.id === b.id),
         switchMap((meeting) => {
           const committeeUids = (meeting.committees || []).map((c) => c.uid).filter(Boolean);
