@@ -121,6 +121,18 @@ export class MemberAcquisitionDrawerComponent {
 
   protected readonly formatNumber = formatNumber;
 
+  /** Hardcoded pipeline deals for prototype */
+  protected readonly pipelineDeals = [
+    { organization: 'Acme Corp', tier: 'Gold', value: '$250K', stage: 'Negotiation' },
+    { organization: 'TechGlobal Inc', tier: 'Platinum', value: '$500K', stage: 'Proposal' },
+    { organization: 'DataStream Ltd', tier: 'Silver', value: '$75K', stage: 'Closed-Won' },
+    { organization: 'CloudNative Co', tier: 'Gold', value: '$180K', stage: 'Closed-Won' },
+    { organization: 'SecureOps AG', tier: 'Silver', value: '$95K', stage: 'Discovery' },
+    { organization: 'NetScale Systems', tier: 'Gold', value: '$200K', stage: 'Lost' },
+    { organization: 'DevPlatform.io', tier: 'Silver', value: '$110K', stage: 'Lost' },
+    { organization: 'InfraCore Inc', tier: 'Platinum', value: '$400K', stage: 'Negotiation' },
+  ];
+
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
