@@ -31,7 +31,7 @@ export type MetricCategory =
  * Custom content type for specialized metric cards
  * @description Determines what type of custom content to render in the metric card
  */
-export type CustomContentType = 'bar-chart' | 'top-projects' | 'bus-factor' | 'health-scores' | 'dual-signal';
+export type CustomContentType = 'bar-chart' | 'top-projects' | 'bus-factor' | 'health-scores' | 'dual-signal' | 'funnel';
 
 /**
  * Unified dashboard metric card interface
@@ -112,6 +112,13 @@ export interface DashboardMetricCard {
 
   /** Caption text below dual-signal card (e.g., "$X attributed of $Y total (Z% match rate)") */
   caption?: string;
+
+  // ============================================
+  // Funnel Card (Flywheel Conversion)
+  // ============================================
+
+  /** Steps for the funnel card (e.g., Attendees → Newsletter → Community → WG) */
+  funnelSteps?: FunnelStep[];
 
   // ============================================
   // Foundation Health Specific
@@ -280,6 +287,17 @@ export interface DualSignalRow {
   trend?: 'up' | 'down';
   /** Sparkline chart data for this signal */
   chartData?: ChartData<ChartType>;
+}
+
+/**
+ * A single step in a funnel visualization on a metric card
+ * @description Used for the Flywheel Conversion card to show the step-down funnel
+ */
+export interface FunnelStep {
+  /** Short label (e.g., "Attendees", "Newsletter") */
+  label: string;
+  /** Display value (e.g., "8.2K", "1.4K") */
+  value: string;
 }
 
 /**
