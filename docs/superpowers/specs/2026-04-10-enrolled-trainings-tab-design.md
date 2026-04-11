@@ -41,6 +41,18 @@ Completed trainings are certificates with `PRODUCT_TYPE = 'Training'`. Reuses th
 
 ## Shared Package
 
+### New constants in `packages/shared/src/constants/training.constants.ts`
+
+```typescript
+export const TRAINING_PRODUCT_TYPE = 'Training' as const;
+export const CERTIFICATION_PRODUCT_TYPE = 'Certification' as const;
+export type ProductType = typeof TRAINING_PRODUCT_TYPE | typeof CERTIFICATION_PRODUCT_TYPE;
+
+export const CONTINUE_LEARNING_URL = 'https://trainingportal.linuxfoundation.org/learn/dashboard';
+```
+
+These constants are used by both frontend (service calls) and backend (Snowflake queries) to avoid inline string literals.
+
 ### New interfaces in `packages/shared/src/interfaces/training.interface.ts`
 
 ```typescript
@@ -100,11 +112,13 @@ Maps rows via `mapRowToEnrollment()`. Returns `[]` on Snowflake failure (gracefu
 
 ### Updated endpoint: `GET /api/training/certifications`
 
-Add optional `productType` query parameter.
+Add required `productType` query parameter.
 
-**Controller:** Passes `req.query.productType` to service.
+**Controller:** Extracts via `req.query['productType'] ? String(req.query['productType']) : undefined` (matching `events.controller.ts` pattern). Passes to service.
 
-**Service:** Updated Snowflake query:
+**Service:** Updated signature: `getCertifications(req, username, productType?: string)`
+
+Updated Snowflake query — `LEVEL` added to SELECT, conditional `PRODUCT_TYPE` filter:
 ```sql
 -- When productType is provided:
 SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
@@ -113,7 +127,7 @@ FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
 WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
 ORDER BY ISSUED_TS DESC
 
--- When not provided:
+-- When not provided (backwards compat, not used by frontend):
 SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
        LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL, LEVEL
 FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
@@ -121,7 +135,7 @@ WHERE USER_NAME = ?
 ORDER BY ISSUED_TS DESC
 ```
 
-`LEVEL` added to SELECT and row mapping.
+Row mapping updated: `mapRowToCertification` maps `LEVEL` to `level`.
 
 ## Frontend
 
@@ -131,24 +145,34 @@ Update `apps/lfx-one/src/app/shared/services/training.service.ts`:
 
 ```typescript
 // New method
-getEnrollments(): Observable<TrainingEnrollment[]>
-// → GET /api/training/enrollments
+public getEnrollments(): Observable<TrainingEnrollment[]> {
+  return this.http.get<TrainingEnrollment[]>('/api/training/enrollments')
+    .pipe(catchError(() => of([])));
+}
 
-// Updated — add optional productType filter
-getCertifications(productType?: string): Observable<Certification[]>
-// → GET /api/training/certifications or GET /api/training/certifications?productType=X
+// Updated — add optional productType filter using HttpParams
+public getCertifications(productType?: string): Observable<Certification[]> {
+  let params = new HttpParams();
+  if (productType) {
+    params = params.set('productType', productType);
+  }
+  return this.http.get<Certification[]>('/api/training/certifications', { params })
+    .pipe(catchError(() => of([])));
+}
 ```
+
+Uses `HttpParams` for query parameter construction (matching `project.service.ts`, `search.service.ts` patterns).
 
 ### TrainingsDashboardComponent updates
 
-**New signals:**
+**New signals (via private init functions per component-organization rules):**
 - `enrollments: Signal<TrainingEnrollment[] | undefined>` — from `trainingService.getEnrollments()`
-- `completedTrainings: Signal<Certification[] | undefined>` — from `trainingService.getCertifications('Training')`
+- `completedTrainings: Signal<Certification[] | undefined>` — from `trainingService.getCertifications(TRAINING_PRODUCT_TYPE)`
 
 **Updated signals:**
-- `certifications` — now calls `trainingService.getCertifications('Certification')`
+- `certifications` — now calls `trainingService.getCertifications(CERTIFICATION_PRODUCT_TYPE)`
 
-All three signals initialized eagerly on component init (no lazy loading per tab — tab switching is instant).
+All three signals initialized eagerly on component init (no lazy loading per tab — tab switching is instant). Uses `toSignal()` without `initialValue` so the signal starts as `undefined`, enabling loading state detection (same pattern as existing `certifications` signal).
 
 **Template for Enrolled Trainings tab:**
 ```
@@ -171,9 +195,11 @@ All three signals initialized eagerly on component init (no lazy loading per tab
 
 **Location:** `modules/trainings/components/training-card/`
 
-**Inputs:**
-- `training: InputSignal<TrainingEnrollment | Certification>` — the training data
-- `variant: InputSignal<'ongoing' | 'completed'>` — defaults to `'ongoing'`
+**Inputs (matching `input()` / `input.required()` pattern from `certification-card.component.ts`):**
+```typescript
+public readonly training = input.required<TrainingEnrollment | Certification>();
+public readonly variant = input<'ongoing' | 'completed'>('ongoing');
+```
 
 **Card layout:**
 - **Left:** 56x56 logo with fallback book icon (fa-light fa-book-open)
@@ -184,18 +210,24 @@ All three signals initialized eagerly on component init (no lazy loading per tab
     - Ongoing: Enrolled date only
     - Completed: Completed date (from `issuedDate`) | "Download certificate" button (if `downloadUrl`)
 
+**Computed signals (via private init functions):**
+- `hasImage` — whether `imageUrl` is non-empty
+- `isOngoing` — derived from `variant() === 'ongoing'`
+- `date` — returns `enrolledDate` (ongoing) or `issuedDate` (completed) based on variant
+- `dateLabel` — returns `'Enrolled'` or `'Completed'` based on variant
+
 **Level badge styling:**
 - Simple inline pill with light background and colored text
 - Color varies by level value (e.g., Beginner = blue, Intermediate = purple, Advanced = orange)
 
 **"Continue Learning" button:**
-- Links to `https://trainingportal.linuxfoundation.org/learn/dashboard` (hardcoded for now)
+- Links to `CONTINUE_LEARNING_URL` constant (hardcoded for now)
 - Opens in new tab
 
 **"Download certificate" button:**
 - Links to `downloadUrl` from `Certification` interface
 - Opens in new tab
-- Only shown when `downloadUrl` is non-null
+- Only shown when variant is `'completed'` and `downloadUrl` is non-null
 
 ## States
 
