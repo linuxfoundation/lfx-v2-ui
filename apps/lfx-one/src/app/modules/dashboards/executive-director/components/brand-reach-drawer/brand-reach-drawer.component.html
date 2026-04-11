@@ -50,12 +50,50 @@
       </lfx-card>
     </div>
 
-    <!-- Placeholder -->
-    <div class="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50" data-testid="brand-reach-drawer-placeholder">
-      <i class="fa-light fa-circle-info text-gray-400 mt-0.5"></i>
-      <p class="text-sm text-gray-500">
-        Per-platform follower breakdown, per-domain session breakdown, and daily trends will appear here when connected to live data.
-      </p>
+    <!-- Social Followers by Platform -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-social-platforms">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Social Followers by Platform</h3>
+        <p class="text-sm text-gray-600">Follower count across active social channels</p>
+      </div>
+      <div class="flex flex-col gap-0">
+        @for (platform of socialPlatforms; track platform.name) {
+          <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="brand-reach-drawer-platform-row">
+            <div class="flex items-center gap-3">
+              <i [class]="platform.icon + ' ' + platform.color + ' text-lg w-5 text-center'"></i>
+              <span class="text-sm font-medium text-gray-900">{{ platform.name }}</span>
+            </div>
+            <span class="text-sm font-semibold text-gray-900">{{ platform.followers }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Website Sessions by Domain -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-website-sessions">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Website Sessions by Domain</h3>
+        <p class="text-sm text-gray-600">Monthly sessions across foundation web properties</p>
+      </div>
+      <div class="flex flex-col gap-0">
+        @for (site of websiteDomains; track site.domain) {
+          <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="brand-reach-drawer-domain-row">
+            <span class="text-sm font-medium text-gray-900">{{ site.domain }}</span>
+            <span class="text-sm font-semibold text-gray-900">{{ site.sessions }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Daily Sessions Trend -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-daily-trend">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Daily Sessions Trend</h3>
+        <p class="text-sm text-gray-600">Website sessions over the last 30 days</p>
+      </div>
+      <div class="h-[240px]" data-testid="brand-reach-drawer-daily-chart">
+        <lfx-chart type="line" [data]="dailyTrendData" [options]="dailyTrendOptions" height="100%"></lfx-chart>
+      </div>
     </div>
   </div>
 </p-drawer>

@@ -16,6 +16,14 @@ import { DrawerModule } from 'primeng/drawer';
 export class RevenueImpactDrawerComponent {
   public readonly visible = model<boolean>(false);
 
+  // === Dummy Data ===
+  protected readonly engagementTypes = [
+    { type: 'Emails', percentage: 42 },
+    { type: 'Calls', percentage: 28 },
+    { type: 'Meetings', percentage: 18 },
+    { type: 'Events', percentage: 12 },
+  ];
+
   protected onClose(): void {
     this.visible.set(false);
   }

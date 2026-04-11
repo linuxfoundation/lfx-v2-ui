@@ -123,6 +123,23 @@ export class EngagedCommunityDrawerComponent {
 
   protected readonly formatNumber = formatNumber;
 
+  /** Hardcoded 6-month email CTR trend for prototype */
+  protected readonly emailTrendChartData = {
+    labels: ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+    datasets: [
+      {
+        data: [3.4, 3.6, 3.8, 3.9, 4.0, 4.2],
+        borderColor: lfxColors.blue[500],
+        backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: lfxColors.blue[500],
+      },
+    ],
+  };
+
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
