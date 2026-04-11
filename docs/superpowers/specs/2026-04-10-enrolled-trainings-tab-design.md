@@ -14,17 +14,17 @@ Add a functional "Enrolled Trainings" tab to the Training & Certifications page 
 
 New table created by DBT model.
 
-| Column | Type | UI Usage |
-|---|---|---|
-| `ENROLLMENT_ID` | string | Unique record ID |
-| `ENROLLMENT_TS` | timestamp | "Enrolled" date |
-| `USER_NAME` | string | User filtering (LFID) |
-| `LOGO_URL` | string | Course logo |
-| `COURSE_NAME` | string | Course name |
-| `COURSE_GROUP_DESCRIPTION` | string | Course description |
-| `PRODUCT_TYPE` | string | Filter: `'Training'` only |
-| `PROJECT_NAME` | string | Issuing project |
-| `LEVEL` | string | Difficulty level (e.g., "Beginner", "Intermediate") |
+| Column                     | Type      | UI Usage                                            |
+| -------------------------- | --------- | --------------------------------------------------- |
+| `ENROLLMENT_ID`            | string    | Unique record ID                                    |
+| `ENROLLMENT_TS`            | timestamp | "Enrolled" date                                     |
+| `USER_NAME`                | string    | User filtering (LFID)                               |
+| `LOGO_URL`                 | string    | Course logo                                         |
+| `COURSE_NAME`              | string    | Course name                                         |
+| `COURSE_GROUP_DESCRIPTION` | string    | Course description                                  |
+| `PRODUCT_TYPE`             | string    | Filter: `'Training'` only                           |
+| `PROJECT_NAME`             | string    | Issuing project                                     |
+| `LEVEL`                    | string    | Difficulty level (e.g., "Beginner", "Intermediate") |
 
 Columns present in table but not used in UI: `USER_ID`, `LEARNER_NAME`, `COURSE_GROUP_ID`, `COURSE_ID`, `INSTRUCTION_TYPE`, `PROJECT_ID`.
 
@@ -35,6 +35,7 @@ Existing table, updated with new columns: `PRODUCT_TYPE`, `LEVEL`.
 Completed trainings are certificates with `PRODUCT_TYPE = 'Training'`. Reuses the existing `Certification` interface with `level` added.
 
 **Key field mapping for completed trainings:**
+
 - Completion date → `ISSUED_TS`
 - Download certificate → `DOWNLOAD_URL`
 - No enrollment date available (not in this table)
@@ -69,13 +70,13 @@ export interface EnrollmentRow {
 }
 
 export interface TrainingEnrollment {
-  id: string;           // ENROLLMENT_ID
-  name: string;         // COURSE_NAME
-  description: string;  // COURSE_GROUP_DESCRIPTION
-  imageUrl: string;     // LOGO_URL
-  issuedBy: string;     // PROJECT_NAME
+  id: string; // ENROLLMENT_ID
+  name: string; // COURSE_NAME
+  description: string; // COURSE_GROUP_DESCRIPTION
+  imageUrl: string; // LOGO_URL
+  issuedBy: string; // PROJECT_NAME
   enrolledDate: string; // ENROLLMENT_TS (ISO string)
-  level: string;        // LEVEL
+  level: string; // LEVEL
 }
 ```
 
@@ -93,6 +94,7 @@ Returns ongoing training enrollments for the authenticated user.
 **Route:** Added to `apps/lfx-one/src/server/routes/training.route.ts`
 
 **Controller method:** `getEnrollments(req, res, next)`
+
 - Extracts username via `getUsernameFromAuth(req)` + `stripAuthPrefix()`
 - Throws `AuthenticationError` if no username
 - Calls `trainingService.getEnrollments(req, username)`
@@ -119,6 +121,7 @@ Add required `productType` query parameter.
 **Service:** Updated signature: `getCertifications(req, username, productType?: string)`
 
 Updated Snowflake query — `LEVEL` added to SELECT, conditional `PRODUCT_TYPE` filter:
+
 ```sql
 -- When productType is provided:
 SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
@@ -166,15 +169,18 @@ Uses `HttpParams` for query parameter construction (matching `project.service.ts
 ### TrainingsDashboardComponent updates
 
 **New signals (via private init functions per component-organization rules):**
+
 - `enrollments: Signal<TrainingEnrollment[] | undefined>` — from `trainingService.getEnrollments()`
 - `completedTrainings: Signal<Certification[] | undefined>` — from `trainingService.getCertifications(TRAINING_PRODUCT_TYPE)`
 
 **Updated signals:**
+
 - `certifications` — now calls `trainingService.getCertifications(CERTIFICATION_PRODUCT_TYPE)`
 
 All three signals initialized eagerly on component init (no lazy loading per tab — tab switching is instant). Uses `toSignal()` without `initialValue` so the signal starts as `undefined`, enabling loading state detection (same pattern as existing `certifications` signal).
 
 **Template for Enrolled Trainings tab:**
+
 ```
 @if (activeTab() === 'enrolled-trainings') {
   <!-- Loading state if either is still loading -->
@@ -196,12 +202,14 @@ All three signals initialized eagerly on component init (no lazy loading per tab
 **Location:** `modules/trainings/components/training-card/`
 
 **Inputs (matching `input()` / `input.required()` pattern from `certification-card.component.ts`):**
+
 ```typescript
 public readonly training = input.required<TrainingEnrollment | Certification>();
 public readonly variant = input<'ongoing' | 'completed'>('ongoing');
 ```
 
 **Card layout:**
+
 - **Left:** 56x56 logo with fallback book icon (fa-light fa-book-open)
 - **Right column:**
   - **Row 1:** Course name (h3) + Level badge (pill) + Project name | "Continue Learning" button (ongoing only)
@@ -211,20 +219,24 @@ public readonly variant = input<'ongoing' | 'completed'>('ongoing');
     - Completed: Completed date (from `issuedDate`) | "Download certificate" button (if `downloadUrl`)
 
 **Computed signals (via private init functions):**
+
 - `hasImage` — whether `imageUrl` is non-empty
 - `isOngoing` — derived from `variant() === 'ongoing'`
 - `date` — returns `enrolledDate` (ongoing) or `issuedDate` (completed) based on variant
 - `dateLabel` — returns `'Enrolled'` or `'Completed'` based on variant
 
 **Level badge styling:**
+
 - Simple inline pill with light background and colored text
 - Color varies by level value (e.g., Beginner = blue, Intermediate = purple, Advanced = orange)
 
 **"Continue Learning" button:**
+
 - Links to `CONTINUE_LEARNING_URL` constant (hardcoded for now)
 - Opens in new tab
 
 **"Download certificate" button:**
+
 - Links to `downloadUrl` from `Certification` interface
 - Opens in new tab
 - Only shown when variant is `'completed'` and `downloadUrl` is non-null
@@ -234,6 +246,7 @@ public readonly variant = input<'ongoing' | 'completed'>('ongoing');
 **Loading:** 3 skeleton cards per section (same pulse animation pattern as certifications tab).
 
 **Empty states:**
+
 - Both sections empty → single centered empty state: book icon, "No enrolled trainings yet", CTA "Browse Courses →" linking to `https://training.linuxfoundation.org`
 - Only ongoing empty → hide "Ongoing trainings" heading, show completed only
 - Only completed empty → hide "Completed trainings" heading, show ongoing only

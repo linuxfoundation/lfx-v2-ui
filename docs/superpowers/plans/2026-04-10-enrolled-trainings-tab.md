@@ -13,29 +13,32 @@
 ## File Map
 
 ### New files
-| File | Purpose |
-|---|---|
-| `packages/shared/src/constants/training.constants.ts` | `TRAINING_PRODUCT_TYPE`, `CERTIFICATION_PRODUCT_TYPE`, `CONTINUE_LEARNING_URL` |
-| `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.ts` | Training card component logic |
-| `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.html` | Training card template |
+
+| File                                                                                           | Purpose                                                                        |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `packages/shared/src/constants/training.constants.ts`                                          | `TRAINING_PRODUCT_TYPE`, `CERTIFICATION_PRODUCT_TYPE`, `CONTINUE_LEARNING_URL` |
+| `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.ts`   | Training card component logic                                                  |
+| `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.html` | Training card template                                                         |
 
 ### Modified files
-| File | What changes |
-|---|---|
-| `packages/shared/src/interfaces/training.interface.ts` | Add `EnrollmentRow`, `TrainingEnrollment`; add `level` to `Certification` and `LEVEL`/`PRODUCT_TYPE` to `CertificateRow` |
-| `packages/shared/src/constants/index.ts` | Export `training.constants` |
-| `apps/lfx-one/src/server/services/training.service.ts` | Add `getEnrollments()`; update `getCertifications()` with `productType` filter + `LEVEL` |
-| `apps/lfx-one/src/server/controllers/training.controller.ts` | Add `getEnrollments()`; update `getCertifications()` to extract `productType` from query |
-| `apps/lfx-one/src/server/routes/training.route.ts` | Add `GET /enrollments` route |
-| `apps/lfx-one/src/app/shared/services/training.service.ts` | Add `getEnrollments()`; update `getCertifications()` with `HttpParams` |
-| `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.ts` | Add `enrollments` + `completedTrainings` signals; pass `productType` to `getCertifications()` |
-| `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.html` | Replace "Coming soon" placeholder with real enrolled-trainings tab content |
+
+| File                                                                                            | What changes                                                                                                             |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `packages/shared/src/interfaces/training.interface.ts`                                          | Add `EnrollmentRow`, `TrainingEnrollment`; add `level` to `Certification` and `LEVEL`/`PRODUCT_TYPE` to `CertificateRow` |
+| `packages/shared/src/constants/index.ts`                                                        | Export `training.constants`                                                                                              |
+| `apps/lfx-one/src/server/services/training.service.ts`                                          | Add `getEnrollments()`; update `getCertifications()` with `productType` filter + `LEVEL`                                 |
+| `apps/lfx-one/src/server/controllers/training.controller.ts`                                    | Add `getEnrollments()`; update `getCertifications()` to extract `productType` from query                                 |
+| `apps/lfx-one/src/server/routes/training.route.ts`                                              | Add `GET /enrollments` route                                                                                             |
+| `apps/lfx-one/src/app/shared/services/training.service.ts`                                      | Add `getEnrollments()`; update `getCertifications()` with `HttpParams`                                                   |
+| `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.ts`   | Add `enrollments` + `completedTrainings` signals; pass `productType` to `getCertifications()`                            |
+| `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.html` | Replace "Coming soon" placeholder with real enrolled-trainings tab content                                               |
 
 ---
 
 ## Task 1: Shared Package — Constants
 
 **Files:**
+
 - Create: `packages/shared/src/constants/training.constants.ts`
 - Modify: `packages/shared/src/constants/index.ts`
 
@@ -80,6 +83,7 @@ git commit --signoff -m "feat(training): add training constants to shared packag
 ## Task 2: Shared Package — Interfaces
 
 **Files:**
+
 - Modify: `packages/shared/src/interfaces/training.interface.ts`
 
 - [ ] **Step 1: Update the interfaces file**
@@ -196,9 +200,11 @@ git commit --signoff -m "feat(training): add EnrollmentRow, TrainingEnrollment; 
 ## Task 3: Backend Service
 
 **Files:**
+
 - Modify: `apps/lfx-one/src/server/services/training.service.ts`
 
 The service currently has a single `getCertifications()` method and a hard-coded `CERTIFICATES_QUERY` with no `PRODUCT_TYPE` filter. We need to:
+
 - Add `LEVEL` to the SELECT
 - Add an optional `productType` parameter with conditional `WHERE` clause
 - Add `mapRowToEnrollment()` and `getEnrollments()` for the new endpoint
@@ -346,6 +352,7 @@ git commit --signoff -m "feat(training): add getEnrollments; add productType fil
 ## Task 4: Backend Controller & Route
 
 **Files:**
+
 - Modify: `apps/lfx-one/src/server/controllers/training.controller.ts`
 - Modify: `apps/lfx-one/src/server/routes/training.route.ts`
 
@@ -472,6 +479,7 @@ git commit --signoff -m "feat(training): add getEnrollments endpoint; add produc
 ## Task 5: Frontend Service
 
 **Files:**
+
 - Modify: `apps/lfx-one/src/app/shared/services/training.service.ts`
 
 The current service has a single `getCertifications()` that uses no query params. We need to add `HttpParams` support and a new `getEnrollments()` method.
@@ -529,12 +537,14 @@ git commit --signoff -m "feat(training): add getEnrollments and productType para
 ## Task 6: TrainingCardComponent
 
 **Files:**
+
 - Create: `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.ts`
 - Create: `apps/lfx-one/src/app/modules/trainings/components/training-card/training-card.component.html`
 
 This component renders a single card for either an ongoing enrollment or a completed training. It accepts a union type input (`TrainingEnrollment | Certification`) and a `variant` input (`'ongoing' | 'completed'`).
 
 Level badge color mapping:
+
 - `'Beginner'` → blue (`bg-blue-50 text-blue-700 border-blue-200`)
 - `'Intermediate'` → purple (`bg-purple-50 text-purple-700 border-purple-200`)
 - `'Advanced'` → orange (`bg-orange-50 text-orange-700 border-orange-200`)
@@ -633,9 +643,9 @@ export class TrainingCardComponent {
       class="flex-shrink-0 w-14 h-14 flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 border border-gray-100"
       data-testid="training-card-image-container">
       @if (hasImage()) {
-        <img [src]="training().imageUrl" [alt]="training().name" class="w-14 h-14 object-contain" data-testid="training-card-image" />
+      <img [src]="training().imageUrl" [alt]="training().name" class="w-14 h-14 object-contain" data-testid="training-card-image" />
       } @else {
-        <i class="fa-light fa-book-open text-2xl text-gray-400" data-testid="training-card-icon-fallback"></i>
+      <i class="fa-light fa-book-open text-2xl text-gray-400" data-testid="training-card-icon-fallback"></i>
       }
     </div>
 
@@ -647,36 +657,32 @@ export class TrainingCardComponent {
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="training-card-name">{{ training().name }}</h3>
             @if (training().level) {
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ levelClasses() }}"
-                data-testid="training-card-level-badge">
-                {{ training().level }}
-              </span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ levelClasses() }}" data-testid="training-card-level-badge">
+              {{ training().level }}
+            </span>
             }
           </div>
           <p class="text-xs text-gray-500" data-testid="training-card-issued-by">{{ training().issuedBy }}</p>
         </div>
 
         @if (isOngoing()) {
-          <div class="flex-shrink-0" data-testid="training-card-continue-action">
-            <lfx-button
-              severity="secondary"
-              styleClass="!text-xs !h-8 !py-0"
-              label="Continue Learning"
-              icon="fa-light fa-arrow-right"
-              [href]="continueLearningUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              [outlined]="true"
-              data-testid="training-card-continue-btn" />
-          </div>
+        <div class="flex-shrink-0" data-testid="training-card-continue-action">
+          <lfx-button
+            severity="secondary"
+            styleClass="!text-xs !h-8 !py-0"
+            label="Continue Learning"
+            icon="fa-light fa-arrow-right"
+            [href]="continueLearningUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            [outlined]="true"
+            data-testid="training-card-continue-btn" />
+        </div>
         }
       </div>
 
       <!-- Description -->
-      <p class="text-sm text-gray-600 line-clamp-2" [title]="training().description" data-testid="training-card-description">
-        {{ training().description }}
-      </p>
+      <p class="text-sm text-gray-600 line-clamp-2" [title]="training().description" data-testid="training-card-description">{{ training().description }}</p>
 
       <!-- Bottom row: date meta + download button (completed only) -->
       <div class="flex items-end justify-between gap-4 border-t border-gray-100 pt-3" data-testid="training-card-meta-row">
@@ -688,18 +694,18 @@ export class TrainingCardComponent {
         </div>
 
         @if (downloadUrl()) {
-          <div class="flex-shrink-0" data-testid="training-card-actions">
-            <lfx-button
-              severity="secondary"
-              styleClass="!text-xs !h-8 !py-0"
-              label="Download Certificate"
-              icon="fa-light fa-arrow-down-to-line"
-              [href]="downloadUrl()!"
-              target="_blank"
-              rel="noopener noreferrer"
-              [outlined]="true"
-              data-testid="training-card-download-btn" />
-          </div>
+        <div class="flex-shrink-0" data-testid="training-card-actions">
+          <lfx-button
+            severity="secondary"
+            styleClass="!text-xs !h-8 !py-0"
+            label="Download Certificate"
+            icon="fa-light fa-arrow-down-to-line"
+            [href]="downloadUrl()!"
+            target="_blank"
+            rel="noopener noreferrer"
+            [outlined]="true"
+            data-testid="training-card-download-btn" />
+        </div>
         }
       </div>
     </div>
@@ -727,9 +733,11 @@ git commit --signoff -m "feat(training): add TrainingCardComponent for ongoing a
 ## Task 7: TrainingsDashboardComponent — Logic
 
 **Files:**
+
 - Modify: `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.ts`
 
 Changes:
+
 1. Import `TrainingEnrollment` and the two product-type constants
 2. Import `TrainingCardComponent`
 3. Add `enrollments` and `completedTrainings` signals
@@ -838,9 +846,11 @@ git commit --signoff -m "feat(training): wire enrollments and completedTrainings
 ## Task 8: TrainingsDashboardComponent — Template
 
 **Files:**
+
 - Modify: `apps/lfx-one/src/app/modules/trainings/trainings-dashboard/trainings-dashboard.component.html`
 
 Replace the "Coming soon" enrolled-trainings placeholder with the real content. The template needs three states:
+
 1. **Loading** — either `enrollments()` or `completedTrainings()` is `undefined`
 2. **Both empty** — single centered empty state with CTA
 3. **Content** — show ongoing section (if non-empty) and/or completed section (if non-empty)
@@ -850,83 +860,79 @@ Replace the "Coming soon" enrolled-trainings placeholder with the real content. 
 Find the current placeholder block (lines 68–77 of the existing template):
 
 ```html
-      <!-- ── TAB: Enrolled Trainings (placeholder) ────────────────────────── -->
-      @if (activeTab() === 'enrolled-trainings') {
-        <div class="flex flex-col items-center justify-center py-20 text-center gap-4" data-testid="trainings-empty-state">
-          <i class="fa-light fa-book-open text-6xl text-gray-300"></i>
-          <div class="flex flex-col gap-2 max-w-md">
-            <h2 class="text-lg font-semibold text-gray-700">Coming soon</h2>
-            <p class="text-gray-500 text-sm">Enrolled trainings will be available here soon.</p>
-          </div>
-        </div>
-      }
+<!-- ── TAB: Enrolled Trainings (placeholder) ────────────────────────── -->
+@if (activeTab() === 'enrolled-trainings') {
+<div class="flex flex-col items-center justify-center py-20 text-center gap-4" data-testid="trainings-empty-state">
+  <i class="fa-light fa-book-open text-6xl text-gray-300"></i>
+  <div class="flex flex-col gap-2 max-w-md">
+    <h2 class="text-lg font-semibold text-gray-700">Coming soon</h2>
+    <p class="text-gray-500 text-sm">Enrolled trainings will be available here soon.</p>
+  </div>
+</div>
+}
 ```
 
 Replace it with:
 
 ```html
-      <!-- ── TAB: Enrolled Trainings ──────────────────────────────────────── -->
-      @if (activeTab() === 'enrolled-trainings') {
-        @if (enrollments() === undefined || completedTrainings() === undefined) {
-          <!-- Loading state -->
-          <div class="flex flex-col gap-4" data-testid="trainings-loading">
-            @for (i of [1, 2, 3]; track i) {
-              <div class="bg-white rounded-xl border shadow-sm p-5 animate-pulse">
-                <div class="flex items-start gap-5">
-                  <div class="w-14 h-14 bg-gray-200 rounded-xl"></div>
-                  <div class="flex-1 flex flex-col gap-3">
-                    <div class="h-4 bg-gray-200 rounded w-1/3"></div>
-                    <div class="h-3 bg-gray-200 rounded w-2/3"></div>
-                    <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        } @else if (enrollments()!.length === 0 && completedTrainings()!.length === 0) {
-          <!-- Empty state: both sections empty -->
-          <div class="flex flex-col items-center justify-center py-20 text-center gap-4" data-testid="trainings-empty-state">
-            <i class="fa-light fa-book-open text-6xl text-gray-300"></i>
-            <div class="flex flex-col gap-2 max-w-md">
-              <h2 class="text-lg font-semibold text-gray-700">No enrolled trainings yet</h2>
-              <p class="text-gray-500 text-sm">Browse the Linux Foundation course catalog to start your learning journey.</p>
-            </div>
-            <lfx-button
-              label="Browse Courses →"
-              href="https://training.linuxfoundation.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              severity="secondary"
-              [outlined]="true"
-              data-testid="trainings-empty-cta" />
-          </div>
-        } @else {
-          <!-- Content: show non-empty sections only -->
-          <div class="flex flex-col gap-8" data-testid="trainings-content">
-            @if (enrollments()!.length > 0) {
-              <div data-testid="trainings-ongoing-section">
-                <h2 class="text-base font-semibold text-gray-800 mb-4">Ongoing trainings</h2>
-                <div class="flex flex-col gap-4" data-testid="trainings-ongoing-list">
-                  @for (enrollment of enrollments()!; track enrollment.id) {
-                    <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-card-item" />
-                  }
-                </div>
-              </div>
-            }
-
-            @if (completedTrainings()!.length > 0) {
-              <div data-testid="trainings-completed-section">
-                <h2 class="text-base font-semibold text-gray-800 mb-4">Completed trainings</h2>
-                <div class="flex flex-col gap-4" data-testid="trainings-completed-list">
-                  @for (cert of completedTrainings()!; track cert.id) {
-                    <lfx-training-card [training]="cert" variant="completed" data-testid="training-completed-item" />
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        }
+<!-- ── TAB: Enrolled Trainings ──────────────────────────────────────── -->
+@if (activeTab() === 'enrolled-trainings') { @if (enrollments() === undefined || completedTrainings() === undefined) {
+<!-- Loading state -->
+<div class="flex flex-col gap-4" data-testid="trainings-loading">
+  @for (i of [1, 2, 3]; track i) {
+  <div class="bg-white rounded-xl border shadow-sm p-5 animate-pulse">
+    <div class="flex items-start gap-5">
+      <div class="w-14 h-14 bg-gray-200 rounded-xl"></div>
+      <div class="flex-1 flex flex-col gap-3">
+        <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-3 bg-gray-200 rounded w-2/3"></div>
+        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+} @else if (enrollments()!.length === 0 && completedTrainings()!.length === 0) {
+<!-- Empty state: both sections empty -->
+<div class="flex flex-col items-center justify-center py-20 text-center gap-4" data-testid="trainings-empty-state">
+  <i class="fa-light fa-book-open text-6xl text-gray-300"></i>
+  <div class="flex flex-col gap-2 max-w-md">
+    <h2 class="text-lg font-semibold text-gray-700">No enrolled trainings yet</h2>
+    <p class="text-gray-500 text-sm">Browse the Linux Foundation course catalog to start your learning journey.</p>
+  </div>
+  <lfx-button
+    label="Browse Courses →"
+    href="https://training.linuxfoundation.org"
+    target="_blank"
+    rel="noopener noreferrer"
+    severity="secondary"
+    [outlined]="true"
+    data-testid="trainings-empty-cta" />
+</div>
+} @else {
+<!-- Content: show non-empty sections only -->
+<div class="flex flex-col gap-8" data-testid="trainings-content">
+  @if (enrollments()!.length > 0) {
+  <div data-testid="trainings-ongoing-section">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Ongoing trainings</h2>
+    <div class="flex flex-col gap-4" data-testid="trainings-ongoing-list">
+      @for (enrollment of enrollments()!; track enrollment.id) {
+      <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-card-item" />
       }
+    </div>
+  </div>
+  } @if (completedTrainings()!.length > 0) {
+  <div data-testid="trainings-completed-section">
+    <h2 class="text-base font-semibold text-gray-800 mb-4">Completed trainings</h2>
+    <div class="flex flex-col gap-4" data-testid="trainings-completed-list">
+      @for (cert of completedTrainings()!; track cert.id) {
+      <lfx-training-card [training]="cert" variant="completed" data-testid="training-completed-item" />
+      }
+    </div>
+  </div>
+  }
+</div>
+} }
 ```
 
 - [ ] **Step 2: Verify the build compiles**
@@ -1008,6 +1014,7 @@ yarn dev
 ```
 
 Navigate to `http://localhost:4200/me/training` and verify:
+
 1. Certifications tab loads (filtered to `productType=Certification` — check Network tab)
 2. Enrolled Trainings tab shows skeleton loader while fetching, then:
    - If no data: empty state with "No enrolled trainings yet" and "Browse Courses →" CTA

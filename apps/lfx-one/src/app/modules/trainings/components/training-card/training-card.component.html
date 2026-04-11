@@ -22,9 +22,7 @@
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="training-card-name">{{ training().name }}</h3>
             @if (training().level) {
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ levelClasses() }}"
-                data-testid="training-card-level-badge">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ levelClasses() }}" data-testid="training-card-level-badge">
                 {{ training().level }}
               </span>
             }
