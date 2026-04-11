@@ -71,6 +71,10 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  EventGrowthResponse,
+  BrandReachResponse,
+  BrandHealthResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -2528,5 +2532,75 @@ export class ProjectService {
         monthlyData: [],
       };
     }
+  }
+
+  /**
+   * Get event growth metrics (STUB — dbt view pending)
+   * TODO: query ANALYTICS.PLATINUM_LFX_ONE.EVENT_GROWTH when the view is live
+   */
+  public async getEventGrowth(foundationSlug: string): Promise<EventGrowthResponse> {
+    logger.warning(undefined, 'get_event_growth', 'Event growth dbt view not yet available, returning empty response', {
+      foundation_slug: foundationSlug,
+    });
+    return {
+      totalAttendees: 0,
+      changePercentage: 0,
+      trend: 'up',
+      monthlyData: [],
+      topEvents: [],
+    };
+  }
+
+  /**
+   * Get brand reach metrics (STUB — dbt view pending)
+   * TODO: query ANALYTICS.PLATINUM_LFX_ONE.BRAND_REACH when the view is live
+   */
+  public async getBrandReach(foundationSlug: string): Promise<BrandReachResponse> {
+    logger.warning(undefined, 'get_brand_reach', 'Brand reach dbt view not yet available, returning empty response', {
+      foundation_slug: foundationSlug,
+    });
+    return {
+      totalReach: 0,
+      changePercentage: 0,
+      trend: 'up',
+      socialPlatforms: [],
+      websiteDomains: [],
+      dailyTrend: [],
+    };
+  }
+
+  /**
+   * Get brand health metrics (STUB — dbt view pending)
+   * TODO: query ANALYTICS.PLATINUM_LFX_ONE.BRAND_HEALTH when the view is live
+   */
+  public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+    logger.warning(undefined, 'get_brand_health', 'Brand health dbt view not yet available, returning empty response', {
+      foundation_slug: foundationSlug,
+    });
+    return {
+      shareOfVoice: 0,
+      sentimentScore: 0,
+      pressMentions: 0,
+      changePercentage: 0,
+      trend: 'up',
+      monthlyMentions: [],
+      topProjects: [],
+    };
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics (STUB — dbt view pending)
+   * TODO: query ANALYTICS.PLATINUM_LFX_ONE.REVENUE_IMPACT when the view is live
+   */
+  public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
+    logger.warning(undefined, 'get_revenue_impact', 'Revenue impact dbt view not yet available, returning empty response', {
+      foundation_slug: foundationSlug,
+    });
+    return {
+      totalAttributedRevenue: 0,
+      changePercentage: 0,
+      trend: 'up',
+      engagementTypes: [],
+    };
   }
 }

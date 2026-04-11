@@ -56,6 +56,10 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  EventGrowthResponse,
+  BrandReachResponse,
+  BrandHealthResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -966,6 +970,76 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get event growth metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalAttendees: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          topEvents: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand reach metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalReach: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          socialPlatforms: [],
+          websiteDomains: [],
+          dailyTrend: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand health metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          shareOfVoice: 0,
+          sentimentScore: 0,
+          pressMentions: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          monthlyMentions: [],
+          topProjects: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalAttributedRevenue: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          engagementTypes: [],
         });
       })
     );

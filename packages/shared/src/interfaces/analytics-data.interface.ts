@@ -2897,3 +2897,95 @@ export interface FlywheelConversionResponse {
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
+
+/**
+ * Top event row for Event Growth drill-down
+ */
+export interface EventGrowthTopEvent {
+  name: string;
+  date: string;
+  attendees: number;
+  revenue: number;
+}
+
+/**
+ * API response for Event Growth metric
+ * Total event attendees, MoM growth, top events by attendance/revenue
+ */
+export interface EventGrowthResponse {
+  totalAttendees: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: NorthStarMonthlyDataPoint[];
+  topEvents: EventGrowthTopEvent[];
+}
+
+/**
+ * Social platform row for Brand Reach drill-down
+ */
+export interface BrandReachSocialPlatform {
+  name: string;
+  followers: number;
+}
+
+/**
+ * Website domain row for Brand Reach drill-down
+ */
+export interface BrandReachWebsiteDomain {
+  domain: string;
+  sessions: number;
+}
+
+/**
+ * API response for Brand Reach metric
+ * Total digital reach across social platforms and owned websites
+ */
+export interface BrandReachResponse {
+  totalReach: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  socialPlatforms: BrandReachSocialPlatform[];
+  websiteDomains: BrandReachWebsiteDomain[];
+  dailyTrend: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * Top project row for Brand Health drill-down
+ */
+export interface BrandHealthTopProject {
+  name: string;
+  mentions: number;
+}
+
+/**
+ * API response for Brand Health metric
+ * Share of voice, sentiment, press mentions, top projects by mentions
+ */
+export interface BrandHealthResponse {
+  shareOfVoice: number;
+  sentimentScore: number;
+  pressMentions: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyMentions: NorthStarMonthlyDataPoint[];
+  topProjects: BrandHealthTopProject[];
+}
+
+/**
+ * Engagement-type revenue attribution row for Revenue Impact drill-down
+ */
+export interface RevenueImpactEngagementType {
+  type: string;
+  percentage: number;
+}
+
+/**
+ * API response for Revenue Impact metric
+ * Revenue attribution across marketing engagement channels
+ */
+export interface RevenueImpactResponse {
+  totalAttributedRevenue: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  engagementTypes: RevenueImpactEngagementType[];
+}
