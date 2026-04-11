@@ -56,11 +56,11 @@ export interface CertificateRow {
 export interface EnrollmentRow {
   ENROLLMENT_ID: string;
   ENROLLMENT_TS: string;
-  LOGO_URL: string;
+  LOGO_URL: string | null;
   COURSE_NAME: string;
-  COURSE_GROUP_DESCRIPTION: string;
-  PROJECT_NAME: string;
-  LEVEL: string;
+  COURSE_GROUP_DESCRIPTION: string | null;
+  PROJECT_NAME: string | null;
+  LEVEL: string | null;
 }
 
 /**
