@@ -351,8 +351,8 @@ export class MeetingJoinComponent implements OnInit {
     const meeting = this.meeting();
     const isTopLevelProject = !project?.parent_uid;
     const uid = parent?.uid || project?.parent_uid || (isTopLevelProject ? project?.uid || meeting?.project_uid : undefined);
-    const name = parent?.name || (isTopLevelProject ? project?.name || meeting?.project_name || '' : '');
-    const slug = parent?.slug || (isTopLevelProject ? project?.slug || '' : '');
+    const name = parent?.name || project?.name || meeting?.project_name || '';
+    const slug = parent?.slug || project?.slug || '';
     if (uid) {
       this.projectContextService.setFoundation({ uid, name, slug });
       window.open('/foundation/overview', '_blank', 'noopener,noreferrer');
