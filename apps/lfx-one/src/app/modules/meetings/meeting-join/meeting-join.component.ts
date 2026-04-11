@@ -3,7 +3,7 @@
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,12 +19,14 @@ import { environment } from '@environments/environment';
 import {
   buildJoinUrlWithParams,
   canJoinMeeting,
+  CommitteeMember,
   DEFAULT_MEETING_TYPE_CONFIG,
   getCurrentOrNextOccurrence,
   hasMeetingEnded,
   Meeting,
   MeetingAttachment,
   MeetingOccurrence,
+  MeetingRegistrant,
   MEETING_TYPE_CONFIGS,
   PastMeetingAttachment,
   PastMeetingRecording,
@@ -38,6 +40,7 @@ import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
+import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
@@ -46,7 +49,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, EMPTY, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, EMPTY, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
 
 import { GuestFormComponent } from '../components/guest-form/guest-form.component';
 import { MeetingRsvpDetailsComponent } from '../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -80,7 +83,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
   providers: [DialogService],
   templateUrl: './meeting-join.component.html',
 })
-export class MeetingJoinComponent {
+export class MeetingJoinComponent implements OnInit {
   // Injected services
   private readonly messageService = inject(MessageService);
   private readonly activatedRoute = inject(ActivatedRoute);
@@ -89,7 +92,9 @@ export class MeetingJoinComponent {
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
+  private readonly committeeService = inject(CommitteeService);
   private readonly dialogService = inject(DialogService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Class variables with types
   public authenticated: WritableSignal<boolean>;
@@ -147,6 +152,26 @@ export class MeetingJoinComponent {
   protected rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
   protected rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
   protected hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
+  public isMobileViewport = signal(false);
+  public drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
+  // Parent project (foundation) for context display
+  public parentProject: Signal<Project | null>;
+  // Registrant + committee member list
+  public registrants: Signal<MeetingRegistrant[]>;
+  public committeeMembers: Signal<CommitteeMember[]>;
+  // Counts from actual data
+  public rsvpMaybeCount = computed(() => this.registrants().filter((r) => r.rsvp?.response === 'maybe').length);
+  public totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
+  // Past meeting attendance stats
+  public participantCount = computed(() => this.meeting()?.participant_count ?? 0);
+  public attendedCount = computed(() => this.meeting()?.attended_count ?? 0);
+  public absentCount = computed(() => this.participantCount() - this.attendedCount());
+  public attendancePercentage = computed(() => {
+    const total = this.participantCount();
+    const attended = this.attendedCount();
+    return total > 0 ? Math.round((attended / total) * 100) : 0;
+  });
+  public hasAttendanceData = computed(() => this.isPastMeeting() && this.participantCount() > 0);
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -188,7 +213,20 @@ export class MeetingJoinComponent {
     this.messageIcon = this.initializeMessageIcon();
     this.alertMessage = this.initializeAlertMessage();
     this.emailError = this.initializeEmailError();
+    this.registrants = this.initializeRegistrants();
+    this.committeeMembers = this.initializeCommitteeMembers();
+    this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
+  }
+
+  public ngOnInit(): void {
+    if (typeof window !== 'undefined') {
+      const mql = window.matchMedia('(max-width: 639px)'); // Matches Tailwind sm: breakpoint (640px)
+      this.isMobileViewport.set(mql.matches);
+      const handler = (e: MediaQueryListEvent) => this.isMobileViewport.set(e.matches);
+      mql.addEventListener('change', handler);
+      this.destroyRef.onDestroy(() => mql.removeEventListener('change', handler));
+    }
   }
 
   public handleCopyLink(): void {
@@ -230,7 +268,7 @@ export class MeetingJoinComponent {
   }
 
   public onShowMembersPlaceholder(): void {
-    // TODO: Phase 4 — attendees drawer
+    console.warn('Show Members clicked — attendees drawer coming in Phase 4');
   }
 
   public onRsvpViewToggle(): void {
@@ -731,5 +769,58 @@ export class MeetingJoinComponent {
       const transcript = recording.recording_files.find((f) => f.file_type === 'TRANSCRIPT');
       return transcript?.download_url ?? null;
     });
+  }
+
+  private initializeParentProject(): Signal<Project | null> {
+    return toSignal(
+      toObservable(this.project).pipe(
+        filter((p) => !!p?.parent_uid),
+        distinctUntilChanged((a, b) => a?.parent_uid === b?.parent_uid),
+        switchMap((p) => this.projectService.getProject(p!.parent_uid!, false).pipe(catchError(() => of(null))))
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializeRegistrants(): Signal<MeetingRegistrant[]> {
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        filter((meeting) => !!meeting?.id),
+        distinctUntilChanged((a, b) => a.id === b.id),
+        switchMap((meeting) => {
+          if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
+          return this.meetingService.getMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initializeCommitteeMembers(): Signal<CommitteeMember[]> {
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        filter((meeting) => !!meeting?.id),
+        distinctUntilChanged((a, b) => a.id === b.id),
+        switchMap((meeting) => {
+          const committeeUids = (meeting.committees || []).map((c) => c.uid).filter(Boolean);
+          if (committeeUids.length === 0) return of([] as CommitteeMember[]);
+          return combineLatest(
+            committeeUids.map((uid) => this.committeeService.getCommitteeMembers(uid).pipe(catchError(() => of([] as CommitteeMember[]))))
+          ).pipe(
+            map((arrays) => {
+              const all = arrays.flat();
+              const seen = new Set<string>();
+              return all.filter((m) => {
+                const key = m.email?.toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+            })
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }

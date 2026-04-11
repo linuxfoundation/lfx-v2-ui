@@ -105,6 +105,32 @@
                   {{ meetingTitle() }}
                 </h1>
 
+                <!-- Foundation / Project / Committee Context Chips -->
+                @if (parentProject()?.name || project()?.name || meeting().project_name || (meeting().committees && meeting().committees.length > 0)) {
+                  <div class="flex flex-wrap items-center gap-2" data-testid="meeting-context">
+                    @if (parentProject()?.name; as foundationName) {
+                      <span class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
+                        <i class="fa-light fa-landmark text-gray-400"></i>
+                        {{ foundationName }}
+                      </span>
+                    }
+                    @if (project()?.name || meeting().project_name; as projectName) {
+                      <span class="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-full px-3 py-1">
+                        <i class="fa-light fa-cube text-teal-400"></i>
+                        {{ projectName }}
+                      </span>
+                    }
+                    @for (committee of meeting().committees; track committee.uid) {
+                      @if (committee.name) {
+                        <span class="inline-flex items-center gap-1.5 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-3 py-1">
+                          <i class="fa-light fa-users-rectangle text-blue-400"></i>
+                          {{ committee.name }}
+                        </span>
+                      }
+                    }
+                  </div>
+                }
+
                 <!-- Date/Time Badge -->
                 @if (currentOccurrence()?.start_time || meeting().start_time; as startTime) {
                   <div class="flex items-center">
@@ -176,7 +202,37 @@
                     </div>
                   </div>
                 }
+
+                <!-- Total Invitees -->
+                @if ((registrants().length > 0 || committeeMembers().length > 0) && !isPastMeeting()) {
+                  <div class="inline-flex items-center gap-1 text-xs text-gray-500" data-testid="total-invitees">
+                    <i class="fa-light fa-users"></i>
+                    <span>{{ totalInvitees() }} invited</span>
+                  </div>
+                }
               </div>
+
+              <!-- Attendance Stats (past meetings) -->
+              @if (hasAttendanceData()) {
+                <div class="flex items-center gap-4" data-testid="attendance-summary">
+                  <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                    <i class="fa-light fa-circle-check text-emerald-500 text-sm"></i>
+                    <span class="text-sm font-semibold text-emerald-600">{{ attendedCount() }}</span>
+                    <span class="text-xs text-gray-500">attended</span>
+                  </div>
+                  <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                    <i class="fa-light fa-circle-xmark text-gray-400 text-sm"></i>
+                    <span class="text-sm font-semibold text-gray-500">{{ absentCount() }}</span>
+                    <span class="text-xs text-gray-500">absent</span>
+                  </div>
+                  <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                    <i class="fa-light fa-chart-pie text-blue-500 text-sm"></i>
+                    <span class="text-sm font-semibold text-gray-700">{{ attendancePercentage() }}%</span>
+                    <span class="text-xs text-gray-500">rate</span>
+                  </div>
+                </div>
+              }
+
               <!-- Alert Banner -->
               @if (isPastMeeting()) {
                 <div class="bg-gray-50 border border-gray-300 rounded px-3 py-2 flex items-center gap-2" [attr.data-testid]="'meeting-alert-past'">
@@ -246,7 +302,7 @@
                     [project]="project()"
                     [currentOccurrence]="currentOccurrence()"
                     [pastMeeting]="isPastMeeting()"
-                    [showAddButton]="true"
+                    [showAddButton]="false"
                     [additionalRegistrantsCount]="0"
                     backgroundColor="bg-gray-50"
                     borderColor="border-gray-200">
@@ -368,28 +424,33 @@
 
           <p-drawer
             [visible]="showRegistrants()"
-            position="right"
-            styleClass="lg:w-1/3 w-full"
+            [position]="drawerPosition()"
+            styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full"
+            [modal]="true"
+            [showCloseIcon]="false"
             (onHide)="onDrawerHide()"
             data-testid="meeting-registrants-drawer">
             <ng-template #header>
-              <div class="flex items-center gap-3">
-                <div class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
-                  <i class="fa-light fa-user-group text-white text-2xl"></i>
+              <div class="flex items-center justify-between w-full">
+                <div class="flex items-center gap-3">
+                  <div class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                    <i class="fa-light fa-user-group text-white text-2xl"></i>
+                  </div>
+                  @if (meeting().committees && meeting().committees.length > 0) {
+                    <div class="flex flex-col">
+                      <h1>Meeting Members</h1>
+                      <span class="text-base text-gray-500">{{ totalInvitees() }} members</span>
+                    </div>
+                  } @else {
+                    <div class="flex flex-col">
+                      <h1>Meeting Guests</h1>
+                      <span class="text-base text-gray-500">{{ totalInvitees() }} guests</span>
+                    </div>
+                  }
                 </div>
-                @if (meeting().committees && meeting().committees.length > 0) {
-                  <div class="flex flex-col">
-                    <h1>Meeting Members</h1>
-                    <span class="text-base text-gray-500">{{ meeting().committee_members_count }} members</span>
-                  </div>
-                } @else {
-                  <div class="flex flex-col">
-                    <h1>Meeting Guests</h1>
-                    <span class="text-base text-gray-500"
-                      >{{ (meeting().individual_registrants_count || 0) + (meeting().committee_members_count || 0) }} guests</span
-                    >
-                  </div>
-                }
+                <button type="button" class="text-gray-400 hover:text-gray-600 p-2 cursor-pointer" (click)="onDrawerHide()">
+                  <i class="fa-light fa-xmark text-xl"></i>
+                </button>
               </div>
             </ng-template>
             <lfx-meeting-registrants-display
