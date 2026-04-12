@@ -5,7 +5,6 @@ import { Component, computed, inject, signal, Signal, WritableSignal } from '@an
 import { RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { getActiveOccurrences } from '@lfx-one/shared';
 import { LensService } from '@services/lens.service';
@@ -19,7 +18,7 @@ import type { Meeting, MeetingWithOccurrence, PastMeeting } from '@lfx-one/share
 
 @Component({
   selector: 'lfx-my-meetings',
-  imports: [DashboardMeetingCardComponent, ButtonComponent, CardComponent, SkeletonModule, RouterLink],
+  imports: [DashboardMeetingCardComponent, CardComponent, SkeletonModule, RouterLink],
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
