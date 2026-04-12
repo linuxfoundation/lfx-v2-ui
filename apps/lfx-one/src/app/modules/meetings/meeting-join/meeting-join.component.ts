@@ -526,23 +526,37 @@ export class MeetingJoinComponent implements OnInit {
       (a: MeetingOccurrence, b: MeetingOccurrence) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     );
     const current = this.currentOccurrence();
-    const currentTime = current ? new Date(current.start_time).getTime() : Date.now();
-    // Find closest occurrence to current time
-    let currentIdx = sorted.findIndex((o: MeetingOccurrence) => new Date(o.start_time).getTime() >= currentTime);
+    let currentTime: number;
+    if (current) {
+      currentTime = new Date(current.start_time).getTime();
+    } else {
+      // For past meetings loaded via /meetings/{id}-{timestamp}, extract timestamp from route
+      const routeId = this.activatedRoute.snapshot.paramMap.get('id') ?? '';
+      const parts = routeId.split('-');
+      currentTime = parts.length === 2 && /^\d{13}$/.test(parts[1]) ? parseInt(parts[1], 10) : Date.now();
+    }
+    // Find exact match first, then closest
+    let currentIdx = sorted.findIndex((o: MeetingOccurrence) => new Date(o.start_time).getTime() === currentTime);
+    if (currentIdx < 0) {
+      currentIdx = sorted.findIndex((o: MeetingOccurrence) => new Date(o.start_time).getTime() >= currentTime);
+    }
     if (currentIdx < 0) currentIdx = sorted.length - 1;
     return { sorted, currentIdx };
   }
 
   private buildOccurrenceUrl(meetingId: string, occurrence: MeetingOccurrence): string {
     const timestamp = new Date(occurrence.start_time).getTime();
-    const isPast = timestamp < Date.now();
+    const meeting = this.meeting();
+    const bufferMs = (meeting?.duration ?? 0) * 60 * 1000 + 40 * 60 * 1000;
+    const isPast = timestamp + bufferMs < Date.now();
     const password = this.password();
-    if (isPast) {
-      const base = `/meetings/${meetingId}-${timestamp}`;
-      return password ? `${base}?password=${password}` : base;
-    }
     const params = new URLSearchParams();
     if (password) params.set('password', password);
+    if (isPast) {
+      const base = `/meetings/${meetingId}-${timestamp}`;
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
+    }
     params.set('occurrence', timestamp.toString());
     return `/meetings/${meetingId}?${params.toString()}`;
   }
