@@ -61,6 +61,7 @@ export interface EnrollmentRow {
   COURSE_GROUP_DESCRIPTION: string | null;
   PROJECT_NAME: string | null;
   LEVEL: string | null;
+  COURSE_SLUG: string | null;
 }
 
 /**
@@ -81,4 +82,6 @@ export interface TrainingEnrollment {
   enrolledDate: string;
   /** Difficulty level (e.g. Beginner, Intermediate, Advanced) */
   level: string;
+  /** URL slug for the specific course page; null if unavailable */
+  courseSlug: string | null;
 }

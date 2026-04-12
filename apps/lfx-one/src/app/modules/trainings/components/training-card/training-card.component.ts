@@ -6,7 +6,7 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { Certification, TrainingEnrollment } from '@lfx-one/shared/interfaces';
-import { CONTINUE_LEARNING_URL } from '@lfx-one/shared/constants';
+import { CONTINUE_LEARNING_URL, COURSE_URL_PREFIX } from '@lfx-one/shared/constants';
 
 import { ButtonComponent } from '@components/button/button.component';
 
@@ -21,9 +21,6 @@ export class TrainingCardComponent {
   public readonly training = input.required<TrainingEnrollment | Certification>();
   public readonly variant = input<'ongoing' | 'completed'>('ongoing');
 
-  // ─── Public constants (used in template) ───────────────────────────────────
-  protected readonly continueLearningUrl = CONTINUE_LEARNING_URL;
-
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly hasImage = computed(() => !!this.training().imageUrl);
   protected readonly isOngoing = computed(() => this.variant() === 'ongoing');
@@ -31,6 +28,7 @@ export class TrainingCardComponent {
   protected readonly date: Signal<string> = this.initDate();
   protected readonly levelClasses: Signal<string> = this.initLevelClasses();
   protected readonly downloadUrl: Signal<string | null> = this.initDownloadUrl();
+  protected readonly continueLearningUrl: Signal<string> = this.initContinueLearningUrl();
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initDate(): Signal<string> {
@@ -59,6 +57,13 @@ export class TrainingCardComponent {
       if (this.variant() !== 'completed') return null;
       const t = this.training() as Certification;
       return t.downloadUrl ?? null;
+    });
+  }
+
+  private initContinueLearningUrl(): Signal<string> {
+    return computed(() => {
+      const t = this.training() as TrainingEnrollment;
+      return t.courseSlug ? `${COURSE_URL_PREFIX}${t.courseSlug}` : CONTINUE_LEARNING_URL;
     });
   }
 }

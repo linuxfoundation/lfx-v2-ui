@@ -32,14 +32,13 @@
 
         @if (isOngoing()) {
           <div class="flex-shrink-0" data-testid="training-card-continue-action">
-            <!-- TODO: link to course-specific URL when available from enrollment data (LFXV2-TODO) -->
             <!-- TODO: replace !important overrides with a size="sm" input on ButtonComponent (LFXV2-TODO) -->
             <lfx-button
               severity="secondary"
               styleClass="!text-xs !h-8 !py-0"
-              label="Go to Training Portal"
+              label="Continue Learning"
               icon="fa-light fa-arrow-right"
-              [href]="continueLearningUrl"
+              [href]="continueLearningUrl()"
               target="_blank"
               rel="noopener noreferrer"
               [outlined]="true"
