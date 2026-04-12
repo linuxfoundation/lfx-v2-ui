@@ -14,10 +14,6 @@
     font-family: var(--font-inter);
   }
 
-  h1 {
-    font-family: var(--font-display);
-  }
-
   h2,
   h3,
   h4,
@@ -32,7 +28,7 @@
 
   /* Heading styles - only apply to elements without text or font classes */
   h1:not([class*='text-']):not([class*='font-']) {
-    @apply text-2xl font-light;
+    @apply text-xl font-semibold;
   }
 
   h2:not([class*='text-']):not([class*='font-']) {
