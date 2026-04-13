@@ -113,7 +113,8 @@ export class SurveysDashboardComponent {
     return computed(() => {
       const surveyId = this.selectedSurveyId();
       if (!surveyId) return null;
-      return this.surveys().find((s) => s.uid === surveyId) ?? null;
+      const source = this.isMeLens() ? this.mySurveys() : this.surveys();
+      return source.find((s) => s.uid === surveyId) ?? null;
     });
   }
 

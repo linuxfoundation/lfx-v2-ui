@@ -15,7 +15,7 @@ router.post('/', (req, res, next) => surveyController.createSurvey(req, res, nex
 // GET /surveys - get all surveys
 router.get('/', (req, res, next) => surveyController.getSurveys(req, res, next));
 
-// GET /surveys/my-surveys - get surveys the current user has responded to
+// GET /surveys/my-surveys - get surveys the current user has been invited to
 router.get('/my-surveys', (req, res, next) => surveyController.getMySurveys(req, res, next));
 
 // GET /surveys/:uid - get a single survey
