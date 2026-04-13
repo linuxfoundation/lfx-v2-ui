@@ -66,7 +66,7 @@ export interface MeetingAttachment {
 export interface PastMeetingAttachment {
   /** Unique attachment identifier */
   uid: string;
-  /** Combined meeting+occurrence ID (e.g., "93699735000:1700000000") */
+  /** Hyphenated meeting and occurrence ID (e.g., "12343245463-1630560600000") */
   meeting_and_occurrence_id: string;
   /** ID of the originating active meeting */
   meeting_id: string;

@@ -342,8 +342,9 @@ export class DocumentService {
 
   private async getUserPastMeetingOccurrenceIds(req: Request): Promise<string[]> {
     const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
+    const username = await getUsernameFromAuth(req);
 
-    if (!email) {
+    if (!email && !username) {
       return [];
     }
 
@@ -352,24 +353,50 @@ export class DocumentService {
     const m2mToken = await generateM2MToken(req);
     const headers = { Authorization: `Bearer ${m2mToken}` };
 
-    const participants = await fetchAllQueryResources<PastMeetingParticipantQueryResult>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipantQueryResult>>(
-        req,
-        'LFX_V2_SERVICE',
-        '/query/resources',
-        'GET',
-        {
-          v: '1',
-          type: 'v1_past_meeting_participant',
-          tags: `email:${email}`,
-          ...(pageToken && { page_token: pageToken }),
-        },
-        undefined,
-        headers
-      )
-    ).catch(() => []);
+    const occurrenceIds = new Set<string>();
 
-    return [...new Set(participants.map((p) => p.meeting_and_occurrence_id).filter(Boolean))];
+    if (email) {
+      const emailParticipants = await fetchAllQueryResources<PastMeetingParticipantQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipantQueryResult>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            v: '1',
+            type: 'v1_past_meeting_participant',
+            tags: `email:${email}`,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      emailParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
+    }
+
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipantQueryResult>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipantQueryResult>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            v: '1',
+            type: 'v1_past_meeting_participant',
+            tags: `username:${plainUsername}`,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
+    }
+
+    return [...occurrenceIds];
   }
 
   private async fetchRawPastMeetingAttachments(req: Request, occurrenceIds: string[]): Promise<PastMeetingAttachment[]> {
