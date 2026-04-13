@@ -11,7 +11,7 @@
 
   /* Typography Defaults - Inter on html so it cascades to everything */
   html {
-    font-family: var(--font-inter);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   }
 
   h1,
@@ -21,8 +21,6 @@
   h5,
   h6,
   p,
-  a,
-  span,
   label,
   button,
   input {
