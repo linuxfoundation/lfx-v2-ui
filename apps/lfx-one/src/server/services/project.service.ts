@@ -2446,16 +2446,32 @@ export class ProjectService {
   public async getFlywheelConversion(foundationSlug: string): Promise<FlywheelConversionResponse> {
     logger.debug(undefined, 'get_flywheel_conversion', 'Fetching flywheel conversion from Snowflake', { foundation_slug: foundationSlug });
 
+    const emptyReengagement = {
+      totalReengaged: 0,
+      reengagementRate: 0,
+      reengagementMomChange: 0,
+      reengagedToNewsletter: 0,
+      reengagedToCommunity: 0,
+      reengagedToWorkingGroup: 0,
+    };
+
     try {
       const query = `
         SELECT
           MONTH_START_DATE,
           EVENT_ATTENDEES,
+          CONVERSION_RATE,
+          MOM_CHANGE_PERCENTAGE,
+          TOTAL_CONVERTED,
+          REENGAGEMENT_RATE,
+          REENGAGEMENT_MOM_CHANGE,
+          TOTAL_REENGAGED,
           CONVERTED_TO_NEWSLETTER,
           CONVERTED_TO_COMMUNITY,
           CONVERTED_TO_WORKING_GROUP,
-          CONVERSION_RATE,
-          MOM_CHANGE_PERCENTAGE
+          REENGAGED_TO_NEWSLETTER,
+          REENGAGED_TO_COMMUNITY,
+          REENGAGED_TO_WORKING_GROUP
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
@@ -2465,11 +2481,18 @@ export class ProjectService {
       const result = await this.snowflakeService.execute<{
         MONTH_START_DATE: string;
         EVENT_ATTENDEES: number;
+        CONVERSION_RATE: number;
+        MOM_CHANGE_PERCENTAGE: number;
+        TOTAL_CONVERTED: number;
+        REENGAGEMENT_RATE: number;
+        REENGAGEMENT_MOM_CHANGE: number;
+        TOTAL_REENGAGED: number;
         CONVERTED_TO_NEWSLETTER: number;
         CONVERTED_TO_COMMUNITY: number;
         CONVERTED_TO_WORKING_GROUP: number;
-        CONVERSION_RATE: number;
-        MOM_CHANGE_PERCENTAGE: number;
+        REENGAGED_TO_NEWSLETTER: number;
+        REENGAGED_TO_COMMUNITY: number;
+        REENGAGED_TO_WORKING_GROUP: number;
       }>(query, [foundationSlug]);
 
       if (result.rows.length === 0) {
@@ -2483,6 +2506,7 @@ export class ProjectService {
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
           },
+          reengagement: emptyReengagement,
           monthlyData: [],
         };
       }
@@ -2508,6 +2532,14 @@ export class ProjectService {
           convertedToCommunity: latest.CONVERTED_TO_COMMUNITY ?? 0,
           convertedToWorkingGroup: latest.CONVERTED_TO_WORKING_GROUP ?? 0,
         },
+        reengagement: {
+          totalReengaged: latest.TOTAL_REENGAGED ?? 0,
+          reengagementRate: latest.REENGAGEMENT_RATE ?? 0,
+          reengagementMomChange: latest.REENGAGEMENT_MOM_CHANGE ?? 0,
+          reengagedToNewsletter: latest.REENGAGED_TO_NEWSLETTER ?? 0,
+          reengagedToCommunity: latest.REENGAGED_TO_COMMUNITY ?? 0,
+          reengagedToWorkingGroup: latest.REENGAGED_TO_WORKING_GROUP ?? 0,
+        },
         monthlyData,
       };
     } catch (error) {
@@ -2525,6 +2557,7 @@ export class ProjectService {
           convertedToCommunity: 0,
           convertedToWorkingGroup: 0,
         },
+        reengagement: emptyReengagement,
         monthlyData: [],
       };
     }

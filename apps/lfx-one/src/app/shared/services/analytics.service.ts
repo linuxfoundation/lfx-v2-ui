@@ -965,6 +965,14 @@ export class AnalyticsService {
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
           },
+          reengagement: {
+            totalReengaged: 0,
+            reengagementRate: 0,
+            reengagementMomChange: 0,
+            reengagedToNewsletter: 0,
+            reengagedToCommunity: 0,
+            reengagedToWorkingGroup: 0,
+          },
           monthlyData: [],
         });
       })

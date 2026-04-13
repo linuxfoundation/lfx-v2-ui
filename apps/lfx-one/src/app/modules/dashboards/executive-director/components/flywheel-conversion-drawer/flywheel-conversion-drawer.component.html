@@ -33,7 +33,7 @@
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Conversion Rate</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ data().conversionRate }}%</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ data().conversionRate.toFixed(1) }}%</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
@@ -48,7 +48,7 @@
           @if (data().changePercentage !== 0) {
             <div class="flex items-center gap-2">
               <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage.toFixed(1) }}%
               </span>
               <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
             </div>
@@ -133,11 +133,11 @@
       </div>
     }
 
-    <!-- Conversion Funnel Chart -->
+    <!-- Re-engagement Funnel Chart -->
     <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="flywheel-conversion-drawer-funnel-section">
       <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">Conversion Funnel (90-day window)</h3>
-        <p class="text-sm text-gray-600">Event attendees converting to community or working group membership</p>
+        <h3 class="text-sm font-semibold text-gray-900">Re-engagement Funnel</h3>
+        <p class="text-sm text-gray-600">Event attendees re-engaging with community, working groups, and newsletter</p>
       </div>
       <div class="h-[200px]" data-testid="flywheel-conversion-drawer-funnel-chart">
         <lfx-chart type="bar" [data]="funnelChartData()" [options]="funnelChartOptions" height="100%"></lfx-chart>

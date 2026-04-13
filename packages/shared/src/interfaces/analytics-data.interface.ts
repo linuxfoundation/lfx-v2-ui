@@ -2895,5 +2895,13 @@ export interface FlywheelConversionResponse {
     convertedToCommunity: number;
     convertedToWorkingGroup: number;
   };
+  reengagement: {
+    totalReengaged: number;
+    reengagementRate: number;
+    reengagementMomChange: number;
+    reengagedToNewsletter: number;
+    reengagedToCommunity: number;
+    reengagedToWorkingGroup: number;
+  };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
