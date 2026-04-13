@@ -15,8 +15,9 @@ export function toProjectContext(project: EnrichedPersonaProject): ProjectContex
 }
 
 /**
- * Determine if a project is a foundation (top-level).
- * Uses the `isFoundation` field from the upstream project service.
+ * Determine if a project should be treated as a foundation (top-level).
+ * Uses the computed `isFoundation` flag attached during persona enrichment
+ * on `EnrichedPersonaProject`, rather than a raw field from the upstream project model.
  */
 export function isFoundationProject(project: EnrichedPersonaProject): boolean {
   return project.isFoundation;
