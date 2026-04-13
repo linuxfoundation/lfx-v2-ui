@@ -63,11 +63,6 @@ export class MailingListDashboardComponent {
   public readonly canCreateMailingList: Signal<boolean> = this.initCanCreateMailingList();
   public readonly mailingLists: Signal<GroupsIOMailingList[]> = this.initMailingLists();
   public readonly myMailingLists: Signal<MyMailingList[]> = this.initMyMailingLists();
-
-  // Me lens statistics
-  public readonly myTotalMailingLists: Signal<number> = computed(() => this.myMailingLists().length);
-  public readonly myPublicMailingLists: Signal<number> = computed(() => this.myMailingLists().filter((ml) => ml.public).length);
-
   public readonly committeeOptions: Signal<FilterOption[]> = this.initCommitteeOptions();
   public readonly statusOptions: Signal<FilterOption[]> = this.initStatusOptions();
   public readonly filteredMailingLists: Signal<GroupsIOMailingList[]> = this.initFilteredMailingLists();
@@ -172,7 +167,7 @@ export class MailingListDashboardComponent {
 
   private initCommitteeOptions(): Signal<FilterOption[]> {
     return computed(() => {
-      const mailingListsData = this.mailingLists();
+      const mailingListsData = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
 
       // Collect unique committees from all mailing lists
       const committeeMap = new Map<string, CommitteeReference>();
@@ -201,7 +196,7 @@ export class MailingListDashboardComponent {
 
   private initStatusOptions(): Signal<FilterOption[]> {
     return computed(() => {
-      const mailingListsData = this.mailingLists();
+      const mailingListsData = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
 
       // Count mailing lists by visibility status
       const publicCount = mailingListsData.filter((ml) => ml.public).length;
@@ -308,19 +303,17 @@ export class MailingListDashboardComponent {
   }
 
   private initMyMailingLists(): Signal<MyMailingList[]> {
-    const project$ = toObservable(this.project);
     const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      combineLatest([project$, this.refresh, lens$]).pipe(
-        switchMap(([project, , lens]) => {
-          this.myMailingListsLoading.set(true);
-          if (lens !== 'me' && !project?.uid) {
+      combineLatest([lens$, this.refresh]).pipe(
+        switchMap(([lens]) => {
+          if (lens !== 'me') {
             this.myMailingListsLoading.set(false);
             return of([] as MyMailingList[]);
           }
-          const projectUid = lens === 'me' ? undefined : project!.uid;
-          return this.mailingListService.getMyMailingLists(projectUid).pipe(
+          this.myMailingListsLoading.set(true);
+          return this.mailingListService.getMyMailingLists().pipe(
             catchError(() => {
               this.myMailingListsLoading.set(false);
               return of([] as MyMailingList[]);

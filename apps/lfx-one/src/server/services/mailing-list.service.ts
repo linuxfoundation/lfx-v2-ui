@@ -20,6 +20,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 import { pollEndpoint, pollUntilIndexed } from '../helpers/poll-endpoint.helper';
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
@@ -354,30 +355,34 @@ export class MailingListService {
       return [];
     }
 
-    // Query groupsio_member records by both email and username in parallel
+    // Query groupsio_member records by both email and username in parallel (with full pagination)
     const memberQueries: Promise<MailingListMember[]>[] = [];
 
     if (email) {
       memberQueries.push(
-        this.microserviceProxy
-          .proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        fetchAllQueryResources<MailingListMember>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
             v: '1',
             type: 'groupsio_member',
+            page_size: 100,
             tags_all: [`email:${email}`],
+            ...(pageToken && { page_token: pageToken }),
           })
-          .then((res) => res.resources.map((r) => r.data))
+        )
       );
     }
 
     if (username) {
       memberQueries.push(
-        this.microserviceProxy
-          .proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        fetchAllQueryResources<MailingListMember>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
             v: '1',
             type: 'groupsio_member',
+            page_size: 100,
             tags_all: [`username:${username}`],
+            ...(pageToken && { page_token: pageToken }),
           })
-          .then((res) => res.resources.map((r) => r.data))
+        )
       );
     }
 
