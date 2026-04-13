@@ -20,9 +20,10 @@ import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+import { ProjectService } from './project.service';
 import { UserService } from './user.service';
 
-type MeetingDetails = Map<string, { title: string; project_uid: string; project_name: string }>;
+type MeetingDetails = Map<string, { title: string; project_uid: string }>;
 
 /**
  * Service for aggregating documents across a user's groups, meetings, and mailing lists.
@@ -36,11 +37,13 @@ export class DocumentService {
   private readonly microserviceProxy: MicroserviceProxyService;
   private readonly committeeService: CommitteeService;
   private readonly userService: UserService;
+  private readonly projectService: ProjectService;
 
   public constructor() {
     this.microserviceProxy = new MicroserviceProxyService();
     this.committeeService = new CommitteeService();
     this.userService = new UserService();
+    this.projectService = new ProjectService();
   }
 
   /**
@@ -95,7 +98,7 @@ export class DocumentService {
     const meetingDetails =
       allMeetingIds.length > 0
         ? await this.fetchMeetingDetails(req, allMeetingIds)
-        : new Map<string, { title: string; project_uid: string; project_name: string }>();
+        : new Map<string, { title: string; project_uid: string }>();
 
     const meetingAttachmentItems = this.mapMeetingAttachments(rawMeetingAttachments, meetingDetails);
     const pastMeetingItems = [
@@ -107,15 +110,38 @@ export class DocumentService {
 
     const allDocuments = [...committeeLinkItems, ...groupsioItems, ...meetingAttachmentItems, ...pastMeetingItems];
 
+    // Stage 4 — Resolve foundation names for meeting-sourced docs via NATS (authoritative, faster than query service)
+    // Committee and mailing list docs already have foundation names from committee service data.
+    const meetingSourced: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary', 'meeting'];
+    const foundationUids = [...new Set(allDocuments.filter((d) => meetingSourced.includes(d.source) && d.foundationUid).map((d) => d.foundationUid))];
+
+    const foundationNames =
+      foundationUids.length > 0
+        ? await this.projectService.getProjectNamesByUids(req, foundationUids).catch((err) => {
+            logger.warning(req, 'get_my_documents', 'Failed to resolve foundation names via NATS, names will be empty', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return new Map<string, string>();
+          })
+        : new Map<string, string>();
+
+    const enrichedDocuments = allDocuments.map((doc) => {
+      if (meetingSourced.includes(doc.source) && doc.foundationUid) {
+        const name = foundationNames.get(doc.foundationUid);
+        return name ? { ...doc, foundationName: name } : doc;
+      }
+      return doc;
+    });
+
     logger.info(req, 'get_my_documents', 'Completed 3-stage document aggregation', {
       committee_docs: committeeLinkItems.length,
       mailing_list_artifacts: groupsioItems.length,
       meeting_attachments: meetingAttachmentItems.length,
       past_meeting_items: pastMeetingItems.length,
-      total: allDocuments.length,
+      total: enrichedDocuments.length,
     });
 
-    return allDocuments;
+    return enrichedDocuments;
   }
 
   // ─── Committee / Group Documents ────────────────────────────────────────────
@@ -231,7 +257,7 @@ export class DocumentService {
       const results = await Promise.all(
         batch.map((id) =>
           this.microserviceProxy
-            .proxyRequest<{ title: string; project_uid: string; project_name: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
+            .proxyRequest<{ title: string; project_uid: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
             .catch(() => null)
         )
       );
@@ -288,7 +314,7 @@ export class DocumentService {
         id: `meeting_attachment:${a.uid}`,
         name: a.name,
         source: a.type === 'file' ? ('file' as MyDocumentSource) : ('meeting' as MyDocumentSource),
-        foundationName: meeting?.project_name || '',
+        foundationName: '',
         foundationUid: meeting?.project_uid || '',
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: a.meeting_id,
@@ -336,7 +362,7 @@ export class DocumentService {
         id: `past_meeting_attachment:${a.uid}`,
         name: a.name,
         source: a.type === 'file' ? ('file' as MyDocumentSource) : ('meeting' as MyDocumentSource),
-        foundationName: meeting?.project_name || '',
+        foundationName: '',
         foundationUid: meeting?.project_uid || '',
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: a.meeting_and_occurrence_id,
@@ -383,7 +409,7 @@ export class DocumentService {
         id: `past_meeting_recording:${r.id}`,
         name: r.title || 'Recording',
         source: 'recording' as MyDocumentSource,
-        foundationName: meeting?.project_name || '',
+        foundationName: '',
         foundationUid: meeting?.project_uid || '',
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: r.meeting_and_occurrence_id,
@@ -431,7 +457,7 @@ export class DocumentService {
         id: `past_meeting_transcript:${t.id}`,
         name: t.title || 'Transcript',
         source: 'transcript' as MyDocumentSource,
-        foundationName: meeting?.project_name || '',
+        foundationName: '',
         foundationUid: meeting?.project_uid || '',
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: t.meeting_and_occurrence_id,
@@ -477,7 +503,7 @@ export class DocumentService {
         id: `past_meeting_summary:${s.id}`,
         name: s.summary_title || s.zoom_meeting_topic || 'Meeting Summary',
         source: 'summary' as MyDocumentSource,
-        foundationName: meeting?.project_name || '',
+        foundationName: '',
         foundationUid: meeting?.project_uid || '',
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: s.meeting_and_occurrence_id,
