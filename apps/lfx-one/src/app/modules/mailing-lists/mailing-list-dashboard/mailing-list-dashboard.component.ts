@@ -212,7 +212,7 @@ export class MailingListDashboardComponent {
 
   private initFilteredMailingLists(): Signal<GroupsIOMailingList[]> {
     return computed(() => {
-      let filtered = this.mailingLists();
+      let filtered: GroupsIOMailingList[] = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
 
       // Apply search filter
       const searchTerm = this.searchTerm()?.toLowerCase() || '';

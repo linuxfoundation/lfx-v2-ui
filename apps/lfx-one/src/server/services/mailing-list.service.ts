@@ -18,7 +18,7 @@ import { MailingListMemberDeliveryMode, MailingListMemberModStatus } from '@lfx-
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { pollEndpoint, pollUntilIndexed } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { AccessCheckService } from './access-check.service';
@@ -342,7 +342,8 @@ export class MailingListService {
    */
   public async getMyMailingLists(req: Request, projectUid?: string): Promise<MyMailingList[]> {
     // Get user identity from auth context
-    const username = await getUsernameFromAuth(req);
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
     const email = (req.oidc?.user?.['email'] as string)?.toLowerCase();
 
     logger.debug(req, 'get_my_mailing_lists', 'Fetching mailing lists for current user', {
@@ -456,14 +457,13 @@ export class MailingListService {
       })
     );
 
-    const result = mailingLists.filter((ml): ml is MyMailingList => ml !== null);
+    const filtered = mailingLists.filter((ml): ml is MyMailingList => ml !== null);
 
     // Filter by project_uid server-side if provided
-    if (projectUid) {
-      return result.filter((ml) => ml.project_uid === projectUid);
-    }
+    const result = projectUid ? filtered.filter((ml) => ml.project_uid === projectUid) : filtered;
 
-    return result;
+    // Enrich with service data for correct email display in UI
+    return (await this.enrichWithServices(req, result)) as MyMailingList[];
   }
 
   // ============================================
