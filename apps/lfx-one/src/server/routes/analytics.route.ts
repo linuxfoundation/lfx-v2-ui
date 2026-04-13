@@ -149,4 +149,7 @@ router.get('/member-acquisition', (req, res, next) => analyticsController.getMem
 router.get('/engaged-community', (req, res, next) => analyticsController.getEngagedCommunity(req, res, next));
 router.get('/flywheel-conversion', (req, res, next) => analyticsController.getFlywheelConversion(req, res, next));
 
+// Participating organizations summary endpoint (health metrics page)
+router.get('/participating-orgs-summary', (req, res, next) => analyticsController.getParticipatingOrgsSummary(req, res, next));
+
 export default router;

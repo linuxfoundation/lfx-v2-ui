@@ -46,7 +46,7 @@ export class MainLayoutComponent {
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
       case 'foundation':
-        return this.foundationLensItems;
+        return this.foundationLensItems();
       case 'project':
         return this.personaService.isBoardScoped() ? this.projectLensItems : this.projectLensItemsWithGovernance;
       case 'org':
@@ -147,55 +147,75 @@ export class MainLayoutComponent {
   ];
 
   // --- Foundation Lens Items ---
-  private readonly foundationLensItems: SidebarMenuItem[] = [
-    {
-      label: 'Dashboard',
-      icon: 'fa-light fa-grid-2',
-      routerLink: '/foundation/overview',
-    },
-    {
-      label: 'Meetings',
-      icon: 'fa-light fa-calendar',
-      routerLink: '/meetings',
-    },
-    {
-      label: 'Events',
-      icon: 'fa-light fa-ticket',
-      routerLink: '/events',
-    },
-    {
-      label: MAILING_LIST_LABEL.plural,
-      icon: 'fa-light fa-envelope',
-      routerLink: '/mailing-lists',
-    },
-    {
-      label: COMMITTEE_LABEL.plural,
-      icon: 'fa-light fa-users-rectangle',
-      routerLink: '/groups',
-    },
-    {
-      label: 'Governance',
-      isSection: true,
-      expanded: true,
-      items: [
-        {
-          label: VOTE_LABEL.plural,
-          icon: 'fa-light fa-check-to-slot',
-          routerLink: '/votes',
-        },
-        {
-          label: SURVEY_LABEL.plural,
-          icon: 'fa-light fa-clipboard-list',
-          routerLink: '/surveys',
-        },
-        {
-          label: 'Permissions',
-          icon: 'fa-light fa-shield',
-          routerLink: '/settings',
-        },
-      ],
-    },
-  ];
+  private readonly foundationLensItems = computed((): SidebarMenuItem[] => {
+    const items: SidebarMenuItem[] = [
+      {
+        label: 'Dashboard',
+        icon: 'fa-light fa-grid-2',
+        routerLink: '/foundation/overview',
+      },
+      {
+        label: 'Meetings',
+        icon: 'fa-light fa-calendar',
+        routerLink: '/meetings',
+      },
+      {
+        label: 'Events',
+        icon: 'fa-light fa-ticket',
+        routerLink: '/events',
+      },
+      {
+        label: MAILING_LIST_LABEL.plural,
+        icon: 'fa-light fa-envelope',
+        routerLink: '/mailing-lists',
+      },
+      {
+        label: COMMITTEE_LABEL.plural,
+        icon: 'fa-light fa-users-rectangle',
+        routerLink: '/groups',
+      },
+      {
+        label: 'Governance',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: VOTE_LABEL.plural,
+            icon: 'fa-light fa-check-to-slot',
+            routerLink: '/votes',
+          },
+          {
+            label: SURVEY_LABEL.plural,
+            icon: 'fa-light fa-clipboard-list',
+            routerLink: '/surveys',
+          },
+          {
+            label: 'Permissions',
+            icon: 'fa-light fa-shield',
+            routerLink: '/settings',
+          },
+        ],
+      },
+    ];
+
+    if (this.personaService.currentPersona() === 'executive-director') {
+      items.push({
+        label: 'Metrics',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: 'Health Metrics',
+            icon: 'fa-light fa-chart-line-up',
+            routerLink: '/foundation/health-metrics',
+            testId: 'sidebar-metrics-health-metrics',
+          },
+        ],
+      });
+    }
+
+    return items;
+  });
 
   // --- Project Lens Items (base) ---
   private readonly projectLensItems: SidebarMenuItem[] = [

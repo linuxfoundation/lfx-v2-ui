@@ -6,7 +6,20 @@ import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
 
-import type { DashboardMetricCard } from '../interfaces';
+import type { DashboardMetricCard, HealthMetricsSummaryCard } from '../interfaces';
+// ============================================
+// Health Metrics Page (Summary Cards)
+// ============================================
+
+export const HEALTH_METRICS_SUMMARY_CARDS: readonly HealthMetricsSummaryCard[] = [
+  { key: 'totalValue', title: 'Total Value', icon: 'fa-solid fa-chart-bar fa-rotate-270', iconBgClass: 'bg-blue-100', iconTextClass: 'text-blue-600', format: 'currency', testId: 'health-metrics-card-total-value' },
+  { key: 'projects', title: 'Projects', icon: 'fa-solid fa-list-ul', iconBgClass: 'bg-emerald-50', iconTextClass: 'text-emerald-600', format: 'count', testId: 'health-metrics-card-projects' },
+  { key: 'members', title: 'Members', icon: 'fa-solid fa-user-group', iconBgClass: 'bg-blue-100', iconTextClass: 'text-blue-500', format: 'count', testId: 'health-metrics-card-members' },
+  { key: 'flywheel', title: 'Flywheel', icon: 'fa-light fa-arrows-spin', iconBgClass: 'bg-amber-50', iconTextClass: 'text-amber-500', format: 'percentage', testId: 'health-metrics-card-flywheel' },
+];
+
+export const HEALTH_METRICS_STATUS_COUNT = 8;
+
 // ============================================
 // Marketing Action Icon Map
 // ============================================

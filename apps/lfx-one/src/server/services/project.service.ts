@@ -71,6 +71,7 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  ParticipatingOrgsSummaryResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -2528,5 +2529,71 @@ export class ProjectService {
         monthlyData: [],
       };
     }
+  }
+
+  /**
+   * Get participating organizations summary for a foundation from Snowflake
+   * Queries ANALYTICS.PLATINUM tables for membership counts and engagement classification
+   * @param foundationSlug - Foundation slug used to resolve Snowflake PROJECT_ID via project_slug
+   * @returns Participating orgs summary with member counts and engagement breakdown
+   */
+  public async getParticipatingOrgsSummary(foundationSlug: string): Promise<ParticipatingOrgsSummaryResponse> {
+    interface ParticipatingOrgsRow {
+      PROJECT_ID: string;
+      TOTAL_ACTIVE_ACCOUNTS: number;
+      TOTAL_NEW_ACCOUNTS: number;
+      HIGH_ENGAGEMENT: number;
+      MED_ENGAGEMENT: number;
+      LOW_ENGAGEMENT: number;
+    }
+
+    const query = `
+      WITH slug_resolve AS (
+        SELECT DISTINCT project_id
+        FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION
+        WHERE project_slug = ?
+      )
+      SELECT
+        a.PROJECT_ID,
+        a.total_active_accounts_YTD as TOTAL_ACTIVE_ACCOUNTS,
+        a.total_new_accounts_YTD as TOTAL_NEW_ACCOUNTS,
+        IFNULL(b.total_accounts, 0) as LOW_ENGAGEMENT,
+        IFNULL(c.total_accounts, 0) as MED_ENGAGEMENT,
+        IFNULL(d.total_accounts, 0) as HIGH_ENGAGEMENT
+      FROM ANALYTICS.PLATINUM.MEMBERSHIP_OVERALL_ACCOUNTS as a
+      INNER JOIN slug_resolve sr ON a.PROJECT_ID = sr.project_id
+      LEFT JOIN
+        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'Low') as b
+      ON a.PROJECT_ID = b.PROJECT_ID
+      LEFT JOIN
+        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'Medium') as c
+      ON a.PROJECT_ID = c.PROJECT_ID
+      LEFT JOIN
+        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'High') as d
+      ON a.PROJECT_ID = d.PROJECT_ID
+    `;
+
+    const result = await this.snowflakeService.execute<ParticipatingOrgsRow>(query, [foundationSlug]);
+
+    if (!result.rows || result.rows.length === 0) {
+      return {
+        projectId: '',
+        totalActiveMembers: 0,
+        totalNewMembers: 0,
+        highEngagement: 0,
+        medEngagement: 0,
+        lowEngagement: 0,
+      };
+    }
+
+    const row = result.rows[0];
+    return {
+      projectId: row.PROJECT_ID ?? '',
+      totalActiveMembers: row.TOTAL_ACTIVE_ACCOUNTS ?? 0,
+      totalNewMembers: row.TOTAL_NEW_ACCOUNTS ?? 0,
+      highEngagement: row.HIGH_ENGAGEMENT ?? 0,
+      medEngagement: row.MED_ENGAGEMENT ?? 0,
+      lowEngagement: row.LOW_ENGAGEMENT ?? 0,
+    };
   }
 }

@@ -238,6 +238,37 @@ export interface ProjectTableRow {
   lastUpdated: string | null;
 }
 
+// ============================================
+// Health Metrics Page (Summary Cards)
+// ============================================
+
+/** Format type for health metrics summary card values */
+export type HealthMetricsFormat = 'currency' | 'count' | 'percentage';
+
+/** Unique key for each summary card on the Health Metrics page */
+export type HealthMetricsKey = 'totalValue' | 'projects' | 'members' | 'flywheel';
+
+/**
+ * Configuration for a summary metric card on the Health Metrics page
+ * @description Defines layout and formatting for static summary cards
+ */
+export interface HealthMetricsSummaryCard {
+  /** Unique key identifying this card */
+  key: HealthMetricsKey;
+  /** Display label shown below the value */
+  title: string;
+  /** Font Awesome icon class */
+  icon: string;
+  /** Tailwind background class for the icon badge */
+  iconBgClass: string;
+  /** Tailwind text color class for the icon */
+  iconTextClass: string;
+  /** How to format the value for display */
+  format: HealthMetricsFormat;
+  /** E2E test selector */
+  testId: string;
+}
+
 /**
  * Filter pill option for dashboard filter controls
  * @description Used by filter-pills component for category filtering
@@ -258,4 +289,24 @@ export interface CategorizedMetricCard {
   card: DashboardMetricCard;
   /** Category used for filtering */
   category: string;
+}
+
+/**
+ * Participating Organizations summary response from BFF
+ * @description Aggregated membership engagement data for a foundation (YTD scope).
+ * Mapped from Snowflake ANALYTICS.PLATINUM tables to camelCase.
+ */
+export interface ParticipatingOrgsSummaryResponse {
+  /** Snowflake PROJECT_ID (Salesforce ID) used for PCC URL navigation */
+  projectId: string;
+  /** Active member organizations in YTD period */
+  totalActiveMembers: number;
+  /** New members added during YTD period */
+  totalNewMembers: number;
+  /** Count of orgs with high engagement classification */
+  highEngagement: number;
+  /** Count of orgs with medium engagement classification */
+  medEngagement: number;
+  /** Count of orgs with low engagement classification */
+  lowEngagement: number;
 }

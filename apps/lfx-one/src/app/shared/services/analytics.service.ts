@@ -53,6 +53,7 @@ import {
   FlywheelConversionResponse,
   MemberAcquisitionResponse,
   MemberRetentionResponse,
+  ParticipatingOrgsSummaryResponse,
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
@@ -966,6 +967,27 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get participating organizations summary (membership counts + engagement breakdown)
+   * @param foundationSlug - Foundation slug for Snowflake project_slug filter
+   * @returns Observable of participating orgs summary response
+   */
+  public getParticipatingOrgsSummary(foundationSlug: string): Observable<ParticipatingOrgsSummaryResponse> {
+    const params = { foundationSlug };
+    return this.http.get<ParticipatingOrgsSummaryResponse>('/api/analytics/participating-orgs-summary', { params }).pipe(
+      catchError(() => {
+        return of({
+          projectId: '',
+          totalActiveMembers: 0,
+          totalNewMembers: 0,
+          highEngagement: 0,
+          medEngagement: 0,
+          lowEngagement: 0,
         });
       })
     );

@@ -2160,4 +2160,42 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/participating-orgs-summary
+   * Get participating organizations summary (membership counts + engagement breakdown)
+   * Query params: foundationSlug (required)
+   */
+  public async getParticipatingOrgsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_participating_orgs_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      const response = await this.projectService.getParticipatingOrgsSummary(foundationSlug);
+
+      logger.success(req, 'get_participating_orgs_summary', startTime, {
+        foundation_slug: foundationSlug,
+        total_active_members: response.totalActiveMembers,
+        total_new_members: response.totalNewMembers,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_participating_orgs_summary', startTime, error);
+      next(error);
+    }
+  }
 }
