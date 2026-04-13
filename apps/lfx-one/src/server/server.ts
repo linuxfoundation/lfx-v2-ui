@@ -21,6 +21,7 @@ import { apiRateLimiter, authRateLimiter } from './middleware/rate-limit.middlew
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import copilotRouter from './routes/copilot.route';
+import badgesRouter from './routes/badges.route';
 import eventsRouter from './routes/events.route';
 import mailingListsRouter from './routes/mailing-lists.route';
 import meetingsRouter from './routes/meetings.route';
@@ -190,6 +191,7 @@ app.use('/api/votes', votesRouter);
 app.use('/api/surveys', surveysRouter);
 app.use('/api/copilot', copilotRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/badges', badgesRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);

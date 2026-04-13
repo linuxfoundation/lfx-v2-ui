@@ -1,0 +1,31 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+import type { FilterPillOption } from '../interfaces/dashboard-metric.interface';
+
+export const BADGE_LABEL = {
+  singular: 'Badge',
+  plural: 'Badges',
+} as const;
+
+export const BADGE_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'certifications', label: 'Certifications' },
+  { id: 'memberships', label: 'Memberships' },
+  { id: 'speaking', label: 'Speaking' },
+  { id: 'event-participation', label: 'Event Participation' },
+  { id: 'contributors', label: 'Contributors' },
+  { id: 'program-committee', label: 'Program Committee' },
+];
+
+export const BADGE_STATUS_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'active', label: 'Active' },
+  { id: 'expired', label: 'Expired' },
+];
+
+export const BADGE_VISIBILITY_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'public', label: 'Public' },
+  { id: 'private', label: 'Private' },
+];

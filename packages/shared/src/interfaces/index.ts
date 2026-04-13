@@ -106,3 +106,9 @@ export * from './persona-detection.interface';
 
 // My Event interfaces
 export * from './my-event.interface';
+
+// Badge interfaces
+export * from './badge.interface';
+
+// Credly interfaces
+export * from './credly.interface';

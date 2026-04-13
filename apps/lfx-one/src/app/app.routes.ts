@@ -73,6 +73,10 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
       },
       {
+        path: 'badges',
+        loadChildren: () => import('./modules/badges/badges.routes').then((m) => m.BADGE_ROUTES),
+      },
+      {
         path: 'events',
         data: { lens: 'foundation' },
         loadChildren: () => import('./modules/events/events.routes').then((m) => m.FOUNDATION_EVENTS_ROUTES),
