@@ -1,0 +1,129 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [modal]="true"
+  [showCloseIcon]="false"
+  styleClass="xl:w-[45%] lg:w-[55%] md:w-[70%] sm:w-[90%] w-full"
+  data-testid="brand-reach-drawer">
+  <!-- Header -->
+  <ng-template #header>
+    <div class="flex items-start justify-between gap-4 w-full" data-testid="brand-reach-drawer-header">
+      <div class="flex flex-col gap-1 flex-1">
+        <h2 class="text-lg font-semibold text-gray-900" data-testid="brand-reach-drawer-title">Brand Reach</h2>
+        <p class="text-sm text-gray-500">Executive Director · Brand Metric</p>
+      </div>
+      <lfx-button
+        icon="fa-light fa-xmark"
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        ariaLabel="Close panel"
+        (onClick)="onClose()"
+        data-testid="brand-reach-drawer-close" />
+    </div>
+  </ng-template>
+
+  <!-- Content -->
+  <div class="flex flex-col gap-6 pb-2" data-testid="brand-reach-drawer-content">
+    <!-- Summary Stats -->
+    <div class="flex gap-4" data-testid="brand-reach-drawer-stats">
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Social Followers</span>
+          @if (data().totalSocialFollowers > 0) {
+            <span class="text-2xl font-semibold text-gray-900">{{ data().totalSocialFollowers | number }}</span>
+          } @else {
+            <span class="text-2xl font-semibold text-gray-400">&mdash;</span>
+          }
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Monthly Sessions</span>
+          @if (data().totalMonthlySessions > 0) {
+            <span class="text-2xl font-semibold text-gray-900">{{ data().totalMonthlySessions | number }}</span>
+          } @else {
+            <span class="text-2xl font-semibold text-gray-400">&mdash;</span>
+          }
+        </div>
+      </lfx-card>
+      <lfx-card styleClass="flex-1">
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-gray-500">Active Platforms</span>
+          @if (data().activePlatforms > 0) {
+            <span class="text-2xl font-semibold text-gray-900">{{ data().activePlatforms }}</span>
+          } @else {
+            <span class="text-2xl font-semibold text-gray-400">&mdash;</span>
+          }
+        </div>
+      </lfx-card>
+    </div>
+
+    <!-- Social Followers by Platform -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-social-platforms">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Social Followers by Platform</h3>
+        <p class="text-sm text-gray-600">Follower count across active social channels</p>
+      </div>
+      @if (socialPlatformViews().length > 0) {
+        <div class="flex flex-col gap-0">
+          @for (platform of socialPlatformViews(); track platform.name) {
+            <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="brand-reach-drawer-platform-row">
+              <div class="flex items-center gap-3">
+                <i [class]="platform.icon + ' ' + platform.colorClass + ' text-lg w-5 text-center'"></i>
+                <span class="text-sm font-medium text-gray-900">{{ platform.name }}</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-900">{{ platform.followers | number }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="flex items-center justify-center h-[80px] text-sm text-gray-400" data-testid="brand-reach-drawer-platforms-empty">
+          Social platform data not yet available
+        </div>
+      }
+    </div>
+
+    <!-- Website Sessions by Domain -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-website-sessions">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Website Sessions by Domain</h3>
+        <p class="text-sm text-gray-600">Monthly sessions across foundation web properties</p>
+      </div>
+      @if (data().websiteDomains.length > 0) {
+        <div class="flex flex-col gap-0">
+          @for (site of data().websiteDomains; track site.domain) {
+            <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="brand-reach-drawer-domain-row">
+              <span class="text-sm font-medium text-gray-900">{{ site.domain }}</span>
+              <span class="text-sm font-semibold text-gray-900">{{ site.sessions | number }}</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="flex items-center justify-center h-[80px] text-sm text-gray-400" data-testid="brand-reach-drawer-domains-empty">
+          Website domain data not yet available
+        </div>
+      }
+    </div>
+
+    <!-- Daily Sessions Trend -->
+    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-daily-trend">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-sm font-semibold text-gray-900">Daily Sessions Trend</h3>
+        <p class="text-sm text-gray-600">Website sessions over the last 30 days</p>
+      </div>
+      @if (data().dailyTrend.length > 0) {
+        <div class="h-[240px]" data-testid="brand-reach-drawer-daily-chart">
+          <lfx-chart type="line" [data]="dailyTrendData()" [options]="dailyTrendOptions" height="100%"></lfx-chart>
+        </div>
+      } @else {
+        <div class="flex items-center justify-center h-[120px] text-sm text-gray-400" data-testid="brand-reach-drawer-daily-empty">
+          Daily trend data not yet available
+        </div>
+      }
+    </div>
+  </div>
+</p-drawer>

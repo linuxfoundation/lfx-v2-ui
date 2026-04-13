@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DashboardDrawerType, MarketingActionType } from '../interfaces';
+import { BrandReachPlatformType, DashboardDrawerType, MarketingActionType } from '../interfaces';
 import { hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
@@ -27,6 +27,19 @@ export const MARKETING_ACTION_ICON_MAP: Record<MarketingActionType, string> = {
   optimize: 'fa-light fa-bullseye-pointer',
   investigate: 'fa-light fa-magnifying-glass-chart',
   monitor: 'fa-light fa-circle-info',
+};
+
+/**
+ * Maps social platform types to Font Awesome icon + Tailwind color classes.
+ * Keeps presentation out of Brand Reach data interfaces.
+ */
+export const MARKETING_SOCIAL_PLATFORM_MAP: Record<BrandReachPlatformType, { icon: string; colorClass: string }> = {
+  linkedin: { icon: 'fa-brands fa-linkedin', colorClass: 'text-blue-700' },
+  twitter: { icon: 'fa-brands fa-x-twitter', colorClass: 'text-gray-900' },
+  youtube: { icon: 'fa-brands fa-youtube', colorClass: 'text-red-600' },
+  facebook: { icon: 'fa-brands fa-facebook', colorClass: 'text-blue-600' },
+  mastodon: { icon: 'fa-brands fa-mastodon', colorClass: 'text-purple-600' },
+  other: { icon: 'fa-light fa-hashtag', colorClass: 'text-gray-500' },
 };
 
 // ============================================

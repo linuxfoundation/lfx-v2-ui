@@ -71,6 +71,8 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  BrandReachResponse,
+  BrandReachPlatformType,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -82,6 +84,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
+
+/**
+ * Schema prefix for ED dashboard dbt views.
+ * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
+ * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
+ */
+const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
 
 /**
  * Service for handling project business logic
@@ -2527,6 +2536,120 @@ export class ProjectService {
         },
         monthlyData: [],
       };
+    }
+  }
+
+  /**
+   * Get brand reach metrics from Snowflake
+   * Combines SOCIAL_MEDIA_OVERVIEW (followers) and WEB_ACTIVITIES_SUMMARY (sessions)
+   */
+  public async getBrandReach(foundationSlug: string): Promise<BrandReachResponse> {
+    logger.debug(undefined, 'get_brand_reach', 'Fetching brand reach from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: BrandReachResponse = {
+      totalSocialFollowers: 0,
+      totalMonthlySessions: 0,
+      activePlatforms: 0,
+      changePercentage: 0,
+      trend: 'up',
+      socialPlatforms: [],
+      websiteDomains: [],
+      dailyTrend: [],
+    };
+
+    try {
+      const webQuery = `
+        SELECT LF_SUB_DOMAIN_CLASSIFICATION,
+               SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS
+        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_SUMMARY
+        WHERE FOUNDATION_SLUG = ?
+        GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
+        ORDER BY TOTAL_SESSIONS DESC
+      `;
+
+      const dailyQuery = `
+        SELECT ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
+        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_BY_PROJECT
+        WHERE FOUNDATION_SLUG = ?
+          AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
+        GROUP BY ACTIVITY_DATE
+        ORDER BY ACTIVITY_DATE ASC
+      `;
+
+      const [webResult, dailyResult] = await Promise.all([
+        this.snowflakeService.execute<{ LF_SUB_DOMAIN_CLASSIFICATION: string; TOTAL_SESSIONS: number }>(webQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ ACTIVITY_DATE: string; DAILY_SESSIONS: number }>(dailyQuery, [foundationSlug]),
+      ]);
+
+      let totalSocialFollowers = 0;
+      let socialPlatforms: BrandReachResponse['socialPlatforms'] = [];
+      try {
+        const [socialResult, socialPlatformResult] = await Promise.all([
+          this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number }>(
+            `SELECT TOTAL_FOLLOWERS, PLATFORMS_ACTIVE
+             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
+            [foundationSlug]
+          ),
+          this.snowflakeService.execute<{ PLATFORM_NAME: string; FOLLOWERS: number }>(
+            `SELECT PLATFORM_NAME, FOLLOWERS
+             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
+             ORDER BY FOLLOWERS DESC`,
+            [foundationSlug]
+          ),
+        ]);
+
+        totalSocialFollowers = socialResult.rows.length > 0 ? (socialResult.rows[0].TOTAL_FOLLOWERS ?? 0) : 0;
+
+        const platformMap: Record<string, BrandReachPlatformType> = {
+          LinkedIn: 'linkedin',
+          Twitter: 'twitter',
+          'Twitter/X': 'twitter',
+          YouTube: 'youtube',
+          Facebook: 'facebook',
+          Mastodon: 'mastodon',
+        };
+        socialPlatforms = socialPlatformResult.rows.map((row) => ({
+          name: row.PLATFORM_NAME ?? 'Other',
+          platformType: platformMap[row.PLATFORM_NAME] || ('other' as BrandReachPlatformType),
+          followers: row.FOLLOWERS ?? 0,
+        }));
+      } catch (socialError) {
+        logger.debug(undefined, 'get_brand_reach', 'Social media query failed, returning web-only data', {
+          error: socialError instanceof Error ? socialError.message : 'Unknown error',
+        });
+      }
+
+      const websiteDomains = webResult.rows.map((row) => ({
+        domain: row.LF_SUB_DOMAIN_CLASSIFICATION || 'Other',
+        sessions: row.TOTAL_SESSIONS ?? 0,
+      }));
+
+      const totalMonthlySessions = websiteDomains.reduce((sum, d) => sum + d.sessions, 0);
+
+      const dailyTrend = dailyResult.rows.map((row) => {
+        const date = new Date(row.ACTIVITY_DATE);
+        return {
+          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sessions: row.DAILY_SESSIONS ?? 0,
+        };
+      });
+
+      return {
+        totalSocialFollowers,
+        totalMonthlySessions,
+        activePlatforms: socialPlatforms.length,
+        changePercentage: 0,
+        trend: 'up',
+        socialPlatforms,
+        websiteDomains,
+        dailyTrend,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_brand_reach', 'Failed to fetch brand reach from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
     }
   }
 }

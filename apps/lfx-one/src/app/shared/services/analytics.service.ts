@@ -56,6 +56,7 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  BrandReachResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -966,6 +967,26 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand reach metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalSocialFollowers: 0,
+          totalMonthlySessions: 0,
+          activePlatforms: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          socialPlatforms: [],
+          websiteDomains: [],
+          dailyTrend: [],
         });
       })
     );

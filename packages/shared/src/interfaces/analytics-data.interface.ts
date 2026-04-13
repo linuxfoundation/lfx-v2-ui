@@ -2897,3 +2897,50 @@ export interface FlywheelConversionResponse {
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
+
+/**
+ * Social platform identifier — maps to a presentation icon + color in the component layer
+ * New platforms must be added to MARKETING_SOCIAL_PLATFORM_MAP in the component constants
+ */
+export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'other';
+
+/**
+ * Social platform row for Brand Reach drill-down
+ * Icon + color mapping is handled in the component, not the data layer
+ */
+export interface BrandReachSocialPlatform {
+  name: string;
+  platformType: BrandReachPlatformType;
+  followers: number;
+}
+
+/**
+ * Website domain row for Brand Reach drill-down
+ */
+export interface BrandReachWebsiteDomain {
+  domain: string;
+  sessions: number;
+}
+
+/**
+ * Daily sessions data point for Brand Reach drill-down
+ */
+export interface BrandReachDailyDataPoint {
+  day: string;
+  sessions: number;
+}
+
+/**
+ * API response for Brand Reach metric
+ * Digital reach across social platforms and owned websites
+ */
+export interface BrandReachResponse {
+  totalSocialFollowers: number;
+  totalMonthlySessions: number;
+  activePlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  socialPlatforms: BrandReachSocialPlatform[];
+  websiteDomains: BrandReachWebsiteDomain[];
+  dailyTrend: BrandReachDailyDataPoint[];
+}

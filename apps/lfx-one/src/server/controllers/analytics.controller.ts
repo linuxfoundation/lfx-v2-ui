@@ -2160,4 +2160,42 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/brand-reach
+   * Get brand reach metrics (total digital reach across social + owned sites)
+   */
+  public async getBrandReach(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_reach');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      const response = await this.projectService.getBrandReach(foundationSlug);
+
+      logger.success(req, 'get_brand_reach', startTime, {
+        foundation_slug: foundationSlug,
+        total_social_followers: response.totalSocialFollowers,
+        total_monthly_sessions: response.totalMonthlySessions,
+        social_platforms: response.socialPlatforms.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_brand_reach', startTime, error);
+      next(error);
+    }
+  }
 }
