@@ -52,11 +52,11 @@
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">ROAS</span>
               <div class="flex items-center gap-2">
-                <span class="text-2xl font-semibold text-gray-900">{{ drawerData().roas.toFixed(2) }}x</span>
+                <span class="text-2xl font-semibold text-gray-900">{{ drawerData().roas.toFixed(1) }}x</span>
                 @if (drawerData().changePercentage !== 0) {
                   <span class="text-sm font-medium" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
                     <i [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up' : 'fa-light fa-arrow-down'"></i>
-                    {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
+                    {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage.toFixed(1) }}%
                   </span>
                 }
               </div>

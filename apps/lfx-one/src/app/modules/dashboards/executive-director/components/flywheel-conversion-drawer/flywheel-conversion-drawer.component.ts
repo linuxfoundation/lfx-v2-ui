@@ -36,11 +36,20 @@ export class FlywheelConversionDrawerComponent {
     changePercentage: 0,
     trend: 'up',
     funnel: { eventAttendees: 0, convertedToNewsletter: 0, convertedToCommunity: 0, convertedToWorkingGroup: 0 },
+    reengagement: {
+      totalReengaged: 0,
+      reengagementRate: 0,
+      reengagementMomChange: 0,
+      reengagedToNewsletter: 0,
+      reengagedToCommunity: 0,
+      reengagedToWorkingGroup: 0,
+    },
     monthlyData: [],
   });
 
   // === Computed Signals ===
   protected readonly formattedEventAttendees: Signal<string> = computed(() => formatNumber(this.data().funnel.eventAttendees));
+  protected readonly reengagementRate: Signal<string> = computed(() => `${this.data().reengagement.reengagementRate.toFixed(1)}%`);
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -132,21 +141,21 @@ export class FlywheelConversionDrawerComponent {
   // === Private Initializers ===
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { conversionRate, changePercentage, funnel, monthlyData } = this.data();
+      const { conversionRate, funnel, reengagement, monthlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
       if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
         return actions;
       }
 
-      // Low WG conversion relative to community conversion
-      if (funnel.eventAttendees > 0 && funnel.convertedToWorkingGroup > 0 && funnel.convertedToCommunity > 0) {
-        const wgRate = (funnel.convertedToWorkingGroup / funnel.eventAttendees) * 100;
-        const communityRate = (funnel.convertedToCommunity / funnel.eventAttendees) * 100;
+      // Low WG re-engagement relative to community re-engagement
+      if (funnel.eventAttendees > 0 && reengagement.reengagedToWorkingGroup > 0 && reengagement.reengagedToCommunity > 0) {
+        const wgRate = (reengagement.reengagedToWorkingGroup / funnel.eventAttendees) * 100;
+        const communityRate = (reengagement.reengagedToCommunity / funnel.eventAttendees) * 100;
         if (wgRate < communityRate * 0.5) {
           actions.push({
-            title: 'Improve working group conversion path',
-            description: `WG conversion at ${wgRate.toFixed(1)}% vs ${communityRate.toFixed(1)}% for community — attendees need clearer path to participate`,
+            title: 'Improve working group re-engagement path',
+            description: `WG re-engagement at ${wgRate.toFixed(1)}% vs ${communityRate.toFixed(1)}% for community — attendees need clearer path to participate`,
             priority: 'high',
             dueLabel: 'This quarter',
             actionType: 'conversion',
@@ -154,22 +163,22 @@ export class FlywheelConversionDrawerComponent {
         }
       }
 
-      // Declining conversion rate
-      if (changePercentage < -5) {
+      // Declining re-engagement rate
+      if (reengagement.reengagementMomChange < -5) {
         actions.push({
-          title: 'Address conversion rate decline',
-          description: `Flywheel conversion dropped ${Math.abs(changePercentage)}% — review post-event follow-up effectiveness`,
+          title: 'Address re-engagement rate decline',
+          description: `Re-engagement dropped ${Math.abs(reengagement.reengagementMomChange).toFixed(1)}% MoM — review post-event follow-up effectiveness`,
           priority: 'high',
           dueLabel: 'This month',
           actionType: 'decline',
         });
       }
 
-      // Low overall conversion
-      if (conversionRate > 0 && conversionRate < 10 && funnel.eventAttendees > 0) {
+      // Low overall re-engagement
+      if (reengagement.reengagementRate > 0 && reengagement.reengagementRate < 10 && funnel.eventAttendees > 0) {
         actions.push({
           title: 'Add post-event engagement CTAs',
-          description: `Only ${conversionRate}% overall conversion — add community join and working group prompts to event follow-ups`,
+          description: `Only ${reengagement.reengagementRate.toFixed(1)}% re-engagement — add community join and working group prompts to event follow-ups`,
           priority: 'medium',
           dueLabel: 'Next event',
           actionType: 'content',
@@ -179,7 +188,7 @@ export class FlywheelConversionDrawerComponent {
       if (actions.length === 0) {
         actions.push({
           title: 'Continue flywheel optimization',
-          description: `${conversionRate}% conversion rate${changePercentage > 0 ? ` — improving ${changePercentage}%` : ''} across ${formatNumber(funnel.eventAttendees)} attendees`,
+          description: `${reengagement.reengagementRate.toFixed(1)}% re-engagement rate${reengagement.reengagementMomChange > 0 ? ` — improving ${reengagement.reengagementMomChange.toFixed(1)}%` : ''} across ${formatNumber(funnel.eventAttendees)} attendees`,
           priority: 'low',
           dueLabel: 'Ongoing',
           actionType: 'growth',
@@ -192,39 +201,43 @@ export class FlywheelConversionDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { conversionRate, changePercentage, funnel, monthlyData } = this.data();
+      const { conversionRate, funnel, reengagement, monthlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
       if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
         return insights;
       }
 
-      // Best conversion path
+      // Best re-engagement path
       if (funnel.eventAttendees > 0) {
         const paths = [
-          { name: 'Community', value: funnel.convertedToCommunity },
-          { name: 'Working group', value: funnel.convertedToWorkingGroup },
+          { name: 'Community', value: reengagement.reengagedToCommunity },
+          { name: 'Working group', value: reengagement.reengagedToWorkingGroup },
+          { name: 'Newsletter', value: reengagement.reengagedToNewsletter },
         ]
           .filter((p) => p.value > 0)
           .sort((a, b) => b.value - a.value);
 
         if (paths.length > 0) {
           const bestRate = (paths[0].value / funnel.eventAttendees) * 100;
-          insights.push({ text: `${paths[0].name} is the highest conversion path at ${bestRate.toFixed(1)}% of attendees`, type: 'driver' });
+          insights.push({ text: `${paths[0].name} is the highest re-engagement path at ${bestRate.toFixed(1)}% of attendees`, type: 'driver' });
         }
 
         // Weakest path
         if (paths.length > 1) {
           const worstRate = (paths[paths.length - 1].value / funnel.eventAttendees) * 100;
-          insights.push({ text: `${paths[paths.length - 1].name} conversion lowest at ${worstRate.toFixed(1)}%`, type: 'warning' });
+          insights.push({ text: `${paths[paths.length - 1].name} re-engagement lowest at ${worstRate.toFixed(1)}%`, type: 'warning' });
         }
       }
 
-      // Conversion trend
-      if (changePercentage > 3) {
-        insights.push({ text: `Conversion rate trending up ${changePercentage}% — flywheel is accelerating`, type: 'driver' });
-      } else if (changePercentage < -3) {
-        insights.push({ text: `Conversion rate dropped ${Math.abs(changePercentage)}% — flywheel is slowing`, type: 'warning' });
+      // Re-engagement MoM trend
+      if (reengagement.reengagementMomChange > 3) {
+        insights.push({ text: `Re-engagement rate trending up ${reengagement.reengagementMomChange.toFixed(1)}% — flywheel is accelerating`, type: 'driver' });
+      } else if (reengagement.reengagementMomChange < -3) {
+        insights.push({
+          text: `Re-engagement rate dropped ${Math.abs(reengagement.reengagementMomChange).toFixed(1)}% — flywheel is slowing`,
+          type: 'warning',
+        });
       }
 
       // Monthly trend consistency
@@ -266,12 +279,12 @@ export class FlywheelConversionDrawerComponent {
 
   private initFunnelChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
-      const { funnel } = this.data();
+      const { funnel, reengagement } = this.data();
       return {
-        labels: ['Event Attendees', 'Converted to Community', 'Converted to WG'],
+        labels: ['Event Attendees', 'Re-engaged to Community', 'Re-engaged to WG', 'Re-engaged to Newsletter'],
         datasets: [
           {
-            data: [funnel.eventAttendees, funnel.convertedToCommunity, funnel.convertedToWorkingGroup],
+            data: [funnel.eventAttendees, reengagement.reengagedToCommunity, reengagement.reengagedToWorkingGroup, reengagement.reengagedToNewsletter],
             backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300]],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',

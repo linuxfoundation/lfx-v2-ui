@@ -17,7 +17,23 @@ import {
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 import { catchError, of, take } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { CookieRegistryService } from './cookie-registry.service';
+
+/**
+ * Dev-mode fallback project used when NATS persona detection is unavailable.
+ * Allows the ED Evolution dashboard to load real Snowflake data locally.
+ */
+const DEV_FALLBACK_FOUNDATION: EnrichedPersonaProject = {
+  projectUid: 'a27394a3-7a6c-4d0f-9e0f-692d8753924f',
+  projectSlug: 'tlf',
+  projectName: 'The Linux Foundation',
+  parentProjectUid: null,
+  logoUrl: null,
+  description: null,
+  detections: [{ source: 'executive_director' }],
+  personas: ['executive-director' as PersonaType],
+};
 
 @Injectable({
   providedIn: 'root',
@@ -108,6 +124,23 @@ export class PersonaService {
             currentPersona: this.currentPersona(),
             allPersonas: this.allPersonas(),
           });
+
+          // In dev mode, provide a fallback foundation so the ED dashboard
+          // can load real Snowflake data even when NATS is unavailable.
+          if (!environment.production && this.detectedProjects().length === 0) {
+            console.info('[PersonaService] Dev mode: using fallback TLF foundation for ED dashboard');
+            this.detectedProjects.set([DEV_FALLBACK_FOUNDATION]);
+            this.personaProjects.set({
+              'executive-director': [
+                {
+                  projectUid: DEV_FALLBACK_FOUNDATION.projectUid,
+                  projectSlug: DEV_FALLBACK_FOUNDATION.projectSlug,
+                  projectName: DEV_FALLBACK_FOUNDATION.projectName,
+                },
+              ],
+            });
+            this.setPersonas('executive-director', ['executive-director'], false, false);
+          }
           return;
         }
 

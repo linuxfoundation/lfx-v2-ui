@@ -44,7 +44,7 @@
         <lfx-card styleClass="flex-1">
           <div class="flex flex-col gap-1">
             <span class="text-sm text-gray-500">Current CTR</span>
-            <span class="text-2xl font-semibold text-gray-900">{{ drawerData().currentCtr.toFixed(2) }}%</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ drawerData().currentCtr.toFixed(1) }}%</span>
           </div>
         </lfx-card>
         <lfx-card styleClass="flex-1">
@@ -53,7 +53,7 @@
             @if (drawerData().changePercentage !== 0) {
               <div class="flex items-center gap-2">
                 <span class="text-2xl font-semibold" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                  {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage }}%
+                  {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage.toFixed(1) }}%
                 </span>
                 <i class="text-sm" [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
               </div>
