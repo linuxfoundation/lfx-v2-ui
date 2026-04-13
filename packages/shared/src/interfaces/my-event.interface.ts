@@ -271,8 +271,8 @@ export interface GetMyEventsOptions {
   pageSize: number;
   offset: number;
   sortOrder: EventSortOrder;
-  /** Project IDs from persona detection — scopes upcoming events to affiliated projects */
-  affiliatedProjectIds?: string[];
+  /** Project slugs from persona detection — scopes upcoming events to affiliated projects */
+  affiliatedProjectSlugs?: string[];
 }
 
 /**
@@ -298,6 +298,6 @@ export interface GetEventOrganizationsOptions {
   projectName?: string;
   /** When true, returns only foundations from the authenticated user's registered past events */
   isPast?: boolean;
-  /** Project IDs from persona detection — scopes upcoming foundations to affiliated projects */
-  affiliatedProjectIds?: string[];
+  /** Project slugs from persona detection — scopes upcoming foundations to affiliated projects */
+  affiliatedProjectSlugs?: string[];
 }

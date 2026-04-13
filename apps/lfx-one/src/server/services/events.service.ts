@@ -30,7 +30,7 @@ export class EventsService {
   }
 
   public async getMyEvents(req: Request, userEmail: string, options: GetMyEventsOptions): Promise<MyEventsResponse> {
-    const { isPast, eventId, projectName, searchQuery, role, status, sortField: rawSortField, pageSize, offset, sortOrder, affiliatedProjectIds } = options;
+    const { isPast, eventId, projectName, searchQuery, role, status, sortField: rawSortField, pageSize, offset, sortOrder, affiliatedProjectSlugs } = options;
     const sortField = rawSortField && VALID_EVENT_SORT_FIELDS.has(rawSortField) ? rawSortField : DEFAULT_EVENT_SORT_FIELD;
     const normalizedSortOrder: EventSortOrder = sortOrder === 'DESC' ? 'DESC' : 'ASC';
     const normalizedPageSize = Number.isInteger(pageSize) && pageSize > 0 ? pageSize : 10;
@@ -42,7 +42,7 @@ export class EventsService {
       has_project_name: !!projectName,
       has_search_query: !!searchQuery,
       role,
-      affiliated_project_count: affiliatedProjectIds?.length ?? 0,
+      affiliated_project_count: affiliatedProjectSlugs?.length ?? 0,
       page_size: normalizedPageSize,
       offset: normalizedOffset,
       sort_order: normalizedSortOrder,
@@ -53,7 +53,7 @@ export class EventsService {
 
     if (isPast === false) {
       // Upcoming tab: show events from affiliated projects UNION user's registered events.
-      // When affiliatedProjectIds is empty, use AND 1=0 so only registered events appear
+      // When affiliatedProjectSlugs is empty, use AND 1=0 so only registered events appear
       // (persona detection returned no affiliations or encountered an error).
       const eventIdFilter = eventId ? 'AND EVENT_ID = ?' : '';
       const projectNameFilter = projectName ? 'AND e.PROJECT_NAME = ?' : '';
@@ -61,9 +61,9 @@ export class EventsService {
       const roleFilterResult = role ? this.buildUpcomingRoleFilter(role) : { filter: '', binds: [] as string[] };
       const statusFilterResult = status ? this.buildUpcomingStatusFilter(status) : { filter: '', binds: [] as string[] };
 
-      const ids = affiliatedProjectIds ?? [];
-      const hasAffiliatedIds = ids.length > 0;
-      const affiliatedFilter = hasAffiliatedIds ? `AND PROJECT_ID IN (${ids.map(() => '?').join(', ')})` : 'AND 1=0';
+      const slugs = affiliatedProjectSlugs ?? [];
+      const hasAffiliatedSlugs = slugs.length > 0;
+      const affiliatedFilter = hasAffiliatedSlugs ? `AND LOWER(PROJECT_SLUG) IN (${slugs.map(() => '?').join(', ')})` : 'AND 1=0';
 
       sql = `
         WITH affiliated_upcoming AS (
@@ -168,7 +168,7 @@ export class EventsService {
         LIMIT ${normalizedPageSize} OFFSET ${normalizedOffset}
       `;
 
-      const affiliatedUpcomingBinds: string[] = [...(eventId ? [eventId] : []), ...ids];
+      const affiliatedUpcomingBinds: string[] = [...(eventId ? [eventId] : []), ...slugs];
       const registeredEventsBinds: string[] = [userEmail, ...(eventId ? [eventId] : [])];
       const userRegBinds: string[] = [userEmail];
       const whereBinds: string[] = [
@@ -178,6 +178,13 @@ export class EventsService {
         ...statusFilterResult.binds,
       ];
       binds = [...affiliatedUpcomingBinds, ...registeredEventsBinds, ...userRegBinds, ...whereBinds];
+
+      logger.debug(req, 'get_my_events', 'Upcoming events query binds', {
+        affiliated_project_slugs: slugs,
+        affiliated_filter_active: hasAffiliatedSlugs,
+        user_email: '***',
+        bind_count: binds.length,
+      });
     } else {
       // Past tab (or no isPast filter): show only the user's own registered events.
       const isPastFilter = isPast !== undefined ? `AND IS_PAST_EVENT = ${isPast ? 'TRUE' : 'FALSE'}` : '';
@@ -355,12 +362,12 @@ export class EventsService {
   }
 
   public async getEventOrganizations(req: Request, userEmail: string, options: GetEventOrganizationsOptions): Promise<MyEventOrganizationsResponse> {
-    const { projectName, isPast, affiliatedProjectIds } = options;
+    const { projectName, isPast, affiliatedProjectSlugs } = options;
 
     logger.debug(req, 'get_event_organizations', 'Building organizations query', {
       has_project_name: !!projectName,
       is_past: isPast,
-      affiliated_project_count: affiliatedProjectIds?.length ?? 0,
+      affiliated_project_count: affiliatedProjectSlugs?.length ?? 0,
     });
 
     let sql: string;
@@ -381,11 +388,11 @@ export class EventsService {
       if (projectName) binds.push(projectName);
     } else {
       // Upcoming tab: return foundations from events the user has registered for OR that belong
-      // to affiliated projects. When affiliatedProjectIds is empty, show only registered foundations.
+      // to affiliated projects. When affiliatedProjectSlugs is empty, show only registered foundations.
       const projectNameFilter = projectName ? 'AND PROJECT_NAME = ?' : '';
-      const ids = affiliatedProjectIds ?? [];
-      const hasAffiliatedIds = ids.length > 0;
-      const affiliatedFilter = hasAffiliatedIds ? `OR PROJECT_ID IN (${ids.map(() => '?').join(', ')})` : '';
+      const slugs = affiliatedProjectSlugs ?? [];
+      const hasAffiliatedSlugs = slugs.length > 0;
+      const affiliatedFilter = hasAffiliatedSlugs ? `OR LOWER(PROJECT_SLUG) IN (${slugs.map(() => '?').join(', ')})` : '';
 
       sql = `
         SELECT DISTINCT PROJECT_NAME
@@ -396,7 +403,7 @@ export class EventsService {
         ORDER BY PROJECT_NAME
       `;
       binds.push(userEmail);
-      if (hasAffiliatedIds) binds.push(...ids);
+      if (hasAffiliatedSlugs) binds.push(...slugs);
       if (projectName) binds.push(projectName);
     }
 

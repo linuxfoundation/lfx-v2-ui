@@ -65,11 +65,12 @@ export class EventsController {
         isPast = false;
       }
 
-      // For upcoming events, fetch affiliated project IDs server-side from the persona service.
+      // For upcoming events, fetch affiliated project slugs server-side from the persona service.
+      // Slugs are used because PROJECT_SLUG is the shared key between the persona service and datalake.
       // This ensures client-supplied values cannot be used to access events from arbitrary projects.
-      let affiliatedProjectIds: string[] | undefined;
+      let affiliatedProjectSlugs: string[] | undefined;
       if (isPast === false) {
-        affiliatedProjectIds = await this.personaDetectionService.getAffiliatedProjectUids(req);
+        affiliatedProjectSlugs = await this.personaDetectionService.getAffiliatedProjectSlugs(req);
       }
 
       const response = await this.eventsService.getMyEvents(req, userEmail, {
@@ -83,7 +84,7 @@ export class EventsController {
         pageSize,
         offset,
         sortOrder,
-        affiliatedProjectIds,
+        affiliatedProjectSlugs,
       });
 
       logger.success(req, 'get_my_events', startTime, {
@@ -188,16 +189,16 @@ export class EventsController {
         isPast = false;
       }
 
-      // For upcoming events, fetch affiliated project IDs server-side from the persona service.
-      let affiliatedProjectIds: string[] | undefined;
+      // For upcoming events, fetch affiliated project slugs server-side from the persona service.
+      let affiliatedProjectSlugs: string[] | undefined;
       if (isPast === false) {
-        affiliatedProjectIds = await this.personaDetectionService.getAffiliatedProjectUids(req);
+        affiliatedProjectSlugs = await this.personaDetectionService.getAffiliatedProjectSlugs(req);
       }
 
       const options: GetEventOrganizationsOptions = {
         projectName: req.query['projectName'] ? String(req.query['projectName']) : undefined,
         isPast,
-        affiliatedProjectIds,
+        affiliatedProjectSlugs,
       };
 
       const response = await this.eventsService.getEventOrganizations(req, userEmail, options);
