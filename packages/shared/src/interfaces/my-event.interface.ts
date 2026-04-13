@@ -180,9 +180,21 @@ export interface EventTab {
 }
 
 /**
+ * Step identifiers for the visa letter application dialog
+ */
+export type VisaRequestStep = 'select-event' | 'terms' | 'apply';
+
+/**
+ * Step identifiers for the travel fund application dialog
+ */
+export type TravelFundStep = 'select-event' | 'terms' | 'about-me' | 'expenses';
+
+/**
  * Parameters for fetching event requests (visa letters or travel fund) from the API
  */
 export interface GetEventRequestsParams {
+  eventId?: string;
+  projectName?: string;
   searchQuery?: string;
   status?: string;
   sortField?: string;
@@ -286,7 +298,7 @@ export interface VisaRequestRow {
   EVENT_COUNTRY: string | null;
   /** Date the visa letter was applied for */
   APPLICATION_DATE: Date | string | null;
-  /** Visa letter request status (e.g. "Pending", "Approved", "Denied") */
+  /** Visa letter request status. Actual Snowflake values: "Submitted", "Approved", "Denied", "Expired" */
   REQUEST_STATUS: string;
   TOTAL_RECORDS: number;
 }
@@ -305,7 +317,7 @@ export interface VisaRequest {
   location: string;
   /** Human-readable application date string (e.g. "Jan 15, 2026") */
   applicationDate: string;
-  /** Visa letter request status (e.g. "Pending", "Approved", "Denied") */
+  /** Visa letter request status (e.g. "Submitted", "Approved", "Denied", "Expired") */
   status: string;
 }
 

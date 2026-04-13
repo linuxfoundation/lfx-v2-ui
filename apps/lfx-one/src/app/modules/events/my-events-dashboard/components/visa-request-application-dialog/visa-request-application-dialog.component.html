@@ -4,19 +4,19 @@
 <div class="flex flex-col" data-testid="visa-request-application-dialog">
   <!-- Step indicator -->
   <div class="flex items-center px-1 pb-5" data-testid="visa-request-step-indicator">
-    @for (s of steps; track s.id; let last = $last) {
+    @for (s of stepStates(); track s.id; let last = $last) {
       <div class="flex items-center" [class.flex-1]="!last">
         <div class="flex items-center gap-2 shrink-0">
           <!-- Circle -->
           <div
             class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-            [class.bg-blue-600]="isStepActive(s.id) || isStepCompleted(s.id)"
-            [class.text-white]="isStepActive(s.id) || isStepCompleted(s.id)"
-            [class.border-2]="!isStepActive(s.id) && !isStepCompleted(s.id)"
-            [class.border-gray-300]="!isStepActive(s.id) && !isStepCompleted(s.id)"
-            [class.text-gray-400]="!isStepActive(s.id) && !isStepCompleted(s.id)"
+            [class.bg-blue-600]="s.isActive || s.isCompleted"
+            [class.text-white]="s.isActive || s.isCompleted"
+            [class.border-2]="!s.isActive && !s.isCompleted"
+            [class.border-gray-300]="!s.isActive && !s.isCompleted"
+            [class.text-gray-400]="!s.isActive && !s.isCompleted"
             [attr.data-testid]="'visa-request-step-circle-' + s.number">
-            @if (isStepCompleted(s.id)) {
+            @if (s.isCompleted) {
               <i class="fa-light fa-check text-sm"></i>
             } @else {
               {{ s.number }}
@@ -25,9 +25,9 @@
           <!-- Label -->
           <span
             class="text-sm whitespace-nowrap"
-            [class.font-semibold]="isStepActive(s.id)"
-            [class.text-gray-900]="isStepActive(s.id)"
-            [class.text-gray-400]="!isStepActive(s.id)"
+            [class.font-semibold]="s.isActive"
+            [class.text-gray-900]="s.isActive"
+            [class.text-gray-400]="!s.isActive"
             [attr.data-testid]="'visa-request-step-label-' + s.number">
             {{ s.label }}
           </span>

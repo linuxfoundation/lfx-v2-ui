@@ -249,6 +249,7 @@ export class EventsController {
 
       res.json(response);
     } catch (error) {
+      logger.error(req, 'get_upcoming_countries', startTime, error, {});
       next(error);
     }
   }
@@ -310,6 +311,12 @@ export class EventsController {
     const startTime = logger.startOperation(req, 'submit_visa_request_application', {});
 
     try {
+      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+
+      if (!userEmail) {
+        throw new AuthenticationError('User authentication required', { operation: 'submit_visa_request_application' });
+      }
+
       const payload = req.body as VisaRequestApplication;
 
       if (!payload?.eventId) {
@@ -319,6 +326,13 @@ export class EventsController {
       if (!payload?.applicantInfo) {
         throw ServiceValidationError.forField('applicantInfo', 'applicantInfo is required', { operation: 'submit_visa_request_application' });
       }
+
+      if (!payload?.termsAccepted) {
+        throw ServiceValidationError.forField('termsAccepted', 'termsAccepted must be true', { operation: 'submit_visa_request_application' });
+      }
+
+      // Overwrite client-provided email with session email for data integrity
+      payload.applicantInfo.email = userEmail;
 
       const result = await this.eventsService.submitVisaRequestApplication(req, payload);
       logger.success(req, 'submit_visa_request_application', startTime, { event_id: payload.eventId });
@@ -338,6 +352,12 @@ export class EventsController {
     const startTime = logger.startOperation(req, 'submit_travel_fund_application', {});
 
     try {
+      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+
+      if (!userEmail) {
+        throw new AuthenticationError('User authentication required', { operation: 'submit_travel_fund_application' });
+      }
+
       const payload = req.body as TravelFundApplication;
 
       if (!payload?.eventId) {
@@ -347,6 +367,17 @@ export class EventsController {
       if (!payload?.aboutMe) {
         throw ServiceValidationError.forField('aboutMe', 'aboutMe is required', { operation: 'submit_travel_fund_application' });
       }
+
+      if (!payload?.termsAccepted) {
+        throw ServiceValidationError.forField('termsAccepted', 'termsAccepted must be true', { operation: 'submit_travel_fund_application' });
+      }
+
+      if (!payload?.expenses) {
+        throw ServiceValidationError.forField('expenses', 'expenses is required', { operation: 'submit_travel_fund_application' });
+      }
+
+      // Overwrite client-provided email with session email for data integrity
+      payload.aboutMe.email = userEmail;
 
       const result = await this.eventsService.submitTravelFundApplication(req, payload);
       logger.success(req, 'submit_travel_fund_application', startTime, { event_id: payload.eventId });
@@ -403,8 +434,8 @@ export class EventsController {
 
       res.json(response);
     } catch (error) {
+      logger.error(req, operationName, startTime, error, {});
       next(error);
     }
   }
-
 }

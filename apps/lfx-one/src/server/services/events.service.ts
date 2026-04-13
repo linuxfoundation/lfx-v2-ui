@@ -92,7 +92,7 @@ export class EventsService {
       const startDateFromFilter = startDateFrom ? 'AND e.EVENT_START_DATE >= ?' : '';
       const startDateToFilter = startDateTo ? 'AND e.EVENT_START_DATE <= ?' : '';
       const countryFilter = country ? 'AND e.EVENT_COUNTRY = ?' : '';
-      const registeredOnlyFilter = registeredOnly ? 'AND r.EVENT_ID IS NOT NULL' : '';
+      const registeredOnlyFilter = registeredOnly ? "AND r.EVENT_ID IS NOT NULL AND r.REGISTRATION_STATUS = 'Accepted'" : '';
 
       sql = `
         WITH all_upcoming AS (

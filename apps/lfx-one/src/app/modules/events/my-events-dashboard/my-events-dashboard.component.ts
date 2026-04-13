@@ -61,6 +61,7 @@ export class MyEventsDashboardComponent {
     this.selectedFoundation.set(null);
     this.selectedRole.set(null);
     this.selectedStatus.set(null);
+    this.selectedSearchQuery.set('');
   }
 
   private initFoundationLabel(): Signal<string> {

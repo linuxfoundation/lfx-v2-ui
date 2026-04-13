@@ -3,8 +3,9 @@
 
 .scroll-area {
   @apply max-h-[440px];
+
   scrollbar-width: thin;
-  scrollbar-color: #e2e8f0 transparent;
+  scrollbar-color: theme('colors.slate.200') transparent;
 
   &::-webkit-scrollbar {
     @apply w-1.5;

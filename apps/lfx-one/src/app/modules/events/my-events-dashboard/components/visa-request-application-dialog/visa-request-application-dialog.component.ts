@@ -5,14 +5,12 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
-import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication } from '@lfx-one/shared/interfaces';
+import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
 import { VisaRequestApplyFormComponent } from '../visa-request-apply-form/visa-request-apply-form.component';
 import { VisaRequestTermsComponent } from '../visa-request-terms/visa-request-terms.component';
-
-export type VisaRequestStep = 'select-event' | 'terms' | 'apply';
 
 const STEP_ORDER: VisaRequestStep[] = ['select-event', 'terms', 'apply'];
 
@@ -31,6 +29,7 @@ export class VisaRequestApplicationDialogComponent {
 
   public step = signal<VisaRequestStep>('select-event');
   public selectedEvent = signal<MyEvent | null>(null);
+  public termsAccepted = signal(false);
   public applyFormValid = signal(false);
   public applicantData = signal<VisaRequestApplicantInfo | null>(null);
   public submitting = signal(false);
@@ -47,7 +46,18 @@ export class VisaRequestApplicationDialogComponent {
     { id: 'apply', label: 'Apply', number: 3 },
   ];
 
+  public readonly stepStates = computed(() =>
+    this.steps.map((s) => ({
+      ...s,
+      isActive: this.step() === s.id,
+      isCompleted: STEP_ORDER.indexOf(s.id) < STEP_ORDER.indexOf(this.step()),
+    }))
+  );
+
   public onNextStep(): void {
+    if (this.step() === 'terms') {
+      this.termsAccepted.set(true);
+    }
     const currentIndex = STEP_ORDER.indexOf(this.step());
     if (currentIndex < STEP_ORDER.length - 1) {
       this.step.set(STEP_ORDER[currentIndex + 1]);
@@ -70,7 +80,7 @@ export class VisaRequestApplicationDialogComponent {
     const payload: VisaRequestApplication = {
       eventId: event.id,
       eventName: event.name,
-      termsAccepted: true,
+      termsAccepted: this.termsAccepted(),
       applicantInfo,
     };
 
@@ -80,13 +90,22 @@ export class VisaRequestApplicationDialogComponent {
       .submitVisaRequestApplication(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Your visa letter application has been submitted successfully.',
-          });
-          this.ref.close({ submitted: true });
+        next: (response) => {
+          if (response.success) {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: 'Your visa letter application has been submitted successfully.',
+            });
+            this.ref.close({ submitted: true });
+          } else {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Submission Failed',
+              detail: response.message ?? 'Unable to submit your application. Please try again.',
+            });
+            this.submitting.set(false);
+          }
         },
         error: () => this.submitting.set(false),
       });
@@ -94,13 +113,5 @@ export class VisaRequestApplicationDialogComponent {
 
   public onCancel(): void {
     this.ref.close(null);
-  }
-
-  public isStepActive(stepId: VisaRequestStep): boolean {
-    return this.step() === stepId;
-  }
-
-  public isStepCompleted(stepId: VisaRequestStep): boolean {
-    return STEP_ORDER.indexOf(stepId) < STEP_ORDER.indexOf(this.step());
   }
 }

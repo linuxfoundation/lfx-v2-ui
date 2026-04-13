@@ -23,7 +23,7 @@ import {
   VisaRequestApplicationResponse,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, take } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -116,11 +116,11 @@ export class EventsService {
   }
 
   public submitVisaRequestApplication(payload: VisaRequestApplication): Observable<VisaRequestApplicationResponse> {
-    return this.http.post<VisaRequestApplicationResponse>('/api/events/visa-applications', payload).pipe(take(1));
+    return this.http.post<VisaRequestApplicationResponse>('/api/events/visa-applications', payload);
   }
 
   public submitTravelFundApplication(payload: TravelFundApplication): Observable<TravelFundApplicationResponse> {
-    return this.http.post<TravelFundApplicationResponse>('/api/events/travel-fund-applications', payload).pipe(take(1));
+    return this.http.post<TravelFundApplicationResponse>('/api/events/travel-fund-applications', payload);
   }
 
   public getCertificate(params: GetCertificateParams): Observable<Blob | null> {

@@ -50,7 +50,7 @@ export class EventSelectionComponent {
   public loadingMore = signal(false);
   public allEvents = signal<MyEvent[]>([]);
   public totalFromServer = signal(0);
-  public availableLocations = signal<{ label: string; value: string }[]>([{ label: 'Any Where', value: 'any' }]);
+  public availableLocations = signal<{ label: string; value: string }[]>([{ label: 'Anywhere', value: 'any' }]);
   private currentOffset = 0;
 
   public hasMore = computed(() => this.allEvents().length < this.totalFromServer());
@@ -86,17 +86,18 @@ export class EventSelectionComponent {
   }
 
   public onLoadMore(): void {
-    this.currentOffset += PAGE_SIZE;
+    const nextOffset = this.currentOffset + PAGE_SIZE;
     this.loadingMore.set(true);
 
     this.eventsService
-      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: this.currentOffset, registeredOnly: true, ...this.activeFilters() })
+      .getMyEvents({ isPast: false, pageSize: PAGE_SIZE, offset: nextOffset, registeredOnly: true, ...this.activeFilters() })
       .pipe(
         catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
         finalize(() => this.loadingMore.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((response) => {
+        this.currentOffset = nextOffset;
         this.allEvents.update((current) => [...current, ...response.data]);
         this.totalFromServer.set(response.total);
       });
@@ -124,7 +125,7 @@ export class EventSelectionComponent {
       .getUpcomingCountries()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((response) => {
-        this.availableLocations.set([{ label: 'Any Where', value: 'any' }, ...response.data.map((c) => ({ label: c, value: c }))]);
+        this.availableLocations.set([{ label: 'Anywhere', value: 'any' }, ...response.data.map((c) => ({ label: c, value: c }))]);
       });
   }
 

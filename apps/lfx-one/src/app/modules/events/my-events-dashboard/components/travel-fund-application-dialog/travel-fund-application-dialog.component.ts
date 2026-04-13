@@ -5,15 +5,13 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
-import { MyEvent, TravelFundAboutMe, TravelFundApplication, TravelFundExpenses } from '@lfx-one/shared/interfaces';
+import { MyEvent, TravelFundAboutMe, TravelFundApplication, TravelFundExpenses, TravelFundStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
 import { TravelFundTermsComponent } from '../travel-fund-terms/travel-fund-terms.component';
 import { AboutMeFormComponent } from '../about-me-form/about-me-form.component';
 import { TravelExpensesFormComponent } from '../travel-expenses-form/travel-expenses-form.component';
-
-export type TravelFundStep = 'select-event' | 'terms' | 'about-me' | 'expenses';
 
 const STEP_ORDER: TravelFundStep[] = ['select-event', 'terms', 'about-me', 'expenses'];
 
@@ -32,6 +30,7 @@ export class TravelFundApplicationDialogComponent {
 
   public step = signal<TravelFundStep>('select-event');
   public selectedEvent = signal<MyEvent | null>(null);
+  public termsAccepted = signal(false);
   public aboutMeFormValid = signal(false);
   public aboutMeData = signal<TravelFundAboutMe | null>(null);
   public expensesData = signal<TravelFundExpenses | null>(null);
@@ -50,7 +49,18 @@ export class TravelFundApplicationDialogComponent {
     { id: 'expenses', label: 'Expenses', number: 4 },
   ];
 
+  public readonly stepStates = computed(() =>
+    this.steps.map((s) => ({
+      ...s,
+      isActive: this.step() === s.id,
+      isCompleted: STEP_ORDER.indexOf(s.id) < STEP_ORDER.indexOf(this.step()),
+    }))
+  );
+
   public onNextStep(): void {
+    if (this.step() === 'terms') {
+      this.termsAccepted.set(true);
+    }
     const currentIndex = STEP_ORDER.indexOf(this.step());
     if (currentIndex < STEP_ORDER.length - 1) {
       this.step.set(STEP_ORDER[currentIndex + 1]);
@@ -73,7 +83,7 @@ export class TravelFundApplicationDialogComponent {
     const payload: TravelFundApplication = {
       eventId: event.id,
       eventName: event.name,
-      termsAccepted: true,
+      termsAccepted: this.termsAccepted(),
       aboutMe,
       expenses: this.expensesData() ?? {
         airfareCost: 0,
@@ -92,13 +102,22 @@ export class TravelFundApplicationDialogComponent {
       .submitTravelFundApplication(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Your travel fund application has been submitted successfully.',
-          });
-          this.ref.close({ submitted: true });
+        next: (response) => {
+          if (response.success) {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Success',
+              detail: 'Your travel fund application has been submitted successfully.',
+            });
+            this.ref.close({ submitted: true });
+          } else {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Submission Failed',
+              detail: response.message ?? 'Unable to submit your application. Please try again.',
+            });
+            this.submitting.set(false);
+          }
         },
         error: () => this.submitting.set(false),
       });
@@ -106,13 +125,5 @@ export class TravelFundApplicationDialogComponent {
 
   public onCancel(): void {
     this.ref.close(null);
-  }
-
-  public isStepActive(stepId: TravelFundStep): boolean {
-    return this.step() === stepId;
-  }
-
-  public isStepCompleted(stepId: TravelFundStep): boolean {
-    return STEP_ORDER.indexOf(stepId) < STEP_ORDER.indexOf(this.step());
   }
 }

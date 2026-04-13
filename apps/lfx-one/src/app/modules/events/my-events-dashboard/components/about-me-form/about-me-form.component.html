@@ -14,6 +14,9 @@
         placeholder="Jane"
         styleClass="w-full"
         dataTest="about-me-first-name" />
+      @if (form.get('firstName')?.invalid && form.get('firstName')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-first-name-error">First name is required</span>
+      }
     </div>
     <div class="flex flex-col gap-1">
       <label for="about-me-last-name" class="text-sm font-medium text-gray-700"> Last Name <span class="text-red-500">*</span> </label>
@@ -25,6 +28,9 @@
         placeholder="Smith"
         styleClass="w-full"
         dataTest="about-me-last-name" />
+      @if (form.get('lastName')?.invalid && form.get('lastName')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-last-name-error">Last name is required</span>
+      }
     </div>
   </div>
 
@@ -46,6 +52,9 @@
         [filter]="true"
         styleClass="w-full"
         dataTest="about-me-citizenship-country" />
+      @if (form.get('citizenshipCountry')?.invalid && form.get('citizenshipCountry')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-citizenship-country-error">Country of citizenship is required</span>
+      }
     </div>
   </div>
 
@@ -63,6 +72,9 @@
         placeholder="https://"
         styleClass="w-full"
         dataTest="about-me-profile-link" />
+      @if (form.get('profileLink')?.invalid && form.get('profileLink')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-profile-link-error">Profile link is required</span>
+      }
     </div>
     <div class="flex flex-col gap-1">
       <label for="about-me-company" class="text-sm font-medium text-gray-700"> Company <span class="text-red-500">*</span> </label>
@@ -74,6 +86,9 @@
         size="small"
         styleClass="w-full"
         dataTest="about-me-company" />
+      @if (form.get('company')?.invalid && form.get('company')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-company-error">Company is required</span>
+      }
     </div>
   </div>
 
@@ -88,6 +103,9 @@
         placeholder="- Select -"
         styleClass="w-full"
         dataTest="about-me-can-receive-funds" />
+      @if (form.get('canReceiveFunds')?.invalid && form.get('canReceiveFunds')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-can-receive-funds-error">This field is required</span>
+      }
     </div>
     <div class="flex flex-col gap-1">
       <label class="text-sm font-medium text-gray-700"> What country would you be travelling from? <span class="text-red-500">*</span> </label>
@@ -99,6 +117,9 @@
         [filter]="true"
         styleClass="w-full"
         dataTest="about-me-travel-from-country" />
+      @if (form.get('travelFromCountry')?.invalid && form.get('travelFromCountry')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-travel-from-country-error">Travel from country is required</span>
+      }
     </div>
   </div>
 
@@ -115,6 +136,9 @@
       placeholder="Tell us about your contributions and motivation..."
       styleClass="w-full"
       dataTest="about-me-open-source-involvement" />
+    @if (form.get('openSourceInvolvement')?.invalid && form.get('openSourceInvolvement')?.touched) {
+      <span class="text-xs text-red-500" data-testid="about-me-open-source-involvement-error">This field is required</span>
+    }
   </div>
 
   <!-- Row 6: Underrepresented Groups -->
