@@ -17,10 +17,12 @@ import {
 } from '@lfx-one/shared/constants';
 import { EventSortOrder, EventStatusFilter, GetEventOrganizationsOptions, GetEventsOptions } from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
+import { PersonaDetectionService } from '../services/persona-detection.service';
 
 export class EventsController {
   private readonly eventsService = new EventsService();
   private readonly certificateService = new CertificateService();
+  private readonly personaDetectionService = new PersonaDetectionService();
 
   /**
    * GET /api/events
@@ -63,6 +65,13 @@ export class EventsController {
         isPast = false;
       }
 
+      // For upcoming events, fetch affiliated project IDs server-side from the persona service.
+      // This ensures client-supplied values cannot be used to access events from arbitrary projects.
+      let affiliatedProjectIds: string[] | undefined;
+      if (isPast === false) {
+        affiliatedProjectIds = await this.personaDetectionService.getAffiliatedProjectUids(req);
+      }
+
       const response = await this.eventsService.getMyEvents(req, userEmail, {
         isPast,
         eventId,
@@ -74,6 +83,7 @@ export class EventsController {
         pageSize,
         offset,
         sortOrder,
+        affiliatedProjectIds,
       });
 
       logger.success(req, 'get_my_events', startTime, {
@@ -178,9 +188,16 @@ export class EventsController {
         isPast = false;
       }
 
+      // For upcoming events, fetch affiliated project IDs server-side from the persona service.
+      let affiliatedProjectIds: string[] | undefined;
+      if (isPast !== true) {
+        affiliatedProjectIds = await this.personaDetectionService.getAffiliatedProjectUids(req);
+      }
+
       const options: GetEventOrganizationsOptions = {
         projectName: req.query['projectName'] ? String(req.query['projectName']) : undefined,
         isPast,
+        affiliatedProjectIds,
       };
 
       const response = await this.eventsService.getEventOrganizations(req, userEmail, options);

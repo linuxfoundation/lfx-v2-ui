@@ -32,6 +32,25 @@ export class PersonaDetectionService {
   }
 
   /**
+   * Return only the project UIDs the authenticated user is affiliated with.
+   * Uses a single NATS call (no project-name enrichment) — suitable for
+   * authorization checks in data-fetching endpoints.
+   * Returns an empty array on error so callers degrade gracefully.
+   */
+  public async getAffiliatedProjectUids(req: Request): Promise<string[]> {
+    const username = req.oidc?.user?.['nickname'] || '';
+    const email = (req.oidc?.user?.['email'] as string) || '';
+
+    const detectionResponse = await this.fetchPersonaDetections(req, username, email);
+
+    if (detectionResponse.error || detectionResponse.projects.length === 0) {
+      return [];
+    }
+
+    return detectionResponse.projects.map((p) => p.project_uid).filter(Boolean);
+  }
+
+  /**
    * Get enriched persona data for the authenticated user
    * Calls the persona detection service via NATS, enriches with project names,
    * and maps detections to persona types
