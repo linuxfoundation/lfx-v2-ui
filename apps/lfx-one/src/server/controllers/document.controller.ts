@@ -3,10 +3,8 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthenticationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { DocumentService } from '../services/document.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
 
 /**
  * Controller for handling My Documents HTTP requests
@@ -23,11 +21,6 @@ export class DocumentController {
     });
 
     try {
-      const rawUsername = await getUsernameFromAuth(req);
-      if (!rawUsername) {
-        throw new AuthenticationError('User authentication required', { operation: 'get_my_documents' });
-      }
-
       const documents = await this.documentService.getMyDocuments(req, req.query as Record<string, any>);
 
       logger.success(req, 'get_my_documents', startTime, {
@@ -36,7 +29,6 @@ export class DocumentController {
 
       res.json(documents);
     } catch (error) {
-      logger.error(req, 'get_my_documents', startTime, error);
       next(error);
     }
   }

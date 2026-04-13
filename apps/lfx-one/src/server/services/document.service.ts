@@ -5,12 +5,10 @@ import {
   CommitteeLinkQueryResult,
   GroupsIOArtifactQueryResult,
   MeetingAttachment,
-  MeetingRegistrantQueryResult,
   MyCommittee,
   MyDocumentItem,
   MyDocumentSource,
   PastMeetingAttachment,
-  PastMeetingParticipantQueryResult,
   PastMeetingRecordingQueryResult,
   PastMeetingSummaryQueryResult,
   PastMeetingTranscriptQueryResult,
@@ -19,11 +17,10 @@ import {
 import { Request } from 'express';
 
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { generateM2MToken } from '../utils/m2m-token.util';
-import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+import { UserService } from './user.service';
 
 type MeetingDetails = Map<string, { title: string; project_uid: string; project_name: string }>;
 
@@ -38,10 +35,12 @@ type MeetingDetails = Map<string, { title: string; project_uid: string; project_
 export class DocumentService {
   private readonly microserviceProxy: MicroserviceProxyService;
   private readonly committeeService: CommitteeService;
+  private readonly userService: UserService;
 
   public constructor() {
     this.microserviceProxy = new MicroserviceProxyService();
     this.committeeService = new CommitteeService();
+    this.userService = new UserService();
   }
 
   /**
@@ -51,7 +50,7 @@ export class DocumentService {
   public async getMyDocuments(req: Request, query: Record<string, any> = {}): Promise<MyDocumentItem[]> {
     const projectUid = query['project_uid'] as string | undefined;
 
-    logger.debug(req, 'get_my_documents', 'Starting document aggregation', { project_uid: projectUid });
+    logger.info(req, 'get_my_documents', 'Starting 3-stage document aggregation', { project_uid: projectUid });
 
     // Stage 1 — Fetch committee memberships and past occurrence IDs in parallel
     const [myCommittees, occurrenceIds] = await Promise.all([
@@ -61,7 +60,12 @@ export class DocumentService {
         });
         return [] as MyCommittee[];
       }),
-      this.getUserPastMeetingOccurrenceIds(req),
+      this.userService.getPastMeetingOccurrenceIds(req).catch((err) => {
+        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting occurrence IDs, returning empty', {
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+        return [] as string[];
+      }),
     ]);
 
     // Stage 2 — Fetch all raw items in parallel (no meeting enrichment yet)
@@ -103,7 +107,7 @@ export class DocumentService {
 
     const allDocuments = [...committeeLinkItems, ...groupsioItems, ...meetingAttachmentItems, ...pastMeetingItems];
 
-    logger.debug(req, 'get_my_documents', 'Aggregated documents', {
+    logger.info(req, 'get_my_documents', 'Completed 3-stage document aggregation', {
       committee_docs: committeeLinkItems.length,
       mailing_list_artifacts: groupsioItems.length,
       meeting_attachments: meetingAttachmentItems.length,
@@ -214,84 +218,43 @@ export class DocumentService {
   // ─── Meeting Enrichment ─────────────────────────────────────────────────────
 
   /**
-   * Fetches meeting details (title, project_uid, project_name) for a set of meeting IDs.
+   * Fetches meeting details (title, project_uid, project_name) for a set of meeting IDs
+   * using bounded parallelism (10 concurrent requests) to avoid overwhelming upstream.
    * Returns a map of meeting_id → enrichment data; missing/failed IDs are silently omitted.
    */
   private async fetchMeetingDetails(req: Request, meetingIds: string[]): Promise<MeetingDetails> {
-    const results = await Promise.all(
-      meetingIds.map((id) =>
-        this.microserviceProxy
-          .proxyRequest<{ title: string; project_uid: string; project_name: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
-          .catch(() => null)
-      )
-    );
-
+    const CONCURRENCY = 10;
     const map: MeetingDetails = new Map();
-    meetingIds.forEach((id, i) => {
-      const m = results[i];
-      if (m?.title) map.set(id, m);
-    });
+
+    for (let i = 0; i < meetingIds.length; i += CONCURRENCY) {
+      const batch = meetingIds.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map((id) =>
+          this.microserviceProxy
+            .proxyRequest<{ title: string; project_uid: string; project_name: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
+            .catch(() => null)
+        )
+      );
+      batch.forEach((id, j) => {
+        const m = results[j];
+        if (m?.title) map.set(id, m);
+      });
+    }
+
     return map;
   }
 
   // ─── Upcoming Meeting Attachments ───────────────────────────────────────────
 
   private async fetchRawMeetingAttachments(req: Request): Promise<MeetingAttachment[]> {
-    const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
-    const username = await getUsernameFromAuth(req);
-
-    if (!email && !username) {
-      return [];
-    }
-
     logger.debug(req, 'get_my_documents', 'Fetching user meeting registrations for attachments');
 
-    const m2mToken = await generateM2MToken(req);
-    const headers = { Authorization: `Bearer ${m2mToken}` };
+    const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
 
-    // Collect meeting IDs from registrant records
-    const meetingIds = new Set<string>();
-
-    if (email) {
-      const emailRegistrants = await fetchAllQueryResources<MeetingRegistrantQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrantQueryResult>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            v: '1',
-            type: 'v1_meeting_registrant',
-            tags: `email:${email}`,
-            ...(pageToken && { page_token: pageToken }),
-          },
-          undefined,
-          headers
-        )
-      ).catch(() => []);
-      emailRegistrants.forEach((r) => r.meeting_id && meetingIds.add(r.meeting_id));
-    }
-
-    if (username) {
-      const plainUsername = stripAuthPrefix(username);
-      const usernameRegistrants = await fetchAllQueryResources<MeetingRegistrantQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrantQueryResult>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            v: '1',
-            type: 'v1_meeting_registrant',
-            tags: `username:${plainUsername}`,
-            ...(pageToken && { page_token: pageToken }),
-          },
-          undefined,
-          headers
-        )
-      ).catch(() => []);
-      usernameRegistrants.forEach((r) => r.meeting_id && meetingIds.add(r.meeting_id));
-    }
+    // Delegate registrant lookup to UserService which handles email+username dual lookup
+    // with M2M tokens (required because registrant queries search across all participants
+    // in the index and require application-level credentials)
+    const meetingIds = await this.userService.getUserRegisteredMeetingIds(req, email).catch(() => new Set<string>());
 
     if (meetingIds.size === 0) {
       return [];
@@ -339,65 +302,6 @@ export class DocumentService {
   }
 
   // ─── Past Meeting Items (Attachments + Recordings) ──────────────────────────
-
-  private async getUserPastMeetingOccurrenceIds(req: Request): Promise<string[]> {
-    const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
-    const username = await getUsernameFromAuth(req);
-
-    if (!email && !username) {
-      return [];
-    }
-
-    logger.debug(req, 'get_my_documents', 'Fetching past meeting participations');
-
-    const m2mToken = await generateM2MToken(req);
-    const headers = { Authorization: `Bearer ${m2mToken}` };
-
-    const occurrenceIds = new Set<string>();
-
-    if (email) {
-      const emailParticipants = await fetchAllQueryResources<PastMeetingParticipantQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipantQueryResult>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            v: '1',
-            type: 'v1_past_meeting_participant',
-            tags: `email:${email}`,
-            ...(pageToken && { page_token: pageToken }),
-          },
-          undefined,
-          headers
-        )
-      ).catch(() => []);
-      emailParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
-    }
-
-    if (username) {
-      const plainUsername = stripAuthPrefix(username);
-      const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipantQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipantQueryResult>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            v: '1',
-            type: 'v1_past_meeting_participant',
-            tags: `username:${plainUsername}`,
-            ...(pageToken && { page_token: pageToken }),
-          },
-          undefined,
-          headers
-        )
-      ).catch(() => []);
-      usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
-    }
-
-    return [...occurrenceIds];
-  }
 
   private async fetchRawPastMeetingAttachments(req: Request, occurrenceIds: string[]): Promise<PastMeetingAttachment[]> {
     if (occurrenceIds.length === 0) {

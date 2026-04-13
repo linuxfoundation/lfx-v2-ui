@@ -204,7 +204,8 @@ export class DocumentsDashboardComponent {
         if (group && doc.groupOrMeetingUid !== group) return false;
         if (meeting && doc.meetingId !== meeting && doc.pastMeetingId !== meeting) return false;
         if (mailingList && doc.mailingListId !== mailingList) return false;
-        if (source && doc.source !== source && !(source === 'meeting' && (doc.source === 'file' || doc.source === 'recording' || doc.source === 'transcript' || doc.source === 'summary'))) return false;
+        const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
+        if (source && doc.source !== source && !(source === 'meeting' && meetingGroupSources.includes(doc.source))) return false;
         return true;
       });
     });
@@ -236,7 +237,7 @@ export class DocumentsDashboardComponent {
       const seen = new Map<string, string>();
 
       for (const doc of docs) {
-        if (doc.source !== 'link') continue;
+        if (doc.source !== 'link' && doc.source !== 'mailing_list') continue;
         if (foundation && doc.foundationUid !== foundation) continue;
         if (doc.groupOrMeetingUid && doc.groupOrMeetingName && !seen.has(doc.groupOrMeetingUid)) {
           seen.set(doc.groupOrMeetingUid, doc.groupOrMeetingName);
