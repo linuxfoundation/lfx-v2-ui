@@ -112,3 +112,5 @@ export * from './travel-fund-application.interface';
 
 // Visa request application interfaces
 export * from './visa-request-application.interface';
+// Training interfaces
+export * from './training.interface';
