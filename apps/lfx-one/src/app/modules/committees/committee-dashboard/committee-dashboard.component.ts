@@ -95,7 +95,6 @@ export class CommitteeDashboardComponent {
   public myTotalGroups: Signal<number>;
   public myPublicGroups: Signal<number>;
   public myActiveVoting: Signal<number>;
-  public myTotalMembers: Signal<number>;
 
   private searchTerm: Signal<string>;
 
@@ -147,7 +146,6 @@ export class CommitteeDashboardComponent {
     this.myTotalGroups = computed(() => this.myCommittees().length);
     this.myPublicGroups = computed(() => this.myCommittees().filter((c) => c.public).length);
     this.myActiveVoting = computed(() => this.myCommittees().filter((c) => c.enable_voting).length);
-    this.myTotalMembers = computed(() => this.myCommittees().reduce((sum, c) => sum + (c.total_members || 0), 0));
   }
 
   public openCreateDialog(): void {
@@ -182,7 +180,11 @@ export class CommitteeDashboardComponent {
       combineLatest([project$, refresh$, lens$]).pipe(
         switchMap(([project, , lens]) => {
           this.myCommitteesLoading.set(true);
-          const projectUid = lens === 'me' ? undefined : project?.uid;
+          if (lens !== 'me' && !project?.uid) {
+            this.myCommitteesLoading.set(false);
+            return of([] as MyCommittee[]);
+          }
+          const projectUid = lens === 'me' ? undefined : project!.uid;
           return this.committeeService.getMyCommittees(projectUid).pipe(
             catchError((error) => {
               console.error('Failed to load my committees:', error);
