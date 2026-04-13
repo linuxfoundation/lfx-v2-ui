@@ -17,7 +17,7 @@ import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
-import { apiRateLimiter, authRateLimiter } from './middleware/rate-limit.middleware';
+import { apiRateLimiter, authRateLimiter, publicApiRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
 import copilotRouter from './routes/copilot.route';
@@ -33,6 +33,7 @@ import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import personaRouter from './routes/persona.route';
 import surveysRouter from './routes/surveys.route';
+import trainingRouter from './routes/training.route';
 import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
 import { reqSerializer, resSerializer, serverLogger } from './server-logger';
@@ -166,6 +167,7 @@ app.use('/login', (req: Request, res: Response) => {
 app.use(authMiddleware);
 
 // Apply rate limiting to API routes
+app.use('/public/api/', publicApiRateLimiter);
 app.use('/api/', apiRateLimiter);
 app.use('/login', authRateLimiter);
 
@@ -190,6 +192,7 @@ app.use('/api/votes', votesRouter);
 app.use('/api/surveys', surveysRouter);
 app.use('/api/copilot', copilotRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/training', trainingRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
