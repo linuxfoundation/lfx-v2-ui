@@ -2897,3 +2897,45 @@ export interface FlywheelConversionResponse {
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
+
+/**
+ * Engagement-type attribution row for Revenue Impact drill-down
+ */
+export interface RevenueImpactEngagementType {
+  type: string;
+  percentage: number;
+}
+
+/**
+ * Attribution model comparison for Revenue Impact drill-down
+ */
+export interface RevenueImpactAttributionModels {
+  linear: number;
+  firstTouch: number;
+  lastTouch: number;
+}
+
+/**
+ * Paid media metrics for Revenue Impact drill-down
+ */
+export interface RevenueImpactPaidMedia {
+  roas: number;
+  impressions: number;
+  adSpend: number;
+  adRevenue: number;
+}
+
+/**
+ * API response for Revenue Impact (Marketing Attribution) metric
+ * Pipeline, revenue, attribution models, engagement channels, paid media
+ */
+export interface RevenueImpactResponse {
+  pipelineInfluenced: number;
+  revenueAttributed: number;
+  matchRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  attributionModels: RevenueImpactAttributionModels;
+  engagementTypes: RevenueImpactEngagementType[];
+  paidMedia: RevenueImpactPaidMedia;
+}

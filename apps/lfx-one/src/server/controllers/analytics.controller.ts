@@ -2160,4 +2160,42 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/revenue-impact
+   * Get marketing-attributed revenue metrics by engagement type
+   */
+  public async getRevenueImpact(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_revenue_impact');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      const response = await this.projectService.getRevenueImpact(foundationSlug);
+
+      logger.success(req, 'get_revenue_impact', startTime, {
+        foundation_slug: foundationSlug,
+        pipeline_influenced: response.pipelineInfluenced,
+        revenue_attributed: response.revenueAttributed,
+        engagement_types: response.engagementTypes.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_revenue_impact', startTime, error);
+      next(error);
+    }
+  }
 }

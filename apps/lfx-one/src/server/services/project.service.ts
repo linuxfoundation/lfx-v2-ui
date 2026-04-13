@@ -71,6 +71,7 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -82,6 +83,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
+
+/**
+ * Schema prefix for ED dashboard dbt views.
+ * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
+ * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
+ */
+const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
 
 /**
  * Service for handling project business logic
@@ -2527,6 +2535,119 @@ export class ProjectService {
         },
         monthlyData: [],
       };
+    }
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics from Snowflake
+   * Queries ${ED_SCHEMA}.PIPELINE_SUMMARY and PAID_ADS_ATTRIBUTION
+   */
+  public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
+    logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: RevenueImpactResponse = {
+      pipelineInfluenced: 0,
+      revenueAttributed: 0,
+      matchRate: 0,
+      changePercentage: 0,
+      trend: 'up',
+      attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+      engagementTypes: [],
+      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
+    };
+
+    try {
+      const pipelineQuery = `
+        SELECT TOTAL_PIPELINE_YTD, WON_REVENUE_YTD, LOST_REVENUE_YTD, OPEN_PIPELINE_YTD,
+               TOTAL_DEALS_YTD, WON_DEALS_YTD, LOST_DEALS_YTD, OPEN_DEALS_YTD,
+               AVG_WON_DEAL_SIZE_YTD, CONVERSION_RATE_YTD,
+               WON_REVENUE_PRIOR_YEAR, WON_REVENUE_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.PIPELINE_SUMMARY
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const paidAdsQuery = `
+        SELECT TOTAL_SPEND_YTD, TOTAL_IMPRESSIONS_YTD, TOTAL_CLICKS_YTD,
+               LINEAR_ROAS_YTD, AVG_CPC_YTD, CTR_YTD, CONVERSION_RATE_YTD,
+               FIRST_TOUCH_REVENUE_YTD, LAST_TOUCH_REVENUE_YTD,
+               LINEAR_REVENUE_YTD, TIME_DECAY_REVENUE_YTD,
+               SPEND_YOY_CHANGE_PCT, IMPRESSIONS_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.PAID_ADS_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const [pipelineResult, adsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          TOTAL_PIPELINE_YTD: number;
+          WON_REVENUE_YTD: number;
+          LOST_REVENUE_YTD: number;
+          OPEN_PIPELINE_YTD: number;
+          TOTAL_DEALS_YTD: number;
+          WON_DEALS_YTD: number;
+          LOST_DEALS_YTD: number;
+          OPEN_DEALS_YTD: number;
+          AVG_WON_DEAL_SIZE_YTD: number;
+          CONVERSION_RATE_YTD: number;
+          WON_REVENUE_PRIOR_YEAR: number;
+          WON_REVENUE_YOY_CHANGE_PCT: number;
+        }>(pipelineQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          TOTAL_SPEND_YTD: number;
+          TOTAL_IMPRESSIONS_YTD: number;
+          TOTAL_CLICKS_YTD: number;
+          LINEAR_ROAS_YTD: number;
+          AVG_CPC_YTD: number;
+          CTR_YTD: number;
+          CONVERSION_RATE_YTD: number;
+          FIRST_TOUCH_REVENUE_YTD: number;
+          LAST_TOUCH_REVENUE_YTD: number;
+          LINEAR_REVENUE_YTD: number;
+          TIME_DECAY_REVENUE_YTD: number;
+          SPEND_YOY_CHANGE_PCT: number;
+          IMPRESSIONS_YOY_CHANGE_PCT: number;
+        }>(paidAdsQuery, [foundationSlug]),
+      ]);
+
+      const pipeline = pipelineResult.rows.length > 0 ? pipelineResult.rows[0] : null;
+      const ads = adsResult.rows.length > 0 ? adsResult.rows[0] : null;
+
+      const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
+      const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
+      const changePercentage = pipeline?.WON_REVENUE_YOY_CHANGE_PCT ?? 0;
+      const matchRate = pipeline?.CONVERSION_RATE_YTD ?? 0;
+      const totalDeals = pipeline?.TOTAL_DEALS_YTD ?? 0;
+
+      return {
+        pipelineInfluenced,
+        revenueAttributed: wonRevenue,
+        matchRate,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        attributionModels: {
+          linear: ads?.LINEAR_REVENUE_YTD ?? 0,
+          firstTouch: ads?.FIRST_TOUCH_REVENUE_YTD ?? 0,
+          lastTouch: ads?.LAST_TOUCH_REVENUE_YTD ?? 0,
+        },
+        engagementTypes: pipeline
+          ? [
+              { type: 'Won', percentage: totalDeals > 0 ? Number(((pipeline.WON_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+              { type: 'Lost', percentage: totalDeals > 0 ? Number(((pipeline.LOST_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+              { type: 'Open', percentage: totalDeals > 0 ? Number(((pipeline.OPEN_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+            ]
+          : [],
+        paidMedia: {
+          roas: ads?.LINEAR_ROAS_YTD ?? 0,
+          impressions: ads?.TOTAL_IMPRESSIONS_YTD ?? 0,
+          adSpend: ads?.TOTAL_SPEND_YTD ?? 0,
+          adRevenue: (ads?.LINEAR_ROAS_YTD ?? 0) * (ads?.TOTAL_SPEND_YTD ?? 0),
+        },
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
     }
   }
 }

@@ -56,6 +56,7 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -966,6 +967,26 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          pipelineInfluenced: 0,
+          revenueAttributed: 0,
+          matchRate: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+          engagementTypes: [],
+          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
         });
       })
     );
