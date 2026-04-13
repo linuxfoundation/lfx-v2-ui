@@ -54,15 +54,16 @@ export class EventsService {
     if (isPast === false) {
       // Upcoming tab: show events from affiliated projects UNION user's registered events.
       // When affiliatedProjectIds is empty, use AND 1=0 so only registered events appear
-      // until persona data loads on the frontend.
+      // (persona detection returned no affiliations or encountered an error).
       const eventIdFilter = eventId ? 'AND EVENT_ID = ?' : '';
       const projectNameFilter = projectName ? 'AND e.PROJECT_NAME = ?' : '';
       const searchQueryFilter = searchQuery ? 'AND e.EVENT_NAME ILIKE ?' : '';
       const roleFilterResult = role ? this.buildUpcomingRoleFilter(role) : { filter: '', binds: [] as string[] };
       const statusFilterResult = status ? this.buildUpcomingStatusFilter(status) : { filter: '', binds: [] as string[] };
 
-      const hasAffiliatedIds = affiliatedProjectIds && affiliatedProjectIds.length > 0;
-      const affiliatedFilter = hasAffiliatedIds ? `AND PROJECT_ID IN (${affiliatedProjectIds!.map(() => '?').join(', ')})` : 'AND 1=0';
+      const ids = affiliatedProjectIds ?? [];
+      const hasAffiliatedIds = ids.length > 0;
+      const affiliatedFilter = hasAffiliatedIds ? `AND PROJECT_ID IN (${ids.map(() => '?').join(', ')})` : 'AND 1=0';
 
       sql = `
         WITH affiliated_upcoming AS (
@@ -125,9 +126,10 @@ export class EventsService {
             AND IS_PAST_EVENT = FALSE
         ),
         combined AS (
-          SELECT * FROM affiliated_upcoming
-          UNION
-          SELECT * FROM registered_events
+          SELECT *, 1 AS source_priority FROM registered_events
+          UNION ALL
+          SELECT *, 2 AS source_priority FROM affiliated_upcoming
+          QUALIFY ROW_NUMBER() OVER (PARTITION BY EVENT_ID ORDER BY source_priority) = 1
         )
         SELECT
           e.EVENT_ID,
@@ -166,20 +168,16 @@ export class EventsService {
         LIMIT ${normalizedPageSize} OFFSET ${normalizedOffset}
       `;
 
-      binds = [];
-      // affiliated_upcoming CTE binds
-      if (eventId) binds.push(eventId);
-      if (hasAffiliatedIds) binds.push(...affiliatedProjectIds!);
-      // registered_events CTE binds
-      binds.push(userEmail);
-      if (eventId) binds.push(eventId);
-      // user_reg CTE binds
-      binds.push(userEmail);
-      // main WHERE clause binds
-      if (projectName) binds.push(projectName);
-      if (searchQuery) binds.push(`%${searchQuery}%`);
-      binds.push(...roleFilterResult.binds);
-      binds.push(...statusFilterResult.binds);
+      const affiliatedUpcomingBinds: string[] = [...(eventId ? [eventId] : []), ...ids];
+      const registeredEventsBinds: string[] = [userEmail, ...(eventId ? [eventId] : [])];
+      const userRegBinds: string[] = [userEmail];
+      const whereBinds: string[] = [
+        ...(projectName ? [projectName] : []),
+        ...(searchQuery ? [`%${searchQuery}%`] : []),
+        ...roleFilterResult.binds,
+        ...statusFilterResult.binds,
+      ];
+      binds = [...affiliatedUpcomingBinds, ...registeredEventsBinds, ...userRegBinds, ...whereBinds];
     } else {
       // Past tab (or no isPast filter): show only the user's own registered events.
       const isPastFilter = isPast !== undefined ? `AND IS_PAST_EVENT = ${isPast ? 'TRUE' : 'FALSE'}` : '';
@@ -385,19 +383,20 @@ export class EventsService {
       // Upcoming tab: return foundations from events the user has registered for OR that belong
       // to affiliated projects. When affiliatedProjectIds is empty, show only registered foundations.
       const projectNameFilter = projectName ? 'AND PROJECT_NAME = ?' : '';
-      const hasAffiliatedIds = affiliatedProjectIds && affiliatedProjectIds.length > 0;
-      const affiliatedFilter = hasAffiliatedIds ? `OR PROJECT_ID IN (${affiliatedProjectIds!.map(() => '?').join(', ')})` : '';
+      const ids = affiliatedProjectIds ?? [];
+      const hasAffiliatedIds = ids.length > 0;
+      const affiliatedFilter = hasAffiliatedIds ? `OR PROJECT_ID IN (${ids.map(() => '?').join(', ')})` : '';
 
       sql = `
         SELECT DISTINCT PROJECT_NAME
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
         WHERE IS_PAST_EVENT = FALSE
-          AND (USER_EMAIL = ? ${affiliatedFilter})
+          AND ((USER_EMAIL = ? AND REGISTRATION_STATUS = 'Accepted') ${affiliatedFilter})
           ${projectNameFilter}
         ORDER BY PROJECT_NAME
       `;
       binds.push(userEmail);
-      if (hasAffiliatedIds) binds.push(...affiliatedProjectIds!);
+      if (hasAffiliatedIds) binds.push(...ids);
       if (projectName) binds.push(projectName);
     }
 

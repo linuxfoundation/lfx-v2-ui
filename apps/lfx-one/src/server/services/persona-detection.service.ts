@@ -18,6 +18,14 @@ const DETECTION_SOURCE_MAP: Record<string, PersonaType> = {
 /** Persona priority order (highest first) for sorting */
 const PERSONA_PRIORITY: PersonaType[] = ['board-member', 'executive-director', 'maintainer', 'contributor'];
 
+/** TTL for the affiliated-project-UIDs cache, in milliseconds */
+const AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS = 15_000;
+
+interface AffiliatedProjectUidsCacheEntry {
+  result: string[];
+  expiresAt: number;
+}
+
 /**
  * Service for detecting user personas via the persona detection NATS RPC
  * and enriching results with project data for UI consumption
@@ -25,6 +33,13 @@ const PERSONA_PRIORITY: PersonaType[] = ['board-member', 'executive-director', '
 export class PersonaDetectionService {
   private readonly natsService: NatsService;
   private readonly projectService: ProjectService;
+
+  /**
+   * Short-lived per-user cache for affiliated project UIDs.
+   * Keyed by lowercase email. Prevents duplicate NATS calls from concurrent
+   * requests on the same page load (e.g. events list + foundation dropdown).
+   */
+  private readonly affiliatedUidsCache = new Map<string, AffiliatedProjectUidsCacheEntry>();
 
   public constructor() {
     this.natsService = new NatsService();
@@ -35,19 +50,39 @@ export class PersonaDetectionService {
    * Return only the project UIDs the authenticated user is affiliated with.
    * Uses a single NATS call (no project-name enrichment) — suitable for
    * authorization checks in data-fetching endpoints.
+   * Results are cached per-user for 15 s to absorb concurrent page-load
+   * requests without redundant NATS round-trips.
    * Returns an empty array on error so callers degrade gracefully.
    */
   public async getAffiliatedProjectUids(req: Request): Promise<string[]> {
     const username = req.oidc?.user?.['nickname'] || '';
-    const email = (req.oidc?.user?.['email'] as string) || '';
+    const email = ((req.oidc?.user?.['email'] as string) || '').toLowerCase();
+
+    const cached = this.affiliatedUidsCache.get(email);
+    if (cached && Date.now() < cached.expiresAt) {
+      logger.debug(req, 'get_affiliated_project_uids', 'Returning cached affiliated project UIDs', {
+        email: email ? '***' : 'empty',
+        count: cached.result.length,
+      });
+      return cached.result;
+    }
 
     const detectionResponse = await this.fetchPersonaDetections(req, username, email);
 
-    if (detectionResponse.error || detectionResponse.projects.length === 0) {
-      return [];
+    let result: string[];
+    if (detectionResponse.error) {
+      logger.warning(req, 'get_affiliated_project_uids', 'Persona detection returned an error, returning empty affiliation list', {
+        error_code: detectionResponse.error.code,
+        error_message: detectionResponse.error.message,
+      });
+      result = [];
+    } else {
+      result = [...new Set(detectionResponse.projects.map((p) => p.project_uid).filter(Boolean))];
     }
 
-    return detectionResponse.projects.map((p) => p.project_uid).filter(Boolean);
+    this.affiliatedUidsCache.set(email, { result, expiresAt: Date.now() + AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS });
+
+    return result;
   }
 
   /**

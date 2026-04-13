@@ -190,7 +190,7 @@ export class EventsController {
 
       // For upcoming events, fetch affiliated project IDs server-side from the persona service.
       let affiliatedProjectIds: string[] | undefined;
-      if (isPast !== true) {
+      if (isPast === false) {
         affiliatedProjectIds = await this.personaDetectionService.getAffiliatedProjectUids(req);
       }
 
