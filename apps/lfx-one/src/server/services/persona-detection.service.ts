@@ -22,7 +22,8 @@ const PERSONA_PRIORITY: PersonaType[] = ['board-member', 'executive-director', '
 const AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS = 15_000;
 
 interface AffiliatedProjectUidsCacheEntry {
-  result: string[];
+  /** In-flight (or resolved) promise — stored before awaiting to collapse concurrent lookups */
+  promise: Promise<string[]>;
   expiresAt: number;
 }
 
@@ -36,53 +37,76 @@ export class PersonaDetectionService {
 
   /**
    * Short-lived per-user cache for affiliated project UIDs.
-   * Keyed by lowercase email. Prevents duplicate NATS calls from concurrent
-   * requests on the same page load (e.g. events list + foundation dropdown).
+   * Keyed by username (nickname claim) with email as fallback.
+   * Stores the in-flight Promise so concurrent requests on the same page load
+   * (e.g. events list + foundation dropdown) share a single NATS round-trip.
    */
   private readonly affiliatedUidsCache = new Map<string, AffiliatedProjectUidsCacheEntry>();
 
   public constructor() {
     this.natsService = new NatsService();
     this.projectService = new ProjectService();
+
+    // Sweep expired cache entries every 60 s — well above the 15 s TTL — so
+    // entries that are never re-requested don't accumulate indefinitely.
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, entry] of this.affiliatedUidsCache) {
+        if (now >= entry.expiresAt) {
+          this.affiliatedUidsCache.delete(key);
+        }
+      }
+    }, 60_000).unref();
   }
 
   /**
    * Return only the project UIDs the authenticated user is affiliated with.
    * Uses a single NATS call (no project-name enrichment) — suitable for
    * authorization checks in data-fetching endpoints.
-   * Results are cached per-user for 15 s to absorb concurrent page-load
-   * requests without redundant NATS round-trips.
+   *
+   * Cache strategy:
+   * - Keyed by username (nickname) with email as fallback; skips cache entirely
+   *   when no stable identifier is present (prevents cross-user data leaks).
+   * - Stores the in-flight Promise before awaiting so concurrent requests for
+   *   the same user share a single NATS round-trip rather than each triggering
+   *   their own (addresses the "events list + foundation dropdown" concurrency).
+   * - Evicts stale entries eagerly on cache miss and on rejection to prevent
+   *   memory growth and poisoned entries.
+   *
    * Returns an empty array on error so callers degrade gracefully.
    */
   public async getAffiliatedProjectUids(req: Request): Promise<string[]> {
     const username = req.oidc?.user?.['nickname'] || '';
     const email = ((req.oidc?.user?.['email'] as string) || '').toLowerCase();
+    const cacheKey = username || email;
 
-    const cached = this.affiliatedUidsCache.get(email);
-    if (cached && Date.now() < cached.expiresAt) {
-      logger.debug(req, 'get_affiliated_project_uids', 'Returning cached affiliated project UIDs', {
-        email: email ? '***' : 'empty',
-        count: cached.result.length,
-      });
-      return cached.result;
+    // No stable identifier — bypass cache to prevent cross-user data leaks.
+    if (!cacheKey) {
+      logger.debug(req, 'get_affiliated_project_uids', 'No stable cache key, bypassing cache');
+      return this.fetchAndResolveAffiliatedUids(req, username, email);
     }
 
-    const detectionResponse = await this.fetchPersonaDetections(req, username, email);
-
-    let result: string[];
-    if (detectionResponse.error) {
-      logger.warning(req, 'get_affiliated_project_uids', 'Persona detection returned an error, returning empty affiliation list', {
-        error_code: detectionResponse.error.code,
-        error_message: detectionResponse.error.message,
-      });
-      result = [];
-    } else {
-      result = [...new Set(detectionResponse.projects.map((p) => p.project_uid).filter(Boolean))];
+    const cached = this.affiliatedUidsCache.get(cacheKey);
+    if (cached) {
+      if (Date.now() < cached.expiresAt) {
+        logger.debug(req, 'get_affiliated_project_uids', 'Returning cached affiliated project UIDs', {
+          cacheKey: '***',
+        });
+        return cached.promise;
+      }
+      // Stale — evict eagerly so the next caller fetches fresh data.
+      this.affiliatedUidsCache.delete(cacheKey);
     }
 
-    this.affiliatedUidsCache.set(email, { result, expiresAt: Date.now() + AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS });
+    // Store the Promise *before* awaiting so concurrent callers retrieve and
+    // await the same Promise instead of each triggering a separate NATS call.
+    const promise = this.fetchAndResolveAffiliatedUids(req, username, email);
+    this.affiliatedUidsCache.set(cacheKey, { promise, expiresAt: Date.now() + AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS });
 
-    return result;
+    // Remove on rejection so a failed lookup doesn't poison the cache.
+    promise.catch(() => this.affiliatedUidsCache.delete(cacheKey));
+
+    return promise;
   }
 
   /**
@@ -161,6 +185,21 @@ export class PersonaDetectionService {
       multiFoundation,
       error: null,
     };
+  }
+
+  /** Fetch persona detections and resolve to a deduplicated list of project UIDs. */
+  private async fetchAndResolveAffiliatedUids(req: Request, username: string, email: string): Promise<string[]> {
+    const detectionResponse = await this.fetchPersonaDetections(req, username, email);
+
+    if (detectionResponse.error) {
+      logger.warning(req, 'get_affiliated_project_uids', 'Persona detection returned an error, returning empty affiliation list', {
+        error_code: detectionResponse.error.code,
+        error_message: detectionResponse.error.message,
+      });
+      return [];
+    }
+
+    return [...new Set(detectionResponse.projects.map((p) => p.project_uid).filter(Boolean))];
   }
 
   /**
