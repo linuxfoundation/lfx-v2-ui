@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { MyDocumentItem } from '@lfx-one/shared/interfaces';
 import { Observable } from 'rxjs';
@@ -12,7 +12,8 @@ import { Observable } from 'rxjs';
 export class DocumentService {
   private readonly http = inject(HttpClient);
 
-  public getMyDocuments(): Observable<MyDocumentItem[]> {
-    return this.http.get<MyDocumentItem[]>('/api/documents');
+  public getMyDocuments(projectUid?: string | null): Observable<MyDocumentItem[]> {
+    const params = projectUid ? new HttpParams().set('project_uid', projectUid) : undefined;
+    return this.http.get<MyDocumentItem[]>('/api/documents', { params });
   }
 }

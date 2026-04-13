@@ -17,7 +17,7 @@ import { DocumentService } from '@services/document.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
-import { MyDocumentSourceTagPipe } from './my-document-source-tag.pipe';
+import { MyDocumentSourceTagPipe } from '@app/shared/pipes/my-document-source-tag.pipe';
 
 @Component({
   selector: 'lfx-documents-dashboard',
@@ -168,10 +168,10 @@ export class DocumentsDashboardComponent {
 
     return toSignal(
       project$.pipe(
-        switchMap(() => {
+        switchMap((project) => {
           this.loading.set(true);
 
-          return this.documentService.getMyDocuments().pipe(
+          return this.documentService.getMyDocuments(project?.uid).pipe(
             catchError(() => of([] as MyDocumentItem[])),
             finalize(() => this.loading.set(false))
           );

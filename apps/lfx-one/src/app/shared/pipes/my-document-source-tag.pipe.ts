@@ -7,8 +7,6 @@ import { MyDocumentSource, TagSeverity } from '@lfx-one/shared/interfaces';
 
 @Pipe({
   name: 'myDocumentSourceTag',
-  standalone: true,
-  pure: true,
 })
 export class MyDocumentSourceTagPipe implements PipeTransform {
   public transform(source: MyDocumentSource, field: 'severity'): TagSeverity;
