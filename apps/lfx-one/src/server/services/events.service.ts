@@ -107,6 +107,7 @@ export class EventsService {
           FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
           WHERE USER_EMAIL = ?
             AND IS_PAST_EVENT = FALSE
+            AND REGISTRATION_STATUS = 'Accepted'
             ${eventIdFilter}
           QUALIFY ROW_NUMBER() OVER (PARTITION BY EVENT_ID ORDER BY EVENT_START_DATE) = 1
         ),
@@ -124,6 +125,7 @@ export class EventsService {
           FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
           WHERE USER_EMAIL = ?
             AND IS_PAST_EVENT = FALSE
+            AND REGISTRATION_STATUS = 'Accepted'
         ),
         combined AS (
           SELECT *, 1 AS source_priority FROM registered_events
