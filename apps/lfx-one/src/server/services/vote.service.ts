@@ -14,6 +14,8 @@ import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
+import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
@@ -241,5 +243,85 @@ export class VoteService {
     });
 
     return results;
+  }
+
+  // ============================================
+  // My Votes (Me Lens)
+  // ============================================
+
+  /**
+   * Fetches votes the current user has been invited to.
+   * Queries vote_response records by user_email and username using filters_or.
+   */
+  public async getMyVotes(req: Request): Promise<Vote[]> {
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+
+    logger.debug(req, 'get_my_votes', 'Fetching votes for current user', {
+      username,
+      has_email: !!email,
+    });
+
+    if (!username && !email) {
+      return [];
+    }
+
+    // Build filters_or array — note: vote_response uses 'user_email' not 'email'
+    const filtersOr: string[] = [];
+    if (email) {
+      filtersOr.push(`user_email:${email}`);
+    }
+    if (username) {
+      filtersOr.push(`username:${username}`);
+    }
+
+    // Query vote_response records using filters_or (OR logic on data fields)
+    const responses = await fetchAllQueryResources<{ vote_uid: string }>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type: 'vote_response',
+        page_size: 100,
+        filters_or: filtersOr,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
+
+    // Extract unique vote UIDs
+    const voteUids = [...new Set(responses.filter((r) => r.vote_uid).map((r) => r.vote_uid))];
+
+    if (voteUids.length === 0) {
+      return [];
+    }
+
+    logger.debug(req, 'get_my_votes', 'Found user vote responses', {
+      response_count: responses.length,
+      unique_vote_count: voteUids.length,
+    });
+
+    // Fetch vote details in parallel
+    const votes = await Promise.all(
+      voteUids.map(async (uid) => {
+        try {
+          const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            type: 'vote',
+            tags: uid,
+          });
+
+          if (!resources || resources.length === 0) {
+            return null;
+          }
+
+          return resources[0].data;
+        } catch (error) {
+          logger.warning(req, 'get_my_votes', 'Failed to fetch vote details, skipping', {
+            vote_uid: uid,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return null;
+        }
+      })
+    );
+
+    return votes.filter((v): v is Vote => v !== null);
   }
 }
