@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, Signal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
@@ -18,6 +18,7 @@ import { TravelFundApplicationDialogComponent } from '../travel-fund-application
   imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule],
   providers: [DialogService],
   templateUrl: './travel-funding.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TravelFundingComponent {
   private readonly eventsService = inject(EventsService);
