@@ -15,9 +15,9 @@ export function toProjectContext(project: EnrichedPersonaProject): ProjectContex
 }
 
 /**
- * Determine if a project is a foundation (top-level) within a given set of projects.
- * A project is a foundation if its parentProjectUid is absent or not in the set.
+ * Determine if a project is a foundation (top-level).
+ * Uses the `isFoundation` field from the upstream project service.
  */
-export function isFoundationProject(project: EnrichedPersonaProject, validProjectIds: Set<string>): boolean {
-  return !project.parentProjectUid || project.parentProjectUid === '' || !validProjectIds.has(project.parentProjectUid);
+export function isFoundationProject(project: EnrichedPersonaProject): boolean {
+  return project.isFoundation;
 }
