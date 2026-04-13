@@ -56,6 +56,7 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  EventGrowthResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -966,6 +967,27 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get event growth metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalAttendees: 0,
+          totalEvents: 0,
+          totalRevenue: 0,
+          revenuePerAttendee: 0,
+          attendeeMomChange: 0,
+          revenueMomChange: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          topEvents: [],
         });
       })
     );

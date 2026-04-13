@@ -148,5 +148,6 @@ router.get('/member-retention', (req, res, next) => analyticsController.getMembe
 router.get('/member-acquisition', (req, res, next) => analyticsController.getMemberAcquisition(req, res, next));
 router.get('/engaged-community', (req, res, next) => analyticsController.getEngagedCommunity(req, res, next));
 router.get('/flywheel-conversion', (req, res, next) => analyticsController.getFlywheelConversion(req, res, next));
+router.get('/event-growth', (req, res, next) => analyticsController.getEventGrowth(req, res, next));
 
 export default router;

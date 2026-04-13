@@ -71,6 +71,8 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  EventGrowthResponse,
+  EventGrowthTopEvent,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -82,6 +84,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
+
+/**
+ * Schema prefix for ED dashboard dbt views.
+ * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
+ * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
+ */
+const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
 
 /**
  * Service for handling project business logic
@@ -2527,6 +2536,116 @@ export class ProjectService {
         },
         monthlyData: [],
       };
+    }
+  }
+
+  /**
+   * Get event growth metrics from Snowflake
+   * Queries ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH (single row YTD) and EVENT_GROWTH_TOP_EVENTS
+   */
+  public async getEventGrowth(foundationSlug: string): Promise<EventGrowthResponse> {
+    logger.debug(undefined, 'get_event_growth', 'Fetching event growth from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: EventGrowthResponse = {
+      totalAttendees: 0,
+      totalEvents: 0,
+      totalRevenue: 0,
+      revenuePerAttendee: 0,
+      attendeeMomChange: 0,
+      revenueMomChange: 0,
+      trend: 'up',
+      monthlyData: [],
+      topEvents: [],
+    };
+
+    try {
+      const summaryQuery = `
+        SELECT EVENT_COUNT_YTD, ATTENDEE_COUNT_YTD, REGISTRANT_COUNT_YTD,
+               TOTAL_NET_REVENUE_YTD,
+               EVENT_COUNT_YOY_CHANGE_PCT, ATTENDEE_COUNT_YOY_CHANGE_PCT,
+               REVENUE_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const topEventsQuery = `
+        SELECT QUARTER_START_DATE, EVENT_NAME, EVENT_DATE,
+               ATTENDEE_COUNT, REGISTRANT_COUNT, EVENT_REVENUE, EVENT_RANK
+        FROM ${ED_SCHEMA}.EVENT_GROWTH_TOP_EVENTS
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY QUARTER_START_DATE DESC, EVENT_RANK
+        LIMIT 10
+      `;
+
+      const [summaryResult, topEventsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          EVENT_COUNT_YTD: number;
+          ATTENDEE_COUNT_YTD: number;
+          REGISTRANT_COUNT_YTD: number;
+          TOTAL_NET_REVENUE_YTD: number;
+          EVENT_COUNT_YOY_CHANGE_PCT: number;
+          ATTENDEE_COUNT_YOY_CHANGE_PCT: number;
+          REVENUE_YOY_CHANGE_PCT: number;
+        }>(summaryQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          QUARTER_START_DATE: string | Date;
+          EVENT_NAME: string;
+          EVENT_DATE: string;
+          ATTENDEE_COUNT: number;
+          REGISTRANT_COUNT: number;
+          EVENT_REVENUE: number;
+          EVENT_RANK: number;
+        }>(topEventsQuery, [foundationSlug]),
+      ]);
+
+      if (summaryResult.rows.length === 0) {
+        return defaultResponse;
+      }
+
+      const summary = summaryResult.rows[0];
+      const totalAttendees = summary.ATTENDEE_COUNT_YTD ?? 0;
+      const totalEvents = summary.EVENT_COUNT_YTD ?? 0;
+      const totalRevenue = summary.TOTAL_NET_REVENUE_YTD ?? 0;
+      const yoyAttendeeChange = summary.ATTENDEE_COUNT_YOY_CHANGE_PCT ?? 0;
+      const yoyRevenueChange = summary.REVENUE_YOY_CHANGE_PCT ?? 0;
+
+      const topEvents: EventGrowthTopEvent[] = topEventsResult.rows.map((row) => ({
+        name: row.EVENT_NAME ?? '',
+        date: row.EVENT_DATE ?? '',
+        attendees: row.ATTENDEE_COUNT ?? 0,
+        revenue: row.EVENT_REVENUE ?? 0,
+      }));
+
+      // Aggregate attendees by quarter for sparkline
+      const quarterMap = new Map<string, number>();
+      for (const row of topEventsResult.rows) {
+        const raw = row.QUARTER_START_DATE;
+        const q = raw instanceof Date ? raw.toISOString().substring(0, 10) : String(raw ?? '');
+        if (q) {
+          quarterMap.set(q, (quarterMap.get(q) ?? 0) + (row.ATTENDEE_COUNT ?? 0));
+        }
+      }
+      const monthlyData = [...quarterMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([quarter, value]) => ({ month: quarter.substring(0, 7), value }));
+
+      return {
+        totalAttendees,
+        totalEvents,
+        totalRevenue,
+        revenuePerAttendee: totalAttendees > 0 ? Number((totalRevenue / totalAttendees).toFixed(2)) : 0,
+        attendeeMomChange: yoyAttendeeChange,
+        revenueMomChange: yoyRevenueChange,
+        trend: yoyAttendeeChange >= 0 ? 'up' : 'down',
+        monthlyData,
+        topEvents,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_event_growth', 'Failed to fetch event growth from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
     }
   }
 }

@@ -2160,4 +2160,42 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/event-growth
+   * Get event growth metrics (total attendees, top events by attendance/revenue)
+   */
+  public async getEventGrowth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_event_growth');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      const response = await this.projectService.getEventGrowth(foundationSlug);
+
+      logger.success(req, 'get_event_growth', startTime, {
+        foundation_slug: foundationSlug,
+        total_attendees: response.totalAttendees,
+        total_events: response.totalEvents,
+        top_events: response.topEvents.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_event_growth', startTime, error);
+      next(error);
+    }
+  }
 }

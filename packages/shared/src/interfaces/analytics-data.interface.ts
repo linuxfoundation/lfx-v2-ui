@@ -2897,3 +2897,29 @@ export interface FlywheelConversionResponse {
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
+
+/**
+ * Top event row for Event Growth drill-down
+ */
+export interface EventGrowthTopEvent {
+  name: string;
+  date: string;
+  attendees: number;
+  revenue: number;
+}
+
+/**
+ * API response for Event Growth metric
+ * Total event attendees, event count, revenue, MoM growth, top events
+ */
+export interface EventGrowthResponse {
+  totalAttendees: number;
+  totalEvents: number;
+  totalRevenue: number;
+  revenuePerAttendee: number;
+  attendeeMomChange: number;
+  revenueMomChange: number;
+  trend: 'up' | 'down';
+  monthlyData: NorthStarMonthlyDataPoint[];
+  topEvents: EventGrowthTopEvent[];
+}
