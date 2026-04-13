@@ -107,7 +107,7 @@
               <div data-testid="trainings-ongoing-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Ongoing trainings</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-ongoing-list">
-                  @for (enrollment of (enrollments() ?? []); track enrollment.id) {
+                  @for (enrollment of enrollments() ?? []; track enrollment.id) {
                     <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-card-item" />
                   }
                 </div>
@@ -118,7 +118,7 @@
               <div data-testid="trainings-completed-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Completed trainings</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-completed-list">
-                  @for (cert of (completedTrainings() ?? []); track cert.id) {
+                  @for (cert of completedTrainings() ?? []; track cert.id) {
                     <lfx-training-card [training]="cert" variant="completed" data-testid="training-completed-item" />
                   }
                 </div>

@@ -2897,3 +2897,34 @@ export interface FlywheelConversionResponse {
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
+
+/**
+ * Top project row for Brand Health drill-down
+ */
+export interface BrandHealthTopProject {
+  name: string;
+  mentions: number;
+}
+
+/**
+ * Sentiment breakdown for Brand Health drill-down
+ * Percentages out of 100
+ */
+export interface BrandHealthSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+/**
+ * API response for Brand Health metric
+ * Total mentions, sentiment breakdown, monthly mentions trend, top projects
+ */
+export interface BrandHealthResponse {
+  totalMentions: number;
+  sentiment: BrandHealthSentimentBreakdown;
+  sentimentMomChangePp: number;
+  trend: 'up' | 'down';
+  monthlyMentions: NorthStarMonthlyDataPoint[];
+  topProjects: BrandHealthTopProject[];
+}

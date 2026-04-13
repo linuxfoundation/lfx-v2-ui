@@ -56,6 +56,7 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  BrandHealthResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -966,6 +967,24 @@ export class AnalyticsService {
             convertedToWorkingGroup: 0,
           },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand health metrics (prototype — stub endpoint until dbt view lands)
+   */
+  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalMentions: 0,
+          sentiment: { positive: 0, neutral: 0, negative: 0 },
+          sentimentMomChangePp: 0,
+          trend: 'up' as const,
+          monthlyMentions: [],
+          topProjects: [],
         });
       })
     );

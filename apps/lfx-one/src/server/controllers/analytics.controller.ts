@@ -2160,4 +2160,42 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/brand-health
+   * Get brand health metrics (share of voice, sentiment, press mentions)
+   */
+  public async getBrandHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_health');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      const response = await this.projectService.getBrandHealth(foundationSlug);
+
+      logger.success(req, 'get_brand_health', startTime, {
+        foundation_slug: foundationSlug,
+        total_mentions: response.totalMentions,
+        positive_sentiment: response.sentiment.positive,
+        top_projects: response.topProjects.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_brand_health', startTime, error);
+      next(error);
+    }
+  }
 }

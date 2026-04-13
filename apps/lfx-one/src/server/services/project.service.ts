@@ -71,6 +71,8 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  BrandHealthResponse,
+  BrandHealthTopProject,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -82,6 +84,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
+
+/**
+ * Schema prefix for ED dashboard dbt views.
+ * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
+ * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
+ */
+const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
 
 /**
  * Service for handling project business logic
@@ -2527,6 +2536,119 @@ export class ProjectService {
         },
         monthlyData: [],
       };
+    }
+  }
+
+  /**
+   * Get brand health metrics from Snowflake (Share of Voice)
+   * Queries ${ED_SCHEMA}.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
+   */
+  public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+    logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: BrandHealthResponse = {
+      totalMentions: 0,
+      sentiment: { positive: 0, neutral: 0, negative: 0 },
+      sentimentMomChangePp: 0,
+      trend: 'up',
+      monthlyMentions: [],
+      topProjects: [],
+    };
+
+    try {
+      const sovSummaryQuery = `
+        SELECT SUM(TOTAL_MENTIONS_30D) AS TOTAL_MENTIONS,
+               SUM(POSITIVE_MENTIONS_30D) AS POSITIVE,
+               SUM(NEGATIVE_MENTIONS_30D) AS NEGATIVE,
+               SUM(NEUTRAL_MENTIONS_30D) AS NEUTRAL,
+               CASE WHEN SUM(TOTAL_MENTIONS_30D) > 0
+                   THEN ROUND(SUM(POSITIVE_MENTIONS_30D)::FLOAT / SUM(TOTAL_MENTIONS_30D)::FLOAT * 100, 2)
+                   ELSE 0
+               END AS POSITIVE_PCT,
+               CASE WHEN SUM(TOTAL_MENTIONS_30D) > 0
+                   THEN ROUND(SUM(NEGATIVE_MENTIONS_30D)::FLOAT / SUM(TOTAL_MENTIONS_30D)::FLOAT * 100, 2)
+                   ELSE 0
+               END AS NEGATIVE_PCT
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const monthlyTrendQuery = `
+        SELECT MONTH_START_DATE, MENTION_COUNT, MOM_CHANGE_PCT
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_MONTHLY_TREND
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 12
+      `;
+
+      const topProjectsQuery = `
+        SELECT PROJECT_NAME, MENTION_COUNT_30D, PROJECT_RANK
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_TOP_PROJECTS
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY PROJECT_RANK
+        LIMIT 5
+      `;
+
+      const [summaryResult, trendResult, projectsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          TOTAL_MENTIONS: number;
+          POSITIVE: number;
+          NEGATIVE: number;
+          NEUTRAL: number;
+          POSITIVE_PCT: number;
+          NEGATIVE_PCT: number;
+        }>(sovSummaryQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          MONTH_START_DATE: string;
+          MENTION_COUNT: number;
+          MOM_CHANGE_PCT: number;
+        }>(monthlyTrendQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          PROJECT_NAME: string;
+          MENTION_COUNT_30D: number;
+          PROJECT_RANK: number;
+        }>(topProjectsQuery, [foundationSlug]),
+      ]);
+
+      if (summaryResult.rows.length === 0) {
+        return defaultResponse;
+      }
+
+      const summary = summaryResult.rows[0];
+      const totalMentions = summary.TOTAL_MENTIONS ?? 0;
+      const positivePct = summary.POSITIVE_PCT ?? 0;
+      const negativePct = summary.NEGATIVE_PCT ?? 0;
+      const neutralPct = Number(Math.max(0, 100 - positivePct - negativePct).toFixed(1));
+
+      const sentimentMomChangePp = trendResult.rows.length > 0 ? (trendResult.rows[0].MOM_CHANGE_PCT ?? 0) : 0;
+
+      const monthlyMentions: NorthStarMonthlyDataPoint[] = [...trendResult.rows].reverse().map((row) => {
+        const date = new Date(row.MONTH_START_DATE);
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          value: row.MENTION_COUNT ?? 0,
+        };
+      });
+
+      const topProjects: BrandHealthTopProject[] = projectsResult.rows.map((row) => ({
+        name: row.PROJECT_NAME ?? '',
+        mentions: row.MENTION_COUNT_30D ?? 0,
+      }));
+
+      return {
+        totalMentions,
+        sentiment: { positive: positivePct, neutral: neutralPct, negative: negativePct },
+        sentimentMomChangePp,
+        trend: sentimentMomChangePp >= 0 ? 'up' : 'down',
+        monthlyMentions,
+        topProjects,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_brand_health', 'Failed to fetch brand health from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
     }
   }
 }
