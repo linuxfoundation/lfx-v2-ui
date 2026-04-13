@@ -112,3 +112,6 @@ export * from './badge.interface';
 
 // Credly interfaces
 export * from './credly.interface';
+
+// Training interfaces
+export * from './training.interface';

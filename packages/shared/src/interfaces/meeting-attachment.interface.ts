@@ -101,6 +101,20 @@ export interface PastMeetingAttachment {
 }
 
 /**
+ * Display metadata for a file attachment based on its extension
+ */
+export interface FileTypeDisplay {
+  /** Font Awesome icon class */
+  icon: string;
+  /** Tailwind background color class */
+  bgColor: string;
+  /** Tailwind text color class */
+  textColor: string;
+  /** Short uppercase label (e.g. 'PDF', 'DOCX') */
+  label: string;
+}
+
+/**
  * Request body for creating a link-type attachment
  */
 export interface CreateLinkAttachmentRequest {
