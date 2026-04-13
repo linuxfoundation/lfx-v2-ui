@@ -2072,8 +2072,9 @@ export class ProjectService {
   public async getProjectNamesByUids(req: Request, uids: string[]): Promise<Map<string, string>> {
     if (uids.length === 0) return new Map();
 
-    logger.debug(req, 'get_project_names_by_uids', 'Fetching project names via REST', { uid_count: uids.length });
+    logger.debug(req, 'get_project_names_by_uids', 'Resolving project names via NATS', { uid_count: uids.length });
 
+    const codec = this.natsService.getCodec();
     const CONCURRENCY = 10;
     const nameMap = new Map<string, string>();
 
@@ -2081,11 +2082,11 @@ export class ProjectService {
       const batch = uids.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         batch.map((uid) =>
-          this.microserviceProxy
-            .proxyRequest<Project>(req, 'LFX_V2_SERVICE', `/projects/${uid}`, 'GET')
-            .then((p) => p?.name?.trim() || '')
+          this.natsService
+            .request(NatsSubjects.PROJECT_GET_NAME, codec.encode(uid), { timeout: NATS_CONFIG.REQUEST_TIMEOUT })
+            .then((r) => codec.decode(r.data).trim())
             .catch((err) => {
-              logger.debug(req, 'get_project_names_by_uids', 'Failed to fetch project name', {
+              logger.debug(req, 'get_project_names_by_uids', 'NATS lookup failed for uid', {
                 uid,
                 error: err instanceof Error ? err.message : String(err),
               });
