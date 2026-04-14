@@ -629,6 +629,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           lfxColors.violet[500]
         ),
       ],
+      caption: `${brandReach.activePlatforms} platforms · Last 6 months`,
       tooltipText: 'Social followers across all platforms (stock) and monthly website sessions (flow). Shown separately — these are different metric types.',
       drawerType: DashboardDrawerType.BrandReach,
     } as DashboardMetricCard,
@@ -657,6 +658,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           brandHealth.sentimentMomChangePp >= 0 ? 'up' : 'down'
         ),
       ],
+      caption: `${formatNumber(brandHealth.totalMentions)} mentions · Last 6 months`,
       tooltipText: 'Total brand mentions across social and web (Octolens) with sentiment breakdown.',
       drawerType: DashboardDrawerType.BrandHealth,
     } as DashboardMetricCard,
