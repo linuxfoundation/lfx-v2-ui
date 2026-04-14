@@ -12,7 +12,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DOCUMENT_LABEL } from '@lfx-one/shared/constants';
-import { MyDocumentItem, MyDocumentSource, ProjectContext } from '@lfx-one/shared/interfaces';
+import { MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -45,7 +45,7 @@ export class DocumentsDashboardComponent {
   protected readonly documentLabel = DOCUMENT_LABEL;
 
   // === Forms ===
-  public filterForm = new FormGroup({
+  protected readonly filterForm = new FormGroup({
     search: new FormControl<string>(''),
     foundation: new FormControl<string | null>(null),
     group: new FormControl<string | null>(null),
@@ -57,8 +57,16 @@ export class DocumentsDashboardComponent {
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
 
+  // === Static Options ===
+  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
+    { label: 'All Sources', value: null },
+    { label: 'Link', value: 'link' as MyDocumentSource },
+    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
+    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+  ];
+
   // === Computed Signals ===
-  protected readonly project: Signal<ProjectContext | null> = this.initProject();
+  protected readonly project = this.projectContextService.activeContext;
   protected readonly foundationLabel: Signal<string> = this.initFoundationLabel();
   protected readonly searchQuery: Signal<string> = this.initSearchQuery();
   protected readonly foundationFilter: Signal<string | null> = this.initFoundationFilter();
@@ -72,12 +80,6 @@ export class DocumentsDashboardComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly meetingOptions: Signal<{ label: string; value: string | null }[]> = this.initMeetingOptions();
   protected readonly mailingListOptions: Signal<{ label: string; value: string | null }[]> = this.initMailingListOptions();
-  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
-    { label: 'All Sources', value: null },
-    { label: 'Link', value: 'link' as MyDocumentSource },
-    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
-  ];
 
   // === Protected Methods ===
   protected openDocument(doc: MyDocumentItem): void {
@@ -93,10 +95,6 @@ export class DocumentsDashboardComponent {
   }
 
   // === Private Initializers ===
-  private initProject(): Signal<ProjectContext | null> {
-    return computed(() => this.projectContextService.activeContext());
-  }
-
   private initFoundationLabel(): Signal<string> {
     return computed(() => {
       if (this.personaService.multiFoundation() || this.personaService.multiProject()) {
@@ -169,10 +167,8 @@ export class DocumentsDashboardComponent {
   }
 
   private initDocuments(): Signal<MyDocumentItem[]> {
-    const project$ = toObservable(this.project);
-
     return toSignal(
-      project$.pipe(
+      toObservable(this.project).pipe(
         switchMap((project) => {
           this.loading.set(true);
 

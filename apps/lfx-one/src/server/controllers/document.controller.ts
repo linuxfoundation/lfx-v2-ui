@@ -3,7 +3,9 @@
 
 import { NextFunction, Request, Response } from 'express';
 
+import { AuthenticationError } from '../errors';
 import { logger } from '../services/logger.service';
+import { getUsernameFromAuth } from '../utils/auth-helper';
 import { DocumentService } from '../services/document.service';
 
 /**
@@ -16,6 +18,11 @@ export class DocumentController {
    * GET /documents - get all documents for the current user
    */
   public async getMyDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const username = getUsernameFromAuth(req);
+    if (!username) {
+      return next(new AuthenticationError('Authentication required'));
+    }
+
     const startTime = logger.startOperation(req, 'get_my_documents', {
       query_params: logger.sanitize(req.query as Record<string, any>),
     });
