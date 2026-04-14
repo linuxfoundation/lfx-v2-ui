@@ -34,6 +34,19 @@ export class UserDashboardComponent {
   private readonly rawContributorActions = signal<PendingActionItem[]>(CONTRIBUTOR_ACTION_ITEMS);
 
   protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
+  protected readonly subtitleText = computed(() => {
+    const projects = this.personaService.detectedProjects();
+
+    if (projects.length === 1) {
+      return `Your maintainer activity on ${projects[0].projectName ?? 'your project'}.`;
+    }
+
+    if (projects.length > 1) {
+      return `Your maintainer activity across ${projects.length} projects.`;
+    }
+
+    return 'Your activity, meetings, and actions across all projects.';
+  });
   private readonly rawBoardActions: Signal<PendingActionItem[]> = this.initBoardActions();
   public readonly pendingActions: Signal<PendingActionItem[]> = computed(() => {
     const raw = this.isBoardScoped() ? this.rawBoardActions() : this.rawContributorActions();
