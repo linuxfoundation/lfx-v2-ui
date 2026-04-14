@@ -34,15 +34,30 @@ export class UserDashboardComponent {
   private readonly rawContributorActions = signal<PendingActionItem[]>(CONTRIBUTOR_ACTION_ITEMS);
 
   protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
-  protected readonly subtitleText = computed(() => {
+  protected readonly activityRoleLabel = computed(() => {
+    const persona = this.personaService.currentPersona();
+
+    if (isBoardScopedPersona(persona)) {
+      return 'board';
+    }
+
+    if (persona === 'contributor') {
+      return 'contributor';
+    }
+
+    return 'maintainer';
+  });
+  protected readonly subtitleText: Signal<string> = computed(() => {
     const projects = this.personaService.detectedProjects();
+    const role = this.activityRoleLabel();
 
     if (projects.length === 1) {
-      return `Your maintainer activity on ${projects[0].projectName ?? 'your project'}.`;
+      const projectName = projects[0].projectName?.trim() || 'your project';
+      return `Your ${role} activity on ${projectName}.`;
     }
 
     if (projects.length > 1) {
-      return `Your maintainer activity across ${projects.length} projects.`;
+      return `Your ${role} activity across ${projects.length} projects.`;
     }
 
     return 'Your activity, meetings, and actions across all projects.';
