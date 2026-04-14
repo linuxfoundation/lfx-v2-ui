@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, ElementRef, HostListener, input, model, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
 import { EnrichedPersonaProject } from '@lfx-one/shared/interfaces';
 import { isFoundationProject } from '@lfx-one/shared/utils';
 import { AutoFocus } from 'primeng/autofocus';
@@ -12,6 +12,10 @@ import { InputTextModule } from 'primeng/inputtext';
   imports: [InputTextModule, AutoFocus],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
+  host: {
+    '(document:keydown.escape)': 'onEscape()',
+    '(document:click)': 'onDocumentClick($event)',
+  },
 })
 export class ProjectSelectorComponent {
   public readonly projects = input.required<EnrichedPersonaProject[]>();
@@ -35,14 +39,12 @@ export class ProjectSelectorComponent {
   protected readonly childProjectsMap = this.initializeChildProjectsMap();
   protected readonly hasResults = this.initializeHasResults();
 
-  @HostListener('document:keydown.escape')
   protected onEscape(): void {
     if (this.isPanelOpen()) {
       this.closePanel();
     }
   }
 
-  @HostListener('document:click', ['$event'])
   protected onDocumentClick(event: MouseEvent): void {
     if (!this.isPanelOpen()) {
       return;
