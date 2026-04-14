@@ -87,8 +87,8 @@ export interface MyDocumentItem {
   source: MyDocumentSource;
   /** Foundation display name */
   foundationName: string;
-  /** Foundation UID */
-  foundationUid: string;
+  /** Foundation UID — undefined when the source has no associated foundation */
+  foundationUid?: string;
   /** Committee/group name or meeting title */
   groupOrMeetingName: string;
   /** Committee UID or meeting ID */

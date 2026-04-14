@@ -29,6 +29,7 @@ export class DocumentController {
 
       res.json(documents);
     } catch (error) {
+      logger.error(req, 'get_my_documents', startTime, error, {});
       next(error);
     }
   }

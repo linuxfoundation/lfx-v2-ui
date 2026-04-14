@@ -72,7 +72,12 @@ export class DocumentsDashboardComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly meetingOptions: Signal<{ label: string; value: string | null }[]> = this.initMeetingOptions();
   protected readonly mailingListOptions: Signal<{ label: string; value: string | null }[]> = this.initMailingListOptions();
-  protected readonly sourceOptions: Signal<{ label: string; value: MyDocumentSource | null }[]> = this.initSourceOptions();
+  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
+    { label: 'All Sources', value: null },
+    { label: 'Link', value: 'link' as MyDocumentSource },
+    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
+    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+  ];
 
   // === Protected Methods ===
   protected openDocument(doc: MyDocumentItem): void {
@@ -255,10 +260,11 @@ export class DocumentsDashboardComponent {
   private initMeetingOptions(): Signal<{ label: string; value: string | null }[]> {
     return computed(() => {
       const docs = this.documents();
+      const meetingLinkedSources = new Set<MyDocumentSource>(['meeting', 'file', 'recording', 'transcript', 'summary']);
       const seen = new Map<string, string>();
 
       for (const doc of docs) {
-        if (doc.source !== 'meeting' && doc.source !== 'file' && doc.source !== 'recording' && doc.source !== 'transcript' && doc.source !== 'summary') continue;
+        if (!meetingLinkedSources.has(doc.source)) continue;
         const id = doc.meetingId || doc.pastMeetingId;
         if (id && !seen.has(id)) {
           seen.set(id, doc.groupOrMeetingName || id);
@@ -293,12 +299,5 @@ export class DocumentsDashboardComponent {
     });
   }
 
-  private initSourceOptions(): Signal<{ label: string; value: MyDocumentSource | null }[]> {
-    return computed(() => [
-      { label: 'All Sources', value: null },
-      { label: 'Link', value: 'link' as MyDocumentSource },
-      { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-      { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
-    ]);
-  }
 }
+

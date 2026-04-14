@@ -20,7 +20,6 @@ import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
-import { ProjectService } from './project.service';
 import { UserService } from './user.service';
 
 type MeetingDetails = Map<string, { title: string; project_uid: string }>;
@@ -28,22 +27,21 @@ type MeetingDetails = Map<string, { title: string; project_uid: string }>;
 /**
  * Service for aggregating documents across a user's groups, meetings, and mailing lists.
  *
- * Uses a 3-stage query model:
- *   Stage 1: Determine which committees and meetings the user belongs to
- *   Stage 2: Fetch all raw attachments/recordings in parallel
- *   Stage 3: Single batched meeting detail fetch, then map to MyDocumentItem
+ * Uses a 4-stage query model:
+ *   Stage 1: Fetch committee memberships and past occurrence IDs in parallel
+ *   Stage 2: Fetch all raw attachments/recordings/artifacts in parallel
+ *   Stage 3: Single batched meeting detail fetch (title + project_uid), then map to MyDocumentItem
+ *   Stage 4: Batched HTTP lookup to resolve foundation display names for meeting-sourced documents
  */
 export class DocumentService {
   private readonly microserviceProxy: MicroserviceProxyService;
   private readonly committeeService: CommitteeService;
   private readonly userService: UserService;
-  private readonly projectService: ProjectService;
 
   public constructor() {
     this.microserviceProxy = new MicroserviceProxyService();
     this.committeeService = new CommitteeService();
     this.userService = new UserService();
-    this.projectService = new ProjectService();
   }
 
   /**
@@ -53,7 +51,7 @@ export class DocumentService {
   public async getMyDocuments(req: Request, query: Record<string, any> = {}): Promise<MyDocumentItem[]> {
     const projectUid = query['project_uid'] as string | undefined;
 
-    logger.info(req, 'get_my_documents', 'Starting 3-stage document aggregation', { project_uid: projectUid });
+    logger.info(req, 'get_my_documents', 'Starting 4-stage document aggregation', { project_uid: projectUid });
 
     // Stage 1 — Fetch committee memberships and past occurrence IDs in parallel
     const [myCommittees, occurrenceIds] = await Promise.all([
@@ -110,20 +108,12 @@ export class DocumentService {
 
     const allDocuments = [...committeeLinkItems, ...groupsioItems, ...meetingAttachmentItems, ...pastMeetingItems];
 
-    // Stage 4 — Resolve foundation names for meeting-sourced docs via NATS (authoritative, faster than query service)
+    // Stage 4 — Resolve foundation names for meeting-sourced docs via project service HTTP
     // Committee and mailing list docs already have foundation names from committee service data.
     const meetingSourced: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary', 'meeting'];
-    const foundationUids = [...new Set(allDocuments.filter((d) => meetingSourced.includes(d.source) && d.foundationUid).map((d) => d.foundationUid))];
+    const foundationUids = [...new Set(allDocuments.filter((d) => meetingSourced.includes(d.source) && d.foundationUid).map((d) => d.foundationUid as string))];
 
-    const foundationNames =
-      foundationUids.length > 0
-        ? await this.projectService.getProjectNamesByUids(req, foundationUids).catch((err) => {
-            logger.warning(req, 'get_my_documents', 'Failed to resolve foundation names via NATS, names will be empty', {
-              error: err instanceof Error ? err.message : String(err),
-            });
-            return new Map<string, string>();
-          })
-        : new Map<string, string>();
+    const foundationNames = await this.fetchProjectNames(req, foundationUids);
 
     const enrichedDocuments = allDocuments.map((doc) => {
       if (meetingSourced.includes(doc.source) && doc.foundationUid) {
@@ -133,7 +123,7 @@ export class DocumentService {
       return doc;
     });
 
-    logger.info(req, 'get_my_documents', 'Completed 3-stage document aggregation', {
+    logger.info(req, 'get_my_documents', 'Completed 4-stage document aggregation', {
       committee_docs: committeeLinkItems.length,
       mailing_list_artifacts: groupsioItems.length,
       meeting_attachments: meetingAttachmentItems.length,
@@ -184,7 +174,7 @@ export class DocumentService {
           name: link.name,
           source: 'link' as MyDocumentSource,
           foundationName: committee?.foundation_name || committee?.project_name || '',
-          foundationUid: committee?.project_uid || '',
+          foundationUid: committee?.project_uid || undefined,
           groupOrMeetingName: committee?.name || '',
           groupOrMeetingUid: committee?.uid || link.committee_uid || '',
           date: link.created_at || '',
@@ -230,7 +220,7 @@ export class DocumentService {
         name: a.filename || a.link_url || a.artifact_id,
         source: 'mailing_list' as MyDocumentSource,
         foundationName: committee?.foundation_name || committee?.project_name || '',
-        foundationUid: committee?.project_uid || a.project_uid || '',
+        foundationUid: committee?.project_uid || a.project_uid || undefined,
         groupOrMeetingName: committee?.name || '',
         groupOrMeetingUid: committee?.uid || a.committee_uid || '',
         date: a.created_at || '',
@@ -239,6 +229,45 @@ export class DocumentService {
         fileType: a.media_type,
       };
     });
+  }
+
+  // ─── Foundation Name Resolution ─────────────────────────────────────────────
+
+  /**
+   * Resolves a batch of project UIDs to display names via the project service HTTP API.
+   * Uses bounded parallelism (10 concurrent) to avoid overwhelming upstream.
+   * UIDs that fail or return no name are silently omitted from the result map.
+   */
+  private async fetchProjectNames(req: Request, uids: string[]): Promise<Map<string, string>> {
+    if (uids.length === 0) return new Map();
+
+    logger.debug(req, 'get_my_documents', 'Resolving foundation names via project service', { uid_count: uids.length });
+
+    const CONCURRENCY = 10;
+    const nameMap = new Map<string, string>();
+
+    for (let i = 0; i < uids.length; i += CONCURRENCY) {
+      const batch = uids.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map((uid) =>
+          this.microserviceProxy
+            .proxyRequest<{ name: string }>(req, 'LFX_V2_SERVICE', `/projects/${uid}`, 'GET')
+            .catch((err) => {
+              logger.debug(req, 'get_my_documents', 'Failed to fetch project name, skipping', {
+                uid,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return null;
+            })
+        )
+      );
+      batch.forEach((uid, j) => {
+        const p = results[j];
+        if (p?.name) nameMap.set(uid, p.name);
+      });
+    }
+
+    return nameMap;
   }
 
   // ─── Meeting Enrichment ─────────────────────────────────────────────────────
@@ -258,7 +287,13 @@ export class DocumentService {
         batch.map((id) =>
           this.microserviceProxy
             .proxyRequest<{ title: string; project_uid: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
-            .catch(() => null)
+            .catch((err) => {
+              logger.debug(req, 'fetch_meeting_details', 'Failed to fetch meeting details, skipping', {
+                meeting_id: id,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return null;
+            })
         )
       );
       batch.forEach((id, j) => {
@@ -315,7 +350,7 @@ export class DocumentService {
         name: a.name,
         source: a.type === 'file' ? ('file' as MyDocumentSource) : ('meeting' as MyDocumentSource),
         foundationName: '',
-        foundationUid: meeting?.project_uid || '',
+        foundationUid: meeting?.project_uid || undefined,
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: a.meeting_id,
         date: a.created_at,
@@ -363,7 +398,7 @@ export class DocumentService {
         name: a.name,
         source: a.type === 'file' ? ('file' as MyDocumentSource) : ('meeting' as MyDocumentSource),
         foundationName: '',
-        foundationUid: meeting?.project_uid || '',
+        foundationUid: meeting?.project_uid || undefined,
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: a.meeting_and_occurrence_id,
         date: a.created_at,
@@ -410,7 +445,7 @@ export class DocumentService {
         name: r.title || 'Recording',
         source: 'recording' as MyDocumentSource,
         foundationName: '',
-        foundationUid: meeting?.project_uid || '',
+        foundationUid: meeting?.project_uid || undefined,
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: r.meeting_and_occurrence_id,
         date: r.start_time || r.created_at,
@@ -458,7 +493,7 @@ export class DocumentService {
         name: t.title || 'Transcript',
         source: 'transcript' as MyDocumentSource,
         foundationName: '',
-        foundationUid: meeting?.project_uid || '',
+        foundationUid: meeting?.project_uid || undefined,
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: t.meeting_and_occurrence_id,
         date: t.start_time || t.created_at,
@@ -504,7 +539,7 @@ export class DocumentService {
         name: s.summary_title || s.zoom_meeting_topic || 'Meeting Summary',
         source: 'summary' as MyDocumentSource,
         foundationName: '',
-        foundationUid: meeting?.project_uid || '',
+        foundationUid: meeting?.project_uid || undefined,
         groupOrMeetingName: meeting?.title || '',
         groupOrMeetingUid: s.meeting_and_occurrence_id,
         date: s.summary_start_time || s.created_at,
