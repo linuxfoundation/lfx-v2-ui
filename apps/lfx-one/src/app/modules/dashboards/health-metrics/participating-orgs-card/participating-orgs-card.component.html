@@ -85,7 +85,7 @@
         <span class="text-xs text-gray-500">Active Members</span>
       </div>
       <div class="flex flex-col" data-testid="participating-orgs-new-members">
-        <span class="text-3xl font-bold" style="color: #FB2C36">{{ summaryData().totalNewMembers }}</span>
+        <span class="text-3xl font-bold text-red-500">{{ summaryData().totalNewMembers }}</span>
         <span class="text-xs text-gray-500">New Members</span>
       </div>
     </div>
@@ -93,8 +93,7 @@
     <!-- Footer -->
     @if (exploreMoreUrl()) {
       <a
-        class="ignore-download text-sm font-medium hover:underline transition-colors"
-        style="color: #FB2C36"
+      class="ignore-download text-sm font-medium text-red-500 hover:underline transition-colors"
         [href]="exploreMoreUrl()"
         target="_blank"
         rel="noopener noreferrer"
