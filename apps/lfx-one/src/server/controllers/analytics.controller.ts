@@ -4,6 +4,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, ServiceValidationError } from '../errors';
+import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
@@ -161,8 +162,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_certified_employees');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -208,8 +209,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_membership_tier');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const projectSlug = req.query['projectSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const projectSlug = getStringQueryParam(req, 'projectSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -248,8 +249,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_organization_maintainers');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -295,8 +296,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_organization_contributors');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -341,8 +342,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_training_enrollments');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const projectSlug = req.query['projectSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const projectSlug = getStringQueryParam(req, 'projectSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -381,8 +382,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_event_attendance_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -428,7 +429,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_project_issues_resolution');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -478,7 +479,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_project_pull_requests_weekly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -526,7 +527,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_contributors_mentored');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -559,7 +560,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_unique_contributors_weekly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -607,7 +608,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_total_projects');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -645,7 +646,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_projects_detail');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -682,7 +683,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_projects_lifecycle_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -719,7 +720,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_total_members');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -757,7 +758,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_active_contributors_monthly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -794,7 +795,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_contributors_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -831,7 +832,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_software_value');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -869,7 +870,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_value_concentration');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -907,7 +908,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -945,7 +946,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers_monthly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -982,7 +983,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1019,7 +1020,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_events_quarterly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1056,7 +1057,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_events_attendance_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1093,7 +1094,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_health_score_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1137,7 +1138,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_company_bus_factor');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1175,7 +1176,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_health_metrics_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -1222,7 +1223,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_unique_contributors_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -1269,7 +1270,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_health_events_monthly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -1316,7 +1317,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_code_commits_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
       const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
 
       if (!slug) {
@@ -1363,8 +1364,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_contributors_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1409,8 +1410,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_contributors_project_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1454,8 +1455,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1500,8 +1501,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1545,8 +1546,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_key_members');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1590,8 +1591,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_event_attendees_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1636,8 +1637,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_event_speakers_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1682,8 +1683,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_training_enrollments_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1728,8 +1729,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_training_enrollments_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1773,8 +1774,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_certified_employees_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1819,8 +1820,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_certified_employees_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1869,7 +1870,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_web_activities_summary');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1907,7 +1908,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_email_ctr');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1944,7 +1945,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_social_reach');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -1981,7 +1982,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_social_media');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2021,7 +2022,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_member_retention');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2058,7 +2059,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_member_acquisition');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2095,7 +2096,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_engaged_community');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2132,7 +2133,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_flywheel_conversion');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2169,7 +2170,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_event_growth');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2207,7 +2208,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_brand_reach');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2245,7 +2246,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_brand_health');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2283,7 +2284,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_revenue_impact');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
