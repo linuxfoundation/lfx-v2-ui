@@ -71,7 +71,7 @@ export class PersonaService {
     this.multiProject = signal<boolean>(stored?.multiProject ?? false);
     this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
     this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>({});
-    this.detectedProjects = signal<EnrichedPersonaProject[]>([]);
+    this.detectedProjects = signal<EnrichedPersonaProject[]>(stored?.projects ?? []);
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
     this.hasBoardRole = this.initHasBoardRole();
     this.hasProjectRole = this.initHasProjectRole();
@@ -107,7 +107,7 @@ export class PersonaService {
     if (organizations !== undefined) {
       this.lastKnownOrganizations.set(organizations);
     }
-    this.persistToCookie({ primary, all, multiProject, multiFoundation, organizations: this.lastKnownOrganizations() });
+    this.persistToCookie({ primary, all, multiProject, multiFoundation, organizations: this.lastKnownOrganizations(), projects: this.detectedProjects() });
   }
 
   /**
@@ -147,6 +147,7 @@ export class PersonaService {
             multiProject: this.multiProject(),
             multiFoundation: this.multiFoundation(),
             organizations: response.organizations,
+            projects: this.detectedProjects(),
           });
         }
 
