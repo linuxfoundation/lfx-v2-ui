@@ -9,10 +9,11 @@ import { Request } from 'express';
 
 import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
+import { tiService } from './ti.service';
 
 const CERTIFICATES_BASE_QUERY = `
   SELECT _KEY, IDENTIFIER, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
-         LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL, LEVEL
+         LOGO_URL, PROJECT_NAME, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL, LEVEL, COURSE_ID
   FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
   WHERE USER_NAME = ?`;
 
@@ -27,7 +28,7 @@ const CERTIFICATES_UNFILTERED_QUERY = `${CERTIFICATES_BASE_QUERY}
 
 const ENROLLMENTS_QUERY = `
   SELECT ENROLLMENT_ID, ENROLLMENT_TS, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
-         LOGO_URL, PROJECT_NAME, LEVEL, COURSE_SLUG
+         LOGO_URL, PROJECT_NAME, LEVEL, COURSE_SLUG, COURSE_ID
   FROM ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
   WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
   ORDER BY ENROLLMENT_TS DESC
@@ -61,7 +62,24 @@ export class TrainingService {
 
     logger.debug(req, 'get_certifications', 'Fetched certifications', { count: result.rows.length });
 
-    return result.rows.map((row) => this.mapRowToCertification(row));
+    const certifications = result.rows.map((row) => this.mapRowToCertification(row));
+
+    // Enrich with clean logo URLs from TI API (replaces Snowflake card banner images)
+    const courseIds = result.rows.map((row) => row.COURSE_ID).filter((id): id is string => Boolean(id));
+    if (courseIds.length > 0) {
+      const logoMap = await tiService.getLogoUrls(req, courseIds);
+      if (logoMap.size > 0) {
+        logger.info(req, 'get_certifications', 'Enriched certifications with TI logo URLs', { enriched: logoMap.size });
+        for (let i = 0; i < certifications.length; i++) {
+          const courseId = result.rows[i].COURSE_ID;
+          if (courseId && logoMap.has(courseId)) {
+            certifications[i] = { ...certifications[i], imageUrl: logoMap.get(courseId)! };
+          }
+        }
+      }
+    }
+
+    return certifications;
   }
 
   public async getEnrollments(req: Request, username: string): Promise<TrainingEnrollment[]> {
@@ -81,7 +99,24 @@ export class TrainingService {
 
     logger.debug(req, 'get_enrollments', 'Fetched enrollments', { count: result.rows.length });
 
-    return result.rows.map((row) => this.mapRowToEnrollment(row));
+    const enrollments = result.rows.map((row) => this.mapRowToEnrollment(row));
+
+    // Enrich with clean logo URLs from TI API (replaces Snowflake card banner images)
+    const courseIds = result.rows.map((row) => row.COURSE_ID).filter((id): id is string => Boolean(id));
+    if (courseIds.length > 0) {
+      const logoMap = await tiService.getLogoUrls(req, courseIds);
+      if (logoMap.size > 0) {
+        logger.info(req, 'get_enrollments', 'Enriched enrollments with TI logo URLs', { enriched: logoMap.size });
+        for (let i = 0; i < enrollments.length; i++) {
+          const courseId = result.rows[i].COURSE_ID;
+          if (courseId && logoMap.has(courseId)) {
+            enrollments[i] = { ...enrollments[i], imageUrl: logoMap.get(courseId)! };
+          }
+        }
+      }
+    }
+
+    return enrollments;
   }
 
   private mapRowToCertification(row: CertificateRow): Certification {
