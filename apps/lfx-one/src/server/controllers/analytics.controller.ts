@@ -2160,4 +2160,151 @@ export class AnalyticsController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/analytics/event-growth
+   * Get event growth metrics (YTD attendees + revenue)
+   */
+  public async getEventGrowth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_event_growth');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      const response = await this.projectService.getEventGrowth(foundationSlug);
+
+      logger.success(req, 'get_event_growth', startTime, {
+        foundation_slug: foundationSlug,
+        total_attendees: response.totalAttendees,
+        total_events: response.totalEvents,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_event_growth', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/brand-reach
+   * Get brand reach metrics (social followers + web sessions)
+   */
+  public async getBrandReach(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_reach');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      const response = await this.projectService.getBrandReach(foundationSlug);
+
+      logger.success(req, 'get_brand_reach', startTime, {
+        foundation_slug: foundationSlug,
+        total_social_followers: response.totalSocialFollowers,
+        total_monthly_sessions: response.totalMonthlySessions,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_brand_reach', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/brand-health
+   * Get brand health metrics (mentions + sentiment)
+   */
+  public async getBrandHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_health');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      const response = await this.projectService.getBrandHealth(foundationSlug);
+
+      logger.success(req, 'get_brand_health', startTime, {
+        foundation_slug: foundationSlug,
+        total_mentions: response.totalMentions,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_brand_health', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/revenue-impact
+   * Get revenue impact / attribution metrics
+   */
+  public async getRevenueImpact(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_revenue_impact');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      const response = await this.projectService.getRevenueImpact(foundationSlug);
+
+      logger.success(req, 'get_revenue_impact', startTime, {
+        foundation_slug: foundationSlug,
+        pipeline_influenced: response.pipelineInfluenced,
+        revenue_attributed: response.revenueAttributed,
+      });
+
+      res.json(response);
+    } catch (error) {
+      logger.error(req, 'get_revenue_impact', startTime, error);
+      next(error);
+    }
+  }
 }

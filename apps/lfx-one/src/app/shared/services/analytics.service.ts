@@ -56,6 +56,10 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  EventGrowthResponse,
+  BrandReachResponse,
+  BrandHealthResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -965,7 +969,94 @@ export class AnalyticsService {
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
           },
+          reengagement: {
+            totalReengaged: 0,
+            reengagementRate: 0,
+            reengagementMomChange: 0,
+            reengagedToNewsletter: 0,
+            reengagedToCommunity: 0,
+            reengagedToWorkingGroup: 0,
+          },
           monthlyData: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get event growth metrics (YTD attendees + revenue) from Snowflake
+   */
+  public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalAttendees: 0,
+          totalEvents: 0,
+          totalRevenue: 0,
+          revenuePerAttendee: 0,
+          attendeeMomChange: 0,
+          revenueMomChange: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          topEvents: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand reach metrics (social followers + web sessions) from Snowflake
+   */
+  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalSocialFollowers: 0,
+          totalMonthlySessions: 0,
+          activePlatforms: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          socialPlatforms: [],
+          websiteDomains: [],
+          dailyTrend: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get brand health metrics (mentions + sentiment) from Snowflake
+   */
+  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          totalMentions: 0,
+          sentiment: { positive: 0, neutral: 0, negative: 0 },
+          sentimentMomChangePp: 0,
+          trend: 'up' as const,
+          monthlyMentions: [],
+          topProjects: [],
+        });
+      })
+    );
+  }
+
+  /**
+   * Get revenue impact / attribution metrics from Snowflake
+   */
+  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+      catchError(() => {
+        return of({
+          pipelineInfluenced: 0,
+          revenueAttributed: 0,
+          matchRate: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+          engagementTypes: [],
+          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
         });
       })
     );

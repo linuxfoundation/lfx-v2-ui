@@ -1,14 +1,13 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<section data-testid="marketing-overview-section">
-  <div class="flex flex-wrap gap-3 items-end justify-between mb-4">
+<section data-testid="marketing-overview-section" class="flex flex-col gap-4">
+  <div class="flex flex-wrap gap-3 items-end justify-between">
     <div class="flex flex-col gap-1">
       <h2 class="mb-0">Executive Director Overview</h2>
-      <p class="text-sm text-gray-500 mb-0">North Star KPIs · Marketing Metrics</p>
+      <p class="text-sm text-gray-500 mb-0">North Star · Brand · Influence</p>
     </div>
 
-    <!-- Carousel Controls -->
     <div class="flex items-center gap-2">
       <lfx-button
         icon="fa-light fa-chevron-left"
@@ -29,128 +28,115 @@
     </div>
   </div>
 
-  <!-- Carousel Container -->
+  <lfx-filter-pills
+    [options]="filterOptions"
+    [selectedFilter]="selectedFilter()"
+    (filterChange)="handleFilterChange($event)"
+    data-testid="marketing-overview-filter-pills" />
+
   <div class="relative overflow-hidden">
     <div lfxScrollShadow [scrollDistance]="320" class="flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth" data-testid="marketing-overview-carousel">
-      <!-- North Star Metrics -->
-      <lfx-metric-card
-        title="Flywheel Conversion"
-        icon="fa-light fa-arrows-spin"
-        chartType="line"
-        [chartData]="flywheelChartData()"
-        [chartOptions]="noTooltipChartOptions"
-        [value]="marketingData().flywheelConversion.conversionRate > 0 ? marketingData().flywheelConversion.conversionRate + '%' : undefined"
-        [changePercentage]="
-          marketingData().flywheelConversion.changePercentage !== 0
-            ? (marketingData().flywheelConversion.changePercentage > 0 ? '+' : '') + marketingData().flywheelConversion.changePercentage + '%'
-            : undefined
-        "
-        [trend]="marketingData().flywheelConversion.trend"
-        subtitle="Event attendee → community/WG within 90 days"
-        testId="flywheel-pulse-conversion"
-        [loading]="marketingDataLoading()"
-        [clickable]="true"
-        (cardClick)="handleCardClick(DashboardDrawerType.NorthStarFlywheelConversion)"></lfx-metric-card>
-
-      <lfx-metric-card
-        title="Member Growth"
-        icon="fa-light fa-user-group"
-        chartType="line"
-        [chartData]="memberGrowthChartData()"
-        [chartOptions]="noTooltipChartOptions"
-        [value]="marketingData().memberAcquisition.totalMembers > 0 ? formatNumber(marketingData().memberAcquisition.totalMembers) : undefined"
-        [changePercentage]="
-          marketingData().memberAcquisition.newMembersThisQuarter > 0
-            ? '+' + marketingData().memberAcquisition.newMembersThisQuarter + ' this quarter'
-            : undefined
-        "
-        trend="up"
-        [subtitle]="
-          marketingData().memberRetention.renewalRate > 0
-            ? marketingData().memberRetention.renewalRate + '% retention · NRR ' + marketingData().memberRetention.netRevenueRetention + '%'
-            : undefined
-        "
-        testId="flywheel-pulse-member-growth"
-        [loading]="marketingDataLoading()"
-        [clickable]="true"
-        (cardClick)="handleCardClick(DashboardDrawerType.NorthStarMemberAcquisition)"></lfx-metric-card>
-
-      <lfx-metric-card
-        title="Engaged Community"
-        icon="fa-light fa-people-group"
-        chartType="line"
-        [chartData]="engagedCommunityChartData()"
-        [chartOptions]="noTooltipChartOptions"
-        [value]="marketingData().engagedCommunity.totalMembers > 0 ? formatNumber(marketingData().engagedCommunity.totalMembers) : undefined"
-        [changePercentage]="
-          marketingData().engagedCommunity.changePercentage !== 0
-            ? (marketingData().engagedCommunity.changePercentage > 0 ? '↑ +' : '↓ ') + marketingData().engagedCommunity.changePercentage + '%'
-            : undefined
-        "
-        [trend]="marketingData().engagedCommunity.trend"
-        subtitle="Community + Working Groups + Certified"
-        testId="flywheel-pulse-share-of-voice"
-        [loading]="marketingDataLoading()"
-        [clickable]="true"
-        (cardClick)="handleCardClick(DashboardDrawerType.NorthStarEngagedCommunity)"></lfx-metric-card>
-
-      <!-- Marketing Metrics Key Insights Card -->
-      <lfx-card styleClass="flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full" data-testid="marketing-overview-key-insights">
-        <div class="flex flex-col h-full">
-          <div class="flex items-center gap-2 mb-3">
-            <i class="fa-light fa-lightbulb w-4 h-4 text-gray-500 flex-shrink-0"></i>
-            <h5 class="text-sm font-medium">Marketing Metrics</h5>
-          </div>
-          <div class="flex-1 flex flex-col gap-1.5 p-3 bg-gray-50 rounded-lg">
-            <h6 class="flex items-center gap-1.5 text-xs font-semibold text-gray-900 mb-1">
-              <i class="fa-light fa-lightbulb text-gray-400"></i>
-              Key Insights
-            </h6>
-            @for (insight of marketingInsights(); track insight) {
-              <div class="flex items-start gap-1.5 text-xs text-gray-700 leading-snug">
-                <span class="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0"></span>
-                <span>{{ insight }}</span>
+      @for (card of visibleCards(); track card.testId) {
+        @switch (card.customContentType) {
+          @case ('funnel') {
+            <lfx-card
+              styleClass="flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full cursor-pointer"
+              [attr.data-testid]="card.testId"
+              (click)="handleCardClick(card.drawerType)">
+              <div class="flex flex-col gap-3 p-3">
+                <div class="flex items-center gap-2">
+                  @if (card.icon) {
+                    <i [class]="card.icon + ' w-4 h-4 text-gray-500'"></i>
+                  }
+                  <h5 class="text-sm font-medium mb-0">{{ card.title }}</h5>
+                </div>
+                @if (card.value) {
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-semibold text-gray-900">{{ card.value }}</span>
+                    @if (card.changePercentage) {
+                      <span class="text-xs font-medium" [class.text-green-600]="card.trend === 'up'" [class.text-red-600]="card.trend === 'down'">
+                        {{ card.changePercentage }}
+                      </span>
+                    }
+                  </div>
+                }
+                @if (card.funnelSteps && card.funnelSteps.length > 0) {
+                  <div class="flex flex-col gap-1">
+                    @for (step of card.funnelSteps; track step.label) {
+                      <div class="flex items-baseline justify-between text-xs">
+                        <span class="text-gray-600">{{ step.label }}</span>
+                        <span class="font-semibold text-gray-900">{{ step.value }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (card.subtitle) {
+                  <p class="text-xs text-gray-500 mb-0">{{ card.subtitle }}</p>
+                }
               </div>
-            }
-          </div>
-          <div class="mt-2 text-right">
-            <lfx-button
-              label="View details"
-              [link]="true"
-              size="small"
-              (onClick)="handleCardClick(DashboardDrawerType.MarketingEmailCtr)"
-              data-testid="marketing-overview-insights-view-details" />
-          </div>
-        </div>
-      </lfx-card>
-
-      <!-- Marketing Cards -->
-      @for (card of marketingCards(); track card.testId) {
-        <lfx-metric-card
-          [title]="card.title"
-          [icon]="card.icon"
-          [testId]="card.testId"
-          [chartType]="card.chartType"
-          [chartData]="card.chartData"
-          [chartOptions]="card.chartOptions"
-          [value]="card.value"
-          [subtitle]="card.subtitle"
-          [trend]="card.trend"
-          [changePercentage]="card.changePercentage"
-          [loading]="card.loading"
-          [clickable]="!!card.drawerType"
-          (cardClick)="handleCardClick(card.drawerType!)"></lfx-metric-card>
+            </lfx-card>
+          }
+          @case ('dual-signal') {
+            <lfx-card
+              styleClass="flex-shrink-0 w-[calc(100vw-3rem)] md:w-80 h-full cursor-pointer"
+              [attr.data-testid]="card.testId"
+              (click)="handleCardClick(card.drawerType)">
+              <div class="flex flex-col gap-3 p-3">
+                <div class="flex items-center gap-2">
+                  @if (card.icon) {
+                    <i [class]="card.icon + ' w-4 h-4 text-gray-500'"></i>
+                  }
+                  <h5 class="text-sm font-medium mb-0">{{ card.title }}</h5>
+                </div>
+                @if (card.dualSignals && card.dualSignals.length > 0) {
+                  <div class="flex flex-col gap-2">
+                    @for (s of card.dualSignals; track s.label) {
+                      <div class="flex items-baseline justify-between">
+                        <span class="text-xs text-gray-600">{{ s.label }}</span>
+                        <div class="flex items-baseline gap-1">
+                          <span class="text-sm font-semibold text-gray-900">{{ s.value }}</span>
+                          @if (s.changePercentage) {
+                            <span class="text-xs" [class.text-green-600]="s.trend === 'up'" [class.text-red-600]="s.trend === 'down'">
+                              {{ s.changePercentage }}
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (card.caption) {
+                  <p class="text-xs text-gray-500 mb-0">{{ card.caption }}</p>
+                }
+              </div>
+            </lfx-card>
+          }
+          @default {
+            <lfx-metric-card
+              [title]="card.title"
+              [icon]="card.icon"
+              [testId]="card.testId"
+              [chartType]="card.chartType"
+              [chartData]="card.chartData"
+              [chartOptions]="card.chartOptions"
+              [value]="card.value"
+              [subtitle]="card.subtitle"
+              [trend]="card.trend"
+              [changePercentage]="card.changePercentage"
+              [loading]="card.loading || edDataLoading()"
+              [clickable]="!!card.drawerType"
+              (cardClick)="handleCardClick(card.drawerType)"></lfx-metric-card>
+          }
+        }
       }
     </div>
 
-    <!-- Right shadow fade -->
     <div
       class="absolute top-0 bottom-0 right-0 w-32 z-10 pointer-events-none bg-[linear-gradient(to_right,transparent,#f9fafb)] transition-opacity duration-200"
       [class.opacity-0]="!scrollShadowDirective()?.showRightShadow()"
       data-testid="marketing-overview-shadow-right"
       aria-hidden="true"></div>
 
-    <!-- Left shadow fade -->
     <div
       class="absolute top-0 bottom-0 left-0 w-32 z-10 pointer-events-none bg-[linear-gradient(to_left,transparent,#f9fafb)] transition-opacity duration-200"
       [class.opacity-0]="!scrollShadowDirective()?.showLeftShadow()"
@@ -159,38 +145,41 @@
   </div>
 </section>
 
-<!-- Drill-Down Drawers
-  Note: [visible] uses a computed expression from activeDrawer() signal.
-  This matches the established pattern in foundation-health and organization-involvement drawers.
-  Signal updates are synchronous — handleDrawerClose() sets activeDrawer(null) in the same
-  change detection cycle, so no flicker occurs on backdrop dismiss. -->
-<lfx-website-visits-drawer
-  [visible]="activeDrawer() === DashboardDrawerType.MarketingWebsiteVisits"
-  (visibleChange)="handleDrawerClose()"></lfx-website-visits-drawer>
-
-<lfx-email-ctr-drawer [visible]="activeDrawer() === DashboardDrawerType.MarketingEmailCtr" (visibleChange)="handleDrawerClose()"></lfx-email-ctr-drawer>
-
-<lfx-paid-social-reach-drawer
-  [visible]="activeDrawer() === DashboardDrawerType.MarketingPaidSocialReach"
-  (visibleChange)="handleDrawerClose()"></lfx-paid-social-reach-drawer>
-
-<lfx-social-media-drawer
-  [visible]="activeDrawer() === DashboardDrawerType.MarketingSocialMedia"
-  (visibleChange)="handleDrawerClose()"></lfx-social-media-drawer>
-
-<!-- North Star Drawers -->
-<lfx-engaged-community-drawer
-  [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
+<!-- Drill-Down Drawers (North Star) -->
+<lfx-flywheel-conversion-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarFlywheelConversion"
   (visibleChange)="handleDrawerClose()"
-  [data]="marketingData().engagedCommunity"></lfx-engaged-community-drawer>
+  [data]="edData().flywheel"></lfx-flywheel-conversion-drawer>
 
 <lfx-member-acquisition-drawer
   [visible]="activeDrawer() === DashboardDrawerType.NorthStarMemberAcquisition"
   (visibleChange)="handleDrawerClose()"
-  [data]="marketingData().memberAcquisition"
-  [retentionData]="marketingData().memberRetention"></lfx-member-acquisition-drawer>
+  [data]="edData().memberAcquisition"
+  [retentionData]="edData().memberRetention"></lfx-member-acquisition-drawer>
 
-<lfx-flywheel-conversion-drawer
-  [visible]="activeDrawer() === DashboardDrawerType.NorthStarFlywheelConversion"
+<lfx-engaged-community-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarEngagedCommunity"
   (visibleChange)="handleDrawerClose()"
-  [data]="marketingData().flywheelConversion"></lfx-flywheel-conversion-drawer>
+  [data]="edData().engagedCommunity"></lfx-engaged-community-drawer>
+
+<lfx-event-growth-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.NorthStarEventGrowth"
+  (visibleChange)="handleDrawerClose()"
+  [data]="edData().eventGrowth"></lfx-event-growth-drawer>
+
+<!-- Brand Drawers -->
+<lfx-brand-reach-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.BrandReach"
+  (visibleChange)="handleDrawerClose()"
+  [data]="edData().brandReach"></lfx-brand-reach-drawer>
+
+<lfx-brand-health-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.BrandHealth"
+  (visibleChange)="handleDrawerClose()"
+  [data]="edData().brandHealth"></lfx-brand-health-drawer>
+
+<!-- Influence Drawer -->
+<lfx-revenue-impact-drawer
+  [visible]="activeDrawer() === DashboardDrawerType.RevenueImpact"
+  (visibleChange)="handleDrawerClose()"
+  [data]="edData().revenueImpact"></lfx-revenue-impact-drawer>

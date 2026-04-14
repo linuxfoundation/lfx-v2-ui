@@ -2895,5 +2895,188 @@ export interface FlywheelConversionResponse {
     convertedToCommunity: number;
     convertedToWorkingGroup: number;
   };
+  reengagement: {
+    totalReengaged: number;
+    reengagementRate: number;
+    reengagementMomChange: number;
+    reengagedToNewsletter: number;
+    reengagedToCommunity: number;
+    reengagedToWorkingGroup: number;
+  };
   monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+// ============================================
+// Event Growth (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Top event data point for Event Growth drill-down
+ */
+export interface EventGrowthTopEvent {
+  eventName: string;
+  totalAttendees: number;
+  totalRevenue: number;
+}
+
+/**
+ * API response for Event Growth metric
+ * YTD event attendees and revenue with MoM trend
+ */
+export interface EventGrowthResponse {
+  totalAttendees: number;
+  totalEvents: number;
+  totalRevenue: number;
+  revenuePerAttendee: number;
+  attendeeMomChange: number;
+  revenueMomChange: number;
+  trend: 'up' | 'down';
+  monthlyData: NorthStarMonthlyDataPoint[];
+  topEvents: EventGrowthTopEvent[];
+}
+
+// ============================================
+// Brand Reach (Executive Director Dashboard)
+// ============================================
+
+/** Social platform types for Brand Reach */
+export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'other';
+
+/**
+ * Social platform breakdown for Brand Reach
+ */
+export interface BrandReachSocialPlatform {
+  platform: BrandReachPlatformType;
+  platformName: string;
+  followers: number;
+}
+
+/**
+ * Website domain breakdown for Brand Reach
+ */
+export interface BrandReachWebsiteDomain {
+  domain: string;
+  sessions: number;
+}
+
+/**
+ * Daily trend data point for Brand Reach
+ */
+export interface BrandReachDailyDataPoint {
+  date: string;
+  sessions: number;
+}
+
+/**
+ * API response for Brand Reach metric
+ * Social followers + monthly website sessions (two separate signals)
+ */
+export interface BrandReachResponse {
+  totalSocialFollowers: number;
+  totalMonthlySessions: number;
+  activePlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  socialPlatforms: BrandReachSocialPlatform[];
+  websiteDomains: BrandReachWebsiteDomain[];
+  dailyTrend: BrandReachDailyDataPoint[];
+}
+
+// ============================================
+// Brand Health (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Top project by brand mentions
+ */
+export interface BrandHealthTopProject {
+  projectName: string;
+  mentions: number;
+}
+
+/**
+ * Sentiment breakdown percentages (must sum to ~100)
+ */
+export interface BrandHealthSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+/**
+ * API response for Brand Health metric
+ * Total mentions with sentiment breakdown
+ */
+export interface BrandHealthResponse {
+  totalMentions: number;
+  sentiment: BrandHealthSentimentBreakdown;
+  sentimentMomChangePp: number;
+  trend: 'up' | 'down';
+  monthlyMentions: NorthStarMonthlyDataPoint[];
+  topProjects: BrandHealthTopProject[];
+}
+
+// ============================================
+// Revenue Impact / Attribution (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Engagement type breakdown for Revenue Impact deal pipeline
+ */
+export interface RevenueImpactEngagementType {
+  type: string;
+  percentage: number;
+}
+
+/**
+ * Attribution model comparison for Revenue Impact
+ */
+export interface RevenueImpactAttributionModels {
+  linear: number;
+  firstTouch: number;
+  lastTouch: number;
+}
+
+/**
+ * Paid media metrics for Revenue Impact
+ */
+export interface RevenueImpactPaidMedia {
+  roas: number;
+  impressions: number;
+  adSpend: number;
+  adRevenue: number;
+}
+
+/**
+ * API response for Revenue Impact / Attribution metric
+ * Membership growth pipeline influenced by marketing + paid media
+ */
+export interface RevenueImpactResponse {
+  pipelineInfluenced: number;
+  revenueAttributed: number;
+  matchRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  attributionModels: RevenueImpactAttributionModels;
+  engagementTypes: RevenueImpactEngagementType[];
+  paidMedia: RevenueImpactPaidMedia;
+}
+
+// ============================================
+// ED Evolution Dashboard Aggregate Data
+// ============================================
+
+/**
+ * Aggregate data for the ED Evolution dashboard cards
+ * Combines all North Star, Brand, and Influence responses
+ */
+export interface EdEvolutionData {
+  flywheel: FlywheelConversionResponse;
+  memberAcquisition: MemberAcquisitionResponse;
+  memberRetention: MemberRetentionResponse;
+  engagedCommunity: EngagedCommunitySizeResponse;
+  eventGrowth: EventGrowthResponse;
+  brandReach: BrandReachResponse;
+  brandHealth: BrandHealthResponse;
+  revenueImpact: RevenueImpactResponse;
 }

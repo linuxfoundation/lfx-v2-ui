@@ -1,12 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DashboardDrawerType, MarketingActionType } from '../interfaces';
-import { hexToRgba } from '../utils';
+import { BrandReachPlatformType, DashboardDrawerType, MarketingActionType } from '../interfaces';
+import { formatCurrency, formatNumber, hexToRgba } from '../utils';
 import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.constants';
 import { lfxColors } from './colors.constants';
 
-import type { DashboardMetricCard } from '../interfaces';
+import type { DashboardMetricCard, DualSignalRow, EdEvolutionData, FilterPillOption } from '../interfaces';
 // ============================================
 // Marketing Action Icon Map
 // ============================================
@@ -27,6 +27,19 @@ export const MARKETING_ACTION_ICON_MAP: Record<MarketingActionType, string> = {
   optimize: 'fa-light fa-bullseye-pointer',
   investigate: 'fa-light fa-magnifying-glass-chart',
   monitor: 'fa-light fa-circle-info',
+};
+
+/**
+ * Maps social platform types to Font Awesome icon + Tailwind color classes.
+ * Keeps presentation out of Brand Reach data interfaces.
+ */
+export const MARKETING_SOCIAL_PLATFORM_MAP: Record<BrandReachPlatformType, { icon: string; colorClass: string }> = {
+  linkedin: { icon: 'fa-brands fa-linkedin', colorClass: 'text-blue-700' },
+  twitter: { icon: 'fa-brands fa-x-twitter', colorClass: 'text-gray-900' },
+  youtube: { icon: 'fa-brands fa-youtube', colorClass: 'text-red-600' },
+  facebook: { icon: 'fa-brands fa-facebook', colorClass: 'text-blue-600' },
+  mastodon: { icon: 'fa-brands fa-mastodon', colorClass: 'text-purple-600' },
+  other: { icon: 'fa-light fa-hashtag', colorClass: 'text-gray-500' },
 };
 
 // ============================================
@@ -466,3 +479,215 @@ export const MAINTAINER_PROGRESS_METRICS: DashboardMetricCard[] = [
     chartOptions: NO_TOOLTIP_CHART_OPTIONS,
   },
 ];
+
+// ============================================
+// ED Dashboard Evolution (8 Cards: 4 North Star + 2 Brand + 1 Influence)
+// ============================================
+
+/** Helper to build a sparkline dataset */
+function edSparkline(data: number[], color: string) {
+  return {
+    labels: data.map((_, i) => `M${i + 1}`),
+    datasets: [
+      {
+        data,
+        borderColor: color,
+        backgroundColor: hexToRgba(color, 0.1),
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 0,
+      },
+    ],
+  };
+}
+
+/** Helper to build a dual-signal row with sparkline */
+function edDualSignal(label: string, value: string, data: number[], color: string, change?: string, trend?: 'up' | 'down'): DualSignalRow {
+  return {
+    label,
+    value,
+    changePercentage: change,
+    trend,
+    chartData: edSparkline(data, color),
+  };
+}
+
+/**
+ * Filter options for the ED Evolution dashboard
+ */
+export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
+  { id: 'all', label: 'All' },
+  { id: 'memberships', label: 'North Star' },
+  { id: 'brand', label: 'Brand' },
+  { id: 'influence', label: 'Influence' },
+];
+
+/** Format a MoM change as a display string */
+function formatMomChange(change: number): string {
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change.toFixed(1)}% MoM`;
+}
+
+/** Extract values from NorthStarMonthlyDataPoint[] */
+function monthlyValues(data: { month: string; value: number }[]): number[] {
+  return data.map((d) => d.value);
+}
+
+/**
+ * Build ED Evolution dashboard cards from live API data.
+ * 4 North Star + 2 Brand + 1 Influence. Member Retention is merged into the Member Growth drawer.
+ */
+export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricCard[] {
+  const { flywheel, memberAcquisition, memberRetention, engagedCommunity, eventGrowth, brandReach, brandHealth, revenueImpact } = data;
+
+  return [
+    // === North Star (4 cards) ===
+    {
+      title: 'Flywheel Conversion',
+      icon: 'fa-light fa-arrows-spin',
+      chartType: 'line',
+      category: 'memberships',
+      testId: 'ed-evo-flywheel-conversion',
+      customContentType: 'funnel',
+      value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
+      changePercentage: formatMomChange(flywheel.reengagement.reengagementMomChange),
+      trend: flywheel.reengagement.reengagementMomChange >= 0 ? 'up' : 'down',
+      subtitle: 'Re-engagement within 90 days · Last 6 months',
+      funnelSteps: [
+        { label: 'Attendees', value: formatNumber(flywheel.funnel.eventAttendees) },
+        { label: 'Newsletter', value: formatNumber(flywheel.reengagement.reengagedToNewsletter) },
+        { label: 'Community', value: formatNumber(flywheel.reengagement.reengagedToCommunity) },
+        { label: 'WG', value: formatNumber(flywheel.reengagement.reengagedToWorkingGroup) },
+      ],
+      tooltipText: 'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event.',
+      drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
+    } as DashboardMetricCard,
+    {
+      title: 'Member Growth',
+      icon: 'fa-light fa-user-group',
+      chartType: 'line',
+      category: 'memberships',
+      testId: 'ed-evo-member-growth',
+      value: formatNumber(memberAcquisition.totalMembers),
+      changePercentage: formatMomChange(memberAcquisition.changePercentage),
+      trend: memberAcquisition.trend,
+      subtitle: `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}% · Last 6 months`,
+      chartData: edSparkline(memberAcquisition.totalMembersMonthlyData.length > 0 ? memberAcquisition.totalMembersMonthlyData : [0], lfxColors.blue[500]),
+      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+      tooltipText: 'Total paying corporate members with monthly net new over the last 6 months. Source: Salesforce B2B memberships.',
+      drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
+    } as DashboardMetricCard,
+    {
+      title: 'Engaged Community',
+      icon: 'fa-light fa-people-group',
+      chartType: 'line',
+      category: 'memberships',
+      testId: 'ed-evo-engaged-community',
+      value: formatNumber(engagedCommunity.totalMembers),
+      changePercentage: formatMomChange(engagedCommunity.changePercentage),
+      trend: engagedCommunity.trend,
+      subtitle: `${Object.values(engagedCommunity.breakdown).filter((v) => v > 0).length} channels · Last 6 months`,
+      chartData: edSparkline(engagedCommunity.monthlyData.length > 0 ? monthlyValues(engagedCommunity.monthlyData) : [0], lfxColors.blue[500]),
+      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+      tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
+      drawerType: DashboardDrawerType.NorthStarEngagedCommunity,
+    } as DashboardMetricCard,
+    {
+      title: 'Event Growth',
+      icon: 'fa-light fa-calendar-star',
+      chartType: 'line',
+      category: 'memberships',
+      testId: 'ed-evo-event-growth',
+      value: formatNumber(eventGrowth.totalAttendees),
+      changePercentage: formatMomChange(eventGrowth.attendeeMomChange),
+      trend: eventGrowth.trend,
+      subtitle: `${formatNumber(eventGrowth.totalEvents)} events · YTD attendees`,
+      chartData: eventGrowth.monthlyData.length > 0 ? edSparkline(monthlyValues(eventGrowth.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
+      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
+      tooltipText: 'Year-to-date event attendees and YoY change. Source: Event registrations.',
+      drawerType: DashboardDrawerType.NorthStarEventGrowth,
+    } as DashboardMetricCard,
+
+    // === Brand (2 dual-signal cards) ===
+    {
+      title: 'Brand Reach',
+      icon: 'fa-light fa-signal-bars',
+      chartType: 'line',
+      category: 'brand',
+      testId: 'ed-evo-brand-reach',
+      customContentType: 'dual-signal',
+      dualSignals: [
+        edDualSignal(
+          'Social Followers',
+          formatNumber(brandReach.totalSocialFollowers),
+          brandReach.dailyTrend.length > 0 ? brandReach.dailyTrend.map((d) => d.sessions) : [0],
+          lfxColors.blue[500],
+          formatMomChange(brandReach.changePercentage),
+          brandReach.trend
+        ),
+        edDualSignal(
+          'Monthly Sessions',
+          formatNumber(brandReach.totalMonthlySessions),
+          brandReach.dailyTrend.length > 0 ? brandReach.dailyTrend.map((d) => d.sessions) : [0],
+          lfxColors.violet[500]
+        ),
+      ],
+      tooltipText: 'Social followers across all platforms (stock) and monthly website sessions (flow). Shown separately — these are different metric types.',
+      drawerType: DashboardDrawerType.BrandReach,
+    } as DashboardMetricCard,
+    {
+      title: 'Brand Health',
+      icon: 'fa-light fa-heart-pulse',
+      chartType: 'line',
+      category: 'brand',
+      testId: 'ed-evo-brand-health',
+      customContentType: 'dual-signal',
+      dualSignals: [
+        edDualSignal(
+          'Mentions',
+          formatNumber(brandHealth.totalMentions),
+          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [0],
+          lfxColors.blue[500],
+          formatMomChange(brandHealth.sentimentMomChangePp),
+          brandHealth.trend
+        ),
+        edDualSignal(
+          'Positive Sentiment',
+          `${brandHealth.sentiment.positive.toFixed(1)}%`,
+          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [0],
+          lfxColors.emerald[500],
+          `${brandHealth.sentimentMomChangePp >= 0 ? '+' : ''}${brandHealth.sentimentMomChangePp.toFixed(1)}pp MoM`,
+          brandHealth.sentimentMomChangePp >= 0 ? 'up' : 'down'
+        ),
+      ],
+      tooltipText: 'Total brand mentions across social and web (Octolens) with sentiment breakdown.',
+      drawerType: DashboardDrawerType.BrandHealth,
+    } as DashboardMetricCard,
+
+    // === Influence (1 dual-signal card) ===
+    {
+      title: 'Attribution',
+      icon: 'fa-light fa-money-bill-trend-up',
+      chartType: 'line',
+      category: 'influence',
+      testId: 'ed-evo-revenue-impact',
+      customContentType: 'dual-signal',
+      caption: `${formatCurrency(revenueImpact.revenueAttributed)} attributed of ${formatCurrency(revenueImpact.pipelineInfluenced + revenueImpact.revenueAttributed)} total (${revenueImpact.matchRate.toFixed(1)}% match rate)`,
+      dualSignals: [
+        edDualSignal(
+          'Membership Growth Pipeline',
+          formatCurrency(revenueImpact.pipelineInfluenced),
+          [0],
+          lfxColors.blue[500],
+          formatMomChange(revenueImpact.changePercentage),
+          revenueImpact.trend
+        ),
+        edDualSignal('Paid Media', formatCurrency(revenueImpact.paidMedia.adSpend), [0], lfxColors.emerald[500]),
+      ],
+      tooltipText:
+        'Membership growth pipeline influenced by marketing, with paid media spend and return on ad spend (ROAS). Match rate shows measurement confidence.',
+      drawerType: DashboardDrawerType.RevenueImpact,
+    } as DashboardMetricCard,
+  ];
+}

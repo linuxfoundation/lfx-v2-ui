@@ -1,0 +1,70 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p-drawer [(visible)]="visible" position="right" styleClass="!w-full md:!w-[520px]" [showCloseIcon]="false">
+  <ng-template pTemplate="header">
+    <div class="flex items-center justify-between w-full">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-semibold text-gray-900">Brand Reach</h2>
+        <p class="text-sm text-gray-500">Social followers and monthly website sessions</p>
+      </div>
+      <lfx-button icon="fa-light fa-xmark" severity="secondary" [text]="true" [rounded]="true" (onClick)="onClose()" />
+    </div>
+  </ng-template>
+
+  <div class="flex flex-col gap-4 p-4">
+    <lfx-card>
+      <div class="flex flex-col gap-3 p-4">
+        <div class="flex items-baseline justify-between">
+          <span class="text-sm font-medium text-gray-600">Total Social Followers</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalSocialFollowers) }}</span>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <span class="text-sm font-medium text-gray-600">Monthly Sessions</span>
+          <span class="text-xl font-semibold text-gray-900">{{ formatNumber(data().totalMonthlySessions) }}</span>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <span class="text-sm font-medium text-gray-600">Active Platforms</span>
+          <span class="text-xl font-semibold text-gray-900">{{ data().activePlatforms }}</span>
+        </div>
+        <div class="flex items-baseline justify-between pt-2 border-t border-gray-200">
+          <span class="text-sm font-medium text-gray-600">MoM Change</span>
+          <span class="text-sm font-semibold" [class.text-green-600]="data().changePercentage >= 0" [class.text-red-600]="data().changePercentage < 0">
+            {{ data().changePercentage >= 0 ? '+' : '' }}{{ data().changePercentage.toFixed(1) }}%
+          </span>
+        </div>
+      </div>
+    </lfx-card>
+
+    @if (data().socialPlatforms.length > 0) {
+      <lfx-card>
+        <div class="flex flex-col gap-3 p-4">
+          <h3 class="text-sm font-semibold text-gray-900">Platforms</h3>
+          @for (platform of data().socialPlatforms; track platform.platform) {
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i [class]="platformIcon(platform.platform) + ' ' + platformColor(platform.platform)"></i>
+                <span class="text-sm text-gray-700">{{ platform.platformName }}</span>
+              </div>
+              <span class="text-sm font-semibold text-gray-900">{{ formatNumber(platform.followers) }}</span>
+            </div>
+          }
+        </div>
+      </lfx-card>
+    }
+
+    @if (data().websiteDomains.length > 0) {
+      <lfx-card>
+        <div class="flex flex-col gap-3 p-4">
+          <h3 class="text-sm font-semibold text-gray-900">Top Domains</h3>
+          @for (domain of data().websiteDomains; track domain.domain) {
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-gray-700 truncate">{{ domain.domain }}</span>
+              <span class="text-sm font-semibold text-gray-900">{{ formatNumber(domain.sessions) }}</span>
+            </div>
+          }
+        </div>
+      </lfx-card>
+    }
+  </div>
+</p-drawer>

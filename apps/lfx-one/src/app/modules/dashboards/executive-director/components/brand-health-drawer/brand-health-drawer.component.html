@@ -1,0 +1,59 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+<p-drawer [(visible)]="visible" position="right" styleClass="!w-full md:!w-[520px]" [showCloseIcon]="false">
+  <ng-template pTemplate="header">
+    <div class="flex items-center justify-between w-full">
+      <div class="flex flex-col gap-1">
+        <h2 class="text-lg font-semibold text-gray-900">Brand Health</h2>
+        <p class="text-sm text-gray-500">Total mentions with sentiment breakdown</p>
+      </div>
+      <lfx-button icon="fa-light fa-xmark" severity="secondary" [text]="true" [rounded]="true" (onClick)="onClose()" />
+    </div>
+  </ng-template>
+
+  <div class="flex flex-col gap-4 p-4">
+    <lfx-card>
+      <div class="flex flex-col gap-3 p-4">
+        <div class="flex items-baseline justify-between">
+          <span class="text-sm font-medium text-gray-600">Total Mentions</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ formatNumber(data().totalMentions) }}</span>
+        </div>
+        <div class="flex flex-col gap-2 pt-2 border-t border-gray-200">
+          <div class="flex items-baseline justify-between">
+            <span class="text-sm text-green-700">Positive</span>
+            <span class="text-sm font-semibold text-gray-900">{{ data().sentiment.positive.toFixed(1) }}%</span>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span class="text-sm text-gray-600">Neutral</span>
+            <span class="text-sm font-semibold text-gray-900">{{ data().sentiment.neutral.toFixed(1) }}%</span>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span class="text-sm text-red-700">Negative</span>
+            <span class="text-sm font-semibold text-gray-900">{{ data().sentiment.negative.toFixed(1) }}%</span>
+          </div>
+        </div>
+        <div class="flex items-baseline justify-between pt-2 border-t border-gray-200">
+          <span class="text-sm font-medium text-gray-600">Sentiment MoM Change</span>
+          <span class="text-sm font-semibold" [class.text-green-600]="data().sentimentMomChangePp >= 0" [class.text-red-600]="data().sentimentMomChangePp < 0">
+            {{ data().sentimentMomChangePp >= 0 ? '+' : '' }}{{ data().sentimentMomChangePp.toFixed(1) }}pp
+          </span>
+        </div>
+      </div>
+    </lfx-card>
+
+    @if (data().topProjects.length > 0) {
+      <lfx-card>
+        <div class="flex flex-col gap-3 p-4">
+          <h3 class="text-sm font-semibold text-gray-900">Top Projects by Mentions</h3>
+          @for (project of data().topProjects; track project.projectName) {
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-gray-700 truncate">{{ project.projectName }}</span>
+              <span class="text-sm font-semibold text-gray-900">{{ formatNumber(project.mentions) }}</span>
+            </div>
+          }
+        </div>
+      </lfx-card>
+    }
+  </div>
+</p-drawer>

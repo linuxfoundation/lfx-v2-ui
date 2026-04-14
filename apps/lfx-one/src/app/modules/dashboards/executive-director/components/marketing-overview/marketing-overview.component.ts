@@ -5,36 +5,39 @@ import { afterNextRender, ChangeDetectionStrategy, Component, computed, inject, 
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { MetricCardComponent } from '@components/metric-card/metric-card.component';
 
-import { MARKETING_OVERVIEW_METRICS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { buildEdEvolutionMetrics, ED_EVOLUTION_FILTER_OPTIONS, NO_TOOLTIP_CHART_OPTIONS } from '@lfx-one/shared/constants';
 import {
+  BrandHealthResponse,
+  BrandReachResponse,
   DashboardDrawerType,
   DashboardMetricCard,
-  EmailCtrResponse,
+  EdEvolutionData,
   EngagedCommunitySizeResponse,
+  EventGrowthResponse,
   FlywheelConversionResponse,
   MemberAcquisitionResponse,
   MemberRetentionResponse,
-  SocialMediaResponse,
-  SocialReachResponse,
-  WebActivitiesSummaryResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
-import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
+import { formatNumber } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, combineLatest, filter, finalize, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { combineLatest, filter, finalize, forkJoin, map, switchMap, tap } from 'rxjs';
 
-import { EmailCtrDrawerComponent } from '../email-ctr-drawer/email-ctr-drawer.component';
+import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
+import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
 import { EngagedCommunityDrawerComponent } from '../engaged-community-drawer/engaged-community-drawer.component';
+import { EventGrowthDrawerComponent } from '../event-growth-drawer/event-growth-drawer.component';
 import { FlywheelConversionDrawerComponent } from '../flywheel-conversion-drawer/flywheel-conversion-drawer.component';
 import { MemberAcquisitionDrawerComponent } from '../member-acquisition-drawer/member-acquisition-drawer.component';
-import { PaidSocialReachDrawerComponent } from '../paid-social-reach-drawer/paid-social-reach-drawer.component';
-import { SocialMediaDrawerComponent } from '../social-media-drawer/social-media-drawer.component';
-import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-visits-drawer.component';
+import { RevenueImpactDrawerComponent } from '../revenue-impact-drawer/revenue-impact-drawer.component';
+
+type EdEvolutionFilterId = 'all' | 'memberships' | 'brand' | 'influence';
 
 @Component({
   selector: 'lfx-marketing-overview',
@@ -42,16 +45,16 @@ import { WebsiteVisitsDrawerComponent } from '../website-visits-drawer/website-v
   imports: [
     ButtonComponent,
     CardComponent,
+    FilterPillsComponent,
     MetricCardComponent,
     ScrollShadowDirective,
-
-    WebsiteVisitsDrawerComponent,
-    EmailCtrDrawerComponent,
-    PaidSocialReachDrawerComponent,
-    SocialMediaDrawerComponent,
+    BrandHealthDrawerComponent,
+    BrandReachDrawerComponent,
     EngagedCommunityDrawerComponent,
-    MemberAcquisitionDrawerComponent,
+    EventGrowthDrawerComponent,
     FlywheelConversionDrawerComponent,
+    MemberAcquisitionDrawerComponent,
+    RevenueImpactDrawerComponent,
   ],
   templateUrl: './marketing-overview.component.html',
   styleUrl: './marketing-overview.component.scss',
@@ -64,9 +67,10 @@ export class MarketingOverviewComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   // === WritableSignals ===
-  protected readonly marketingDataLoading = signal(true);
-  private readonly browserReady = signal(false);
+  protected readonly edDataLoading = signal(true);
+  public readonly selectedFilter = signal<EdEvolutionFilterId>('all');
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
+  private readonly browserReady = signal(false);
 
   // === Observables ===
   private readonly selectedFoundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(
@@ -75,79 +79,20 @@ export class MarketingOverviewComponent {
 
   // === Constants ===
   protected readonly DashboardDrawerType = DashboardDrawerType;
-
-  // === Computed Signals ===
-  protected readonly marketingInsights: Signal<string[]> = this.initMarketingInsights();
-  protected readonly marketingData: Signal<{
-    webActivities: WebActivitiesSummaryResponse;
-    emailCtr: EmailCtrResponse;
-    socialReach: SocialReachResponse;
-    socialMedia: SocialMediaResponse;
-    memberRetention: MemberRetentionResponse;
-    memberAcquisition: MemberAcquisitionResponse;
-    engagedCommunity: EngagedCommunitySizeResponse;
-    flywheelConversion: FlywheelConversionResponse;
-  }> = this.initMarketingData();
-  protected readonly marketingCards: Signal<DashboardMetricCard[]> = this.initMarketingCards();
-  protected readonly formatNumber = formatNumber;
+  protected readonly filterOptions = ED_EVOLUTION_FILTER_OPTIONS;
   protected readonly noTooltipChartOptions = NO_TOOLTIP_CHART_OPTIONS;
+  protected readonly formatNumber = formatNumber;
 
-  // North Star sparkline chart data
-  protected readonly memberGrowthChartData = computed(() => {
-    const { totalMembersMonthlyData, totalMembersMonthlyLabels } = this.marketingData().memberAcquisition;
-    if (totalMembersMonthlyData.length === 0) return undefined;
-    return {
-      labels: totalMembersMonthlyLabels,
-      datasets: [
-        {
-          data: totalMembersMonthlyData,
-          borderColor: lfxColors.blue[500],
-          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-        },
-      ],
-    };
-  });
+  // === Complex signals ===
+  protected readonly edData: Signal<EdEvolutionData> = this.initEdData();
 
-  protected readonly flywheelChartData = computed(() => {
-    const { monthlyData } = this.marketingData().flywheelConversion;
-    if (monthlyData.length === 0) return undefined;
-    return {
-      labels: monthlyData.map((d) => d.month),
-      datasets: [
-        {
-          data: monthlyData.map((d) => d.value),
-          borderColor: lfxColors.blue[500],
-          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-        },
-      ],
-    };
-  });
+  protected readonly allCards: Signal<DashboardMetricCard[]> = computed(() => buildEdEvolutionMetrics(this.edData()));
 
-  protected readonly engagedCommunityChartData = computed(() => {
-    const { monthlyData } = this.marketingData().engagedCommunity;
-    if (monthlyData.length === 0) return undefined;
-    return {
-      labels: monthlyData.map((d) => d.month),
-      datasets: [
-        {
-          data: monthlyData.map((d) => d.value),
-          borderColor: lfxColors.blue[500],
-          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 0,
-        },
-      ],
-    };
+  protected readonly visibleCards: Signal<DashboardMetricCard[]> = computed(() => {
+    const filterId = this.selectedFilter();
+    const cards = this.allCards();
+    if (filterId === 'all') return cards;
+    return cards.filter((c) => c.category === filterId);
   });
 
   public constructor() {
@@ -157,7 +102,12 @@ export class MarketingOverviewComponent {
   }
 
   // === Public Methods ===
-  public handleCardClick(drawerType: DashboardDrawerType): void {
+  public handleFilterChange(filterId: string): void {
+    this.selectedFilter.set(filterId as EdEvolutionFilterId);
+  }
+
+  public handleCardClick(drawerType: DashboardDrawerType | undefined): void {
+    if (!drawerType) return;
     this.activeDrawer.set(drawerType);
   }
 
@@ -166,89 +116,23 @@ export class MarketingOverviewComponent {
   }
 
   // === Private Initializers ===
-  private initMarketingCards(): Signal<DashboardMetricCard[]> {
-    return computed(() => {
-      const { webActivities, emailCtr, socialReach, socialMedia } = this.marketingData();
-      const loading = this.marketingDataLoading();
-
-      return MARKETING_OVERVIEW_METRICS.map((card) => {
-        switch (card.drawerType) {
-          case DashboardDrawerType.MarketingWebsiteVisits:
-            return this.transformWebsiteVisits(card, webActivities, loading);
-          case DashboardDrawerType.MarketingEmailCtr:
-            return this.transformEmailCtr(card, emailCtr, loading);
-          case DashboardDrawerType.MarketingPaidSocialReach:
-            return this.transformSocialReach(card, socialReach, loading);
-          case DashboardDrawerType.MarketingSocialMedia:
-            return this.transformSocialMedia(card, socialMedia, loading);
-          default:
-            return card;
-        }
-      });
-    });
-  }
-
-  private initMarketingData(): Signal<{
-    webActivities: WebActivitiesSummaryResponse;
-    emailCtr: EmailCtrResponse;
-    socialReach: SocialReachResponse;
-    socialMedia: SocialMediaResponse;
-    memberRetention: MemberRetentionResponse;
-    memberAcquisition: MemberAcquisitionResponse;
-    engagedCommunity: EngagedCommunitySizeResponse;
-    flywheelConversion: FlywheelConversionResponse;
-  }> {
-    const defaultWebActivities: WebActivitiesSummaryResponse = {
-      totalSessions: 0,
-      totalPageViews: 0,
-      domainGroups: [],
-      dailyData: [],
-      dailyLabels: [],
-    };
-
-    const defaultEmailCtr: EmailCtrResponse = {
-      currentCtr: 0,
+  private initEdData(): Signal<EdEvolutionData> {
+    const defaultFlywheel: FlywheelConversionResponse = {
+      conversionRate: 0,
       changePercentage: 0,
       trend: 'up',
-      monthlyData: [],
-      monthlyLabels: [],
-      campaignGroups: [],
-      monthlySends: [],
-      monthlyOpens: [],
-    };
-
-    const defaultSocialReach: SocialReachResponse = {
-      totalReach: 0,
-      roas: 0,
-      totalSpend: 0,
-      totalRevenue: 0,
-      changePercentage: 0,
-      trend: 'up',
-      monthlyData: [],
-      monthlyLabels: [],
-      monthlyRoas: [],
-      channelGroups: [],
-    };
-
-    const defaultSocialMedia: SocialMediaResponse = {
-      totalFollowers: 0,
-      totalPlatforms: 0,
-      changePercentage: 0,
-      trend: 'up',
-      platforms: [],
+      funnel: { eventAttendees: 0, convertedToNewsletter: 0, convertedToCommunity: 0, convertedToWorkingGroup: 0 },
+      reengagement: {
+        totalReengaged: 0,
+        reengagementRate: 0,
+        reengagementMomChange: 0,
+        reengagedToNewsletter: 0,
+        reengagedToCommunity: 0,
+        reengagedToWorkingGroup: 0,
+      },
       monthlyData: [],
     };
-
-    const defaultMemberRetention: MemberRetentionResponse = {
-      renewalRate: 0,
-      netRevenueRetention: 0,
-      changePercentage: 0,
-      trend: 'up',
-      target: 85,
-      monthlyData: [],
-    };
-
-    const defaultMemberAcquisition: MemberAcquisitionResponse = {
+    const defaultAcquisition: MemberAcquisitionResponse = {
       totalMembers: 0,
       totalMembersMonthlyData: [],
       totalMembersMonthlyLabels: [],
@@ -258,42 +142,70 @@ export class MarketingOverviewComponent {
       trend: 'up',
       quarterlyData: [],
     };
-
-    const defaultEngagedCommunity: EngagedCommunitySizeResponse = {
+    const defaultRetention: MemberRetentionResponse = {
+      renewalRate: 0,
+      netRevenueRetention: 0,
+      changePercentage: 0,
+      trend: 'up',
+      target: 85,
+      monthlyData: [],
+    };
+    const defaultEngaged: EngagedCommunitySizeResponse = {
       totalMembers: 0,
       changePercentage: 0,
       trend: 'up',
-      breakdown: {
-        newsletterSubscribers: 0,
-        communityMembers: 0,
-        workingGroupMembers: 0,
-        certifiedIndividuals: 0,
-      },
+      breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
       monthlyData: [],
     };
-
-    const defaultFlywheelConversion: FlywheelConversionResponse = {
-      conversionRate: 0,
+    const defaultEventGrowth: EventGrowthResponse = {
+      totalAttendees: 0,
+      totalEvents: 0,
+      totalRevenue: 0,
+      revenuePerAttendee: 0,
+      attendeeMomChange: 0,
+      revenueMomChange: 0,
+      trend: 'up',
+      monthlyData: [],
+      topEvents: [],
+    };
+    const defaultBrandReach: BrandReachResponse = {
+      totalSocialFollowers: 0,
+      totalMonthlySessions: 0,
+      activePlatforms: 0,
       changePercentage: 0,
       trend: 'up',
-      funnel: {
-        eventAttendees: 0,
-        convertedToNewsletter: 0,
-        convertedToCommunity: 0,
-        convertedToWorkingGroup: 0,
-      },
-      monthlyData: [],
+      socialPlatforms: [],
+      websiteDomains: [],
+      dailyTrend: [],
+    };
+    const defaultBrandHealth: BrandHealthResponse = {
+      totalMentions: 0,
+      sentiment: { positive: 0, neutral: 0, negative: 0 },
+      sentimentMomChangePp: 0,
+      trend: 'up',
+      monthlyMentions: [],
+      topProjects: [],
+    };
+    const defaultRevenueImpact: RevenueImpactResponse = {
+      pipelineInfluenced: 0,
+      revenueAttributed: 0,
+      matchRate: 0,
+      changePercentage: 0,
+      trend: 'up',
+      attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+      engagementTypes: [],
+      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
     };
 
-    const defaultValue = {
-      webActivities: defaultWebActivities,
-      emailCtr: defaultEmailCtr,
-      socialReach: defaultSocialReach,
-      socialMedia: defaultSocialMedia,
-      memberRetention: defaultMemberRetention,
-      memberAcquisition: defaultMemberAcquisition,
-      engagedCommunity: defaultEngagedCommunity,
-      flywheelConversion: defaultFlywheelConversion,
+    const defaultValue: EdEvolutionData = {
+      flywheel: defaultFlywheel,
+      memberAcquisition: defaultAcquisition,
+      memberRetention: defaultRetention,
+      engagedCommunity: defaultEngaged,
+      eventGrowth: defaultEventGrowth,
+      brandReach: defaultBrandReach,
+      brandHealth: defaultBrandHealth,
+      revenueImpact: defaultRevenueImpact,
     };
 
     return toSignal(
@@ -301,229 +213,24 @@ export class MarketingOverviewComponent {
         filter(([ready, foundation]) => ready && !!foundation.slug),
         map(([, foundation]) => foundation),
         tap(() => {
-          this.marketingDataLoading.set(true);
+          this.edDataLoading.set(true);
           this.activeDrawer.set(null);
         }),
         switchMap((foundation) =>
           forkJoin({
-            webActivities: this.analyticsService.getWebActivitiesSummary(foundation.slug).pipe(catchError(() => of(defaultWebActivities))),
-            emailCtr: this.analyticsService.getEmailCtr(foundation.name).pipe(catchError(() => of(defaultEmailCtr))),
-            socialReach: this.analyticsService.getSocialReach(foundation.name).pipe(catchError(() => of(defaultSocialReach))),
-            socialMedia: this.analyticsService.getSocialMedia(foundation.name).pipe(catchError(() => of(defaultSocialMedia))),
-            memberRetention: this.analyticsService.getMemberRetention(foundation.slug).pipe(catchError(() => of(defaultMemberRetention))),
-            memberAcquisition: this.analyticsService.getMemberAcquisition(foundation.slug).pipe(catchError(() => of(defaultMemberAcquisition))),
-            engagedCommunity: this.analyticsService.getEngagedCommunity(foundation.slug).pipe(catchError(() => of(defaultEngagedCommunity))),
-            flywheelConversion: this.analyticsService.getFlywheelConversion(foundation.slug).pipe(catchError(() => of(defaultFlywheelConversion))),
-          }).pipe(tap(() => this.marketingDataLoading.set(false)))
+            flywheel: this.analyticsService.getFlywheelConversion(foundation.slug),
+            memberAcquisition: this.analyticsService.getMemberAcquisition(foundation.slug),
+            memberRetention: this.analyticsService.getMemberRetention(foundation.slug),
+            engagedCommunity: this.analyticsService.getEngagedCommunity(foundation.slug),
+            eventGrowth: this.analyticsService.getEventGrowth(foundation.slug),
+            brandReach: this.analyticsService.getBrandReach(foundation.slug),
+            brandHealth: this.analyticsService.getBrandHealth(foundation.slug),
+            revenueImpact: this.analyticsService.getRevenueImpact(foundation.slug),
+          }).pipe(tap(() => this.edDataLoading.set(false)))
         ),
-        finalize(() => this.marketingDataLoading.set(false))
+        finalize(() => this.edDataLoading.set(false))
       ),
       { initialValue: defaultValue }
     );
-  }
-
-  private initMarketingInsights(): Signal<string[]> {
-    return computed(() => {
-      const data = this.marketingData();
-      if (this.marketingDataLoading()) {
-        return [];
-      }
-
-      // Collect all metrics that have meaningful data and a change percentage
-      const signals: { label: string; change: number; detail: string }[] = [];
-
-      if (data.socialMedia.totalFollowers > 0) {
-        signals.push({
-          label: 'Social followers',
-          change: data.socialMedia.changePercentage,
-          detail: formatNumber(data.socialMedia.totalFollowers),
-        });
-      }
-
-      if (data.socialReach.totalReach > 0) {
-        signals.push({
-          label: 'Paid social reach',
-          change: data.socialReach.changePercentage,
-          detail: formatNumber(data.socialReach.totalReach),
-        });
-      }
-
-      if (data.engagedCommunity.totalMembers > 0) {
-        signals.push({
-          label: 'Engaged community',
-          change: data.engagedCommunity.changePercentage,
-          detail: formatNumber(data.engagedCommunity.totalMembers),
-        });
-      }
-
-      if (data.memberAcquisition.totalMembers > 0) {
-        signals.push({
-          label: 'Member base',
-          change: data.memberAcquisition.changePercentage,
-          detail: formatNumber(data.memberAcquisition.totalMembers),
-        });
-      }
-
-      if (data.flywheelConversion.conversionRate > 0) {
-        signals.push({
-          label: 'Flywheel conversion',
-          change: data.flywheelConversion.changePercentage,
-          detail: `${data.flywheelConversion.conversionRate}%`,
-        });
-      }
-
-      if (data.memberRetention.renewalRate > 0) {
-        signals.push({
-          label: 'Member retention',
-          change: data.memberRetention.changePercentage,
-          detail: `${data.memberRetention.renewalRate}%`,
-        });
-      }
-
-      // Sort by absolute change magnitude — biggest movers first
-      const sorted = signals.filter((s) => s.change !== 0).sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
-
-      const insights: string[] = [];
-
-      // Top movers — up to 3, biggest changes across all metrics
-      for (const signal of sorted.slice(0, 3)) {
-        const direction = signal.change > 0 ? 'up' : 'down';
-        insights.push(`${signal.label} is ${direction} ${Math.abs(signal.change)}% — now at ${signal.detail}`);
-      }
-
-      // If fewer than 2 insights from movers, add a steady-state summary
-      if (insights.length < 2 && data.webActivities.totalSessions > 0) {
-        insights.push(`${formatNumber(data.webActivities.totalSessions)} website sessions in the last 30 days`);
-      }
-
-      return insights;
-    });
-  }
-
-  // === Private Helpers ===
-  private transformWebsiteVisits(card: DashboardMetricCard, data: WebActivitiesSummaryResponse, loading: boolean): DashboardMetricCard {
-    return {
-      ...card,
-      loading,
-      value: data.totalSessions > 0 ? formatNumber(data.totalSessions) : undefined,
-      subtitle: data.totalSessions > 0 ? `Last 30 days · ${formatNumber(data.totalPageViews)} page views` : undefined,
-      chartData:
-        data.dailyData.length > 0
-          ? {
-              labels: data.dailyLabels,
-              datasets: [
-                {
-                  data: data.dailyData,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-                  fill: true,
-                  tension: 0.4,
-                  borderWidth: 2,
-                  pointRadius: 0,
-                },
-              ],
-            }
-          : card.chartData,
-      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    };
-  }
-
-  private transformEmailCtr(card: DashboardMetricCard, data: EmailCtrResponse, loading: boolean): DashboardMetricCard {
-    return {
-      ...card,
-      loading,
-      value: data.currentCtr > 0 ? `${data.currentCtr.toFixed(1)}%` : undefined,
-      subtitle: data.currentCtr > 0 ? 'Last 6 months' : undefined,
-      changePercentage: data.changePercentage !== 0 ? `${data.changePercentage}%` : undefined,
-      trend: data.trend,
-      chartData:
-        data.monthlyData.length > 0
-          ? {
-              labels: data.monthlyLabels,
-              datasets: [
-                {
-                  data: data.monthlyData,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-                  fill: true,
-                  tension: 0.4,
-                  borderWidth: 2,
-                  pointRadius: 0,
-                },
-              ],
-            }
-          : card.chartData,
-      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    };
-  }
-
-  private transformSocialReach(card: DashboardMetricCard, data: SocialReachResponse, loading: boolean): DashboardMetricCard {
-    return {
-      ...card,
-      loading,
-      value: this.getSocialReachValue(data),
-      subtitle: this.getSocialReachSubtitle(data),
-      changePercentage: data.changePercentage !== 0 ? `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%` : undefined,
-      trend: data.trend,
-      chartData:
-        data.monthlyRoas && data.monthlyRoas.length > 0
-          ? {
-              labels: data.monthlyLabels,
-              datasets: [
-                {
-                  data: data.monthlyRoas,
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-                  fill: true,
-                  tension: 0.4,
-                  borderWidth: 2,
-                  pointRadius: 0,
-                },
-              ],
-            }
-          : card.chartData,
-      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    };
-  }
-
-  private transformSocialMedia(card: DashboardMetricCard, data: SocialMediaResponse, loading: boolean): DashboardMetricCard {
-    return {
-      ...card,
-      loading,
-      value: data.totalFollowers > 0 ? formatNumber(data.totalFollowers) : undefined,
-      subtitle: data.totalFollowers > 0 ? `${data.totalPlatforms} platforms · Last 6 months` : undefined,
-      changePercentage: data.changePercentage !== 0 ? `${data.changePercentage > 0 ? '+' : ''}${data.changePercentage}%` : undefined,
-      trend: data.trend,
-      chartData:
-        data.monthlyData.length > 0
-          ? {
-              labels: data.monthlyData.map((d) => d.month),
-              datasets: [
-                {
-                  data: data.monthlyData.map((d) => d.totalFollowers),
-                  borderColor: lfxColors.blue[500],
-                  backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-                  fill: true,
-                  tension: 0.4,
-                  borderWidth: 2,
-                  pointRadius: 0,
-                },
-              ],
-            }
-          : card.chartData,
-      chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-    };
-  }
-
-  private getSocialReachValue(data: SocialReachResponse): string | undefined {
-    if (data.roas > 0) return `${data.roas.toFixed(2)}x`;
-    if (data.totalReach > 0) return formatNumber(data.totalReach);
-    return undefined;
-  }
-
-  private getSocialReachSubtitle(data: SocialReachResponse): string | undefined {
-    if (data.roas > 0) return 'ROAS · Last 6 months';
-    if (data.totalReach > 0) return 'Last 6 months';
-    return undefined;
   }
 }
