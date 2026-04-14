@@ -5,9 +5,9 @@
   <div class="flex flex-col gap-6">
     <!-- Page Header -->
     <div class="flex items-start justify-between mt-[12px] mb-[24px]">
-      <div class="flex flex-col gap-1">
+      <div>
         <h1 class="font-display font-light text-2xl" data-testid="my-events-page-title">My Events</h1>
-        <p class="text-sm text-gray-500" data-testid="my-events-description">Events you are registered to attend across all foundations.</p>
+        <p class="mt-1 text-sm text-gray-500" data-testid="my-events-description">Events you are registered to attend across all foundations.</p>
         <lfx-tag [value]="foundationLabel()" severity="info" styleClass="mt-1" />
       </div>
       <lfx-discover-events-button testId="my-events-discover-button" />
