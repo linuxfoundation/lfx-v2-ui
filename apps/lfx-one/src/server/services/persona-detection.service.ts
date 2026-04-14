@@ -329,6 +329,56 @@ export class PersonaDetectionService {
       })
     );
 
+    const enriched = results.filter((r): r is PromiseFulfilledResult<EnrichedPersonaProject> => r.status === 'fulfilled').map((r) => r.value);
+
+    // Fetch missing parent foundations so the UI can group child projects properly
+    const missingParents = await this.fetchMissingParentProjects(req, enriched);
+    if (missingParents.length > 0) {
+      enriched.push(...missingParents);
+    }
+
+    return enriched;
+  }
+
+  /**
+   * Fetch parent projects that aren't in the detected list but are referenced by child projects.
+   * This ensures the UI can group child projects under their foundation in the filter dropdown.
+   */
+  private async fetchMissingParentProjects(req: Request, enrichedProjects: EnrichedPersonaProject[]): Promise<EnrichedPersonaProject[]> {
+    const knownUids = new Set(enrichedProjects.map((p) => p.projectUid));
+    const missingParentUids = new Set<string>();
+
+    for (const project of enrichedProjects) {
+      if (project.parentProjectUid && !knownUids.has(project.parentProjectUid)) {
+        missingParentUids.add(project.parentProjectUid);
+      }
+    }
+
+    if (missingParentUids.size === 0) {
+      return [];
+    }
+
+    logger.debug(req, 'fetch_missing_parent_projects', 'Fetching missing parent projects for grouping', {
+      missing_parent_uids: [...missingParentUids],
+    });
+
+    const results = await Promise.allSettled(
+      [...missingParentUids].map(async (parentUid) => {
+        const projectData = await this.projectService.getProjectById(req, parentUid, false);
+        return {
+          projectUid: parentUid,
+          projectSlug: projectData?.slug || '',
+          projectName: projectData?.name || null,
+          parentProjectUid: projectData?.parent_uid || null,
+          isFoundation: this.computeIsFoundation(projectData),
+          logoUrl: projectData?.logo_url || null,
+          description: projectData?.description || null,
+          detections: [],
+          personas: [],
+        } as EnrichedPersonaProject;
+      })
+    );
+
     return results.filter((r): r is PromiseFulfilledResult<EnrichedPersonaProject> => r.status === 'fulfilled').map((r) => r.value);
   }
 
