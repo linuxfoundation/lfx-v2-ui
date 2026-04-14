@@ -175,7 +175,7 @@ export class TopBarComponent {
     this.foundationDropdownOpen.set(false);
     if (!foundation) {
       this.projectContextService.clearFoundation();
-      this.projectContextService.selectedProject.set(null);
+      this.projectContextService.clearProject();
     } else {
       this.projectContextService.setFoundation(foundation as ProjectContext);
       // setFoundation() already clears selectedProject
@@ -190,7 +190,11 @@ export class TopBarComponent {
       this.projectContextService.topBarSubProject.set(project ? (project as ProjectContext) : null);
     } else {
       // Home / Me lens: update selectedProject directly (keep foundation signal intact)
-      this.projectContextService.selectedProject.set(project ? (project as ProjectContext) : null);
+      if (project) {
+        this.projectContextService.setProject(project as ProjectContext);
+      } else {
+        this.projectContextService.clearProject();
+      }
     }
   }
 

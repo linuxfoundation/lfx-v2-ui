@@ -228,7 +228,6 @@ export class SidebarComponent {
     return toSignal(
       this.projectService.getProjects().pipe(
         tap((loadedProjects: Project[]) => {
-          this.projectContextService.availableProjects = loadedProjects;
           const currentFoundation = this.projectContextService.selectedFoundation();
           const currentProject = this.projectContextService.selectedProject();
           const foundationExists = loadedProjects.some((p: Project) => p.uid === currentFoundation?.uid);
