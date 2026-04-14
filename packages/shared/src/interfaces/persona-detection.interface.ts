@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { Account } from './account.interface';
 import type { PersonaType } from './persona.interface';
 
 /**
@@ -86,6 +87,8 @@ export interface PersonaApiResponse {
   multiProject: boolean;
   /** Whether the user has access to projects under multiple foundations */
   multiFoundation: boolean;
+  /** Unique organizations extracted from board member committee detections */
+  organizations: Account[];
   /** Error message if the persona detection failed */
   error: string | null;
 }
@@ -96,4 +99,15 @@ export interface PersonaApiResponse {
 export interface SsrPersonaResult {
   persona: PersonaType;
   personas: PersonaType[];
+  /** User's organizations from board member detections (optional — empty for non-board personas) */
+  organizations?: Account[];
+}
+
+/**
+ * Cache entry for affiliated project UIDs lookup in PersonaDetectionService.
+ * Stores an in-flight (or resolved) promise to collapse concurrent lookups.
+ */
+export interface AffiliatedProjectUidsCacheEntry {
+  promise: Promise<string[]>;
+  expiresAt: number;
 }
