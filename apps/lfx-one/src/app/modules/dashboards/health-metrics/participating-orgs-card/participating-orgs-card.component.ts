@@ -8,7 +8,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
+import { filter, map, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 
 import type { ParticipatingOrgsSummaryResponse } from '@lfx-one/shared/interfaces';
@@ -57,13 +57,19 @@ export class ParticipatingOrgsCardComponent {
     const total = this.totalEngagement();
     if (total === 0) return [];
 
-    const raw: EngagementSegment[] = [
-      { label: 'High', count: data.highEngagement, percent: Math.round((data.highEngagement / total) * 100), color: lfxColors.emerald[300], dotColor: lfxColors.emerald[300] },
-      { label: 'Medium', count: data.medEngagement, percent: Math.round((data.medEngagement / total) * 100), color: lfxColors.amber[200], dotColor: lfxColors.amber[200] },
-      { label: 'Low', count: data.lowEngagement, percent: Math.round((data.lowEngagement / total) * 100), color: lfxColors.red[200], dotColor: lfxColors.red[200] },
-    ];
+    const visible = [
+      { label: 'High', count: data.highEngagement, color: lfxColors.emerald[300], dotColor: lfxColors.emerald[300] },
+      { label: 'Medium', count: data.medEngagement, color: lfxColors.amber[200], dotColor: lfxColors.amber[200] },
+      { label: 'Low', count: data.lowEngagement, color: lfxColors.red[200], dotColor: lfxColors.red[200] },
+    ].filter((s) => s.count > 0);
 
-    return raw.filter((s) => s.count > 0);
+    let usedPercent = 0;
+    return visible.map((segment, index) => {
+      const isLast = index === visible.length - 1;
+      const percent = isLast ? 100 - usedPercent : Math.round((segment.count / total) * 100);
+      usedPercent += percent;
+      return { ...segment, percent };
+    });
   });
 
   protected readonly dominantSegment = computed(() => {
@@ -98,9 +104,22 @@ export class ParticipatingOrgsCardComponent {
   protected readonly alertSubtitle = computed(() => {
     const data = this.summaryData();
     const total = this.totalEngagement();
-    if (total === 0) return '';
-    const highPct = Math.round((data.highEngagement / total) * 100);
-    return `Only ${highPct}% of members are highly engaged this period`;
+    const dominant = this.dominantSegment();
+    if (total === 0 || !dominant) return '';
+
+    const pctMap: Record<string, number> = {
+      high: Math.round((data.highEngagement / total) * 100),
+      medium: Math.round((data.medEngagement / total) * 100),
+      low: Math.round((data.lowEngagement / total) * 100),
+    };
+    const pct = pctMap[dominant.level] ?? 0;
+
+    const subtitleMap: Record<string, string> = {
+      high: `${pct}% of members are highly engaged this period`,
+      medium: `${pct}% of members show medium engagement this period`,
+      low: `Only ${pct}% of members are highly engaged this period`,
+    };
+    return subtitleMap[dominant.level] ?? '';
   });
 
   protected readonly alertBgClass = computed(() => {
@@ -139,11 +158,7 @@ export class ParticipatingOrgsCardComponent {
           this.loading.set(true);
           this.summaryData.set(DEFAULT_SUMMARY);
         }),
-        switchMap((slug) =>
-          this.analyticsService.getParticipatingOrgsSummary(slug).pipe(
-            catchError(() => of(DEFAULT_SUMMARY))
-          )
-        ),
+        switchMap((slug) => this.analyticsService.getParticipatingOrgsSummary(slug)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((data) => {

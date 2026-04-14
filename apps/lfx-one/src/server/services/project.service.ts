@@ -2557,20 +2557,24 @@ export class ProjectService {
         a.PROJECT_ID,
         a.total_active_accounts_YTD as TOTAL_ACTIVE_ACCOUNTS,
         a.total_new_accounts_YTD as TOTAL_NEW_ACCOUNTS,
-        IFNULL(b.total_accounts, 0) as LOW_ENGAGEMENT,
-        IFNULL(c.total_accounts, 0) as MED_ENGAGEMENT,
-        IFNULL(d.total_accounts, 0) as HIGH_ENGAGEMENT
+        IFNULL(e.LOW_ENGAGEMENT, 0) as LOW_ENGAGEMENT,
+        IFNULL(e.MED_ENGAGEMENT, 0) as MED_ENGAGEMENT,
+        IFNULL(e.HIGH_ENGAGEMENT, 0) as HIGH_ENGAGEMENT
       FROM ANALYTICS.PLATINUM.MEMBERSHIP_OVERALL_ACCOUNTS as a
       INNER JOIN slug_resolve sr ON a.PROJECT_ID = sr.project_id
-      LEFT JOIN
-        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'Low') as b
-      ON a.PROJECT_ID = b.PROJECT_ID
-      LEFT JOIN
-        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'Medium') as c
-      ON a.PROJECT_ID = c.PROJECT_ID
-      LEFT JOIN
-        (SELECT total_accounts, project_id FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION WHERE is_member AND engagement_score_classification = 'High') as d
-      ON a.PROJECT_ID = d.PROJECT_ID
+      LEFT JOIN (
+        SELECT
+          esc.project_id,
+          SUM(CASE WHEN esc.engagement_score_classification = 'Low' THEN esc.total_accounts ELSE 0 END) as LOW_ENGAGEMENT,
+          SUM(CASE WHEN esc.engagement_score_classification = 'Medium' THEN esc.total_accounts ELSE 0 END) as MED_ENGAGEMENT,
+          SUM(CASE WHEN esc.engagement_score_classification = 'High' THEN esc.total_accounts ELSE 0 END) as HIGH_ENGAGEMENT
+        FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION esc
+        INNER JOIN slug_resolve sr2 ON esc.project_id = sr2.project_id
+        WHERE esc.is_member
+        GROUP BY esc.project_id
+      ) as e
+      ON a.PROJECT_ID = e.PROJECT_ID
+      LIMIT 1
     `;
 
     const result = await this.snowflakeService.execute<ParticipatingOrgsRow>(query, [foundationSlug]);
