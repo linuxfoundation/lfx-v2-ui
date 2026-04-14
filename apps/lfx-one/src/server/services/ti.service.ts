@@ -30,8 +30,8 @@ interface TiContentResponse {
  * TI serves full card images (wide banners with geometric frames) as LOGO_URL in Snowflake.
  * The `asset` field in the TI API response contains the clean logo URL without the frame.
  *
- * Uses singleton pattern and in-memory cache (1hr TTL) to minimize API calls.
- * Rate limit: 250 requests per ~15-minute window.
+ * Uses singleton pattern and in-memory cache (30-day TTL) to minimize API calls.
+ * Rate limit: ~250 requests per 15-minute window, shared with LF Education production flows.
  */
 export class TiService {
   private static instance: TiService | null = null;

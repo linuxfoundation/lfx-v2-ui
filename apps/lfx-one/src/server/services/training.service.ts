@@ -63,23 +63,9 @@ export class TrainingService {
     logger.debug(req, 'get_certifications', 'Fetched certifications', { count: result.rows.length });
 
     const certifications = result.rows.map((row) => this.mapRowToCertification(row));
+    const courseIds = result.rows.map((row) => row.COURSE_ID);
 
-    // Enrich with clean logo URLs from TI API (replaces Snowflake card banner images)
-    const courseIds = result.rows.map((row) => row.COURSE_ID).filter((id): id is string => Boolean(id));
-    if (courseIds.length > 0) {
-      const logoMap = await tiService.getLogoUrls(req, courseIds);
-      if (logoMap.size > 0) {
-        logger.info(req, 'get_certifications', 'Enriched certifications with TI logo URLs', { enriched: logoMap.size });
-        for (let i = 0; i < certifications.length; i++) {
-          const courseId = result.rows[i].COURSE_ID;
-          if (courseId && logoMap.has(courseId)) {
-            certifications[i] = { ...certifications[i], imageUrl: logoMap.get(courseId)! };
-          }
-        }
-      }
-    }
-
-    return certifications;
+    return this.enrichWithTiLogos(req, 'get_certifications', certifications, courseIds);
   }
 
   public async getEnrollments(req: Request, username: string): Promise<TrainingEnrollment[]> {
@@ -100,23 +86,35 @@ export class TrainingService {
     logger.debug(req, 'get_enrollments', 'Fetched enrollments', { count: result.rows.length });
 
     const enrollments = result.rows.map((row) => this.mapRowToEnrollment(row));
+    const courseIds = result.rows.map((row) => row.COURSE_ID);
 
-    // Enrich with clean logo URLs from TI API (replaces Snowflake card banner images)
-    const courseIds = result.rows.map((row) => row.COURSE_ID).filter((id): id is string => Boolean(id));
-    if (courseIds.length > 0) {
-      const logoMap = await tiService.getLogoUrls(req, courseIds);
-      if (logoMap.size > 0) {
-        logger.info(req, 'get_enrollments', 'Enriched enrollments with TI logo URLs', { enriched: logoMap.size });
-        for (let i = 0; i < enrollments.length; i++) {
-          const courseId = result.rows[i].COURSE_ID;
-          if (courseId && logoMap.has(courseId)) {
-            enrollments[i] = { ...enrollments[i], imageUrl: logoMap.get(courseId)! };
-          }
-        }
-      }
-    }
+    return this.enrichWithTiLogos(req, 'get_enrollments', enrollments, courseIds);
+  }
 
-    return enrollments;
+  // ─── Private Enrichment Methods ────────────────────────────────────────────
+
+  /**
+   * Enriches items with logo URLs fetched from the TI API.
+   * Course IDs that are null or have no TI match are left with their existing imageUrl.
+   */
+  private async enrichWithTiLogos<T extends { imageUrl: string }>(
+    req: Request,
+    operation: string,
+    items: T[],
+    courseIds: (string | null)[],
+  ): Promise<T[]> {
+    const validIds = courseIds.filter((id): id is string => Boolean(id));
+    if (validIds.length === 0) return items;
+
+    const logoMap = await tiService.getLogoUrls(req, validIds);
+    if (logoMap.size === 0) return items;
+
+    logger.info(req, operation, 'Enriched with TI logo URLs', { enriched: logoMap.size });
+
+    return items.map((item, i) => {
+      const courseId = courseIds[i];
+      return courseId && logoMap.has(courseId) ? { ...item, imageUrl: logoMap.get(courseId)! } : item;
+    });
   }
 
   private mapRowToCertification(row: CertificateRow): Certification {
