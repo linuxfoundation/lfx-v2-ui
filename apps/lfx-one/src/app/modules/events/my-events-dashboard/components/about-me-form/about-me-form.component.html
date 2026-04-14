@@ -164,6 +164,9 @@
         placeholder="- Select -"
         styleClass="w-full"
         dataTest="about-me-attending-for-company" />
+      @if (form.get('attendingForCompany')?.invalid && form.get('attendingForCompany')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-attending-for-company-error">This field is required</span>
+      }
     </div>
     <div class="flex flex-col gap-1">
       <label class="text-sm font-medium text-gray-700"> Are you willing to write a blog about the event? <span class="text-red-500">*</span> </label>
@@ -174,6 +177,9 @@
         placeholder="- Select -"
         styleClass="w-full"
         dataTest="about-me-willing-to-blog" />
+      @if (form.get('willingToBlog')?.invalid && form.get('willingToBlog')?.touched) {
+        <span class="text-xs text-red-500" data-testid="about-me-willing-to-blog-error">This field is required</span>
+      }
     </div>
   </div>
 </form>

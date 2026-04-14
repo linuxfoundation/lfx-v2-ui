@@ -32,6 +32,7 @@ export class TravelFundApplicationDialogComponent {
   public selectedEvent = signal<MyEvent | null>(null);
   public termsAccepted = signal(false);
   public aboutMeFormValid = signal(false);
+  public expensesFormValid = signal(true);
   public aboutMeData = signal<TravelFundAboutMe | null>(null);
   public expensesData = signal<TravelFundExpenses | null>(null);
   public submitting = signal(false);

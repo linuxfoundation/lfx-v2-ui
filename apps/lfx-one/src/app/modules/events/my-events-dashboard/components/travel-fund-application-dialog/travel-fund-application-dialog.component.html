@@ -52,7 +52,7 @@
       <lfx-about-me-form (formValidityChange)="aboutMeFormValid.set($event)" (formChange)="aboutMeData.set($event)" />
     }
     @if (step() === 'expenses') {
-      <lfx-travel-expenses-form (formChange)="expensesData.set($event)" />
+      <lfx-travel-expenses-form (formValidityChange)="expensesFormValid.set($event)" (formChange)="expensesData.set($event)" />
     }
   </div>
 
@@ -71,7 +71,7 @@
           severity="primary"
           size="small"
           [loading]="submitting()"
-          [disabled]="submitting()"
+          [disabled]="submitting() || !expensesFormValid()"
           (onClick)="onSubmitApplication()"
           data-testid="travel-fund-submit" />
       } @else {

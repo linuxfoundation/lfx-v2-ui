@@ -9,17 +9,11 @@ import { MyEventsDashboardComponent } from '../my-events-dashboard/my-events-das
 @Component({
   selector: 'lfx-events-dashboard',
   imports: [MyEventsDashboardComponent, FoundationEventDashboardComponent],
-  template: `
-    @if (isMeLens()) {
-      <lfx-my-events-dashboard />
-    } @else {
-      <lfx-foundation-event-dashboard />
-    }
-  `,
+  templateUrl: './events-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsDashboardComponent {
   private readonly lensService = inject(LensService);
 
-  protected readonly isMeLens = computed(() => this.lensService.activeLens() === 'me');
+  protected readonly isFoundationLens = computed(() => this.lensService.activeLens() === 'foundation');
 }
