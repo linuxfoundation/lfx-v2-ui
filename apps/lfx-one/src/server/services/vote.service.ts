@@ -298,20 +298,11 @@ export class VoteService {
       unique_vote_count: voteUids.length,
     });
 
-    // Fetch vote details in parallel
+    // Fetch vote details in parallel via the voting microservice
     const votes = await Promise.all(
       voteUids.map(async (uid) => {
         try {
-          const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-            type: 'vote',
-            tags: uid,
-          });
-
-          if (!resources || resources.length === 0) {
-            return null;
-          }
-
-          return resources[0].data;
+          return await this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET');
         } catch (error) {
           logger.warning(req, 'get_my_votes', 'Failed to fetch vote details, skipping', {
             vote_uid: uid,
@@ -322,6 +313,16 @@ export class VoteService {
       })
     );
 
-    return votes.filter((v): v is Vote => v !== null);
+    // Sort: active votes first, then by end_time descending
+    return votes
+      .filter((v): v is Vote => v !== null)
+      .sort((a, b) => {
+        const aActive = a.status === 'active' ? 0 : 1;
+        const bActive = b.status === 'active' ? 0 : 1;
+        if (aActive !== bActive) {
+          return aActive - bActive;
+        }
+        return new Date(b.end_time || 0).getTime() - new Date(a.end_time || 0).getTime();
+      });
   }
 }
