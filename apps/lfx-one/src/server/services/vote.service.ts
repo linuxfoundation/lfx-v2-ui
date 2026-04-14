@@ -322,7 +322,7 @@ export class VoteService {
         if (aActive !== bActive) {
           return aActive - bActive;
         }
-        return new Date(b.end_time || 0).getTime() - new Date(a.end_time || 0).getTime();
+        return new Date(b.end_time).getTime() - new Date(a.end_time).getTime();
       });
   }
 }

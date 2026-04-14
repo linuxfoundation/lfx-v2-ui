@@ -231,16 +231,16 @@ export class SurveyService {
     );
 
     // Sort: open/sent surveys first, then by cutoff date descending
+    const openStatuses = new Set(['open', 'sent']);
     return surveys
       .filter((s): s is Survey => s !== null)
       .sort((a, b) => {
-        const openStatuses = new Set(['open', 'sent']);
         const aOpen = openStatuses.has(a.survey_status) ? 0 : 1;
         const bOpen = openStatuses.has(b.survey_status) ? 0 : 1;
         if (aOpen !== bOpen) {
           return aOpen - bOpen;
         }
-        return new Date(b.survey_cutoff_date || 0).getTime() - new Date(a.survey_cutoff_date || 0).getTime();
+        return new Date(b.survey_cutoff_date).getTime() - new Date(a.survey_cutoff_date).getTime();
       });
   }
 }
