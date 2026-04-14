@@ -61,8 +61,28 @@
     <span class="text-sm text-gray-500">{{ statusCount }} metrics tracked across your foundation</span>
   </div>
 
-  <!-- Participating Organizations -->
+  <!-- Participating Organizations & NPS -->
   @if (hasFoundation()) {
-    <lfx-participating-orgs-card />
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <lfx-participating-orgs-card />
+      <lfx-nps-card />
+    </div>
+
+    <!-- Membership Churn Per Tier & Outstanding Balance -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <lfx-membership-churn-tier-card />
+      <lfx-outstanding-balance-card />
+    </div>
+
+    <!-- Events & Training & Certification -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <lfx-events-card />
+      <lfx-training-certification-card />
+    </div>
+
+    <!-- Code Contribution -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <lfx-code-contribution-card />
+    </div>
   }
 </div>

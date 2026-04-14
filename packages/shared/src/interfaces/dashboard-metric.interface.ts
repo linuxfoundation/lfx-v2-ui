@@ -292,6 +292,83 @@ export interface CategorizedMetricCard {
 }
 
 /**
+ * Net Promoter Score summary response from BFF
+ * @description NPS card data from Snowflake ANALYTICS.PLATINUM.SURVEY_RESPONSES.
+ * Query semantics aligned with lfx-pcc SurveyQueriesService.surveyResponseMetrics (YTD).
+ */
+export interface NpsSummaryResponse {
+  /** Snowflake PROJECT_ID used for PCC deep-link navigation */
+  projectId: string;
+  /** Headline NPS (−100…100) */
+  npsScore: number;
+  /** Count of promoter responses */
+  promoters: number;
+  /** Count of passive responses */
+  passives: number;
+  /** Count of detractor responses */
+  detractors: number;
+  /** Count of non-responses */
+  nonResponses: number;
+  /** Total: promoters + passives + detractors + nonResponses */
+  responses: number;
+  /** Human-readable reporting period for Last Updated (e.g. "Q4 2025" or "N/A") */
+  lastUpdatedLabel: string;
+  /** Optional period-over-period NPS change (omit from card UI in v1) */
+  changeNpsScore?: number;
+}
+
+// ============================================
+// Membership Churn Per Tier (Health Metrics Card)
+// ============================================
+
+/**
+ * Period-level churn snapshot (current or previous year)
+ * @description Contains headline churn rate, monetary loss, and member count for one reporting slice
+ */
+export interface MembershipChurnPeriodSummary {
+  /** Project-level churn rate as a display-friendly percentage (e.g. 3.6 means 3.6%) */
+  churnRatePct: number;
+  /** Monetary loss for the period in whole dollars (before UI abbreviation) */
+  valueLost: number;
+  /** Count of churned accounts / members for the period */
+  membersLost: number;
+}
+
+/**
+ * Trend comparison between current and previous year
+ * @description Derived from membersLost; null when comparison is not available
+ */
+export interface MembershipChurnTrendSummary {
+  /** Visual direction for the trend indicator */
+  direction: 'up' | 'down';
+  /** Rounded multiplier vs previous year (e.g. 2.3) */
+  multiplier: number;
+  /** Documents which metric drives the multiplier */
+  basis: 'membersLost';
+}
+
+/**
+ * Consolidated Membership Churn Per Tier summary from BFF
+ * @description Single-response contract for the Health Metrics churn card.
+ * Query semantics aligned with lfx-pcc MembershipQueriesService (membershipTotalChurnRate + membershipChurnRate).
+ * Source: ANALYTICS.PLATINUM.MEMBERSHIP_CHURN
+ */
+export interface MembershipChurnPerTierSummaryResponse {
+  /** Snowflake PROJECT_ID echoed for PCC deep-link navigation */
+  projectId: string;
+  /** Effective reporting range used by the query (e.g. 'YTD') */
+  range: string;
+  /** Whether the card should render Previous year row and trend */
+  comparisonAvailable: boolean;
+  /** Current-period headline metrics */
+  currentPeriod: MembershipChurnPeriodSummary;
+  /** Prior-year comparison values; null when comparisonAvailable is false */
+  previousYear: MembershipChurnPeriodSummary | null;
+  /** Trend direction and multiplier; null when comparison is unavailable or non-finite */
+  trend: MembershipChurnTrendSummary | null;
+}
+
+/**
  * Participating Organizations summary response from BFF
  * @description Aggregated membership engagement data for a foundation (YTD scope).
  * Mapped from Snowflake ANALYTICS.PLATINUM tables to camelCase.
@@ -309,4 +386,155 @@ export interface ParticipatingOrgsSummaryResponse {
   medEngagement: number;
   /** Count of orgs with low engagement classification */
   lowEngagement: number;
+}
+
+// ============================================
+// Outstanding Balance (Health Metrics Card)
+// ============================================
+
+/**
+ * Risk bucket for the Outstanding Balance overdue breakdown
+ * @description Each bucket is a fixed pair: Medium ↔ 60-89, High ↔ 90+
+ */
+export interface OutstandingBalanceRiskBucket {
+  riskLevel: 'Medium' | 'High';
+  overdueRangeLabel: '60-89' | '90+';
+  outstandingBalance: number;
+  membersAtRisk: number;
+}
+
+/**
+ * Normalized overdue breakdown with fixed medium and high buckets
+ * @description Both buckets are always present; missing Snowflake rows are zero-filled
+ */
+export interface OutstandingBalanceOverdueBreakdown {
+  medium: OutstandingBalanceRiskBucket;
+  high: OutstandingBalanceRiskBucket;
+}
+
+/**
+ * Outstanding Balance summary response from BFF
+ * @description Single normalized card-ready payload from Snowflake ANALYTICS.PLATINUM.CHURN_RISK.
+ * Two logical reads: overview row (churn_risk IS NULL) + breakdown rows (churn_risk IS NOT NULL).
+ */
+export interface OutstandingBalanceSummaryResponse {
+  projectId: string;
+  totalOutstandingBalance: number;
+  totalMembersAtRisk: number;
+  primaryRiskLevel: 'High' | 'Medium' | null;
+  primaryRiskAmount: number;
+  overdueBreakdown: OutstandingBalanceOverdueBreakdown;
+}
+
+// ============================================
+// Events Summary (Health Metrics Card)
+// ============================================
+
+/**
+ * Events summary response from BFF
+ * @description Single normalized card-ready payload from Snowflake EVENT_OVERVIEW,
+ * EVENT_SPONSORSHIPS, and ENGAGEMENT_SCORES tables.
+ * Three logical reads: overview (total events + change), sponsorship SUM, and goal MAX.
+ */
+export interface EventsSummaryResponse {
+  /** Snowflake PROJECT_ID echoed for PCC deep-link navigation */
+  projectId: string;
+  /** Total event count for YTD (EVENT_COUNT_YTD) */
+  totalEvents: number;
+  /** Period-over-period change ratio (e.g., -0.45 for 45% decrease); 0 when previous year is zero */
+  eventChange: number;
+  /** Aggregate sponsorship revenue for YTD in dollars */
+  sponsorshipRevenue: number;
+  /** Sponsorship goal proxy from ENGAGEMENT_SCORES; 0 when unavailable */
+  sponsorshipGoal: number;
+  /** Progress percentage: revenue/goal*100; 0 when goal is zero */
+  sponsorshipProgressPct: number;
+}
+
+// ============================================
+// Training & Certification (Health Metrics Card)
+// ============================================
+
+/**
+ * Allowed reporting windows for the Training & Certification card.
+ * Maps to range-specific columns in ANALYTICS.PLATINUM.ENROLLMENTS / COURSE_PURCHASES.
+ */
+export type TrainingCertificationRange = 'YTD' | 'COMPLETED_YEAR' | 'COMPLETED_YEAR_2' | 'COMPLETED_YEAR_3' | 'COMPLETED_YEAR_4';
+
+/**
+ * Enrollment-mode category values for the Training & Certification card.
+ * Four visible categories: Instructor Led, eLearning, Cert Exams, edX.
+ */
+export interface TrainingCertificationEnrollmentSummary {
+  instructorLed: number;
+  eLearning: number;
+  certExams: number;
+  edx: number;
+}
+
+/**
+ * Revenue-mode category values for the Training & Certification card.
+ * Three visible categories: Instructor Led, eLearning, Cert Exams. edX intentionally omitted.
+ */
+export interface TrainingCertificationRevenueSummary {
+  instructorLed: number;
+  eLearning: number;
+  certExams: number;
+}
+
+/**
+ * Training & Certification summary response from BFF
+ * @description Single normalized card-ready payload from Snowflake ANALYTICS.PLATINUM.ENROLLMENTS
+ * and ANALYTICS.PLATINUM.COURSE_PURCHASES. Two logical reads combined into one response
+ * containing both Enrollment and Revenue values for local UI toggling.
+ */
+export interface TrainingCertificationSummaryResponse {
+  /** Snowflake PROJECT_ID echoed for PCC deep-link navigation */
+  projectId: string;
+  /** Effective reporting window used by the summary query */
+  range: TrainingCertificationRange;
+  /** Enrollment-mode values for the selected project and range */
+  enrollment: TrainingCertificationEnrollmentSummary;
+  /** Revenue-mode values for the selected project and range */
+  revenue: TrainingCertificationRevenueSummary;
+}
+
+// ============================================
+// Code Contribution Summary (Health Metrics Card)
+// ============================================
+
+/**
+ * Allowed reporting windows for the Code Contribution card.
+ * Maps to range-specific columns in ANALYTICS.PLATINUM.CODE_CONTRIBUTIONS.
+ */
+export type CodeContributionRange = 'YTD' | 'COMPLETED_YEAR' | 'COMPLETED_YEAR_2' | 'COMPLETED_YEAR_3' | 'COMPLETED_YEAR_4';
+
+/**
+ * Code Contribution summary response from BFF.
+ * Single normalized card-ready payload from Snowflake ANALYTICS.PLATINUM.CODE_CONTRIBUTIONS.
+ * One logical read with dynamic column interpolation; all-time role counts are always fixed.
+ */
+export interface CodeContributionSummaryResponse {
+  /** true when CODE_CONTRIBUTIONS returned rows for the project; false triggers "No Contribution Data Available" */
+  dataAvailable: boolean;
+  /** Snowflake PROJECT_ID echoed for context; empty string when dataAvailable is false */
+  projectId: string;
+  /** Foundation/project slug echoed for Insights URL construction */
+  projectSlug: string;
+  /** Effective reporting range used by the summary query */
+  range: CodeContributionRange;
+  /** Distinct contributors for the selected range */
+  totalContributors: number;
+  /** Period-over-period change ratio for total contributors (e.g., 0.14 = 14% increase); raw dbt value */
+  totalContributorsChange: number;
+  /** New contributors for the selected range */
+  newContributors: number;
+  /** Period-over-period change ratio for new contributors; raw dbt value */
+  newContributorsChange: number;
+  /** All-time committer count (fixed regardless of range) */
+  committers: number;
+  /** All-time maintainer count (fixed regardless of range) */
+  maintainers: number;
+  /** All-time reviewer count (fixed regardless of range) */
+  reviewers: number;
 }

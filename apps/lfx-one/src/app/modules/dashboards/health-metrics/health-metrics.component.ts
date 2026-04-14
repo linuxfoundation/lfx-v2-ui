@@ -11,7 +11,13 @@ import { AnalyticsService } from '@services/analytics.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, forkJoin, map, of, switchMap, tap } from 'rxjs';
+import { MembershipChurnTierCardComponent } from './membership-churn-tier-card/membership-churn-tier-card.component';
+import { NpsCardComponent } from './nps-card/nps-card.component';
+import { OutstandingBalanceCardComponent } from './outstanding-balance-card/outstanding-balance-card.component';
 import { ParticipatingOrgsCardComponent } from './participating-orgs-card/participating-orgs-card.component';
+import { EventsCardComponent } from './events-card/events-card.component';
+import { TrainingCertificationCardComponent } from './training-certification-card/training-certification-card.component';
+import { CodeContributionCardComponent } from './code-contribution-card/code-contribution-card.component';
 
 import type {
   FlywheelConversionResponse,
@@ -45,7 +51,7 @@ const DEFAULT_DATA: HealthMetricsData = {
 @Component({
   selector: 'lfx-health-metrics',
   standalone: true,
-  imports: [NgClass, SkeletonModule, ParticipatingOrgsCardComponent],
+  imports: [NgClass, SkeletonModule, MembershipChurnTierCardComponent, NpsCardComponent, OutstandingBalanceCardComponent, ParticipatingOrgsCardComponent, EventsCardComponent, TrainingCertificationCardComponent, CodeContributionCardComponent],
   templateUrl: './health-metrics.component.html',
   styleUrl: './health-metrics.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
