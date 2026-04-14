@@ -136,7 +136,7 @@ export class CredlyService {
         nextUrl = this.isTrustedUrl(candidateUrl) ? candidateUrl : null;
       }
 
-      if (page >= CredlyService.maxPaginationPages) {
+      if (nextUrl && page >= CredlyService.maxPaginationPages) {
         logger.warning(req, 'fetch_badges_for_email', 'Reached max pagination limit', {
           email: maskedEmail,
           pages_fetched: page,

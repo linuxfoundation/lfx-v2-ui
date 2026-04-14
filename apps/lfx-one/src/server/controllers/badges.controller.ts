@@ -22,17 +22,15 @@ export class BadgesController {
    * addresses are included. Falls back to the single OIDC email on failure.
    */
   public async getBadges(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const emails = await this.resolveUserEmails(req);
+
+    if (emails.length === 0) {
+      return next(new AuthenticationError('User authentication required', { operation: 'get_badges' }));
+    }
+
     const startTime = logger.startOperation(req, 'get_badges');
 
     try {
-      const emails = await this.resolveUserEmails(req);
-
-      if (emails.length === 0) {
-        throw new AuthenticationError('User authentication required', {
-          operation: 'get_badges',
-        });
-      }
-
       const badges = await this.credlyService.getBadgesForEmails(req, emails);
 
       logger.success(req, 'get_badges', startTime, {
