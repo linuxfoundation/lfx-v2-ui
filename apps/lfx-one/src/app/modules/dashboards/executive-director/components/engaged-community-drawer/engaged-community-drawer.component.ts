@@ -17,7 +17,13 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EngagedCommunitySizeResponse, MarketingActionType, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type {
+  BrandReachResponse,
+  EngagedCommunitySizeResponse,
+  MarketingActionType,
+  MarketingRecommendedAction,
+  MarketingKeyInsight,
+} from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-engaged-community-drawer',
@@ -38,6 +44,16 @@ export class EngagedCommunityDrawerComponent {
     breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
     monthlyData: [],
   });
+  public readonly brandReachData = input<BrandReachResponse>({
+    totalSocialFollowers: 0,
+    totalMonthlySessions: 0,
+    activePlatforms: 0,
+    changePercentage: 0,
+    trend: 'up',
+    socialPlatforms: [],
+    websiteDomains: [],
+    dailyTrend: [],
+  });
   // === Computed Signals ===
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
@@ -52,6 +68,7 @@ export class EngagedCommunityDrawerComponent {
   );
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly breakdownChartData: Signal<ChartData<'bar'>> = this.initBreakdownChartData();
+  protected readonly dailyTrendData: Signal<ChartData<'line'>> = this.initDailyTrendData();
 
   protected readonly trendChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
@@ -120,6 +137,40 @@ export class EngagedCommunityDrawerComponent {
       },
     },
   });
+
+  protected readonly dailyTrendOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true, mode: 'index', intersect: false },
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          maxTicksLimit: 6,
+        },
+      },
+      y: {
+        display: true,
+        grid: { color: lfxColors.gray[200], lineWidth: 1 },
+        border: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          callback: (value) => {
+            const num = Number(value);
+            if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
+            return String(num);
+          },
+        },
+      },
+    },
+  };
 
   protected readonly formatNumber = formatNumber;
 
@@ -238,6 +289,26 @@ export class EngagedCommunityDrawerComponent {
             borderWidth: 2,
             pointRadius: 3,
             pointBackgroundColor: lfxColors.blue[500],
+          },
+        ],
+      };
+    });
+  }
+
+  private initDailyTrendData(): Signal<ChartData<'line'>> {
+    return computed(() => {
+      const { dailyTrend } = this.brandReachData();
+      return {
+        labels: dailyTrend.map((d) => d.day),
+        datasets: [
+          {
+            data: dailyTrend.map((d) => d.sessions),
+            borderColor: lfxColors.blue[500],
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
           },
         ],
       };

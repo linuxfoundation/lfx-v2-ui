@@ -108,22 +108,5 @@
         </div>
       }
     </div>
-
-    <!-- Daily Sessions Trend -->
-    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="brand-reach-drawer-daily-trend">
-      <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">Daily Sessions Trend</h3>
-        <p class="text-sm text-gray-600">Website sessions over the last 30 days</p>
-      </div>
-      @if (data().dailyTrend.length > 0) {
-        <div class="h-[240px]" data-testid="brand-reach-drawer-daily-chart">
-          <lfx-chart type="line" [data]="dailyTrendData()" [options]="dailyTrendOptions" height="100%"></lfx-chart>
-        </div>
-      } @else {
-        <div class="flex items-center justify-center h-[120px] text-sm text-gray-400" data-testid="brand-reach-drawer-daily-empty">
-          Daily trend data not yet available
-        </div>
-      }
-    </div>
   </div>
 </p-drawer>
