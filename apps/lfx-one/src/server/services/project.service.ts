@@ -2206,7 +2206,7 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
-        LIMIT 12
+        LIMIT 6
       `;
 
       const result = await this.snowflakeService.execute<{
@@ -2363,7 +2363,7 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
-        LIMIT 12
+        LIMIT 6
       `;
 
       const result = await this.snowflakeService.execute<{
@@ -2482,7 +2482,7 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
-        LIMIT 12
+        LIMIT 6
       `;
 
       const result = await this.snowflakeService.execute<{
@@ -2834,7 +2834,7 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_MONTHLY_TREND
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
-        LIMIT 12
+        LIMIT 6
       `;
 
       const topProjectsQuery = `
@@ -2969,12 +2969,12 @@ export class ProjectService {
         LIMIT 6
       `;
 
-      // Per-project per-channel impressions — last 12 months
+      // Per-project per-channel impressions — rolling last 6 months
       const projectBreakdownQuery = `
         SELECT PROJECT_NAME, CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
         WHERE FOUNDATION_SLUG = ?
-          AND CAMPAIGN_MONTH >= DATEADD(month, -12, CURRENT_DATE())
+          AND CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
         GROUP BY PROJECT_NAME, CHANNEL
         ORDER BY PROJECT_NAME, IMPRESSIONS DESC
       `;
