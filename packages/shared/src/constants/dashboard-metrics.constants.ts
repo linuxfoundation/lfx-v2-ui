@@ -677,7 +677,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       caption: `${formatCurrency(revenueImpact.revenueAttributed)} attributed of ${formatCurrency(revenueImpact.pipelineInfluenced + revenueImpact.revenueAttributed)} total (${revenueImpact.matchRate.toFixed(1)}% match rate)`,
       dualSignals: [
         protoDualSignal(
-          'Membership Growth Pipeline',
+          'Sales Pipeline',
           formatCurrency(revenueImpact.pipelineInfluenced),
           [0],
           lfxColors.blue[500],

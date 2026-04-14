@@ -30,7 +30,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { TooltipModule } from 'primeng/tooltip';
-import { filter, forkJoin, map, switchMap } from 'rxjs';
+import { forkJoin, map, switchMap } from 'rxjs';
 
 import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
 import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
@@ -208,10 +208,7 @@ export class MarketingOverviewComponent {
 
   // === Private Initializers ===
   private initEdEvolutionData(): Signal<EdEvolutionData> {
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(
-      map((f) => f?.slug || ''),
-      filter((slug) => !!slug)
-    );
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     return toSignal(
       foundation$.pipe(
