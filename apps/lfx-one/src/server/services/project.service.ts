@@ -2745,9 +2745,12 @@ export class ProjectService {
           LinkedIn: 'linkedin',
           Twitter: 'twitter',
           'Twitter/X': 'twitter',
+          X: 'twitter',
           YouTube: 'youtube',
           Facebook: 'facebook',
           Mastodon: 'mastodon',
+          Bluesky: 'bluesky',
+          'Bluesky Social': 'bluesky',
         };
         socialPlatforms = socialPlatformResult.rows.map((row) => ({
           name: row.PLATFORM_NAME ?? 'Other',

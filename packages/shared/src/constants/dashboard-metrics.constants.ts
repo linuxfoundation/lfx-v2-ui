@@ -39,6 +39,7 @@ export const MARKETING_SOCIAL_PLATFORM_MAP: Record<BrandReachPlatformType, { ico
   youtube: { icon: 'fa-brands fa-youtube', colorClass: 'text-red-600' },
   facebook: { icon: 'fa-brands fa-facebook', colorClass: 'text-blue-600' },
   mastodon: { icon: 'fa-brands fa-mastodon', colorClass: 'text-purple-600' },
+  bluesky: { icon: 'fa-brands fa-bluesky', colorClass: 'text-sky-500' },
   other: { icon: 'fa-light fa-hashtag', colorClass: 'text-gray-500' },
 };
 

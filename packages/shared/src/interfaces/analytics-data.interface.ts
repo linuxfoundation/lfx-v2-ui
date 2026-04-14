@@ -2936,7 +2936,7 @@ export interface EventGrowthResponse {
  * Social platform identifier — maps to a presentation icon + color in the component layer
  * New platforms must be added to MARKETING_SOCIAL_PLATFORM_MAP in the component constants
  */
-export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'other';
+export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'bluesky' | 'other';
 
 /**
  * Social platform row for Brand Reach drill-down
