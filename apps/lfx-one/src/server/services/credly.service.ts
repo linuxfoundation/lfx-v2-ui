@@ -17,7 +17,7 @@ interface CachedBadges {
 export class CredlyService {
   // TODO: Replace with AWS Secrets Manager fetch + in-memory cache
   private readonly apiUrl = process.env['CREDLY_API_URL'] || '';
-  private readonly authToken = process.env['CREDLY_AUTH_TOKEN'] || '';
+  private readonly authToken = process.env['CREDLY_API_TOKEN'] || '';
 
   private static readonly requestTimeoutMs = 15_000;
   private static readonly maxPaginationPages = 20;
@@ -34,7 +34,7 @@ export class CredlyService {
    */
   public async getBadgesForEmails(req: Request, emails: string[]): Promise<Badge[]> {
     if (!this.apiUrl || !this.authToken) {
-      logger.warning(req, 'get_badges_for_emails', 'Credly API not configured — missing CREDLY_API_URL or CREDLY_AUTH_TOKEN', {
+      logger.warning(req, 'get_badges_for_emails', 'Credly API not configured — missing CREDLY_API_URL or CREDLY_API_TOKEN', {
         email_count: emails.length,
       });
       return [];
@@ -45,7 +45,7 @@ export class CredlyService {
     }
 
     // Normalize before capping: sort + dedupe so the same logical set always maps to the same cache key
-    const normalizedEmails = [...new Set(emails.map(e => e.toLowerCase()))].sort();
+    const normalizedEmails = [...new Set(emails.map((e) => e.toLowerCase()))].sort();
     const emailsToQuery = normalizedEmails.slice(0, CredlyService.maxEmailsPerQuery);
     if (normalizedEmails.length > CredlyService.maxEmailsPerQuery) {
       logger.warning(req, 'get_badges_for_emails', 'Email count exceeds limit, truncating', {
@@ -64,12 +64,12 @@ export class CredlyService {
       return cached.badges;
     }
 
-    const results = await Promise.all(emailsToQuery.map(email => this.fetchBadgesForEmail(req, email)));
+    const results = await Promise.all(emailsToQuery.map((email) => this.fetchBadgesForEmail(req, email)));
     const allEntries = results.flat();
 
     // Deduplicate by badge ID (a user with multiple emails may have the same badge issued to each)
     const seen = new Set<string>();
-    const unique = allEntries.filter(entry => {
+    const unique = allEntries.filter((entry) => {
       if (seen.has(entry.id)) return false;
       seen.add(entry.id);
       return true;
