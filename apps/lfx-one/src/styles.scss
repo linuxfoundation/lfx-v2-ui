@@ -10,7 +10,9 @@
   @tailwind base;
 
   /* Typography Defaults - Inter on html so it cascades to everything */
-  h1,
+  html {
+    font-family: var(--font-inter);
+  }
   h2,
   h3,
   h4,

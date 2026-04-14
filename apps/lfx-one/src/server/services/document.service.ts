@@ -94,9 +94,7 @@ export class DocumentService {
     ];
 
     const meetingDetails =
-      allMeetingIds.length > 0
-        ? await this.fetchMeetingDetails(req, allMeetingIds)
-        : new Map<string, { title: string; project_uid: string }>();
+      allMeetingIds.length > 0 ? await this.fetchMeetingDetails(req, allMeetingIds) : new Map<string, { title: string; project_uid: string }>();
 
     const meetingAttachmentItems = this.mapMeetingAttachments(rawMeetingAttachments, meetingDetails);
     const pastMeetingItems = [
@@ -250,15 +248,13 @@ export class DocumentService {
       const batch = uids.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         batch.map((uid) =>
-          this.microserviceProxy
-            .proxyRequest<{ name: string }>(req, 'LFX_V2_SERVICE', `/projects/${uid}`, 'GET')
-            .catch((err) => {
-              logger.debug(req, 'get_my_documents', 'Failed to fetch project name, skipping', {
-                uid,
-                error: err instanceof Error ? err.message : String(err),
-              });
-              return null;
-            })
+          this.microserviceProxy.proxyRequest<{ name: string }>(req, 'LFX_V2_SERVICE', `/projects/${uid}`, 'GET').catch((err) => {
+            logger.debug(req, 'get_my_documents', 'Failed to fetch project name, skipping', {
+              uid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return null;
+          })
         )
       );
       batch.forEach((uid, j) => {
@@ -285,15 +281,13 @@ export class DocumentService {
       const batch = meetingIds.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         batch.map((id) =>
-          this.microserviceProxy
-            .proxyRequest<{ title: string; project_uid: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET')
-            .catch((err) => {
-              logger.debug(req, 'fetch_meeting_details', 'Failed to fetch meeting details, skipping', {
-                meeting_id: id,
-                error: err instanceof Error ? err.message : String(err),
-              });
-              return null;
-            })
+          this.microserviceProxy.proxyRequest<{ title: string; project_uid: string }>(req, 'LFX_V2_SERVICE', `/itx/meetings/${id}`, 'GET').catch((err) => {
+            logger.debug(req, 'fetch_meeting_details', 'Failed to fetch meeting details, skipping', {
+              meeting_id: id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return null;
+          })
         )
       );
       batch.forEach((id, j) => {

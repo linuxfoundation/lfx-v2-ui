@@ -294,6 +294,4 @@ export class DocumentsDashboardComponent {
       return options;
     });
   }
-
 }
-
