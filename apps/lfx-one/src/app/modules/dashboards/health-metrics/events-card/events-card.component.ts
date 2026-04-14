@@ -7,7 +7,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { filter, map, switchMap, tap } from 'rxjs';
+import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 import type { EventsSummaryResponse } from '@lfx-one/shared/interfaces';
 
@@ -109,17 +109,16 @@ export class EventsCardComponent {
           this.loading.set(true);
           this.summaryData.set(DEFAULT_SUMMARY);
         }),
-        switchMap((slug) => this.analyticsService.getEventsSummary(slug)),
+        switchMap((slug) =>
+          this.analyticsService.getEventsSummary(slug).pipe(
+            catchError(() => of(DEFAULT_SUMMARY))
+          )
+        ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe({
-        next: (data) => {
-          this.summaryData.set(data);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.loading.set(false);
-        },
+      .subscribe((data) => {
+        this.summaryData.set(data);
+        this.loading.set(false);
       });
   }
 

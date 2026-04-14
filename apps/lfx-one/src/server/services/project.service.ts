@@ -78,6 +78,7 @@ import {
   EventsSummaryResponse,
   TrainingCertificationSummaryResponse,
   CodeContributionSummaryResponse,
+  CodeContributionRange,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -3190,7 +3191,11 @@ export class ProjectService {
       REVIEWERS_ALL_TIME: number;
     }
 
-    const rangeSuffix = this.getCodeContributionRangeSuffix(range);
+    const validRanges: CodeContributionRange[] = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+    const effectiveRange: CodeContributionRange = validRanges.includes(range as CodeContributionRange)
+      ? (range as CodeContributionRange)
+      : 'YTD';
+    const rangeSuffix = this.getCodeContributionRangeSuffix(effectiveRange);
 
     const query = `
       WITH slug_resolve AS (
@@ -3219,7 +3224,7 @@ export class ProjectService {
       dataAvailable: !!row,
       projectId: row?.PROJECT_ID ?? '',
       projectSlug: foundationSlug,
-      range: range as CodeContributionSummaryResponse['range'],
+      range: effectiveRange,
       totalContributors: row?.TOTAL_CONTRIBUTORS ?? 0,
       totalContributorsChange: row?.TOTAL_CONTRIBUTORS_CHANGE ?? 0,
       newContributors: row?.NEW_CONTRIBUTORS ?? 0,
@@ -3230,7 +3235,7 @@ export class ProjectService {
     };
   }
 
-  private getCodeContributionRangeSuffix(range: string): string {
+  private getCodeContributionRangeSuffix(range: CodeContributionRange): string {
     switch (range) {
       case 'COMPLETED_YEAR':
         return '_last_completed_year';

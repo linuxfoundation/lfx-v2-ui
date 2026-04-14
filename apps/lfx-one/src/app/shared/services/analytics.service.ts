@@ -1043,9 +1043,9 @@ export class AnalyticsService {
           return of({
             projectId: '',
             range: 'YTD',
-            comparisonAvailable: true,
+            comparisonAvailable: false,
             currentPeriod: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
-            previousYear: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
+            previousYear: null,
             trend: null,
           });
         })
