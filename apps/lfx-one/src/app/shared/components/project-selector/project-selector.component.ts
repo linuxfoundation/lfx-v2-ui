@@ -1,23 +1,23 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, ElementRef, input, model, output, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal } from '@angular/core';
 import { EnrichedPersonaProject } from '@lfx-one/shared/interfaces';
 import { isFoundationProject } from '@lfx-one/shared/utils';
+import { FeatureFlagService } from '@services/feature-flag.service';
 import { AutoFocus } from 'primeng/autofocus';
 import { InputTextModule } from 'primeng/inputtext';
+import { Popover, PopoverModule } from 'primeng/popover';
 
 @Component({
   selector: 'lfx-project-selector',
-  imports: [InputTextModule, AutoFocus],
+  imports: [PopoverModule, InputTextModule, AutoFocus],
   templateUrl: './project-selector.component.html',
   styleUrl: './project-selector.component.scss',
-  host: {
-    '(document:keydown.escape)': 'onEscape()',
-    '(document:click)': 'onDocumentClick($event)',
-  },
 })
 export class ProjectSelectorComponent {
+  private readonly featureFlagService = inject(FeatureFlagService);
+
   public readonly projects = input.required<EnrichedPersonaProject[]>();
   public readonly selectedProject = input<EnrichedPersonaProject | null>(null);
   public readonly searchPlaceholder = input<string>('Search...');
@@ -26,12 +26,11 @@ export class ProjectSelectorComponent {
   public readonly projectChange = output<EnrichedPersonaProject>();
   public readonly isPanelOpen = model<boolean>(false);
 
+  protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
+  protected readonly panelStyleClass = computed(() =>
+    this.showDevToolbar() ? 'project-selector-panel project-selector-panel--with-toolbar' : 'project-selector-panel'
+  );
   protected readonly searchQuery = signal<string>('');
-  protected readonly panelTopPx = signal<number>(0);
-  protected readonly panelLeftPx = signal<number>(0);
-
-  private readonly triggerRef = viewChild<ElementRef<HTMLElement>>('trigger');
-  private readonly panelRef = viewChild<ElementRef<HTMLElement>>('panel');
 
   protected readonly displayName = this.initializeDisplayName();
   protected readonly displayLogo = this.initializeDisplayLogo();
@@ -39,51 +38,17 @@ export class ProjectSelectorComponent {
   protected readonly childProjectsMap = this.initializeChildProjectsMap();
   protected readonly hasResults = this.initializeHasResults();
 
-  protected onEscape(): void {
-    if (this.isPanelOpen()) {
-      this.closePanel();
-    }
-  }
-
-  protected onDocumentClick(event: MouseEvent): void {
-    if (!this.isPanelOpen()) {
-      return;
-    }
-    const target = event.target as HTMLElement;
-    const trigger = this.triggerRef()?.nativeElement;
-    const panel = this.panelRef()?.nativeElement;
-    if (trigger?.contains(target) || panel?.contains(target)) {
-      return;
-    }
-    this.closePanel();
-  }
-
-  protected togglePanel(event: Event): void {
-    event.stopPropagation();
-    if (this.isPanelOpen()) {
-      this.closePanel();
-    } else {
-      this.openPanel();
-    }
-  }
-
-  protected selectProject(project: EnrichedPersonaProject): void {
+  protected selectProject(project: EnrichedPersonaProject, popover: Popover): void {
     this.projectChange.emit(project);
-    this.closePanel();
-  }
-
-  private openPanel(): void {
-    const triggerEl = this.triggerRef()?.nativeElement;
-    if (triggerEl) {
-      const rect = triggerEl.getBoundingClientRect();
-      this.panelTopPx.set(rect.top);
-      this.panelLeftPx.set(rect.right + 8);
-    }
     this.searchQuery.set('');
-    this.isPanelOpen.set(true);
+    popover.hide();
   }
 
-  private closePanel(): void {
+  protected togglePanel(event: Event, popover: Popover): void {
+    popover.toggle(event);
+  }
+
+  protected onPopoverHide(): void {
     this.isPanelOpen.set(false);
     this.searchQuery.set('');
   }
