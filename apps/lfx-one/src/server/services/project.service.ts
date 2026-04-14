@@ -2959,14 +2959,14 @@ export class ProjectService {
         ORDER BY IMPRESSIONS DESC
       `;
 
-      // Paid media monthly trend — revenue attribution starts 2025-10-01, so pre-Oct 2025 months are excluded
+      // Paid media monthly trend — rolling last 6 months, matching other dashboard cards
       const monthlyTrendQuery = `
         SELECT CAMPAIGN_MONTH, SPEND, FIRST_TOUCH_REVENUE, IMPRESSIONS, FIRST_TOUCH_ROAS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
         WHERE FOUNDATION_SLUG = ?
-          AND CAMPAIGN_MONTH >= '2025-10-01'
+          AND CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
         ORDER BY CAMPAIGN_MONTH DESC
-        LIMIT 12
+        LIMIT 6
       `;
 
       // Per-project per-channel impressions — last 12 months
