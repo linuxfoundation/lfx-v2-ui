@@ -11,7 +11,7 @@ const TI_API_URL = 'https://linux.thoughtindustries.com/incoming/v2/content';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface TiCacheEntry {
-  url: string;
+  url: string | null; // null = confirmed TI miss; still cached to avoid re-fetching
   expiresAt: number;
 }
 
@@ -82,7 +82,10 @@ export class TiService {
     for (const id of courseIds) {
       const cached = this.cache.get(id);
       if (cached && cached.expiresAt > now) {
-        result.set(id, cached.url);
+        if (cached.url) {
+          result.set(id, cached.url);
+        }
+        // null entry = confirmed TI miss, skip without re-fetching
       } else {
         uncachedIds.push(id);
       }
@@ -90,6 +93,13 @@ export class TiService {
 
     if (uncachedIds.length === 0) {
       logger.debug(req, 'ti_cache_hit', 'All course logos served from cache', { count: courseIds.length });
+      return result;
+    }
+
+    if (!this.apiKey) {
+      logger.debug(req, 'ti_get_logos', 'TI_API_KEY not configured — skipping fetch, returning cached results only', {
+        uncached_count: uncachedIds.length,
+      });
       return result;
     }
 
@@ -113,7 +123,8 @@ export class TiService {
 
       if (response.status === 429) {
         const resetHeader = response.headers.get('x-ratelimit-reset');
-        const resetTime = resetHeader ? new Date(parseInt(resetHeader, 10) * 1000).toISOString() : 'unknown';
+        const resetTimestamp = resetHeader ? parseInt(resetHeader, 10) : NaN;
+        const resetTime = Number.isFinite(resetTimestamp) ? new Date(resetTimestamp * 1000).toISOString() : 'unknown';
         logger.warning(req, 'ti_get_logos', 'TI API rate limit hit — returning cached results only', {
           uncached_count: uncachedIds.length,
           rate_limit_resets_at: resetTime,
@@ -133,11 +144,20 @@ export class TiService {
 
       const data = (await response.json()) as TiContentResponse;
       const items = data.contentItems || [];
+      const foundIds = new Set<string>();
 
       for (const item of items) {
         if (item.id && item.asset) {
+          foundIds.add(item.id);
           this.cache.set(item.id, { url: item.asset, expiresAt: now + CACHE_TTL_MS });
           result.set(item.id, item.asset);
+        }
+      }
+
+      // Cache negative results so unmatched IDs aren't re-fetched until TTL expires
+      for (const id of uncachedIds) {
+        if (!foundIds.has(id)) {
+          this.cache.set(id, { url: null, expiresAt: now + CACHE_TTL_MS });
         }
       }
 
