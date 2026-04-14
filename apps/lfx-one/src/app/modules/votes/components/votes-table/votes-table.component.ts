@@ -107,6 +107,12 @@ export class VotesTableComponent implements OnInit {
     this.viewResults.emit(voteId);
   }
 
+  protected onFoundationFilterChange(value: string | null): void {
+    this.foundationFilterChange.emit(value);
+    this.searchForm.get('projectFilter')?.setValue(null, { emitEvent: false });
+    this.projectFilterChange.emit(null);
+  }
+
   protected onPageChange(event: { first: number; rows: number }): void {
     this.pageChange.emit({ first: event.first, rows: event.rows });
   }

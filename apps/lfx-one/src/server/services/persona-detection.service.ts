@@ -162,17 +162,19 @@ export class PersonaDetectionService {
     // Enrich projects with names in parallel
     const enrichedProjects = await this.enrichProjectsWithNames(req, detectionResponse);
 
-    // Build persona-centric mapping
+    // Build persona-centric mapping (before adding synthetic parents — they have no personas)
     const personaProjects = this.buildPersonaProjectsMap(enrichedProjects);
 
     // Collect all unique personas sorted by priority
     const personas = this.collectUniquePersonas(enrichedProjects);
 
-    // Compute multi-access flags from enriched projects
-    const uniqueProjectUids = new Set(enrichedProjects.map((p) => p.projectUid));
+    // Compute multi-access flags from detected projects only (before synthetic parents are added)
+    // Synthetic parent projects are for UI grouping only — they shouldn't inflate access counts
+    const detectedOnly = enrichedProjects.filter((p) => p.detections.length > 0);
+    const uniqueProjectUids = new Set(detectedOnly.map((p) => p.projectUid));
     const multiProject = uniqueProjectUids.size > 1;
 
-    const foundationUids = new Set(enrichedProjects.map((p) => (p.isFoundation ? p.projectUid : p.parentProjectUid || p.projectUid)));
+    const foundationUids = new Set(detectedOnly.map((p) => (p.isFoundation ? p.projectUid : p.parentProjectUid || p.projectUid)));
     const multiFoundation = foundationUids.size > 1;
 
     logger.debug(req, 'get_personas', 'Persona detection complete', {

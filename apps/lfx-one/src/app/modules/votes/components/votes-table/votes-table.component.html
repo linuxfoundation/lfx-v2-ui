@@ -27,7 +27,7 @@
             [filter]="true"
             filterPlaceholder="Search foundations..."
             styleClass="w-full"
-            (onChange)="foundationFilterChange.emit($event.value)"
+            (onChange)="onFoundationFilterChange($event.value)"
             data-testid="votes-foundation-filter">
           </lfx-select>
         </div>

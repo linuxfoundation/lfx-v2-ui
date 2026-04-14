@@ -462,7 +462,7 @@ export class MailingListService {
 
     const filtered = mailingLists.filter((ml): ml is MyMailingList => ml !== null);
 
-    // Filter by project_uid or foundation_uid server-side if provided
+    // Post-fetch filtering by project_uid or foundation_uid
     let result = filtered;
     if (projectUid) {
       result = filtered.filter((ml) => ml.project_uid === projectUid);

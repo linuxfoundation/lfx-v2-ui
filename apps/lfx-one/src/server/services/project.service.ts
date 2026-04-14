@@ -2552,10 +2552,11 @@ export class ProjectService {
           uids.push(r.data.uid);
         }
       }
-    } catch {
+    } catch (error) {
       // If child lookup fails, just filter by foundation UID alone
       logger.warning(req, 'get_foundation_project_uids', 'Failed to resolve child projects, using foundation UID only', {
         foundation_uid: foundationUid,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
     logger.debug(req, 'get_foundation_project_uids', 'Resolved foundation project UIDs', { foundation_uid: foundationUid, count: uids.length });
