@@ -47,6 +47,14 @@ export class EmailCtrDrawerComponent {
   protected readonly drawerData: Signal<EmailCtrResponse> = this.initDrawerData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
+    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
+  );
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
+    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
+  );
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly campaignChartData: Signal<ChartData<'bar'>> = this.initCampaignChartData();
   protected readonly reachVsOpensChartData: Signal<ChartData<'bar'>> = this.initReachVsOpensChartData();

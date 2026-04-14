@@ -2894,6 +2894,9 @@ export interface FlywheelConversionResponse {
     convertedToNewsletter: number;
     convertedToCommunity: number;
     convertedToWorkingGroup: number;
+    convertedToTraining: number;
+    convertedToCode: number;
+    convertedToWeb: number;
   };
   reengagement: {
     totalReengaged: number;
@@ -2902,6 +2905,9 @@ export interface FlywheelConversionResponse {
     reengagedToNewsletter: number;
     reengagedToCommunity: number;
     reengagedToWorkingGroup: number;
+    reengagedToTraining: number;
+    reengagedToCode: number;
+    reengagedToWeb: number;
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
@@ -2922,10 +2928,12 @@ export interface EventGrowthTopEvent {
  */
 export interface EventGrowthResponse {
   totalAttendees: number;
+  totalRegistrants: number;
   totalEvents: number;
   totalRevenue: number;
   revenuePerAttendee: number;
   attendeeMomChange: number;
+  registrantMomChange: number;
   revenueMomChange: number;
   trend: 'up' | 'down';
   monthlyData: NorthStarMonthlyDataPoint[];
@@ -3069,6 +3077,34 @@ export interface RevenueImpactProjectBreakdown {
 }
 
 /**
+ * Event-registration attribution per-channel totals (last 6 complete months).
+ */
+export interface EventRegistrationAttributionChannel {
+  channel: string;
+  sessions: number;
+  uniqueVisitors: number;
+  lastTouchRevenue: number;
+}
+
+/**
+ * Event-registration attribution monthly row (for stacked bar).
+ */
+export interface EventRegistrationAttributionMonth {
+  month: string;
+  channel: string;
+  sessions: number;
+  lastTouchRevenue: number;
+}
+
+/**
+ * Event-registration attribution block on the Revenue Impact response.
+ */
+export interface EventRegistrationAttribution {
+  channelBreakdown: EventRegistrationAttributionChannel[];
+  monthlyTrend: EventRegistrationAttributionMonth[];
+}
+
+/**
  * API response for Revenue Impact (Marketing Attribution) metric
  * Pipeline, revenue, attribution models, engagement channels, paid media
  */
@@ -3083,6 +3119,7 @@ export interface RevenueImpactResponse {
   paidMedia: RevenueImpactPaidMedia;
   attributionChannels: RevenueImpactAttributionChannel[];
   projectBreakdown: RevenueImpactProjectBreakdown[];
+  eventRegistrationAttribution: EventRegistrationAttribution;
 }
 
 /**

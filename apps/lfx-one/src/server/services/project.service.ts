@@ -1711,15 +1711,15 @@ export class ProjectService {
         ORDER BY TOTAL_SESSIONS DESC
       `;
 
-      // Query 2: Daily sessions for trend chart
+      // Query 2: Weekly sessions for trend chart (last 6 months)
       const dailyQuery = `
         SELECT
-          ACTIVITY_DATE,
+          DATE_TRUNC('WEEK', ACTIVITY_DATE) AS ACTIVITY_DATE,
           SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
         WHERE PROJECT_SLUG = ?
-          AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
-        GROUP BY ACTIVITY_DATE
+          AND ACTIVITY_DATE >= DATEADD('MONTH', -6, CURRENT_DATE())
+        GROUP BY DATE_TRUNC('WEEK', ACTIVITY_DATE)
         ORDER BY ACTIVITY_DATE ASC
       `;
 
@@ -2460,25 +2460,57 @@ export class ProjectService {
       reengagedToNewsletter: 0,
       reengagedToCommunity: 0,
       reengagedToWorkingGroup: 0,
+      reengagedToTraining: 0,
+      reengagedToCode: 0,
+      reengagedToWeb: 0,
     };
 
     try {
-      const query = `
+      // TLF is the umbrella — aggregate raw counts across all foundations, then recompute rates.
+      // Otherwise scope to the single foundation and use precomputed rates.
+      const isUmbrella = foundationSlug === 'tlf';
+      const query = isUmbrella
+        ? `
+        SELECT
+          MONTH_START_DATE,
+          SUM(EVENT_ATTENDEES) AS EVENT_ATTENDEES,
+          SUM(TOTAL_CONVERTED) AS TOTAL_CONVERTED,
+          SUM(TOTAL_REENGAGED) AS TOTAL_REENGAGED,
+          SUM(CONVERTED_TO_NEWSLETTER) AS CONVERTED_TO_NEWSLETTER,
+          SUM(CONVERTED_TO_COMMUNITY) AS CONVERTED_TO_COMMUNITY,
+          SUM(CONVERTED_TO_WORKING_GROUP) AS CONVERTED_TO_WORKING_GROUP,
+          SUM(CONVERTED_TO_TRAINING) AS CONVERTED_TO_TRAINING,
+          SUM(CONVERTED_TO_CODE) AS CONVERTED_TO_CODE,
+          SUM(CONVERTED_TO_WEB) AS CONVERTED_TO_WEB,
+          SUM(REENGAGED_TO_NEWSLETTER) AS REENGAGED_TO_NEWSLETTER,
+          SUM(REENGAGED_TO_COMMUNITY) AS REENGAGED_TO_COMMUNITY,
+          SUM(REENGAGED_TO_WORKING_GROUP) AS REENGAGED_TO_WORKING_GROUP,
+          SUM(REENGAGED_TO_TRAINING) AS REENGAGED_TO_TRAINING,
+          SUM(REENGAGED_TO_CODE) AS REENGAGED_TO_CODE,
+          SUM(REENGAGED_TO_WEB) AS REENGAGED_TO_WEB
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
+        GROUP BY MONTH_START_DATE
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 6
+      `
+        : `
         SELECT
           MONTH_START_DATE,
           EVENT_ATTENDEES,
-          CONVERSION_RATE,
-          MOM_CHANGE_PERCENTAGE,
           TOTAL_CONVERTED,
-          REENGAGEMENT_RATE,
-          REENGAGEMENT_MOM_CHANGE,
           TOTAL_REENGAGED,
           CONVERTED_TO_NEWSLETTER,
           CONVERTED_TO_COMMUNITY,
           CONVERTED_TO_WORKING_GROUP,
+          CONVERTED_TO_TRAINING,
+          CONVERTED_TO_CODE,
+          CONVERTED_TO_WEB,
           REENGAGED_TO_NEWSLETTER,
           REENGAGED_TO_COMMUNITY,
-          REENGAGED_TO_WORKING_GROUP
+          REENGAGED_TO_WORKING_GROUP,
+          REENGAGED_TO_TRAINING,
+          REENGAGED_TO_CODE,
+          REENGAGED_TO_WEB
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
@@ -2488,19 +2520,21 @@ export class ProjectService {
       const result = await this.snowflakeService.execute<{
         MONTH_START_DATE: string;
         EVENT_ATTENDEES: number;
-        CONVERSION_RATE: number;
-        MOM_CHANGE_PERCENTAGE: number;
         TOTAL_CONVERTED: number;
-        REENGAGEMENT_RATE: number;
-        REENGAGEMENT_MOM_CHANGE: number;
         TOTAL_REENGAGED: number;
         CONVERTED_TO_NEWSLETTER: number;
         CONVERTED_TO_COMMUNITY: number;
         CONVERTED_TO_WORKING_GROUP: number;
+        CONVERTED_TO_TRAINING: number;
+        CONVERTED_TO_CODE: number;
+        CONVERTED_TO_WEB: number;
         REENGAGED_TO_NEWSLETTER: number;
         REENGAGED_TO_COMMUNITY: number;
         REENGAGED_TO_WORKING_GROUP: number;
-      }>(query, [foundationSlug]);
+        REENGAGED_TO_TRAINING: number;
+        REENGAGED_TO_CODE: number;
+        REENGAGED_TO_WEB: number;
+      }>(query, isUmbrella ? [] : [foundationSlug]);
 
       if (result.rows.length === 0) {
         return {
@@ -2512,25 +2546,45 @@ export class ProjectService {
             convertedToNewsletter: 0,
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
+            convertedToTraining: 0,
+            convertedToCode: 0,
+            convertedToWeb: 0,
           },
           reengagement: emptyReengagement,
           monthlyData: [],
         };
       }
 
-      const latest = result.rows[0];
-      const changePercentage = latest.MOM_CHANGE_PERCENTAGE ?? 0;
+      const rate = (num: number, denom: number): number => (denom > 0 ? Number(((num / denom) * 100).toFixed(2)) : 0);
 
-      const monthlyData: NorthStarMonthlyDataPoint[] = [...result.rows].reverse().map((row) => {
+      // Compute rates per row (supports both umbrella SUMs and single-foundation counts)
+      const rows = result.rows.map((row) => {
+        const attendees = row.EVENT_ATTENDEES ?? 0;
+        return {
+          ...row,
+          CONVERSION_RATE: rate(row.TOTAL_CONVERTED ?? 0, attendees),
+          REENGAGEMENT_RATE: rate(row.TOTAL_REENGAGED ?? 0, attendees),
+        };
+      });
+
+      const latest = rows[0];
+      const prior = rows[1];
+      const changePercentage = prior ? Number((latest.CONVERSION_RATE - prior.CONVERSION_RATE).toFixed(2)) : 0;
+      const reengagementMomChange = prior ? Number((latest.REENGAGEMENT_RATE - prior.REENGAGEMENT_RATE).toFixed(2)) : 0;
+
+      // monthlyData.value = absolute re-engaged count.
+      // Rate was misleading — denominator (event attendees) spikes during big events,
+      // making re-engagement look like it collapses when we're actually acquiring new audiences.
+      const monthlyData: NorthStarMonthlyDataPoint[] = [...rows].reverse().map((row) => {
         const date = new Date(row.MONTH_START_DATE);
         return {
           month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          value: row.REENGAGEMENT_RATE ?? 0,
+          value: row.TOTAL_REENGAGED ?? 0,
         };
       });
 
       return {
-        conversionRate: latest.CONVERSION_RATE ?? 0,
+        conversionRate: latest.CONVERSION_RATE,
         changePercentage,
         trend: changePercentage >= 0 ? 'up' : 'down',
         funnel: {
@@ -2538,14 +2592,20 @@ export class ProjectService {
           convertedToNewsletter: latest.CONVERTED_TO_NEWSLETTER ?? 0,
           convertedToCommunity: latest.CONVERTED_TO_COMMUNITY ?? 0,
           convertedToWorkingGroup: latest.CONVERTED_TO_WORKING_GROUP ?? 0,
+          convertedToTraining: latest.CONVERTED_TO_TRAINING ?? 0,
+          convertedToCode: latest.CONVERTED_TO_CODE ?? 0,
+          convertedToWeb: latest.CONVERTED_TO_WEB ?? 0,
         },
         reengagement: {
           totalReengaged: latest.TOTAL_REENGAGED ?? 0,
-          reengagementRate: latest.REENGAGEMENT_RATE ?? 0,
-          reengagementMomChange: latest.REENGAGEMENT_MOM_CHANGE ?? 0,
+          reengagementRate: latest.REENGAGEMENT_RATE,
+          reengagementMomChange,
           reengagedToNewsletter: latest.REENGAGED_TO_NEWSLETTER ?? 0,
           reengagedToCommunity: latest.REENGAGED_TO_COMMUNITY ?? 0,
           reengagedToWorkingGroup: latest.REENGAGED_TO_WORKING_GROUP ?? 0,
+          reengagedToTraining: latest.REENGAGED_TO_TRAINING ?? 0,
+          reengagedToCode: latest.REENGAGED_TO_CODE ?? 0,
+          reengagedToWeb: latest.REENGAGED_TO_WEB ?? 0,
         },
         monthlyData,
       };
@@ -2563,6 +2623,9 @@ export class ProjectService {
           convertedToNewsletter: 0,
           convertedToCommunity: 0,
           convertedToWorkingGroup: 0,
+          convertedToTraining: 0,
+          convertedToCode: 0,
+          convertedToWeb: 0,
         },
         reengagement: emptyReengagement,
         monthlyData: [],
@@ -2579,10 +2642,12 @@ export class ProjectService {
 
     const defaultResponse: EventGrowthResponse = {
       totalAttendees: 0,
+      totalRegistrants: 0,
       totalEvents: 0,
       totalRevenue: 0,
       revenuePerAttendee: 0,
       attendeeMomChange: 0,
+      registrantMomChange: 0,
       revenueMomChange: 0,
       trend: 'up',
       monthlyData: [],
@@ -2590,16 +2655,38 @@ export class ProjectService {
     };
 
     try {
-      const summaryQuery = `
+      // TLF is the umbrella — aggregate across all foundations. Otherwise scope to the single row.
+      const isUmbrella = foundationSlug === 'tlf';
+      const summaryQuery = isUmbrella
+        ? `
+        SELECT SUM(EVENT_COUNT_YTD) AS EVENT_COUNT_YTD,
+               SUM(ATTENDEE_COUNT_YTD) AS ATTENDEE_COUNT_YTD,
+               SUM(REGISTRANT_COUNT_YTD) AS REGISTRANT_COUNT_YTD,
+               SUM(TOTAL_NET_REVENUE_YTD) AS TOTAL_NET_REVENUE_YTD,
+               SUM(EVENT_COUNT_LAST_YTD) AS EVENT_COUNT_LAST_YTD,
+               SUM(ATTENDEE_COUNT_LAST_YTD) AS ATTENDEE_COUNT_LAST_YTD,
+               SUM(REGISTRANT_COUNT_LAST_YTD) AS REGISTRANT_COUNT_LAST_YTD,
+               SUM(TOTAL_NET_REVENUE_LAST_YTD) AS TOTAL_NET_REVENUE_LAST_YTD
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_EVENT_GROWTH
+      `
+        : `
         SELECT EVENT_COUNT_YTD, ATTENDEE_COUNT_YTD, REGISTRANT_COUNT_YTD,
                TOTAL_NET_REVENUE_YTD,
-               EVENT_COUNT_YOY_CHANGE_PCT, ATTENDEE_COUNT_YOY_CHANGE_PCT,
-               REVENUE_YOY_CHANGE_PCT
+               EVENT_COUNT_LAST_YTD, ATTENDEE_COUNT_LAST_YTD, REGISTRANT_COUNT_LAST_YTD,
+               TOTAL_NET_REVENUE_LAST_YTD
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_EVENT_GROWTH
         WHERE FOUNDATION_SLUG = ?
       `;
 
-      const topEventsQuery = `
+      const topEventsQuery = isUmbrella
+        ? `
+        SELECT QUARTER_START_DATE, EVENT_NAME, EVENT_DATE,
+               ATTENDEE_COUNT, REGISTRANT_COUNT, EVENT_REVENUE, EVENT_RANK
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_GROWTH_TOP_EVENTS
+        ORDER BY ATTENDEE_COUNT DESC
+        LIMIT 10
+      `
+        : `
         SELECT QUARTER_START_DATE, EVENT_NAME, EVENT_DATE,
                ATTENDEE_COUNT, REGISTRANT_COUNT, EVENT_REVENUE, EVENT_RANK
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_GROWTH_TOP_EVENTS
@@ -2614,10 +2701,11 @@ export class ProjectService {
           ATTENDEE_COUNT_YTD: number;
           REGISTRANT_COUNT_YTD: number;
           TOTAL_NET_REVENUE_YTD: number;
-          EVENT_COUNT_YOY_CHANGE_PCT: number;
-          ATTENDEE_COUNT_YOY_CHANGE_PCT: number;
-          REVENUE_YOY_CHANGE_PCT: number;
-        }>(summaryQuery, [foundationSlug]),
+          EVENT_COUNT_LAST_YTD: number;
+          ATTENDEE_COUNT_LAST_YTD: number;
+          REGISTRANT_COUNT_LAST_YTD: number;
+          TOTAL_NET_REVENUE_LAST_YTD: number;
+        }>(summaryQuery, isUmbrella ? [] : [foundationSlug]),
         this.snowflakeService.execute<{
           QUARTER_START_DATE: string | Date;
           EVENT_NAME: string;
@@ -2626,7 +2714,7 @@ export class ProjectService {
           REGISTRANT_COUNT: number;
           EVENT_REVENUE: number;
           EVENT_RANK: number;
-        }>(topEventsQuery, [foundationSlug]),
+        }>(topEventsQuery, isUmbrella ? [] : [foundationSlug]),
       ]);
 
       if (summaryResult.rows.length === 0) {
@@ -2635,10 +2723,18 @@ export class ProjectService {
 
       const summary = summaryResult.rows[0];
       const totalAttendees = summary.ATTENDEE_COUNT_YTD ?? 0;
+      const totalRegistrants = summary.REGISTRANT_COUNT_YTD ?? 0;
       const totalEvents = summary.EVENT_COUNT_YTD ?? 0;
       const totalRevenue = summary.TOTAL_NET_REVENUE_YTD ?? 0;
-      const yoyAttendeeChange = summary.ATTENDEE_COUNT_YOY_CHANGE_PCT ?? 0;
-      const yoyRevenueChange = summary.REVENUE_YOY_CHANGE_PCT ?? 0;
+      const attendeesLastYtd = summary.ATTENDEE_COUNT_LAST_YTD ?? 0;
+      const registrantsLastYtd = summary.REGISTRANT_COUNT_LAST_YTD ?? 0;
+      const revenueLastYtd = summary.TOTAL_NET_REVENUE_LAST_YTD ?? 0;
+
+      const pctChange = (curr: number, prev: number): number => (prev > 0 ? Number((((curr - prev) / prev) * 100).toFixed(2)) : 0);
+
+      const yoyAttendeeChange = pctChange(totalAttendees, attendeesLastYtd);
+      const yoyRegistrantChange = pctChange(totalRegistrants, registrantsLastYtd);
+      const yoyRevenueChange = pctChange(totalRevenue, revenueLastYtd);
 
       const topEvents: EventGrowthTopEvent[] = topEventsResult.rows.map((row) => ({
         name: row.EVENT_NAME ?? '',
@@ -2662,10 +2758,12 @@ export class ProjectService {
 
       return {
         totalAttendees,
+        totalRegistrants,
         totalEvents,
         totalRevenue,
         revenuePerAttendee: totalAttendees > 0 ? Number((totalRevenue / totalAttendees).toFixed(2)) : 0,
         attendeeMomChange: yoyAttendeeChange,
+        registrantMomChange: yoyRegistrantChange,
         revenueMomChange: yoyRevenueChange,
         trend: yoyAttendeeChange >= 0 ? 'up' : 'down',
         monthlyData,
@@ -2709,11 +2807,11 @@ export class ProjectService {
       `;
 
       const dailyQuery = `
-        SELECT ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
+        SELECT DATE_TRUNC('WEEK', ACTIVITY_DATE) AS ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
         WHERE FOUNDATION_SLUG = ?
-          AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
-        GROUP BY ACTIVITY_DATE
+          AND ACTIVITY_DATE >= DATEADD('MONTH', -6, CURRENT_DATE())
+        GROUP BY DATE_TRUNC('WEEK', ACTIVITY_DATE)
         ORDER BY ACTIVITY_DATE ASC
       `;
 
@@ -2929,6 +3027,7 @@ export class ProjectService {
       paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
       attributionChannels: [],
       projectBreakdown: [],
+      eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
     };
 
     try {
@@ -2953,27 +3052,61 @@ export class ProjectService {
         WHERE FOUNDATION_SLUG = ?
       `;
 
-      // Attribution channels — YTD impressions aggregated by paid-social channel
-      const channelsQuery = `
+      const isUmbrella = foundationSlug === 'tlf';
+
+      // Attribution channels — last 6 months, aggregated by paid-social channel
+      const channelsQuery = isUmbrella
+        ? `
+        SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+        WHERE CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
+        GROUP BY CHANNEL
+        ORDER BY IMPRESSIONS DESC
+      `
+        : `
         SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
         WHERE FOUNDATION_SLUG = ?
+          AND CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
         GROUP BY CHANNEL
         ORDER BY IMPRESSIONS DESC
       `;
 
-      // Paid media monthly trend — rolling last 6 months, matching other dashboard cards
-      const monthlyTrendQuery = `
+      // Paid media monthly trend — last 6 complete months (exclude current in-progress month)
+      const monthlyTrendQuery = isUmbrella
+        ? `
+        SELECT CAMPAIGN_MONTH,
+               SUM(SPEND) AS SPEND,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(IMPRESSIONS) AS IMPRESSIONS,
+               CASE WHEN SUM(SPEND) > 0 THEN SUM(FIRST_TOUCH_REVENUE) / SUM(SPEND) ELSE 0 END AS FIRST_TOUCH_ROAS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+        WHERE CAMPAIGN_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND CAMPAIGN_MONTH < DATE_TRUNC('month', CURRENT_DATE())
+        GROUP BY CAMPAIGN_MONTH
+        ORDER BY CAMPAIGN_MONTH DESC
+        LIMIT 6
+      `
+        : `
         SELECT CAMPAIGN_MONTH, SPEND, FIRST_TOUCH_REVENUE, IMPRESSIONS, FIRST_TOUCH_ROAS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
         WHERE FOUNDATION_SLUG = ?
-          AND CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
+          AND CAMPAIGN_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND CAMPAIGN_MONTH < DATE_TRUNC('month', CURRENT_DATE())
         ORDER BY CAMPAIGN_MONTH DESC
         LIMIT 6
       `;
 
       // Per-project per-channel impressions — rolling last 6 months
-      const projectBreakdownQuery = `
+      const projectBreakdownQuery = isUmbrella
+        ? `
+        SELECT PROJECT_NAME, CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+        WHERE CAMPAIGN_MONTH >= DATEADD(month, -6, CURRENT_DATE())
+        GROUP BY PROJECT_NAME, CHANNEL
+        ORDER BY PROJECT_NAME, IMPRESSIONS DESC
+      `
+        : `
         SELECT PROJECT_NAME, CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
         WHERE FOUNDATION_SLUG = ?
@@ -2982,53 +3115,112 @@ export class ProjectService {
         ORDER BY PROJECT_NAME, IMPRESSIONS DESC
       `;
 
-      const [pipelineResult, adsResult, channelsResult, monthlyTrendResult, projectBreakdownResult] = await Promise.all([
-        this.snowflakeService.execute<{
-          TOTAL_PIPELINE_YTD: number;
-          WON_REVENUE_YTD: number;
-          LOST_REVENUE_YTD: number;
-          OPEN_PIPELINE_YTD: number;
-          TOTAL_DEALS_YTD: number;
-          WON_DEALS_YTD: number;
-          LOST_DEALS_YTD: number;
-          OPEN_DEALS_YTD: number;
-          AVG_WON_DEAL_SIZE_YTD: number;
-          CONVERSION_RATE_YTD: number;
-          WON_REVENUE_PRIOR_YEAR: number;
-          WON_REVENUE_YOY_CHANGE_PCT: number;
-        }>(pipelineQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          TOTAL_SPEND_YTD: number;
-          TOTAL_IMPRESSIONS_YTD: number;
-          TOTAL_CLICKS_YTD: number;
-          LINEAR_ROAS_YTD: number;
-          AVG_CPC_YTD: number;
-          CTR_YTD: number;
-          CONVERSION_RATE_YTD: number;
-          FIRST_TOUCH_REVENUE_YTD: number;
-          LAST_TOUCH_REVENUE_YTD: number;
-          LINEAR_REVENUE_YTD: number;
-          TIME_DECAY_REVENUE_YTD: number;
-          SPEND_YOY_CHANGE_PCT: number;
-          IMPRESSIONS_YOY_CHANGE_PCT: number;
-        }>(paidAdsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          CHANNEL: string;
-          IMPRESSIONS: number;
-        }>(channelsQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          CAMPAIGN_MONTH: string;
-          SPEND: number;
-          FIRST_TOUCH_REVENUE: number;
-          IMPRESSIONS: number;
-          FIRST_TOUCH_ROAS: number;
-        }>(monthlyTrendQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          PROJECT_NAME: string;
-          CHANNEL: string;
-          IMPRESSIONS: number;
-        }>(projectBreakdownQuery, [foundationSlug]),
-      ]);
+      // Event-registration attribution — per-channel totals, last 6 complete months
+      const eventAttrChannelQuery = isUmbrella
+        ? `
+        SELECT CHANNEL,
+               SUM(SESSIONS) AS SESSIONS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATION_ATTRIBUTION
+        WHERE SESSION_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND SESSION_MONTH <  DATE_TRUNC('month', CURRENT_DATE())
+        GROUP BY CHANNEL
+        ORDER BY SESSIONS DESC
+      `
+        : `
+        SELECT CHANNEL,
+               SUM(SESSIONS) AS SESSIONS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATION_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+          AND SESSION_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND SESSION_MONTH <  DATE_TRUNC('month', CURRENT_DATE())
+        GROUP BY CHANNEL
+        ORDER BY SESSIONS DESC
+      `;
+
+      // Event-registration attribution — monthly sessions by channel (stacked bar)
+      const eventAttrMonthlyQuery = isUmbrella
+        ? `
+        SELECT TO_CHAR(SESSION_MONTH, 'YYYY-MM') AS MONTH, CHANNEL, SUM(SESSIONS) AS SESSIONS, SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATION_ATTRIBUTION
+        WHERE SESSION_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND SESSION_MONTH <  DATE_TRUNC('month', CURRENT_DATE())
+        GROUP BY SESSION_MONTH, CHANNEL
+        ORDER BY SESSION_MONTH ASC
+      `
+        : `
+        SELECT TO_CHAR(SESSION_MONTH, 'YYYY-MM') AS MONTH, CHANNEL, SUM(SESSIONS) AS SESSIONS, SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATION_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+          AND SESSION_MONTH >= DATE_TRUNC('month', DATEADD(month, -6, CURRENT_DATE()))
+          AND SESSION_MONTH <  DATE_TRUNC('month', CURRENT_DATE())
+        GROUP BY SESSION_MONTH, CHANNEL
+        ORDER BY SESSION_MONTH ASC
+      `;
+
+      const [pipelineResult, adsResult, channelsResult, monthlyTrendResult, projectBreakdownResult, eventAttrChannelResult, eventAttrMonthlyResult] =
+        await Promise.all([
+          this.snowflakeService.execute<{
+            TOTAL_PIPELINE_YTD: number;
+            WON_REVENUE_YTD: number;
+            LOST_REVENUE_YTD: number;
+            OPEN_PIPELINE_YTD: number;
+            TOTAL_DEALS_YTD: number;
+            WON_DEALS_YTD: number;
+            LOST_DEALS_YTD: number;
+            OPEN_DEALS_YTD: number;
+            AVG_WON_DEAL_SIZE_YTD: number;
+            CONVERSION_RATE_YTD: number;
+            WON_REVENUE_PRIOR_YEAR: number;
+            WON_REVENUE_YOY_CHANGE_PCT: number;
+          }>(pipelineQuery, [foundationSlug]),
+          this.snowflakeService.execute<{
+            TOTAL_SPEND_YTD: number;
+            TOTAL_IMPRESSIONS_YTD: number;
+            TOTAL_CLICKS_YTD: number;
+            LINEAR_ROAS_YTD: number;
+            AVG_CPC_YTD: number;
+            CTR_YTD: number;
+            CONVERSION_RATE_YTD: number;
+            FIRST_TOUCH_REVENUE_YTD: number;
+            LAST_TOUCH_REVENUE_YTD: number;
+            LINEAR_REVENUE_YTD: number;
+            TIME_DECAY_REVENUE_YTD: number;
+            SPEND_YOY_CHANGE_PCT: number;
+            IMPRESSIONS_YOY_CHANGE_PCT: number;
+          }>(paidAdsQuery, [foundationSlug]),
+          this.snowflakeService.execute<{
+            CHANNEL: string;
+            IMPRESSIONS: number;
+          }>(channelsQuery, isUmbrella ? [] : [foundationSlug]),
+          this.snowflakeService.execute<{
+            CAMPAIGN_MONTH: string;
+            SPEND: number;
+            FIRST_TOUCH_REVENUE: number;
+            IMPRESSIONS: number;
+            FIRST_TOUCH_ROAS: number;
+          }>(monthlyTrendQuery, isUmbrella ? [] : [foundationSlug]),
+          this.snowflakeService.execute<{
+            PROJECT_NAME: string;
+            CHANNEL: string;
+            IMPRESSIONS: number;
+          }>(projectBreakdownQuery, isUmbrella ? [] : [foundationSlug]),
+          this.snowflakeService.execute<{
+            CHANNEL: string;
+            SESSIONS: number;
+            UNIQUE_VISITORS: number;
+            LAST_TOUCH_REVENUE: number;
+          }>(eventAttrChannelQuery, isUmbrella ? [] : [foundationSlug]),
+          this.snowflakeService.execute<{
+            MONTH: string;
+            CHANNEL: string;
+            SESSIONS: number;
+            LAST_TOUCH_REVENUE: number;
+          }>(eventAttrMonthlyQuery, isUmbrella ? [] : [foundationSlug]),
+        ]);
 
       const pipeline = pipelineResult.rows.length > 0 ? pipelineResult.rows[0] : null;
       const ads = adsResult.rows.length > 0 ? adsResult.rows[0] : null;
@@ -3067,6 +3259,19 @@ export class ProjectService {
         }))
         .sort((a, b) => b.totalImpressions - a.totalImpressions);
 
+      const eventAttrChannelBreakdown = eventAttrChannelResult.rows.map((r) => ({
+        channel: r.CHANNEL,
+        sessions: r.SESSIONS ?? 0,
+        uniqueVisitors: r.UNIQUE_VISITORS ?? 0,
+        lastTouchRevenue: r.LAST_TOUCH_REVENUE ?? 0,
+      }));
+      const eventAttrMonthlyTrend = eventAttrMonthlyResult.rows.map((r) => ({
+        month: r.MONTH,
+        channel: r.CHANNEL,
+        sessions: r.SESSIONS ?? 0,
+        lastTouchRevenue: r.LAST_TOUCH_REVENUE ?? 0,
+      }));
+
       const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
       const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
       const changePercentage = pipeline?.WON_REVENUE_YOY_CHANGE_PCT ?? 0;
@@ -3100,6 +3305,10 @@ export class ProjectService {
         },
         attributionChannels,
         projectBreakdown,
+        eventRegistrationAttribution: {
+          channelBreakdown: eventAttrChannelBreakdown,
+          monthlyTrend: eventAttrMonthlyTrend,
+        },
       };
     } catch (error) {
       logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {

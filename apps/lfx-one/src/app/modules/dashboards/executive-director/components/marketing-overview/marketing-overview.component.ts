@@ -49,7 +49,15 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
     conversionRate: 0,
     changePercentage: 0,
     trend: 'up',
-    funnel: { eventAttendees: 0, convertedToNewsletter: 0, convertedToCommunity: 0, convertedToWorkingGroup: 0 },
+    funnel: {
+      eventAttendees: 0,
+      convertedToNewsletter: 0,
+      convertedToCommunity: 0,
+      convertedToWorkingGroup: 0,
+      convertedToTraining: 0,
+      convertedToCode: 0,
+      convertedToWeb: 0,
+    },
     reengagement: {
       totalReengaged: 0,
       reengagementRate: 0,
@@ -57,6 +65,9 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
       reengagedToNewsletter: 0,
       reengagedToCommunity: 0,
       reengagedToWorkingGroup: 0,
+      reengagedToTraining: 0,
+      reengagedToCode: 0,
+      reengagedToWeb: 0,
     },
     monthlyData: [],
   },
@@ -87,10 +98,12 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
   },
   eventGrowth: {
     totalAttendees: 0,
+    totalRegistrants: 0,
     totalEvents: 0,
     totalRevenue: 0,
     revenuePerAttendee: 0,
     attendeeMomChange: 0,
+    registrantMomChange: 0,
     revenueMomChange: 0,
     trend: 'up',
     monthlyData: [],
@@ -125,6 +138,7 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
     paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
     attributionChannels: [],
     projectBreakdown: [],
+    eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
   },
 };
 

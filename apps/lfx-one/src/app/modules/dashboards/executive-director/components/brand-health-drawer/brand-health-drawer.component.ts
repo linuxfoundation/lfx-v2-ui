@@ -6,17 +6,18 @@ import { ChangeDetectionStrategy, Component, computed, input, model, Signal } fr
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
-import { lfxColors } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { TagComponent } from '@components/tag/tag.component';
+import { lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
+import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { BrandHealthResponse } from '@lfx-one/shared/interfaces';
+import type { BrandHealthResponse, MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-brand-health-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule],
+  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, TagComponent],
   templateUrl: './brand-health-drawer.component.html',
   styleUrl: './brand-health-drawer.component.scss',
 })
@@ -84,7 +85,95 @@ export class BrandHealthDrawerComponent {
     },
   };
 
+  protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
+  protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
+    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
+  );
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
+    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
+  );
+
   protected onClose(): void {
     this.visible.set(false);
+  }
+
+  protected actionIcon(type: MarketingActionType): string {
+    return MARKETING_ACTION_ICON_MAP[type];
+  }
+
+  private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
+    return computed(() => {
+      const { totalMentions, sentiment, sentimentMomChangePp } = this.data();
+      const actions: MarketingRecommendedAction[] = [];
+
+      if (totalMentions === 0) {
+        return actions;
+      }
+
+      if (sentiment.negative > 20) {
+        actions.push({
+          title: 'Address negative sentiment spike',
+          description: `${sentiment.negative.toFixed(1)}% of mentions are negative — investigate top themes and coordinate response`,
+          priority: 'high',
+          dueLabel: 'This month',
+          actionType: 'decline',
+        });
+      }
+
+      if (sentimentMomChangePp < -2) {
+        actions.push({
+          title: 'Sentiment trending down',
+          description: `Positive sentiment dropped ${Math.abs(sentimentMomChangePp).toFixed(1)}pp month-over-month — review recent coverage drivers`,
+          priority: 'medium',
+          dueLabel: 'This month',
+          actionType: 'engagement',
+        });
+      }
+
+      if (actions.length === 0) {
+        actions.push({
+          title: 'Maintain brand sentiment momentum',
+          description: `${formatNumber(totalMentions)} mentions with ${sentiment.positive.toFixed(0)}% positive sentiment`,
+          priority: 'low',
+          dueLabel: 'Ongoing',
+          actionType: 'growth',
+        });
+      }
+
+      return actions;
+    });
+  }
+
+  private initKeyInsights(): Signal<MarketingKeyInsight[]> {
+    return computed(() => {
+      const { totalMentions, sentiment, sentimentMomChangePp, topProjects } = this.data();
+      const insights: MarketingKeyInsight[] = [];
+
+      if (totalMentions === 0) {
+        return insights;
+      }
+
+      if (sentiment.positive > 60) {
+        insights.push({ text: `Strong positive sentiment at ${sentiment.positive.toFixed(0)}% of mentions`, type: 'driver' });
+      }
+
+      if (sentimentMomChangePp > 2) {
+        insights.push({ text: `Positive sentiment up ${sentimentMomChangePp.toFixed(1)}pp month-over-month`, type: 'driver' });
+      } else if (sentimentMomChangePp < -2) {
+        insights.push({ text: `Positive sentiment down ${Math.abs(sentimentMomChangePp).toFixed(1)}pp month-over-month`, type: 'warning' });
+      }
+
+      if (topProjects.length > 0) {
+        insights.push({
+          text: `${topProjects[0].name} drives the most mentions (${formatNumber(topProjects[0].mentions)})`,
+          type: 'info',
+        });
+      }
+
+      return insights;
+    });
   }
 }

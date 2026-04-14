@@ -35,7 +35,15 @@ export class FlywheelConversionDrawerComponent {
     conversionRate: 0,
     changePercentage: 0,
     trend: 'up',
-    funnel: { eventAttendees: 0, convertedToNewsletter: 0, convertedToCommunity: 0, convertedToWorkingGroup: 0 },
+    funnel: {
+      eventAttendees: 0,
+      convertedToNewsletter: 0,
+      convertedToCommunity: 0,
+      convertedToWorkingGroup: 0,
+      convertedToTraining: 0,
+      convertedToCode: 0,
+      convertedToWeb: 0,
+    },
     reengagement: {
       totalReengaged: 0,
       reengagementRate: 0,
@@ -43,6 +51,9 @@ export class FlywheelConversionDrawerComponent {
       reengagedToNewsletter: 0,
       reengagedToCommunity: 0,
       reengagedToWorkingGroup: 0,
+      reengagedToTraining: 0,
+      reengagedToCode: 0,
+      reengagedToWeb: 0,
     },
     monthlyData: [],
   });
@@ -69,7 +80,7 @@ export class FlywheelConversionDrawerComponent {
       tooltip: {
         ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
-          label: (ctx) => ` ${(ctx.parsed.y ?? 0).toFixed(1)}% conversion rate`,
+          label: (ctx) => ` ${formatNumber(ctx.parsed.y ?? 0)} re-engaged`,
         },
       },
     },
@@ -87,7 +98,7 @@ export class FlywheelConversionDrawerComponent {
         ticks: {
           color: lfxColors.gray[500],
           font: { size: 11 },
-          callback: (value) => `${Number(value).toFixed(1)}%`,
+          callback: (value) => formatNumber(Number(value)),
         },
       },
     },
@@ -214,6 +225,9 @@ export class FlywheelConversionDrawerComponent {
           { name: 'Community', value: reengagement.reengagedToCommunity },
           { name: 'Working group', value: reengagement.reengagedToWorkingGroup },
           { name: 'Newsletter', value: reengagement.reengagedToNewsletter },
+          { name: 'Training', value: reengagement.reengagedToTraining },
+          { name: 'Code', value: reengagement.reengagedToCode },
+          { name: 'Web', value: reengagement.reengagedToWeb },
         ]
           .filter((p) => p.value > 0)
           .sort((a, b) => b.value - a.value);
@@ -240,15 +254,15 @@ export class FlywheelConversionDrawerComponent {
         });
       }
 
-      // Monthly trend consistency
+      // Re-engaged count trend (monthlyData.value = TOTAL_REENGAGED)
       if (monthlyData.length >= 3) {
         const recent3 = monthlyData.slice(-3);
         const isGrowing = recent3[0].value < recent3[1].value && recent3[1].value < recent3[2].value;
         const isShrinking = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
         if (isGrowing) {
-          insights.push({ text: 'Conversion rate growing for 3 consecutive months', type: 'driver' });
+          insights.push({ text: `Re-engaged members growing for 3 consecutive months — ${formatNumber(recent3[2].value)} this month`, type: 'driver' });
         } else if (isShrinking) {
-          insights.push({ text: 'Conversion rate declining for 3 consecutive months', type: 'warning' });
+          insights.push({ text: `Re-engaged members declining for 3 consecutive months — ${formatNumber(recent3[2].value)} this month`, type: 'warning' });
         }
       }
 
@@ -281,11 +295,35 @@ export class FlywheelConversionDrawerComponent {
     return computed(() => {
       const { funnel, reengagement } = this.data();
       return {
-        labels: ['Event Attendees', 'Re-engaged to Community', 'Re-engaged to WG', 'Re-engaged to Newsletter'],
+        labels: [
+          'Event Attendees',
+          'Re-engaged to Community',
+          'Re-engaged to WG',
+          'Re-engaged to Newsletter',
+          'Re-engaged to Training',
+          'Re-engaged to Code',
+          'Re-engaged to Web',
+        ],
         datasets: [
           {
-            data: [funnel.eventAttendees, reengagement.reengagedToCommunity, reengagement.reengagedToWorkingGroup, reengagement.reengagedToNewsletter],
-            backgroundColor: [lfxColors.blue[700], lfxColors.blue[500], lfxColors.blue[400], lfxColors.blue[300]],
+            data: [
+              funnel.eventAttendees,
+              reengagement.reengagedToCommunity,
+              reengagement.reengagedToWorkingGroup,
+              reengagement.reengagedToNewsletter,
+              reengagement.reengagedToTraining,
+              reengagement.reengagedToCode,
+              reengagement.reengagedToWeb,
+            ],
+            backgroundColor: [
+              lfxColors.blue[700],
+              lfxColors.blue[500],
+              lfxColors.blue[400],
+              lfxColors.blue[300],
+              lfxColors.emerald[600],
+              lfxColors.emerald[500],
+              lfxColors.emerald[400],
+            ],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },

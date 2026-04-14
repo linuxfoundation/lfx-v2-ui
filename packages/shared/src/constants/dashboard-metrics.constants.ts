@@ -530,9 +530,52 @@ function formatMomChange(change: number): string {
   return `${sign}${change.toFixed(1)}% MoM`;
 }
 
+/** Compute MoM change display from a paid media monthly trend series (last two months of spend) */
+function paidMediaMomChange(trend: { spend: number }[]): string | undefined {
+  if (trend.length < 2) return undefined;
+  const prev = trend[trend.length - 2].spend;
+  const curr = trend[trend.length - 1].spend;
+  if (prev === 0) return undefined;
+  return formatMomChange(((curr - prev) / prev) * 100);
+}
+
+/** Compute trend direction from a paid media monthly trend series */
+function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | undefined {
+  if (trend.length < 2) return undefined;
+  const prev = trend[trend.length - 2].spend;
+  const curr = trend[trend.length - 1].spend;
+  return curr >= prev ? 'up' : 'down';
+}
+
 /** Extract values from NorthStarMonthlyDataPoint[] */
 function monthlyValues(data: { month: string; value: number }[]): number[] {
   return data.map((d) => d.value);
+}
+
+/** Roll up per-channel-per-month event-registration rows into a single monthly lastTouchRevenue series (chronological). */
+function eventAttrMonthlyRevenueSeries(rows: { month: string; lastTouchRevenue: number }[]): number[] {
+  const byMonth = new Map<string, number>();
+  for (const r of rows) {
+    byMonth.set(r.month, (byMonth.get(r.month) ?? 0) + (r.lastTouchRevenue ?? 0));
+  }
+  return Array.from(byMonth.keys())
+    .sort()
+    .map((m) => byMonth.get(m) ?? 0);
+}
+
+/** Compute MoM change display from event-attribution monthly revenue series */
+function eventAttrMomChange(series: number[]): string | undefined {
+  if (series.length < 2) return undefined;
+  const prev = series[series.length - 2];
+  const curr = series[series.length - 1];
+  if (prev === 0) return undefined;
+  return formatMomChange(((curr - prev) / prev) * 100);
+}
+
+/** Compute trend direction from event-attribution monthly revenue series */
+function eventAttrTrendDirection(series: number[]): 'up' | 'down' | undefined {
+  if (series.length < 2) return undefined;
+  return series[series.length - 1] >= series[series.length - 2] ? 'up' : 'down';
 }
 
 /**
@@ -596,10 +639,10 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-event-growth',
-      value: formatNumber(eventGrowth.totalAttendees),
-      changePercentage: formatMomChange(eventGrowth.attendeeMomChange),
-      trend: eventGrowth.trend,
-      subtitle: `${formatNumber(eventGrowth.totalEvents)} events · YTD attendees`,
+      value: formatNumber(eventGrowth.totalRegistrants),
+      changePercentage: formatMomChange(eventGrowth.registrantMomChange),
+      trend: eventGrowth.registrantMomChange >= 0 ? 'up' : 'down',
+      subtitle: `${formatNumber(eventGrowth.totalEvents)} events · YTD registrants`,
       chartData: eventGrowth.monthlyData.length > 0 ? protoSparkline(monthlyValues(eventGrowth.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Year-to-date event attendees and YoY change. Source: Event registrations.',
@@ -674,15 +717,26 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       customContentType: 'dual-signal',
       caption: `Last-touch attribution · Last 6 months`,
       dualSignals: [
+        (() => {
+          const eventAttrSeries = eventAttrMonthlyRevenueSeries(revenueImpact.eventRegistrationAttribution.monthlyTrend);
+          const eventAttrTotal = revenueImpact.eventRegistrationAttribution.channelBreakdown.reduce((sum, c) => sum + (c.lastTouchRevenue ?? 0), 0);
+          return protoDualSignal(
+            'Marketing Attribution',
+            formatCurrency(eventAttrTotal),
+            eventAttrSeries,
+            lfxColors.blue[500],
+            eventAttrMomChange(eventAttrSeries),
+            eventAttrTrendDirection(eventAttrSeries)
+          );
+        })(),
         protoDualSignal(
-          'Marketing Attribution',
-          formatCurrency(revenueImpact.attributionModels.lastTouch),
-          [0],
-          lfxColors.blue[500],
-          formatMomChange(revenueImpact.changePercentage),
-          revenueImpact.trend
+          'Paid Media',
+          formatCurrency(revenueImpact.paidMedia.adSpend),
+          revenueImpact.paidMedia.monthlyTrend.map((r) => r.spend),
+          lfxColors.emerald[500],
+          paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
+          paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
         ),
-        protoDualSignal('Paid Media', formatCurrency(revenueImpact.paidMedia.adSpend), [0], lfxColors.emerald[500]),
       ],
       tooltipText:
         'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend. Sales pipeline is shown on the Member Growth card.',
