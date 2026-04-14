@@ -12,7 +12,7 @@
       'top-12': showDevToolbar(),
       'top-0': !showDevToolbar(),
     }">
-    <!-- Lens Switcher Column (w-16 = 64px) -->
+    <!-- Lens Switcher Column (64px) -->
     <div class="w-16 flex-shrink-0" data-testid="lens-switcher-column">
       <lfx-lens-switcher></lfx-lens-switcher>
     </div>
@@ -21,7 +21,8 @@
       <lfx-sidebar
         [items]="sidebarItems()"
         [showMeSelector]="activeLens() === 'me'"
-        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"></lfx-sidebar>
+        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+        [(selectorPanelOpen)]="selectorPanelOpen"></lfx-sidebar>
     </div>
   </div>
 
@@ -52,10 +53,20 @@
           [items]="sidebarItems()"
           [showMeSelector]="activeLens() === 'me'"
           [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+          [(selectorPanelOpen)]="selectorPanelOpen"
           [mobile]="true"></lfx-sidebar>
       </div>
     </div>
   </p-drawer>
+
+  <!-- Selector backdrop — desktop only, covers main content area to the right of the sidebar -->
+  @if (selectorPanelOpen()) {
+    <div
+      class="hidden lg:block fixed right-0 bottom-0 left-[344px] bg-black/10 z-40"
+      [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }"
+      (click)="selectorPanelOpen.set(false)"
+      data-testid="selector-backdrop"></div>
+  }
 
   <!-- Main Content Area -->
   <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[344px] flex flex-col" data-testid="main-content">

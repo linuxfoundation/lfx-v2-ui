@@ -9,21 +9,3 @@
 .sidebar-project-name {
   @apply font-medium grow leading-5 relative text-base text-gray-900 tracking-tight line-clamp-2;
 }
-
-::ng-deep {
-  .project-selector-panel {
-    @apply shadow-lg;
-
-    &::before {
-      @apply hidden;
-    }
-
-    &::after {
-      @apply hidden;
-    }
-
-    .p-popover-content {
-      @apply rounded-none;
-    }
-  }
-}
