@@ -91,13 +91,6 @@ import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
 
 /**
- * Schema prefix for ED dashboard dbt views.
- * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
- * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
- */
-const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
-
-/**
  * Service for handling project business logic
  */
 export class ProjectService {
@@ -2198,7 +2191,7 @@ export class ProjectService {
 
   /**
    * Get member retention metrics from Snowflake
-   * Queries ${ED_SCHEMA}.NORTH_STAR_MEMBER_RETENTION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
    */
   public async getMemberRetention(foundationSlug: string): Promise<MemberRetentionResponse> {
     logger.debug(undefined, 'get_member_retention', 'Fetching member retention from Snowflake', { foundation_slug: foundationSlug });
@@ -2210,7 +2203,7 @@ export class ProjectService {
           RENEWAL_RATE,
           NET_REVENUE_RETENTION,
           MOM_CHANGE_PERCENTAGE
-        FROM ${ED_SCHEMA}.NORTH_STAR_MEMBER_RETENTION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2271,7 +2264,7 @@ export class ProjectService {
 
   /**
    * Get member acquisition metrics from Snowflake
-   * Queries ${ED_SCHEMA}.NORTH_STAR_MEMBER_ACQUISITION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
    */
   public async getMemberAcquisition(foundationSlug: string): Promise<MemberAcquisitionResponse> {
     logger.debug(undefined, 'get_member_acquisition', 'Fetching member acquisition from Snowflake', { foundation_slug: foundationSlug });
@@ -2295,7 +2288,7 @@ export class ProjectService {
           NEW_MEMBERS,
           NEW_MEMBER_REVENUE,
           QOQ_CHANGE_PERCENTAGE
-        FROM ${ED_SCHEMA}.NORTH_STAR_MEMBER_ACQUISITION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY QUARTER_START_DATE DESC
         LIMIT 8
@@ -2352,7 +2345,7 @@ export class ProjectService {
 
   /**
    * Get engaged community size metrics from Snowflake
-   * Queries ${ED_SCHEMA}.NORTH_STAR_ENGAGED_COMMUNITY
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
    */
   public async getEngagedCommunity(foundationSlug: string): Promise<EngagedCommunitySizeResponse> {
     logger.debug(undefined, 'get_engaged_community', 'Fetching engaged community from Snowflake', { foundation_slug: foundationSlug });
@@ -2367,7 +2360,7 @@ export class ProjectService {
           CERTIFIED_INDIVIDUALS,
           TOTAL_ENGAGED_MEMBERS,
           MOM_CHANGE_PERCENTAGE
-        FROM ${ED_SCHEMA}.NORTH_STAR_ENGAGED_COMMUNITY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2455,7 +2448,7 @@ export class ProjectService {
 
   /**
    * Get flywheel conversion rate metrics from Snowflake
-   * Queries ${ED_SCHEMA}.NORTH_STAR_FLYWHEEL_CONVERSION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
    */
   public async getFlywheelConversion(foundationSlug: string): Promise<FlywheelConversionResponse> {
     logger.debug(undefined, 'get_flywheel_conversion', 'Fetching flywheel conversion from Snowflake', { foundation_slug: foundationSlug });
@@ -2486,7 +2479,7 @@ export class ProjectService {
           REENGAGED_TO_NEWSLETTER,
           REENGAGED_TO_COMMUNITY,
           REENGAGED_TO_WORKING_GROUP
-        FROM ${ED_SCHEMA}.NORTH_STAR_FLYWHEEL_CONVERSION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2579,7 +2572,7 @@ export class ProjectService {
 
   /**
    * Get event growth metrics from Snowflake
-   * Queries ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH (single row YTD) and EVENT_GROWTH_TOP_EVENTS
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_EVENT_GROWTH (single row YTD) and EVENT_GROWTH_TOP_EVENTS
    */
   public async getEventGrowth(foundationSlug: string): Promise<EventGrowthResponse> {
     logger.debug(undefined, 'get_event_growth', 'Fetching event growth from Snowflake', { foundation_slug: foundationSlug });
@@ -2602,14 +2595,14 @@ export class ProjectService {
                TOTAL_NET_REVENUE_YTD,
                EVENT_COUNT_YOY_CHANGE_PCT, ATTENDEE_COUNT_YOY_CHANGE_PCT,
                REVENUE_YOY_CHANGE_PCT
-        FROM ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH
+        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_EVENT_GROWTH
         WHERE FOUNDATION_SLUG = ?
       `;
 
       const topEventsQuery = `
         SELECT QUARTER_START_DATE, EVENT_NAME, EVENT_DATE,
                ATTENDEE_COUNT, REGISTRANT_COUNT, EVENT_REVENUE, EVENT_RANK
-        FROM ${ED_SCHEMA}.EVENT_GROWTH_TOP_EVENTS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_GROWTH_TOP_EVENTS
         WHERE FOUNDATION_SLUG = ?
         ORDER BY QUARTER_START_DATE DESC, EVENT_RANK
         LIMIT 10
@@ -2709,7 +2702,7 @@ export class ProjectService {
       const webQuery = `
         SELECT LF_SUB_DOMAIN_CLASSIFICATION,
                SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS
-        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
         WHERE FOUNDATION_SLUG = ?
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
@@ -2717,7 +2710,7 @@ export class ProjectService {
 
       const dailyQuery = `
         SELECT ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
-        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_BY_PROJECT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
         WHERE FOUNDATION_SLUG = ?
           AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
         GROUP BY ACTIVITY_DATE
@@ -2735,12 +2728,12 @@ export class ProjectService {
         const [socialResult, socialPlatformResult] = await Promise.all([
           this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number }>(
             `SELECT TOTAL_FOLLOWERS, PLATFORMS_ACTIVE
-             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
+             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
             [foundationSlug]
           ),
           this.snowflakeService.execute<{ PLATFORM_NAME: string; FOLLOWERS: number }>(
             `SELECT PLATFORM_NAME, FOLLOWERS
-             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
+             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
              ORDER BY FOLLOWERS DESC`,
             [foundationSlug]
           ),
@@ -2803,7 +2796,7 @@ export class ProjectService {
 
   /**
    * Get brand health metrics from Snowflake (Share of Voice)
-   * Queries ${ED_SCHEMA}.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
    */
   public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
     logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
@@ -2832,13 +2825,13 @@ export class ProjectService {
                    THEN ROUND(SUM(NEGATIVE_MENTIONS_30D)::FLOAT / SUM(TOTAL_MENTIONS_30D)::FLOAT * 100, 2)
                    ELSE 0
                END AS NEGATIVE_PCT
-        FROM ${ED_SCHEMA}.SHARE_OF_VOICE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE
         WHERE FOUNDATION_SLUG = ?
       `;
 
       const monthlyTrendQuery = `
         SELECT MONTH_START_DATE, MENTION_COUNT, MOM_CHANGE_PCT
-        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_MONTHLY_TREND
+        FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_MONTHLY_TREND
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2846,7 +2839,7 @@ export class ProjectService {
 
       const topProjectsQuery = `
         SELECT PROJECT_NAME, MENTION_COUNT_30D, PROJECT_RANK
-        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_TOP_PROJECTS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_TOP_PROJECTS
         WHERE FOUNDATION_SLUG = ?
         ORDER BY PROJECT_RANK
         LIMIT 5
@@ -2917,7 +2910,7 @@ export class ProjectService {
 
   /**
    * Get marketing-attributed revenue metrics from Snowflake
-   * Queries ${ED_SCHEMA}.PIPELINE_SUMMARY and PAID_ADS_ATTRIBUTION
+   * Queries ANALYTICS.PLATINUM_LFX_ONE.PIPELINE_SUMMARY and PAID_ADS_ATTRIBUTION
    */
   public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
     logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
@@ -2940,7 +2933,7 @@ export class ProjectService {
                TOTAL_DEALS_YTD, WON_DEALS_YTD, LOST_DEALS_YTD, OPEN_DEALS_YTD,
                AVG_WON_DEAL_SIZE_YTD, CONVERSION_RATE_YTD,
                WON_REVENUE_PRIOR_YEAR, WON_REVENUE_YOY_CHANGE_PCT
-        FROM ${ED_SCHEMA}.PIPELINE_SUMMARY
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PIPELINE_SUMMARY
         WHERE FOUNDATION_SLUG = ?
       `;
 
@@ -2951,7 +2944,7 @@ export class ProjectService {
                FIRST_TOUCH_REVENUE_YTD, LAST_TOUCH_REVENUE_YTD,
                LINEAR_REVENUE_YTD, TIME_DECAY_REVENUE_YTD,
                SPEND_YOY_CHANGE_PCT, IMPRESSIONS_YOY_CHANGE_PCT
-        FROM ${ED_SCHEMA}.PAID_ADS_ATTRIBUTION
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_ATTRIBUTION
         WHERE FOUNDATION_SLUG = ?
       `;
 
