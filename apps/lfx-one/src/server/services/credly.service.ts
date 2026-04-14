@@ -17,6 +17,7 @@ interface CachedBadges {
 export class CredlyService {
   // TODO: Replace with AWS Secrets Manager fetch + in-memory cache
   private readonly apiUrl = process.env['CREDLY_API_URL'] || '';
+  private readonly orgId = process.env['CREDLY_ORG_ID'] || '';
   private readonly authToken = process.env['CREDLY_API_TOKEN'] || '';
 
   private static readonly requestTimeoutMs = 15_000;
@@ -33,8 +34,8 @@ export class CredlyService {
    * Queries all emails in parallel, deduplicates by badge ID, and maps to our Badge interface.
    */
   public async getBadgesForEmails(req: Request, emails: string[]): Promise<Badge[]> {
-    if (!this.apiUrl || !this.authToken) {
-      logger.warning(req, 'get_badges_for_emails', 'Credly API not configured — missing CREDLY_API_URL or CREDLY_API_TOKEN', {
+    if (!this.apiUrl || !this.orgId || !this.authToken) {
+      logger.warning(req, 'get_badges_for_emails', 'Credly API not configured — missing CREDLY_API_URL, CREDLY_ORG_ID, or CREDLY_API_TOKEN', {
         email_count: emails.length,
       });
       return [];
@@ -104,7 +105,7 @@ export class CredlyService {
     const maskedEmail = this.maskEmail(email);
 
     const allEntries: CredlyBadgeEntry[] = [];
-    let nextUrl: string | null = `${this.apiUrl}/badges?filter=${encodeURIComponent(filter)}`;
+    let nextUrl: string | null = `${this.apiUrl}/organizations/${this.orgId}/badges?filter=${encodeURIComponent(filter)}`;
     let page = 0;
 
     try {
