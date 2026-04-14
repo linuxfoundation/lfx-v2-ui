@@ -281,7 +281,7 @@ export const NORTH_STAR_METRICS: DashboardMetricCard[] = [
     drawerType: DashboardDrawerType.NorthStarMemberRetention,
   },
   {
-    title: 'Flywheel Conv. Rate',
+    title: 'Flywheel Re-engagement',
     icon: 'fa-light fa-rotate',
     chartType: 'line',
     category: 'memberships',

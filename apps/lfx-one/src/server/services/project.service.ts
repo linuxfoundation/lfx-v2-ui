@@ -2525,7 +2525,7 @@ export class ProjectService {
         const date = new Date(row.MONTH_START_DATE);
         return {
           month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          value: row.CONVERSION_RATE ?? 0,
+          value: row.REENGAGEMENT_RATE ?? 0,
         };
       });
 
