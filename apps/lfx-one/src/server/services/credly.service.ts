@@ -23,6 +23,7 @@ export class CredlyService {
   private static readonly maxPaginationPages = 20;
   private static readonly maxEmailsPerQuery = 10;
   private static readonly cacheTtlMs = 30 * 60 * 1_000; // 30 minutes
+  private static readonly maxCacheSize = 500;
 
   /** Per-user in-memory badge cache. Key is a sorted, joined email list. */
   private readonly badgeCache = new Map<string, CachedBadges>();
@@ -74,6 +75,7 @@ export class CredlyService {
 
     const badges = unique.filter(isValidBadge).map(mapCredlyBadgeToBadge);
 
+    this.evictExpiredCacheEntries();
     this.badgeCache.set(cacheKey, {
       badges,
       expiresAt: Date.now() + CredlyService.cacheTtlMs,
@@ -129,7 +131,7 @@ export class CredlyService {
 
         // Validate the next page URL belongs to the same Credly API origin before following
         const candidateUrl = body.metadata?.next_page_url ?? null;
-        nextUrl = candidateUrl?.startsWith(this.apiUrl) ? candidateUrl : null;
+        nextUrl = this.isTrustedUrl(candidateUrl) ? candidateUrl : null;
       }
 
       if (page >= CredlyService.maxPaginationPages) {
@@ -147,6 +149,44 @@ export class CredlyService {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       return allEntries; // return whatever was collected before the error
+    }
+  }
+
+  /**
+   * Returns true if the candidate URL shares the same origin as the configured Credly API URL.
+   * Rejects null, relative URLs, and any URL whose origin doesn't match (guards against SSRF
+   * via subdomain tricks like `https://api.credly.com.evil.com`).
+   */
+  private isTrustedUrl(candidateUrl: string | null): candidateUrl is string {
+    if (!candidateUrl) return false;
+    try {
+      const candidate = new URL(candidateUrl);
+      const trusted = new URL(this.apiUrl);
+      return candidate.origin === trusted.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Remove expired entries from the badge cache and enforce the max cache size limit.
+   * Called before each cache write to prevent unbounded memory growth.
+   */
+  private evictExpiredCacheEntries(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.badgeCache) {
+      if (now >= entry.expiresAt) {
+        this.badgeCache.delete(key);
+      }
+    }
+    // If still over the limit after expiry eviction, remove oldest entries (insertion order)
+    if (this.badgeCache.size >= CredlyService.maxCacheSize) {
+      const overflow = this.badgeCache.size - CredlyService.maxCacheSize + 1;
+      let removed = 0;
+      for (const key of this.badgeCache.keys()) {
+        this.badgeCache.delete(key);
+        if (++removed >= overflow) break;
+      }
     }
   }
 
