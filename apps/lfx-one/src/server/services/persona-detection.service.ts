@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { EnrichedPersonaProject, PersonaApiResponse, PersonaDetectionResponse, PersonaProject, PersonaType, Project } from '@lfx-one/shared/interfaces';
+import {
+  Account,
+  EnrichedPersonaProject,
+  PersonaApiResponse,
+  PersonaDetectionResponse,
+  PersonaProject,
+  PersonaType,
+  Project,
+} from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
@@ -59,6 +67,7 @@ export class PersonaDetectionService {
         projects: [],
         multiProject: false,
         multiFoundation: false,
+        organizations: [],
         error: detectionResponse.error.message,
       };
     }
@@ -72,6 +81,7 @@ export class PersonaDetectionService {
         projects: [],
         multiProject: false,
         multiFoundation: false,
+        organizations: [],
         error: null,
       };
     }
@@ -105,6 +115,7 @@ export class PersonaDetectionService {
       projects: enrichedProjects,
       multiProject,
       multiFoundation,
+      organizations: this.extractOrganizations(req, enrichedProjects),
       error: null,
     };
   }
@@ -120,6 +131,21 @@ export class PersonaDetectionService {
       const decoded = codec.decode(response.data);
 
       const parsed = JSON.parse(decoded);
+
+      // Log raw NATS response for debugging detection extras (e.g. organization data)
+      const projectCount = Array.isArray(parsed?.projects) ? parsed.projects.length : 0;
+      const boardDetections = Array.isArray(parsed?.projects)
+        ? parsed.projects.flatMap((p: Record<string, unknown>) =>
+            Array.isArray(p['detections'])
+              ? (p['detections'] as Record<string, unknown>[]).filter((d: Record<string, unknown>) => d['source'] === 'board_member')
+              : []
+          )
+        : [];
+      logger.debug(req, 'fetch_persona_detections', 'Raw NATS persona response', {
+        project_count: projectCount,
+        board_member_detections: boardDetections.length,
+        board_member_extras: boardDetections.map((d: Record<string, unknown>) => d['extra']),
+      });
 
       // Validate response shape — normalize malformed fields to prevent downstream crashes
       return {
@@ -277,5 +303,44 @@ export class PersonaDetectionService {
       Array.isArray(project.funding_model) &&
       project.funding_model.includes('Membership')
     );
+  }
+
+  /**
+   * Extract unique organizations from board_member detection extras
+   * The persona service includes organization data (Salesforce account ID, name, website)
+   * in board_member detection extras — map these to Account objects for UI consumption
+   */
+  private extractOrganizations(req: Request, projects: EnrichedPersonaProject[]): Account[] {
+    const seen = new Set<string>();
+    const accounts: Account[] = [];
+
+    for (const project of projects) {
+      for (const detection of project.detections) {
+        if (detection.source === 'board_member') {
+          logger.debug(req, 'extract_organizations', 'Processing board_member detection', {
+            project_uid: project.projectUid,
+            project_slug: project.projectSlug,
+            has_extra: !!detection.extra,
+            extra_keys: detection.extra ? Object.keys(detection.extra) : [],
+            organization_raw: detection.extra?.['organization'],
+          });
+
+          if (detection.extra) {
+            const org = detection.extra['organization'] as { id: string; name: string } | undefined;
+            if (org?.id && !seen.has(org.id)) {
+              seen.add(org.id);
+              accounts.push({ accountId: org.id, accountName: org.name });
+            }
+          }
+        }
+      }
+    }
+
+    logger.debug(req, 'extract_organizations', 'Organization extraction complete', {
+      total_accounts: accounts.length,
+      accounts: accounts.map((a) => ({ id: a.accountId, name: a.accountName })),
+    });
+
+    return accounts;
   }
 }
