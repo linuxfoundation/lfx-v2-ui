@@ -671,11 +671,11 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       category: 'influence',
       testId: 'ed-evo-revenue-impact',
       customContentType: 'dual-signal',
-      caption: `${formatCurrency(revenueImpact.revenueAttributed)} attributed of ${formatCurrency(revenueImpact.pipelineInfluenced + revenueImpact.revenueAttributed)} total (${revenueImpact.matchRate.toFixed(1)}% match rate)`,
+      caption: `Last-touch attribution · Last 6 months`,
       dualSignals: [
         protoDualSignal(
-          'Sales Pipeline',
-          formatCurrency(revenueImpact.pipelineInfluenced),
+          'Marketing Attribution',
+          formatCurrency(revenueImpact.attributionModels.lastTouch),
           [0],
           lfxColors.blue[500],
           formatMomChange(revenueImpact.changePercentage),
@@ -684,7 +684,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         protoDualSignal('Paid Media', formatCurrency(revenueImpact.paidMedia.adSpend), [0], lfxColors.emerald[500]),
       ],
       tooltipText:
-        'Membership growth pipeline influenced by marketing, with paid media spend and return on ad spend (ROAS). Match rate shows measurement confidence.',
+        'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend. Sales pipeline is shown on the Member Growth card.',
       drawerType: DashboardDrawerType.RevenueImpact,
     } as DashboardMetricCard,
   ];
