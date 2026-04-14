@@ -76,7 +76,7 @@ export class MainLayoutComponent {
         {
           label: 'My Events',
           icon: 'fa-light fa-ticket',
-          routerLink: '/me/events',
+          routerLink: '/events',
         },
         {
           label: 'My ' + COMMITTEE_LABEL.plural,
