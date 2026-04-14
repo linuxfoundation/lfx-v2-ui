@@ -44,15 +44,17 @@ export class CredlyService {
       return [];
     }
 
-    const emailsToQuery = emails.slice(0, CredlyService.maxEmailsPerQuery);
-    if (emails.length > CredlyService.maxEmailsPerQuery) {
+    // Normalize before capping: sort + dedupe so the same logical set always maps to the same cache key
+    const normalizedEmails = [...new Set(emails.map(e => e.toLowerCase()))].sort();
+    const emailsToQuery = normalizedEmails.slice(0, CredlyService.maxEmailsPerQuery);
+    if (normalizedEmails.length > CredlyService.maxEmailsPerQuery) {
       logger.warning(req, 'get_badges_for_emails', 'Email count exceeds limit, truncating', {
-        total: emails.length,
+        total: normalizedEmails.length,
         limit: CredlyService.maxEmailsPerQuery,
       });
     }
 
-    const cacheKey = [...emailsToQuery].sort().join(',');
+    const cacheKey = emailsToQuery.join(',');
     const cached = this.badgeCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
       logger.debug(req, 'get_badges_for_emails', 'Returning cached badges', {

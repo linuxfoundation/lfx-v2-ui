@@ -6,7 +6,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Badge } from '@lfx-one/shared/interfaces';
-import { map, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -15,12 +15,6 @@ export class BadgesService {
   private readonly http = inject(HttpClient);
 
   public getBadges(): Observable<Badge[]> {
-    const now = new Date();
-    return this.http.get<Badge[]>('/api/badges').pipe(
-      map(badges => badges.map(badge => ({
-        ...badge,
-        isExpired: !!badge.expiresDate && new Date(badge.expiresDate) < now,
-      })))
-    );
+    return this.http.get<Badge[]>('/api/badges');
   }
 }

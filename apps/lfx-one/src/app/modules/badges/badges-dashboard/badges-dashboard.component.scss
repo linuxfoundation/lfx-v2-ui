@@ -19,17 +19,6 @@
   }
 }
 
-.badge-credly-btn {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-1 w-fit
-    rounded-md border border-gray-300 text-xs font-medium text-gray-900
-    hover:bg-gray-50 transition-colors;
-}
-
-.badge-share-btn {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-1 w-fit
-    rounded-md border border-gray-300 text-xs font-medium text-gray-600
-    hover:bg-gray-50 transition-colors cursor-pointer bg-transparent;
-}
 
 :host ::ng-deep .badges-grid {
   > a,
