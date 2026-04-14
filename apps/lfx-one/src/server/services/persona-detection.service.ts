@@ -144,7 +144,11 @@ export class PersonaDetectionService {
       logger.debug(req, 'fetch_persona_detections', 'Raw NATS persona response', {
         project_count: projectCount,
         board_member_detections: boardDetections.length,
-        board_member_extras: boardDetections.map((d: Record<string, unknown>) => d['extra']),
+        board_member_has_org: boardDetections.map((d: Record<string, unknown>) => {
+          const extra = d['extra'] as Record<string, unknown> | undefined;
+          const org = extra?.['organization'] as Record<string, unknown> | undefined;
+          return { has_org: !!org, org_id: org?.['id'], org_name: org?.['name'] };
+        }),
       });
 
       // Validate response shape — normalize malformed fields to prevent downstream crashes
@@ -316,21 +320,21 @@ export class PersonaDetectionService {
 
     for (const project of projects) {
       for (const detection of project.detections) {
-        if (detection.source === 'board_member') {
+        if (detection.source === 'board_member' && detection.extra) {
+          const org = detection.extra['organization'] as { id?: unknown; name?: unknown } | undefined;
+          const orgId = typeof org?.id === 'string' ? org.id : '';
+          const orgName = typeof org?.name === 'string' ? org.name : '';
+
           logger.debug(req, 'extract_organizations', 'Processing board_member detection', {
-            project_uid: project.projectUid,
             project_slug: project.projectSlug,
-            has_extra: !!detection.extra,
-            extra_keys: detection.extra ? Object.keys(detection.extra) : [],
-            organization_raw: detection.extra?.['organization'],
+            has_org: !!org,
+            org_id: orgId || null,
+            org_name: orgName || null,
           });
 
-          if (detection.extra) {
-            const org = detection.extra['organization'] as { id: string; name: string } | undefined;
-            if (org?.id && !seen.has(org.id)) {
-              seen.add(org.id);
-              accounts.push({ accountId: org.id, accountName: org.name });
-            }
+          if (orgId && orgName && !seen.has(orgId)) {
+            seen.add(orgId);
+            accounts.push({ accountId: orgId, accountName: orgName });
           }
         }
       }

@@ -59,18 +59,19 @@ export class AccountContextService {
    * Called during app initialization with organizations matched from committee memberships
    */
   public initializeUserOrganizations(organizations: Account[]): void {
-    if (organizations && organizations.length > 0) {
-      this.userOrganizations.set(organizations);
-      this.initialized.set(true);
+    this.initialized.set(true);
+    this.userOrganizations.set(organizations ?? []);
 
-      // If stored account is not in user's organizations, select the first available
+    if (organizations && organizations.length > 0) {
+      // Validate stored selection against the full available set (ACCOUNTS + detected)
       const stored = this.loadFromStorage();
-      const isStoredValid = stored && organizations.some((org) => org.accountId === stored.accountId);
+      const available = this.availableAccounts();
+      const isStoredValid = stored && available.some((acc) => acc.accountId === stored.accountId);
 
       if (isStoredValid && stored) {
         this.selectedAccount.set(stored);
       } else {
-        // Select first organization and persist
+        // Select first detected organization and persist
         this.setAccount(organizations[0]);
       }
     }
