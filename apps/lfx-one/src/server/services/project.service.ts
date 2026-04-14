@@ -2923,7 +2923,8 @@ export class ProjectService {
       trend: 'up',
       attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
       engagementTypes: [],
-      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
+      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
+      attributionChannels: [],
     };
 
     try {
@@ -2948,7 +2949,25 @@ export class ProjectService {
         WHERE FOUNDATION_SLUG = ?
       `;
 
-      const [pipelineResult, adsResult] = await Promise.all([
+      // Attribution channels — YTD impressions aggregated by paid-social channel
+      const channelsQuery = `
+        SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+        WHERE FOUNDATION_SLUG = ?
+        GROUP BY CHANNEL
+        ORDER BY IMPRESSIONS DESC
+      `;
+
+      // Paid media monthly trend — last 12 months of spend/revenue/impressions/ROAS
+      const monthlyTrendQuery = `
+        SELECT CAMPAIGN_MONTH, SPEND, FIRST_TOUCH_REVENUE, IMPRESSIONS, FIRST_TOUCH_ROAS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY CAMPAIGN_MONTH DESC
+        LIMIT 12
+      `;
+
+      const [pipelineResult, adsResult, channelsResult, monthlyTrendResult] = await Promise.all([
         this.snowflakeService.execute<{
           TOTAL_PIPELINE_YTD: number;
           WON_REVENUE_YTD: number;
@@ -2978,10 +2997,39 @@ export class ProjectService {
           SPEND_YOY_CHANGE_PCT: number;
           IMPRESSIONS_YOY_CHANGE_PCT: number;
         }>(paidAdsQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          CHANNEL: string;
+          IMPRESSIONS: number;
+        }>(channelsQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          CAMPAIGN_MONTH: string;
+          SPEND: number;
+          FIRST_TOUCH_REVENUE: number;
+          IMPRESSIONS: number;
+          FIRST_TOUCH_ROAS: number;
+        }>(monthlyTrendQuery, [foundationSlug]),
       ]);
 
       const pipeline = pipelineResult.rows.length > 0 ? pipelineResult.rows[0] : null;
       const ads = adsResult.rows.length > 0 ? adsResult.rows[0] : null;
+      const channelRows = channelsResult.rows;
+      const totalChannelImpressions = channelRows.reduce((sum, r) => sum + (r.IMPRESSIONS ?? 0), 0);
+      const attributionChannels =
+        totalChannelImpressions > 0
+          ? channelRows.map((r) => ({
+              channel: r.CHANNEL,
+              impressions: r.IMPRESSIONS ?? 0,
+              percentage: Number((((r.IMPRESSIONS ?? 0) / totalChannelImpressions) * 100).toFixed(1)),
+            }))
+          : [];
+
+      const monthlyTrend = [...monthlyTrendResult.rows].reverse().map((r) => ({
+        month: r.CAMPAIGN_MONTH,
+        spend: r.SPEND ?? 0,
+        revenue: r.FIRST_TOUCH_REVENUE ?? 0,
+        impressions: r.IMPRESSIONS ?? 0,
+        roas: r.FIRST_TOUCH_ROAS ?? 0,
+      }));
 
       const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
       const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
@@ -3012,7 +3060,9 @@ export class ProjectService {
           impressions: ads?.TOTAL_IMPRESSIONS_YTD ?? 0,
           adSpend: ads?.TOTAL_SPEND_YTD ?? 0,
           adRevenue: (ads?.LINEAR_ROAS_YTD ?? 0) * (ads?.TOTAL_SPEND_YTD ?? 0),
+          monthlyTrend,
         },
+        attributionChannels,
       };
     } catch (error) {
       logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {

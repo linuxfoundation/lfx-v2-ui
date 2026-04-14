@@ -1056,7 +1056,8 @@ export class AnalyticsService {
           trend: 'up' as const,
           attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
           engagementTypes: [],
-          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
+          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
+          attributionChannels: [],
         });
       })
     );

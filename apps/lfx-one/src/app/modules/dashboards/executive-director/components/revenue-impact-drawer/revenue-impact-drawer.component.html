@@ -28,70 +28,6 @@
 
   <!-- Content -->
   <div class="flex flex-col gap-6 pb-2" data-testid="revenue-impact-drawer-content">
-    <!-- SECTION 1: Sales Pipeline -->
-    <div class="flex flex-col gap-4" data-testid="revenue-impact-drawer-pipeline-section">
-      <h3 class="text-sm font-semibold text-gray-900">Sales Pipeline</h3>
-      <div class="flex gap-4" data-testid="revenue-impact-drawer-stats">
-        <lfx-card styleClass="flex-1">
-          <div class="flex flex-col gap-1">
-            <span class="text-sm text-gray-500">Pipeline Influenced</span>
-            @if (data().pipelineInfluenced > 0) {
-              <span class="text-2xl font-semibold text-gray-900">${{ data().pipelineInfluenced / 1000000 | number: '1.1-1' }}M</span>
-            } @else {
-              <span class="text-2xl font-semibold text-gray-400">—</span>
-            }
-          </div>
-        </lfx-card>
-        <lfx-card styleClass="flex-1">
-          <div class="flex flex-col gap-1">
-            <span class="text-sm text-gray-500">Revenue Attributed</span>
-            @if (data().revenueAttributed > 0) {
-              <span class="text-2xl font-semibold text-gray-900">${{ data().revenueAttributed / 1000000 | number: '1.1-1' }}M</span>
-            } @else {
-              <span class="text-2xl font-semibold text-gray-400">—</span>
-            }
-          </div>
-        </lfx-card>
-        <lfx-card styleClass="flex-1">
-          <div class="flex flex-col gap-1">
-            <span class="text-sm text-gray-500">Match Rate</span>
-            @if (data().matchRate > 0) {
-              <span class="text-2xl font-semibold text-gray-900">{{ data().matchRate.toFixed(1) }}%</span>
-            } @else {
-              <span class="text-2xl font-semibold text-gray-400">—</span>
-            }
-          </div>
-        </lfx-card>
-      </div>
-    </div>
-
-    <!-- Deal Pipeline Breakdown -->
-    <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="revenue-impact-drawer-engagement">
-      <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">Deal Pipeline Breakdown</h3>
-        <p class="text-sm text-gray-600">Deal status distribution across the membership pipeline</p>
-      </div>
-      @if (data().engagementTypes.length > 0) {
-        <div class="flex flex-col gap-3">
-          @for (engagement of data().engagementTypes; track engagement.type) {
-            <div class="flex flex-col gap-1" data-testid="revenue-impact-drawer-engagement-row">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-900">{{ engagement.type }}</span>
-                <span class="text-sm font-semibold text-gray-900">{{ engagement.percentage.toFixed(1) }}%</span>
-              </div>
-              <div class="w-full h-2 bg-gray-100 rounded-full">
-                <div class="h-2 bg-blue-500 rounded-full" [style.width.%]="engagement.percentage"></div>
-              </div>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="flex items-center justify-center h-[80px] text-sm text-gray-400" data-testid="revenue-impact-drawer-engagement-empty">
-          Deal pipeline data not yet available
-        </div>
-      }
-    </div>
-
     <!-- Attribution Model Comparison -->
     @if (data().attributionModels.linear + data().attributionModels.firstTouch + data().attributionModels.lastTouch > 0) {
       <div class="flex flex-col gap-4" data-testid="revenue-impact-drawer-attribution">
@@ -115,6 +51,29 @@
               <span class="text-2xl font-semibold text-gray-900">{{ formatRevenue(data().attributionModels.lastTouch) }}</span>
             </div>
           </lfx-card>
+        </div>
+      </div>
+    }
+
+    <!-- Attribution Channels -->
+    @if (data().attributionChannels.length > 0) {
+      <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="revenue-impact-drawer-channels">
+        <div class="flex flex-col gap-1">
+          <h3 class="text-sm font-semibold text-gray-900">Attribution Channels</h3>
+          <p class="text-sm text-gray-600">Impression share by paid media channel (YTD)</p>
+        </div>
+        <div class="flex flex-col gap-3">
+          @for (channel of data().attributionChannels; track channel.channel) {
+            <div class="flex flex-col gap-1" data-testid="revenue-impact-drawer-channel-row">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-900">{{ formatChannelLabel(channel.channel) }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ channel.impressions | number }} · {{ channel.percentage.toFixed(1) }}%</span>
+              </div>
+              <div class="w-full h-2 bg-gray-100 rounded-full">
+                <div class="h-2 bg-blue-500 rounded-full" [style.width.%]="channel.percentage"></div>
+              </div>
+            </div>
+          }
         </div>
       </div>
     }
@@ -166,6 +125,28 @@
           </div>
         </lfx-card>
       </div>
+
+      @if (data().paidMedia.monthlyTrend.length > 1) {
+        <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="revenue-impact-drawer-paid-media-trend">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-sm font-semibold text-gray-900">Paid Media Trend</h3>
+            <p class="text-sm text-gray-600">Monthly spend and ROAS over the last 12 months</p>
+          </div>
+          <div class="h-[240px]" data-testid="revenue-impact-drawer-paid-media-chart">
+            <lfx-chart type="bar" [data]="paidMediaTrendChartData()" [options]="paidMediaTrendChartOptions" height="100%"></lfx-chart>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-3 h-3 rounded-sm bg-blue-500"></span>
+              <span>Spend — dollars per month</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-3 h-3 rounded-sm bg-emerald-600"></span>
+              <span>ROAS — revenue ÷ spend per month</span>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </p-drawer>

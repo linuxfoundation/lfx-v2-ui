@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -17,12 +18,13 @@ import type {
   MarketingRecommendedAction,
   MarketingKeyInsight,
   MarketingActionType,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-member-acquisition-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, ChartComponent, TagComponent],
   templateUrl: './member-acquisition-drawer.component.html',
   styleUrl: './member-acquisition-drawer.component.scss',
 })
@@ -49,6 +51,18 @@ export class MemberAcquisitionDrawerComponent {
     trend: 'up',
     target: 85,
     monthlyData: [],
+  });
+
+  public readonly revenueImpactData = input<RevenueImpactResponse>({
+    pipelineInfluenced: 0,
+    revenueAttributed: 0,
+    matchRate: 0,
+    changePercentage: 0,
+    trend: 'up',
+    attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+    engagementTypes: [],
+    paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
+    attributionChannels: [],
   });
 
   // === Computed Signals ===

@@ -157,6 +157,69 @@
       </div>
     }
 
+    <!-- Sales Pipeline -->
+    @if (revenueImpactData().pipelineInfluenced > 0 || revenueImpactData().revenueAttributed > 0 || revenueImpactData().engagementTypes.length > 0) {
+      <div class="flex flex-col gap-4" data-testid="member-acquisition-drawer-pipeline-section">
+        <h3 class="text-sm font-semibold text-gray-900">Sales Pipeline</h3>
+        <div class="flex gap-4" data-testid="member-acquisition-drawer-pipeline-stats">
+          <lfx-card styleClass="flex-1">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-gray-500">Pipeline Influenced</span>
+              @if (revenueImpactData().pipelineInfluenced > 0) {
+                <span class="text-2xl font-semibold text-gray-900">${{ revenueImpactData().pipelineInfluenced / 1000000 | number: '1.1-1' }}M</span>
+              } @else {
+                <span class="text-2xl font-semibold text-gray-400">—</span>
+              }
+            </div>
+          </lfx-card>
+          <lfx-card styleClass="flex-1">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-gray-500">Revenue Attributed</span>
+              @if (revenueImpactData().revenueAttributed > 0) {
+                <span class="text-2xl font-semibold text-gray-900">${{ revenueImpactData().revenueAttributed / 1000000 | number: '1.1-1' }}M</span>
+              } @else {
+                <span class="text-2xl font-semibold text-gray-400">—</span>
+              }
+            </div>
+          </lfx-card>
+          <lfx-card styleClass="flex-1">
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-gray-500">Match Rate</span>
+              @if (revenueImpactData().matchRate > 0) {
+                <span class="text-2xl font-semibold text-gray-900">{{ revenueImpactData().matchRate.toFixed(1) }}%</span>
+              } @else {
+                <span class="text-2xl font-semibold text-gray-400">—</span>
+              }
+            </div>
+          </lfx-card>
+        </div>
+
+        <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-deal-breakdown">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-sm font-semibold text-gray-900">Deal Pipeline Breakdown</h3>
+            <p class="text-sm text-gray-600">Deal status distribution across the membership pipeline</p>
+          </div>
+          @if (revenueImpactData().engagementTypes.length > 0) {
+            <div class="flex flex-col gap-3">
+              @for (engagement of revenueImpactData().engagementTypes; track engagement.type) {
+                <div class="flex flex-col gap-1" data-testid="member-acquisition-drawer-deal-row">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-900">{{ engagement.type }}</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ engagement.percentage.toFixed(1) }}%</span>
+                  </div>
+                  <div class="w-full h-2 bg-gray-100 rounded-full">
+                    <div class="h-2 bg-blue-500 rounded-full" [style.width.%]="engagement.percentage"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="flex items-center justify-center h-[80px] text-sm text-gray-400">Deal pipeline data not yet available</div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Total Members Trend -->
     @if (data().totalMembersMonthlyData.length > 1) {
       <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="member-acquisition-drawer-total-members-section">

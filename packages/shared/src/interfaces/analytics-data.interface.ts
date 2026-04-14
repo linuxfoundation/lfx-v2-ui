@@ -3035,6 +3035,27 @@ export interface RevenueImpactPaidMedia {
   impressions: number;
   adSpend: number;
   adRevenue: number;
+  monthlyTrend: RevenueImpactPaidMediaMonth[];
+}
+
+/**
+ * Monthly paid media trend row for Revenue Impact drill-down
+ */
+export interface RevenueImpactPaidMediaMonth {
+  month: string;
+  spend: number;
+  revenue: number;
+  impressions: number;
+  roas: number;
+}
+
+/**
+ * Attribution channel breakdown row for Revenue Impact drill-down
+ */
+export interface RevenueImpactAttributionChannel {
+  channel: string;
+  impressions: number;
+  percentage: number;
 }
 
 /**
@@ -3050,6 +3071,7 @@ export interface RevenueImpactResponse {
   attributionModels: RevenueImpactAttributionModels;
   engagementTypes: RevenueImpactEngagementType[];
   paidMedia: RevenueImpactPaidMedia;
+  attributionChannels: RevenueImpactAttributionChannel[];
 }
 
 /**
