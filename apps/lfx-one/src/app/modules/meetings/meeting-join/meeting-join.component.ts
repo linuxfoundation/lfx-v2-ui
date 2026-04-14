@@ -3,7 +3,7 @@
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,14 +19,18 @@ import { environment } from '@environments/environment';
 import {
   buildJoinUrlWithParams,
   canJoinMeeting,
+  CommitteeMember,
   DEFAULT_MEETING_TYPE_CONFIG,
+  getActiveOccurrences,
   getCurrentOrNextOccurrence,
   hasMeetingEnded,
   Meeting,
+  MEETING_TYPE_CONFIGS,
   MeetingAttachment,
   MeetingOccurrence,
-  MEETING_TYPE_CONFIGS,
+  MeetingRegistrant,
   PastMeetingAttachment,
+  PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
   Project,
@@ -38,7 +42,9 @@ import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
+import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
+import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
@@ -46,7 +52,22 @@ import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, EMPTY, filter, map, Observable, of, startWith, switchMap, take, tap } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  debounceTime,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  map,
+  Observable,
+  of,
+  startWith,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
 import { GuestFormComponent } from '../components/guest-form/guest-form.component';
 import { MeetingRsvpDetailsComponent } from '../components/meeting-rsvp-details/meeting-rsvp-details.component';
@@ -80,7 +101,7 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
   providers: [DialogService],
   templateUrl: './meeting-join.component.html',
 })
-export class MeetingJoinComponent {
+export class MeetingJoinComponent implements OnInit {
   // Injected services
   private readonly messageService = inject(MessageService);
   private readonly activatedRoute = inject(ActivatedRoute);
@@ -89,7 +110,10 @@ export class MeetingJoinComponent {
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
+  private readonly committeeService = inject(CommitteeService);
+  private readonly projectContextService = inject(ProjectContextService);
   private readonly dialogService = inject(DialogService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Class variables with types
   public authenticated: WritableSignal<boolean>;
@@ -98,6 +122,10 @@ export class MeetingJoinComponent {
   public project: WritableSignal<Partial<Project> | null> = signal<Partial<Project> | null>(null);
   public meeting: Signal<Meeting & { project: Partial<Project> }>;
   public currentOccurrence: Signal<MeetingOccurrence | null>;
+  private occurrenceContext: Signal<{ sorted: MeetingOccurrence[]; currentIdx: number }>;
+  protected previousOccurrenceUrl: Signal<string | null>;
+  protected nextOccurrenceUrl: Signal<string | null>;
+  protected occurrenceLabel: Signal<string | null>;
   public meetingTypeBadge: Signal<{
     severity: TagSeverity;
     styleClass: string;
@@ -147,6 +175,31 @@ export class MeetingJoinComponent {
   protected rsvpDeclinedCount = computed(() => this.meeting()?.registrants_declined_count ?? 0);
   protected rsvpPendingCount = computed(() => this.meeting()?.registrants_pending_count ?? 0);
   protected hasRsvpData = computed(() => this.rsvpAcceptedCount() > 0 || this.rsvpDeclinedCount() > 0 || this.rsvpPendingCount() > 0);
+  protected userInitials = computed(() => {
+    const name = this.user()?.name || 'User';
+    return name.substring(0, 2).toUpperCase();
+  });
+  protected isMobileViewport = signal(false);
+  protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
+  // Parent project (foundation) for context display
+  protected parentProject: Signal<Project | null>;
+  // Registrant + committee member list
+  protected registrants: Signal<MeetingRegistrant[]>;
+  protected committeeMembers: Signal<CommitteeMember[]>;
+  // Counts from actual data
+  protected totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
+  // Past meeting participants (fetched from API for attendance stats)
+  protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
+  // Past meeting attendance stats (derived from participants)
+  protected participantCount = computed(() => this.pastMeetingParticipants().length);
+  protected attendedCount = computed(() => this.pastMeetingParticipants().filter((p) => p.is_attended).length);
+  protected absentCount = computed(() => this.participantCount() - this.attendedCount());
+  protected attendancePercentage = computed(() => {
+    const total = this.participantCount();
+    const attended = this.attendedCount();
+    return total > 0 ? Math.round((attended / total) * 100) : 0;
+  });
+  protected hasAttendanceData = computed(() => this.isPastMeeting() && this.participantCount() > 0);
   // Computed signals for invited/registration status
   public isInvited: Signal<boolean>;
   public canRegisterForMeeting: Signal<boolean>;
@@ -161,6 +214,10 @@ export class MeetingJoinComponent {
     this.authenticated = this.userService.authenticated;
     this.meeting = this.initializeMeeting();
     this.currentOccurrence = this.initializeCurrentOccurrence();
+    this.occurrenceContext = this.initializeOccurrenceContext();
+    this.previousOccurrenceUrl = this.initializePreviousOccurrenceUrl();
+    this.nextOccurrenceUrl = this.initializeNextOccurrenceUrl();
+    this.occurrenceLabel = this.initializeOccurrenceLabel();
     this.joinForm = this.initializeJoinForm();
     this.formValues = this.initializeFormValues();
     this.meetingTypeBadge = this.initializeMeetingTypeBadge();
@@ -174,6 +231,7 @@ export class MeetingJoinComponent {
     this.pastMeetingAttachments = this.initializePastMeetingAttachments();
     this.primaryRecordingUrl = this.initializePrimaryRecordingUrl();
     this.transcriptUrl = this.initializeTranscriptUrl();
+    this.pastMeetingParticipants = this.initializePastMeetingParticipants();
 
     // Initialize invited/registration signals
     this.isInvited = this.initializeIsInvited();
@@ -188,7 +246,20 @@ export class MeetingJoinComponent {
     this.messageIcon = this.initializeMessageIcon();
     this.alertMessage = this.initializeAlertMessage();
     this.emailError = this.initializeEmailError();
+    this.registrants = this.initializeRegistrants();
+    this.committeeMembers = this.initializeCommitteeMembers();
+    this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
+  }
+
+  public ngOnInit(): void {
+    if (typeof window !== 'undefined') {
+      const mql = window.matchMedia('(max-width: 639px)'); // Matches Tailwind sm: breakpoint (640px)
+      this.isMobileViewport.set(mql.matches);
+      const handler = (e: MediaQueryListEvent) => this.isMobileViewport.set(e.matches);
+      mql.addEventListener('change', handler);
+      this.destroyRef.onDestroy(() => mql.removeEventListener('change', handler));
+    }
   }
 
   public handleCopyLink(): void {
@@ -230,7 +301,7 @@ export class MeetingJoinComponent {
   }
 
   public onShowMembersPlaceholder(): void {
-    // TODO: Phase 4 — attendees drawer
+    this.messageService.add({ severity: 'info', summary: 'Coming Soon', detail: 'Attendees list will be available soon.', life: 3000 });
   }
 
   public onRsvpViewToggle(): void {
@@ -280,6 +351,21 @@ export class MeetingJoinComponent {
         this.refreshTrigger$.next();
       }
     });
+  }
+
+  /** Sets foundation context via ProjectContextService and opens /foundation/overview in a new tab. */
+  public navigateToFoundation(): void {
+    const parent = this.parentProject();
+    const project = this.project();
+    const meeting = this.meeting();
+    const isTopLevelProject = !project?.parent_uid;
+    const uid = parent?.uid || project?.parent_uid || (isTopLevelProject ? project?.uid || meeting?.project_uid : undefined);
+    const name = parent?.name || project?.name || meeting?.project_name || '';
+    const slug = parent?.slug || project?.slug || '';
+    if (uid) {
+      this.projectContextService.setFoundation({ uid, name, slug });
+      window.open('/foundation/overview', '_blank', 'noopener,noreferrer');
+    }
   }
 
   public openSummaryModal(): void {
@@ -423,7 +509,87 @@ export class MeetingJoinComponent {
   private initializeCurrentOccurrence(): Signal<MeetingOccurrence | null> {
     return computed(() => {
       const meeting = this.meeting();
+      // Check if a specific occurrence was requested via query param
+      const requestedOccurrence = this.activatedRoute.snapshot.queryParamMap.get('occurrence');
+      if (requestedOccurrence && meeting?.occurrences?.length) {
+        const requestedTime = parseInt(requestedOccurrence, 10);
+        const active = getActiveOccurrences(meeting.occurrences);
+        const match = active.find((o: MeetingOccurrence) => new Date(o.start_time).getTime() === requestedTime);
+        if (match) return match;
+      }
       return getCurrentOrNextOccurrence(meeting);
+    });
+  }
+
+  private initializeOccurrenceContext(): Signal<{ sorted: MeetingOccurrence[]; currentIdx: number }> {
+    return computed(() => {
+      const meeting = this.meeting();
+      if (!meeting?.occurrences?.length) return { sorted: [], currentIdx: -1 };
+      const sorted = getActiveOccurrences(meeting.occurrences).sort(
+        (a: MeetingOccurrence, b: MeetingOccurrence) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
+      const current = this.currentOccurrence();
+      let currentTime: number;
+      if (current) {
+        currentTime = new Date(current.start_time).getTime();
+      } else {
+        // For past meetings loaded via /meetings/{id}-{timestamp}, extract timestamp from route
+        const routeId = this.activatedRoute.snapshot.paramMap.get('id') ?? '';
+        const parts = routeId.split('-');
+        currentTime = parts.length === 2 && /^\d{13}$/.test(parts[1]) ? parseInt(parts[1], 10) : Date.now();
+      }
+      let currentIdx = sorted.findIndex((o: MeetingOccurrence) => new Date(o.start_time).getTime() === currentTime);
+      if (currentIdx < 0) {
+        currentIdx = sorted.findIndex((o: MeetingOccurrence) => new Date(o.start_time).getTime() >= currentTime);
+      }
+      if (currentIdx < 0) currentIdx = sorted.length - 1;
+      return { sorted, currentIdx };
+    });
+  }
+
+  private buildOccurrenceUrl(meetingId: string, occurrence: MeetingOccurrence): string {
+    const timestamp = new Date(occurrence.start_time).getTime();
+    const meeting = this.meeting();
+    const isPast = hasMeetingEnded(meeting, occurrence);
+    const password = this.password();
+    const params = new URLSearchParams();
+    if (password) params.set('password', password);
+    if (isPast) {
+      const base = `/meetings/${meetingId}-${timestamp}`;
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
+    }
+    params.set('occurrence', timestamp.toString());
+    return `/meetings/${meetingId}?${params.toString()}`;
+  }
+
+  private initializePreviousOccurrenceUrl(): Signal<string | null> {
+    return computed(() => {
+      const meeting = this.meeting();
+      if (!meeting?.recurrence) return null;
+      const { sorted, currentIdx } = this.occurrenceContext();
+      if (currentIdx <= 0) return null;
+      return this.buildOccurrenceUrl(meeting.id, sorted[currentIdx - 1]);
+    });
+  }
+
+  private initializeNextOccurrenceUrl(): Signal<string | null> {
+    return computed(() => {
+      const meeting = this.meeting();
+      if (!meeting?.recurrence) return null;
+      const { sorted, currentIdx } = this.occurrenceContext();
+      if (currentIdx < 0 || currentIdx >= sorted.length - 1) return null;
+      return this.buildOccurrenceUrl(meeting.id, sorted[currentIdx + 1]);
+    });
+  }
+
+  private initializeOccurrenceLabel(): Signal<string | null> {
+    return computed(() => {
+      const meeting = this.meeting();
+      if (!meeting?.recurrence) return null;
+      const { sorted, currentIdx } = this.occurrenceContext();
+      if (sorted.length === 0) return null;
+      return `${currentIdx + 1} of ${sorted.length}`;
     });
   }
 
@@ -603,6 +769,7 @@ export class MeetingJoinComponent {
           if (meeting.visibility === 'public' && !meeting.restricted) return true;
           return this.authenticated();
         }),
+        distinctUntilChanged((a, b) => a.id === b.id),
         switchMap((meeting) => this.meetingService.getMeetingAttachments(meeting.id)),
         catchError(() => of([] as MeetingAttachment[]))
       ),
@@ -709,6 +876,18 @@ export class MeetingJoinComponent {
     );
   }
 
+  private initializePastMeetingParticipants(): Signal<PastMeetingParticipant[]> {
+    return toSignal(
+      combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
+        switchMap(([hasAccess, meeting]) => {
+          if (!hasAccess || !meeting?.id || !this.authenticated()) return of([] as PastMeetingParticipant[]);
+          return this.meetingService.getPastMeetingParticipants(meeting.id).pipe(catchError(() => of([] as PastMeetingParticipant[])));
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
   private initializePrimaryRecordingUrl(): Signal<string | null> {
     return computed(() => {
       const recording = this.pastMeetingRecording();
@@ -731,5 +910,58 @@ export class MeetingJoinComponent {
       const transcript = recording.recording_files.find((f) => f.file_type === 'TRANSCRIPT');
       return transcript?.download_url ?? null;
     });
+  }
+
+  private initializeParentProject(): Signal<Project | null> {
+    return toSignal(
+      toObservable(this.project).pipe(
+        filter((p) => !!p?.parent_uid),
+        distinctUntilChanged((a, b) => a?.parent_uid === b?.parent_uid),
+        switchMap((p) => this.projectService.getProject(p!.parent_uid!, false).pipe(catchError(() => of(null))))
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializeRegistrants(): Signal<MeetingRegistrant[]> {
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        filter((meeting) => !!meeting?.id && this.authenticated()),
+        distinctUntilChanged((a, b) => a.id === b.id),
+        switchMap((meeting) => {
+          if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
+          return this.meetingService.getMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initializeCommitteeMembers(): Signal<CommitteeMember[]> {
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        filter((meeting) => !!meeting?.id && this.authenticated()),
+        distinctUntilChanged((a, b) => a.id === b.id),
+        switchMap((meeting) => {
+          const committeeUids = (meeting.committees || []).map((c) => c.uid).filter(Boolean);
+          if (committeeUids.length === 0) return of([] as CommitteeMember[]);
+          return combineLatest(
+            committeeUids.map((uid) => this.committeeService.getCommitteeMembers(uid).pipe(catchError(() => of([] as CommitteeMember[]))))
+          ).pipe(
+            map((arrays) => {
+              const all = arrays.flat();
+              const seen = new Set<string>();
+              return all.filter((m) => {
+                const key = m.email?.toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              });
+            })
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }
