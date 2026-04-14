@@ -1765,11 +1765,11 @@ export class ProjectService {
   /**
    * Get email click-through rate data from Snowflake
    * Queries ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
-   * @param foundationName - Foundation name used to filter by PROJECT_NAME (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG
    * @returns Email CTR response with monthly trend and change percentage
    */
-  public async getEmailCtr(foundationName: string): Promise<EmailCtrResponse> {
-    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake Platinum tables', { foundation_name: foundationName });
+  public async getEmailCtr(foundationSlug: string): Promise<EmailCtrResponse> {
+    logger.debug(undefined, 'get_email_ctr', 'Fetching email CTR from Snowflake Platinum tables', { foundation_slug: foundationSlug });
 
     try {
       // Query 1: KPI card — current CTR + MoM change from email_ctr_summary
@@ -1779,7 +1779,7 @@ export class ProjectService {
           CTR_LAST_COMPLETED_MONTH,
           CTR_MOM_CHANGE
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
-        WHERE PROJECT_NAME = ?
+        WHERE FOUNDATION_SLUG = ?
       `;
 
       // Query 2: Monthly CTR trend (bar chart, last 6 months) from email_ctr_by_month
@@ -1791,7 +1791,7 @@ export class ProjectService {
           TOTAL_SENDS,
           TOTAL_OPENS
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
-        WHERE PROJECT_NAME = ?
+        WHERE FOUNDATION_SLUG = ?
           AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         ORDER BY PUBLISHED_MONTH_DATE ASC
       `;
@@ -1803,17 +1803,17 @@ export class ProjectService {
           LF_SUB_DOMAIN_CLASSIFICATION,
           CTR_LAST_6_MONTHS AS AVG_CTR
         FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
-        WHERE PROJECT_NAME = ?
+        WHERE FOUNDATION_SLUG = ?
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
 
       const [summaryResult, monthlyResult, campaignResult] = await Promise.all([
-        this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationName]),
+        this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationSlug]),
         this.snowflakeService.execute<{ PUBLISHED_MONTH: string; PUBLISHED_MONTH_DATE: string; MONTHLY_CTR: number; TOTAL_SENDS: number; TOTAL_OPENS: number }>(
           monthlyQuery,
-          [foundationName]
+          [foundationSlug]
         ),
-        this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationName]),
+        this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationSlug]),
       ]);
 
       if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -1860,7 +1860,7 @@ export class ProjectService {
       };
     } catch (error) {
       logger.warning(undefined, 'get_email_ctr', 'Failed to fetch email CTR from Snowflake', {
-        foundation_name: foundationName,
+        foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       return { currentCtr: 0, changePercentage: 0, trend: 'up', monthlyData: [], monthlyLabels: [], campaignGroups: [], monthlySends: [], monthlyOpens: [] };
@@ -1870,11 +1870,11 @@ export class ProjectService {
   /**
    * Get paid social reach metrics from Snowflake Platinum tables
    * Queries ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH and ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
-   * @param foundationName - Foundation name used to filter by FOUNDATION_NAME (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG
    * @returns Social reach response with ROAS, impressions, spend, revenue, and monthly trends
    */
-  public async getSocialReach(foundationName: string): Promise<SocialReachResponse> {
-    logger.debug(undefined, 'get_social_reach', 'Fetching paid social reach from Snowflake', { foundation_name: foundationName });
+  public async getSocialReach(foundationSlug: string): Promise<SocialReachResponse> {
+    logger.debug(undefined, 'get_social_reach', 'Fetching paid social reach from Snowflake', { foundation_slug: foundationSlug });
 
     try {
       // Block 1: Total impressions, spend, revenue (last 6 months)
@@ -1882,14 +1882,14 @@ export class ProjectService {
       SELECT SUM(IMPRESSIONS) AS TOTAL_IMPRESSIONS, SUM(SPEND) AS TOTAL_SPEND, SUM(FIRST_TOUCH_REVENUE) AS TOTAL_REVENUE
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_NAME = ?
+        AND FOUNDATION_SLUG = ?
     `;
 
       // Block 2: ROAS KPI — latest completed month
       const roasKpiQuery = `
       SELECT FIRST_TOUCH_ROAS AS ROAS, ROAS_MOM_PCT
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
-      WHERE FOUNDATION_NAME = ?
+      WHERE FOUNDATION_SLUG = ?
         AND CAMPAIGN_MONTH < DATE_TRUNC('MONTH', CURRENT_DATE())
       QUALIFY ROW_NUMBER() OVER (ORDER BY CAMPAIGN_MONTH DESC) = 1
     `;
@@ -1899,7 +1899,7 @@ export class ProjectService {
       SELECT CAMPAIGN_MONTH, FIRST_TOUCH_ROAS AS ROAS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_NAME = ?
+        AND FOUNDATION_SLUG = ?
       ORDER BY CAMPAIGN_MONTH
     `;
 
@@ -1908,7 +1908,7 @@ export class ProjectService {
       SELECT CAMPAIGN_MONTH, IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_NAME = ?
+        AND FOUNDATION_SLUG = ?
       ORDER BY CAMPAIGN_MONTH
     `;
 
@@ -1917,17 +1917,17 @@ export class ProjectService {
       SELECT CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
       WHERE CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
-        AND FOUNDATION_NAME = ?
+        AND FOUNDATION_SLUG = ?
       GROUP BY CHANNEL
       ORDER BY IMPRESSIONS DESC
     `;
 
       const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult] = await Promise.all([
-        this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationName]),
-        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationName]),
-        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationName]),
-        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationName]),
-        this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationName]),
+        this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
       ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
@@ -1977,7 +1977,7 @@ export class ProjectService {
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
-        foundation_name: foundationName,
+        foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       return {
@@ -2078,11 +2078,11 @@ export class ProjectService {
   /**
    * Get social media metrics from Snowflake Platinum tables
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW, ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN, and ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_FOLLOWER_TREND
-   * @param foundationName - Foundation name used to filter by FOUNDATION_NAME (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG
    * @returns Social media response with followers, platform breakdown, and trend data
    */
-  public async getSocialMedia(foundationName: string): Promise<SocialMediaResponse> {
-    logger.debug(undefined, 'get_social_media', 'Fetching social media data from Snowflake Platinum tables', { foundation_name: foundationName });
+  public async getSocialMedia(foundationSlug: string): Promise<SocialMediaResponse> {
+    logger.debug(undefined, 'get_social_media', 'Fetching social media data from Snowflake Platinum tables', { foundation_slug: foundationSlug });
 
     try {
       // Query 1: KPI cards — total followers, platforms, growth (aggregated)
@@ -2099,7 +2099,7 @@ export class ProjectService {
             )
         END AS FOLLOWER_GROWTH_PCT
       FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW
-      WHERE FOUNDATION_NAME = ?
+      WHERE FOUNDATION_SLUG = ?
     `;
 
       // Query 2: Platform breakdown table (aggregated per platform)
@@ -2114,7 +2114,7 @@ export class ProjectService {
         SUM(POSTS_30D) AS POSTS_30D,
         SUM(IMPRESSIONS) AS IMPRESSIONS
       FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN
-      WHERE FOUNDATION_NAME = ?
+      WHERE FOUNDATION_SLUG = ?
       GROUP BY PLATFORM_NAME
       ORDER BY FOLLOWERS DESC
     `;
@@ -2125,7 +2125,7 @@ export class ProjectService {
         SNAPSHOT_MONTH,
         SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
       FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_FOLLOWER_TREND
-      WHERE FOUNDATION_NAME = ?
+      WHERE FOUNDATION_SLUG = ?
         AND SNAPSHOT_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
       GROUP BY SNAPSHOT_MONTH
       ORDER BY SNAPSHOT_MONTH ASC
@@ -2133,7 +2133,7 @@ export class ProjectService {
 
       const [overviewResult, platformResult, trendResult] = await Promise.all([
         this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number; FOLLOWER_GROWTH_PCT: number | null }>(overviewQuery, [
-          foundationName,
+          foundationSlug,
         ]),
         this.snowflakeService.execute<{
           PLATFORM_NAME: string;
@@ -2141,8 +2141,8 @@ export class ProjectService {
           ENGAGEMENT_RATE_PCT: number | null;
           POSTS_30D: number;
           IMPRESSIONS: number;
-        }>(platformQuery, [foundationName]),
-        this.snowflakeService.execute<{ SNAPSHOT_MONTH: string; TOTAL_FOLLOWERS: number }>(trendQuery, [foundationName]),
+        }>(platformQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ SNAPSHOT_MONTH: string; TOTAL_FOLLOWERS: number }>(trendQuery, [foundationSlug]),
       ]);
 
       if (overviewResult.rows.length === 0) {
@@ -2180,7 +2180,7 @@ export class ProjectService {
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_media', 'Failed to fetch social media data, returning defaults', {
-        foundation_name: foundationName,
+        foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       return {

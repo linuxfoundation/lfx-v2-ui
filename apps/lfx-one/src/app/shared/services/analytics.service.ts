@@ -826,11 +826,11 @@ export class AnalyticsService {
 
   /**
    * Get email click-through rate data
-   * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug to filter by
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
+  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -849,11 +849,11 @@ export class AnalyticsService {
   /**
    * Get social media metrics from Snowflake Platinum tables
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social media response with followers, platforms, engagement, and trend data
    */
-  public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
-    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
+  public getSocialMedia(foundationSlug: string): Observable<SocialMediaResponse> {
+    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalFollowers: 0,
@@ -869,11 +869,11 @@ export class AnalyticsService {
 
   /**
    * Get paid social reach metrics
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
-  public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
+  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,

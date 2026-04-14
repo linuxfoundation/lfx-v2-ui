@@ -155,15 +155,15 @@ export class PaidSocialReachDrawerComponent {
     };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.name || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(
-        filter(([isVisible, name]) => isVisible && !!name),
-        map(([, name]) => name),
+        filter(([isVisible, slug]) => isVisible && !!slug),
+        map(([, slug]) => slug),
         tap(() => this.drawerLoading.set(true)),
-        switchMap((foundationName) =>
-          this.analyticsService.getSocialReach(foundationName).pipe(
+        switchMap((foundationSlug) =>
+          this.analyticsService.getSocialReach(foundationSlug).pipe(
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
