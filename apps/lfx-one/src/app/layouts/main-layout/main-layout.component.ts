@@ -111,7 +111,7 @@ export class MainLayoutComponent {
       expanded: true,
       items: [
         {
-          label: 'Trainings & Certs',
+          label: 'Training & Certifications',
           icon: 'fa-light fa-graduation-cap',
           routerLink: '/me/training',
         },
