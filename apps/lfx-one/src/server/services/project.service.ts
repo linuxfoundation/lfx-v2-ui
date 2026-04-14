@@ -71,6 +71,13 @@ import {
   EngagedCommunitySizeResponse,
   FlywheelConversionResponse,
   NorthStarMonthlyDataPoint,
+  EventGrowthResponse,
+  EventGrowthTopEvent,
+  BrandReachResponse,
+  BrandReachPlatformType,
+  BrandHealthResponse,
+  BrandHealthTopProject,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -82,6 +89,13 @@ import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
+
+/**
+ * Schema prefix for ED dashboard dbt views.
+ * Defaults to production; set SNOWFLAKE_ED_SCHEMA env var to use dev views for testing.
+ * Example: SNOWFLAKE_ED_SCHEMA=ANALYTICS_DEV.DEV_MRAUTELA_PLATINUM_LFX_ONE
+ */
+const ED_SCHEMA = process.env['SNOWFLAKE_ED_SCHEMA'] || 'ANALYTICS.PLATINUM_LFX_ONE';
 
 /**
  * Service for handling project business logic
@@ -2184,7 +2198,7 @@ export class ProjectService {
 
   /**
    * Get member retention metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
+   * Queries ${ED_SCHEMA}.NORTH_STAR_MEMBER_RETENTION
    */
   public async getMemberRetention(foundationSlug: string): Promise<MemberRetentionResponse> {
     logger.debug(undefined, 'get_member_retention', 'Fetching member retention from Snowflake', { foundation_slug: foundationSlug });
@@ -2196,7 +2210,7 @@ export class ProjectService {
           RENEWAL_RATE,
           NET_REVENUE_RETENTION,
           MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_RETENTION
+        FROM ${ED_SCHEMA}.NORTH_STAR_MEMBER_RETENTION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2257,7 +2271,7 @@ export class ProjectService {
 
   /**
    * Get member acquisition metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
+   * Queries ${ED_SCHEMA}.NORTH_STAR_MEMBER_ACQUISITION
    */
   public async getMemberAcquisition(foundationSlug: string): Promise<MemberAcquisitionResponse> {
     logger.debug(undefined, 'get_member_acquisition', 'Fetching member acquisition from Snowflake', { foundation_slug: foundationSlug });
@@ -2281,7 +2295,7 @@ export class ProjectService {
           NEW_MEMBERS,
           NEW_MEMBER_REVENUE,
           QOQ_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_MEMBER_ACQUISITION
+        FROM ${ED_SCHEMA}.NORTH_STAR_MEMBER_ACQUISITION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY QUARTER_START_DATE DESC
         LIMIT 8
@@ -2338,7 +2352,7 @@ export class ProjectService {
 
   /**
    * Get engaged community size metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
+   * Queries ${ED_SCHEMA}.NORTH_STAR_ENGAGED_COMMUNITY
    */
   public async getEngagedCommunity(foundationSlug: string): Promise<EngagedCommunitySizeResponse> {
     logger.debug(undefined, 'get_engaged_community', 'Fetching engaged community from Snowflake', { foundation_slug: foundationSlug });
@@ -2353,7 +2367,7 @@ export class ProjectService {
           CERTIFIED_INDIVIDUALS,
           TOTAL_ENGAGED_MEMBERS,
           MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
+        FROM ${ED_SCHEMA}.NORTH_STAR_ENGAGED_COMMUNITY
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2441,22 +2455,38 @@ export class ProjectService {
 
   /**
    * Get flywheel conversion rate metrics from Snowflake
-   * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
+   * Queries ${ED_SCHEMA}.NORTH_STAR_FLYWHEEL_CONVERSION
    */
   public async getFlywheelConversion(foundationSlug: string): Promise<FlywheelConversionResponse> {
     logger.debug(undefined, 'get_flywheel_conversion', 'Fetching flywheel conversion from Snowflake', { foundation_slug: foundationSlug });
+
+    const emptyReengagement = {
+      totalReengaged: 0,
+      reengagementRate: 0,
+      reengagementMomChange: 0,
+      reengagedToNewsletter: 0,
+      reengagedToCommunity: 0,
+      reengagedToWorkingGroup: 0,
+    };
 
     try {
       const query = `
         SELECT
           MONTH_START_DATE,
           EVENT_ATTENDEES,
+          CONVERSION_RATE,
+          MOM_CHANGE_PERCENTAGE,
+          TOTAL_CONVERTED,
+          REENGAGEMENT_RATE,
+          REENGAGEMENT_MOM_CHANGE,
+          TOTAL_REENGAGED,
           CONVERTED_TO_NEWSLETTER,
           CONVERTED_TO_COMMUNITY,
           CONVERTED_TO_WORKING_GROUP,
-          CONVERSION_RATE,
-          MOM_CHANGE_PERCENTAGE
-        FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_FLYWHEEL_CONVERSION
+          REENGAGED_TO_NEWSLETTER,
+          REENGAGED_TO_COMMUNITY,
+          REENGAGED_TO_WORKING_GROUP
+        FROM ${ED_SCHEMA}.NORTH_STAR_FLYWHEEL_CONVERSION
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 12
@@ -2465,11 +2495,18 @@ export class ProjectService {
       const result = await this.snowflakeService.execute<{
         MONTH_START_DATE: string;
         EVENT_ATTENDEES: number;
+        CONVERSION_RATE: number;
+        MOM_CHANGE_PERCENTAGE: number;
+        TOTAL_CONVERTED: number;
+        REENGAGEMENT_RATE: number;
+        REENGAGEMENT_MOM_CHANGE: number;
+        TOTAL_REENGAGED: number;
         CONVERTED_TO_NEWSLETTER: number;
         CONVERTED_TO_COMMUNITY: number;
         CONVERTED_TO_WORKING_GROUP: number;
-        CONVERSION_RATE: number;
-        MOM_CHANGE_PERCENTAGE: number;
+        REENGAGED_TO_NEWSLETTER: number;
+        REENGAGED_TO_COMMUNITY: number;
+        REENGAGED_TO_WORKING_GROUP: number;
       }>(query, [foundationSlug]);
 
       if (result.rows.length === 0) {
@@ -2483,6 +2520,7 @@ export class ProjectService {
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
           },
+          reengagement: emptyReengagement,
           monthlyData: [],
         };
       }
@@ -2508,6 +2546,14 @@ export class ProjectService {
           convertedToCommunity: latest.CONVERTED_TO_COMMUNITY ?? 0,
           convertedToWorkingGroup: latest.CONVERTED_TO_WORKING_GROUP ?? 0,
         },
+        reengagement: {
+          totalReengaged: latest.TOTAL_REENGAGED ?? 0,
+          reengagementRate: latest.REENGAGEMENT_RATE ?? 0,
+          reengagementMomChange: latest.REENGAGEMENT_MOM_CHANGE ?? 0,
+          reengagedToNewsletter: latest.REENGAGED_TO_NEWSLETTER ?? 0,
+          reengagedToCommunity: latest.REENGAGED_TO_COMMUNITY ?? 0,
+          reengagedToWorkingGroup: latest.REENGAGED_TO_WORKING_GROUP ?? 0,
+        },
         monthlyData,
       };
     } catch (error) {
@@ -2525,8 +2571,462 @@ export class ProjectService {
           convertedToCommunity: 0,
           convertedToWorkingGroup: 0,
         },
+        reengagement: emptyReengagement,
         monthlyData: [],
       };
+    }
+  }
+
+  /**
+   * Get event growth metrics from Snowflake
+   * Queries ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH (single row YTD) and EVENT_GROWTH_TOP_EVENTS
+   */
+  public async getEventGrowth(foundationSlug: string): Promise<EventGrowthResponse> {
+    logger.debug(undefined, 'get_event_growth', 'Fetching event growth from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: EventGrowthResponse = {
+      totalAttendees: 0,
+      totalEvents: 0,
+      totalRevenue: 0,
+      revenuePerAttendee: 0,
+      attendeeMomChange: 0,
+      revenueMomChange: 0,
+      trend: 'up',
+      monthlyData: [],
+      topEvents: [],
+    };
+
+    try {
+      const summaryQuery = `
+        SELECT EVENT_COUNT_YTD, ATTENDEE_COUNT_YTD, REGISTRANT_COUNT_YTD,
+               TOTAL_NET_REVENUE_YTD,
+               EVENT_COUNT_YOY_CHANGE_PCT, ATTENDEE_COUNT_YOY_CHANGE_PCT,
+               REVENUE_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.NORTH_STAR_EVENT_GROWTH
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const topEventsQuery = `
+        SELECT QUARTER_START_DATE, EVENT_NAME, EVENT_DATE,
+               ATTENDEE_COUNT, REGISTRANT_COUNT, EVENT_REVENUE, EVENT_RANK
+        FROM ${ED_SCHEMA}.EVENT_GROWTH_TOP_EVENTS
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY QUARTER_START_DATE DESC, EVENT_RANK
+        LIMIT 10
+      `;
+
+      const [summaryResult, topEventsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          EVENT_COUNT_YTD: number;
+          ATTENDEE_COUNT_YTD: number;
+          REGISTRANT_COUNT_YTD: number;
+          TOTAL_NET_REVENUE_YTD: number;
+          EVENT_COUNT_YOY_CHANGE_PCT: number;
+          ATTENDEE_COUNT_YOY_CHANGE_PCT: number;
+          REVENUE_YOY_CHANGE_PCT: number;
+        }>(summaryQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          QUARTER_START_DATE: string | Date;
+          EVENT_NAME: string;
+          EVENT_DATE: string;
+          ATTENDEE_COUNT: number;
+          REGISTRANT_COUNT: number;
+          EVENT_REVENUE: number;
+          EVENT_RANK: number;
+        }>(topEventsQuery, [foundationSlug]),
+      ]);
+
+      if (summaryResult.rows.length === 0) {
+        return defaultResponse;
+      }
+
+      const summary = summaryResult.rows[0];
+      const totalAttendees = summary.ATTENDEE_COUNT_YTD ?? 0;
+      const totalEvents = summary.EVENT_COUNT_YTD ?? 0;
+      const totalRevenue = summary.TOTAL_NET_REVENUE_YTD ?? 0;
+      const yoyAttendeeChange = summary.ATTENDEE_COUNT_YOY_CHANGE_PCT ?? 0;
+      const yoyRevenueChange = summary.REVENUE_YOY_CHANGE_PCT ?? 0;
+
+      const topEvents: EventGrowthTopEvent[] = topEventsResult.rows.map((row) => ({
+        name: row.EVENT_NAME ?? '',
+        date: row.EVENT_DATE ?? '',
+        attendees: row.ATTENDEE_COUNT ?? 0,
+        revenue: row.EVENT_REVENUE ?? 0,
+      }));
+
+      // Aggregate attendees by quarter for sparkline
+      const quarterMap = new Map<string, number>();
+      for (const row of topEventsResult.rows) {
+        const raw = row.QUARTER_START_DATE;
+        const q = raw instanceof Date ? raw.toISOString().substring(0, 10) : String(raw ?? '');
+        if (q) {
+          quarterMap.set(q, (quarterMap.get(q) ?? 0) + (row.ATTENDEE_COUNT ?? 0));
+        }
+      }
+      const monthlyData = [...quarterMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([quarter, value]) => ({ month: quarter.substring(0, 7), value }));
+
+      return {
+        totalAttendees,
+        totalEvents,
+        totalRevenue,
+        revenuePerAttendee: totalAttendees > 0 ? Number((totalRevenue / totalAttendees).toFixed(2)) : 0,
+        attendeeMomChange: yoyAttendeeChange,
+        revenueMomChange: yoyRevenueChange,
+        trend: yoyAttendeeChange >= 0 ? 'up' : 'down',
+        monthlyData,
+        topEvents,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_event_growth', 'Failed to fetch event growth from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
+    }
+  }
+
+  /**
+   * Get brand reach metrics from Snowflake
+   * Combines SOCIAL_MEDIA_OVERVIEW (followers) and WEB_ACTIVITIES_SUMMARY (sessions)
+   */
+  public async getBrandReach(foundationSlug: string): Promise<BrandReachResponse> {
+    logger.debug(undefined, 'get_brand_reach', 'Fetching brand reach from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: BrandReachResponse = {
+      totalSocialFollowers: 0,
+      totalMonthlySessions: 0,
+      activePlatforms: 0,
+      changePercentage: 0,
+      trend: 'up',
+      socialPlatforms: [],
+      websiteDomains: [],
+      dailyTrend: [],
+    };
+
+    try {
+      const webQuery = `
+        SELECT LF_SUB_DOMAIN_CLASSIFICATION,
+               SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS
+        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_SUMMARY
+        WHERE FOUNDATION_SLUG = ?
+        GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
+        ORDER BY TOTAL_SESSIONS DESC
+      `;
+
+      const dailyQuery = `
+        SELECT ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
+        FROM ${ED_SCHEMA}.WEB_ACTIVITIES_BY_PROJECT
+        WHERE FOUNDATION_SLUG = ?
+          AND ACTIVITY_DATE >= DATEADD('DAY', -30, CURRENT_DATE())
+        GROUP BY ACTIVITY_DATE
+        ORDER BY ACTIVITY_DATE ASC
+      `;
+
+      const [webResult, dailyResult] = await Promise.all([
+        this.snowflakeService.execute<{ LF_SUB_DOMAIN_CLASSIFICATION: string; TOTAL_SESSIONS: number }>(webQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ ACTIVITY_DATE: string; DAILY_SESSIONS: number }>(dailyQuery, [foundationSlug]),
+      ]);
+
+      let totalSocialFollowers = 0;
+      let socialPlatforms: BrandReachResponse['socialPlatforms'] = [];
+      try {
+        const [socialResult, socialPlatformResult] = await Promise.all([
+          this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number }>(
+            `SELECT TOTAL_FOLLOWERS, PLATFORMS_ACTIVE
+             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
+            [foundationSlug]
+          ),
+          this.snowflakeService.execute<{ PLATFORM_NAME: string; FOLLOWERS: number }>(
+            `SELECT PLATFORM_NAME, FOLLOWERS
+             FROM ${ED_SCHEMA}.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
+             ORDER BY FOLLOWERS DESC`,
+            [foundationSlug]
+          ),
+        ]);
+
+        totalSocialFollowers = socialResult.rows.length > 0 ? (socialResult.rows[0].TOTAL_FOLLOWERS ?? 0) : 0;
+
+        const platformMap: Record<string, BrandReachPlatformType> = {
+          LinkedIn: 'linkedin',
+          Twitter: 'twitter',
+          'Twitter/X': 'twitter',
+          YouTube: 'youtube',
+          Facebook: 'facebook',
+          Mastodon: 'mastodon',
+        };
+        socialPlatforms = socialPlatformResult.rows.map((row) => ({
+          name: row.PLATFORM_NAME ?? 'Other',
+          platformType: platformMap[row.PLATFORM_NAME] || ('other' as BrandReachPlatformType),
+          followers: row.FOLLOWERS ?? 0,
+        }));
+      } catch (socialError) {
+        logger.debug(undefined, 'get_brand_reach', 'Social media query failed, returning web-only data', {
+          error: socialError instanceof Error ? socialError.message : 'Unknown error',
+        });
+      }
+
+      const websiteDomains = webResult.rows.map((row) => ({
+        domain: row.LF_SUB_DOMAIN_CLASSIFICATION || 'Other',
+        sessions: row.TOTAL_SESSIONS ?? 0,
+      }));
+
+      const totalMonthlySessions = websiteDomains.reduce((sum, d) => sum + d.sessions, 0);
+
+      const dailyTrend = dailyResult.rows.map((row) => {
+        const date = new Date(row.ACTIVITY_DATE);
+        return {
+          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          sessions: row.DAILY_SESSIONS ?? 0,
+        };
+      });
+
+      return {
+        totalSocialFollowers,
+        totalMonthlySessions,
+        activePlatforms: socialPlatforms.length,
+        changePercentage: 0,
+        trend: 'up',
+        socialPlatforms,
+        websiteDomains,
+        dailyTrend,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_brand_reach', 'Failed to fetch brand reach from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
+    }
+  }
+
+  /**
+   * Get brand health metrics from Snowflake (Share of Voice)
+   * Queries ${ED_SCHEMA}.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
+   */
+  public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+    logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: BrandHealthResponse = {
+      totalMentions: 0,
+      sentiment: { positive: 0, neutral: 0, negative: 0 },
+      sentimentMomChangePp: 0,
+      trend: 'up',
+      monthlyMentions: [],
+      topProjects: [],
+    };
+
+    try {
+      // SHARE_OF_VOICE has per-platform rows with raw mention counts and sentiment percentages
+      const sovSummaryQuery = `
+        SELECT SUM(TOTAL_MENTIONS_30D) AS TOTAL_MENTIONS,
+               SUM(POSITIVE_MENTIONS_30D) AS POSITIVE,
+               SUM(NEGATIVE_MENTIONS_30D) AS NEGATIVE,
+               SUM(NEUTRAL_MENTIONS_30D) AS NEUTRAL,
+               CASE WHEN SUM(TOTAL_MENTIONS_30D) > 0
+                   THEN ROUND(SUM(POSITIVE_MENTIONS_30D)::FLOAT / SUM(TOTAL_MENTIONS_30D)::FLOAT * 100, 2)
+                   ELSE 0
+               END AS POSITIVE_PCT,
+               CASE WHEN SUM(TOTAL_MENTIONS_30D) > 0
+                   THEN ROUND(SUM(NEGATIVE_MENTIONS_30D)::FLOAT / SUM(TOTAL_MENTIONS_30D)::FLOAT * 100, 2)
+                   ELSE 0
+               END AS NEGATIVE_PCT
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const monthlyTrendQuery = `
+        SELECT MONTH_START_DATE, MENTION_COUNT, MOM_CHANGE_PCT
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_MONTHLY_TREND
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 12
+      `;
+
+      const topProjectsQuery = `
+        SELECT PROJECT_NAME, MENTION_COUNT_30D, PROJECT_RANK
+        FROM ${ED_SCHEMA}.SHARE_OF_VOICE_TOP_PROJECTS
+        WHERE FOUNDATION_SLUG = ?
+        ORDER BY PROJECT_RANK
+        LIMIT 5
+      `;
+
+      const [summaryResult, trendResult, projectsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          TOTAL_MENTIONS: number;
+          POSITIVE: number;
+          NEGATIVE: number;
+          NEUTRAL: number;
+          POSITIVE_PCT: number;
+          NEGATIVE_PCT: number;
+        }>(sovSummaryQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          MONTH_START_DATE: string;
+          MENTION_COUNT: number;
+          MOM_CHANGE_PCT: number;
+        }>(monthlyTrendQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          PROJECT_NAME: string;
+          MENTION_COUNT_30D: number;
+          PROJECT_RANK: number;
+        }>(topProjectsQuery, [foundationSlug]),
+      ]);
+
+      if (summaryResult.rows.length === 0) {
+        return defaultResponse;
+      }
+
+      const summary = summaryResult.rows[0];
+      const totalMentions = summary.TOTAL_MENTIONS ?? 0;
+      const positivePct = summary.POSITIVE_PCT ?? 0;
+      const negativePct = summary.NEGATIVE_PCT ?? 0;
+      const neutralPct = Number(Math.max(0, 100 - positivePct - negativePct).toFixed(1));
+
+      const sentimentMomChangePp = trendResult.rows.length > 0 ? (trendResult.rows[0].MOM_CHANGE_PCT ?? 0) : 0;
+
+      const monthlyMentions: NorthStarMonthlyDataPoint[] = [...trendResult.rows].reverse().map((row) => {
+        const date = new Date(row.MONTH_START_DATE);
+        return {
+          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          value: row.MENTION_COUNT ?? 0,
+        };
+      });
+
+      const topProjects: BrandHealthTopProject[] = projectsResult.rows.map((row) => ({
+        name: row.PROJECT_NAME ?? '',
+        mentions: row.MENTION_COUNT_30D ?? 0,
+      }));
+
+      return {
+        totalMentions,
+        sentiment: { positive: positivePct, neutral: neutralPct, negative: negativePct },
+        sentimentMomChangePp,
+        trend: sentimentMomChangePp >= 0 ? 'up' : 'down',
+        monthlyMentions,
+        topProjects,
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_brand_health', 'Failed to fetch brand health from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
+    }
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics from Snowflake
+   * Queries ${ED_SCHEMA}.PIPELINE_SUMMARY and PAID_ADS_ATTRIBUTION
+   */
+  public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
+    logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
+
+    const defaultResponse: RevenueImpactResponse = {
+      pipelineInfluenced: 0,
+      revenueAttributed: 0,
+      matchRate: 0,
+      changePercentage: 0,
+      trend: 'up',
+      attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+      engagementTypes: [],
+      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0 },
+    };
+
+    try {
+      // PIPELINE_SUMMARY is a single row per foundation with full YTD + prior year data
+      const pipelineQuery = `
+        SELECT TOTAL_PIPELINE_YTD, WON_REVENUE_YTD, LOST_REVENUE_YTD, OPEN_PIPELINE_YTD,
+               TOTAL_DEALS_YTD, WON_DEALS_YTD, LOST_DEALS_YTD, OPEN_DEALS_YTD,
+               AVG_WON_DEAL_SIZE_YTD, CONVERSION_RATE_YTD,
+               WON_REVENUE_PRIOR_YEAR, WON_REVENUE_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.PIPELINE_SUMMARY
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      // PAID_ADS_ATTRIBUTION is a single row per foundation with YTD totals
+      const paidAdsQuery = `
+        SELECT TOTAL_SPEND_YTD, TOTAL_IMPRESSIONS_YTD, TOTAL_CLICKS_YTD,
+               LINEAR_ROAS_YTD, AVG_CPC_YTD, CTR_YTD, CONVERSION_RATE_YTD,
+               FIRST_TOUCH_REVENUE_YTD, LAST_TOUCH_REVENUE_YTD,
+               LINEAR_REVENUE_YTD, TIME_DECAY_REVENUE_YTD,
+               SPEND_YOY_CHANGE_PCT, IMPRESSIONS_YOY_CHANGE_PCT
+        FROM ${ED_SCHEMA}.PAID_ADS_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+      `;
+
+      const [pipelineResult, adsResult] = await Promise.all([
+        this.snowflakeService.execute<{
+          TOTAL_PIPELINE_YTD: number;
+          WON_REVENUE_YTD: number;
+          LOST_REVENUE_YTD: number;
+          OPEN_PIPELINE_YTD: number;
+          TOTAL_DEALS_YTD: number;
+          WON_DEALS_YTD: number;
+          LOST_DEALS_YTD: number;
+          OPEN_DEALS_YTD: number;
+          AVG_WON_DEAL_SIZE_YTD: number;
+          CONVERSION_RATE_YTD: number;
+          WON_REVENUE_PRIOR_YEAR: number;
+          WON_REVENUE_YOY_CHANGE_PCT: number;
+        }>(pipelineQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          TOTAL_SPEND_YTD: number;
+          TOTAL_IMPRESSIONS_YTD: number;
+          TOTAL_CLICKS_YTD: number;
+          LINEAR_ROAS_YTD: number;
+          AVG_CPC_YTD: number;
+          CTR_YTD: number;
+          CONVERSION_RATE_YTD: number;
+          FIRST_TOUCH_REVENUE_YTD: number;
+          LAST_TOUCH_REVENUE_YTD: number;
+          LINEAR_REVENUE_YTD: number;
+          TIME_DECAY_REVENUE_YTD: number;
+          SPEND_YOY_CHANGE_PCT: number;
+          IMPRESSIONS_YOY_CHANGE_PCT: number;
+        }>(paidAdsQuery, [foundationSlug]),
+      ]);
+
+      const pipeline = pipelineResult.rows.length > 0 ? pipelineResult.rows[0] : null;
+      const ads = adsResult.rows.length > 0 ? adsResult.rows[0] : null;
+
+      const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
+      const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
+      const changePercentage = pipeline?.WON_REVENUE_YOY_CHANGE_PCT ?? 0;
+      const matchRate = pipeline?.CONVERSION_RATE_YTD ?? 0;
+      const totalDeals = pipeline?.TOTAL_DEALS_YTD ?? 0;
+
+      return {
+        pipelineInfluenced,
+        revenueAttributed: wonRevenue,
+        matchRate,
+        changePercentage,
+        trend: changePercentage >= 0 ? 'up' : 'down',
+        attributionModels: {
+          linear: ads?.LINEAR_REVENUE_YTD ?? 0,
+          firstTouch: ads?.FIRST_TOUCH_REVENUE_YTD ?? 0,
+          lastTouch: ads?.LAST_TOUCH_REVENUE_YTD ?? 0,
+        },
+        engagementTypes: pipeline
+          ? [
+              { type: 'Won', percentage: totalDeals > 0 ? Number(((pipeline.WON_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+              { type: 'Lost', percentage: totalDeals > 0 ? Number(((pipeline.LOST_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+              { type: 'Open', percentage: totalDeals > 0 ? Number(((pipeline.OPEN_DEALS_YTD / totalDeals) * 100).toFixed(1)) : 0 },
+            ]
+          : [],
+        paidMedia: {
+          roas: ads?.LINEAR_ROAS_YTD ?? 0,
+          impressions: ads?.TOTAL_IMPRESSIONS_YTD ?? 0,
+          adSpend: ads?.TOTAL_SPEND_YTD ?? 0,
+          adRevenue: (ads?.LINEAR_ROAS_YTD ?? 0) * (ads?.TOTAL_SPEND_YTD ?? 0),
+        },
+      };
+    } catch (error) {
+      logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {
+        foundation_slug: foundationSlug,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return defaultResponse;
     }
   }
 }
