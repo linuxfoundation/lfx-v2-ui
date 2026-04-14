@@ -28,9 +28,9 @@ export class VoteService {
       params = params.set('project_uid', projectUid);
     }
     if (foundationUid) {
-      params = params.set('foundationUid', foundationUid);
+      params = params.set('foundation_uid', foundationUid);
     }
-    return this.http.get<Vote[]>('/api/votes/my-votes', { params });
+    return this.http.get<Vote[]>('/api/votes/my-votes', { params }).pipe(catchError(() => of([])));
   }
 
   public getVotesByProject(projectUid: string, pageSize?: number, orderBy?: string): Observable<Vote[]> {

@@ -101,13 +101,13 @@ export class UserController {
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_meetings', {
       project_uid: req.query['projectUid'],
-      foundation_uid: req.query['foundationUid'],
+      foundation_uid: req.query['foundation_uid'],
       limit: req.query['limit'],
     });
 
     try {
       const projectUid = req.query['projectUid'] as string | undefined;
-      const foundationUid = req.query['foundationUid'] as string | undefined;
+      const foundationUid = req.query['foundation_uid'] as string | undefined;
 
       // Extract user email from OIDC (lowercased for consistent tag matching)
       const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
@@ -165,13 +165,13 @@ export class UserController {
   public async getUserPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_past_meetings', {
       project_uid: req.query['projectUid'],
-      foundation_uid: req.query['foundationUid'],
+      foundation_uid: req.query['foundation_uid'],
       limit: req.query['limit'],
     });
 
     try {
       const projectUid = req.query['projectUid'] as string | undefined;
-      const foundationUid = req.query['foundationUid'] as string | undefined;
+      const foundationUid = req.query['foundation_uid'] as string | undefined;
 
       // Extract user email from OIDC (lowercased for consistent tag matching)
       const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();

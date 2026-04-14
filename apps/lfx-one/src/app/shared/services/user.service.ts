@@ -152,7 +152,7 @@ export class UserService {
       params['projectUid'] = projectUid;
     }
     if (foundationUid) {
-      params['foundationUid'] = foundationUid;
+      params['foundation_uid'] = foundationUid;
     }
     return this.http.get<Meeting[]>('/api/user/meetings', { params }).pipe(
       catchError((error) => {
@@ -175,7 +175,7 @@ export class UserService {
       params['projectUid'] = projectUid;
     }
     if (foundationUid) {
-      params['foundationUid'] = foundationUid;
+      params['foundation_uid'] = foundationUid;
     }
     return this.http.get<PastMeeting[]>('/api/user/past-meetings', { params }).pipe(
       catchError((error) => {

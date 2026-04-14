@@ -528,6 +528,7 @@ export class CommitteeService {
     if (projectUid) {
       return result.filter((c) => c.project_uid === projectUid);
     } else if (foundationUid) {
+      logger.debug(req, 'get_my_committees', 'Filtering by foundation', { foundation_uid: foundationUid });
       const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
       const uidSet = new Set(uids);
       return result.filter((c) => uidSet.has(c.project_uid));

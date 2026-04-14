@@ -2538,6 +2538,7 @@ export class ProjectService {
    * @returns Array of UIDs including the foundation itself and all child projects
    */
   public async getFoundationProjectUids(req: Request, foundationUid: string): Promise<string[]> {
+    logger.debug(req, 'get_foundation_project_uids', 'Resolving child projects for foundation', { foundation_uid: foundationUid });
     const uids = [foundationUid];
     try {
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<{ uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
@@ -2557,6 +2558,7 @@ export class ProjectService {
         foundation_uid: foundationUid,
       });
     }
+    logger.debug(req, 'get_foundation_project_uids', 'Resolved foundation project UIDs', { foundation_uid: foundationUid, count: uids.length });
     return uids;
   }
 }

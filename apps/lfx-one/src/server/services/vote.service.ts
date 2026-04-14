@@ -333,6 +333,7 @@ export class VoteService {
     if (projectUid) {
       return sorted.filter((v) => v.project_uid === projectUid);
     } else if (foundationUid) {
+      logger.debug(req, 'get_my_votes', 'Filtering by foundation', { foundation_uid: foundationUid });
       const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
       const uidSet = new Set(uids);
       return sorted.filter((v) => uidSet.has(v.project_uid));

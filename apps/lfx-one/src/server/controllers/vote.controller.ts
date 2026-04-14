@@ -62,7 +62,7 @@ export class VoteController {
    */
   public async getMyVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
     const projectUid = req.query['project_uid'] as string | undefined;
-    const foundationUid = req.query['foundationUid'] as string | undefined;
+    const foundationUid = req.query['foundation_uid'] as string | undefined;
     const startTime = logger.startOperation(req, 'get_my_votes', {
       project_uid: projectUid,
       foundation_uid: foundationUid,

@@ -467,6 +467,7 @@ export class MailingListService {
     if (projectUid) {
       result = filtered.filter((ml) => ml.project_uid === projectUid);
     } else if (foundationUid) {
+      logger.debug(req, 'get_my_mailing_lists', 'Filtering by foundation', { foundation_uid: foundationUid });
       const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
       const uidSet = new Set(uids);
       result = filtered.filter((ml) => uidSet.has(ml.project_uid));

@@ -14,7 +14,7 @@ import {
   QueryServiceCountResponse,
   UpdateMailingListMemberRequest,
 } from '@lfx-one/shared/interfaces';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 
 /**
  * Service for managing mailing list data
@@ -47,9 +47,9 @@ export class MailingListService {
       params = params.set('project_uid', projectUid);
     }
     if (foundationUid) {
-      params = params.set('foundationUid', foundationUid);
+      params = params.set('foundation_uid', foundationUid);
     }
-    return this.http.get<MyMailingList[]>(`${this.baseUrl}/my-mailing-lists`, { params });
+    return this.http.get<MyMailingList[]>(`${this.baseUrl}/my-mailing-lists`, { params }).pipe(catchError(() => of([])));
   }
 
   public getMailingList(uid: string): Observable<GroupsIOMailingList> {

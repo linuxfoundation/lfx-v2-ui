@@ -139,7 +139,7 @@ export class CommitteeService {
       params = params.set('project_uid', projectUid);
     }
     if (foundationUid) {
-      params = params.set('foundationUid', foundationUid);
+      params = params.set('foundation_uid', foundationUid);
     }
     return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(catchError(() => of([])));
   }
