@@ -34,10 +34,13 @@ export class RevenueImpactDrawerComponent {
     engagementTypes: [],
     paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
     attributionChannels: [],
+    projectBreakdown: [],
   });
 
   // === Computed Signals ===
   protected readonly paidMediaTrendChartData: Signal<ChartData<'bar'>> = this.initPaidMediaTrendChartData();
+  protected readonly projectBreakdownChartData: Signal<ChartData<'bar'>> = this.initProjectBreakdownChartData();
+  protected readonly projectBreakdownHeight: Signal<number> = computed(() => Math.max(160, this.data().projectBreakdown.length * 56));
 
   protected readonly paidMediaTrendChartOptions: ChartOptions<'bar'> = {
     responsive: true,
@@ -98,6 +101,52 @@ export class RevenueImpactDrawerComponent {
     },
   };
 
+  protected readonly projectBreakdownChartOptions: ChartOptions<'bar'> = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'end',
+        labels: { color: lfxColors.gray[700], font: { size: 11 }, boxWidth: 12, boxHeight: 12, padding: 12 },
+      },
+      tooltip: {
+        ...DASHBOARD_TOOLTIP_CONFIG,
+        callbacks: {
+          label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.parsed.x ?? 0).toLocaleString()} impressions`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        display: true,
+        grid: { color: lfxColors.gray[200], lineWidth: 1 },
+        border: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          callback: (value) => {
+            const n = Number(value);
+            if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+            if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+            return n.toString();
+          },
+        },
+      },
+      y: {
+        stacked: true,
+        display: true,
+        grid: { display: false },
+        border: { display: true, color: lfxColors.gray[300] },
+        ticks: { color: lfxColors.gray[700], font: { size: 11 } },
+      },
+    },
+  };
+
   protected formatRevenue(value: number): string {
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
@@ -149,6 +198,39 @@ export class RevenueImpactDrawerComponent {
           } as never,
         ],
       };
+    });
+  }
+
+  private initProjectBreakdownChartData(): Signal<ChartData<'bar'>> {
+    return computed(() => {
+      const rows = this.data().projectBreakdown;
+      if (rows.length === 0) {
+        return { labels: [], datasets: [] };
+      }
+      const channelColors: Record<string, string> = {
+        google_ads: lfxColors.blue[500],
+        facebook_ads: lfxColors.blue[700],
+        microsoft_ads: lfxColors.emerald[600],
+        linkedin_ads: lfxColors.gray[700],
+        reddit_ads: lfxColors.red[500],
+      };
+      const fallbackColor = lfxColors.gray[500];
+      const channelSet = new Set<string>();
+      rows.forEach((r) => Object.keys(r.channelImpressions).forEach((c) => channelSet.add(c)));
+      const channels = Array.from(channelSet).sort(
+        (a, b) => rows.reduce((sum, r) => sum + (r.channelImpressions[b] ?? 0), 0) - rows.reduce((sum, r) => sum + (r.channelImpressions[a] ?? 0), 0)
+      );
+
+      const labels = rows.map((r) => r.project);
+      const datasets = channels.map((channel) => ({
+        label: this.formatChannelLabel(channel),
+        data: rows.map((r) => r.channelImpressions[channel] ?? 0),
+        backgroundColor: channelColors[channel] ?? fallbackColor,
+        borderRadius: 2,
+        borderSkipped: false,
+      }));
+
+      return { labels, datasets };
     });
   }
 }

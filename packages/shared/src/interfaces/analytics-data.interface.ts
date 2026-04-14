@@ -3059,6 +3059,16 @@ export interface RevenueImpactAttributionChannel {
 }
 
 /**
+ * Per-project paid-media breakdown for Revenue Impact drill-down.
+ * channelImpressions maps channel name → impressions in the last 12 months.
+ */
+export interface RevenueImpactProjectBreakdown {
+  project: string;
+  totalImpressions: number;
+  channelImpressions: Record<string, number>;
+}
+
+/**
  * API response for Revenue Impact (Marketing Attribution) metric
  * Pipeline, revenue, attribution models, engagement channels, paid media
  */
@@ -3072,6 +3082,7 @@ export interface RevenueImpactResponse {
   engagementTypes: RevenueImpactEngagementType[];
   paidMedia: RevenueImpactPaidMedia;
   attributionChannels: RevenueImpactAttributionChannel[];
+  projectBreakdown: RevenueImpactProjectBreakdown[];
 }
 
 /**

@@ -1058,6 +1058,7 @@ export class AnalyticsService {
           engagementTypes: [],
           paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
           attributionChannels: [],
+          projectBreakdown: [],
         });
       })
     );

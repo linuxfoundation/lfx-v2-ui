@@ -2925,6 +2925,7 @@ export class ProjectService {
       engagementTypes: [],
       paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
       attributionChannels: [],
+      projectBreakdown: [],
     };
 
     try {
@@ -2967,7 +2968,17 @@ export class ProjectService {
         LIMIT 12
       `;
 
-      const [pipelineResult, adsResult, channelsResult, monthlyTrendResult] = await Promise.all([
+      // Per-project per-channel impressions — last 12 months
+      const projectBreakdownQuery = `
+        SELECT PROJECT_NAME, CHANNEL, SUM(IMPRESSIONS) AS IMPRESSIONS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+        WHERE FOUNDATION_SLUG = ?
+          AND CAMPAIGN_MONTH >= DATEADD(month, -12, CURRENT_DATE())
+        GROUP BY PROJECT_NAME, CHANNEL
+        ORDER BY PROJECT_NAME, IMPRESSIONS DESC
+      `;
+
+      const [pipelineResult, adsResult, channelsResult, monthlyTrendResult, projectBreakdownResult] = await Promise.all([
         this.snowflakeService.execute<{
           TOTAL_PIPELINE_YTD: number;
           WON_REVENUE_YTD: number;
@@ -3008,6 +3019,11 @@ export class ProjectService {
           IMPRESSIONS: number;
           FIRST_TOUCH_ROAS: number;
         }>(monthlyTrendQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          PROJECT_NAME: string;
+          CHANNEL: string;
+          IMPRESSIONS: number;
+        }>(projectBreakdownQuery, [foundationSlug]),
       ]);
 
       const pipeline = pipelineResult.rows.length > 0 ? pipelineResult.rows[0] : null;
@@ -3030,6 +3046,22 @@ export class ProjectService {
         impressions: r.IMPRESSIONS ?? 0,
         roas: r.FIRST_TOUCH_ROAS ?? 0,
       }));
+
+      const projectMap = new Map<string, { total: number; channels: Record<string, number> }>();
+      for (const r of projectBreakdownResult.rows) {
+        const impressions = r.IMPRESSIONS ?? 0;
+        const entry = projectMap.get(r.PROJECT_NAME) ?? { total: 0, channels: {} };
+        entry.total += impressions;
+        entry.channels[r.CHANNEL] = (entry.channels[r.CHANNEL] ?? 0) + impressions;
+        projectMap.set(r.PROJECT_NAME, entry);
+      }
+      const projectBreakdown = Array.from(projectMap.entries())
+        .map(([project, { total, channels }]) => ({
+          project,
+          totalImpressions: total,
+          channelImpressions: channels,
+        }))
+        .sort((a, b) => b.totalImpressions - a.totalImpressions);
 
       const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
       const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
@@ -3063,6 +3095,7 @@ export class ProjectService {
           monthlyTrend,
         },
         attributionChannels,
+        projectBreakdown,
       };
     } catch (error) {
       logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {
