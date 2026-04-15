@@ -100,17 +100,25 @@ export class ImpersonationService {
       const tokenEndpoint = `${this.issuerBaseUrl}/oauth/token`;
       const clientAssertion = this.buildClientAssertion(tokenEndpoint);
 
-      const tokenResponse = await fetch(tokenEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: this.clientId,
-          client_assertion: clientAssertion,
-          client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-          audience: mgmtAudience,
-        }).toString(),
-      });
+      const tokenController = new AbortController();
+      const tokenTimeout = setTimeout(() => tokenController.abort(), 10000);
+      let tokenResponse: Response;
+      try {
+        tokenResponse = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: this.clientId,
+            client_assertion: clientAssertion,
+            client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+            audience: mgmtAudience,
+          }).toString(),
+          signal: tokenController.signal,
+        });
+      } finally {
+        clearTimeout(tokenTimeout);
+      }
 
       if (!tokenResponse.ok) {
         logger.warning(req, 'fetch_target_user_profile', 'Failed to get management API token', {
@@ -121,9 +129,24 @@ export class ImpersonationService {
 
       const { access_token: mgmtToken } = await tokenResponse.json();
 
-      const response = await fetch(`${this.issuerBaseUrl}/api/v2/users/${encodeURIComponent(userId)}?fields=name,picture,given_name,family_name`, {
-        headers: { Authorization: `Bearer ${mgmtToken}` },
-      });
+      const profileController = new AbortController();
+      const profileTimeout = setTimeout(() => profileController.abort(), 5000);
+      let response: Response;
+      try {
+        response = await fetch(`${this.issuerBaseUrl}/api/v2/users/${encodeURIComponent(userId)}?fields=name,picture,given_name,family_name`, {
+          headers: { Authorization: `Bearer ${mgmtToken}` },
+          signal: profileController.signal,
+        });
+      } catch (abortError) {
+        clearTimeout(profileTimeout);
+        logger.warning(req, 'fetch_target_user_profile', 'Profile lookup timed out, continuing without profile data', {
+          user_id: userId,
+          error: abortError instanceof Error ? abortError.message : 'Unknown error',
+        });
+        return {};
+      } finally {
+        clearTimeout(profileTimeout);
+      }
 
       if (!response.ok) {
         logger.warning(req, 'fetch_target_user_profile', 'Failed to fetch target user profile', {
@@ -173,7 +196,8 @@ export class ImpersonationService {
     };
 
     req.appSession['impersonationToken'] = tokenResponse.access_token;
-    req.appSession['impersonationExpiresAt'] = Date.now() + (tokenResponse.expires_in - 300) * 1000;
+    const safetyBufferSeconds = tokenResponse.expires_in > 300 ? 300 : 0;
+    req.appSession['impersonationExpiresAt'] = Date.now() + (tokenResponse.expires_in - safetyBufferSeconds) * 1000;
     req.appSession['impersonationUser'] = targetUser;
     req.appSession['impersonator'] = impersonator;
 

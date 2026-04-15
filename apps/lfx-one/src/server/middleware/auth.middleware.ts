@@ -109,14 +109,29 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
       const impersonationExpiresAt = req.appSession?.['impersonationExpiresAt'];
 
       if (impersonationToken && typeof impersonationToken === 'string' && impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
-        req.bearerToken = impersonationToken;
+        // Validate JWT format before using
+        const tokenParts = impersonationToken.split('.');
+        if (tokenParts.length !== 3) {
+          // Malformed token — clean up and fall through to normal extraction
+          logger.warning(req, 'impersonation_token_malformed', 'Impersonation token has invalid JWT format, clearing session', {
+            path: req.path,
+          });
+          if (req.appSession) {
+            delete req.appSession['impersonationToken'];
+            delete req.appSession['impersonationExpiresAt'];
+            delete req.appSession['impersonationUser'];
+            delete req.appSession['impersonator'];
+          }
+        } else {
+          req.bearerToken = impersonationToken;
 
-        logger.info(req, 'impersonation_request', 'Request under impersonation', {
-          path: req.path,
-          impersonator: req.appSession?.['impersonator']?.email,
-          target: req.appSession?.['impersonationUser']?.email,
-        });
-        return { success: true, needsLogout: false };
+          logger.info(req, 'impersonation_request', 'Request under impersonation', {
+            path: req.path,
+            impersonator: req.appSession?.['impersonator']?.email,
+            target: req.appSession?.['impersonationUser']?.email,
+          });
+          return { success: true, needsLogout: false };
+        }
       }
 
       // If impersonation token is expired, clear it and fall through to normal extraction

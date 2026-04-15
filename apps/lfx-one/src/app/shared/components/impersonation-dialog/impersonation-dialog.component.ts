@@ -2,31 +2,35 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { ButtonComponent } from '@components/button/button.component';
+import { InputTextComponent } from '@components/input-text/input-text.component';
 import { ImpersonationService } from '@services/impersonation.service';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { take } from 'rxjs';
 
 @Component({
   selector: 'lfx-impersonation-dialog',
-  imports: [ReactiveFormsModule],
+  imports: [InputTextComponent, ButtonComponent],
   templateUrl: './impersonation-dialog.component.html',
 })
 export class ImpersonationDialogComponent {
   private readonly impersonationService = inject(ImpersonationService);
   private readonly dialogRef = inject(DynamicDialogRef);
 
-  public targetUserControl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
-  public loading = signal(false);
-  public error = signal('');
+  protected targetUserForm = new FormGroup({
+    targetUser: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+  });
+  protected loading = signal(false);
+  protected error = signal('');
 
   public submit(): void {
-    const target = this.targetUserControl.value.trim();
+    const target = this.targetUserForm.controls.targetUser.value.trim();
     if (!target) return;
 
     this.loading.set(true);
     this.error.set('');
-    this.targetUserControl.disable();
+    this.targetUserForm.controls.targetUser.disable();
 
     this.impersonationService
       .startImpersonation(target)
@@ -38,7 +42,7 @@ export class ImpersonationDialogComponent {
         },
         error: (err) => {
           this.loading.set(false);
-          this.targetUserControl.enable();
+          this.targetUserForm.controls.targetUser.enable();
           this.error.set(err.error?.error || 'Failed to start impersonation');
         },
       });

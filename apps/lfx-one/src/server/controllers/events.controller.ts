@@ -241,11 +241,10 @@ export class EventsController {
         });
       }
 
-      const userName =
-        (req.appSession?.['impersonationUser']?.name as string) ||
-        (req.appSession?.['impersonationUser']?.username as string) ||
-        (req.oidc?.user?.['name'] as string) ||
-        userEmail;
+      const impersonationUser = req.appSession?.['impersonationUser'];
+      const userName = impersonationUser
+        ? (impersonationUser.name as string) || (impersonationUser.username as string) || userEmail
+        : (req.oidc?.user?.['name'] as string) || userEmail;
 
       const pdfBuffer = await this.certificateService.generateCertificate(req, {
         eventId,

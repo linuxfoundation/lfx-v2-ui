@@ -18,11 +18,12 @@ import { UserService } from '@services/user.service';
 import { DrawerModule } from 'primeng/drawer';
 import { filter, take } from 'rxjs';
 
+import { ButtonComponent } from '@components/button/button.component';
 import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, DevToolbarComponent, LensSwitcherComponent],
+  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, DevToolbarComponent, LensSwitcherComponent, ButtonComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -35,7 +36,7 @@ export class MainLayoutComponent {
   private readonly personaService = inject(PersonaService);
   private readonly lensService = inject(LensService);
   private readonly impersonationService = inject(ImpersonationService);
-  public readonly userService = inject(UserService);
+  protected readonly userService = inject(UserService);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
@@ -364,10 +365,13 @@ export class MainLayoutComponent {
     }
   }
 
-  public stopImpersonation(): void {
-    this.impersonationService.stopImpersonation().pipe(take(1)).subscribe(() => {
-      window.location.reload();
-    });
+  protected stopImpersonation(): void {
+    this.impersonationService
+      .stopImpersonation()
+      .pipe(take(1))
+      .subscribe(() => {
+        window.location.reload();
+      });
   }
 
   /**

@@ -21,8 +21,8 @@ export class ImpersonationService {
   }
 
   public getStatus(): Observable<ImpersonationStatusResponse> {
-    return this.http.get<ImpersonationStatusResponse>('/api/impersonate/status').pipe(
-      catchError(() => of({ impersonating: false } as ImpersonationStatusResponse))
-    );
+    return this.http
+      .get<ImpersonationStatusResponse>('/api/impersonate/status')
+      .pipe(catchError(() => of({ impersonating: false } as ImpersonationStatusResponse)));
   }
 }

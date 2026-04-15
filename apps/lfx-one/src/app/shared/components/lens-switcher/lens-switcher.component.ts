@@ -5,6 +5,7 @@ import { NgClass } from '@angular/common';
 import { Component, inject, input, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
+import { ButtonComponent } from '@components/button/button.component';
 import { ImpersonationDialogComponent } from '@components/impersonation-dialog/impersonation-dialog.component';
 import { environment } from '@environments/environment';
 import { LENS_DEFAULT_ROUTES } from '@lfx-one/shared/constants';
@@ -17,7 +18,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'lfx-lens-switcher',
-  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent],
+  imports: [NgClass, RouterLink, TooltipModule, PopoverModule, AvatarComponent, ButtonComponent],
   providers: [DialogService],
   templateUrl: './lens-switcher.component.html',
   styleUrl: './lens-switcher.component.scss',
