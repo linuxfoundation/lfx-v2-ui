@@ -17,7 +17,13 @@ import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EngagedCommunitySizeResponse, MarketingActionType, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type {
+  BrandReachResponse,
+  EngagedCommunitySizeResponse,
+  MarketingActionType,
+  MarketingRecommendedAction,
+  MarketingKeyInsight,
+} from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-engaged-community-drawer',
@@ -38,6 +44,16 @@ export class EngagedCommunityDrawerComponent {
     breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
     monthlyData: [],
   });
+  public readonly brandReachData = input<BrandReachResponse>({
+    totalSocialFollowers: 0,
+    totalMonthlySessions: 0,
+    activePlatforms: 0,
+    changePercentage: 0,
+    trend: 'up',
+    socialPlatforms: [],
+    websiteDomains: [],
+    dailyTrend: [],
+  });
   // === Computed Signals ===
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
@@ -52,6 +68,7 @@ export class EngagedCommunityDrawerComponent {
   );
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly breakdownChartData: Signal<ChartData<'bar'>> = this.initBreakdownChartData();
+  protected readonly dailyTrendData: Signal<ChartData<'line'>> = this.initDailyTrendData();
 
   protected readonly trendChartOptions: ChartOptions<'line'> = createLineChartOptions({
     plugins: {
@@ -121,6 +138,40 @@ export class EngagedCommunityDrawerComponent {
     },
   });
 
+  protected readonly dailyTrendOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true, mode: 'index', intersect: false },
+    },
+    scales: {
+      x: {
+        display: true,
+        grid: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          maxTicksLimit: 6,
+        },
+      },
+      y: {
+        display: true,
+        grid: { color: lfxColors.gray[200], lineWidth: 1 },
+        border: { display: false },
+        ticks: {
+          color: lfxColors.gray[500],
+          font: { size: 11 },
+          callback: (value) => {
+            const num = Number(value);
+            if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
+            return String(num);
+          },
+        },
+      },
+    },
+  };
+
   protected readonly formatNumber = formatNumber;
 
   // === Protected Methods ===
@@ -142,36 +193,29 @@ export class EngagedCommunityDrawerComponent {
         return actions;
       }
 
-      // Check if working groups are underrepresented
-      if (totalMembers > 0 && breakdown.workingGroupMembers < totalMembers * 0.1) {
-        actions.push({
-          title: 'Increase working group participation',
-          description: `Working group members are only ${((breakdown.workingGroupMembers / totalMembers) * 100).toFixed(0)}% of total — improve outreach to convert community members into active participants`,
-          priority: 'high',
-          dueLabel: 'This quarter',
-          actionType: 'engagement',
-        });
-      }
-
-      // Check for declining community
-      if (changePercentage < -5) {
+      // MoM drop — actionable when large
+      if (changePercentage <= -5) {
         actions.push({
           title: 'Address community decline',
-          description: `Community size dropped ${Math.abs(changePercentage)}% — review engagement programs and onboarding flow`,
+          description: `Engaged community dropped ${Math.abs(changePercentage).toFixed(1)}% vs last month — review engagement programs and onboarding flow`,
           priority: 'high',
           dueLabel: 'This month',
           actionType: 'decline',
         });
       }
 
-      if (actions.length === 0) {
-        actions.push({
-          title: 'Continue community growth strategy',
-          description: `${formatNumber(totalMembers)} engaged members${changePercentage > 0 ? ` — growing ${changePercentage}%` : ''}`,
-          priority: 'low',
-          dueLabel: 'Ongoing',
-          actionType: 'growth',
-        });
+      // Working group is the deepest engagement signal — flag floor
+      if (totalMembers > 0) {
+        const wgShare = (breakdown.workingGroupMembers / totalMembers) * 100;
+        if (wgShare < 10) {
+          actions.push({
+            title: 'Grow working group participation',
+            description: `Working groups hold only ${wgShare.toFixed(0)}% of engaged members (${formatNumber(breakdown.workingGroupMembers)}) — convert passive community members into active contributors`,
+            priority: 'medium',
+            dueLabel: 'This quarter',
+            actionType: 'engagement',
+          });
+        }
       }
 
       return actions;
@@ -181,41 +225,60 @@ export class EngagedCommunityDrawerComponent {
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
       const { totalMembers, changePercentage, breakdown, monthlyData } = this.data();
+      const brand = this.brandReachData();
       const insights: MarketingKeyInsight[] = [];
 
       if (totalMembers === 0 && monthlyData.length === 0) {
         return insights;
       }
 
-      // Growth trend
-      if (changePercentage > 5) {
-        insights.push({ text: `Community grew ${changePercentage}% month-over-month`, type: 'driver' });
-      } else if (changePercentage < -5) {
-        insights.push({ text: `Community declined ${Math.abs(changePercentage)}% month-over-month`, type: 'warning' });
-      } else if (changePercentage !== 0) {
-        insights.push({ text: `Community ${changePercentage > 0 ? 'up' : 'down'} ${Math.abs(changePercentage)}% — relatively stable`, type: 'info' });
+      // MoM headline
+      if (changePercentage >= 5) {
+        insights.push({ text: `Engaged community grew ${changePercentage.toFixed(1)}% MoM to ${formatNumber(totalMembers)}`, type: 'driver' });
+      } else if (changePercentage <= -2) {
+        insights.push({ text: `Engaged community declined ${Math.abs(changePercentage).toFixed(1)}% MoM`, type: 'warning' });
       }
 
-      // Largest segment
+      // 3-month consistent growth
+      if (monthlyData.length >= 3) {
+        const recent3 = monthlyData.slice(-3);
+        const isGrowing = recent3[0].value < recent3[1].value && recent3[1].value < recent3[2].value;
+        if (isGrowing) {
+          insights.push({ text: 'Engaged community growing for 3 consecutive months', type: 'driver' });
+        }
+      }
+
+      // Segment composition — keep in sync with initBreakdownChartData (Community / Working Groups / Certified)
       if (totalMembers > 0) {
         const segments = [
           { name: 'Community members', value: breakdown.communityMembers },
           { name: 'Working group members', value: breakdown.workingGroupMembers },
           { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
         ].sort((a, b) => b.value - a.value);
-        const topShare = (segments[0].value / totalMembers) * 100;
-        insights.push({ text: `${segments[0].name} are the largest segment at ${topShare.toFixed(0)}% of total`, type: 'info' });
+        const top = segments[0];
+        const topShare = (top.value / totalMembers) * 100;
+        insights.push({ text: `${top.name} are the largest segment (${formatNumber(top.value)}, ${topShare.toFixed(0)}%)`, type: 'info' });
       }
 
-      // Monthly trend consistency
-      if (monthlyData.length >= 3) {
-        const recent3 = monthlyData.slice(-3);
-        const isGrowing = recent3[0].value < recent3[1].value && recent3[1].value < recent3[2].value;
-        const isShrinking = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
-        if (isGrowing) {
-          insights.push({ text: 'Community growing for 3 consecutive months', type: 'driver' });
-        } else if (isShrinking) {
-          insights.push({ text: 'Community declining for 3 consecutive months', type: 'warning' });
+      // Weekly sessions — drawer renders 6-month weekly chart, compare recent 4 weeks vs prior 4
+      if (brand.dailyTrend.length >= 8) {
+        const recent4 = brand.dailyTrend.slice(-4).reduce((s, d) => s + d.sessions, 0);
+        const prior4 = brand.dailyTrend.slice(-8, -4).reduce((s, d) => s + d.sessions, 0);
+        if (prior4 === 0 && recent4 > 0) {
+          insights.push({
+            text: `Weekly sessions started growing from a zero baseline (${formatNumber(recent4)} last 4 weeks)`,
+            type: 'driver',
+          });
+        } else if (prior4 > 0) {
+          const monthDelta = ((recent4 - prior4) / prior4) * 100;
+          if (monthDelta >= 10) {
+            insights.push({ text: `Weekly sessions up ${monthDelta.toFixed(0)}% vs prior month (${formatNumber(recent4)} last 4 weeks)`, type: 'driver' });
+          } else if (monthDelta <= -10) {
+            insights.push({
+              text: `Weekly sessions down ${Math.abs(monthDelta).toFixed(0)}% vs prior month — investigate content or promotion changes`,
+              type: 'warning',
+            });
+          }
         }
       }
 
@@ -238,6 +301,26 @@ export class EngagedCommunityDrawerComponent {
             borderWidth: 2,
             pointRadius: 3,
             pointBackgroundColor: lfxColors.blue[500],
+          },
+        ],
+      };
+    });
+  }
+
+  private initDailyTrendData(): Signal<ChartData<'line'>> {
+    return computed(() => {
+      const { dailyTrend } = this.brandReachData();
+      return {
+        labels: dailyTrend.map((d) => d.day),
+        datasets: [
+          {
+            data: dailyTrend.map((d) => d.sessions),
+            borderColor: lfxColors.blue[500],
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
           },
         ],
       };

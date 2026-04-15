@@ -63,6 +63,14 @@ export class SocialMediaDrawerComponent {
   protected readonly formattedTotalFollowers: Signal<string> = computed(() => formatNumber(this.drawerData().totalFollowers));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
+    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
+  );
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
+    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
+  );
   protected readonly followerTrendChartData: Signal<ChartData<'line'>> = this.initFollowerTrendChartData();
   protected readonly platformChartData: Signal<ChartData<'bar'>> = this.initPlatformChartData();
 
@@ -169,15 +177,15 @@ export class SocialMediaDrawerComponent {
     };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.name || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(
-        filter(([isVisible, name]) => isVisible && !!name),
-        map(([, name]) => name),
+        filter(([isVisible, slug]) => isVisible && !!slug),
+        map(([, slug]) => slug),
         tap(() => this.drawerLoading.set(true)),
-        switchMap((foundationName) =>
-          this.analyticsService.getSocialMedia(foundationName).pipe(
+        switchMap((foundationSlug) =>
+          this.analyticsService.getSocialMedia(foundationSlug).pipe(
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);

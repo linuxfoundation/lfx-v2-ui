@@ -50,6 +50,14 @@ export class WebsiteVisitsDrawerComponent {
   protected readonly formattedTotalPageViews: Signal<string> = computed(() => formatNumber(this.drawerData().totalPageViews));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
+    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
+  );
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
+    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
+  );
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly domainChartData: Signal<ChartData<'bar'>> = this.initDomainChartData();
 
@@ -270,20 +278,24 @@ export class WebsiteVisitsDrawerComponent {
         }
       }
 
-      // Daily trend
-      if (dailyData.length >= 14) {
+      // Weekly trend — first half vs second half of 6-month window
+      if (dailyData.length >= 8) {
         const firstHalf = dailyData.slice(0, Math.floor(dailyData.length / 2));
         const secondHalf = dailyData.slice(Math.floor(dailyData.length / 2));
         const firstAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
         const secondAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
-        if (secondAvg > firstAvg * 1.1) {
+        if (firstAvg === 0 && secondAvg > 0) {
+          insights.push({ text: 'Sessions started growing from a zero baseline over the last 6 months', type: 'driver' });
+        } else if (firstAvg === 0) {
+          insights.push({ text: 'No session activity over the last 6 months', type: 'info' });
+        } else if (secondAvg > firstAvg * 1.1) {
           const growth = Math.round(((secondAvg - firstAvg) / firstAvg) * 100);
-          insights.push({ text: `Sessions trending up ~${growth}% in recent days`, type: 'driver' });
+          insights.push({ text: `Sessions trending up ~${growth}% over the last 6 months`, type: 'driver' });
         } else if (secondAvg < firstAvg * 0.9) {
           const decline = Math.round(((firstAvg - secondAvg) / firstAvg) * 100);
-          insights.push({ text: `Sessions trending down ~${decline}% in recent days`, type: 'warning' });
+          insights.push({ text: `Sessions trending down ~${decline}% over the last 6 months`, type: 'warning' });
         } else {
-          insights.push({ text: 'Session volume stable over the last 30 days', type: 'info' });
+          insights.push({ text: 'Session volume stable over the last 6 months', type: 'info' });
         }
       }
 

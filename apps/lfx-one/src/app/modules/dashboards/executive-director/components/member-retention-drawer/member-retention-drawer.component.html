@@ -33,13 +33,13 @@
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Renewal Rate</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ data().renewalRate }}%</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ data().renewalRate.toFixed(1) }}%</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Net Revenue Retention</span>
-          <span class="text-2xl font-semibold text-gray-900">{{ data().netRevenueRetention }}%</span>
+          <span class="text-2xl font-semibold text-gray-900">{{ data().netRevenueRetention.toFixed(1) }}%</span>
         </div>
       </lfx-card>
       <lfx-card styleClass="flex-1">
@@ -48,7 +48,7 @@
           @if (data().changePercentage !== 0) {
             <div class="flex items-center gap-2">
               <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage }}%
+                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage.toFixed(1) }}%
               </span>
               <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
             </div>

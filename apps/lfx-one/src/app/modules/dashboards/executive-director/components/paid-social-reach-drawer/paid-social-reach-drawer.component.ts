@@ -44,6 +44,14 @@ export class PaidSocialReachDrawerComponent {
   protected readonly formattedTotalRevenue: Signal<string> = computed(() => formatCurrency(this.drawerData().totalRevenue));
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
+    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
+  );
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
+    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
+  );
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly roasChartData: Signal<ChartData<'bar'>> = this.initRoasChartData();
   protected readonly hasRoasData: Signal<boolean> = computed(() => {
@@ -155,15 +163,15 @@ export class PaidSocialReachDrawerComponent {
     };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.name || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(
-        filter(([isVisible, name]) => isVisible && !!name),
-        map(([, name]) => name),
+        filter(([isVisible, slug]) => isVisible && !!slug),
+        map(([, slug]) => slug),
         tap(() => this.drawerLoading.set(true)),
-        switchMap((foundationName) =>
-          this.analyticsService.getSocialReach(foundationName).pipe(
+        switchMap((foundationSlug) =>
+          this.analyticsService.getSocialReach(foundationSlug).pipe(
             tap(() => this.drawerLoading.set(false)),
             catchError(() => {
               this.drawerLoading.set(false);
@@ -183,45 +191,54 @@ export class PaidSocialReachDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { roas, changePercentage, totalSpend, totalRevenue } = this.drawerData();
+      const { roas, changePercentage, totalSpend, totalRevenue, monthlyRoas } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
-      if (roas > 0 && roas < 1) {
+      // Losing money — the most urgent signal (includes 0.00x — spend with no attributed revenue)
+      if (totalSpend > 0 && roas < 0.8) {
+        const lost = totalSpend - totalRevenue;
         actions.push({
-          title: 'Review ad spend efficiency',
-          description: `ROAS is ${roas.toFixed(2)}x — spending more than earning. Pause underperforming campaigns`,
+          title: 'Cut or pause losing campaigns',
+          description: `ROAS is ${roas.toFixed(2)}x — ${formatCurrency(lost)} spent above revenue earned. Pause bottom-performing campaigns before next cycle`,
           priority: 'high',
           dueLabel: 'This week',
           actionType: 'decline',
         });
-      } else if (changePercentage < -10) {
+      } else if (totalSpend > 0 && roas >= 0.8 && roas < 1) {
         actions.push({
-          title: 'Investigate reach decline',
-          description: `Impressions dropped ${Math.abs(changePercentage)}% — review targeting and bid strategy`,
-          priority: 'high',
-          dueLabel: 'Next campaign',
+          title: 'Campaigns at break-even',
+          description: `ROAS is ${roas.toFixed(2)}x on ${formatCurrency(totalSpend)} spend — not yet profitable. Fix creative and targeting before scaling budget`,
+          priority: 'medium',
+          dueLabel: 'This month',
           actionType: 'investigate',
         });
       }
 
-      if (actions.length === 0) {
-        if (roas > 1) {
+      // ROAS trending down — separate from absolute level
+      if (monthlyRoas && monthlyRoas.length >= 3) {
+        const recent3 = monthlyRoas.slice(-3);
+        const falling = recent3[0] > recent3[1] && recent3[1] > recent3[2];
+        const drop = recent3[0] - recent3[2];
+        if (falling && drop >= 0.5) {
           actions.push({
-            title: 'Scale current campaigns',
-            description: `ROAS at ${roas.toFixed(2)}x with ${formatCurrency(totalRevenue)} revenue on ${formatCurrency(totalSpend)} spend — room to grow`,
-            priority: 'low',
-            dueLabel: 'Ongoing',
-            actionType: 'growth',
-          });
-        } else {
-          actions.push({
-            title: 'Monitor campaign performance',
-            description: `${formatNumber(this.drawerData().totalReach)} total impressions — tracking performance`,
-            priority: 'low',
-            dueLabel: 'Ongoing',
-            actionType: 'growth',
+            title: 'ROAS trending down 3 months straight',
+            description: `ROAS fell from ${recent3[0].toFixed(2)}x to ${recent3[2].toFixed(2)}x over 3 months — investigate audience saturation and creative fatigue`,
+            priority: 'medium',
+            dueLabel: 'This month',
+            actionType: 'investigate',
           });
         }
+      }
+
+      // Reach drop — separate from ROAS
+      if (changePercentage <= -10) {
+        actions.push({
+          title: 'Investigate reach decline',
+          description: `Impressions dropped ${Math.abs(changePercentage).toFixed(1)}% MoM — review targeting, bid strategy, and platform algorithm changes`,
+          priority: 'high',
+          dueLabel: 'Next campaign',
+          actionType: 'investigate',
+        });
       }
 
       return actions;
@@ -237,28 +254,23 @@ export class PaidSocialReachDrawerComponent {
         return insights;
       }
 
-      // ROAS insight
+      // ROAS tiers
       if (roas >= 3) {
         insights.push({
           text: `Strong ROAS at ${roas.toFixed(2)}x — ${formatCurrency(totalRevenue)} revenue on ${formatCurrency(totalSpend)} spend`,
           type: 'driver',
         });
-      } else if (roas >= 1) {
-        insights.push({ text: `ROAS at ${roas.toFixed(2)}x — profitable but room for optimization`, type: 'info' });
-      } else if (totalSpend > 0) {
-        insights.push({
-          text: `ROAS below break-even at ${roas.toFixed(2)}x — spending ${formatCurrency(totalSpend)} for ${formatCurrency(totalRevenue)} revenue`,
-          type: 'warning',
-        });
+      } else if (roas >= 2) {
+        insights.push({ text: `Healthy ROAS at ${roas.toFixed(2)}x — room to scale top campaigns`, type: 'driver' });
+      } else if (roas >= 1 && totalSpend > 0) {
+        insights.push({ text: `Profitable at ${roas.toFixed(2)}x ROAS — fix underperformers before scaling`, type: 'info' });
       }
 
-      // Impression trend
-      if (changePercentage !== 0) {
-        if (changePercentage > 0) {
-          insights.push({ text: `Impressions grew ${changePercentage}% month-over-month`, type: 'driver' });
-        } else {
-          insights.push({ text: `Impressions declined ${Math.abs(changePercentage)}% month-over-month`, type: 'warning' });
-        }
+      // Impressions trend
+      if (changePercentage >= 10) {
+        insights.push({ text: `Impressions grew ${changePercentage.toFixed(1)}% MoM to ${formatNumber(totalReach)}`, type: 'driver' });
+      } else if (changePercentage <= -5) {
+        insights.push({ text: `Impressions declined ${Math.abs(changePercentage).toFixed(1)}% MoM`, type: 'warning' });
       }
 
       // ROAS trend
@@ -266,10 +278,10 @@ export class PaidSocialReachDrawerComponent {
         const recent3 = monthlyRoas.slice(-3);
         const isDecreasing = recent3[0] > recent3[1] && recent3[1] > recent3[2];
         const isIncreasing = recent3[0] < recent3[1] && recent3[1] < recent3[2];
-        if (isDecreasing) {
-          insights.push({ text: 'ROAS declining for 3 consecutive months', type: 'warning' });
-        } else if (isIncreasing) {
-          insights.push({ text: 'ROAS improving for 3 consecutive months', type: 'driver' });
+        if (isIncreasing) {
+          insights.push({ text: `ROAS improving 3 months straight — now at ${recent3[2].toFixed(2)}x`, type: 'driver' });
+        } else if (isDecreasing) {
+          insights.push({ text: `ROAS declining 3 months straight — now at ${recent3[2].toFixed(2)}x`, type: 'warning' });
         }
       }
 

@@ -17,6 +17,7 @@ import type {
   MarketingRecommendedAction,
   MarketingKeyInsight,
   MarketingActionType,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 
 @Component({
@@ -49,6 +50,20 @@ export class MemberAcquisitionDrawerComponent {
     trend: 'up',
     target: 85,
     monthlyData: [],
+  });
+
+  public readonly revenueImpactData = input<RevenueImpactResponse>({
+    pipelineInfluenced: 0,
+    revenueAttributed: 0,
+    matchRate: 0,
+    changePercentage: 0,
+    trend: 'up',
+    attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+    engagementTypes: [],
+    paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
+    attributionChannels: [],
+    projectBreakdown: [],
+    eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
   });
 
   // === Computed Signals ===
@@ -130,6 +145,12 @@ export class MemberAcquisitionDrawerComponent {
     return MARKETING_ACTION_ICON_MAP[type];
   }
 
+  protected formatMoney(value: number): string {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${Math.round(value).toLocaleString()}`;
+  }
+
   // === Private Initializers ===
   private initTotalMembersChartData(): Signal<ChartData<'line'>> {
     return computed(() => {
@@ -154,33 +175,53 @@ export class MemberAcquisitionDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { newMembersThisQuarter, newMemberRevenue, changePercentage, quarterlyData } = this.data();
+      const { newMembersThisQuarter, changePercentage, quarterlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
       if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
         return actions;
       }
 
-      // Check if revenue per new member is declining (only flag if decline > 5%)
+      // Acquisition decline — tier on magnitude
+      if (changePercentage <= -15) {
+        actions.push({
+          title: 'Reverse acquisition decline',
+          description: `New member signups dropped ${Math.abs(changePercentage).toFixed(1)}% QoQ — review top-of-funnel channels, conversion paths, and outbound pipeline`,
+          priority: 'high',
+          dueLabel: 'This month',
+          actionType: 'decline',
+        });
+      } else if (changePercentage <= -5) {
+        actions.push({
+          title: 'Acquisition softening',
+          description: `New member signups down ${Math.abs(changePercentage).toFixed(1)}% QoQ — watch next quarter's pipeline and renewal mix`,
+          priority: 'medium',
+          dueLabel: 'Next quarter',
+          actionType: 'investigate',
+        });
+      }
+
+      // Revenue per new member — the tier-mix signal for an ED
       if (quarterlyData.length >= 2) {
         const recent = quarterlyData[quarterlyData.length - 1];
         const previous = quarterlyData[quarterlyData.length - 2];
         const recentPerMember = recent.newMembers > 0 ? recent.revenue / recent.newMembers : 0;
         const previousPerMember = previous.newMembers > 0 ? previous.revenue / previous.newMembers : 0;
-        if (previousPerMember > 0) {
+        if (previousPerMember > 0 && recentPerMember > 0) {
+          const delta = recentPerMember - previousPerMember;
           const declinePct = ((previousPerMember - recentPerMember) / previousPerMember) * 100;
-          if (declinePct > 15) {
+          if (declinePct >= 15) {
             actions.push({
-              title: 'Improve revenue per new member',
-              description: `Revenue per new member declined ${declinePct.toFixed(0)}% — review membership tier mix and onboarding`,
+              title: 'Membership tier mix shifting down',
+              description: `Revenue per new member fell ${declinePct.toFixed(0)}% (${this.formatMoney(Math.abs(delta))}/member) — winning deals are smaller. Review tier positioning and sales qualification`,
               priority: 'high',
               dueLabel: 'This quarter',
               actionType: 'revenue',
             });
-          } else if (declinePct > 5) {
+          } else if (declinePct >= 5) {
             actions.push({
-              title: 'Monitor revenue per new member',
-              description: `Revenue per new member declined ${declinePct.toFixed(0)}% — watch tier mix trends`,
+              title: 'Watch tier mix trend',
+              description: `Revenue per new member down ${declinePct.toFixed(0)}% QoQ — not yet urgent, but track whether next quarter's deals are smaller still`,
               priority: 'medium',
               dueLabel: 'Next quarter',
               actionType: 'revenue',
@@ -189,92 +230,60 @@ export class MemberAcquisitionDrawerComponent {
         }
       }
 
-      // Check if acquisition is declining
-      if (changePercentage < -10) {
-        actions.push({
-          title: 'Address acquisition decline',
-          description: `New member signups dropped ${Math.abs(changePercentage)}% — review marketing funnel and conversion paths`,
-          priority: 'high',
-          dueLabel: 'This month',
-          actionType: 'decline',
-        });
-      }
-
-      // Check revenue growth trend over 3+ quarters
-      if (quarterlyData.length >= 3) {
-        const recent3 = quarterlyData.slice(-3);
-        const revenueGrowing = recent3[0].revenue < recent3[1].revenue && recent3[1].revenue < recent3[2].revenue;
-        if (revenueGrowing && recent3[2].revenue > 0) {
-          const totalGrowth = (((recent3[2].revenue - recent3[0].revenue) / recent3[0].revenue) * 100).toFixed(0);
-          actions.push({
-            title: 'Scale current acquisition channels',
-            description: `New member revenue grew ${totalGrowth}% over 3 quarters — room to increase investment in efficient channels`,
-            priority: 'medium',
-            dueLabel: 'Next quarter',
-            actionType: 'growth',
-          });
-        }
-      }
-
-      if (actions.length === 0) {
-        actions.push({
-          title: 'Monitor acquisition performance',
-          description: `${newMembersThisQuarter} new members this quarter with $${formatNumber(newMemberRevenue)} in new revenue`,
-          priority: 'low',
-          dueLabel: 'Ongoing',
-          actionType: 'growth',
-        });
-      }
-
       return actions;
     });
   }
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { newMembersThisQuarter, changePercentage, quarterlyData } = this.data();
+      const { newMembersThisQuarter, newMemberRevenue, changePercentage, quarterlyData } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
       if (newMembersThisQuarter === 0 && quarterlyData.length === 0) {
         return insights;
       }
 
-      // Acquisition trend
-      if (changePercentage > 10) {
-        insights.push({ text: `New member acquisition up ${changePercentage}% quarter-over-quarter`, type: 'driver' });
-      } else if (changePercentage < -10) {
-        insights.push({ text: `New member acquisition down ${Math.abs(changePercentage)}% quarter-over-quarter`, type: 'warning' });
-      } else if (changePercentage !== 0) {
-        insights.push({ text: `Acquisition ${changePercentage > 0 ? 'up' : 'down'} ${Math.abs(changePercentage)}% — relatively stable`, type: 'info' });
+      // Acquisition QoQ
+      if (changePercentage >= 10) {
+        insights.push({
+          text: `New member acquisition up ${changePercentage.toFixed(1)}% QoQ — ${newMembersThisQuarter} new members, ${this.formatMoney(newMemberRevenue)} revenue`,
+          type: 'driver',
+        });
+      } else if (changePercentage <= -10) {
+        insights.push({ text: `New member acquisition down ${Math.abs(changePercentage).toFixed(1)}% QoQ`, type: 'warning' });
       }
 
-      // Revenue trend
+      // Revenue-per-member trend (the tier-mix signal)
       if (quarterlyData.length >= 2) {
         const recent = quarterlyData[quarterlyData.length - 1];
         const previous = quarterlyData[quarterlyData.length - 2];
-        if (previous.revenue > 0 && recent.revenue > previous.revenue) {
-          const growth = (((recent.revenue - previous.revenue) / previous.revenue) * 100).toFixed(0);
-          insights.push({ text: `New member revenue grew ${growth}% to $${formatNumber(recent.revenue)} — acquisition efficiency increasing`, type: 'driver' });
-        } else if (previous.revenue > 0 && recent.revenue < previous.revenue) {
-          insights.push({ text: `New member revenue declined to $${formatNumber(recent.revenue)} — review membership tier mix`, type: 'warning' });
+        const recentPerMember = recent.newMembers > 0 ? recent.revenue / recent.newMembers : 0;
+        const previousPerMember = previous.newMembers > 0 ? previous.revenue / previous.newMembers : 0;
+        if (previousPerMember > 0 && recentPerMember > previousPerMember) {
+          const growthPct = ((recentPerMember - previousPerMember) / previousPerMember) * 100;
+          insights.push({
+            text: `Revenue per new member up ${growthPct.toFixed(0)}% QoQ to ${this.formatMoney(recentPerMember)} — tier mix improving`,
+            type: 'driver',
+          });
         }
       }
 
-      // Best quarter check
+      // 3 consecutive quarters of revenue growth — strongest performing-well signal
+      if (quarterlyData.length >= 3) {
+        const recent3 = quarterlyData.slice(-3);
+        const revenueGrowing = recent3[0].revenue < recent3[1].revenue && recent3[1].revenue < recent3[2].revenue;
+        if (revenueGrowing && recent3[0].revenue > 0) {
+          const totalGrowth = ((recent3[2].revenue - recent3[0].revenue) / recent3[0].revenue) * 100;
+          insights.push({ text: `New member revenue grew ${totalGrowth.toFixed(0)}% over 3 quarters — scale efficient channels`, type: 'driver' });
+        }
+      }
+
+      // Best quarter in dataset
       if (quarterlyData.length >= 4) {
         const max = Math.max(...quarterlyData.map((q) => q.newMembers));
         const current = quarterlyData[quarterlyData.length - 1];
-        if (current.newMembers === max) {
-          insights.push({ text: `${current.quarter} is the strongest acquisition quarter in the dataset`, type: 'driver' });
-        }
-      }
-
-      // Consecutive growth
-      if (quarterlyData.length >= 3) {
-        const recent3 = quarterlyData.slice(-3);
-        const isGrowing = recent3[0].newMembers < recent3[1].newMembers && recent3[1].newMembers < recent3[2].newMembers;
-        if (isGrowing) {
-          insights.push({ text: 'Acquisition growing for 3 consecutive quarters', type: 'driver' });
+        if (current.newMembers === max && current.newMembers > 0) {
+          insights.push({ text: `${current.quarter} is the strongest acquisition quarter on record`, type: 'driver' });
         }
       }
 
