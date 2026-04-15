@@ -597,7 +597,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
       changePercentage: formatMomChange(flywheel.reengagement.reengagementMomChange),
       trend: flywheel.reengagement.reengagementMomChange >= 0 ? 'up' : 'down',
-      subtitle: 'Re-engagement within 90 days · Last 6 months',
+      subtitle: 'Re-engagement within 90 days · Sparkline: monthly re-engaged count',
       chartData: flywheel.monthlyData.length > 0 ? protoSparkline(monthlyValues(flywheel.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event.',
@@ -661,7 +661,9 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         protoDualSignal(
           'Social Followers',
           formatNumber(brandReach.totalSocialFollowers),
-          brandReach.dailyTrend.length > 0 ? brandReach.dailyTrend.map((d) => d.sessions) : [0],
+          // No historical follower series available — leave the sparkline empty rather than reuse
+          // website-session data (they are different metrics).
+          [0],
           lfxColors.blue[500],
           formatMomChange(brandReach.changePercentage),
           brandReach.trend
@@ -689,9 +691,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           'Mentions',
           formatNumber(brandHealth.totalMentions),
           brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [0],
-          lfxColors.blue[500],
-          formatMomChange(brandHealth.sentimentMomChangePp),
-          brandHealth.trend
+          lfxColors.blue[500]
         ),
         protoDualSignal(
           'Positive Sentiment',

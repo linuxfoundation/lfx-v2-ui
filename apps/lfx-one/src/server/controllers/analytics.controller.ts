@@ -14,7 +14,7 @@ import { getUsernameFromAuth } from '../utils/auth-helper';
 /** Allowed pattern for foundationSlug: lowercase alphanumeric and hyphens only */
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 
-/** Maximum allowed length for foundationName query parameter */
+/** Maximum allowed length for foundationSlug query parameter */
 const NAME_MAX_LENGTH = 200;
 
 /**
@@ -1857,10 +1857,9 @@ export class AnalyticsController {
   }
 
   // Marketing Analytics Endpoints
-  // Note on parameter naming:
-  // - Web Activities uses `foundationSlug` (PROJECT_SLUG column in WEB_ACTIVITIES_* tables)
-  // - Email CTR, Social Reach, Social Media use `foundationName` (FOUNDATION_NAME/PROJECT_NAME columns)
-  // This reflects the different key columns in the underlying Snowflake Platinum tables.
+  // All marketing endpoints (Web Activities, Email CTR, Social Reach, Social Media, and the
+  // ED dashboard KPIs) use `foundationSlug` — underlying Snowflake Platinum views key on a
+  // consistent FOUNDATION_SLUG / PROJECT_SLUG column.
 
   /**
    * GET /api/analytics/web-activities-summary
@@ -1922,6 +1921,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_email_ctr',
+        });
+      }
+
       const response = await this.projectService.getEmailCtr(foundationSlug);
 
       logger.success(req, 'get_email_ctr', startTime, {
@@ -1959,6 +1964,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_social_reach',
+        });
+      }
+
       const response = await this.projectService.getSocialReach(foundationSlug);
 
       logger.success(req, 'get_social_reach', startTime, {
@@ -1992,6 +2003,12 @@ export class AnalyticsController {
 
       if (foundationSlug.length > NAME_MAX_LENGTH) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug exceeds maximum length', {
+          operation: 'get_social_media',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_social_media',
         });
       }

@@ -224,6 +224,8 @@ export class MarketingOverviewComponent {
 
   // === Private Initializers ===
   private initEdEvolutionData(): Signal<EdEvolutionData> {
+    // ED dashboard intentionally falls back to `tlf` (the umbrella foundation) when no specific
+    // foundation is selected — that is the default "all foundations" view for executive directors.
     const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     return toSignal(

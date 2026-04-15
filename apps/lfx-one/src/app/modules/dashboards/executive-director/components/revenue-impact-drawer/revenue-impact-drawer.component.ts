@@ -45,13 +45,14 @@ export class RevenueImpactDrawerComponent {
   protected readonly paidMediaTrendChartData: Signal<ChartData<'bar'>> = this.initPaidMediaTrendChartData();
   protected readonly sortedProjectBreakdown = computed(() => [...this.data().projectBreakdown].sort((a, b) => b.totalImpressions - a.totalImpressions));
   protected readonly projectBreakdownChannels = computed<string[]>(() => {
-    const channelSet = new Set<string>();
-    this.data().projectBreakdown.forEach((r) => Object.keys(r.channelImpressions).forEach((c) => channelSet.add(c)));
-    return Array.from(channelSet).sort(
-      (a, b) =>
-        this.data().projectBreakdown.reduce((sum, r) => sum + (r.channelImpressions[b] ?? 0), 0) -
-        this.data().projectBreakdown.reduce((sum, r) => sum + (r.channelImpressions[a] ?? 0), 0)
-    );
+    // Pre-aggregate impressions per channel in a single pass, then sort on the cached totals.
+    const channelTotals = new Map<string, number>();
+    for (const r of this.data().projectBreakdown) {
+      for (const [channel, impressions] of Object.entries(r.channelImpressions)) {
+        channelTotals.set(channel, (channelTotals.get(channel) ?? 0) + (impressions ?? 0));
+      }
+    }
+    return Array.from(channelTotals.keys()).sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0));
   });
   protected readonly eventAttrChartData: Signal<ChartData<'bar'>> = this.initEventAttrChartData();
   protected readonly sortedEventAttrChannels = computed(() => {
@@ -413,11 +414,18 @@ export class RevenueImpactDrawerComponent {
       };
       const fallbackColor = lfxColors.gray[400];
 
-      const monthSet = Array.from(new Set(rows.map((r) => r.month))).sort();
-      const channels = Array.from(new Set(rows.map((r) => r.channel))).sort(
-        (a, b) =>
-          rows.filter((r) => r.channel === b).reduce((s, r) => s + r.sessions, 0) - rows.filter((r) => r.channel === a).reduce((s, r) => s + r.sessions, 0)
-      );
+      // Pre-aggregate once: channel → total sessions for sort; (month, channel) → sessions for lookup
+      const channelTotals = new Map<string, number>();
+      const monthChannelSessions = new Map<string, number>();
+      const monthSetRaw = new Set<string>();
+      for (const r of rows) {
+        monthSetRaw.add(r.month);
+        channelTotals.set(r.channel, (channelTotals.get(r.channel) ?? 0) + r.sessions);
+        monthChannelSessions.set(`${r.month}|${r.channel}`, r.sessions);
+      }
+
+      const monthSet = Array.from(monthSetRaw).sort();
+      const channels = Array.from(channelTotals.keys()).sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0));
 
       const labels = monthSet.map((m) => {
         const d = new Date(`${m}-01`);
@@ -426,7 +434,7 @@ export class RevenueImpactDrawerComponent {
 
       const datasets = channels.map((channel) => ({
         label: channel,
-        data: monthSet.map((m) => rows.find((r) => r.month === m && r.channel === channel)?.sessions ?? 0),
+        data: monthSet.map((m) => monthChannelSessions.get(`${m}|${channel}`) ?? 0),
         backgroundColor: palette[channel] ?? fallbackColor,
         borderRadius: 2,
         borderSkipped: false,
