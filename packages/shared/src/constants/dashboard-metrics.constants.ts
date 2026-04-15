@@ -614,7 +614,7 @@ function protoDualSignal(label: string, value: string, data: number[], color: st
     value,
     changePercentage: change,
     trend,
-    chartData: protoSparkline(data, color),
+    chartData: data.length > 0 ? protoSparkline(data, color) : EMPTY_CHART_DATA,
   };
 }
 
@@ -632,6 +632,18 @@ export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
 function formatMomChange(change: number): string {
   const sign = change >= 0 ? '+' : '';
   return `${sign}${change.toFixed(1)}% MoM`;
+}
+
+/** Format a YoY change as a display string */
+function formatYoyChange(change: number): string {
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change.toFixed(1)}% YoY`;
+}
+
+/** Format a percentage-point MoM change as a display string */
+function formatPpMomChange(change: number): string {
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change.toFixed(1)}pp MoM`;
 }
 
 /** Compute MoM change display from a paid media monthly trend series (last two months of spend) */
@@ -693,18 +705,19 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
   return [
     // === North Star (4 cards — retention merged into Member Growth drawer) ===
     {
-      title: 'Flywheel Conversion',
+      title: 'Flywheel Re-engagement',
       icon: 'fa-light fa-arrows-spin',
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-flywheel-conversion',
       value: `${(flywheel.reengagement?.reengagementRate ?? 0).toFixed(1)}%`,
-      changePercentage: formatMomChange(flywheel.reengagement?.reengagementMomChange ?? 0),
+      changePercentage: formatPpMomChange(flywheel.reengagement?.reengagementMomChange ?? 0),
       trend: (flywheel.reengagement?.reengagementMomChange ?? 0) >= 0 ? 'up' : 'down',
       subtitle: 'Re-engagement within 90 days · Sparkline: monthly re-engaged count',
       chartData: flywheel.monthlyData.length > 0 ? protoSparkline(monthlyValues(flywheel.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-      tooltipText: 'Percentage of event attendees who engage with newsletter, community, or working groups within 90 days post-event.',
+      tooltipText:
+        'Percentage of event attendees who re-engage via newsletter, community, or working groups within 90 days post-event. Change shown in percentage points (pp) MoM.',
       drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
     } as DashboardMetricCard,
     {
@@ -744,7 +757,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       category: 'memberships',
       testId: 'ed-evo-event-growth',
       value: formatNumber(eventGrowth.totalRegistrants),
-      changePercentage: formatMomChange(eventGrowth.registrantYoyChange),
+      changePercentage: formatYoyChange(eventGrowth.registrantYoyChange),
       trend: eventGrowth.registrantYoyChange >= 0 ? 'up' : 'down',
       subtitle: `${formatNumber(eventGrowth.totalEvents)} events · YTD registrants`,
       chartData: eventGrowth.monthlyData.length > 0 ? protoSparkline(monthlyValues(eventGrowth.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
@@ -767,7 +780,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           formatNumber(brandReach.totalSocialFollowers),
           // No historical follower series available — leave the sparkline empty rather than reuse
           // website-session data (they are different metrics).
-          [0],
+          [],
           lfxColors.blue[500],
           formatMomChange(brandReach.changePercentage),
           brandReach.trend
@@ -775,7 +788,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         protoDualSignal(
           'Monthly Sessions',
           formatNumber(brandReach.totalMonthlySessions),
-          brandReach.dailyTrend.length > 0 ? brandReach.dailyTrend.map((d) => d.sessions) : [0],
+          brandReach.weeklyTrend.length > 0 ? brandReach.weeklyTrend.map((d) => d.sessions) : [],
           lfxColors.violet[500]
         ),
       ],
@@ -794,13 +807,13 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         protoDualSignal(
           'Mentions',
           formatNumber(brandHealth.totalMentions),
-          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [0],
+          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [],
           lfxColors.blue[500]
         ),
         protoDualSignal(
           'Positive Sentiment',
           `${brandHealth.sentiment.positive.toFixed(1)}%`,
-          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [0],
+          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [],
           lfxColors.emerald[500],
           `${brandHealth.sentimentMomChangePp >= 0 ? '+' : ''}${brandHealth.sentimentMomChangePp.toFixed(1)}pp MoM`,
           brandHealth.sentimentMomChangePp >= 0 ? 'up' : 'down'

@@ -1731,7 +1731,7 @@ export class ProjectService {
   /**
    * Get web activities summary grouped by domain category
    * Queries ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY and ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
-   * @param foundationSlug - Foundation slug used to filter by PROJECT_SLUG
+   * @param foundationSlug - Foundation slug used to filter by FOUNDATION_SLUG (aggregates all projects under the foundation)
    */
   public async getWebActivitiesSummary(foundationSlug: string): Promise<WebActivitiesSummaryResponse> {
     logger.debug(undefined, 'get_web_activities_summary', 'Fetching web activities summary from Snowflake', { foundation_slug: foundationSlug });
@@ -1744,7 +1744,7 @@ export class ProjectService {
           SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS,
           SUM(TOTAL_PAGE_VIEWS_LAST_30_DAYS) AS TOTAL_PAGE_VIEWS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
-        WHERE PROJECT_SLUG = ?
+        WHERE FOUNDATION_SLUG = ?
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
       `;
@@ -1755,7 +1755,7 @@ export class ProjectService {
           DATE_TRUNC('WEEK', ACTIVITY_DATE) AS ACTIVITY_DATE,
           SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
-        WHERE PROJECT_SLUG = ?
+        WHERE FOUNDATION_SLUG = ?
           AND ACTIVITY_DATE >= DATEADD('MONTH', -6, CURRENT_DATE())
         GROUP BY DATE_TRUNC('WEEK', ACTIVITY_DATE)
         ORDER BY ACTIVITY_DATE ASC
@@ -3546,7 +3546,10 @@ export class ProjectService {
         revenue: row.EVENT_REVENUE ?? 0,
       }));
 
-      // Aggregate attendees by quarter for sparkline
+      // Aggregate attendees by quarter for sparkline.
+      // NOTE: this is sourced from the top-10 events only (LIMIT 10 above), so the trend reflects
+      // top-event movement, not total event attendance. This is intentional for the card sparkline —
+      // a separate full-portfolio trend query can be added if the drawer needs it.
       const quarterMap = new Map<string, number>();
       for (const row of topEventsResult.rows) {
         const raw = row.QUARTER_START_DATE;
@@ -3616,8 +3619,8 @@ export class ProjectService {
       let socialPlatforms: BrandReachResponse['socialPlatforms'] = [];
       try {
         const [socialResult, socialPlatformResult] = await Promise.all([
-          this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number }>(
-            `SELECT SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS, SUM(PLATFORMS_ACTIVE) AS PLATFORMS_ACTIVE
+          this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number }>(
+            `SELECT SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
              FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
             [foundationSlug]
           ),
@@ -3661,10 +3664,10 @@ export class ProjectService {
 
       const totalMonthlySessions = websiteDomains.reduce((sum, d) => sum + d.sessions, 0);
 
-      const dailyTrend = dailyResult.rows.map((row) => {
+      const weeklyTrend = dailyResult.rows.map((row) => {
         const date = new Date(row.ACTIVITY_DATE);
         return {
-          day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          week: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           sessions: row.DAILY_SESSIONS ?? 0,
         };
       });
@@ -3677,7 +3680,7 @@ export class ProjectService {
         trend: 'up',
         socialPlatforms,
         websiteDomains,
-        dailyTrend,
+        weeklyTrend,
       };
     } catch (error) {
       logger.warning(undefined, 'get_brand_reach', 'Failed to fetch brand reach from Snowflake', {

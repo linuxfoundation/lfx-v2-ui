@@ -420,7 +420,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -469,7 +469,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -548,7 +548,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1148,7 +1148,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1194,7 +1194,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1240,7 +1240,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1286,7 +1286,7 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {

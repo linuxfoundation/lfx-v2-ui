@@ -2924,7 +2924,7 @@ export interface EventGrowthTopEvent {
 
 /**
  * API response for Event Growth metric
- * Total event attendees, event count, revenue, MoM growth, top events
+ * Total event attendees, event count, revenue, YoY growth, top events
  */
 export interface EventGrowthResponse {
   totalAttendees: number;
@@ -2941,8 +2941,8 @@ export interface EventGrowthResponse {
 }
 
 /**
- * Social platform identifier — maps to a presentation icon + color in the component layer
- * New platforms must be added to MARKETING_SOCIAL_PLATFORM_MAP in the component constants
+ * Social platform identifier — maps to a presentation icon + color in the shared constants layer
+ * New platforms must be added to MARKETING_SOCIAL_PLATFORM_MAP in @lfx-one/shared/constants/dashboard-metrics.constants.ts
  */
 export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'bluesky' | 'other';
 
@@ -2965,10 +2965,10 @@ export interface BrandReachWebsiteDomain {
 }
 
 /**
- * Daily sessions data point for Brand Reach drill-down
+ * Weekly sessions data point for Brand Reach drill-down (bucketed by ISO week)
  */
-export interface BrandReachDailyDataPoint {
-  day: string;
+export interface BrandReachWeeklyDataPoint {
+  week: string;
   sessions: number;
 }
 
@@ -2984,7 +2984,7 @@ export interface BrandReachResponse {
   trend: 'up' | 'down';
   socialPlatforms: BrandReachSocialPlatform[];
   websiteDomains: BrandReachWebsiteDomain[];
-  dailyTrend: BrandReachDailyDataPoint[];
+  weeklyTrend: BrandReachWeeklyDataPoint[];
 }
 
 /**
@@ -3068,7 +3068,7 @@ export interface RevenueImpactAttributionChannel {
 
 /**
  * Per-project paid-media breakdown for Revenue Impact drill-down.
- * channelImpressions maps channel name → impressions in the last 12 months.
+ * channelImpressions maps channel name → impressions in the last 6 months.
  */
 export interface RevenueImpactProjectBreakdown {
   project: string;
