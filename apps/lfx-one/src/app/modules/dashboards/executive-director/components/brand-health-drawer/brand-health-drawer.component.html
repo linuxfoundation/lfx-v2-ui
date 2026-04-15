@@ -43,7 +43,7 @@
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Positive Sentiment</span>
-          @if (data().sentiment.positive > 0) {
+          @if (data().totalMentions > 0) {
             <span class="text-2xl font-semibold text-gray-900">{{ data().sentiment.positive.toFixed(1) }}%</span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>

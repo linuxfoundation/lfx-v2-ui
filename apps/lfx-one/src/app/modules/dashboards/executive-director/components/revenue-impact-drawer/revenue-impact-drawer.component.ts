@@ -222,6 +222,18 @@ export class RevenueImpactDrawerComponent {
     return ((project.channelImpressions[channel] ?? 0) / project.totalImpressions) * 100;
   }
 
+  private formatYearMonthLabel(yearMonth: string): string {
+    const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+    if (!match) return yearMonth;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    return new Date(Date.UTC(year, month, 1)).toLocaleDateString('en-US', {
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'UTC',
+    });
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
       const { attributionChannels, paidMedia, projectBreakdown, eventRegistrationAttribution } = this.data();
@@ -370,10 +382,7 @@ export class RevenueImpactDrawerComponent {
   private initPaidMediaTrendChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
       const trend = this.data().paidMedia.monthlyTrend;
-      const labels = trend.map((r) => {
-        const d = new Date(r.month);
-        return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      });
+      const labels = trend.map((r) => this.formatYearMonthLabel(r.month));
       return {
         labels,
         datasets: [
@@ -427,10 +436,7 @@ export class RevenueImpactDrawerComponent {
       const monthSet = Array.from(monthSetRaw).sort();
       const channels = Array.from(channelTotals.keys()).sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0));
 
-      const labels = monthSet.map((m) => {
-        const d = new Date(`${m}-01`);
-        return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      });
+      const labels = monthSet.map((m) => this.formatYearMonthLabel(m));
 
       const datasets = channels.map((channel) => ({
         label: channel,

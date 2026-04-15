@@ -167,11 +167,12 @@ export class EventGrowthDrawerComponent {
         });
       }
 
-      // Total event revenue declining — use revenue YoY, not per-attendee
-      if (revenuePerAttendee > 0 && revenueYoyChange <= -5) {
+      // Total event revenue declining YoY — independent of per-attendee value
+      if (revenueYoyChange <= -5) {
+        const revenuePerAttendeeText = revenuePerAttendee > 0 ? ` at ${this.formatMoney(revenuePerAttendee)} per attendee` : '';
         actions.push({
           title: 'Event revenue declining',
-          description: `Total event revenue down ${Math.abs(revenueYoyChange).toFixed(1)}% YoY at ${this.formatMoney(revenuePerAttendee)} per attendee — review sponsorship packages and ticket pricing`,
+          description: `Total event revenue down ${Math.abs(revenueYoyChange).toFixed(1)}% YoY${revenuePerAttendeeText} — review sponsorship packages and ticket pricing`,
           priority: 'medium',
           dueLabel: 'This quarter',
           actionType: 'revenue',

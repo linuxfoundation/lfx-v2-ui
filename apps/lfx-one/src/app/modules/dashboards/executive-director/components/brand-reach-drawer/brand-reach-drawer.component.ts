@@ -109,11 +109,11 @@ export class BrandReachDrawerComponent {
         }
       }
 
-      // Under-diversified footprint — open Bluesky/Mastodon (matches project_social_platforms memory: TLF uses both)
+      // Under-diversified footprint — reduce single-network risk
       if (activePlatforms > 0 && activePlatforms < 3) {
         actions.push({
           title: 'Expand platform footprint',
-          description: `Active on only ${activePlatforms} platform${activePlatforms === 1 ? '' : 's'} — TLF uses Bluesky heavily and Mastodon on the fediverse; evaluate adding one to reduce single-network risk`,
+          description: `Active on only ${activePlatforms} platform${activePlatforms === 1 ? '' : 's'} — evaluate adding complementary networks to reduce single-network risk`,
           priority: 'medium',
           dueLabel: 'This quarter',
           actionType: 'engagement',
