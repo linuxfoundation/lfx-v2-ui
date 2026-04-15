@@ -17,7 +17,6 @@ router.get('/meetings', (req, res, next) => userController.getUserMeetings(req, 
 // GET /api/user/past-meetings - Get past meetings for the authenticated user
 router.get('/past-meetings', (req, res, next) => userController.getUserPastMeetings(req, res, next));
 
-// TODO: TEMPORARY — remove after validating the API Gateway token
 // GET /api/user/salesforce-id - Proxy test for the API Gateway token
 router.get('/salesforce-id', (req, res, next) => userController.getSalesforceId(req, res, next));
 

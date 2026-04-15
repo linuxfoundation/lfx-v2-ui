@@ -1,8 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, OnInit, Signal, signal } from '@angular/core';
+import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { TagComponent } from '@app/shared/components/tag/tag.component';
 import { PersonaService } from '@app/shared/services/persona.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
@@ -19,8 +18,7 @@ import { EventsListComponent } from './components/events-list/events-list.compon
   templateUrl: './my-events-dashboard.component.html',
   styleUrl: './my-events-dashboard.component.scss',
 })
-export class MyEventsDashboardComponent implements OnInit {
-  private readonly http = inject(HttpClient);
+export class MyEventsDashboardComponent {
   private readonly personaService = inject(PersonaService);
   private readonly projectContextService = inject(ProjectContextService);
 
@@ -35,14 +33,6 @@ export class MyEventsDashboardComponent implements OnInit {
   protected readonly selectedSearchQuery = signal('');
 
   protected readonly foundationLabel: Signal<string> = this.initFoundationLabel();
-
-  // TODO: TEMPORARY — remove after validating the API Gateway token
-  public ngOnInit(): void {
-    this.http.get('/api/user/salesforce-id').subscribe({
-      next: (response) => console.info('[salesforce-id]', response),
-      error: (err) => console.error('[salesforce-id] error', err),
-    });
-  }
 
   protected onFoundationChange(value: string | null): void {
     this.selectedFoundation.set(value);

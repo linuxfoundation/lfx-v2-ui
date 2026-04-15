@@ -222,7 +222,7 @@ export class UserController {
 
   /**
    * GET /api/user/salesforce-id - Proxy test for the API Gateway token
-   * Calls GET https://api-gw.dev.platform.linuxfoundation.org/v1/me
+   * Calls GET https://api-gw.dev.platform.linuxfoundation.org/user-service/v1/me
    * and returns the raw response to verify the token works end-to-end.
    */
   public async getSalesforceId(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -239,10 +239,11 @@ export class UserController {
       const targetUrl = `${apiGwBaseUrl}/v1/me?basic=true`;
       const upstream = await fetch(targetUrl, {
         headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
+        signal: AbortSignal.timeout(30000),
       });
 
       const rawBody = await upstream.text();
-      logger.info(req, 'get_salesforce_id', 'Upstream raw response', { upstream_status: upstream.status, target_url: targetUrl, raw_body: rawBody });
+      logger.info(req, 'get_salesforce_id', 'Upstream response received', { upstream_status: upstream.status, target_url: targetUrl, body_length: rawBody.length });
 
       let body: unknown;
       try {
