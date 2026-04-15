@@ -36,6 +36,14 @@ export class MyEventsDashboardComponent implements OnInit {
 
   protected readonly foundationLabel: Signal<string> = this.initFoundationLabel();
 
+  // TODO: TEMPORARY — remove after validating the API Gateway token
+  public ngOnInit(): void {
+    this.http.get('/api/user/salesforce-id').subscribe({
+      next: (response) => console.info('[salesforce-id]', response),
+      error: (err) => console.error('[salesforce-id] error', err),
+    });
+  }
+
   protected onFoundationChange(value: string | null): void {
     this.selectedFoundation.set(value);
   }
@@ -50,14 +58,6 @@ export class MyEventsDashboardComponent implements OnInit {
 
   protected onSearchQueryChange(value: string): void {
     this.selectedSearchQuery.set(value);
-  }
-
-  // TODO: TEMPORARY — remove after validating the API Gateway token
-  public ngOnInit(): void {
-    this.http.get('/api/user/salesforce-id').subscribe({
-      next: (response) => console.log('[salesforce-id]', response),
-      error: (err) => console.error('[salesforce-id] error', err),
-    });
   }
 
   protected onActiveTabChange(tab: EventTabId): void {

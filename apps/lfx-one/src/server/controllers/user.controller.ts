@@ -221,7 +221,6 @@ export class UserController {
   }
 
   /**
-   * TODO: TEMPORARY — remove after validating the API Gateway token
    * GET /api/user/salesforce-id - Proxy test for the API Gateway token
    * Calls GET https://api-gw.dev.platform.linuxfoundation.org/v1/me
    * and returns the raw response to verify the token works end-to-end.
@@ -236,7 +235,7 @@ export class UserController {
         return;
       }
 
-      const apiGwBaseUrl = (process.env['API_GW_BASE_URL'] || process.env['API_GW_AUDIENCE'] || '').replace(/\/+$/, '');
+      const apiGwBaseUrl = `${(process.env['API_GW_AUDIENCE'] || '').replace(/\/+$/, '')}/user-service`;
       const targetUrl = `${apiGwBaseUrl}/v1/me?basic=true`;
       const upstream = await fetch(targetUrl, {
         headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
