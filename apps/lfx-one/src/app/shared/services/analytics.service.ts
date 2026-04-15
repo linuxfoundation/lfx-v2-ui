@@ -63,6 +63,10 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  EventGrowthResponse,
+  BrandReachResponse,
+  BrandHealthResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -829,11 +833,11 @@ export class AnalyticsService {
 
   /**
    * Get email click-through rate data
-   * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug to filter by
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
+  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -852,11 +856,11 @@ export class AnalyticsService {
   /**
    * Get social media metrics from Snowflake Platinum tables
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social media response with followers, platforms, engagement, and trend data
    */
-  public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
-    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
+  public getSocialMedia(foundationSlug: string): Observable<SocialMediaResponse> {
+    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalFollowers: 0,
@@ -872,11 +876,11 @@ export class AnalyticsService {
 
   /**
    * Get paid social reach metrics
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
-  public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
+  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
@@ -971,6 +975,20 @@ export class AnalyticsService {
             convertedToNewsletter: 0,
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
+            convertedToTraining: 0,
+            convertedToCode: 0,
+            convertedToWeb: 0,
+          },
+          reengagement: {
+            totalReengaged: 0,
+            reengagementRate: 0,
+            reengagementMomChange: 0,
+            reengagedToNewsletter: 0,
+            reengagedToCommunity: 0,
+            reengagedToWorkingGroup: 0,
+            reengagedToTraining: 0,
+            reengagedToCode: 0,
+            reengagedToWeb: 0,
           },
           reengagement: {
             totalReengaged: 0,
@@ -1149,5 +1167,33 @@ export class AnalyticsService {
         });
       })
     );
+  }
+
+  /**
+   * Get event growth metrics. Errors propagate to the caller so the UI can show an error state.
+   */
+  public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } });
+  }
+
+  /**
+   * Get brand reach metrics. Errors propagate to the caller so the UI can show an error state.
+   */
+  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } });
+  }
+
+  /**
+   * Get brand health metrics. Errors propagate to the caller so the UI can show an error state.
+   */
+  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } });
+  }
+
+  /**
+   * Get marketing-attributed revenue metrics. Errors propagate to the caller so the UI can show an error state.
+   */
+  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } });
   }
 }
