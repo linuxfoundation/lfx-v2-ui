@@ -5,6 +5,8 @@ import { BADGE_FILTER_OPTIONS } from '../constants/badge.constants';
 import { Badge, BadgeCategory } from '../interfaces/badge.interface';
 import { CredlyBadgeEntry } from '../interfaces/credly.interface';
 
+const CREDLY_EDIT_FRAGMENT = '/edit#credly';
+
 /**
  * Map a raw Credly badge entry to the application Badge interface.
  * @param entry - Raw Credly API badge entry
@@ -12,8 +14,18 @@ import { CredlyBadgeEntry } from '../interfaces/credly.interface';
  */
 export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
   const category = inferBadgeCategory(entry);
-  const primaryIssuer = entry.issuer?.entities?.find(e => e.primary)?.entity;
+  const primaryIssuer = entry.issuer?.entities?.find((e) => e.primary)?.entity;
   const expiresDate = entry.expires_at_date ?? entry.expires_at ?? undefined;
+  const firstName = (entry.user?.first_name ?? entry.issued_to_first_name ?? '').trim();
+  const middleName = (entry.user?.middle_name ?? entry.issued_to_middle_name ?? '').trim();
+  const lastName = (entry.user?.last_name ?? entry.issued_to_last_name ?? '').trim();
+  const credlyOrigin = getTrustedCredlyOrigin(entry.user?.url, entry.badge_url, entry.accept_badge_url);
+  const credlyProfileSlug = getCredlyProfileSlug(entry.user?.url) ?? buildCredlyProfileSlug(firstName, middleName, lastName);
+  const privateBadgeEditUrl = credlyProfileSlug && credlyOrigin ? `${credlyOrigin}/users/${credlyProfileSlug}${CREDLY_EDIT_FRAGMENT}` : undefined;
+  const isPrivateBadge = !(entry.public ?? false);
+  const acceptedBadgeUrl = isPrivateBadge ? (privateBadgeEditUrl ?? entry.badge_url ?? undefined) : (entry.badge_url ?? undefined);
+  const credlyUrl = entry.state === 'pending' ? (entry.accept_badge_url ?? undefined) : acceptedBadgeUrl;
+
   return {
     id: entry.id,
     title: entry.badge_template?.name ?? 'Badge',
@@ -22,6 +34,9 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
     categoryLabel: getCategoryLabel(category),
     issuedDate: entry.issued_at_date ?? entry.issued_at ?? '',
     issuer: primaryIssuer?.name ?? 'The Linux Foundation',
+    firstName,
+    middleName: middleName || undefined,
+    lastName,
     credentialId: entry.issuer_earner_id ?? entry.id,
     isVerified: entry.state === 'accepted',
     isExpired: false, // computed client-side from expiresDate to avoid cache staleness
@@ -29,9 +44,59 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
     isPending: entry.state === 'pending',
     expiresDate,
     imageUrl: entry.badge_template?.image_url ?? entry.image_url,
-    credlyUrl: entry.badge_url || entry.accept_badge_url || undefined,
+    credlyUrl,
     shareUrl: entry.badge_url || undefined,
   };
+}
+
+function getTrustedCredlyOrigin(...candidates: Array<string | null | undefined>): string | undefined {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const parsedUrl = new URL(candidate);
+      const isTrustedHost = parsedUrl.hostname === 'credly.com' || parsedUrl.hostname.endsWith('.credly.com');
+      if (isTrustedHost) {
+        return parsedUrl.origin;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract the Credly profile slug from a URL like:
+ * https://www.credly.com/users/audi-young
+ */
+function getCredlyProfileSlug(userUrl?: string): string | undefined {
+  if (!userUrl) return undefined;
+  try {
+    const parsedUrl = new URL(userUrl);
+    const match = parsedUrl.pathname.match(/^\/users\/([^/]+)$/);
+    return match?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+function buildCredlyProfileSlug(firstName: string, middleName: string, lastName: string): string | undefined {
+  if (!firstName || !lastName) return undefined;
+  const nameParts = [firstName];
+  if (middleName) {
+    nameParts.push(middleName);
+  }
+  nameParts.push(lastName);
+
+  const slug = nameParts
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return slug || undefined;
 }
 
 /**
@@ -51,8 +116,7 @@ export function inferBadgeCategory(entry: CredlyBadgeEntry): BadgeCategory {
 
   if (name.includes('speaker') || name.includes('keynote')) return 'speaking';
   if (name.includes('program committee')) return 'program-committee';
-  if (name.includes('attendee') || name.includes('participant') || name.includes('participation'))
-    return 'event-participation';
+  if (name.includes('attendee') || name.includes('participant') || name.includes('participation')) return 'event-participation';
   if (name.includes('contributor') || name.includes('maintainer')) return 'contributors';
   if (name.includes('member') || name.includes('membership')) return 'memberships';
 
@@ -67,7 +131,7 @@ export function inferBadgeCategory(entry: CredlyBadgeEntry): BadgeCategory {
  * @returns Display label string
  */
 export function getCategoryLabel(category: BadgeCategory): string {
-  return BADGE_FILTER_OPTIONS.find(opt => opt.id === category)?.label ?? category;
+  return BADGE_FILTER_OPTIONS.find((opt) => opt.id === category)?.label ?? category;
 }
 
 /**
@@ -76,9 +140,8 @@ export function getCategoryLabel(category: BadgeCategory): string {
  * @param entry - Raw Credly API badge entry
  */
 export function isValidBadge(entry: CredlyBadgeEntry): boolean {
-  return !!(
-    entry.id &&
-    entry.badge_template?.name &&
-    (entry.state === 'accepted' || entry.state === 'pending')
-  );
+  const firstName = (entry.user?.first_name ?? entry.issued_to_first_name ?? '').trim();
+  const lastName = (entry.user?.last_name ?? entry.issued_to_last_name ?? '').trim();
+
+  return !!(entry.id && entry.badge_template?.name && firstName && lastName && (entry.state === 'accepted' || entry.state === 'pending'));
 }

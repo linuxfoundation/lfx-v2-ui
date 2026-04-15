@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal, Signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
@@ -23,10 +23,10 @@ const BADGES_PER_PAGE = 12;
 const SKELETON_COUNT = 6;
 
 /** Status filter options shaped for lfx-select: { label, value } */
-const STATUS_SELECT_OPTIONS = BADGE_STATUS_FILTER_OPTIONS.map(o => ({ label: o.label, value: o.id }));
+const STATUS_SELECT_OPTIONS = BADGE_STATUS_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));
 
 /** Visibility filter options shaped for lfx-select: { label, value } */
-const VISIBILITY_SELECT_OPTIONS = BADGE_VISIBILITY_FILTER_OPTIONS.map(o => ({ label: o.label, value: o.id }));
+const VISIBILITY_SELECT_OPTIONS = BADGE_VISIBILITY_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));
 
 @Component({
   selector: 'lfx-badges-dashboard',
@@ -58,6 +58,7 @@ export class BadgesDashboardComponent {
 
   // === View Children ===
   protected readonly filtersPopover = viewChild<Popover>('filtersPopover');
+  protected readonly pageTopAnchor = viewChild<ElementRef<HTMLElement>>('pageTopAnchor');
 
   // === Writable Signals ===
   protected readonly selectedFilter = signal<BadgeCategory | 'all'>('all');
@@ -68,14 +69,12 @@ export class BadgesDashboardComponent {
   protected readonly loading = computed(() => this.badgeState().loading);
   protected readonly hasError = computed(() => this.badgeState().error);
   private readonly badges = computed(() => this.badgeState().data);
-  protected readonly selectedStatusFilter = toSignal(
-    this.statusForm.controls.status.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))),
-    { initialValue: 'all' as BadgeStatusFilter }
-  );
-  protected readonly selectedVisibilityFilter = toSignal(
-    this.visibilityForm.controls.visibility.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))),
-    { initialValue: 'all' as BadgeVisibilityFilter }
-  );
+  protected readonly selectedStatusFilter = toSignal(this.statusForm.controls.status.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
+    initialValue: 'all' as BadgeStatusFilter,
+  });
+  protected readonly selectedVisibilityFilter = toSignal(this.visibilityForm.controls.visibility.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
+    initialValue: 'all' as BadgeVisibilityFilter,
+  });
   protected readonly hasActiveFilters = computed(() => this.selectedStatusFilter() !== 'all' || this.selectedVisibilityFilter() !== 'all');
   protected readonly filteredBadges = this.initializeFilteredBadges();
   protected readonly badgeCountLabel = computed(() => {
@@ -95,6 +94,7 @@ export class BadgesDashboardComponent {
 
   protected onPageChange(event: PaginatorState): void {
     this.paginatorFirst.set(event.first ?? 0);
+    this.scrollToTop();
   }
 
   private initializeBadgeState(): Signal<BadgeState> {
@@ -117,25 +117,25 @@ export class BadgesDashboardComponent {
 
       // Enrich with isExpired here so it re-evaluates against the current time
       // whenever a filter interaction triggers this computed to re-run
-      let result = this.badges().map(badge => ({
+      let result = this.badges().map((badge) => ({
         ...badge,
         isExpired: !!badge.expiresDate && new Date(badge.expiresDate) < now,
       }));
 
       if (categoryFilter !== 'all') {
-        result = result.filter(badge => badge.category === categoryFilter);
+        result = result.filter((badge) => badge.category === categoryFilter);
       }
 
       if (statusFilter === 'active') {
-        result = result.filter(badge => !badge.isExpired);
+        result = result.filter((badge) => !badge.isExpired);
       } else if (statusFilter === 'expired') {
-        result = result.filter(badge => badge.isExpired);
+        result = result.filter((badge) => badge.isExpired);
       }
 
       if (visibilityFilter === 'public') {
-        result = result.filter(badge => badge.isPublic);
+        result = result.filter((badge) => badge.isPublic);
       } else if (visibilityFilter === 'private') {
-        result = result.filter(badge => !badge.isPublic);
+        result = result.filter((badge) => !badge.isPublic);
       }
 
       return result;
@@ -146,6 +146,13 @@ export class BadgesDashboardComponent {
     return computed(() => {
       const first = this.paginatorFirst();
       return this.filteredBadges().slice(first, first + BADGES_PER_PAGE);
+    });
+  }
+
+  private scrollToTop(): void {
+    this.pageTopAnchor()?.nativeElement.scrollIntoView({
+      behavior: 'auto',
+      block: 'start',
     });
   }
 }

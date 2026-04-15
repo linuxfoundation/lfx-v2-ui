@@ -16,8 +16,15 @@ export interface CredlyBadgeEntry {
   image_url: string;
   issued_to: string;
   issued_to_first_name: string;
+  issued_to_middle_name: string | null;
   issued_to_last_name: string;
   issuer_earner_id: string | null;
+  user: {
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
+    url: string;
+  };
   issuer: {
     summary: string;
     entities: Array<{

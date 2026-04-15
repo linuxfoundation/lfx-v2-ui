@@ -26,6 +26,12 @@ export interface Badge {
   issuedDate: string;
   /** Issuing organization name */
   issuer: string;
+  /** Earner first name from Credly profile */
+  firstName: string;
+  /** Earner middle name from Credly profile (optional) */
+  middleName?: string;
+  /** Earner last name from Credly profile */
+  lastName: string;
   /** Credential ID from the issuer (e.g., issuer_earner_id) */
   credentialId: string;
   /** Whether the badge state is accepted/verified */
@@ -40,7 +46,7 @@ export interface Badge {
   expiresDate?: string;
   /** Optional badge image URL */
   imageUrl?: string;
-  /** Link to view the badge on Credly — badge_url for accepted, accept_badge_url for pending */
+  /** Link to the badge on Credly: pending uses accept_badge_url, accepted public uses badge_url, accepted private uses an edit URL when derivable */
   credlyUrl?: string;
   /** Link to share the badge — only present for accepted badges (badge_url) */
   shareUrl?: string;
