@@ -29,3 +29,7 @@ export const BADGE_VISIBILITY_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'public', label: 'Public' },
   { id: 'private', label: 'Private' },
 ];
+
+export const BADGE_STATUS_SELECT_OPTIONS = BADGE_STATUS_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));
+
+export const BADGE_VISIBILITY_SELECT_OPTIONS = BADGE_VISIBILITY_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));

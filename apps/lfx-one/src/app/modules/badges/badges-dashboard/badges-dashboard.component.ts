@@ -12,7 +12,7 @@ import { Paginator, PaginatorState } from 'primeng/paginator';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CardComponent } from '@components/card/card.component';
-import { BADGE_FILTER_OPTIONS, BADGE_LABEL, BADGE_STATUS_FILTER_OPTIONS, BADGE_VISIBILITY_FILTER_OPTIONS } from '@lfx-one/shared';
+import { BADGE_FILTER_OPTIONS, BADGE_LABEL, BADGE_STATUS_SELECT_OPTIONS, BADGE_VISIBILITY_SELECT_OPTIONS } from '@lfx-one/shared';
 import { Badge, BadgeCategory, BadgeState, BadgeStatusFilter, BadgeVisibilityFilter } from '@lfx-one/shared/interfaces';
 import { catchError, map, of, startWith, tap } from 'rxjs';
 
@@ -21,12 +21,6 @@ import { BadgeCardComponent } from './components/badge-card/badge-card.component
 
 const BADGES_PER_PAGE = 12;
 const SKELETON_COUNT = 6;
-
-/** Status filter options shaped for lfx-select: { label, value } */
-const STATUS_SELECT_OPTIONS = BADGE_STATUS_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));
-
-/** Visibility filter options shaped for lfx-select: { label, value } */
-const VISIBILITY_SELECT_OPTIONS = BADGE_VISIBILITY_FILTER_OPTIONS.map((o) => ({ label: o.label, value: o.id }));
 
 @Component({
   selector: 'lfx-badges-dashboard',
@@ -42,8 +36,8 @@ export class BadgesDashboardComponent {
   // === Constants ===
   protected readonly badgeLabelPlural = BADGE_LABEL.plural;
   protected readonly filterOptions = BADGE_FILTER_OPTIONS;
-  protected readonly statusSelectOptions = STATUS_SELECT_OPTIONS;
-  protected readonly visibilitySelectOptions = VISIBILITY_SELECT_OPTIONS;
+  protected readonly statusSelectOptions = BADGE_STATUS_SELECT_OPTIONS;
+  protected readonly visibilitySelectOptions = BADGE_VISIBILITY_SELECT_OPTIONS;
   protected readonly rowsPerPage = BADGES_PER_PAGE;
   protected readonly skeletonItems = Array.from({ length: SKELETON_COUNT });
 
