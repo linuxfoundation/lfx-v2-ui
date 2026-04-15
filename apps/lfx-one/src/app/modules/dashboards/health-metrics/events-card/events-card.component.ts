@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
-import type { EventsSummaryResponse } from '@lfx-one/shared/interfaces';
+import { downloadCardAsImage } from '@shared/utils/download-card.util';
+import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
+import type { EventsSummaryResponse, HealthMetricsRange } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-events-card',
@@ -25,6 +25,9 @@ export class EventsCardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly elementRef = inject(ElementRef);
+
+  public readonly range = input<HealthMetricsRange>('YTD');
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<EventsSummaryResponse>(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
@@ -33,23 +36,32 @@ export class EventsCardComponent {
     return this.summaryData().totalEvents.toLocaleString();
   });
 
+  protected readonly formattedUpcomingEvents = computed(() => {
+    return this.summaryData().upcomingEvents.toLocaleString();
+  });
+
+  protected readonly formattedPastEvents = computed(() => {
+    return this.summaryData().pastEvents.toLocaleString();
+  });
+
   protected readonly changeDirection = computed((): 'up' | 'down' | 'neutral' => {
-    const change = this.summaryData().eventChange;
-    if (change > 0) return 'up';
-    if (change < 0) return 'down';
+    const diff = this.summaryData().eventCountDiff;
+    if (diff > 0) return 'up';
+    if (diff < 0) return 'down';
     return 'neutral';
   });
 
   protected readonly formattedChange = computed(() => {
-    const change = this.summaryData().eventChange;
-    const pct = Math.abs(change * 100).toFixed(0);
-    if (change > 0) return `↑ ${pct}%`;
-    if (change < 0) return `↓ ${pct}%`;
-    return '0%';
+    const diff = this.summaryData().eventCountDiff;
+    const abs = Math.abs(diff);
+    let prefix = '';
+    if (diff > 0) prefix = '+';
+    else if (diff < 0) prefix = '-';
+    return `${prefix}${abs} vs prev period`;
   });
 
   protected readonly showChangeIndicator = computed(() => {
-    return this.summaryData().totalEvents > 0 || this.summaryData().eventChange !== 0;
+    return this.summaryData().totalEvents > 0 || this.summaryData().eventCountDiff !== 0;
   });
 
   protected readonly sponsorshipProgressWidth = computed(() => {
@@ -89,29 +101,19 @@ export class EventsCardComponent {
   }
 
   protected downloadCard(): void {
-    // TODO: Implement download-as-PNG when html2canvas is added as a project dependency
+    downloadCardAsImage(this.elementRef.nativeElement, 'events');
   }
 
   private initializeDataFetching(): void {
-    toObservable(this.projectContextService.selectedFoundation)
-      .pipe(
-        map((foundation) => foundation?.slug || ''),
-        filter((slug): slug is string => !!slug),
-        tap(() => {
-          this.loading.set(true);
-          this.summaryData.set(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
-        }),
-        switchMap((slug) =>
-          this.analyticsService.getEventsSummary(slug).pipe(
-            catchError(() => of(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY))
-          )
-        ),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((data) => {
-        this.summaryData.set(data);
-        this.loading.set(false);
-      });
+    initializeRangeDataFetching({
+      projectContextService: this.projectContextService,
+      range: this.range,
+      loading: this.loading,
+      data: this.summaryData,
+      defaultValue: HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY,
+      fetchFn: (slug, range) => this.analyticsService.getEventsSummary(slug, range),
+      destroyRef: this.destroyRef,
+    });
   }
 
   private abbreviateDollar(value: number): string {

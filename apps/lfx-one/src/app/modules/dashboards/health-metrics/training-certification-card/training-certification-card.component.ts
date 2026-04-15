@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
+import { downloadCardAsImage } from '@shared/utils/download-card.util';
+import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
 
-import type { TrainingCertificationSummaryResponse } from '@lfx-one/shared/interfaces';
+import type { HealthMetricsRange, TrainingCertificationSummaryResponse } from '@lfx-one/shared/interfaces';
 
 type CardMode = 'enrollment' | 'revenue';
 
@@ -28,6 +28,9 @@ export class TrainingCertificationCardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly elementRef = inject(ElementRef);
+
+  public readonly range = input<HealthMetricsRange>('YTD');
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<TrainingCertificationSummaryResponse>(HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY);
@@ -75,7 +78,7 @@ export class TrainingCertificationCardComponent {
   }
 
   protected downloadCard(): void {
-    // TODO: Implement download-as-PNG when html2canvas is added as a project dependency
+    downloadCardAsImage(this.elementRef.nativeElement, 'training-certification');
   }
 
   private formatValue(value: number, mode: CardMode): string {
@@ -95,24 +98,14 @@ export class TrainingCertificationCardComponent {
   }
 
   private initializeDataFetching(): void {
-    toObservable(this.projectContextService.selectedFoundation)
-      .pipe(
-        map((foundation) => foundation?.slug || ''),
-        filter((slug): slug is string => !!slug),
-        tap(() => {
-          this.loading.set(true);
-          this.summaryData.set(HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY);
-        }),
-        switchMap((slug) =>
-          this.analyticsService.getTrainingCertificationSummary(slug).pipe(
-            catchError(() => of(HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY))
-          )
-        ),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((data) => {
-        this.summaryData.set(data);
-        this.loading.set(false);
-      });
+    initializeRangeDataFetching({
+      projectContextService: this.projectContextService,
+      range: this.range,
+      loading: this.loading,
+      data: this.summaryData,
+      defaultValue: HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY,
+      fetchFn: (slug, range) => this.analyticsService.getTrainingCertificationSummary(slug, range),
+      destroyRef: this.destroyRef,
+    });
   }
 }

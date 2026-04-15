@@ -9,12 +9,24 @@
       <p class="text-sm text-gray-500">Operational health metrics across your foundation.</p>
     </div>
     <div class="flex items-center gap-4">
-      <span class="text-sm text-gray-500 whitespace-nowrap">{{ ytdDateRange() }}</span>
-      <div class="flex items-center gap-0.5 rounded-lg bg-gray-100 p-1" data-testid="health-metrics-year-filter">
-        <button disabled aria-disabled="true" class="px-3 py-1 text-sm text-gray-500 cursor-not-allowed">2023</button>
-        <button disabled aria-disabled="true" class="px-3 py-1 text-sm text-gray-500 cursor-not-allowed">2024</button>
-        <button disabled aria-disabled="true" class="px-3 py-1 text-sm text-gray-500 cursor-not-allowed">2025</button>
-        <button class="px-3 py-1 text-sm font-semibold text-gray-900 bg-white rounded-md shadow-sm" data-testid="health-metrics-year-ytd">YTD</button>
+      <span class="text-sm text-gray-500 whitespace-nowrap">{{ dateRangeLabel() }}</span>
+      <div class="flex items-center gap-0.5 rounded-lg bg-gray-100 p-1" role="group" aria-label="Year range filter" data-testid="health-metrics-year-filter">
+        @for (option of yearOptions(); track option.range) {
+          <button
+            class="px-3 py-1 text-sm rounded-md transition-colors"
+            [class.font-semibold]="selectedRange() === option.range"
+            [class.text-gray-900]="selectedRange() === option.range"
+            [class.bg-white]="selectedRange() === option.range"
+            [class.shadow-sm]="selectedRange() === option.range"
+            [class.text-gray-500]="selectedRange() !== option.range"
+            [class.hover:text-gray-700]="selectedRange() !== option.range"
+            [attr.aria-pressed]="selectedRange() === option.range"
+            [attr.aria-label]="'Show data for ' + option.label"
+            (click)="selectRange(option.range)"
+            [attr.data-testid]="'health-metrics-year-' + (option.range === 'YTD' ? 'ytd' : option.year)">
+            {{ option.label }}
+          </button>
+        }
       </div>
     </div>
   </div>
@@ -66,25 +78,25 @@
   <!-- Participating Organizations & NPS -->
   @if (hasFoundation()) {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <lfx-participating-orgs-card />
-      <lfx-nps-card />
+      <lfx-participating-orgs-card [range]="selectedRange()" />
+      <lfx-nps-card [range]="selectedRange()" />
     </div>
 
     <!-- Membership Churn Per Tier & Outstanding Balance -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <lfx-membership-churn-tier-card />
+      <lfx-membership-churn-tier-card [range]="selectedRange()" />
       <lfx-outstanding-balance-card />
     </div>
 
     <!-- Events & Training & Certification -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <lfx-events-card />
-      <lfx-training-certification-card />
+      <lfx-events-card [range]="selectedRange()" />
+      <lfx-training-certification-card [range]="selectedRange()" />
     </div>
 
     <!-- Code Contribution -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <lfx-code-contribution-card />
+      <lfx-code-contribution-card [range]="selectedRange()" />
     </div>
   }
 </div>

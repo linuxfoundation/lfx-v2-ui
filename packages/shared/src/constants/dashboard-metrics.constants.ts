@@ -511,7 +511,10 @@ export const HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY: CodeContributionS
 export const HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY: EventsSummaryResponse = {
   projectId: '',
   totalEvents: 0,
+  upcomingEvents: 0,
+  pastEvents: 0,
   eventChange: 0,
+  eventCountDiff: 0,
   sponsorshipRevenue: 0,
   sponsorshipGoal: 0,
   sponsorshipProgressPct: 0,

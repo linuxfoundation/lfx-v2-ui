@@ -441,8 +441,14 @@ export interface EventsSummaryResponse {
   projectId: string;
   /** Total event count for YTD (EVENT_COUNT_YTD) */
   totalEvents: number;
+  /** Upcoming events count (UPCOMING_EVENTS_YTD) */
+  upcomingEvents: number;
+  /** Past events count (PAST_EVENTS_YTD) */
+  pastEvents: number;
   /** Period-over-period change ratio (e.g., -0.45 for 45% decrease); 0 when previous year is zero */
   eventChange: number;
+  /** Absolute period-over-period count difference (current - previous); for "+N vs prev period" display */
+  eventCountDiff: number;
   /** Aggregate sponsorship revenue for YTD in dollars */
   sponsorshipRevenue: number;
   /** Sponsorship goal proxy from ENGAGEMENT_SCORES; 0 when unavailable */
@@ -456,10 +462,25 @@ export interface EventsSummaryResponse {
 // ============================================
 
 /**
+ * Shared reporting range type used by all Health Metrics cards.
+ * Maps to range-specific Snowflake columns or year predicates.
+ */
+export type HealthMetricsRange = 'YTD' | 'COMPLETED_YEAR' | 'COMPLETED_YEAR_2' | 'COMPLETED_YEAR_3' | 'COMPLETED_YEAR_4';
+
+/**
+ * Year filter option for the Health Metrics page year-range selector.
+ */
+export interface HealthMetricsYearOption {
+  label: string;
+  range: HealthMetricsRange;
+  year: number;
+}
+
+/**
  * Allowed reporting windows for the Training & Certification card.
  * Maps to range-specific columns in ANALYTICS.PLATINUM.ENROLLMENTS / COURSE_PURCHASES.
  */
-export type TrainingCertificationRange = 'YTD' | 'COMPLETED_YEAR' | 'COMPLETED_YEAR_2' | 'COMPLETED_YEAR_3' | 'COMPLETED_YEAR_4';
+export type TrainingCertificationRange = HealthMetricsRange;
 
 /**
  * Enrollment-mode category values for the Training & Certification card.
@@ -507,7 +528,7 @@ export interface TrainingCertificationSummaryResponse {
  * Allowed reporting windows for the Code Contribution card.
  * Maps to range-specific columns in ANALYTICS.PLATINUM.CODE_CONTRIBUTIONS.
  */
-export type CodeContributionRange = 'YTD' | 'COMPLETED_YEAR' | 'COMPLETED_YEAR_2' | 'COMPLETED_YEAR_3' | 'COMPLETED_YEAR_4';
+export type CodeContributionRange = HealthMetricsRange;
 
 /**
  * Code Contribution summary response from BFF.

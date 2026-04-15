@@ -983,8 +983,14 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project resolution
    * @returns Observable of NPS summary response; degrades to zeros on error
    */
-  public getNpsSummary(foundationSlug: string): Observable<NpsSummaryResponse> {
-    const params = { foundationSlug };
+  public getNpsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Observable<NpsSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (range && range !== 'YTD') {
+      params['range'] = range;
+    }
     return this.http.get<NpsSummaryResponse>('/api/analytics/nps-summary', { params }).pipe(
       catchError(() => {
         return of({
@@ -1006,8 +1012,14 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project_slug filter
    * @returns Observable of participating orgs summary response
    */
-  public getParticipatingOrgsSummary(foundationSlug: string): Observable<ParticipatingOrgsSummaryResponse> {
-    const params = { foundationSlug };
+  public getParticipatingOrgsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Observable<ParticipatingOrgsSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (range && range !== 'YTD') {
+      params['range'] = range;
+    }
     return this.http.get<ParticipatingOrgsSummaryResponse>('/api/analytics/participating-orgs-summary', { params }).pipe(
       catchError(() => {
         return of({
@@ -1057,14 +1069,23 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project resolution
    * @returns Observable of events summary; degrades to zeros on error
    */
-  public getEventsSummary(foundationSlug: string): Observable<EventsSummaryResponse> {
-    const params = { foundationSlug };
+  public getEventsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Observable<EventsSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (range && range !== 'YTD') {
+      params['range'] = range;
+    }
     return this.http.get<EventsSummaryResponse>('/api/analytics/events-summary', { params }).pipe(
       catchError(() => {
         return of({
           projectId: '',
           totalEvents: 0,
+          upcomingEvents: 0,
+          pastEvents: 0,
           eventChange: 0,
+          eventCountDiff: 0,
           sponsorshipRevenue: 0,
           sponsorshipGoal: 0,
           sponsorshipProgressPct: 0,
@@ -1087,7 +1108,7 @@ export class AnalyticsService {
         catchError(() => {
           return of({
             projectId: '',
-            range: 'YTD' as const,
+            range: (range || 'YTD') as TrainingCertificationSummaryResponse['range'],
             enrollment: { instructorLed: 0, eLearning: 0, certExams: 0, edx: 0 },
             revenue: { instructorLed: 0, eLearning: 0, certExams: 0 },
           });
@@ -1111,7 +1132,7 @@ export class AnalyticsService {
             dataAvailable: false,
             projectId: '',
             projectSlug: '',
-            range: 'YTD' as const,
+            range: (range || 'YTD') as CodeContributionSummaryResponse['range'],
             totalContributors: 0,
             totalContributorsChange: 0,
             newContributors: 0,

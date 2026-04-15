@@ -101,6 +101,36 @@ export class ProjectService {
   private readonly etagService: ETagService;
   private readonly snowflakeService: SnowflakeService;
 
+  private static readonly rangeSuffixMap: Record<string, Record<string, string>> = {
+    standard: {
+      YTD: '_ytd',
+      COMPLETED_YEAR: '_last_completed_year',
+      COMPLETED_YEAR_2: '_prev_completed_year',
+      COMPLETED_YEAR_3: '_3rd_last_completed_year',
+      COMPLETED_YEAR_4: '_4th_last_completed_year',
+    },
+    engagementScoresGoal: {
+      YTD: '_ytd',
+      COMPLETED_YEAR: '_last_completed_year',
+      COMPLETED_YEAR_2: '_previous_completed_year',
+      COMPLETED_YEAR_3: '_third_last_completed_year',
+      COMPLETED_YEAR_4: '_fourth_last_completed_year',
+    },
+    eventComparison: {
+      YTD: '_last_completed_year',
+      COMPLETED_YEAR: '_prev_completed_year',
+      COMPLETED_YEAR_2: '_3rd_last_completed_year',
+      COMPLETED_YEAR_3: '_4th_last_completed_year',
+    },
+    training: {
+      YTD: 'YTD',
+      COMPLETED_YEAR: 'LAST_COMPLETED_YEAR',
+      COMPLETED_YEAR_2: 'PREV_COMPLETED_YEAR',
+      COMPLETED_YEAR_3: '3RD_LAST_COMPLETED_YEAR',
+      COMPLETED_YEAR_4: '4th_LAST_COMPLETED_YEAR',
+    },
+  };
+
   public constructor() {
     this.accessCheckService = new AccessCheckService();
     this.microserviceProxy = new MicroserviceProxyService();
@@ -2586,11 +2616,18 @@ export class ProjectService {
 
   /**
    * Get participating organizations summary for a foundation from Snowflake
-   * Queries ANALYTICS.PLATINUM tables for membership counts and engagement classification
+   * Queries ANALYTICS.PLATINUM tables for membership counts and engagement classification.
+   * Note: ENGAGEMENT_SCORES_BY_CLASSIFICATION only provides last-12-month engagement
+   * classification, so engagement breakdown is only included for YTD. Non-YTD ranges
+   * return zeroed engagement to avoid mismatching period-scoped counts with stale breakdown.
    * @param foundationSlug - Foundation slug used to resolve Snowflake PROJECT_ID via project_slug
+   * @param range - Reporting range (default 'YTD')
    * @returns Participating orgs summary with member counts and engagement breakdown
    */
-  public async getParticipatingOrgsSummary(foundationSlug: string): Promise<ParticipatingOrgsSummaryResponse> {
+  public async getParticipatingOrgsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Promise<ParticipatingOrgsSummaryResponse> {
     interface ParticipatingOrgsRow {
       PROJECT_ID: string;
       TOTAL_ACTIVE_ACCOUNTS: number;
@@ -2600,6 +2637,34 @@ export class ProjectService {
       LOW_ENGAGEMENT: number;
     }
 
+    const VALID_RANGES = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+    const effectiveRange = VALID_RANGES.includes(range) ? range : 'YTD';
+    const suffix = this.getRangeSuffix(effectiveRange);
+    const includeEngagement = effectiveRange === 'YTD';
+
+    const engagementJoin = includeEngagement
+      ? `LEFT JOIN (
+          SELECT
+            esc.project_id,
+            SUM(CASE WHEN esc.engagement_score_classification = 'Low' THEN esc.total_accounts ELSE 0 END) as LOW_ENGAGEMENT,
+            SUM(CASE WHEN esc.engagement_score_classification = 'Medium' THEN esc.total_accounts ELSE 0 END) as MED_ENGAGEMENT,
+            SUM(CASE WHEN esc.engagement_score_classification = 'High' THEN esc.total_accounts ELSE 0 END) as HIGH_ENGAGEMENT
+          FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION esc
+          INNER JOIN slug_resolve sr2 ON esc.project_id = sr2.project_id
+          WHERE esc.is_member
+          GROUP BY esc.project_id
+        ) as e
+        ON a.PROJECT_ID = e.PROJECT_ID`
+      : '';
+
+    const engagementSelect = includeEngagement
+      ? `IFNULL(e.LOW_ENGAGEMENT, 0) as LOW_ENGAGEMENT,
+        IFNULL(e.MED_ENGAGEMENT, 0) as MED_ENGAGEMENT,
+        IFNULL(e.HIGH_ENGAGEMENT, 0) as HIGH_ENGAGEMENT`
+      : `0 as LOW_ENGAGEMENT,
+        0 as MED_ENGAGEMENT,
+        0 as HIGH_ENGAGEMENT`;
+
     const query = `
       WITH slug_resolve AS (
         SELECT DISTINCT project_id
@@ -2608,25 +2673,12 @@ export class ProjectService {
       )
       SELECT
         a.PROJECT_ID,
-        a.total_active_accounts_YTD as TOTAL_ACTIVE_ACCOUNTS,
-        a.total_new_accounts_YTD as TOTAL_NEW_ACCOUNTS,
-        IFNULL(e.LOW_ENGAGEMENT, 0) as LOW_ENGAGEMENT,
-        IFNULL(e.MED_ENGAGEMENT, 0) as MED_ENGAGEMENT,
-        IFNULL(e.HIGH_ENGAGEMENT, 0) as HIGH_ENGAGEMENT
+        IFNULL(a.total_active_accounts${suffix}, 0) as TOTAL_ACTIVE_ACCOUNTS,
+        IFNULL(a.total_new_accounts${suffix}, 0) as TOTAL_NEW_ACCOUNTS,
+        ${engagementSelect}
       FROM ANALYTICS.PLATINUM.MEMBERSHIP_OVERALL_ACCOUNTS as a
       INNER JOIN slug_resolve sr ON a.PROJECT_ID = sr.project_id
-      LEFT JOIN (
-        SELECT
-          esc.project_id,
-          SUM(CASE WHEN esc.engagement_score_classification = 'Low' THEN esc.total_accounts ELSE 0 END) as LOW_ENGAGEMENT,
-          SUM(CASE WHEN esc.engagement_score_classification = 'Medium' THEN esc.total_accounts ELSE 0 END) as MED_ENGAGEMENT,
-          SUM(CASE WHEN esc.engagement_score_classification = 'High' THEN esc.total_accounts ELSE 0 END) as HIGH_ENGAGEMENT
-        FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES_BY_CLASSIFICATION esc
-        INNER JOIN slug_resolve sr2 ON esc.project_id = sr2.project_id
-        WHERE esc.is_member
-        GROUP BY esc.project_id
-      ) as e
-      ON a.PROJECT_ID = e.PROJECT_ID
+      ${engagementJoin}
       LIMIT 1
     `;
 
@@ -2656,12 +2708,16 @@ export class ProjectService {
 
   /**
    * Get NPS summary for a foundation from Snowflake
-   * SQL aligned with lfx-pcc SurveyQueriesService.surveyResponseMetrics (YTD range).
+   * SQL aligned with lfx-pcc SurveyQueriesService.surveyResponseMetrics.
    * Resolves project_id from foundation slug via ENGAGEMENT_SCORES_BY_CLASSIFICATION CTE.
    * @param foundationSlug - Foundation slug used to resolve project_id
+   * @param range - Reporting range (default 'YTD')
    * @returns NPS summary response with score, counts, and period label
    */
-  public async getNpsSummary(foundationSlug: string): Promise<NpsSummaryResponse> {
+  public async getNpsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Promise<NpsSummaryResponse> {
     interface NpsSummaryRow {
       PROJECT_ID: string;
       NPS_SCORE: number;
@@ -2673,6 +2729,10 @@ export class ProjectService {
       CHANGE_NPS_SCORE: number;
     }
 
+    const VALID_RANGES = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+    const effectiveRange = VALID_RANGES.includes(range) ? range : 'YTD';
+    const suffix = this.getRangeSuffix(effectiveRange);
+
     const query = `
       WITH slug_resolve AS (
         SELECT DISTINCT project_id
@@ -2681,13 +2741,13 @@ export class ProjectService {
       )
       SELECT
         sr.project_id AS PROJECT_ID,
-        IFNULL(sr.most_recent_nps_score_YTD, 0) AS NPS_SCORE,
-        IFNULL(sr.most_recent_count_promoters_YTD, 0) AS PROMOTERS,
-        IFNULL(sr.most_recent_count_passives_YTD, 0) AS PASSIVES,
-        IFNULL(sr.most_recent_count_detractors_YTD, 0) AS DETRACTORS,
-        IFNULL(sr.most_recent_count_non_responses_YTD, 0) AS NON_RESPONSES,
+        IFNULL(sr.most_recent_nps_score${suffix}, 0) AS NPS_SCORE,
+        IFNULL(sr.most_recent_count_promoters${suffix}, 0) AS PROMOTERS,
+        IFNULL(sr.most_recent_count_passives${suffix}, 0) AS PASSIVES,
+        IFNULL(sr.most_recent_count_detractors${suffix}, 0) AS DETRACTORS,
+        IFNULL(sr.most_recent_count_non_responses${suffix}, 0) AS NON_RESPONSES,
         sr.last_updated AS LAST_UPDATED,
-        IFNULL(sr.nps_score_most_recent_to_previous_change_YTD, 0) AS CHANGE_NPS_SCORE
+        IFNULL(sr.nps_score_most_recent_to_previous_change${suffix}, 0) AS CHANGE_NPS_SCORE
       FROM ANALYTICS.PLATINUM.SURVEY_RESPONSES sr
       INNER JOIN slug_resolve s ON sr.project_id = s.project_id
       LIMIT 1
@@ -2716,6 +2776,8 @@ export class ProjectService {
       if (!isNaN(date.getTime())) {
         const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
         lastUpdatedLabel = `Q${quarter} ${date.getUTCFullYear()}`;
+      } else {
+        lastUpdatedLabel = row.LAST_UPDATED;
       }
     }
 
@@ -2759,25 +2821,25 @@ export class ProjectService {
     const VALID_RANGES = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
     const effectiveRange = VALID_RANGES.includes(range) ? range : 'YTD';
 
-    const currentYearPredicate = effectiveRange === 'COMPLETED_YEAR'
-      ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 2"
-      : effectiveRange === 'COMPLETED_YEAR_2'
-        ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 3"
-        : effectiveRange === 'COMPLETED_YEAR_3'
-          ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 4"
-          : effectiveRange === 'COMPLETED_YEAR_4'
-            ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 5"
-            : "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1";
+    const currentYearOffsetMap: Record<string, number> = {
+      COMPLETED_YEAR: 2,
+      COMPLETED_YEAR_2: 3,
+      COMPLETED_YEAR_3: 4,
+      COMPLETED_YEAR_4: 5,
+    };
+    const currentOffset = currentYearOffsetMap[effectiveRange] ?? 1;
+    const currentYearPredicate = `EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - ${currentOffset}`;
 
-    const previousYearPredicate = effectiveRange === 'COMPLETED_YEAR'
-      ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 3"
-      : effectiveRange === 'COMPLETED_YEAR_2'
-        ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 4"
-        : effectiveRange === 'COMPLETED_YEAR_3'
-          ? "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 5"
-          : effectiveRange === 'COMPLETED_YEAR_4'
-            ? null
-            : "EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - 2";
+    const previousYearOffsetMap: Record<string, number | null> = {
+      COMPLETED_YEAR: 3,
+      COMPLETED_YEAR_2: 4,
+      COMPLETED_YEAR_3: 5,
+      COMPLETED_YEAR_4: null,
+    };
+    const previousOffset = effectiveRange in previousYearOffsetMap ? previousYearOffsetMap[effectiveRange] : 2;
+    const previousYearPredicate = previousOffset !== null
+      ? `EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - ${previousOffset}`
+      : null;
 
     const comparisonAvailable = previousYearPredicate !== null;
 
@@ -3037,11 +3099,17 @@ export class ProjectService {
    * @param foundationSlug - Foundation slug used to resolve project_id
    * @returns Events summary response with total events, change, sponsorship, and goal
    */
-  public async getEventsSummary(foundationSlug: string): Promise<EventsSummaryResponse> {
+  public async getEventsSummary(
+    foundationSlug: string,
+    range: string = 'YTD'
+  ): Promise<EventsSummaryResponse> {
     interface OverviewRow {
       PROJECT_ID: string;
       ALL_EVENTS: number;
+      UPCOMING_EVENTS: number;
+      PAST_EVENTS: number;
       EVENT_CHANGE: number;
+      EVENT_COUNT_DIFF: number;
     }
 
     interface SponsorshipRow {
@@ -3052,6 +3120,31 @@ export class ProjectService {
       SPONSORSHIP_GOAL: number;
     }
 
+    const VALID_RANGES = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+    const effectiveRange = VALID_RANGES.includes(range) ? range : 'YTD';
+    const suffix = this.getRangeSuffix(effectiveRange);
+    const goalSuffix = this.getRangeSuffix(effectiveRange, 'engagementScoresGoal');
+
+    const comparisonMap = ProjectService.rangeSuffixMap['eventComparison'];
+    const hasComparison = effectiveRange in comparisonMap;
+    const comparisonSuffix = hasComparison ? comparisonMap[effectiveRange] : null;
+
+    const upcomingCol = effectiveRange === 'YTD'
+      ? `IFNULL(eo.UPCOMING_EVENTS${suffix}, 0)`
+      : '0';
+
+    const changeExpr = comparisonSuffix
+      ? `CASE
+          WHEN IFNULL(eo.EVENT_COUNT${comparisonSuffix}, 0) = 0 THEN 0
+          ELSE (IFNULL(eo.EVENT_COUNT${suffix}, 0) - eo.EVENT_COUNT${comparisonSuffix})
+               / NULLIF(eo.EVENT_COUNT${comparisonSuffix}, 0)
+        END`
+      : '0';
+
+    const diffExpr = comparisonSuffix
+      ? `IFNULL(eo.EVENT_COUNT${suffix}, 0) - IFNULL(eo.EVENT_COUNT${comparisonSuffix}, 0)`
+      : '0';
+
     const overviewQuery = `
       WITH slug_resolve AS (
         SELECT DISTINCT project_id
@@ -3060,12 +3153,11 @@ export class ProjectService {
       )
       SELECT
         eo.PROJECT_ID,
-        IFNULL(eo.EVENT_COUNT_YTD, 0) AS ALL_EVENTS,
-        CASE
-          WHEN IFNULL(eo.EVENT_COUNT_LAST_COMPLETED_YEAR, 0) = 0 THEN 0
-          ELSE (IFNULL(eo.EVENT_COUNT_YTD, 0) - eo.EVENT_COUNT_LAST_COMPLETED_YEAR)
-               / NULLIF(eo.EVENT_COUNT_LAST_COMPLETED_YEAR, 0)
-        END AS EVENT_CHANGE
+        IFNULL(eo.EVENT_COUNT${suffix}, 0) AS ALL_EVENTS,
+        ${upcomingCol} AS UPCOMING_EVENTS,
+        IFNULL(eo.PAST_EVENTS${suffix}, 0) AS PAST_EVENTS,
+        ${changeExpr} AS EVENT_CHANGE,
+        ${diffExpr} AS EVENT_COUNT_DIFF
       FROM ANALYTICS.PLATINUM.EVENT_OVERVIEW eo
       INNER JOIN slug_resolve sr ON eo.PROJECT_ID = sr.project_id
       LIMIT 1
@@ -3078,7 +3170,7 @@ export class ProjectService {
         WHERE project_slug = ?
       )
       SELECT
-        IFNULL(SUM(es.SPONSORSHIP_REVENUE_YTD), 0) AS SPONSORSHIP_REVENUE
+        IFNULL(SUM(es.SPONSORSHIP_REVENUE${suffix}), 0) AS SPONSORSHIP_REVENUE
       FROM ANALYTICS.PLATINUM.EVENT_SPONSORSHIPS es
       INNER JOIN slug_resolve sr ON es.PROJECT_ID = sr.project_id
     `;
@@ -3090,7 +3182,7 @@ export class ProjectService {
         WHERE project_slug = ?
       )
       SELECT
-        IFNULL(MAX(eng.EVENT_SPONSORSHIPS_YTD_GOAL), 0) AS SPONSORSHIP_GOAL
+        IFNULL(MAX(eng.EVENT_SPONSORSHIPS${goalSuffix}_GOAL), 0) AS SPONSORSHIP_GOAL
       FROM ANALYTICS.PLATINUM.ENGAGEMENT_SCORES eng
       INNER JOIN slug_resolve sr ON eng.PROJECT_ID = sr.project_id
       WHERE eng.IS_MEMBER = TRUE
@@ -3108,7 +3200,10 @@ export class ProjectService {
 
     const resolvedProjectId = overviewRow?.PROJECT_ID ?? '';
     const totalEvents = overviewRow?.ALL_EVENTS ?? 0;
+    const upcomingEvents = overviewRow?.UPCOMING_EVENTS ?? 0;
+    const pastEvents = overviewRow?.PAST_EVENTS ?? 0;
     const eventChange = overviewRow?.EVENT_CHANGE ?? 0;
+    const eventCountDiff = overviewRow?.EVENT_COUNT_DIFF ?? 0;
     const sponsorshipRevenue = sponsorshipRow?.SPONSORSHIP_REVENUE ?? 0;
     const sponsorshipGoal = goalRow?.SPONSORSHIP_GOAL ?? 0;
     const sponsorshipProgressPct = sponsorshipGoal > 0 ? (sponsorshipRevenue / sponsorshipGoal) * 100 : 0;
@@ -3116,7 +3211,10 @@ export class ProjectService {
     return {
       projectId: resolvedProjectId,
       totalEvents,
+      upcomingEvents,
+      pastEvents,
       eventChange,
+      eventCountDiff,
       sponsorshipRevenue,
       sponsorshipGoal,
       sponsorshipProgressPct,
@@ -3241,7 +3339,7 @@ export class ProjectService {
     const effectiveRange: CodeContributionRange = validRanges.includes(range as CodeContributionRange)
       ? (range as CodeContributionRange)
       : 'YTD';
-    const rangeSuffix = this.getCodeContributionRangeSuffix(effectiveRange);
+    const rangeSuffix = this.getRangeSuffix(effectiveRange);
 
     const query = `
       WITH slug_resolve AS (
@@ -3281,36 +3379,6 @@ export class ProjectService {
     };
   }
 
-  private getCodeContributionRangeSuffix(range: CodeContributionRange): string {
-    switch (range) {
-      case 'COMPLETED_YEAR':
-        return '_last_completed_year';
-      case 'COMPLETED_YEAR_2':
-        return '_prev_completed_year';
-      case 'COMPLETED_YEAR_3':
-        return '_3rd_last_completed_year';
-      case 'COMPLETED_YEAR_4':
-        return '_4th_last_completed_year';
-      default:
-        return '_ytd';
-    }
-  }
-
-  private getTrainingRangeColumns(range: string): { prefix: string; suffix: string } {
-    switch (range) {
-      case 'COMPLETED_YEAR':
-        return { prefix: 'LAST_', suffix: 'COMPLETED_YEAR' };
-      case 'COMPLETED_YEAR_2':
-        return { prefix: 'PREV_', suffix: 'COMPLETED_YEAR' };
-      case 'COMPLETED_YEAR_3':
-        return { prefix: '3RD_LAST_', suffix: 'COMPLETED_YEAR' };
-      case 'COMPLETED_YEAR_4':
-        return { prefix: '4th_LAST_', suffix: 'COMPLETED_YEAR' };
-      default:
-        return { prefix: '', suffix: 'YTD' };
-    }
-  }
-
   /**
    * Get all project UIDs under a foundation (foundation UID + child project UIDs).
    * Queries the query service for projects with parent_uid matching the foundation.
@@ -3342,5 +3410,17 @@ export class ProjectService {
     }
     logger.debug(req, 'get_foundation_project_uids', 'Resolved foundation project UIDs', { foundation_uid: foundationUid, count: uids.length });
     return uids;
+  }
+
+  private getRangeSuffix(range: string, convention: string = 'standard'): string {
+    const map = ProjectService.rangeSuffixMap[convention];
+    return map?.[range] ?? map?.['YTD'] ?? '_ytd';
+  }
+
+  private getTrainingRangeColumns(range: string): { prefix: string; suffix: string } {
+    const full = this.getRangeSuffix(range, 'training');
+    if (full === 'YTD') return { prefix: '', suffix: 'YTD' };
+    const lastUnderscore = full.lastIndexOf('_');
+    return { prefix: full.substring(0, lastUnderscore + 1), suffix: full.substring(lastUnderscore + 1) };
   }
 }

@@ -2164,13 +2164,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/nps-summary
    * Get Net Promoter Score summary for a foundation
-   * Query params: foundationSlug (required)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
    */
   public async getNpsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_nps_summary');
 
     try {
       const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2184,10 +2185,11 @@ export class AnalyticsController {
         });
       }
 
-      const response = await this.projectService.getNpsSummary(foundationSlug);
+      const response = await this.projectService.getNpsSummary(foundationSlug, range);
 
       logger.success(req, 'get_nps_summary', startTime, {
         foundation_slug: foundationSlug,
+        range,
         nps_score: response.npsScore,
         responses: response.responses,
       });
@@ -2201,13 +2203,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/participating-orgs-summary
    * Get participating organizations summary (membership counts + engagement breakdown)
-   * Query params: foundationSlug (required)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
    */
   public async getParticipatingOrgsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_participating_orgs_summary');
 
     try {
       const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2221,10 +2224,11 @@ export class AnalyticsController {
         });
       }
 
-      const response = await this.projectService.getParticipatingOrgsSummary(foundationSlug);
+      const response = await this.projectService.getParticipatingOrgsSummary(foundationSlug, range);
 
       logger.success(req, 'get_participating_orgs_summary', startTime, {
         foundation_slug: foundationSlug,
+        range,
         total_active_members: response.totalActiveMembers,
         total_new_members: response.totalNewMembers,
       });
@@ -2284,13 +2288,14 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/events-summary
    * Get events summary for a foundation (total events, change, sponsorship vs goal)
-   * Query params: foundationSlug (required)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
    */
   public async getEventsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_events_summary');
 
     try {
       const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
@@ -2304,10 +2309,11 @@ export class AnalyticsController {
         });
       }
 
-      const response = await this.projectService.getEventsSummary(foundationSlug);
+      const response = await this.projectService.getEventsSummary(foundationSlug, range);
 
       logger.success(req, 'get_events_summary', startTime, {
         foundation_slug: foundationSlug,
+        range,
         project_id: response.projectId,
         total_events: response.totalEvents,
         event_change: response.eventChange,

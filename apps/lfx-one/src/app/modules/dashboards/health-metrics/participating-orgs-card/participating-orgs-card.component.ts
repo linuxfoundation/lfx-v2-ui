@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser, NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal } from '@angular/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY, lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { filter, map, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
+import { downloadCardAsImage } from '@shared/utils/download-card.util';
+import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
 
-import type { EngagementSegment, ParticipatingOrgsSummaryResponse } from '@lfx-one/shared/interfaces';
+import type { EngagementSegment, HealthMetricsRange, ParticipatingOrgsSummaryResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-participating-orgs-card',
@@ -26,6 +26,9 @@ export class ParticipatingOrgsCardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly elementRef = inject(ElementRef);
+
+  public readonly range = input<HealthMetricsRange>('YTD');
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<ParticipatingOrgsSummaryResponse>(HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY);
@@ -41,9 +44,9 @@ export class ParticipatingOrgsCardComponent {
     if (total === 0) return [];
 
     const visible = [
-      { label: 'High', count: data.highEngagement, color: lfxColors.emerald[300], dotColor: lfxColors.emerald[300] },
-      { label: 'Medium', count: data.medEngagement, color: lfxColors.amber[200], dotColor: lfxColors.amber[200] },
-      { label: 'Low', count: data.lowEngagement, color: lfxColors.red[200], dotColor: lfxColors.red[200] },
+      { label: 'High', count: data.highEngagement, color: lfxColors.emerald[400], dotColor: lfxColors.emerald[400] },
+      { label: 'Medium', count: data.medEngagement, color: lfxColors.amber[300], dotColor: lfxColors.amber[300] },
+      { label: 'Low', count: data.lowEngagement, color: lfxColors.red[400], dotColor: lfxColors.red[400] },
     ].filter((s) => s.count > 0);
 
     let usedPercent = 0;
@@ -90,17 +93,13 @@ export class ParticipatingOrgsCardComponent {
     const dominant = this.dominantSegment();
     if (total === 0 || !dominant) return '';
 
-    const pctMap: Record<string, number> = {
-      high: Math.round((data.highEngagement / total) * 100),
-      medium: Math.round((data.medEngagement / total) * 100),
-      low: Math.round((data.lowEngagement / total) * 100),
-    };
-    const pct = pctMap[dominant.level] ?? 0;
+    const highPct = Math.round((data.highEngagement / total) * 100);
+    const medPct = Math.round((data.medEngagement / total) * 100);
 
     const subtitleMap: Record<string, string> = {
-      high: `${pct}% of members are highly engaged this period`,
-      medium: `${pct}% of members show medium engagement this period`,
-      low: `Only ${pct}% of members are highly engaged this period`,
+      high: `${highPct}% of members are highly engaged this period`,
+      medium: `${medPct}% of members show medium engagement this period`,
+      low: `Only ${highPct}% of members are highly engaged this period`,
     };
     return subtitleMap[dominant.level] ?? '';
   });
@@ -127,26 +126,18 @@ export class ParticipatingOrgsCardComponent {
   }
 
   protected downloadCard(): void {
-    // TODO: Implement download-as-PNG when html2canvas is added as a project dependency
-    // Install with: npm install html2canvas @types/html2canvas
-    // Then use: import('html2canvas').then(mod => mod.default(el, options))
+    downloadCardAsImage(this.elementRef.nativeElement, 'participating-organizations');
   }
 
   private initializeDataFetching(): void {
-    toObservable(this.projectContextService.selectedFoundation)
-      .pipe(
-        map((foundation) => foundation?.slug || ''),
-        filter((slug): slug is string => !!slug),
-        tap(() => {
-          this.loading.set(true);
-          this.summaryData.set(HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY);
-        }),
-        switchMap((slug) => this.analyticsService.getParticipatingOrgsSummary(slug)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((data) => {
-        this.summaryData.set(data);
-        this.loading.set(false);
-      });
+    initializeRangeDataFetching({
+      projectContextService: this.projectContextService,
+      range: this.range,
+      loading: this.loading,
+      data: this.summaryData,
+      defaultValue: HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY,
+      fetchFn: (slug, range) => this.analyticsService.getParticipatingOrgsSummary(slug, range),
+      destroyRef: this.destroyRef,
+    });
   }
 }

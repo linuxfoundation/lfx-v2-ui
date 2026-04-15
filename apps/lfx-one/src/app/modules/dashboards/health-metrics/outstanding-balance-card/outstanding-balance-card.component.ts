@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
 import { HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
@@ -10,6 +10,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
+import { downloadCardAsImage } from '@shared/utils/download-card.util';
 import type { OutstandingBalanceSummaryResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
@@ -25,6 +26,7 @@ export class OutstandingBalanceCardComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly elementRef = inject(ElementRef);
 
   protected readonly loading = signal(true);
   protected readonly summaryData = signal<OutstandingBalanceSummaryResponse>(HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY);
@@ -69,7 +71,7 @@ export class OutstandingBalanceCardComponent {
   }
 
   protected downloadCard(): void {
-    // TODO: Implement download-as-PNG when html2canvas is added as a project dependency
+    downloadCardAsImage(this.elementRef.nativeElement, 'outstanding-balance');
   }
 
   private initializeDataFetching(): void {
@@ -88,9 +90,14 @@ export class OutstandingBalanceCardComponent {
         ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((data) => {
-        this.summaryData.set(data);
-        this.loading.set(false);
+      .subscribe({
+        next: (data) => {
+          this.summaryData.set(data);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+        },
       });
   }
 }

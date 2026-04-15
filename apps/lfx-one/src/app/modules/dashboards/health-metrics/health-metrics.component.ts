@@ -19,7 +19,7 @@ import { EventsCardComponent } from './events-card/events-card.component';
 import { TrainingCertificationCardComponent } from './training-certification-card/training-certification-card.component';
 import { CodeContributionCardComponent } from './code-contribution-card/code-contribution-card.component';
 
-import type { HealthMetricsSummaryCard, HealthMetricsData, DisplayCard } from '@lfx-one/shared/interfaces';
+import type { HealthMetricsData, DisplayCard, HealthMetricsRange, HealthMetricsYearOption } from '@lfx-one/shared/interfaces';
 
 const DEFAULT_DATA: HealthMetricsData = {
   totalValue: null,
@@ -47,15 +47,39 @@ export class HealthMetricsComponent {
   protected readonly loading = signal(false);
   protected readonly metricsData = signal<HealthMetricsData>(DEFAULT_DATA);
   protected readonly statusCount = HEALTH_METRICS_STATUS_COUNT;
+  protected readonly selectedRange = signal<HealthMetricsRange>('YTD');
 
   protected readonly hasFoundation = computed(() => !!this.projectContextService.selectedFoundation());
 
-  protected readonly ytdDateRange = computed(() => {
+  protected readonly yearOptions = computed((): HealthMetricsYearOption[] => {
+    const currentYear = new Date().getFullYear();
+    return [
+      { label: `${currentYear - 3}`, range: 'COMPLETED_YEAR_3', year: currentYear - 3 },
+      { label: `${currentYear - 2}`, range: 'COMPLETED_YEAR_2', year: currentYear - 2 },
+      { label: `${currentYear - 1}`, range: 'COMPLETED_YEAR', year: currentYear - 1 },
+      { label: 'YTD', range: 'YTD', year: currentYear },
+    ];
+  });
+
+  protected readonly dateRangeLabel = computed(() => {
+    const range = this.selectedRange();
     const now = new Date();
-    const year = now.getFullYear();
-    const startDate = new Date(year, 0, 1);
-    const start = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const end = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const currentYear = now.getFullYear();
+
+    if (range === 'YTD') {
+      const start = new Date(currentYear, 0, 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const end = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      return `${start} \u2013 ${end}`;
+    }
+
+    const yearMap: Record<string, number> = {
+      COMPLETED_YEAR: currentYear - 1,
+      COMPLETED_YEAR_2: currentYear - 2,
+      COMPLETED_YEAR_3: currentYear - 3,
+    };
+    const year = yearMap[range] ?? currentYear;
+    const start = new Date(year, 0, 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const end = new Date(year, 11, 31).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     return `${start} \u2013 ${end}`;
   });
 
@@ -98,6 +122,10 @@ export class HealthMetricsComponent {
     this.initializeDataFetching();
   }
 
+  protected selectRange(range: HealthMetricsRange): void {
+    this.selectedRange.set(range);
+  }
+
   private initializeDataFetching(): void {
     toObservable(this.projectContextService.selectedFoundation)
       .pipe(
@@ -117,9 +145,14 @@ export class HealthMetricsComponent {
         ),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((data) => {
-        this.metricsData.set(data);
-        this.loading.set(false);
+      .subscribe({
+        next: (data) => {
+          this.metricsData.set(data);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+        },
       });
   }
 
