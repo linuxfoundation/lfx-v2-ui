@@ -990,86 +990,30 @@ export class AnalyticsService {
   }
 
   /**
-   * Get event growth metrics (prototype — stub endpoint until dbt view lands)
+   * Get event growth metrics. Errors propagate to the caller so the UI can show an error state.
    */
   public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
-    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          totalAttendees: 0,
-          totalRegistrants: 0,
-          totalEvents: 0,
-          totalRevenue: 0,
-          revenuePerAttendee: 0,
-          attendeeMomChange: 0,
-          registrantMomChange: 0,
-          revenueMomChange: 0,
-          trend: 'up' as const,
-          monthlyData: [],
-          topEvents: [],
-        });
-      })
-    );
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } });
   }
 
   /**
-   * Get brand reach metrics (prototype — stub endpoint until dbt view lands)
+   * Get brand reach metrics. Errors propagate to the caller so the UI can show an error state.
    */
   public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
-    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          totalSocialFollowers: 0,
-          totalMonthlySessions: 0,
-          activePlatforms: 0,
-          changePercentage: 0,
-          trend: 'up' as const,
-          socialPlatforms: [],
-          websiteDomains: [],
-          dailyTrend: [],
-        });
-      })
-    );
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } });
   }
 
   /**
-   * Get brand health metrics (prototype — stub endpoint until dbt view lands)
+   * Get brand health metrics. Errors propagate to the caller so the UI can show an error state.
    */
   public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
-    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          totalMentions: 0,
-          sentiment: { positive: 0, neutral: 0, negative: 0 },
-          sentimentMomChangePp: 0,
-          trend: 'up' as const,
-          monthlyMentions: [],
-          topProjects: [],
-        });
-      })
-    );
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } });
   }
 
   /**
-   * Get marketing-attributed revenue metrics (prototype — stub endpoint until dbt view lands)
+   * Get marketing-attributed revenue metrics. Errors propagate to the caller so the UI can show an error state.
    */
   public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
-    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          pipelineInfluenced: 0,
-          revenueAttributed: 0,
-          matchRate: 0,
-          changePercentage: 0,
-          trend: 'up' as const,
-          attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
-          engagementTypes: [],
-          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
-          attributionChannels: [],
-          projectBreakdown: [],
-          eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
-        });
-      })
-    );
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } });
   }
 }

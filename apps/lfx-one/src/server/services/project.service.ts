@@ -2774,7 +2774,7 @@ export class ProjectService {
         foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return defaultResponse;
+      throw error;
     }
   }
 
@@ -2784,17 +2784,6 @@ export class ProjectService {
    */
   public async getBrandReach(foundationSlug: string): Promise<BrandReachResponse> {
     logger.debug(undefined, 'get_brand_reach', 'Fetching brand reach from Snowflake', { foundation_slug: foundationSlug });
-
-    const defaultResponse: BrandReachResponse = {
-      totalSocialFollowers: 0,
-      totalMonthlySessions: 0,
-      activePlatforms: 0,
-      changePercentage: 0,
-      trend: 'up',
-      socialPlatforms: [],
-      websiteDomains: [],
-      dailyTrend: [],
-    };
 
     try {
       const webQuery = `
@@ -2891,7 +2880,7 @@ export class ProjectService {
         foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return defaultResponse;
+      throw error;
     }
   }
 
@@ -3005,7 +2994,7 @@ export class ProjectService {
         foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return defaultResponse;
+      throw error;
     }
   }
 
@@ -3015,20 +3004,6 @@ export class ProjectService {
    */
   public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
     logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
-
-    const defaultResponse: RevenueImpactResponse = {
-      pipelineInfluenced: 0,
-      revenueAttributed: 0,
-      matchRate: 0,
-      changePercentage: 0,
-      trend: 'up',
-      attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
-      engagementTypes: [],
-      paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
-      attributionChannels: [],
-      projectBreakdown: [],
-      eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
-    };
 
     try {
       // PIPELINE_SUMMARY is a single row per foundation with full YTD + prior year data
@@ -3315,7 +3290,7 @@ export class ProjectService {
         foundation_slug: foundationSlug,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      return defaultResponse;
+      throw error;
     }
   }
 
