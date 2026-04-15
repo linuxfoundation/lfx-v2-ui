@@ -7,19 +7,19 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
+import { lfxColors } from '@lfx-one/shared/constants';
 import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { BrandHealthResponse, MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
+import type { BrandHealthResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-brand-health-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
   templateUrl: './brand-health-drawer.component.html',
-  styleUrl: './brand-health-drawer.component.scss',
 })
 export class BrandHealthDrawerComponent {
   // === Model Signals (two-way binding) ===
@@ -98,10 +98,6 @@ export class BrandHealthDrawerComponent {
 
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {

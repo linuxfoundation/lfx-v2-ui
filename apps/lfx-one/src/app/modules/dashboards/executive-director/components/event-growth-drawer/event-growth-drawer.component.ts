@@ -7,20 +7,20 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
+import { lfxColors } from '@lfx-one/shared/constants';
 import { formatNumber } from '@lfx-one/shared/utils';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EventGrowthResponse, MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
+import type { EventGrowthResponse, EventGrowthTopEventView, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-event-growth-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
   templateUrl: './event-growth-drawer.component.html',
-  styleUrl: './event-growth-drawer.component.scss',
 })
 export class EventGrowthDrawerComponent {
   // === Model Signals (two-way binding) ===
@@ -41,43 +41,10 @@ export class EventGrowthDrawerComponent {
     topEvents: [],
   });
 
-  // === Computed Signals ===
   // === Sort state for Top Events table ===
   protected readonly topEventsSortBy = signal<'attendees' | 'revenue'>('attendees');
-  protected readonly sortedTopEvents = computed(() => {
-    const key = this.topEventsSortBy();
-    return [...this.data().topEvents].sort((a, b) => (key === 'revenue' ? b.revenue - a.revenue : b.attendees - a.attendees));
-  });
 
-  protected readonly formattedRevenue = computed(() => {
-    const rev = this.data().totalRevenue;
-    if (rev >= 1_000_000) return `$${(rev / 1_000_000).toFixed(1)}M`;
-    if (rev >= 1_000) return `$${(rev / 1_000).toFixed(1)}K`;
-    return `$${rev.toLocaleString()}`;
-  });
-
-  protected readonly monthlyChartData: Signal<ChartData<'bar'>> = computed(() => {
-    const { monthlyData } = this.data();
-    const quarterBuckets = new Map<string, number>();
-    for (const d of monthlyData) {
-      const [year, month] = d.month.split('-');
-      const qi = Math.ceil(Number(month) / 3);
-      const key = `Q${qi} ${year}`;
-      quarterBuckets.set(key, (quarterBuckets.get(key) ?? 0) + d.value);
-    }
-    return {
-      labels: Array.from(quarterBuckets.keys()),
-      datasets: [
-        {
-          data: Array.from(quarterBuckets.values()),
-          backgroundColor: lfxColors.blue[500],
-          borderRadius: 4,
-          barPercentage: 0.6,
-        },
-      ],
-    };
-  });
-
+  // === Chart options (static config) ===
   protected readonly monthlyChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -108,6 +75,10 @@ export class EventGrowthDrawerComponent {
     },
   };
 
+  // === Computed Signals ===
+  protected readonly sortedTopEvents: Signal<EventGrowthTopEventView[]> = this.initSortedTopEvents();
+  protected readonly formattedRevenue: Signal<string> = computed(() => EventGrowthDrawerComponent.formatMoney(this.data().totalRevenue));
+  protected readonly monthlyChartData: Signal<ChartData<'bar'>> = this.initMonthlyChartData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -119,24 +90,47 @@ export class EventGrowthDrawerComponent {
     this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
   );
 
-  protected formatEventRevenue(revenue: number): string {
-    if (revenue >= 1_000_000) return `$${(revenue / 1_000_000).toFixed(1)}M`;
-    if (revenue >= 1_000) return `$${(revenue / 1_000).toFixed(1)}K`;
-    return `$${revenue.toLocaleString()}`;
-  }
-
   protected onClose(): void {
     this.visible.set(false);
   }
 
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
-  }
-
-  protected formatMoney(value: number): string {
+  private static formatMoney(value: number): string {
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
     return `$${Math.round(value).toLocaleString()}`;
+  }
+
+  private initSortedTopEvents(): Signal<EventGrowthTopEventView[]> {
+    return computed(() => {
+      const key = this.topEventsSortBy();
+      return [...this.data().topEvents]
+        .sort((a, b) => (key === 'revenue' ? b.revenue - a.revenue : b.attendees - a.attendees))
+        .map((event) => ({ ...event, formattedRevenue: EventGrowthDrawerComponent.formatMoney(event.revenue) }));
+    });
+  }
+
+  private initMonthlyChartData(): Signal<ChartData<'bar'>> {
+    return computed(() => {
+      const { monthlyData } = this.data();
+      const quarterBuckets = new Map<string, number>();
+      for (const d of monthlyData) {
+        const [year, month] = d.month.split('-');
+        const qi = Math.ceil(Number(month) / 3);
+        const key = `Q${qi} ${year}`;
+        quarterBuckets.set(key, (quarterBuckets.get(key) ?? 0) + d.value);
+      }
+      return {
+        labels: Array.from(quarterBuckets.keys()),
+        datasets: [
+          {
+            data: Array.from(quarterBuckets.values()),
+            backgroundColor: lfxColors.blue[500],
+            borderRadius: 4,
+            barPercentage: 0.6,
+          },
+        ],
+      };
+    });
   }
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
@@ -148,7 +142,6 @@ export class EventGrowthDrawerComponent {
         return actions;
       }
 
-      // Attendance declining — how much matters
       if (attendeeYoyChange <= -10) {
         actions.push({
           title: 'Reverse attendance decline',
@@ -167,9 +160,8 @@ export class EventGrowthDrawerComponent {
         });
       }
 
-      // Total event revenue declining YoY — independent of per-attendee value
       if (revenueYoyChange <= -5) {
-        const revenuePerAttendeeText = revenuePerAttendee > 0 ? ` at ${this.formatMoney(revenuePerAttendee)} per attendee` : '';
+        const revenuePerAttendeeText = revenuePerAttendee > 0 ? ` at ${EventGrowthDrawerComponent.formatMoney(revenuePerAttendee)} per attendee` : '';
         actions.push({
           title: 'Event revenue declining',
           description: `Total event revenue down ${Math.abs(revenueYoyChange).toFixed(1)}% YoY${revenuePerAttendeeText} — review sponsorship packages and ticket pricing`,
@@ -179,7 +171,6 @@ export class EventGrowthDrawerComponent {
         });
       }
 
-      // Top-event concentration risk
       if (topEvents.length > 0 && totalAttendees > 0) {
         const topShare = (topEvents[0].attendees / totalAttendees) * 100;
         if (topShare > 50) {
@@ -193,7 +184,6 @@ export class EventGrowthDrawerComponent {
         }
       }
 
-      // 3-month consistent decline
       if (monthlyData.length >= 3) {
         const recent3 = monthlyData.slice(-3);
         const falling = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
@@ -208,10 +198,8 @@ export class EventGrowthDrawerComponent {
         }
       }
 
-      // Keep the data context the ED needs if nothing red
-      if (actions.length === 0 && totalRevenue > 0) {
-        // No filler action — silence is fine when everything is healthy
-      }
+      // Silence when healthy — ED doesn't need filler actions
+      void totalRevenue;
 
       return actions;
     });
@@ -236,16 +224,19 @@ export class EventGrowthDrawerComponent {
       }
 
       if (revenueYoyChange >= 10) {
-        insights.push({ text: `Event revenue up ${revenueYoyChange.toFixed(1)}% YoY to ${this.formatMoney(totalRevenue)}`, type: 'driver' });
+        insights.push({
+          text: `Event revenue up ${revenueYoyChange.toFixed(1)}% YoY to ${EventGrowthDrawerComponent.formatMoney(totalRevenue)}`,
+          type: 'driver',
+        });
       }
 
       if (revenuePerAttendee > 0) {
-        insights.push({ text: `Revenue per attendee at ${this.formatMoney(revenuePerAttendee)}`, type: 'info' });
+        insights.push({ text: `Revenue per attendee at ${EventGrowthDrawerComponent.formatMoney(revenuePerAttendee)}`, type: 'info' });
       }
 
       if (topEvents.length > 0) {
         insights.push({
-          text: `${topEvents[0].name} leads with ${formatNumber(topEvents[0].attendees)} attendees (${this.formatMoney(topEvents[0].revenue)} revenue)`,
+          text: `${topEvents[0].name} leads with ${formatNumber(topEvents[0].attendees)} attendees (${EventGrowthDrawerComponent.formatMoney(topEvents[0].revenue)} revenue)`,
           type: 'info',
         });
       }

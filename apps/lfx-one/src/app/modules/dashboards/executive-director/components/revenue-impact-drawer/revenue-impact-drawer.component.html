@@ -41,7 +41,7 @@
         @for (action of attentionActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-red-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-red-100 flex-shrink-0 mt-0.5">
-              <i [class]="actionIcon(action.actionType) + ' text-red-600'"></i>
+              <i [class]="(action.actionType | marketingActionIcon) + ' text-red-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-2">
@@ -80,7 +80,7 @@
         @for (action of performingActions(); track action.title) {
           <div class="flex items-start gap-3 p-4 bg-white border border-green-200 rounded-lg">
             <div class="flex items-center justify-center w-9 h-9 rounded-full bg-green-100 flex-shrink-0 mt-0.5">
-              <i [class]="actionIcon(action.actionType) + ' text-green-600'"></i>
+              <i [class]="(action.actionType | marketingActionIcon) + ' text-green-600'"></i>
             </div>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-semibold text-gray-900">{{ action.title }}</span>
@@ -119,7 +119,7 @@
               type="button"
               class="w-24 text-right cursor-pointer hover:text-gray-900 flex items-center justify-end gap-1"
               [class.text-gray-900]="eventAttrSortBy() === 'sessions'"
-              (click)="setEventAttrSort('sessions')"
+              (click)="eventAttrSortBy.set('sessions')"
               data-testid="revenue-impact-drawer-event-attr-sort-sessions">
               Sessions
               @if (eventAttrSortBy() === 'sessions') {
@@ -130,7 +130,7 @@
               type="button"
               class="w-28 text-right cursor-pointer hover:text-gray-900 flex items-center justify-end gap-1"
               [class.text-gray-900]="eventAttrSortBy() === 'visitors'"
-              (click)="setEventAttrSort('visitors')"
+              (click)="eventAttrSortBy.set('visitors')"
               data-testid="revenue-impact-drawer-event-attr-sort-visitors">
               Unique Visitors
               @if (eventAttrSortBy() === 'visitors') {
@@ -141,7 +141,7 @@
               type="button"
               class="w-32 text-right cursor-pointer hover:text-gray-900 flex items-center justify-end gap-1"
               [class.text-gray-900]="eventAttrSortBy() === 'revenue'"
-              (click)="setEventAttrSort('revenue')"
+              (click)="eventAttrSortBy.set('revenue')"
               data-testid="revenue-impact-drawer-event-attr-sort-revenue">
               Last-Touch Revenue
               @if (eventAttrSortBy() === 'revenue') {
@@ -154,7 +154,7 @@
               <span class="flex-1 text-sm font-medium text-gray-900">{{ row.channel }}</span>
               <span class="w-24 text-right text-sm font-semibold text-gray-900">{{ row.sessions | number }}</span>
               <span class="w-28 text-right text-sm font-semibold text-gray-900">{{ row.uniqueVisitors | number }}</span>
-              <span class="w-32 text-right text-sm font-semibold text-gray-900">{{ formatLastTouchRevenue(row.lastTouchRevenue) }}</span>
+              <span class="w-32 text-right text-sm font-semibold text-gray-900">{{ row.formattedLastTouchRevenue }}</span>
             </div>
           }
         </div>
@@ -170,10 +170,10 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="revenue-impact-drawer-project-breakdown-legend">
-          @for (channel of projectBreakdownChannels(); track channel) {
+          @for (legend of projectBreakdownLegend(); track legend.channel) {
             <div class="flex items-center gap-2 text-xs text-gray-600">
-              <span class="inline-block w-3 h-3 rounded-sm" [style.background-color]="channelColor(channel)"></span>
-              <span>{{ formatChannelLabel(channel) }}</span>
+              <span class="inline-block w-3 h-3 rounded-sm" [class]="legend.bgClass"></span>
+              <span>{{ legend.label }}</span>
             </div>
           }
         </div>
@@ -189,18 +189,12 @@
               <span class="flex-1 text-sm font-medium text-gray-900 truncate pr-2">{{ project.project }}</span>
               <div class="flex-[2] px-2">
                 <div class="flex w-full h-3 rounded-sm overflow-hidden bg-gray-100">
-                  @for (channel of projectBreakdownChannels(); track channel) {
-                    @if (channelShareForProject(project, channel) > 0) {
-                      <div
-                        class="h-full"
-                        [style.width.%]="channelShareForProject(project, channel)"
-                        [style.background-color]="channelColor(channel)"
-                        [title]="formatChannelLabel(channel) + ': ' + formatImpressionsShort(project.channelImpressions[channel])"></div>
-                    }
+                  @for (segment of project.segments; track segment.channel) {
+                    <div class="h-full" [class]="segment.bgClass" [style.width.%]="segment.sharePercent" [title]="segment.title"></div>
                   }
                 </div>
               </div>
-              <span class="w-32 text-right text-sm font-semibold text-gray-900">{{ formatImpressionsShort(project.totalImpressions) }}</span>
+              <span class="w-32 text-right text-sm font-semibold text-gray-900">{{ project.formattedTotalImpressions }}</span>
             </div>
           }
         </div>
@@ -210,17 +204,17 @@
     }
 
     <!-- Attribution Channels -->
-    @if (data().attributionChannels.length > 0) {
+    @if (attributionChannelsView().length > 0) {
       <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="revenue-impact-drawer-channels">
         <div class="flex flex-col gap-1">
           <h3 class="text-sm font-semibold text-gray-900">Attribution Channels</h3>
           <p class="text-sm text-gray-600">Impression share by paid media channel over the last 6 months</p>
         </div>
         <div class="flex flex-col gap-3">
-          @for (channel of data().attributionChannels; track channel.channel) {
+          @for (channel of attributionChannelsView(); track channel.channel) {
             <div class="flex flex-col gap-1" data-testid="revenue-impact-drawer-channel-row">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-900">{{ formatChannelLabel(channel.channel) }}</span>
+                <span class="text-sm font-medium text-gray-900">{{ channel.label }}</span>
                 <span class="text-sm font-semibold text-gray-900">{{ channel.impressions | number }} · {{ channel.percentage.toFixed(1) }}%</span>
               </div>
               <div class="w-full h-2 bg-gray-100 rounded-full">

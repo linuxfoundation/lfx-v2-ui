@@ -6,29 +6,18 @@ import { ChangeDetectionStrategy, Component, computed, input, model, Signal } fr
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { MARKETING_ACTION_ICON_MAP, MARKETING_SOCIAL_PLATFORM_MAP } from '@lfx-one/shared/constants';
+import { MARKETING_SOCIAL_PLATFORM_MAP } from '@lfx-one/shared/constants';
 import { formatNumber } from '@lfx-one/shared/utils';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
-import type {
-  BrandReachResponse,
-  BrandReachSocialPlatform,
-  MarketingActionType,
-  MarketingKeyInsight,
-  MarketingRecommendedAction,
-} from '@lfx-one/shared/interfaces';
-
-interface SocialPlatformView extends BrandReachSocialPlatform {
-  icon: string;
-  colorClass: string;
-}
+import type { BrandReachResponse, BrandReachSocialPlatformView, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-brand-reach-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
   templateUrl: './brand-reach-drawer.component.html',
-  styleUrl: './brand-reach-drawer.component.scss',
 })
 export class BrandReachDrawerComponent {
   // === Model Signals (two-way binding) ===
@@ -43,11 +32,11 @@ export class BrandReachDrawerComponent {
     trend: 'up',
     socialPlatforms: [],
     websiteDomains: [],
-    dailyTrend: [],
+    weeklyTrend: [],
   });
 
   // === Computed Signals ===
-  protected readonly socialPlatformViews: Signal<SocialPlatformView[]> = computed(() =>
+  protected readonly socialPlatformViews: Signal<BrandReachSocialPlatformView[]> = computed(() =>
     this.data().socialPlatforms.map((platform) => {
       const presentation = MARKETING_SOCIAL_PLATFORM_MAP[platform.platformType] ?? MARKETING_SOCIAL_PLATFORM_MAP.other;
       return {
@@ -71,10 +60,6 @@ export class BrandReachDrawerComponent {
 
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {

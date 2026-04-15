@@ -6,18 +6,26 @@ import { ChangeDetectionStrategy, Component, computed, input, model, signal, Sig
 import { ButtonComponent } from '@components/button/button.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DASHBOARD_TOOLTIP_CONFIG, lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
+import { DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction, RevenueImpactResponse } from '@lfx-one/shared/interfaces';
+import type {
+  EventRegistrationAttributionChannelView,
+  MarketingKeyInsight,
+  MarketingRecommendedAction,
+  RevenueImpactAttributionChannelView,
+  RevenueImpactChannelLegendView,
+  RevenueImpactProjectBreakdownView,
+  RevenueImpactResponse,
+} from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-revenue-impact-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, ChartComponent, DecimalPipe, DrawerModule, TagComponent],
+  imports: [ButtonComponent, ChartComponent, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
   templateUrl: './revenue-impact-drawer.component.html',
-  styleUrl: './revenue-impact-drawer.component.scss',
 })
 export class RevenueImpactDrawerComponent {
   // === Model Signals (two-way binding) ===
@@ -41,30 +49,19 @@ export class RevenueImpactDrawerComponent {
   // === WritableSignals ===
   protected readonly eventAttrSortBy = signal<'revenue' | 'sessions' | 'visitors'>('revenue');
 
-  // === Computed Signals ===
-  protected readonly paidMediaTrendChartData: Signal<ChartData<'bar'>> = this.initPaidMediaTrendChartData();
-  protected readonly sortedProjectBreakdown = computed(() => [...this.data().projectBreakdown].sort((a, b) => b.totalImpressions - a.totalImpressions));
-  protected readonly projectBreakdownChannels = computed<string[]>(() => {
-    // Pre-aggregate impressions per channel in a single pass, then sort on the cached totals.
-    const channelTotals = new Map<string, number>();
-    for (const r of this.data().projectBreakdown) {
-      for (const [channel, impressions] of Object.entries(r.channelImpressions)) {
-        channelTotals.set(channel, (channelTotals.get(channel) ?? 0) + (impressions ?? 0));
-      }
-    }
-    return Array.from(channelTotals.keys()).sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0));
-  });
-  protected readonly eventAttrChartData: Signal<ChartData<'bar'>> = this.initEventAttrChartData();
-  protected readonly sortedEventAttrChannels = computed(() => {
-    const rows = [...this.data().eventRegistrationAttribution.channelBreakdown];
-    const sortBy = this.eventAttrSortBy();
-    return rows.sort((a, b) => {
-      if (sortBy === 'revenue') return b.lastTouchRevenue - a.lastTouchRevenue;
-      if (sortBy === 'visitors') return b.uniqueVisitors - a.uniqueVisitors;
-      return b.sessions - a.sessions;
-    });
-  });
+  // Tailwind background class per known channel — keeps colors in the build-time CSS layer
+  // rather than inline [style.background-color] so purge/safelist behavior is predictable.
+  private static readonly channelBgClass: Record<string, string> = {
+    google_ads: 'bg-blue-500',
+    facebook_ads: 'bg-blue-700',
+    microsoft_ads: 'bg-emerald-600',
+    linkedin_ads: 'bg-gray-700',
+    reddit_ads: 'bg-red-500',
+    twitter_ads: 'bg-gray-500',
+  };
+  private static readonly channelBgFallback = 'bg-gray-400';
 
+  // === Chart options (static config) ===
   protected readonly paidMediaTrendChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -109,15 +106,6 @@ export class RevenueImpactDrawerComponent {
         },
       },
     },
-  };
-
-  protected readonly channelColorMap: Record<string, string> = {
-    google_ads: lfxColors.blue[500],
-    facebook_ads: lfxColors.blue[700],
-    microsoft_ads: lfxColors.emerald[600],
-    linkedin_ads: lfxColors.gray[700],
-    reddit_ads: lfxColors.red[500],
-    twitter_ads: lfxColors.gray[500],
   };
 
   protected readonly eventAttrChartOptions: ChartOptions<'bar'> = {
@@ -166,6 +154,15 @@ export class RevenueImpactDrawerComponent {
     },
   };
 
+  // === Computed Signals ===
+  protected readonly paidMediaTrendChartData: Signal<ChartData<'bar'>> = this.initPaidMediaTrendChartData();
+  protected readonly eventAttrChartData: Signal<ChartData<'bar'>> = this.initEventAttrChartData();
+  protected readonly projectBreakdownLegend: Signal<RevenueImpactChannelLegendView[]> = this.initProjectBreakdownLegend();
+  protected readonly sortedProjectBreakdown: Signal<RevenueImpactProjectBreakdownView[]> = this.initSortedProjectBreakdown();
+  protected readonly sortedEventAttrChannels: Signal<EventRegistrationAttributionChannelView[]> = this.initSortedEventAttrChannels();
+  protected readonly attributionChannelsView: Signal<RevenueImpactAttributionChannelView[]> = computed(() =>
+    this.data().attributionChannels.map((c) => ({ ...c, label: RevenueImpactDrawerComponent.formatChannelLabel(c.channel) }))
+  );
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -177,52 +174,39 @@ export class RevenueImpactDrawerComponent {
     this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
   );
 
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
+  protected onClose(): void {
+    this.visible.set(false);
   }
 
-  protected formatRevenue(value: number): string {
+  private static formatRevenue(value: number): string {
     if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
     return `$${value.toLocaleString()}`;
   }
 
-  protected formatChannelLabel(channel: string): string {
+  private static formatLastTouchRevenue(value: number): string {
+    if (value <= 0) return '—';
+    return RevenueImpactDrawerComponent.formatRevenue(value);
+  }
+
+  private static formatChannelLabel(channel: string): string {
     return channel
       .split('_')
       .map((word) => (word === 'ads' ? 'Ads' : word.charAt(0).toUpperCase() + word.slice(1)))
       .join(' ');
   }
 
-  protected onClose(): void {
-    this.visible.set(false);
-  }
-
-  protected setEventAttrSort(sortBy: 'revenue' | 'sessions' | 'visitors'): void {
-    this.eventAttrSortBy.set(sortBy);
-  }
-
-  protected formatLastTouchRevenue(value: number): string {
-    if (value <= 0) return '—';
-    return this.formatRevenue(value);
-  }
-
-  protected channelColor(channel: string): string {
-    return this.channelColorMap[channel] ?? lfxColors.gray[400];
-  }
-
-  protected formatImpressionsShort(n: number): string {
+  private static formatImpressionsShort(n: number): string {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
     return n.toLocaleString();
   }
 
-  protected channelShareForProject(project: { totalImpressions: number; channelImpressions: Record<string, number> }, channel: string): number {
-    if (!project.totalImpressions) return 0;
-    return ((project.channelImpressions[channel] ?? 0) / project.totalImpressions) * 100;
+  private static bgClassFor(channel: string): string {
+    return RevenueImpactDrawerComponent.channelBgClass[channel] ?? RevenueImpactDrawerComponent.channelBgFallback;
   }
 
-  private formatYearMonthLabel(yearMonth: string): string {
+  private static formatYearMonthLabel(yearMonth: string): string {
     const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
     if (!match) return yearMonth;
     const year = Number(match[1]);
@@ -234,17 +218,75 @@ export class RevenueImpactDrawerComponent {
     });
   }
 
+  private initProjectBreakdownLegend(): Signal<RevenueImpactChannelLegendView[]> {
+    return computed(() => {
+      const channelTotals = new Map<string, number>();
+      for (const r of this.data().projectBreakdown) {
+        for (const [channel, impressions] of Object.entries(r.channelImpressions)) {
+          channelTotals.set(channel, (channelTotals.get(channel) ?? 0) + (impressions ?? 0));
+        }
+      }
+      return Array.from(channelTotals.keys())
+        .sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0))
+        .map((channel) => ({
+          channel,
+          label: RevenueImpactDrawerComponent.formatChannelLabel(channel),
+          bgClass: RevenueImpactDrawerComponent.bgClassFor(channel),
+        }));
+    });
+  }
+
+  private initSortedProjectBreakdown(): Signal<RevenueImpactProjectBreakdownView[]> {
+    return computed(() => {
+      const legend = this.projectBreakdownLegend();
+      return [...this.data().projectBreakdown]
+        .sort((a, b) => b.totalImpressions - a.totalImpressions)
+        .map((project) => {
+          const segments = legend
+            .map(({ channel, label, bgClass }) => {
+              const impressions = project.channelImpressions[channel] ?? 0;
+              const sharePercent = project.totalImpressions > 0 ? (impressions / project.totalImpressions) * 100 : 0;
+              return {
+                channel,
+                bgClass,
+                sharePercent,
+                title: `${label}: ${RevenueImpactDrawerComponent.formatImpressionsShort(impressions)}`,
+              };
+            })
+            .filter((s) => s.sharePercent > 0);
+          return {
+            ...project,
+            formattedTotalImpressions: RevenueImpactDrawerComponent.formatImpressionsShort(project.totalImpressions),
+            segments,
+          };
+        });
+    });
+  }
+
+  private initSortedEventAttrChannels(): Signal<EventRegistrationAttributionChannelView[]> {
+    return computed(() => {
+      const rows = [...this.data().eventRegistrationAttribution.channelBreakdown];
+      const sortBy = this.eventAttrSortBy();
+      return rows
+        .sort((a, b) => {
+          if (sortBy === 'revenue') return b.lastTouchRevenue - a.lastTouchRevenue;
+          if (sortBy === 'visitors') return b.uniqueVisitors - a.uniqueVisitors;
+          return b.sessions - a.sessions;
+        })
+        .map((row) => ({ ...row, formattedLastTouchRevenue: RevenueImpactDrawerComponent.formatLastTouchRevenue(row.lastTouchRevenue) }));
+    });
+  }
+
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
       const { attributionChannels, paidMedia, projectBreakdown, eventRegistrationAttribution } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
-      // Paid media ROAS — the spend-efficiency signal ED must see first
       if (paidMedia.adSpend > 0 && paidMedia.roas > 0 && paidMedia.roas < 0.8) {
         const lost = paidMedia.adSpend - paidMedia.adRevenue;
         actions.push({
           title: 'Cut or pause losing paid campaigns',
-          description: `Paid ROAS is ${paidMedia.roas.toFixed(2)}x — ${this.formatRevenue(lost)} spent above revenue earned. Review top-spending campaigns and pause underperformers`,
+          description: `Paid ROAS is ${paidMedia.roas.toFixed(2)}x — ${RevenueImpactDrawerComponent.formatRevenue(lost)} spent above revenue earned. Review top-spending campaigns and pause underperformers`,
           priority: 'high',
           dueLabel: 'This week',
           actionType: 'decline',
@@ -252,20 +294,19 @@ export class RevenueImpactDrawerComponent {
       } else if (paidMedia.adSpend > 0 && paidMedia.roas >= 0.8 && paidMedia.roas < 1) {
         actions.push({
           title: 'Paid media at break-even',
-          description: `ROAS is ${paidMedia.roas.toFixed(2)}x on ${this.formatRevenue(paidMedia.adSpend)} spend — optimize creative and targeting before scaling`,
+          description: `ROAS is ${paidMedia.roas.toFixed(2)}x on ${RevenueImpactDrawerComponent.formatRevenue(paidMedia.adSpend)} spend — optimize creative and targeting before scaling`,
           priority: 'medium',
           dueLabel: 'This month',
           actionType: 'investigate',
         });
       }
 
-      // Foundation-level channel concentration
       if (attributionChannels.length > 0) {
         const top = [...attributionChannels].sort((a, b) => b.percentage - a.percentage)[0];
         if (top.percentage > 70) {
           actions.push({
             title: 'Reduce channel concentration risk',
-            description: `${this.formatChannelLabel(top.channel)} drives ${top.percentage.toFixed(0)}% of paid impressions — one algorithm change could cut reach in half. Grow at least one alternate channel`,
+            description: `${RevenueImpactDrawerComponent.formatChannelLabel(top.channel)} drives ${top.percentage.toFixed(0)}% of paid impressions — one algorithm change could cut reach in half. Grow at least one alternate channel`,
             priority: 'high',
             dueLabel: 'This quarter',
             actionType: 'decline',
@@ -273,7 +314,7 @@ export class RevenueImpactDrawerComponent {
         } else if (top.percentage > 55) {
           actions.push({
             title: 'Watch channel concentration',
-            description: `${this.formatChannelLabel(top.channel)} is ${top.percentage.toFixed(0)}% of paid impressions — diversify before it crosses 70%`,
+            description: `${RevenueImpactDrawerComponent.formatChannelLabel(top.channel)} is ${top.percentage.toFixed(0)}% of paid impressions — diversify before it crosses 70%`,
             priority: 'medium',
             dueLabel: 'This quarter',
             actionType: 'engagement',
@@ -281,7 +322,6 @@ export class RevenueImpactDrawerComponent {
         }
       }
 
-      // Project-level over-concentration (uses the project table the drawer renders)
       if (projectBreakdown.length >= 2) {
         const heavilyConcentrated = projectBreakdown.filter((p) => {
           if (!p.totalImpressions) return false;
@@ -299,7 +339,6 @@ export class RevenueImpactDrawerComponent {
         }
       }
 
-      // Event-registration attribution — drawer renders this table, so insights must cover it
       if (eventRegistrationAttribution.channelBreakdown.length > 0) {
         const totalEventRev = eventRegistrationAttribution.channelBreakdown.reduce((s, c) => s + (c.lastTouchRevenue ?? 0), 0);
         if (totalEventRev > 0) {
@@ -308,7 +347,7 @@ export class RevenueImpactDrawerComponent {
           if (topShare > 70) {
             actions.push({
               title: 'Event registration revenue over-concentrated',
-              description: `${topEvt.channel} drove ${topShare.toFixed(0)}% of event-registration last-touch revenue (${this.formatRevenue(topEvt.lastTouchRevenue ?? 0)}) — grow alternate acquisition paths for event revenue`,
+              description: `${topEvt.channel} drove ${topShare.toFixed(0)}% of event-registration last-touch revenue (${RevenueImpactDrawerComponent.formatRevenue(topEvt.lastTouchRevenue ?? 0)}) — grow alternate acquisition paths for event revenue`,
               priority: 'medium',
               dueLabel: 'Next quarter',
               actionType: 'engagement',
@@ -326,10 +365,9 @@ export class RevenueImpactDrawerComponent {
       const { attributionChannels, paidMedia, eventRegistrationAttribution } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
-      // Paid media ROAS tiers
       if (paidMedia.adSpend > 0 && paidMedia.roas >= 3) {
         insights.push({
-          text: `Paid media ROAS at ${paidMedia.roas.toFixed(1)}x — ${this.formatRevenue(paidMedia.adRevenue)} revenue on ${this.formatRevenue(paidMedia.adSpend)} spend`,
+          text: `Paid media ROAS at ${paidMedia.roas.toFixed(1)}x — ${RevenueImpactDrawerComponent.formatRevenue(paidMedia.adRevenue)} revenue on ${RevenueImpactDrawerComponent.formatRevenue(paidMedia.adSpend)} spend`,
           type: 'driver',
         });
       } else if (paidMedia.adSpend > 0 && paidMedia.roas >= 1) {
@@ -339,7 +377,6 @@ export class RevenueImpactDrawerComponent {
         });
       }
 
-      // Paid media trend over 3 months
       if (paidMedia.monthlyTrend.length >= 3) {
         const recent3 = paidMedia.monthlyTrend.slice(-3);
         const isRisingRev = recent3[0].revenue < recent3[1].revenue && recent3[1].revenue < recent3[2].revenue;
@@ -351,11 +388,10 @@ export class RevenueImpactDrawerComponent {
         }
       }
 
-      // Channel balance
       if (attributionChannels.length > 0) {
         const top = [...attributionChannels].sort((a, b) => b.percentage - a.percentage)[0];
         insights.push({
-          text: `${this.formatChannelLabel(top.channel)} leads paid impressions at ${top.percentage.toFixed(0)}%`,
+          text: `${RevenueImpactDrawerComponent.formatChannelLabel(top.channel)} leads paid impressions at ${top.percentage.toFixed(0)}%`,
           type: 'info',
         });
         if (attributionChannels.length >= 3 && attributionChannels.every((c) => c.percentage < 45)) {
@@ -363,13 +399,12 @@ export class RevenueImpactDrawerComponent {
         }
       }
 
-      // Event-attribution leader
       if (eventRegistrationAttribution.channelBreakdown.length > 0) {
         const totalEventRev = eventRegistrationAttribution.channelBreakdown.reduce((s, c) => s + (c.lastTouchRevenue ?? 0), 0);
         if (totalEventRev > 0) {
           const topEvt = [...eventRegistrationAttribution.channelBreakdown].sort((a, b) => (b.lastTouchRevenue ?? 0) - (a.lastTouchRevenue ?? 0))[0];
           insights.push({
-            text: `${topEvt.channel} drove ${this.formatRevenue(topEvt.lastTouchRevenue ?? 0)} in event-registration last-touch revenue`,
+            text: `${topEvt.channel} drove ${RevenueImpactDrawerComponent.formatRevenue(topEvt.lastTouchRevenue ?? 0)} in event-registration last-touch revenue`,
             type: 'info',
           });
         }
@@ -382,7 +417,7 @@ export class RevenueImpactDrawerComponent {
   private initPaidMediaTrendChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
       const trend = this.data().paidMedia.monthlyTrend;
-      const labels = trend.map((r) => this.formatYearMonthLabel(r.month));
+      const labels = trend.map((r) => RevenueImpactDrawerComponent.formatYearMonthLabel(r.month));
       return {
         labels,
         datasets: [
@@ -423,7 +458,6 @@ export class RevenueImpactDrawerComponent {
       };
       const fallbackColor = lfxColors.gray[400];
 
-      // Pre-aggregate once: channel → total sessions for sort; (month, channel) → sessions for lookup
       const channelTotals = new Map<string, number>();
       const monthChannelSessions = new Map<string, number>();
       const monthSetRaw = new Set<string>();
@@ -436,7 +470,7 @@ export class RevenueImpactDrawerComponent {
       const monthSet = Array.from(monthSetRaw).sort();
       const channels = Array.from(channelTotals.keys()).sort((a, b) => (channelTotals.get(b) ?? 0) - (channelTotals.get(a) ?? 0));
 
-      const labels = monthSet.map((m) => this.formatYearMonthLabel(m));
+      const labels = monthSet.map((m) => RevenueImpactDrawerComponent.formatYearMonthLabel(m));
 
       const datasets = channels.map((channel) => ({
         label: channel,
