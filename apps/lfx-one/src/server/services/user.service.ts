@@ -496,11 +496,17 @@ export class UserService {
       '/itx/meetings',
       'get_user_meetings',
       projectUid,
-      limit,
+      undefined,
       foundationProjectUids
     );
 
-    return this.accessCheckService.addAccessToResources(req, meetings, 'v1_meeting', 'organizer');
+    // Sort by start_time ascending (soonest first) before applying limit
+    // so the limit returns the most relevant upcoming meetings
+    meetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+    const limited = limit !== undefined && limit > 0 ? meetings.slice(0, limit) : meetings;
+
+    return this.accessCheckService.addAccessToResources(req, limited, 'v1_meeting', 'organizer');
   }
 
   /**
@@ -541,7 +547,12 @@ export class UserService {
         undefined,
         headers
       )
-    ).catch(() => []);
+    ).catch((error) => {
+      logger.warning(req, 'get_user_past_meetings', 'Email participant query failed, returning partial results', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    });
     emailParticipants.forEach((p) => p.meeting_and_occurrence_id && pastMeetingIds.add(p.meeting_and_occurrence_id));
 
     // Also query by username for complete coverage
@@ -562,7 +573,12 @@ export class UserService {
           undefined,
           headers
         )
-      ).catch(() => []);
+      ).catch((error) => {
+        logger.warning(req, 'get_user_past_meetings', 'Username participant query failed, returning partial results', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      });
       usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && pastMeetingIds.add(p.meeting_and_occurrence_id));
     }
 
@@ -576,18 +592,24 @@ export class UserService {
       foundationProjectUids = new Set(uids);
     }
 
-    // Step 2: Fetch each past meeting and filter/limit
+    // Step 2: Fetch each past meeting and filter (limit applied after sorting)
     const pastMeetings = await this.fetchByIdFilterAndLimit<PastMeeting>(
       req,
       pastMeetingIds,
       '/itx/past_meetings',
       'get_user_past_meetings',
       projectUid,
-      limit,
+      undefined,
       foundationProjectUids
     );
 
-    return this.accessCheckService.addAccessToResources(req, pastMeetings, 'v1_past_meeting', 'organizer');
+    // Sort by scheduled_start_time descending (most recent first) before applying limit
+    // so the limit returns the most recent meetings rather than an arbitrary subset
+    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time).getTime() - new Date(a.scheduled_start_time).getTime());
+
+    const limited = limit !== undefined && limit > 0 ? pastMeetings.slice(0, limit) : pastMeetings;
+
+    return this.accessCheckService.addAccessToResources(req, limited, 'v1_past_meeting', 'organizer');
   }
 
   /**
