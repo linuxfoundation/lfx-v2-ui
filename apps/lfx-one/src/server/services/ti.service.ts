@@ -3,26 +3,13 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
+import { TiCacheEntry, TiContentItem, TiContentResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
 
 const TI_API_URL = 'https://linux.thoughtindustries.com/incoming/v2/content';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-interface TiCacheEntry {
-  url: string | null; // null = confirmed TI miss; still cached to avoid re-fetching
-  expiresAt: number;
-}
-
-interface TiContentItem {
-  id: string;
-  asset: string;
-}
-
-interface TiContentResponse {
-  contentItems: TiContentItem[];
-}
 
 /**
  * Service for fetching logo URLs from the Thought Industries (TI) API.

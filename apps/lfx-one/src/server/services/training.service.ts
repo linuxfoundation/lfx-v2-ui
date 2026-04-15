@@ -65,7 +65,7 @@ export class TrainingService {
     const certifications = result.rows.map((row) => this.mapRowToCertification(row));
     const courseIds = result.rows.map((row) => row.COURSE_ID);
 
-    return this.enrichWithTiLogos(req, 'get_certifications', certifications, courseIds);
+    return this.enrichWithTiLogos(req, certifications, courseIds);
   }
 
   public async getEnrollments(req: Request, username: string): Promise<TrainingEnrollment[]> {
@@ -88,7 +88,7 @@ export class TrainingService {
     const enrollments = result.rows.map((row) => this.mapRowToEnrollment(row));
     const courseIds = result.rows.map((row) => row.COURSE_ID);
 
-    return this.enrichWithTiLogos(req, 'get_enrollments', enrollments, courseIds);
+    return this.enrichWithTiLogos(req, enrollments, courseIds);
   }
 
   // ─── Private Enrichment Methods ────────────────────────────────────────────
@@ -99,7 +99,6 @@ export class TrainingService {
    */
   private async enrichWithTiLogos<T extends { imageUrl: string }>(
     req: Request,
-    operation: string,
     items: T[],
     courseIds: (string | null)[],
   ): Promise<T[]> {
@@ -109,7 +108,7 @@ export class TrainingService {
     const logoMap = await tiService.getLogoUrls(req, validIds);
     if (logoMap.size === 0) return items;
 
-    logger.info(req, operation, 'Enriched with TI logo URLs', { enriched: logoMap.size });
+    logger.info(req, 'enrich_ti_logos', 'Enriched with TI logo URLs', { enriched: logoMap.size });
 
     return items.map((item, i) => {
       const courseId = courseIds[i];
