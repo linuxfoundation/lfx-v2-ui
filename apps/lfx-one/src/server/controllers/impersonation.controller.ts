@@ -3,6 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
+import { AuthorizationError, MicroserviceError, ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { ImpersonationService } from '../services/impersonation.service';
 
@@ -16,19 +17,40 @@ export class ImpersonationController {
 
     try {
       if (!this.impersonationService.isConfigured()) {
-        res.status(501).json({ error: 'Impersonation is not configured' });
+        next(
+          new MicroserviceError('Impersonation is not configured', 501, 'IMPERSONATION_NOT_CONFIGURED', {
+            operation: 'start_impersonation',
+            service: 'impersonation',
+          })
+        );
+        return;
+      }
+
+      if (req.appSession?.['impersonationToken']) {
+        next(
+          new MicroserviceError('Already impersonating a user. Stop the current session first.', 409, 'ALREADY_IMPERSONATING', {
+            operation: 'start_impersonation',
+            service: 'impersonation',
+          })
+        );
         return;
       }
 
       const targetUser = req.body?.targetUser;
       if (!targetUser || typeof targetUser !== 'string' || targetUser.trim() === '') {
-        res.status(400).json({ error: 'targetUser is required and must be a non-empty string' });
+        next(
+          ServiceValidationError.forField('targetUser', 'targetUser is required and must be a non-empty string', {
+            operation: 'start_impersonation',
+            service: 'impersonation',
+          })
+        );
         return;
       }
 
-      const tokenPayload = this.impersonationService.decodeJwtPayload(req.bearerToken || '');
+      const realToken = req.oidc?.accessToken?.access_token || '';
+      const tokenPayload = this.impersonationService.decodeJwtPayload(realToken);
       if (!tokenPayload || tokenPayload['http://lfx.dev/claims/can_impersonate'] !== true) {
-        res.status(403).json({ error: 'Insufficient permissions to impersonate users' });
+        next(new AuthorizationError('Insufficient permissions to impersonate users', { operation: 'start_impersonation', service: 'impersonation' }));
         return;
       }
 

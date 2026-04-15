@@ -267,21 +267,30 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
   if (req.appSession?.['impersonationToken'] && req.appSession?.['impersonationUser']) {
     const impersonationExpiresAt = req.appSession['impersonationExpiresAt'];
     if (impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
-      const targetClaims = JSON.parse(Buffer.from(req.appSession['impersonationToken'].split('.')[1], 'base64url').toString());
+      try {
+        const tokenParts = req.appSession['impersonationToken'].split('.');
+        if (tokenParts.length !== 3) throw new Error('Invalid token format');
+        const targetClaims = JSON.parse(Buffer.from(tokenParts[1], 'base64url').toString());
 
-      const impersonationUser = req.appSession['impersonationUser'];
-      auth.user = {
-        ...auth.user,
-        sub: targetClaims.sub,
-        email: targetClaims['http://lfx.dev/claims/email'] || '',
-        username: targetClaims['http://lfx.dev/claims/username'] || '',
-        'https://sso.linuxfoundation.org/claims/username': targetClaims['http://lfx.dev/claims/username'] || '',
-        name: impersonationUser?.name || targetClaims['http://lfx.dev/claims/username'] || '',
-        nickname: targetClaims['http://lfx.dev/claims/username'] || '',
-        picture: impersonationUser?.picture || auth.user?.picture || '',
-      } as User;
-      auth.impersonating = true;
-      auth.impersonator = req.appSession['impersonator'];
+        const impersonationUser = req.appSession['impersonationUser'];
+        auth.user = {
+          ...auth.user,
+          sub: targetClaims.sub,
+          email: targetClaims['http://lfx.dev/claims/email'] || '',
+          username: targetClaims['http://lfx.dev/claims/username'] || '',
+          'https://sso.linuxfoundation.org/claims/username': targetClaims['http://lfx.dev/claims/username'] || '',
+          name: impersonationUser?.name || targetClaims['http://lfx.dev/claims/username'] || '',
+          nickname: targetClaims['http://lfx.dev/claims/username'] || '',
+          picture: impersonationUser?.picture || auth.user?.picture || '',
+        } as User;
+        auth.impersonating = true;
+        auth.impersonator = req.appSession['impersonator'];
+      } catch {
+        delete req.appSession['impersonationToken'];
+        delete req.appSession['impersonationExpiresAt'];
+        delete req.appSession['impersonationUser'];
+        delete req.appSession['impersonator'];
+      }
     }
   }
 

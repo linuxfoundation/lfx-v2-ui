@@ -38,11 +38,9 @@ export class ImpersonationService {
     });
 
     try {
-      const response = await this.natsService.request(
-        NatsSubjects.IMPERSONATION_TOKEN_EXCHANGE,
-        codec.encode(payload),
-        { timeout: NATS_CONFIG.REQUEST_TIMEOUT }
-      );
+      const response = await this.natsService.request(NatsSubjects.IMPERSONATION_TOKEN_EXCHANGE, codec.encode(payload), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
 
       const responseText = codec.decode(response.data);
       const result = JSON.parse(responseText);
@@ -64,12 +62,23 @@ export class ImpersonationService {
         });
       }
 
-      logger.debug(req, 'cte_token_exchange', 'CTE token exchange successful', { target_user: targetUser });
+      // Derive expires_in from the JWT exp claim
+      let expiresIn = 86400;
+      try {
+        const payload = this.decodeJwtPayload(accessToken);
+        if (payload?.['exp']) {
+          expiresIn = Math.max(payload['exp'] - Math.floor(Date.now() / 1000), 0);
+        }
+      } catch {
+        // Fall back to 24h default
+      }
+
+      logger.debug(req, 'cte_token_exchange', 'CTE token exchange successful', { target_user: targetUser, expires_in: expiresIn });
 
       return {
         access_token: accessToken,
         token_type: 'Bearer',
-        expires_in: 86400,
+        expires_in: expiresIn,
       };
     } catch (error) {
       if (error instanceof MicroserviceError) {
@@ -138,7 +147,12 @@ export class ImpersonationService {
     }
   }
 
-  public startImpersonation(req: Request, tokenResponse: M2MTokenResponse, targetClaims: Record<string, any>, profile?: { name?: string; picture?: string }): void {
+  public startImpersonation(
+    req: Request,
+    tokenResponse: M2MTokenResponse,
+    targetClaims: Record<string, any>,
+    profile?: { name?: string; picture?: string }
+  ): void {
     if (!req.appSession) {
       req.appSession = {};
     }
@@ -222,12 +236,15 @@ export class ImpersonationService {
   }
 
   public decodeJwtPayload(token: string): Record<string, any> | null {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+      return JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    } catch {
       return null;
     }
-
-    return JSON.parse(Buffer.from(parts[1], 'base64url').toString());
   }
 
   private buildClientAssertion(tokenEndpoint: string): string {
