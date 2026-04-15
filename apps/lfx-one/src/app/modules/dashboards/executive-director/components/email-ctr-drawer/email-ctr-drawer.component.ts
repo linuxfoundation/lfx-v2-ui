@@ -7,27 +7,23 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import {
-  createBarChartOptions,
-  createHorizontalBarChartOptions,
-  DASHBOARD_TOOLTIP_CONFIG,
-  lfxColors,
-  MARKETING_ACTION_ICON_MAP,
-} from '@lfx-one/shared/constants';
+import { createBarChartOptions, createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
 import { DrawerModule } from 'primeng/drawer';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { EmailCtrResponse, MarketingActionType, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
+import type { EmailCtrResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
+import { splitByPriority, type MarketingSplitByPriority } from '@lfx-one/shared/utils';
 
 @Component({
   selector: 'lfx-email-ctr-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent, MarketingActionIconPipe],
   templateUrl: './email-ctr-drawer.component.html',
   styleUrl: './email-ctr-drawer.component.scss',
 })
@@ -47,14 +43,15 @@ export class EmailCtrDrawerComponent {
   protected readonly drawerData: Signal<EmailCtrResponse> = this.initDrawerData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
-  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
-    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
-  );
-  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
-  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
-  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
-    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
-  );
+  private readonly split: Signal<MarketingSplitByPriority> = computed(() => splitByPriority(this.recommendedActions(), this.keyInsights()));
+
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().attentionActions);
+
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
+
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
+
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
   protected readonly campaignChartData: Signal<ChartData<'bar'>> = this.initCampaignChartData();
   protected readonly reachVsOpensChartData: Signal<ChartData<'bar'>> = this.initReachVsOpensChartData();
@@ -167,10 +164,6 @@ export class EmailCtrDrawerComponent {
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   // === Private Initializers ===

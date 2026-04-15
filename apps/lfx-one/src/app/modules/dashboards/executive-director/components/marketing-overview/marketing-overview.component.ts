@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
@@ -146,6 +147,7 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
   selector: 'lfx-marketing-overview',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    NgTemplateOutlet,
     ButtonComponent,
     CardComponent,
     ChartComponent,
@@ -222,6 +224,10 @@ export class MarketingOverviewComponent {
     this.activeDrawer.set(null);
   }
 
+  public setFilter(value: string): void {
+    this.selectedFilter.set(value as 'all' | MetricCategory);
+  }
+
   // === Private Initializers ===
   private initEdEvolutionData(): Signal<EdEvolutionData> {
     // ED dashboard intentionally falls back to `tlf` (the umbrella foundation) when no specific
@@ -229,14 +235,9 @@ export class MarketingOverviewComponent {
     const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     // Per-call catchError ensures a single failing Snowflake query degrades only its own card
-    // rather than taking down the whole dashboard; errors are still logged for visibility.
-    const safe = <T>(key: keyof EdEvolutionData, obs: Observable<T>): Observable<T> =>
-      obs.pipe(
-        catchError((err) => {
-          console.error(`[marketing-overview] Failed to load ${String(key)}:`, err);
-          return of(EMPTY_ED_EVOLUTION_DATA[key] as T);
-        })
-      );
+    // rather than taking down the whole dashboard. Errors are swallowed client-side — the server
+    // logger already records the upstream failure.
+    const safe = <T>(key: keyof EdEvolutionData, obs: Observable<T>): Observable<T> => obs.pipe(catchError(() => of(EMPTY_ED_EVOLUTION_DATA[key] as T)));
 
     return toSignal(
       foundation$.pipe(

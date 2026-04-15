@@ -10,11 +10,7 @@
 
     <div class="flex items-center gap-4">
       <!-- Filter Pills -->
-      <lfx-filter-pills
-        [options]="filterOptions"
-        [selectedFilter]="selectedFilter()"
-        (filterChange)="selectedFilter.set($any($event))"
-        data-testid="ed-evolution-filters" />
+      <lfx-filter-pills [options]="filterOptions" [selectedFilter]="selectedFilter()" (filterChange)="setFilter($event)" data-testid="ed-evolution-filters" />
 
       <!-- Carousel Controls -->
       <div class="flex items-center gap-2">
@@ -38,123 +34,128 @@
     </div>
   </div>
 
+  <!-- Reusable card template used by both North Star and non-North-Star loops -->
+  <ng-template #metricCardTpl let-card>
+    @switch (card.customContentType) {
+      @case ('dual-signal') {
+        <!-- Dual-Signal Card (Brand Reach, Brand Health, Revenue Impact) -->
+        <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
+          <lfx-metric-card
+            [title]="card.title"
+            [icon]="card.icon"
+            [testId]="card.testId"
+            [chartType]="card.chartType"
+            [clickable]="!!card.drawerType"
+            [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
+            (cardClick)="handleCardClick(card.drawerType!)">
+            <ng-template #customContent>
+              <div class="flex flex-col gap-0 flex-1">
+                @if (card.dualSignals) {
+                  @for (row of card.dualSignals; track row.label; let last = $last) {
+                    <div class="flex flex-col gap-1 py-2">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">{{ row.label }}</span>
+                        @if (row.changePercentage) {
+                          <span class="text-xs font-medium" [class.text-emerald-600]="row.trend === 'up'" [class.text-red-600]="row.trend === 'down'">
+                            {{ row.changePercentage }}
+                          </span>
+                        }
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <span class="text-lg font-semibold text-gray-900 flex-shrink-0">{{ row.value }}</span>
+                        @if (row.chartData) {
+                          <div class="flex-1 h-8">
+                            <lfx-chart type="line" [data]="row.chartData" [options]="noTooltipChartOptions" height="100%"></lfx-chart>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                    @if (!last) {
+                      <div class="border-t border-gray-100"></div>
+                    }
+                  }
+                }
+                @if (card.caption) {
+                  <div class="text-[10px] text-gray-400 mt-1">{{ card.caption }}</div>
+                }
+              </div>
+            </ng-template>
+          </lfx-metric-card>
+        </div>
+      }
+      @case ('funnel') {
+        <!-- Funnel Card (Flywheel Conversion) -->
+        <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
+          <lfx-metric-card
+            [title]="card.title"
+            [icon]="card.icon"
+            [testId]="card.testId"
+            [chartType]="card.chartType"
+            [clickable]="!!card.drawerType"
+            [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
+            (cardClick)="handleCardClick(card.drawerType!)">
+            <ng-template #customContent>
+              <div class="flex flex-col gap-2 flex-1">
+                <!-- Primary Value + Trend -->
+                <div class="flex items-center gap-2">
+                  <span class="text-xl font-semibold text-gray-900">{{ card.value }}</span>
+                  @if (card.changePercentage) {
+                    <span class="text-xs font-medium" [class.text-emerald-600]="card.trend === 'up'" [class.text-red-600]="card.trend === 'down'">
+                      {{ card.changePercentage }}
+                    </span>
+                  }
+                </div>
+
+                <!-- Mini Funnel Step-Down -->
+                @if (card.funnelSteps) {
+                  <div class="flex items-center gap-1">
+                    @for (step of card.funnelSteps; track step.label; let last = $last) {
+                      <div class="flex flex-col items-center gap-0 flex-1 min-w-0">
+                        <span class="text-[10px] text-gray-400 truncate">{{ step.label }}</span>
+                        <span class="text-xs font-semibold text-gray-700">{{ step.value }}</span>
+                      </div>
+                      @if (!last) {
+                        <i class="fa-light fa-chevron-right text-[8px] text-gray-300 flex-shrink-0"></i>
+                      }
+                    }
+                  </div>
+                }
+
+                @if (card.subtitle) {
+                  <div class="text-[10px] text-gray-400">{{ card.subtitle }}</div>
+                }
+              </div>
+            </ng-template>
+          </lfx-metric-card>
+        </div>
+      }
+      @default {
+        <!-- Standard Single-Signal Card -->
+        <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
+          <lfx-metric-card
+            [title]="card.title"
+            [icon]="card.icon"
+            [testId]="card.testId"
+            [chartType]="card.chartType"
+            [chartData]="card.chartData"
+            [chartOptions]="card.chartOptions"
+            [value]="card.value"
+            [subtitle]="card.subtitle"
+            [trend]="card.trend"
+            [changePercentage]="card.changePercentage"
+            [clickable]="!!card.drawerType"
+            (cardClick)="handleCardClick(card.drawerType!)">
+          </lfx-metric-card>
+        </div>
+      }
+    }
+  </ng-template>
+
   <!-- Carousel Container -->
   <div class="relative overflow-hidden">
     <div lfxScrollShadow [scrollDistance]="320" class="flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth" data-testid="ed-evolution-carousel">
       @for (card of northStarCards(); track card.testId) {
-        @switch (card.customContentType) {
-          @case ('dual-signal') {
-            <!-- Dual-Signal Card (Brand Reach, Brand Health, Revenue Impact) -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [clickable]="!!card.drawerType"
-                [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
-                (cardClick)="handleCardClick(card.drawerType!)">
-                <ng-template #customContent>
-                  <div class="flex flex-col gap-0 flex-1">
-                    @if (card.dualSignals) {
-                      @for (row of card.dualSignals; track row.label; let last = $last) {
-                        <div class="flex flex-col gap-1 py-2">
-                          <div class="flex items-center justify-between">
-                            <span class="text-xs text-gray-500">{{ row.label }}</span>
-                            @if (row.changePercentage) {
-                              <span class="text-xs font-medium" [class.text-emerald-600]="row.trend === 'up'" [class.text-red-600]="row.trend === 'down'">
-                                {{ row.changePercentage }}
-                              </span>
-                            }
-                          </div>
-                          <div class="flex items-center gap-3">
-                            <span class="text-lg font-semibold text-gray-900 flex-shrink-0">{{ row.value }}</span>
-                            @if (row.chartData) {
-                              <div class="flex-1 h-8">
-                                <lfx-chart type="line" [data]="row.chartData" [options]="noTooltipChartOptions" height="100%"></lfx-chart>
-                              </div>
-                            }
-                          </div>
-                        </div>
-                        @if (!last) {
-                          <div class="border-t border-gray-100"></div>
-                        }
-                      }
-                    }
-                    @if (card.caption) {
-                      <div class="text-[10px] text-gray-400 mt-1">{{ card.caption }}</div>
-                    }
-                  </div>
-                </ng-template>
-              </lfx-metric-card>
-            </div>
-          }
-          @case ('funnel') {
-            <!-- Funnel Card (Flywheel Conversion) -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [clickable]="!!card.drawerType"
-                [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
-                (cardClick)="handleCardClick(card.drawerType!)">
-                <ng-template #customContent>
-                  <div class="flex flex-col gap-2 flex-1">
-                    <!-- Primary Value + Trend -->
-                    <div class="flex items-center gap-2">
-                      <span class="text-xl font-semibold text-gray-900">{{ card.value }}</span>
-                      @if (card.changePercentage) {
-                        <span class="text-xs font-medium" [class.text-emerald-600]="card.trend === 'up'" [class.text-red-600]="card.trend === 'down'">
-                          {{ card.changePercentage }}
-                        </span>
-                      }
-                    </div>
-
-                    <!-- Mini Funnel Step-Down -->
-                    @if (card.funnelSteps) {
-                      <div class="flex items-center gap-1">
-                        @for (step of card.funnelSteps; track step.label; let last = $last) {
-                          <div class="flex flex-col items-center gap-0 flex-1 min-w-0">
-                            <span class="text-[10px] text-gray-400 truncate">{{ step.label }}</span>
-                            <span class="text-xs font-semibold text-gray-700">{{ step.value }}</span>
-                          </div>
-                          @if (!last) {
-                            <i class="fa-light fa-chevron-right text-[8px] text-gray-300 flex-shrink-0"></i>
-                          }
-                        }
-                      </div>
-                    }
-
-                    @if (card.subtitle) {
-                      <div class="text-[10px] text-gray-400">{{ card.subtitle }}</div>
-                    }
-                  </div>
-                </ng-template>
-              </lfx-metric-card>
-            </div>
-          }
-          @default {
-            <!-- Standard Single-Signal Card -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [chartData]="card.chartData"
-                [chartOptions]="card.chartOptions"
-                [value]="card.value"
-                [subtitle]="card.subtitle"
-                [trend]="card.trend"
-                [changePercentage]="card.changePercentage"
-                [clickable]="!!card.drawerType"
-                (cardClick)="handleCardClick(card.drawerType!)">
-              </lfx-metric-card>
-            </div>
-          }
-        }
+        <ng-container *ngTemplateOutlet="metricCardTpl; context: { $implicit: card }"></ng-container>
       }
 
       <!-- Marketing Metrics Key Insights Card (between North Star and Brand/Influence) -->
@@ -190,117 +191,7 @@
       }
 
       @for (card of nonNorthStarCards(); track card.testId) {
-        @switch (card.customContentType) {
-          @case ('dual-signal') {
-            <!-- Dual-Signal Card (Brand Reach, Brand Health, Revenue Impact) -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [clickable]="!!card.drawerType"
-                [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
-                (cardClick)="handleCardClick(card.drawerType!)">
-                <ng-template #customContent>
-                  <div class="flex flex-col gap-0 flex-1">
-                    @if (card.dualSignals) {
-                      @for (row of card.dualSignals; track row.label; let last = $last) {
-                        <div class="flex flex-col gap-1 py-2">
-                          <div class="flex items-center justify-between">
-                            <span class="text-xs text-gray-500">{{ row.label }}</span>
-                            @if (row.changePercentage) {
-                              <span class="text-xs font-medium" [class.text-emerald-600]="row.trend === 'up'" [class.text-red-600]="row.trend === 'down'">
-                                {{ row.changePercentage }}
-                              </span>
-                            }
-                          </div>
-                          <div class="flex items-center gap-3">
-                            <span class="text-lg font-semibold text-gray-900 flex-shrink-0">{{ row.value }}</span>
-                            @if (row.chartData) {
-                              <div class="flex-1 h-8">
-                                <lfx-chart type="line" [data]="row.chartData" [options]="noTooltipChartOptions" height="100%"></lfx-chart>
-                              </div>
-                            }
-                          </div>
-                        </div>
-                        @if (!last) {
-                          <div class="border-t border-gray-100"></div>
-                        }
-                      }
-                    }
-                    @if (card.caption) {
-                      <div class="text-[10px] text-gray-400 mt-1">{{ card.caption }}</div>
-                    }
-                  </div>
-                </ng-template>
-              </lfx-metric-card>
-            </div>
-          }
-          @case ('funnel') {
-            <!-- Funnel Card (Flywheel Conversion) -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [clickable]="!!card.drawerType"
-                [styleClass]="'w-[calc(100vw-3rem)] md:w-96'"
-                (cardClick)="handleCardClick(card.drawerType!)">
-                <ng-template #customContent>
-                  <div class="flex flex-col gap-2 flex-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xl font-semibold text-gray-900">{{ card.value }}</span>
-                      @if (card.changePercentage) {
-                        <span class="text-xs font-medium" [class.text-emerald-600]="card.trend === 'up'" [class.text-red-600]="card.trend === 'down'">
-                          {{ card.changePercentage }}
-                        </span>
-                      }
-                    </div>
-
-                    @if (card.funnelSteps) {
-                      <div class="flex items-center gap-1">
-                        @for (step of card.funnelSteps; track step.label; let last = $last) {
-                          <div class="flex flex-col items-center gap-0 flex-1 min-w-0">
-                            <span class="text-[10px] text-gray-400 truncate">{{ step.label }}</span>
-                            <span class="text-xs font-semibold text-gray-700">{{ step.value }}</span>
-                          </div>
-                          @if (!last) {
-                            <i class="fa-light fa-chevron-right text-[8px] text-gray-300 flex-shrink-0"></i>
-                          }
-                        }
-                      </div>
-                    }
-
-                    @if (card.subtitle) {
-                      <div class="text-[10px] text-gray-400">{{ card.subtitle }}</div>
-                    }
-                  </div>
-                </ng-template>
-              </lfx-metric-card>
-            </div>
-          }
-          @default {
-            <!-- Standard Single-Signal Card -->
-            <div [pTooltip]="card.tooltipText!" tooltipPosition="top" class="flex-shrink-0">
-              <lfx-metric-card
-                [title]="card.title"
-                [icon]="card.icon"
-                [testId]="card.testId"
-                [chartType]="card.chartType"
-                [chartData]="card.chartData"
-                [chartOptions]="card.chartOptions"
-                [value]="card.value"
-                [subtitle]="card.subtitle"
-                [trend]="card.trend"
-                [changePercentage]="card.changePercentage"
-                [clickable]="!!card.drawerType"
-                (cardClick)="handleCardClick(card.drawerType!)">
-              </lfx-metric-card>
-            </div>
-          }
-        }
+        <ng-container *ngTemplateOutlet="metricCardTpl; context: { $implicit: card }"></ng-container>
       }
     </div>
 

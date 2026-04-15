@@ -5,15 +5,16 @@ import { ChangeDetectionStrategy, Component, computed, input, model, Signal } fr
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { splitByPriority, type MarketingSplitByPriority } from '@lfx-one/shared/utils';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
-import { MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
-import type { MemberRetentionResponse, MarketingRecommendedAction, MarketingKeyInsight, MarketingActionType } from '@lfx-one/shared/interfaces';
+import type { MarketingKeyInsight, MarketingRecommendedAction, MemberRetentionResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-member-retention-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, TagComponent, MarketingActionIconPipe],
   templateUrl: './member-retention-drawer.component.html',
   styleUrl: './member-retention-drawer.component.scss',
 })
@@ -34,22 +35,19 @@ export class MemberRetentionDrawerComponent {
   // === Computed Signals ===
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
-  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
-    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
-  );
-  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
-  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
-  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
-    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
-  );
+  private readonly split: Signal<MarketingSplitByPriority> = computed(() => splitByPriority(this.recommendedActions(), this.keyInsights()));
+
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().attentionActions);
+
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
+
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
+
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
 
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   // === Private Initializers ===

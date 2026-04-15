@@ -6,8 +6,10 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { createBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors, MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
-import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
+import { createBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { formatCurrency, formatNumber, hexToRgba, splitByPriority, type MarketingSplitByPriority } from '@lfx-one/shared/utils';
+import { FormatMoneyPipe } from '@pipes/format-money.pipe';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -16,14 +18,13 @@ import type {
   MemberRetentionResponse,
   MarketingRecommendedAction,
   MarketingKeyInsight,
-  MarketingActionType,
   RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-member-acquisition-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent, FormatMoneyPipe, MarketingActionIconPipe],
   templateUrl: './member-acquisition-drawer.component.html',
   styleUrl: './member-acquisition-drawer.component.scss',
 })
@@ -74,22 +75,13 @@ export class MemberAcquisitionDrawerComponent {
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly retentionActions: Signal<MarketingRecommendedAction[]> = this.initRetentionActions();
   protected readonly retentionInsights: Signal<MarketingKeyInsight[]> = this.initRetentionInsights();
-  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => [
-    ...this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium'),
-    ...this.retentionActions().filter((a) => a.priority === 'high' || a.priority === 'medium'),
-  ]);
-  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => [
-    ...this.keyInsights().filter((i) => i.type === 'warning'),
-    ...this.retentionInsights().filter((i) => i.type === 'warning'),
-  ]);
-  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => [
-    ...this.recommendedActions().filter((a) => a.priority === 'low'),
-    ...this.retentionActions().filter((a) => a.priority === 'low'),
-  ]);
-  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => [
-    ...this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info'),
-    ...this.retentionInsights().filter((i) => i.type === 'driver' || i.type === 'info'),
-  ]);
+  private readonly split: Signal<MarketingSplitByPriority> = computed(() =>
+    splitByPriority([...this.recommendedActions(), ...this.retentionActions()], [...this.keyInsights(), ...this.retentionInsights()])
+  );
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().attentionActions);
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
   protected readonly acquisitionChartData: Signal<ChartData<'bar'>> = this.initAcquisitionChartData();
 
   protected readonly acquisitionChartOptions: ChartOptions<'bar'> = createBarChartOptions({
@@ -139,16 +131,6 @@ export class MemberAcquisitionDrawerComponent {
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
-  }
-
-  protected formatMoney(value: number): string {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${Math.round(value).toLocaleString()}`;
   }
 
   // === Private Initializers ===
@@ -213,7 +195,7 @@ export class MemberAcquisitionDrawerComponent {
           if (declinePct >= 15) {
             actions.push({
               title: 'Membership tier mix shifting down',
-              description: `Revenue per new member fell ${declinePct.toFixed(0)}% (${this.formatMoney(Math.abs(delta))}/member) — winning deals are smaller. Review tier positioning and sales qualification`,
+              description: `Revenue per new member fell ${declinePct.toFixed(0)}% (${formatCurrency(Math.abs(delta))}/member) — winning deals are smaller. Review tier positioning and sales qualification`,
               priority: 'high',
               dueLabel: 'This quarter',
               actionType: 'revenue',
@@ -246,7 +228,7 @@ export class MemberAcquisitionDrawerComponent {
       // Acquisition QoQ
       if (changePercentage >= 10) {
         insights.push({
-          text: `New member acquisition up ${changePercentage.toFixed(1)}% QoQ — ${newMembersThisQuarter} new members, ${this.formatMoney(newMemberRevenue)} revenue`,
+          text: `New member acquisition up ${changePercentage.toFixed(1)}% QoQ — ${newMembersThisQuarter} new members, ${formatCurrency(newMemberRevenue)} revenue`,
           type: 'driver',
         });
       } else if (changePercentage <= -10) {
@@ -262,7 +244,7 @@ export class MemberAcquisitionDrawerComponent {
         if (previousPerMember > 0 && recentPerMember > previousPerMember) {
           const growthPct = ((recentPerMember - previousPerMember) / previousPerMember) * 100;
           insights.push({
-            text: `Revenue per new member up ${growthPct.toFixed(0)}% QoQ to ${this.formatMoney(recentPerMember)} — tier mix improving`,
+            text: `Revenue per new member up ${growthPct.toFixed(0)}% QoQ to ${formatCurrency(recentPerMember)} — tier mix improving`,
             type: 'driver',
           });
         }

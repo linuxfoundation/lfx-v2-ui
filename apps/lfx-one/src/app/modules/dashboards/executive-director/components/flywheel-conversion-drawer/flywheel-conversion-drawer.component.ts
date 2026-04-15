@@ -6,23 +6,18 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { TagComponent } from '@components/tag/tag.component';
-import {
-  createHorizontalBarChartOptions,
-  createLineChartOptions,
-  DASHBOARD_TOOLTIP_CONFIG,
-  lfxColors,
-  MARKETING_ACTION_ICON_MAP,
-} from '@lfx-one/shared/constants';
-import { formatNumber, hexToRgba } from '@lfx-one/shared/utils';
+import { createHorizontalBarChartOptions, createLineChartOptions, DASHBOARD_TOOLTIP_CONFIG, lfxColors } from '@lfx-one/shared/constants';
+import { formatNumber, hexToRgba, splitByPriority, type MarketingSplitByPriority } from '@lfx-one/shared/utils';
+import { MarketingActionIconPipe } from '@pipes/marketing-action-icon.pipe';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { FlywheelConversionResponse, MarketingActionType, MarketingRecommendedAction, MarketingKeyInsight } from '@lfx-one/shared/interfaces';
+import type { FlywheelConversionResponse, MarketingKeyInsight, MarketingRecommendedAction } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-flywheel-conversion-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent],
+  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent, MarketingActionIconPipe],
   templateUrl: './flywheel-conversion-drawer.component.html',
   styleUrl: './flywheel-conversion-drawer.component.scss',
 })
@@ -78,14 +73,15 @@ export class FlywheelConversionDrawerComponent {
   protected readonly reengagementRate: Signal<string> = computed(() => `${this.reengagement().reengagementRate.toFixed(1)}%`);
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
-  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
-    this.recommendedActions().filter((a) => a.priority === 'high' || a.priority === 'medium')
-  );
-  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.keyInsights().filter((i) => i.type === 'warning'));
-  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.recommendedActions().filter((a) => a.priority === 'low'));
-  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() =>
-    this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
-  );
+  private readonly split: Signal<MarketingSplitByPriority> = computed(() => splitByPriority(this.recommendedActions(), this.keyInsights()));
+
+  protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().attentionActions);
+
+  protected readonly attentionInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().attentionInsights);
+
+  protected readonly performingActions: Signal<MarketingRecommendedAction[]> = computed(() => this.split().performingActions);
+
+  protected readonly performingInsights: Signal<MarketingKeyInsight[]> = computed(() => this.split().performingInsights);
   protected readonly trendChartData: Signal<ChartData<'line'>> = this.initTrendChartData();
   protected readonly funnelChartData: Signal<ChartData<'bar'>> = this.initFunnelChartData();
 
@@ -158,10 +154,6 @@ export class FlywheelConversionDrawerComponent {
   // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  protected actionIcon(type: MarketingActionType): string {
-    return MARKETING_ACTION_ICON_MAP[type];
   }
 
   // === Private Initializers ===
