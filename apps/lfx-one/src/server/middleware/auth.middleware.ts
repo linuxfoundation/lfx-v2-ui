@@ -125,10 +125,10 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
         } else {
           req.bearerToken = impersonationToken;
 
-          logger.info(req, 'impersonation_request', 'Request under impersonation', {
+          logger.debug(req, 'impersonation_request', 'Request under impersonation', {
             path: req.path,
-            impersonator: req.appSession?.['impersonator']?.email,
-            target: req.appSession?.['impersonationUser']?.email,
+            impersonator_sub: req.appSession?.['impersonator']?.sub,
+            target_sub: req.appSession?.['impersonationUser']?.sub,
           });
           return { success: true, needsLogout: false };
         }
