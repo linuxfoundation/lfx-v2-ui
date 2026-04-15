@@ -117,14 +117,14 @@ Profile enrichment (fetching the target user's name and picture) also uses NATS 
 
 **`apps/lfx-one/src/server/services/impersonation.service.ts`**
 
-| Method                                                    | Purpose                                                        |
-| --------------------------------------------------------- | -------------------------------------------------------------- |
-| `exchangeToken(req, targetUser)`                          | Performs CTE call to Auth0 `/oauth/token`                      |
-| `fetchTargetUserProfile(req, userId)`                     | Fetches target user's name/picture from Management API         |
-| `startImpersonation(req, tokenResponse, claims, profile)` | Stores impersonation state in `appSession`                     |
-| `stopImpersonation(req)`                                  | Clears impersonation state from `appSession`                   |
-| `getImpersonationToken(req)`                              | Returns active impersonation token or null (clears if expired) |
-| `getImpersonationStatus(req)`                             | Returns current impersonation status                           |
+| Method                                                    | Purpose                                                          |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| `exchangeToken(req, targetUser)`                          | Performs CTE via NATS to `lfx-v2-auth-service`                   |
+| `fetchTargetUserProfile(req, userId)`                     | Fetches target user's name/picture via NATS `user_metadata.read` |
+| `startImpersonation(req, tokenResponse, claims, profile)` | Stores impersonation state in `appSession`                       |
+| `stopImpersonation(req)`                                  | Clears impersonation state from `appSession`                     |
+| `getImpersonationToken(req)`                              | Returns active impersonation token or null (clears if expired)   |
+| `getImpersonationStatus(req)`                             | Returns current impersonation status                             |
 
 ### 3. API Endpoints
 
