@@ -95,7 +95,7 @@ The CTE is performed by the **lfx-v2-auth-service** via NATS request-reply on su
 { success: false, error: "target_user_not_found: Target user 'jdoe' not found" }
 ```
 
-The `CTE_CLIENT_ID` and `CTE_CLIENT_KEY` env vars are still used for the Management API profile lookup (fetching target user's name and picture), but not for the token exchange itself.
+Profile enrichment (fetching the target user's name and picture) also uses NATS via the `lfx.auth-service.user_metadata.read` subject — no direct Auth0 Management API calls are made from the UI server.
 
 ## Implementation Layers
 
@@ -217,17 +217,7 @@ This is cookie-based (no server-side session store), so it works across replicas
 
 ## Environment Variables
 
-```bash
-# Auth Service client credentials (for Management API profile lookup)
-# Client ID of the "LFX V2 Auth Service" Auth0 client
-CTE_CLIENT_ID=your-cte-client-id
-# Base64-encoded RSA private key for private_key_jwt auth
-CTE_CLIENT_KEY=your-base64-encoded-private-key
-```
-
-The private key is stored in the `auth-secrets` k8s secret in the `auth-service` namespace (`client_private_key` field).
-
-The token exchange itself goes through NATS to the auth service — no additional credentials needed beyond `NATS_URL`.
+No impersonation-specific environment variables are required. Both the token exchange and profile enrichment use NATS to communicate with the auth service. The only requirement is `NATS_URL`.
 
 ## Token Expiry
 
@@ -235,16 +225,16 @@ When the impersonation token expires, the auth middleware clears the session and
 
 ## Audit Trail
 
-Every request made under impersonation is logged at INFO level:
+Every request made under impersonation is logged at DEBUG level with opaque identifiers:
 
 ```text
 impersonation_request: Request under impersonation
-  impersonator: adesilva@linuxfoundation.org
-  target: jdoe@example.com
+  impersonator_sub: auth0|asitha
+  target_sub: auth0|jdoe
   path: /api/user/meetings
 ```
 
-Impersonation start/stop events are also logged:
+Impersonation start/stop events are logged at INFO level:
 
 ```text
 impersonation_granted: Impersonation session started
@@ -260,7 +250,7 @@ impersonation_stopped: Impersonation session ended
 
 2. **Write operations use the target's identity** — creating meetings, committees, or votes while impersonating will attribute them to the target user (via the bearer token). The `created_by_name` field on committees is an exception (uses the real user's name).
 
-3. **Local dev (Authelia) not supported** — CTE is an Auth0-specific feature. Impersonation won't work with the Authelia dev auth provider. The impersonation button is hidden when `CTE_CLIENT_KEY` is not configured.
+3. **Local dev (Authelia) not supported** — CTE is an Auth0-specific feature. Impersonation won't work with the Authelia dev auth provider.
 
 4. **Target user must exist in LFID connection** — the Auth0 CTE action looks up users in the `Username-Password-Authentication` connection only. Social-only or enterprise SSO users cannot be impersonated.
 

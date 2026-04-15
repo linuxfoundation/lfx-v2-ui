@@ -3,6 +3,8 @@
 
 import { Request } from 'express';
 
+import { LfxAccessTokenClaims } from '@lfx-one/shared/interfaces';
+
 /**
  * Strips the auth provider prefix (e.g. "auth0|") from a username/sub claim.
  * Returns the raw username if no prefix is present.
@@ -72,4 +74,45 @@ export function getEffectiveSub(req: Request): string | null {
     return req.appSession['impersonationUser'].sub as string;
   }
   return (req.oidc?.user?.['sub'] as string) || null;
+}
+
+/**
+ * Gets the effective name for the current request context.
+ * During impersonation, returns the target user's name from the impersonation session.
+ * Otherwise returns the OIDC session user's name.
+ */
+export function getEffectiveName(req: Request): string | null {
+  if (req.appSession?.['impersonationUser']) {
+    return (req.appSession['impersonationUser'].name as string) || (req.appSession['impersonationUser'].username as string) || null;
+  }
+  return (req.oidc?.user?.['name'] as string) || null;
+}
+
+/**
+ * Decodes the payload from a JWT token without verifying the signature.
+ * Returns null if the token is malformed or cannot be decoded.
+ */
+export function decodeJwtPayload(token: string): LfxAccessTokenClaims | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    return JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clears all impersonation-related data from the request session.
+ */
+export function clearImpersonationSession(req: Request): void {
+  if (!req.appSession) {
+    return;
+  }
+  delete req.appSession['impersonationToken'];
+  delete req.appSession['impersonationExpiresAt'];
+  delete req.appSession['impersonationUser'];
+  delete req.appSession['impersonator'];
 }

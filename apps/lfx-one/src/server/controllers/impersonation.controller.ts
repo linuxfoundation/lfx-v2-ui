@@ -6,9 +6,10 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthorizationError, MicroserviceError, ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { ImpersonationService } from '../services/impersonation.service';
+import { decodeJwtPayload } from '../utils/auth-helper';
 
 export class ImpersonationController {
-  private impersonationService: ImpersonationService = new ImpersonationService();
+  private readonly impersonationService: ImpersonationService = new ImpersonationService();
 
   public async startImpersonation(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'start_impersonation', {
@@ -16,16 +17,6 @@ export class ImpersonationController {
     });
 
     try {
-      if (!this.impersonationService.isConfigured()) {
-        next(
-          new MicroserviceError('Impersonation is not configured', 501, 'IMPERSONATION_NOT_CONFIGURED', {
-            operation: 'start_impersonation',
-            service: 'impersonation',
-          })
-        );
-        return;
-      }
-
       if (req.appSession?.['impersonationToken']) {
         next(
           new MicroserviceError('Already impersonating a user. Stop the current session first.', 409, 'ALREADY_IMPERSONATING', {
@@ -48,14 +39,14 @@ export class ImpersonationController {
       }
 
       const realToken = req.oidc?.accessToken?.access_token || '';
-      const tokenPayload = this.impersonationService.decodeJwtPayload(realToken);
+      const tokenPayload = decodeJwtPayload(realToken);
       if (!tokenPayload || tokenPayload['http://lfx.dev/claims/can_impersonate'] !== true) {
         next(new AuthorizationError('Insufficient permissions to impersonate users', { operation: 'start_impersonation', service: 'impersonation' }));
         return;
       }
 
       const tokenResponse = await this.impersonationService.exchangeToken(req, targetUser.trim());
-      const targetClaims = this.impersonationService.decodeJwtPayload(tokenResponse.access_token);
+      const targetClaims = decodeJwtPayload(tokenResponse.access_token);
 
       if (!targetClaims) {
         throw new Error('Failed to decode target user claims from CTE response');

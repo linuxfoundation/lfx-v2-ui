@@ -2,6 +2,20 @@
 // SPDX-License-Identifier: MIT
 
 /**
+ * Decoded claims from an LFX access token (JWT payload).
+ */
+export interface LfxAccessTokenClaims {
+  sub: string;
+  'http://lfx.dev/claims/email'?: string;
+  'http://lfx.dev/claims/username'?: string;
+  'http://lfx.dev/claims/can_impersonate'?: boolean;
+  exp?: number;
+  aud?: string | string[];
+  iss?: string;
+  [key: string]: unknown;
+}
+
+/**
  * Target user information during impersonation
  */
 export interface ImpersonationUser {

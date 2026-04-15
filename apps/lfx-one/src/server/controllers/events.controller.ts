@@ -18,7 +18,7 @@ import {
 import { EventSortOrder, EventStatusFilter, GetEventOrganizationsOptions, GetEventsOptions } from '@lfx-one/shared/interfaces';
 import { EventsService } from '../services/events.service';
 import { PersonaDetectionService } from '../services/persona-detection.service';
-import { getEffectiveEmail } from '../utils/auth-helper';
+import { getEffectiveEmail, getEffectiveName } from '../utils/auth-helper';
 
 export class EventsController {
   private readonly eventsService = new EventsService();
@@ -241,10 +241,7 @@ export class EventsController {
         });
       }
 
-      const impersonationUser = req.appSession?.['impersonationUser'];
-      const userName = impersonationUser
-        ? (impersonationUser.name as string) || (impersonationUser.username as string) || userEmail
-        : (req.oidc?.user?.['name'] as string) || userEmail;
+      const userName = getEffectiveName(req) || userEmail;
 
       const pdfBuffer = await this.certificateService.generateCertificate(req, {
         eventId,

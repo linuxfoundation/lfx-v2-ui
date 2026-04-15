@@ -6,6 +6,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
 import { logger } from '../services/logger.service';
+import { clearImpersonationSession } from '../utils/auth-helper';
 
 // OIDC middleware already provides req.oidc with authentication context
 
@@ -116,12 +117,7 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
           logger.warning(req, 'impersonation_token_malformed', 'Impersonation token has invalid JWT format, clearing session', {
             path: req.path,
           });
-          if (req.appSession) {
-            delete req.appSession['impersonationToken'];
-            delete req.appSession['impersonationExpiresAt'];
-            delete req.appSession['impersonationUser'];
-            delete req.appSession['impersonator'];
-          }
+          clearImpersonationSession(req);
         } else {
           req.bearerToken = impersonationToken;
 
@@ -141,12 +137,7 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
           impersonator: req.appSession?.['impersonator']?.email,
           target: req.appSession?.['impersonationUser']?.email,
         });
-        if (req.appSession) {
-          delete req.appSession['impersonationToken'];
-          delete req.appSession['impersonationExpiresAt'];
-          delete req.appSession['impersonationUser'];
-          delete req.appSession['impersonator'];
-        }
+        clearImpersonationSession(req);
       }
 
       // Check if token exists and is expired

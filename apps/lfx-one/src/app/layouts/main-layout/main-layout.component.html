@@ -4,7 +4,7 @@
 <!-- Impersonation Banner -->
 @if (userService.impersonating()) {
   <div
-    class="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-yellow-400 py-2 text-sm font-medium text-black"
+    class="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 bg-yellow-400 py-2 text-sm font-medium text-black"
     data-testid="impersonation-banner">
     <i class="fa-light fa-eye text-sm"></i>
     <span
@@ -21,9 +21,7 @@
 <div
   class="flex min-h-screen"
   [ngClass]="{
-    'pt-12': showDevToolbar() && !userService.impersonating(),
-    'pt-10': userService.impersonating() && !showDevToolbar(),
-    'pt-[88px]': userService.impersonating() && showDevToolbar(),
+    'pt-12': showDevToolbar(),
   }">
   <!-- Sidebar - Desktop: lens switcher (64px) + nav panel (280px) = 344px -->
   <div

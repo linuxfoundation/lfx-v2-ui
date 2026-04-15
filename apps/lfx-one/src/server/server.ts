@@ -40,6 +40,7 @@ import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
 import { reqSerializer, resSerializer, serverLogger } from './server-logger';
 import { logger } from './services/logger.service';
+import { clearImpersonationSession, decodeJwtPayload } from './utils/auth-helper';
 import { resolvePersonaForSsr } from './utils/persona-helper';
 
 if (process.env['NODE_ENV'] !== 'production') {
@@ -253,9 +254,8 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
   // Check if user can impersonate (from access token custom claim)
   if (req.oidc?.accessToken?.access_token) {
     try {
-      const parts = req.oidc.accessToken.access_token.split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      const payload = decodeJwtPayload(req.oidc.accessToken.access_token);
+      if (payload) {
         auth.canImpersonate = payload['http://lfx.dev/claims/can_impersonate'] === true;
       }
     } catch {
@@ -268,13 +268,12 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     const impersonationExpiresAt = req.appSession['impersonationExpiresAt'];
     if (impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
       try {
-        const tokenParts = req.appSession['impersonationToken'].split('.');
-        if (tokenParts.length !== 3) throw new Error('Invalid token format');
-        const targetClaims = JSON.parse(Buffer.from(tokenParts[1], 'base64url').toString());
+        const targetClaims = decodeJwtPayload(req.appSession['impersonationToken']);
+        if (!targetClaims) throw new Error('Invalid token format');
 
         const impersonationUser = req.appSession['impersonationUser'];
-        auth.user = {
-          ...auth.user,
+        if (!auth.user) throw new Error('No authenticated user for impersonation override');
+        Object.assign(auth.user, {
           sub: targetClaims.sub,
           email: targetClaims['http://lfx.dev/claims/email'] || '',
           username: targetClaims['http://lfx.dev/claims/username'] || '',
@@ -282,14 +281,11 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
           name: impersonationUser?.name || targetClaims['http://lfx.dev/claims/username'] || '',
           nickname: targetClaims['http://lfx.dev/claims/username'] || '',
           picture: impersonationUser?.picture || auth.user?.picture || '',
-        } as User;
+        });
         auth.impersonating = true;
         auth.impersonator = req.appSession['impersonator'];
       } catch {
-        delete req.appSession['impersonationToken'];
-        delete req.appSession['impersonationExpiresAt'];
-        delete req.appSession['impersonationUser'];
-        delete req.appSession['impersonator'];
+        clearImpersonationSession(req);
       }
     }
   }
