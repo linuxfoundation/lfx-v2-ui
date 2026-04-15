@@ -8,7 +8,7 @@ import { logger } from '../services/logger.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
 import { UserService } from '../services/user.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth } from '../utils/auth-helper';
 
 /** Allowed pattern for foundationSlug: lowercase alphanumeric and hyphens only */
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
@@ -39,7 +39,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_active_weeks_streak');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -56,7 +56,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_active_weeks_streak', startTime, error);
       next(error);
     }
   }
@@ -69,7 +68,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_pull_requests_merged');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -86,7 +85,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_pull_requests_merged', startTime, error);
       next(error);
     }
   }
@@ -99,7 +97,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_code_commits');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -116,7 +114,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_code_commits', startTime, error);
       next(error);
     }
   }
@@ -147,7 +144,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_my_projects', startTime, error);
       next(error);
     }
   }
@@ -194,7 +190,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_certified_employees', startTime, error);
       next(error);
     }
   }
@@ -234,7 +229,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_membership_tier', startTime, error);
       next(error);
     }
   }
@@ -281,7 +275,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_organization_maintainers', startTime, error);
       next(error);
     }
   }
@@ -327,7 +320,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_organization_contributors', startTime, error);
       next(error);
     }
   }
@@ -367,7 +359,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_training_enrollments', startTime, error);
       next(error);
     }
   }
@@ -414,7 +405,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_event_attendance_monthly', startTime, error);
       next(error);
     }
   }
@@ -464,7 +454,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_project_issues_resolution', startTime, error);
       next(error);
     }
   }
@@ -512,7 +501,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_project_pull_requests_weekly', startTime, error);
       next(error);
     }
   }
@@ -545,7 +533,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_contributors_mentored', startTime, error);
       next(error);
     }
   }
@@ -593,7 +580,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_unique_contributors_weekly', startTime, error);
       next(error);
     }
   }
@@ -631,7 +617,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_total_projects', startTime, error);
       next(error);
     }
   }
@@ -668,7 +653,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_projects_detail', startTime, error);
       next(error);
     }
   }
@@ -705,7 +689,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_projects_lifecycle_distribution', startTime, error);
       next(error);
     }
   }
@@ -743,7 +726,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_total_members', startTime, error);
       next(error);
     }
   }
@@ -780,7 +762,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_active_contributors_monthly', startTime, error);
       next(error);
     }
   }
@@ -817,7 +798,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_contributors_distribution', startTime, error);
       next(error);
     }
   }
@@ -855,7 +835,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_software_value', startTime, error);
       next(error);
     }
   }
@@ -893,7 +872,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_value_concentration', startTime, error);
       next(error);
     }
   }
@@ -931,7 +909,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers', startTime, error);
       next(error);
     }
   }
@@ -968,7 +945,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers_monthly', startTime, error);
       next(error);
     }
   }
@@ -1005,7 +981,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers_distribution', startTime, error);
       next(error);
     }
   }
@@ -1042,7 +1017,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_events_quarterly', startTime, error);
       next(error);
     }
   }
@@ -1079,7 +1053,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_events_attendance_distribution', startTime, error);
       next(error);
     }
   }
@@ -1123,7 +1096,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_health_score_distribution', startTime, error);
       next(error);
     }
   }
@@ -1161,7 +1133,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_company_bus_factor', startTime, error);
       next(error);
     }
   }
@@ -1208,7 +1179,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_health_metrics_daily', startTime, error);
       next(error);
     }
   }
@@ -1255,7 +1225,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_unique_contributors_daily', startTime, error);
       next(error);
     }
   }
@@ -1302,7 +1271,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_health_events_monthly', startTime, error);
       next(error);
     }
   }
@@ -1349,7 +1317,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_code_commits_daily', startTime, error);
       next(error);
     }
   }
@@ -1395,7 +1362,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_contributors_monthly', startTime, error);
       next(error);
     }
   }
@@ -1440,7 +1406,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_contributors_project_distribution', startTime, error);
       next(error);
     }
   }
@@ -1486,7 +1451,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_monthly', startTime, error);
       next(error);
     }
   }
@@ -1531,7 +1495,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_distribution', startTime, error);
       next(error);
     }
   }
@@ -1576,7 +1539,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_key_members', startTime, error);
       next(error);
     }
   }
@@ -1622,7 +1584,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_event_attendees_monthly', startTime, error);
       next(error);
     }
   }
@@ -1668,7 +1629,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_event_speakers_monthly', startTime, error);
       next(error);
     }
   }
@@ -1714,7 +1674,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_training_enrollments_monthly', startTime, error);
       next(error);
     }
   }
@@ -1759,7 +1718,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_training_enrollments_distribution', startTime, error);
       next(error);
     }
   }
@@ -1805,7 +1763,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_certified_employees_monthly', startTime, error);
       next(error);
     }
   }
@@ -1850,7 +1807,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_certified_employees_distribution', startTime, error);
       next(error);
     }
   }
@@ -1894,7 +1850,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_web_activities_summary', startTime, error);
       next(error);
     }
   }
@@ -1931,7 +1886,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_email_ctr', startTime, error);
       next(error);
     }
   }
@@ -1968,7 +1922,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_social_reach', startTime, error);
       next(error);
     }
   }
@@ -2005,7 +1958,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_social_media', startTime, error);
       next(error);
     }
   }
@@ -2045,7 +1997,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_member_retention', startTime, error);
       next(error);
     }
   }
@@ -2082,7 +2033,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_member_acquisition', startTime, error);
       next(error);
     }
   }
@@ -2119,7 +2069,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_engaged_community', startTime, error);
       next(error);
     }
   }
@@ -2156,7 +2105,302 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_flywheel_conversion', startTime, error);
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/nps-summary
+   * Get Net Promoter Score summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getNpsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_nps_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_nps_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_nps_summary',
+        });
+      }
+
+      const response = await this.projectService.getNpsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_nps_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        nps_score: response.npsScore,
+        responses: response.responses,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/participating-orgs-summary
+   * Get participating organizations summary (membership counts + engagement breakdown)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getParticipatingOrgsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_participating_orgs_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      const response = await this.projectService.getParticipatingOrgsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_participating_orgs_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        total_active_members: response.totalActiveMembers,
+        total_new_members: response.totalNewMembers,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/membership-churn-per-tier-summary
+   * Get consolidated membership churn per tier summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getMembershipChurnPerTierSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_membership_churn_per_tier_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      const response = await this.projectService.getMembershipChurnPerTierSummary(foundationSlug, range);
+
+      logger.success(req, 'get_membership_churn_per_tier_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        comparison_available: response.comparisonAvailable,
+        current_churn_rate_pct: response.currentPeriod.churnRatePct,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/events-summary
+   * Get events summary for a foundation (total events, change, sponsorship vs goal)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getEventsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_events_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_events_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_events_summary',
+        });
+      }
+
+      const response = await this.projectService.getEventsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_events_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        project_id: response.projectId,
+        total_events: response.totalEvents,
+        event_change: response.eventChange,
+        sponsorship_revenue: response.sponsorshipRevenue,
+        sponsorship_goal: response.sponsorshipGoal,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/outstanding-balance-summary
+   * Get outstanding balance summary for a foundation
+   * Query params: foundationSlug (required)
+   */
+  public async getOutstandingBalanceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_outstanding_balance_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_outstanding_balance_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_outstanding_balance_summary',
+        });
+      }
+
+      const response = await this.projectService.getOutstandingBalanceSummary(foundationSlug);
+
+      logger.success(req, 'get_outstanding_balance_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        total_outstanding_balance: response.totalOutstandingBalance,
+        total_members_at_risk: response.totalMembersAtRisk,
+        primary_risk_level: response.primaryRiskLevel,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/training-certification-summary
+   * Get Training & Certification summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getTrainingCertificationSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_training_certification_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      const response = await this.projectService.getTrainingCertificationSummary(foundationSlug, range);
+
+      logger.success(req, 'get_training_certification_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        range: response.range,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/code-contribution-summary
+   * Get Code Contribution summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getCodeContributionSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_code_contribution_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      const response = await this.projectService.getCodeContributionSummary(foundationSlug, range);
+
+      logger.success(req, 'get_code_contribution_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        range: response.range,
+        data_available: response.dataAvailable,
+      });
+
+      res.json(response);
+    } catch (error) {
       next(error);
     }
   }
