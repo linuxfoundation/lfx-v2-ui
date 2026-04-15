@@ -112,3 +112,6 @@ export * from './training.interface';
 
 // My Documents interfaces
 export * from './my-document.interface';
+
+// API Gateway user profile interfaces
+export * from './api-gateway-user-profile.interface';
