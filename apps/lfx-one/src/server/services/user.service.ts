@@ -523,6 +523,12 @@ export class UserService {
     // Step 1: Get all past meeting participant records for this user via query service
     // Uses fetchAllQueryResources to auto-paginate through all pages and dual email+username
     // lookup for complete coverage (same pattern as getPastMeetingOccurrenceIds)
+    logger.debug(req, 'get_user_past_meetings', 'Starting past meeting lookup for user', {
+      has_project_filter: !!projectUid,
+      has_foundation_filter: !!foundationUid,
+      limit,
+    });
+
     const normalizedEmail = email.toLowerCase();
     const username = await getUsernameFromAuth(req);
 
@@ -549,7 +555,7 @@ export class UserService {
       )
     ).catch((error) => {
       logger.warning(req, 'get_user_past_meetings', 'Email participant query failed, returning partial results', {
-        error: error instanceof Error ? error.message : String(error),
+        err: error,
       });
       return [];
     });
@@ -575,12 +581,17 @@ export class UserService {
         )
       ).catch((error) => {
         logger.warning(req, 'get_user_past_meetings', 'Username participant query failed, returning partial results', {
-          error: error instanceof Error ? error.message : String(error),
+          err: error,
         });
         return [];
       });
       usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && pastMeetingIds.add(p.meeting_and_occurrence_id));
     }
+
+    logger.debug(req, 'get_user_past_meetings', 'Found past meeting participant IDs', {
+      total_ids: pastMeetingIds.size,
+      email_matches: emailParticipants.length,
+    });
 
     if (pastMeetingIds.size === 0) {
       return [];
