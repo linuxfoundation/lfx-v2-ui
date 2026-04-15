@@ -1158,6 +1158,11 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get event growth metrics for the ED dashboard.
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting event growth totals, YoY changes, and monthly trend (or zeroed defaults on error)
+   */
   public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
     return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
       catchError(() =>
@@ -1178,6 +1183,11 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get brand reach metrics for the ED dashboard (social followers + web sessions).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
+   */
   public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
     return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
       catchError(() =>
@@ -1195,6 +1205,11 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get brand health metrics for the ED dashboard (mention volume + sentiment breakdown).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting mention totals, sentiment percentages, and monthly history (or zeroed defaults on error)
+   */
   public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
     return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
       catchError(() =>
@@ -1210,6 +1225,11 @@ export class AnalyticsService {
     );
   }
 
+  /**
+   * Get revenue impact metrics for the ED dashboard (attribution + paid media + event registration).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
+   */
   public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
     return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
       catchError(() =>
