@@ -276,7 +276,7 @@ export class MarketingOverviewComponent {
           unit: '%',
         },
         {
-          label: 'Flywheel conversion',
+          label: 'Flywheel re-engagement',
           change: data.flywheel.reengagement?.reengagementMomChange ?? 0,
           detail: `${(data.flywheel.reengagement?.reengagementRate ?? 0).toFixed(1)}%`,
           unit: 'pp',

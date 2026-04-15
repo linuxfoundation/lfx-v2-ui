@@ -188,19 +188,19 @@ export class WebsiteVisitsDrawerComponent {
         return actions;
       }
 
-      // Check for declining trend in recent days
-      if (dailyData.length >= 14) {
+      // Check for declining trend over the 6-month weekly series
+      if (dailyData.length >= 8) {
         const firstHalf = dailyData.slice(0, Math.floor(dailyData.length / 2));
         const secondHalf = dailyData.slice(Math.floor(dailyData.length / 2));
         const firstAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
         const secondAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
-        if (secondAvg < firstAvg * 0.9) {
+        if (firstAvg > 0 && secondAvg < firstAvg * 0.9) {
           const decline = Math.round(((firstAvg - secondAvg) / firstAvg) * 100);
           actions.push({
             title: 'Investigate traffic decline',
-            description: `Sessions dropped ~${decline}% in the recent period — review traffic sources and content changes`,
+            description: `Sessions dropped ~${decline}% over recent weeks — review traffic sources and content changes`,
             priority: 'high',
-            dueLabel: 'This week',
+            dueLabel: 'This month',
             actionType: 'decline',
           });
         }

@@ -58,9 +58,24 @@ export class FlywheelConversionDrawerComponent {
     monthlyData: [],
   });
 
+  private readonly defaultReengagement: NonNullable<FlywheelConversionResponse['reengagement']> = {
+    totalReengaged: 0,
+    reengagementRate: 0,
+    reengagementMomChange: 0,
+    reengagedToNewsletter: 0,
+    reengagedToCommunity: 0,
+    reengagedToWorkingGroup: 0,
+    reengagedToTraining: 0,
+    reengagedToCode: 0,
+    reengagedToWeb: 0,
+  };
+
   // === Computed Signals ===
   protected readonly formattedEventAttendees: Signal<string> = computed(() => formatNumber(this.data().funnel.eventAttendees));
-  protected readonly reengagementRate: Signal<string> = computed(() => `${this.data().reengagement!.reengagementRate.toFixed(1)}%`);
+  protected readonly reengagement: Signal<NonNullable<FlywheelConversionResponse['reengagement']>> = computed(
+    () => this.data().reengagement ?? this.defaultReengagement
+  );
+  protected readonly reengagementRate: Signal<string> = computed(() => `${this.reengagement().reengagementRate.toFixed(1)}%`);
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -153,7 +168,7 @@ export class FlywheelConversionDrawerComponent {
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
       const { conversionRate, funnel, monthlyData } = this.data();
-      const reengagement = this.data().reengagement!;
+      const reengagement = this.reengagement();
       const actions: MarketingRecommendedAction[] = [];
 
       if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
@@ -214,7 +229,7 @@ export class FlywheelConversionDrawerComponent {
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
       const { conversionRate, funnel, monthlyData } = this.data();
-      const reengagement = this.data().reengagement!;
+      const reengagement = this.reengagement();
       const insights: MarketingKeyInsight[] = [];
 
       if (conversionRate === 0 && funnel.eventAttendees === 0 && monthlyData.length === 0) {
@@ -296,7 +311,7 @@ export class FlywheelConversionDrawerComponent {
   private initFunnelChartData(): Signal<ChartData<'bar'>> {
     return computed(() => {
       const { funnel } = this.data();
-      const reengagement = this.data().reengagement!;
+      const reengagement = this.reengagement();
       return {
         labels: [
           'Event Attendees',

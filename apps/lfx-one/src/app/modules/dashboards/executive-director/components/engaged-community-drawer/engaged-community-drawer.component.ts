@@ -52,7 +52,7 @@ export class EngagedCommunityDrawerComponent {
     trend: 'up',
     socialPlatforms: [],
     websiteDomains: [],
-    dailyTrend: [],
+    weeklyTrend: [],
   });
   // === Computed Signals ===
   protected readonly formattedTotalMembers: Signal<string> = computed(() => formatNumber(this.data().totalMembers));
@@ -261,9 +261,9 @@ export class EngagedCommunityDrawerComponent {
       }
 
       // Weekly sessions — drawer renders 6-month weekly chart, compare recent 4 weeks vs prior 4
-      if (brand.dailyTrend.length >= 8) {
-        const recent4 = brand.dailyTrend.slice(-4).reduce((s, d) => s + d.sessions, 0);
-        const prior4 = brand.dailyTrend.slice(-8, -4).reduce((s, d) => s + d.sessions, 0);
+      if (brand.weeklyTrend.length >= 8) {
+        const recent4 = brand.weeklyTrend.slice(-4).reduce((s, d) => s + d.sessions, 0);
+        const prior4 = brand.weeklyTrend.slice(-8, -4).reduce((s, d) => s + d.sessions, 0);
         if (prior4 === 0 && recent4 > 0) {
           insights.push({
             text: `Weekly sessions started growing from a zero baseline (${formatNumber(recent4)} last 4 weeks)`,
@@ -309,12 +309,12 @@ export class EngagedCommunityDrawerComponent {
 
   private initDailyTrendData(): Signal<ChartData<'line'>> {
     return computed(() => {
-      const { dailyTrend } = this.brandReachData();
+      const { weeklyTrend } = this.brandReachData();
       return {
-        labels: dailyTrend.map((d) => d.day),
+        labels: weeklyTrend.map((d) => d.week),
         datasets: [
           {
-            data: dailyTrend.map((d) => d.sessions),
+            data: weeklyTrend.map((d) => d.sessions),
             borderColor: lfxColors.blue[500],
             backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
             fill: true,
