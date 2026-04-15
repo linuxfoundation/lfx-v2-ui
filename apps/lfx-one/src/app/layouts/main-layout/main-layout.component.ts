@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, model } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
-import { ALL_LENSES, COMMITTEE_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
+import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
 import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
@@ -35,6 +35,9 @@ export class MainLayoutComponent {
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
+
+  // Project/foundation selector panel open state (drives the main-content backdrop)
+  protected readonly selectorPanelOpen = model(false);
 
   // Feature flags
   protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
@@ -98,6 +101,11 @@ export class MainLayoutComponent {
           icon: 'fa-light fa-clipboard-list',
           routerLink: '/surveys',
         },
+        {
+          label: 'My ' + DOCUMENT_LABEL.plural,
+          icon: 'fa-light fa-folder-open',
+          routerLink: '/documents',
+        },
       ],
     },
     {
@@ -106,7 +114,7 @@ export class MainLayoutComponent {
       expanded: true,
       items: [
         {
-          label: 'Trainings & Certs',
+          label: 'Training & Certifications',
           icon: 'fa-light fa-graduation-cap',
           routerLink: '/me/training',
         },
@@ -174,6 +182,11 @@ export class MainLayoutComponent {
       routerLink: '/groups',
     },
     {
+      label: DOCUMENT_LABEL.plural,
+      icon: 'fa-light fa-folder-open',
+      routerLink: '/documents',
+    },
+    {
       label: 'Governance',
       isSection: true,
       expanded: true,
@@ -218,6 +231,11 @@ export class MainLayoutComponent {
       label: COMMITTEE_LABEL.plural,
       icon: 'fa-light fa-users-rectangle',
       routerLink: '/groups',
+    },
+    {
+      label: DOCUMENT_LABEL.plural,
+      icon: 'fa-light fa-folder-open',
+      routerLink: '/documents',
     },
   ];
 
@@ -327,6 +345,7 @@ export class MainLayoutComponent {
       )
       .subscribe(() => {
         this.appService.closeMobileSidebar();
+        this.selectorPanelOpen.set(false);
         this.syncLensFromRoute();
       });
   }

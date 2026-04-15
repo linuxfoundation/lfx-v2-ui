@@ -115,3 +115,6 @@ export * from './credly.interface';
 
 // Training interfaces
 export * from './training.interface';
+
+// My Documents interfaces
+export * from './my-document.interface';
