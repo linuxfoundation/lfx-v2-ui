@@ -33,9 +33,9 @@ export class EventGrowthDrawerComponent {
     totalEvents: 0,
     totalRevenue: 0,
     revenuePerAttendee: 0,
-    attendeeMomChange: 0,
-    registrantMomChange: 0,
-    revenueMomChange: 0,
+    attendeeYoyChange: 0,
+    registrantYoyChange: 0,
+    revenueYoyChange: 0,
     trend: 'up',
     monthlyData: [],
     topEvents: [],
@@ -58,16 +58,18 @@ export class EventGrowthDrawerComponent {
 
   protected readonly monthlyChartData: Signal<ChartData<'bar'>> = computed(() => {
     const { monthlyData } = this.data();
-    const quarterLabels = monthlyData.map((d) => {
+    const quarterBuckets = new Map<string, number>();
+    for (const d of monthlyData) {
       const [year, month] = d.month.split('-');
       const qi = Math.ceil(Number(month) / 3);
-      return `Q${qi} ${year}`;
-    });
+      const key = `Q${qi} ${year}`;
+      quarterBuckets.set(key, (quarterBuckets.get(key) ?? 0) + d.value);
+    }
     return {
-      labels: quarterLabels,
+      labels: Array.from(quarterBuckets.keys()),
       datasets: [
         {
-          data: monthlyData.map((d) => d.value),
+          data: Array.from(quarterBuckets.values()),
           backgroundColor: lfxColors.blue[500],
           borderRadius: 4,
           barPercentage: 0.6,
@@ -139,7 +141,7 @@ export class EventGrowthDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
-      const { totalAttendees, totalEvents, totalRevenue, revenuePerAttendee, attendeeMomChange, revenueMomChange, topEvents, monthlyData } = this.data();
+      const { totalAttendees, totalEvents, totalRevenue, revenuePerAttendee, attendeeYoyChange, revenueYoyChange, topEvents, monthlyData } = this.data();
       const actions: MarketingRecommendedAction[] = [];
 
       if (totalAttendees === 0 && totalEvents === 0) {
@@ -147,29 +149,29 @@ export class EventGrowthDrawerComponent {
       }
 
       // Attendance declining — how much matters
-      if (attendeeMomChange <= -10) {
+      if (attendeeYoyChange <= -10) {
         actions.push({
           title: 'Reverse attendance decline',
-          description: `Attendance dropped ${Math.abs(attendeeMomChange).toFixed(1)}% MoM — review event mix, promotion windows, and channel performance`,
+          description: `Attendance dropped ${Math.abs(attendeeYoyChange).toFixed(1)}% YoY — review event mix, promotion windows, and channel performance`,
           priority: 'high',
           dueLabel: 'This month',
           actionType: 'decline',
         });
-      } else if (attendeeMomChange <= -3) {
+      } else if (attendeeYoyChange <= -3) {
         actions.push({
           title: 'Attendance softening',
-          description: `Attendance down ${Math.abs(attendeeMomChange).toFixed(1)}% MoM — watch next event's registration pace`,
+          description: `Attendance down ${Math.abs(attendeeYoyChange).toFixed(1)}% YoY — watch next event's registration pace`,
           priority: 'medium',
           dueLabel: 'Next event',
           actionType: 'investigate',
         });
       }
 
-      // Revenue per attendee — use the stat card's own value, not derived deltas
-      if (revenuePerAttendee > 0 && revenueMomChange <= -5) {
+      // Total event revenue declining — use revenue YoY, not per-attendee
+      if (revenuePerAttendee > 0 && revenueYoyChange <= -5) {
         actions.push({
-          title: 'Revenue per attendee declining',
-          description: `Event revenue down ${Math.abs(revenueMomChange).toFixed(1)}% MoM at ${this.formatMoney(revenuePerAttendee)} per attendee — review sponsorship packages and ticket pricing`,
+          title: 'Event revenue declining',
+          description: `Total event revenue down ${Math.abs(revenueYoyChange).toFixed(1)}% YoY at ${this.formatMoney(revenuePerAttendee)} per attendee — review sponsorship packages and ticket pricing`,
           priority: 'medium',
           dueLabel: 'This quarter',
           actionType: 'revenue',
@@ -216,24 +218,24 @@ export class EventGrowthDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
-      const { totalAttendees, totalEvents, totalRevenue, revenuePerAttendee, attendeeMomChange, revenueMomChange, topEvents } = this.data();
+      const { totalAttendees, totalEvents, totalRevenue, revenuePerAttendee, attendeeYoyChange, revenueYoyChange, topEvents } = this.data();
       const insights: MarketingKeyInsight[] = [];
 
       if (totalAttendees === 0) {
         return insights;
       }
 
-      if (attendeeMomChange >= 10) {
+      if (attendeeYoyChange >= 10) {
         insights.push({
-          text: `Attendance up ${attendeeMomChange.toFixed(1)}% MoM — ${formatNumber(totalAttendees)} attendees across ${totalEvents} events`,
+          text: `Attendance up ${attendeeYoyChange.toFixed(1)}% YoY — ${formatNumber(totalAttendees)} attendees across ${totalEvents} events`,
           type: 'driver',
         });
-      } else if (attendeeMomChange <= -5) {
-        insights.push({ text: `Attendance down ${Math.abs(attendeeMomChange).toFixed(1)}% MoM`, type: 'warning' });
+      } else if (attendeeYoyChange <= -5) {
+        insights.push({ text: `Attendance down ${Math.abs(attendeeYoyChange).toFixed(1)}% YoY`, type: 'warning' });
       }
 
-      if (revenueMomChange >= 10) {
-        insights.push({ text: `Event revenue up ${revenueMomChange.toFixed(1)}% MoM to ${this.formatMoney(totalRevenue)}`, type: 'driver' });
+      if (revenueYoyChange >= 10) {
+        insights.push({ text: `Event revenue up ${revenueYoyChange.toFixed(1)}% YoY to ${this.formatMoney(totalRevenue)}`, type: 'driver' });
       }
 
       if (revenuePerAttendee > 0) {

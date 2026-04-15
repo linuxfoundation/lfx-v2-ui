@@ -248,13 +248,12 @@ export class EngagedCommunityDrawerComponent {
         }
       }
 
-      // Segment composition — call out the leader with real numbers
+      // Segment composition — keep in sync with initBreakdownChartData (Community / Working Groups / Certified)
       if (totalMembers > 0) {
         const segments = [
           { name: 'Community members', value: breakdown.communityMembers },
           { name: 'Working group members', value: breakdown.workingGroupMembers },
           { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
-          { name: 'Newsletter subscribers', value: breakdown.newsletterSubscribers },
         ].sort((a, b) => b.value - a.value);
         const top = segments[0];
         const topShare = (top.value / totalMembers) * 100;

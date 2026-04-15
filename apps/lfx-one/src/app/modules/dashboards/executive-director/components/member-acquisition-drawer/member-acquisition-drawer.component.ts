@@ -214,7 +214,7 @@ export class MemberAcquisitionDrawerComponent {
           if (declinePct >= 15) {
             actions.push({
               title: 'Membership tier mix shifting down',
-              description: `Revenue per new member fell ${declinePct.toFixed(0)}% (${this.formatMoney(delta)}/member) — winning deals are smaller. Review tier positioning and sales qualification`,
+              description: `Revenue per new member fell ${declinePct.toFixed(0)}% (${this.formatMoney(Math.abs(delta))}/member) — winning deals are smaller. Review tier positioning and sales qualification`,
               priority: 'high',
               dueLabel: 'This quarter',
               actionType: 'revenue',

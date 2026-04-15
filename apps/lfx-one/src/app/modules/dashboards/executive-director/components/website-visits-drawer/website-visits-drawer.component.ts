@@ -284,7 +284,11 @@ export class WebsiteVisitsDrawerComponent {
         const secondHalf = dailyData.slice(Math.floor(dailyData.length / 2));
         const firstAvg = firstHalf.reduce((s, v) => s + v, 0) / firstHalf.length;
         const secondAvg = secondHalf.reduce((s, v) => s + v, 0) / secondHalf.length;
-        if (secondAvg > firstAvg * 1.1) {
+        if (firstAvg === 0 && secondAvg > 0) {
+          insights.push({ text: 'Sessions started growing from a zero baseline over the last 6 months', type: 'driver' });
+        } else if (firstAvg === 0) {
+          insights.push({ text: 'No session activity over the last 6 months', type: 'info' });
+        } else if (secondAvg > firstAvg * 1.1) {
           const growth = Math.round(((secondAvg - firstAvg) / firstAvg) * 100);
           insights.push({ text: `Sessions trending up ~${growth}% over the last 6 months`, type: 'driver' });
         } else if (secondAvg < firstAvg * 0.9) {

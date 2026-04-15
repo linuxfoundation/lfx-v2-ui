@@ -194,8 +194,8 @@ export class PaidSocialReachDrawerComponent {
       const { roas, changePercentage, totalSpend, totalRevenue, monthlyRoas } = this.drawerData();
       const actions: MarketingRecommendedAction[] = [];
 
-      // Losing money — the most urgent signal
-      if (totalSpend > 0 && roas > 0 && roas < 0.8) {
+      // Losing money — the most urgent signal (includes 0.00x — spend with no attributed revenue)
+      if (totalSpend > 0 && roas < 0.8) {
         const lost = totalSpend - totalRevenue;
         actions.push({
           title: 'Cut or pause losing campaigns',

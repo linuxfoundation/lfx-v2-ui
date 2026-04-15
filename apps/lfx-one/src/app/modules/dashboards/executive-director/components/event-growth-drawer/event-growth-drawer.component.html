@@ -55,9 +55,9 @@
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Registrant YoY</span>
-          @if (data().registrantMomChange !== 0) {
-            <span class="text-2xl font-semibold" [class.text-green-600]="data().registrantMomChange > 0" [class.text-red-600]="data().registrantMomChange < 0">
-              {{ data().registrantMomChange > 0 ? '+' : '' }}{{ data().registrantMomChange.toFixed(1) }}%
+          @if (data().registrantYoyChange !== 0) {
+            <span class="text-2xl font-semibold" [class.text-green-600]="data().registrantYoyChange > 0" [class.text-red-600]="data().registrantYoyChange < 0">
+              {{ data().registrantYoyChange > 0 ? '+' : '' }}{{ data().registrantYoyChange.toFixed(1) }}%
             </span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>
@@ -92,9 +92,9 @@
       <lfx-card styleClass="flex-1">
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Revenue YoY</span>
-          @if (data().revenueMomChange !== 0) {
-            <span class="text-2xl font-semibold" [class.text-green-600]="data().revenueMomChange > 0" [class.text-red-600]="data().revenueMomChange < 0">
-              {{ data().revenueMomChange > 0 ? '+' : '' }}{{ data().revenueMomChange.toFixed(1) }}%
+          @if (data().revenueYoyChange !== 0) {
+            <span class="text-2xl font-semibold" [class.text-green-600]="data().revenueYoyChange > 0" [class.text-red-600]="data().revenueYoyChange < 0">
+              {{ data().revenueYoyChange > 0 ? '+' : '' }}{{ data().revenueYoyChange.toFixed(1) }}%
             </span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>
@@ -177,11 +177,11 @@
       </div>
     }
 
-    <!-- Quarterly Attendance Trend -->
+    <!-- Quarterly Attendance Trend (top events only) -->
     <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="event-growth-drawer-monthly-trend">
       <div class="flex flex-col gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">Quarterly Attendance Trend</h3>
-        <p class="text-sm text-gray-600">Total event attendees per quarter</p>
+        <h3 class="text-sm font-semibold text-gray-900">Top Events — Quarterly Attendance</h3>
+        <p class="text-sm text-gray-600">Attendance across the top events (up to 10) per quarter</p>
       </div>
       @if (data().monthlyData.length > 0) {
         <div class="h-[240px]" data-testid="event-growth-drawer-monthly-chart">

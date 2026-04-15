@@ -2932,9 +2932,9 @@ export interface EventGrowthResponse {
   totalEvents: number;
   totalRevenue: number;
   revenuePerAttendee: number;
-  attendeeMomChange: number;
-  registrantMomChange: number;
-  revenueMomChange: number;
+  attendeeYoyChange: number;
+  registrantYoyChange: number;
+  revenueYoyChange: number;
   trend: 'up' | 'down';
   monthlyData: NorthStarMonthlyDataPoint[];
   topEvents: EventGrowthTopEvent[];

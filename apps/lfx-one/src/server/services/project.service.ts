@@ -2646,9 +2646,9 @@ export class ProjectService {
       totalEvents: 0,
       totalRevenue: 0,
       revenuePerAttendee: 0,
-      attendeeMomChange: 0,
-      registrantMomChange: 0,
-      revenueMomChange: 0,
+      attendeeYoyChange: 0,
+      registrantYoyChange: 0,
+      revenueYoyChange: 0,
       trend: 'up',
       monthlyData: [],
       topEvents: [],
@@ -2762,9 +2762,9 @@ export class ProjectService {
         totalEvents,
         totalRevenue,
         revenuePerAttendee: totalAttendees > 0 ? Number((totalRevenue / totalAttendees).toFixed(2)) : 0,
-        attendeeMomChange: yoyAttendeeChange,
-        registrantMomChange: yoyRegistrantChange,
-        revenueMomChange: yoyRevenueChange,
+        attendeeYoyChange: yoyAttendeeChange,
+        registrantYoyChange: yoyRegistrantChange,
+        revenueYoyChange: yoyRevenueChange,
         trend: yoyAttendeeChange >= 0 ? 'up' : 'down',
         monthlyData,
         topEvents,
@@ -2814,13 +2814,14 @@ export class ProjectService {
       try {
         const [socialResult, socialPlatformResult] = await Promise.all([
           this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; PLATFORMS_ACTIVE: number }>(
-            `SELECT TOTAL_FOLLOWERS, PLATFORMS_ACTIVE
+            `SELECT SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS, SUM(PLATFORMS_ACTIVE) AS PLATFORMS_ACTIVE
              FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
             [foundationSlug]
           ),
           this.snowflakeService.execute<{ PLATFORM_NAME: string; FOLLOWERS: number }>(
-            `SELECT PLATFORM_NAME, FOLLOWERS
+            `SELECT PLATFORM_NAME, SUM(FOLLOWERS) AS FOLLOWERS
              FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
+             GROUP BY PLATFORM_NAME
              ORDER BY FOLLOWERS DESC`,
             [foundationSlug]
           ),
@@ -3006,8 +3007,20 @@ export class ProjectService {
     logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
 
     try {
-      // PIPELINE_SUMMARY is a single row per foundation with full YTD + prior year data
-      const pipelineQuery = `
+      const isUmbrella = foundationSlug === 'tlf';
+
+      // PIPELINE_SUMMARY is a single row per foundation; aggregate across all foundations in umbrella mode
+      const pipelineQuery = isUmbrella
+        ? `
+        SELECT SUM(TOTAL_PIPELINE_YTD) AS TOTAL_PIPELINE_YTD, SUM(WON_REVENUE_YTD) AS WON_REVENUE_YTD,
+               SUM(LOST_REVENUE_YTD) AS LOST_REVENUE_YTD, SUM(OPEN_PIPELINE_YTD) AS OPEN_PIPELINE_YTD,
+               SUM(TOTAL_DEALS_YTD) AS TOTAL_DEALS_YTD, SUM(WON_DEALS_YTD) AS WON_DEALS_YTD,
+               SUM(LOST_DEALS_YTD) AS LOST_DEALS_YTD, SUM(OPEN_DEALS_YTD) AS OPEN_DEALS_YTD,
+               AVG(AVG_WON_DEAL_SIZE_YTD) AS AVG_WON_DEAL_SIZE_YTD, AVG(CONVERSION_RATE_YTD) AS CONVERSION_RATE_YTD,
+               SUM(WON_REVENUE_PRIOR_YEAR) AS WON_REVENUE_PRIOR_YEAR, AVG(WON_REVENUE_YOY_CHANGE_PCT) AS WON_REVENUE_YOY_CHANGE_PCT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PIPELINE_SUMMARY
+      `
+        : `
         SELECT TOTAL_PIPELINE_YTD, WON_REVENUE_YTD, LOST_REVENUE_YTD, OPEN_PIPELINE_YTD,
                TOTAL_DEALS_YTD, WON_DEALS_YTD, LOST_DEALS_YTD, OPEN_DEALS_YTD,
                AVG_WON_DEAL_SIZE_YTD, CONVERSION_RATE_YTD,
@@ -3016,8 +3029,19 @@ export class ProjectService {
         WHERE FOUNDATION_SLUG = ?
       `;
 
-      // PAID_ADS_ATTRIBUTION is a single row per foundation with YTD totals
-      const paidAdsQuery = `
+      // PAID_ADS_ATTRIBUTION is a single row per foundation; aggregate across all foundations in umbrella mode
+      const paidAdsQuery = isUmbrella
+        ? `
+        SELECT SUM(TOTAL_SPEND_YTD) AS TOTAL_SPEND_YTD, SUM(TOTAL_IMPRESSIONS_YTD) AS TOTAL_IMPRESSIONS_YTD,
+               SUM(TOTAL_CLICKS_YTD) AS TOTAL_CLICKS_YTD,
+               AVG(LINEAR_ROAS_YTD) AS LINEAR_ROAS_YTD, AVG(AVG_CPC_YTD) AS AVG_CPC_YTD,
+               AVG(CTR_YTD) AS CTR_YTD, AVG(CONVERSION_RATE_YTD) AS CONVERSION_RATE_YTD,
+               SUM(FIRST_TOUCH_REVENUE_YTD) AS FIRST_TOUCH_REVENUE_YTD, SUM(LAST_TOUCH_REVENUE_YTD) AS LAST_TOUCH_REVENUE_YTD,
+               SUM(LINEAR_REVENUE_YTD) AS LINEAR_REVENUE_YTD, SUM(TIME_DECAY_REVENUE_YTD) AS TIME_DECAY_REVENUE_YTD,
+               AVG(SPEND_YOY_CHANGE_PCT) AS SPEND_YOY_CHANGE_PCT, AVG(IMPRESSIONS_YOY_CHANGE_PCT) AS IMPRESSIONS_YOY_CHANGE_PCT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_ATTRIBUTION
+      `
+        : `
         SELECT TOTAL_SPEND_YTD, TOTAL_IMPRESSIONS_YTD, TOTAL_CLICKS_YTD,
                LINEAR_ROAS_YTD, AVG_CPC_YTD, CTR_YTD, CONVERSION_RATE_YTD,
                FIRST_TOUCH_REVENUE_YTD, LAST_TOUCH_REVENUE_YTD,
@@ -3026,8 +3050,6 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_ADS_ATTRIBUTION
         WHERE FOUNDATION_SLUG = ?
       `;
-
-      const isUmbrella = foundationSlug === 'tlf';
 
       // Attribution channels — last 6 months, aggregated by paid-social channel
       const channelsQuery = isUmbrella
@@ -3151,7 +3173,7 @@ export class ProjectService {
             CONVERSION_RATE_YTD: number;
             WON_REVENUE_PRIOR_YEAR: number;
             WON_REVENUE_YOY_CHANGE_PCT: number;
-          }>(pipelineQuery, [foundationSlug]),
+          }>(pipelineQuery, isUmbrella ? [] : [foundationSlug]),
           this.snowflakeService.execute<{
             TOTAL_SPEND_YTD: number;
             TOTAL_IMPRESSIONS_YTD: number;
@@ -3166,7 +3188,7 @@ export class ProjectService {
             TIME_DECAY_REVENUE_YTD: number;
             SPEND_YOY_CHANGE_PCT: number;
             IMPRESSIONS_YOY_CHANGE_PCT: number;
-          }>(paidAdsQuery, [foundationSlug]),
+          }>(paidAdsQuery, isUmbrella ? [] : [foundationSlug]),
           this.snowflakeService.execute<{
             CHANNEL: string;
             IMPRESSIONS: number;
