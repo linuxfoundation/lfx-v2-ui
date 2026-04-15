@@ -3592,11 +3592,17 @@ export class ProjectService {
     logger.debug(undefined, 'get_brand_reach', 'Fetching brand reach from Snowflake', { foundation_slug: foundationSlug });
 
     try {
+      // TLF is the umbrella — aggregate across all foundations. Otherwise scope to a single foundation.
+      const isUmbrella = foundationSlug === 'tlf';
+      const foundationFilter = isUmbrella ? '' : 'WHERE FOUNDATION_SLUG = ?';
+      const foundationFilterAnd = isUmbrella ? '' : 'AND FOUNDATION_SLUG = ?';
+      const foundationParams = isUmbrella ? [] : [foundationSlug];
+
       const webQuery = `
         SELECT LF_SUB_DOMAIN_CLASSIFICATION,
                SUM(TOTAL_SESSIONS_LAST_30_DAYS) AS TOTAL_SESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
-        WHERE FOUNDATION_SLUG = ?
+        ${foundationFilter}
         GROUP BY LF_SUB_DOMAIN_CLASSIFICATION
         ORDER BY TOTAL_SESSIONS DESC
       `;
@@ -3604,15 +3610,15 @@ export class ProjectService {
       const dailyQuery = `
         SELECT DATE_TRUNC('WEEK', ACTIVITY_DATE) AS ACTIVITY_DATE, SUM(DAILY_SESSIONS) AS DAILY_SESSIONS
         FROM ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_BY_PROJECT
-        WHERE FOUNDATION_SLUG = ?
-          AND ACTIVITY_DATE >= DATEADD('MONTH', -6, CURRENT_DATE())
+        WHERE ACTIVITY_DATE >= DATEADD('MONTH', -6, CURRENT_DATE())
+          ${foundationFilterAnd}
         GROUP BY DATE_TRUNC('WEEK', ACTIVITY_DATE)
         ORDER BY ACTIVITY_DATE ASC
       `;
 
       const [webResult, dailyResult] = await Promise.all([
-        this.snowflakeService.execute<{ LF_SUB_DOMAIN_CLASSIFICATION: string; TOTAL_SESSIONS: number }>(webQuery, [foundationSlug]),
-        this.snowflakeService.execute<{ ACTIVITY_DATE: string; DAILY_SESSIONS: number }>(dailyQuery, [foundationSlug]),
+        this.snowflakeService.execute<{ LF_SUB_DOMAIN_CLASSIFICATION: string; TOTAL_SESSIONS: number }>(webQuery, foundationParams),
+        this.snowflakeService.execute<{ ACTIVITY_DATE: string; DAILY_SESSIONS: number }>(dailyQuery, foundationParams),
       ]);
 
       let totalSocialFollowers = 0;
@@ -3621,15 +3627,15 @@ export class ProjectService {
         const [socialResult, socialPlatformResult] = await Promise.all([
           this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number }>(
             `SELECT SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS
-             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW WHERE FOUNDATION_SLUG = ?`,
-            [foundationSlug]
+             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW ${foundationFilter}`,
+            foundationParams
           ),
           this.snowflakeService.execute<{ PLATFORM_NAME: string; FOLLOWERS: number }>(
             `SELECT PLATFORM_NAME, SUM(FOLLOWERS) AS FOLLOWERS
-             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN WHERE FOUNDATION_SLUG = ?
+             FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_PLATFORM_BREAKDOWN ${foundationFilter}
              GROUP BY PLATFORM_NAME
              ORDER BY FOLLOWERS DESC`,
-            [foundationSlug]
+            foundationParams
           ),
         ]);
 
@@ -3710,6 +3716,11 @@ export class ProjectService {
     };
 
     try {
+      // TLF is the umbrella — aggregate across all foundations. Otherwise scope to a single foundation.
+      const isUmbrella = foundationSlug === 'tlf';
+      const sovFilter = isUmbrella ? '' : 'WHERE FOUNDATION_SLUG = ?';
+      const sovParams = isUmbrella ? [] : [foundationSlug];
+
       // SHARE_OF_VOICE has per-platform rows with raw mention counts and sentiment percentages
       const sovSummaryQuery = `
         SELECT SUM(TOTAL_MENTIONS_30D) AS TOTAL_MENTIONS,
@@ -3725,18 +3736,36 @@ export class ProjectService {
                    ELSE 0
                END AS NEGATIVE_PCT
         FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE
-        WHERE FOUNDATION_SLUG = ?
+        ${sovFilter}
       `;
 
-      const monthlyTrendQuery = `
-        SELECT MONTH_START_DATE, MENTION_COUNT, MOM_CHANGE_PCT
+      // MOM_CHANGE_PCT in SHARE_OF_VOICE_MONTHLY_TREND is a mention-volume delta, not a sentiment delta.
+      // Re-aggregate per-month mention counts (when umbrella) so monthlyMentions is correct across foundations.
+      const monthlyTrendQuery = isUmbrella
+        ? `
+        SELECT MONTH_START_DATE, SUM(MENTION_COUNT) AS MENTION_COUNT
+        FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_MONTHLY_TREND
+        GROUP BY MONTH_START_DATE
+        ORDER BY MONTH_START_DATE DESC
+        LIMIT 6
+      `
+        : `
+        SELECT MONTH_START_DATE, MENTION_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_MONTHLY_TREND
         WHERE FOUNDATION_SLUG = ?
         ORDER BY MONTH_START_DATE DESC
         LIMIT 6
       `;
 
-      const topProjectsQuery = `
+      const topProjectsQuery = isUmbrella
+        ? `
+        SELECT PROJECT_NAME, SUM(MENTION_COUNT_30D) AS MENTION_COUNT_30D
+        FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_TOP_PROJECTS
+        GROUP BY PROJECT_NAME
+        ORDER BY MENTION_COUNT_30D DESC
+        LIMIT 5
+      `
+        : `
         SELECT PROJECT_NAME, MENTION_COUNT_30D, PROJECT_RANK
         FROM ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE_TOP_PROJECTS
         WHERE FOUNDATION_SLUG = ?
@@ -3752,17 +3781,16 @@ export class ProjectService {
           NEUTRAL: number;
           POSITIVE_PCT: number;
           NEGATIVE_PCT: number;
-        }>(sovSummaryQuery, [foundationSlug]),
+        }>(sovSummaryQuery, sovParams),
         this.snowflakeService.execute<{
           MONTH_START_DATE: string;
           MENTION_COUNT: number;
-          MOM_CHANGE_PCT: number;
-        }>(monthlyTrendQuery, [foundationSlug]),
+        }>(monthlyTrendQuery, sovParams),
         this.snowflakeService.execute<{
           PROJECT_NAME: string;
           MENTION_COUNT_30D: number;
-          PROJECT_RANK: number;
-        }>(topProjectsQuery, [foundationSlug]),
+          PROJECT_RANK?: number;
+        }>(topProjectsQuery, sovParams),
       ]);
 
       if (summaryResult.rows.length === 0) {
@@ -3775,7 +3803,10 @@ export class ProjectService {
       const negativePct = summary.NEGATIVE_PCT ?? 0;
       const neutralPct = Number(Math.max(0, 100 - positivePct - negativePct).toFixed(1));
 
-      const sentimentMomChangePp = trendResult.rows.length > 0 ? (trendResult.rows[0].MOM_CHANGE_PCT ?? 0) : 0;
+      // No sentiment time-series available yet — MOM_CHANGE_PCT on SHARE_OF_VOICE_MONTHLY_TREND is a
+      // mention-volume delta, not a sentiment delta. Surface 0 and let the UI suppress the trend indicator
+      // until a dedicated sentiment time-series (e.g., SENTIMENT_MOM_CHANGE_PCT) ships.
+      const sentimentMomChangePp = 0;
 
       const monthlyMentions: NorthStarMonthlyDataPoint[] = [...trendResult.rows].reverse().map((row) => {
         const date = new Date(row.MONTH_START_DATE);
