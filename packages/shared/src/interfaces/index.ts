@@ -110,6 +110,9 @@ export * from './my-event.interface';
 // Training interfaces
 export * from './training.interface';
 
+// TI (Thought Industries) interfaces
+export * from './ti.interface';
+
 // My Documents interfaces
 export * from './my-document.interface';
 
