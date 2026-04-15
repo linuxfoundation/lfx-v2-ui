@@ -425,3 +425,80 @@ export interface GetEventOrganizationsOptions {
   /** Project slugs from persona detection — scopes upcoming foundations to affiliated projects */
   affiliatedProjectSlugs?: string[];
 }
+
+// ---------------------------------------------------------------------------
+// Travel Fund Application
+// ---------------------------------------------------------------------------
+
+export interface TravelFundAboutMe {
+  firstName: string;
+  lastName: string;
+  email: string;
+  citizenshipCountry: string;
+  profileLink: string;
+  company: string;
+  canReceiveFunds: string;
+  travelFromCountry: string;
+  openSourceInvolvement: string;
+  isLgbtqia: boolean;
+  isWoman: boolean;
+  isPersonWithDisability: boolean;
+  isDiversityOther: boolean;
+  preferNotToAnswer: boolean;
+  attendingForCompany: string;
+  willingToBlog: string;
+}
+
+export interface TravelFundExpenses {
+  airfareCost: number;
+  airfareNotes: string;
+  hotelCost: number;
+  hotelNotes: string;
+  groundTransportCost: number;
+  groundTransportNotes: string;
+  estimatedTotal: number;
+}
+
+export interface TravelFundApplication {
+  eventId: string;
+  eventName: string;
+  termsAccepted: boolean;
+  aboutMe: TravelFundAboutMe;
+  expenses: TravelFundExpenses;
+}
+
+export interface TravelFundApplicationResponse {
+  success: boolean;
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Visa Request Application
+// ---------------------------------------------------------------------------
+
+export interface VisaRequestApplicantInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  passportNumber: string;
+  citizenshipCountry: string;
+  passportExpiryDate: Date | null;
+  embassyCity: string;
+  company: string;
+  mailingAddress: string;
+}
+
+export interface VisaRequestApplication {
+  eventId: string;
+  eventName: string;
+  termsAccepted: boolean;
+  applicantInfo: VisaRequestApplicantInfo;
+}
+
+export interface VisaRequestApplicationResponse {
+  success: boolean;
+  message: string;
+}
+
+export type RequestType = 'visa' | 'travel-fund';
+export type TimeFilterValue = 'any' | 'this-month' | 'next-3-months';

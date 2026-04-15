@@ -5,7 +5,6 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY_ORGANIZATIONS_RESPONSE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import {
   EventsResponse,
   GetCertificateParams,
@@ -23,7 +22,7 @@ import {
   VisaRequestApplicationResponse,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -78,9 +77,7 @@ export class EventsService {
     if (params.projectName) httpParams = httpParams.set('projectName', params.projectName);
     if (params.isPast !== undefined) httpParams = httpParams.set('isPast', String(params.isPast));
 
-    return this.http
-      .get<MyEventOrganizationsResponse>('/api/events/organizations', { params: httpParams })
-      .pipe(catchError(() => of(EMPTY_ORGANIZATIONS_RESPONSE)));
+    return this.http.get<MyEventOrganizationsResponse>('/api/events/organizations', { params: httpParams });
   }
 
   public getVisaRequests(params: GetEventRequestsParams = {}): Observable<VisaRequestsResponse> {
@@ -93,7 +90,7 @@ export class EventsService {
     if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
     if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
 
-    return this.http.get<VisaRequestsResponse>('/api/events/visa-requests', { params: httpParams }).pipe(catchError(() => of(EMPTY_VISA_REQUESTS_RESPONSE)));
+    return this.http.get<VisaRequestsResponse>('/api/events/visa-requests', { params: httpParams });
   }
 
   public getTravelFundRequests(params: GetEventRequestsParams = {}): Observable<TravelFundRequestsResponse> {
@@ -106,13 +103,11 @@ export class EventsService {
     if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
     if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
 
-    return this.http
-      .get<TravelFundRequestsResponse>('/api/events/travel-fund-requests', { params: httpParams })
-      .pipe(catchError(() => of(EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE)));
+    return this.http.get<TravelFundRequestsResponse>('/api/events/travel-fund-requests', { params: httpParams });
   }
 
   public getUpcomingCountries(): Observable<GetUpcomingCountriesResponse> {
-    return this.http.get<GetUpcomingCountriesResponse>('/api/events/countries').pipe(catchError(() => of({ data: [] as string[] })));
+    return this.http.get<GetUpcomingCountriesResponse>('/api/events/countries');
   }
 
   public submitVisaRequestApplication(payload: VisaRequestApplication): Observable<VisaRequestApplicationResponse> {
@@ -123,11 +118,11 @@ export class EventsService {
     return this.http.post<TravelFundApplicationResponse>('/api/events/travel-fund-applications', payload);
   }
 
-  public getCertificate(params: GetCertificateParams): Observable<Blob | null> {
+  public getCertificate(params: GetCertificateParams): Observable<Blob> {
     let httpParams = new HttpParams();
 
     if (params.eventId) httpParams = httpParams.set('eventId', params.eventId);
 
-    return this.http.get('/api/events/certificate', { params: httpParams, responseType: 'blob' }).pipe(catchError(() => of(null)));
+    return this.http.get('/api/events/certificate', { params: httpParams, responseType: 'blob' });
   }
 }

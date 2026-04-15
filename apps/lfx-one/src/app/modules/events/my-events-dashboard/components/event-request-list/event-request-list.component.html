@@ -83,7 +83,7 @@
       <td>
         <lfx-tag
           [value]="request.status"
-          [severity]="statusSeverityMap[request.status] ?? 'info'"
+          [severity]="request.status | eventRequestStatusSeverity"
           [attr.data-testid]="config().testIdPrefix + '-status-' + request.id" />
       </td>
     </tr>

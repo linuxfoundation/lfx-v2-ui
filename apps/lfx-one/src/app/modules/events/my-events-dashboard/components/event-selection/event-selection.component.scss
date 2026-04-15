@@ -1,10 +1,22 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-@use '../../styles/mixins' as *;
-
 .events-scroll-area {
-  @include scroll-area(340px);
+  max-height: 340px;
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.slate.200') transparent;
+
+  &::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply rounded-sm bg-slate-200;
+  }
 }
 
 .event-card {

@@ -13,8 +13,7 @@ import { StepIndicatorComponent } from '../step-indicator/step-indicator.compone
 import { TravelFundTermsComponent } from '../travel-fund-terms/travel-fund-terms.component';
 import { AboutMeFormComponent } from '../about-me-form/about-me-form.component';
 import { TravelExpensesFormComponent } from '../travel-expenses-form/travel-expenses-form.component';
-
-const STEP_ORDER: TravelFundStep[] = ['select-event', 'terms', 'about-me', 'expenses'];
+import { TRAVEL_FUND_STEP_ORDER } from '@lfx-one/shared/constants/events.constants';
 
 @Component({
   selector: 'lfx-travel-fund-application-dialog',
@@ -55,7 +54,7 @@ export class TravelFundApplicationDialogComponent {
     this.steps.map((s) => ({
       ...s,
       isActive: this.step() === s.id,
-      isCompleted: STEP_ORDER.indexOf(s.id) < STEP_ORDER.indexOf(this.step()),
+      isCompleted: TRAVEL_FUND_STEP_ORDER.indexOf(s.id) < TRAVEL_FUND_STEP_ORDER.indexOf(this.step()),
     }))
   );
 
@@ -63,16 +62,16 @@ export class TravelFundApplicationDialogComponent {
     if (this.step() === 'terms') {
       this.termsAccepted.set(true);
     }
-    const currentIndex = STEP_ORDER.indexOf(this.step());
-    if (currentIndex < STEP_ORDER.length - 1) {
-      this.step.set(STEP_ORDER[currentIndex + 1]);
+    const currentIndex = TRAVEL_FUND_STEP_ORDER.indexOf(this.step());
+    if (currentIndex < TRAVEL_FUND_STEP_ORDER.length - 1) {
+      this.step.set(TRAVEL_FUND_STEP_ORDER[currentIndex + 1]);
     }
   }
 
   public onPreviousStep(): void {
-    const currentIndex = STEP_ORDER.indexOf(this.step());
+    const currentIndex = TRAVEL_FUND_STEP_ORDER.indexOf(this.step());
     if (currentIndex > 0) {
-      this.step.set(STEP_ORDER[currentIndex - 1]);
+      this.step.set(TRAVEL_FUND_STEP_ORDER[currentIndex - 1]);
     }
   }
 

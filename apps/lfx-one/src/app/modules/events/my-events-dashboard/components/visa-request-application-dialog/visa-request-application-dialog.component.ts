@@ -12,8 +12,7 @@ import { EventSelectionComponent } from '../event-selection/event-selection.comp
 import { StepIndicatorComponent } from '../step-indicator/step-indicator.component';
 import { VisaRequestApplyFormComponent } from '../visa-request-apply-form/visa-request-apply-form.component';
 import { VisaRequestTermsComponent } from '../visa-request-terms/visa-request-terms.component';
-
-const STEP_ORDER: VisaRequestStep[] = ['select-event', 'terms', 'apply'];
+import { VIS_REQUEST_STEP_ORDER } from '@lfx-one/shared/constants/events.constants';
 
 @Component({
   selector: 'lfx-visa-request-application-dialog',
@@ -51,7 +50,7 @@ export class VisaRequestApplicationDialogComponent {
     this.steps.map((s) => ({
       ...s,
       isActive: this.step() === s.id,
-      isCompleted: STEP_ORDER.indexOf(s.id) < STEP_ORDER.indexOf(this.step()),
+      isCompleted: VIS_REQUEST_STEP_ORDER.indexOf(s.id) < VIS_REQUEST_STEP_ORDER.indexOf(this.step()),
     }))
   );
 
@@ -59,16 +58,16 @@ export class VisaRequestApplicationDialogComponent {
     if (this.step() === 'terms') {
       this.termsAccepted.set(true);
     }
-    const currentIndex = STEP_ORDER.indexOf(this.step());
-    if (currentIndex < STEP_ORDER.length - 1) {
-      this.step.set(STEP_ORDER[currentIndex + 1]);
+    const currentIndex = VIS_REQUEST_STEP_ORDER.indexOf(this.step());
+    if (currentIndex < VIS_REQUEST_STEP_ORDER.length - 1) {
+      this.step.set(VIS_REQUEST_STEP_ORDER[currentIndex + 1]);
     }
   }
 
   public onPreviousStep(): void {
-    const currentIndex = STEP_ORDER.indexOf(this.step());
+    const currentIndex = VIS_REQUEST_STEP_ORDER.indexOf(this.step());
     if (currentIndex > 0) {
-      this.step.set(STEP_ORDER[currentIndex - 1]);
+      this.step.set(VIS_REQUEST_STEP_ORDER[currentIndex - 1]);
     }
   }
 

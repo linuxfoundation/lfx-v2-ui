@@ -10,6 +10,8 @@ import {
   TagSeverity,
   TravelFundRequestsResponse,
   VisaRequestsResponse,
+  TravelFundStep,
+  VisaRequestStep,
 } from '../interfaces';
 
 export const EVENT_ROLE_OPTIONS: FilterOption[] = [
@@ -34,6 +36,13 @@ export const VISA_REQUEST_STATUS_OPTIONS: FilterOption[] = [
   { label: 'Denied', value: 'Denied' },
   { label: 'Expired', value: 'Expired' },
 ];
+
+export const EVENT_REQUEST_STATUS_SEVERITY_MAP: Partial<Record<string, TagSeverity>> = {
+  Submitted: 'info',
+  Approved: 'success',
+  Denied: 'danger',
+  Expired: 'secondary',
+};
 
 /**
  * Status filter options for Foundation Lens events.
@@ -72,3 +81,12 @@ export const EMPTY_EVENTS_RESPONSE: EventsResponse = { data: [], total: 0, pageS
 export const EMPTY_ORGANIZATIONS_RESPONSE: MyEventOrganizationsResponse = { data: [] };
 export const EMPTY_VISA_REQUESTS_RESPONSE: VisaRequestsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };
 export const EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE: TravelFundRequestsResponse = { data: [], total: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE, offset: 0 };
+export const YES_NO_OPTIONS: FilterOption[] = [
+  { label: 'Yes', value: 'yes' },
+  { label: 'No', value: 'no' },
+];
+
+export const TRAVEL_FUND_STEP_ORDER: TravelFundStep[] = ['select-event', 'terms', 'about-me', 'expenses'];
+export const VIS_REQUEST_STEP_ORDER: VisaRequestStep[] = ['select-event', 'terms', 'apply'];
+
+export const EVENT_SELECTION_PAGE_SIZE = 12;

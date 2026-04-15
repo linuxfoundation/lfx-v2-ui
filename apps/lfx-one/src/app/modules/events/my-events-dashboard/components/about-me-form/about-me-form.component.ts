@@ -11,11 +11,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { COUNTRIES } from '@lfx-one/shared/constants';
 import { TravelFundAboutMe } from '@lfx-one/shared/interfaces';
-
-const YES_NO_OPTIONS = [
-  { label: 'Yes', value: 'yes' },
-  { label: 'No', value: 'no' },
-];
+import { YES_NO_OPTIONS } from '@lfx-one/shared/constants/events.constants';
 
 @Component({
   selector: 'lfx-about-me-form',

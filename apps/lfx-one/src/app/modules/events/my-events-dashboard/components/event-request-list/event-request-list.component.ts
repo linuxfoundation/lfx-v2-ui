@@ -5,20 +5,18 @@ import { ChangeDetectionStrategy, Component, Type, computed, inject, input, Sign
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
+import { EventRequestStatusSeverityPipe } from '@app/shared/pipes/event-request-status-severity.pipe';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
-import { PageChangeEvent, TagSeverity, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
+import { PageChangeEvent, RequestType, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
 import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
-
-type RequestType = 'visa' | 'travel-fund';
-
 @Component({
   selector: 'lfx-event-request-list',
-  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule],
+  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule, EventRequestStatusSeverityPipe],
   providers: [DialogService],
   templateUrl: './event-request-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,13 +35,6 @@ export class EventRequestListComponent {
   protected readonly page = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
 
   protected readonly requestsResponse: Signal<VisaRequestsResponse> = this.initRequests();
-
-  protected readonly statusSeverityMap: Partial<Record<string, TagSeverity>> = {
-    Submitted: 'info',
-    Approved: 'success',
-    Denied: 'danger',
-    Expired: 'secondary',
-  };
 
   protected readonly config = computed(() => {
     const isVisa = this.requestType() === 'visa';
