@@ -243,7 +243,6 @@ export class UserController {
       });
 
       const rawBody = await upstream.text();
-      logger.info(req, 'get_salesforce_id', 'Upstream response received', { upstream_status: upstream.status, target_url: targetUrl, body_length: rawBody.length });
 
       let body: unknown;
       try {
@@ -252,7 +251,7 @@ export class UserController {
         body = { raw: rawBody };
       }
 
-      logger.success(req, 'get_salesforce_id', startTime, { upstream_status: upstream.status });
+      logger.success(req, 'get_salesforce_id', startTime, { upstream_status: upstream.status, target_url: targetUrl, body_length: rawBody.length });
 
       res.status(upstream.status).json(body);
     } catch (error) {

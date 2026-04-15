@@ -187,8 +187,8 @@ async function extractApiGatewayToken(req: Request): Promise<void> {
     }
 
     // express-openid-connect stores the full OIDC session (including refresh_token) in req.appSession
-     
-    const refreshToken = (req.appSession as any)?.refresh_token as string | undefined;
+
+    const refreshToken = req.appSession?.['refresh_token'] as string | undefined;
     if (!refreshToken) {
       logger.warning(req, 'api_gateway_token', 'No refresh_token in OIDC session — ensure offline_access scope is requested');
       return;
