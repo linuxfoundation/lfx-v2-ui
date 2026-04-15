@@ -110,8 +110,16 @@ export * from './my-event.interface';
 // Training interfaces
 export * from './training.interface';
 
+// TI (Thought Industries) interfaces
+export * from './ti.interface';
+
 // My Documents interfaces
 export * from './my-document.interface';
 
 // API Gateway user profile interfaces
 export * from './api-gateway-user-profile.interface';
+// Impersonation interfaces
+export * from './impersonation.interface';
+
+// Health Metrics interfaces
+export * from './health-metrics.interface';

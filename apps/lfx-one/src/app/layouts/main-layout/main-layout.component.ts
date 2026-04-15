@@ -11,16 +11,19 @@ import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, SURVEY
 import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { AppService } from '@services/app.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
+import { ImpersonationService } from '@services/impersonation.service';
 import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
+import { UserService } from '@services/user.service';
 import { DrawerModule } from 'primeng/drawer';
-import { filter } from 'rxjs';
+import { filter, take } from 'rxjs';
 
+import { ButtonComponent } from '@components/button/button.component';
 import { DevToolbarComponent } from '../dev-toolbar/dev-toolbar.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, DevToolbarComponent, LensSwitcherComponent],
+  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, DevToolbarComponent, LensSwitcherComponent, ButtonComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -32,6 +35,8 @@ export class MainLayoutComponent {
   private readonly featureFlagService = inject(FeatureFlagService);
   private readonly personaService = inject(PersonaService);
   private readonly lensService = inject(LensService);
+  private readonly impersonationService = inject(ImpersonationService);
+  protected readonly userService = inject(UserService);
 
   // Expose mobile sidebar state from service (writable for two-way binding with p-drawer)
   protected readonly showMobileSidebar = this.appService.showMobileSidebar;
@@ -49,7 +54,7 @@ export class MainLayoutComponent {
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
       case 'foundation':
-        return this.foundationLensItems;
+        return this.foundationLensItems();
       case 'project':
         return this.personaService.isBoardScoped() ? this.projectLensItems : this.projectLensItemsWithGovernance;
       case 'org':
@@ -155,60 +160,80 @@ export class MainLayoutComponent {
   ];
 
   // --- Foundation Lens Items ---
-  private readonly foundationLensItems: SidebarMenuItem[] = [
-    {
-      label: 'Dashboard',
-      icon: 'fa-light fa-grid-2',
-      routerLink: '/foundation/overview',
-    },
-    {
-      label: 'Meetings',
-      icon: 'fa-light fa-calendar',
-      routerLink: '/meetings',
-    },
-    {
-      label: 'Events',
-      icon: 'fa-light fa-ticket',
-      routerLink: '/events',
-    },
-    {
-      label: MAILING_LIST_LABEL.plural,
-      icon: 'fa-light fa-envelope',
-      routerLink: '/mailing-lists',
-    },
-    {
-      label: COMMITTEE_LABEL.plural,
-      icon: 'fa-light fa-users-rectangle',
-      routerLink: '/groups',
-    },
-    {
-      label: DOCUMENT_LABEL.plural,
-      icon: 'fa-light fa-folder-open',
-      routerLink: '/documents',
-    },
-    {
-      label: 'Governance',
-      isSection: true,
-      expanded: true,
-      items: [
-        {
-          label: VOTE_LABEL.plural,
-          icon: 'fa-light fa-check-to-slot',
-          routerLink: '/votes',
-        },
-        {
-          label: SURVEY_LABEL.plural,
-          icon: 'fa-light fa-clipboard-list',
-          routerLink: '/surveys',
-        },
-        {
-          label: 'Permissions',
-          icon: 'fa-light fa-shield',
-          routerLink: '/settings',
-        },
-      ],
-    },
-  ];
+  private readonly foundationLensItems = computed((): SidebarMenuItem[] => {
+    const items: SidebarMenuItem[] = [
+      {
+        label: 'Dashboard',
+        icon: 'fa-light fa-grid-2',
+        routerLink: '/foundation/overview',
+      },
+      {
+        label: 'Meetings',
+        icon: 'fa-light fa-calendar',
+        routerLink: '/meetings',
+      },
+      {
+        label: 'Events',
+        icon: 'fa-light fa-ticket',
+        routerLink: '/events',
+      },
+      {
+        label: MAILING_LIST_LABEL.plural,
+        icon: 'fa-light fa-envelope',
+        routerLink: '/mailing-lists',
+      },
+      {
+        label: COMMITTEE_LABEL.plural,
+        icon: 'fa-light fa-users-rectangle',
+        routerLink: '/groups',
+      },
+      {
+        label: DOCUMENT_LABEL.plural,
+        icon: 'fa-light fa-folder-open',
+        routerLink: '/documents',
+      },
+      {
+        label: 'Governance',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: VOTE_LABEL.plural,
+            icon: 'fa-light fa-check-to-slot',
+            routerLink: '/votes',
+          },
+          {
+            label: SURVEY_LABEL.plural,
+            icon: 'fa-light fa-clipboard-list',
+            routerLink: '/surveys',
+          },
+          {
+            label: 'Permissions',
+            icon: 'fa-light fa-shield',
+            routerLink: '/settings',
+          },
+        ],
+      },
+    ];
+
+    if (this.personaService.currentPersona() === 'executive-director') {
+      items.push({
+        label: 'Metrics',
+        isSection: true,
+        expanded: true,
+        items: [
+          {
+            label: 'Health Metrics',
+            icon: 'fa-light fa-chart-line-up',
+            routerLink: '/foundation/health-metrics',
+            testId: 'sidebar-metrics-health-metrics',
+          },
+        ],
+      });
+    }
+
+    return items;
+  });
 
   // --- Project Lens Items (base) ---
   private readonly projectLensItems: SidebarMenuItem[] = [
@@ -358,6 +383,15 @@ export class MainLayoutComponent {
     if (!visible) {
       this.appService.closeMobileSidebar();
     }
+  }
+
+  protected stopImpersonation(): void {
+    this.impersonationService
+      .stopImpersonation()
+      .pipe(take(1))
+      .subscribe(() => {
+        window.location.reload();
+      });
   }
 
   /**
