@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
@@ -16,6 +16,7 @@ import { EventsTableComponent } from '../events-table/events-table.component';
   selector: 'lfx-events-list',
   imports: [NgClass, EventsTableComponent, EventRequestListComponent],
   templateUrl: './events-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsListComponent {
   private readonly eventsService = inject(EventsService);

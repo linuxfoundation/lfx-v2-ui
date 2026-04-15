@@ -28,26 +28,26 @@ export class VisaRequestApplicationDialogComponent {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
-  public step = signal<VisaRequestStep>('select-event');
-  public selectedEvent = signal<MyEvent | null>(null);
-  public termsAccepted = signal(false);
-  public applyFormValid = signal(false);
-  public applicantData = signal<VisaRequestApplicantInfo | null>(null);
-  public submitting = signal(false);
+  protected step = signal<VisaRequestStep>('select-event');
+  protected selectedEvent = signal<MyEvent | null>(null);
+  protected termsAccepted = signal(false);
+  protected applyFormValid = signal(false);
+  protected applicantData = signal<VisaRequestApplicantInfo | null>(null);
+  protected submitting = signal(false);
 
-  public readonly isNextDisabled = computed(() => {
+  protected readonly isNextDisabled = computed(() => {
     if (this.step() === 'select-event') return !this.selectedEvent();
     if (this.step() === 'apply') return !this.applyFormValid();
     return false;
   });
 
-  public readonly steps: { id: VisaRequestStep; label: string; number: number }[] = [
+  protected readonly steps: { id: VisaRequestStep; label: string; number: number }[] = [
     { id: 'select-event', label: 'Choose an Event', number: 1 },
     { id: 'terms', label: 'Terms and Conditions', number: 2 },
     { id: 'apply', label: 'Apply', number: 3 },
   ];
 
-  public readonly stepStates = computed(() =>
+  protected readonly stepStates = computed(() =>
     this.steps.map((s) => ({
       ...s,
       isActive: this.step() === s.id,

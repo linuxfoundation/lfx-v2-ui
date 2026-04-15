@@ -44,16 +44,16 @@ export class EventSelectionComponent {
   });
 
   // Events & pagination
-  public loading = signal(true);
-  public loadingMore = signal(false);
-  public allEvents = signal<MyEvent[]>([]);
-  public totalFromServer = signal(0);
-  public availableLocations = signal<{ label: string; value: string }[]>([{ label: 'Anywhere', value: 'any' }]);
+  protected loading = signal(true);
+  protected loadingMore = signal(false);
+  protected allEvents = signal<MyEvent[]>([]);
+  protected totalFromServer = signal(0);
+  protected availableLocations = signal<{ label: string; value: string }[]>([{ label: 'Anywhere', value: 'any' }]);
   private currentOffset = 0;
 
-  public hasMore = computed(() => this.allEvents().length < this.totalFromServer());
+  protected hasMore = computed(() => this.allEvents().length < this.totalFromServer());
 
-  public readonly timeFilterOptions: { label: string; value: TimeFilterValue }[] = [
+  protected readonly timeFilterOptions: { label: string; value: TimeFilterValue }[] = [
     { label: 'Any Time', value: 'any' },
     { label: 'This Month', value: 'this-month' },
     { label: 'Next 3 Months', value: 'next-3-months' },

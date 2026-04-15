@@ -20,7 +20,7 @@
 
   <!-- Footer -->
   <div class="mt-5 flex items-center justify-between border-t border-gray-100 pt-4" data-testid="travel-fund-footer">
-    <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-700" (click)="onCancel()" data-testid="travel-fund-cancel">Cancel</button>
+    <lfx-button label="Cancel" severity="secondary" size="small" (onClick)="onCancel()" data-testid="travel-fund-cancel" />
     <div class="flex items-center gap-2">
       @if (step() !== 'select-event') {
         <lfx-button label="Previous Step" [outlined]="true" size="small" (onClick)="onPreviousStep()" data-testid="travel-fund-previous-step" />

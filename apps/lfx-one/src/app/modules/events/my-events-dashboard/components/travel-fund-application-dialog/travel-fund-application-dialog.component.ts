@@ -29,29 +29,29 @@ export class TravelFundApplicationDialogComponent {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
-  public step = signal<TravelFundStep>('select-event');
-  public selectedEvent = signal<MyEvent | null>(null);
-  public termsAccepted = signal(false);
-  public aboutMeFormValid = signal(false);
-  public expensesFormValid = signal(true);
-  public aboutMeData = signal<TravelFundAboutMe | null>(null);
-  public expensesData = signal<TravelFundExpenses | null>(null);
-  public submitting = signal(false);
+  protected step = signal<TravelFundStep>('select-event');
+  protected selectedEvent = signal<MyEvent | null>(null);
+  protected termsAccepted = signal(false);
+  protected aboutMeFormValid = signal(false);
+  protected expensesFormValid = signal(true);
+  protected aboutMeData = signal<TravelFundAboutMe | null>(null);
+  protected expensesData = signal<TravelFundExpenses | null>(null);
+  protected submitting = signal(false);
 
-  public readonly isNextDisabled = computed(() => {
+  protected readonly isNextDisabled = computed(() => {
     if (this.step() === 'select-event') return !this.selectedEvent();
     if (this.step() === 'about-me') return !this.aboutMeFormValid();
     return false;
   });
 
-  public readonly steps: { id: TravelFundStep; label: string; number: number }[] = [
+  protected readonly steps: { id: TravelFundStep; label: string; number: number }[] = [
     { id: 'select-event', label: 'Choose an Event', number: 1 },
     { id: 'terms', label: 'Terms and Conditions', number: 2 },
     { id: 'about-me', label: 'About Me', number: 3 },
     { id: 'expenses', label: 'Expenses', number: 4 },
   ];
 
-  public readonly stepStates = computed(() =>
+  protected readonly stepStates = computed(() =>
     this.steps.map((s) => ({
       ...s,
       isActive: this.step() === s.id,
