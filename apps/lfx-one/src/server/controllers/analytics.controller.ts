@@ -2456,8 +2456,7 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_event_growth', startTime, error);
-      next(error);
+      return next(error);
     }
   }
 
@@ -2494,8 +2493,7 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_brand_reach', startTime, error);
-      next(error);
+      return next(error);
     }
   }
 
@@ -2532,8 +2530,7 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_brand_health', startTime, error);
-      next(error);
+      return next(error);
     }
   }
 
@@ -2570,8 +2567,7 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_revenue_impact', startTime, error);
-      next(error);
+      return next(error);
     }
   }
 }

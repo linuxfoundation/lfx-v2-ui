@@ -2898,7 +2898,7 @@ export interface FlywheelConversionResponse {
     convertedToCode?: number;
     convertedToWeb?: number;
   };
-  reengagement?: {
+  reengagement: {
     totalReengaged: number;
     reengagementRate: number;
     reengagementMomChange: number;

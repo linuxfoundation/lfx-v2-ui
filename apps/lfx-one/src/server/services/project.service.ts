@@ -3676,6 +3676,8 @@ export class ProjectService {
         totalSocialFollowers,
         totalMonthlySessions,
         activePlatforms: socialPlatforms.length,
+        // No historical follower time series yet — 0 signals "no data" and
+        // UI must suppress the trend indicator until this is wired up.
         changePercentage: 0,
         trend: 'up',
         socialPlatforms,
