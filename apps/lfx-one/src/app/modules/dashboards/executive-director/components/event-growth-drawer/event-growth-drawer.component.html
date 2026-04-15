@@ -57,7 +57,7 @@
           <span class="text-sm text-gray-500">Registrant YoY</span>
           @if (data().registrantYoyChange !== 0) {
             <span class="text-2xl font-semibold" [class.text-green-600]="data().registrantYoyChange > 0" [class.text-red-600]="data().registrantYoyChange < 0">
-              {{ data().registrantYoyChange > 0 ? '+' : '' }}{{ data().registrantYoyChange.toFixed(1) }}%
+              {{ formattedRegistrantYoyChange() }}%
             </span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>
@@ -94,7 +94,7 @@
           <span class="text-sm text-gray-500">Revenue YoY</span>
           @if (data().revenueYoyChange !== 0) {
             <span class="text-2xl font-semibold" [class.text-green-600]="data().revenueYoyChange > 0" [class.text-red-600]="data().revenueYoyChange < 0">
-              {{ data().revenueYoyChange > 0 ? '+' : '' }}{{ data().revenueYoyChange.toFixed(1) }}%
+              {{ formattedRevenueYoyChange() }}%
             </span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>

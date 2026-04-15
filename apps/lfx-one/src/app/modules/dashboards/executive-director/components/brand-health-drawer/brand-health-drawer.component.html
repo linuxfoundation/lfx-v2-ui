@@ -44,7 +44,7 @@
         <div class="flex flex-col gap-1">
           <span class="text-sm text-gray-500">Positive Sentiment</span>
           @if (data().totalMentions > 0) {
-            <span class="text-2xl font-semibold text-gray-900">{{ data().sentiment.positive.toFixed(1) }}%</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ data().sentiment.positive | number: '1.1-1' }}%</span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>
           }
@@ -58,7 +58,7 @@
               class="text-2xl font-semibold"
               [class.text-green-600]="data().sentimentMomChangePp > 0"
               [class.text-red-600]="data().sentimentMomChangePp < 0">
-              {{ data().sentimentMomChangePp > 0 ? '+' : '' }}{{ data().sentimentMomChangePp.toFixed(1) }}pp
+              {{ formattedSentimentMom() }}pp
             </span>
           } @else {
             <span class="text-2xl font-semibold text-gray-400">—</span>
@@ -166,19 +166,19 @@
           <lfx-card styleClass="flex-1">
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Positive</span>
-              <span class="text-2xl font-semibold text-green-600">{{ data().sentiment.positive.toFixed(1) }}%</span>
+              <span class="text-2xl font-semibold text-green-600">{{ data().sentiment.positive | number: '1.1-1' }}%</span>
             </div>
           </lfx-card>
           <lfx-card styleClass="flex-1">
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Neutral</span>
-              <span class="text-2xl font-semibold text-gray-600">{{ data().sentiment.neutral.toFixed(1) }}%</span>
+              <span class="text-2xl font-semibold text-gray-600">{{ data().sentiment.neutral | number: '1.1-1' }}%</span>
             </div>
           </lfx-card>
           <lfx-card styleClass="flex-1">
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Negative</span>
-              <span class="text-2xl font-semibold text-red-600">{{ data().sentiment.negative.toFixed(1) }}%</span>
+              <span class="text-2xl font-semibold text-red-600">{{ data().sentiment.negative | number: '1.1-1' }}%</span>
             </div>
           </lfx-card>
         </div>

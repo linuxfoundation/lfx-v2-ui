@@ -96,6 +96,11 @@ export class BrandHealthDrawerComponent {
     this.keyInsights().filter((i) => i.type === 'driver' || i.type === 'info')
   );
 
+  protected readonly formattedSentimentMom: Signal<string> = computed(() => {
+    const v = this.data().sentimentMomChangePp;
+    return (v > 0 ? '+' : '') + v.toFixed(1);
+  });
+
   protected onClose(): void {
     this.visible.set(false);
   }

@@ -78,6 +78,14 @@ export class EventGrowthDrawerComponent {
   // === Computed Signals ===
   protected readonly sortedTopEvents: Signal<EventGrowthTopEventView[]> = this.initSortedTopEvents();
   protected readonly formattedRevenue: Signal<string> = computed(() => EventGrowthDrawerComponent.formatMoney(this.data().totalRevenue));
+  protected readonly formattedRegistrantYoyChange: Signal<string> = computed(() => {
+    const v = this.data().registrantYoyChange;
+    return (v > 0 ? '+' : '') + v.toFixed(1);
+  });
+  protected readonly formattedRevenueYoyChange: Signal<string> = computed(() => {
+    const v = this.data().revenueYoyChange;
+    return (v > 0 ? '+' : '') + v.toFixed(1);
+  });
   protected readonly monthlyChartData: Signal<ChartData<'bar'>> = this.initMonthlyChartData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
@@ -92,12 +100,6 @@ export class EventGrowthDrawerComponent {
 
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  private static formatMoney(value: number): string {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${Math.round(value).toLocaleString()}`;
   }
 
   private initSortedTopEvents(): Signal<EventGrowthTopEventView[]> {
@@ -243,5 +245,11 @@ export class EventGrowthDrawerComponent {
 
       return insights;
     });
+  }
+
+  private static formatMoney(value: number): string {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${Math.round(value).toLocaleString()}`;
   }
 }

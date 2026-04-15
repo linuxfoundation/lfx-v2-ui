@@ -3152,10 +3152,11 @@ export interface RevenueImpactProjectBreakdownView extends RevenueImpactProjectB
 }
 
 /**
- * Attribution channel row enriched with a formatted label for the template.
+ * Attribution channel row enriched with formatted display strings for the template.
  */
 export interface RevenueImpactAttributionChannelView extends RevenueImpactAttributionChannel {
   label: string;
+  formattedPercentage: string;
 }
 
 /**

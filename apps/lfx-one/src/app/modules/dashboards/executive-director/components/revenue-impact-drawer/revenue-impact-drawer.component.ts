@@ -161,7 +161,11 @@ export class RevenueImpactDrawerComponent {
   protected readonly sortedProjectBreakdown: Signal<RevenueImpactProjectBreakdownView[]> = this.initSortedProjectBreakdown();
   protected readonly sortedEventAttrChannels: Signal<EventRegistrationAttributionChannelView[]> = this.initSortedEventAttrChannels();
   protected readonly attributionChannelsView: Signal<RevenueImpactAttributionChannelView[]> = computed(() =>
-    this.data().attributionChannels.map((c) => ({ ...c, label: RevenueImpactDrawerComponent.formatChannelLabel(c.channel) }))
+    this.data().attributionChannels.map((c) => ({
+      ...c,
+      label: RevenueImpactDrawerComponent.formatChannelLabel(c.channel),
+      formattedPercentage: c.percentage.toFixed(1),
+    }))
   );
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
@@ -176,46 +180,6 @@ export class RevenueImpactDrawerComponent {
 
   protected onClose(): void {
     this.visible.set(false);
-  }
-
-  private static formatRevenue(value: number): string {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${value.toLocaleString()}`;
-  }
-
-  private static formatLastTouchRevenue(value: number): string {
-    if (value <= 0) return '—';
-    return RevenueImpactDrawerComponent.formatRevenue(value);
-  }
-
-  private static formatChannelLabel(channel: string): string {
-    return channel
-      .split('_')
-      .map((word) => (word === 'ads' ? 'Ads' : word.charAt(0).toUpperCase() + word.slice(1)))
-      .join(' ');
-  }
-
-  private static formatImpressionsShort(n: number): string {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-    return n.toLocaleString();
-  }
-
-  private static bgClassFor(channel: string): string {
-    return RevenueImpactDrawerComponent.channelBgClass[channel] ?? RevenueImpactDrawerComponent.channelBgFallback;
-  }
-
-  private static formatYearMonthLabel(yearMonth: string): string {
-    const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
-    if (!match) return yearMonth;
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    return new Date(Date.UTC(year, month, 1)).toLocaleDateString('en-US', {
-      month: 'short',
-      year: '2-digit',
-      timeZone: 'UTC',
-    });
   }
 
   private initProjectBreakdownLegend(): Signal<RevenueImpactChannelLegendView[]> {
@@ -481,6 +445,46 @@ export class RevenueImpactDrawerComponent {
       }));
 
       return { labels, datasets };
+    });
+  }
+
+  private static formatRevenue(value: number): string {
+    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+    return `$${value.toLocaleString()}`;
+  }
+
+  private static formatLastTouchRevenue(value: number): string {
+    if (value <= 0) return '—';
+    return RevenueImpactDrawerComponent.formatRevenue(value);
+  }
+
+  private static formatChannelLabel(channel: string): string {
+    return channel
+      .split('_')
+      .map((word) => (word === 'ads' ? 'Ads' : word.charAt(0).toUpperCase() + word.slice(1)))
+      .join(' ');
+  }
+
+  private static formatImpressionsShort(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return n.toLocaleString();
+  }
+
+  private static bgClassFor(channel: string): string {
+    return RevenueImpactDrawerComponent.channelBgClass[channel] ?? RevenueImpactDrawerComponent.channelBgFallback;
+  }
+
+  private static formatYearMonthLabel(yearMonth: string): string {
+    const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+    if (!match) return yearMonth;
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    return new Date(Date.UTC(year, month, 1)).toLocaleDateString('en-US', {
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'UTC',
     });
   }
 }
