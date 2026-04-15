@@ -6,7 +6,7 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
 import { logger } from '../services/logger.service';
-import { clearImpersonationSession } from '../utils/auth-helper';
+import { clearImpersonationSession, decodeJwtPayload } from '../utils/auth-helper';
 
 // OIDC middleware already provides req.oidc with authentication context
 
@@ -110,9 +110,8 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
       const impersonationExpiresAt = req.appSession?.['impersonationExpiresAt'];
 
       if (impersonationToken && typeof impersonationToken === 'string' && impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
-        // Validate JWT format before using
-        const tokenParts = impersonationToken.split('.');
-        if (tokenParts.length !== 3) {
+        // Validate JWT payload is decodable before using
+        if (!decodeJwtPayload(impersonationToken)) {
           // Malformed token — clean up and fall through to normal extraction
           logger.warning(req, 'impersonation_token_malformed', 'Impersonation token has invalid JWT format, clearing session', {
             path: req.path,

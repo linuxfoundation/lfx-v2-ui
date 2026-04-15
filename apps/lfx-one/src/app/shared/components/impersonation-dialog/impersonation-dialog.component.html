@@ -3,8 +3,8 @@
 
 <div class="relative flex flex-col gap-4">
   @if (loading()) {
-    <div class="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80">
-      <div class="flex items-center gap-2 text-sm text-gray-600">
+    <div class="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80" aria-busy="true">
+      <div class="flex items-center gap-2 text-sm text-gray-600" role="status" aria-live="polite">
         <i class="fa-light fa-spinner-third fa-spin"></i>
         <span>Starting impersonation...</span>
       </div>
@@ -22,7 +22,7 @@
       dataTest="impersonation-target-input" />
   </div>
   @if (error()) {
-    <p class="text-sm text-red-600" data-testid="impersonation-error">{{ error() }}</p>
+    <p class="text-sm text-red-600" role="alert" data-testid="impersonation-error">{{ error() }}</p>
   }
   <div class="flex justify-end gap-2">
     <lfx-button

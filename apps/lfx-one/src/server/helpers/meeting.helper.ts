@@ -142,8 +142,8 @@ export async function checkPastMeetingAccess(req: Request, meeting: PastMeeting,
 
   logger.debug(req, 'check_past_meeting_access', 'Membership check complete', {
     past_meeting_id: meeting.id,
-    email,
-    username,
+    has_email: !!email,
+    has_username: !!username,
     is_registrant: isRegistrant,
     is_participant: isParticipant,
     is_committee_member: isCommitteeMember,
