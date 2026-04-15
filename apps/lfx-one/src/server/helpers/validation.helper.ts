@@ -104,6 +104,19 @@ export function validateRequiredParameter<T>(
 }
 
 /**
+ * Safely extracts a string query parameter. Returns undefined if the param is
+ * missing or not a string (e.g. client sent repeated keys producing an array).
+ * Prevents type confusion via parameter tampering (CodeQL js/type-confusion-through-parameter-tampering).
+ * @param req Express request object
+ * @param name Query parameter name
+ * @returns The string value, or undefined if missing or not a string
+ */
+export function getStringQueryParam(req: Request, name: string): string | undefined {
+  const value = req.query[name];
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
  * Validates that a request body exists
  * @param body The request body to validate
  * @param req Express request object
