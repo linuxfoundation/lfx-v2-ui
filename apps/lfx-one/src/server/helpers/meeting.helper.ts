@@ -8,7 +8,7 @@ import { Request } from 'express';
 import { CommitteeService } from '../services/committee.service';
 import { logger } from '../services/logger.service';
 import { MeetingService } from '../services/meeting.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
 
 const meetingService = new MeetingService();
@@ -110,7 +110,7 @@ export async function checkPastMeetingAccess(req: Request, meeting: PastMeeting,
     return false;
   }
 
-  const email = (req.oidc.user?.['email'] as string) || '';
+  const email = getEffectiveEmail(req) || '';
   const username = await getUsernameFromAuth(req);
 
   logger.debug(req, 'check_past_meeting_access', 'Running membership checks', {

@@ -112,3 +112,6 @@ export * from './training.interface';
 
 // My Documents interfaces
 export * from './my-document.interface';
+
+// Impersonation interfaces
+export * from './impersonation.interface';

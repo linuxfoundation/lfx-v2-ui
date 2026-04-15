@@ -104,6 +104,36 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
 
   try {
     if (req.oidc?.isAuthenticated()) {
+      // Check for active impersonation token first
+      const impersonationToken = req.appSession?.['impersonationToken'];
+      const impersonationExpiresAt = req.appSession?.['impersonationExpiresAt'];
+
+      if (impersonationToken && typeof impersonationToken === 'string' && impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
+        req.bearerToken = impersonationToken;
+
+        logger.info(req, 'impersonation_request', 'Request under impersonation', {
+          path: req.path,
+          impersonator: req.appSession?.['impersonator']?.email,
+          target: req.appSession?.['impersonationUser']?.email,
+        });
+        return { success: true, needsLogout: false };
+      }
+
+      // If impersonation token is expired, clear it and fall through to normal extraction
+      if (impersonationToken && impersonationExpiresAt && Date.now() >= impersonationExpiresAt) {
+        logger.warning(req, 'impersonation_token_expired', 'Impersonation token expired, clearing session', {
+          path: req.path,
+          impersonator: req.appSession?.['impersonator']?.email,
+          target: req.appSession?.['impersonationUser']?.email,
+        });
+        if (req.appSession) {
+          delete req.appSession['impersonationToken'];
+          delete req.appSession['impersonationExpiresAt'];
+          delete req.appSession['impersonationUser'];
+          delete req.appSession['impersonator'];
+        }
+      }
+
       // Check if token exists and is expired
       if (req.oidc.accessToken?.isExpired()) {
         try {

@@ -27,7 +27,7 @@ export async function getUsernameFromAuth(req: Request): Promise<string | null> 
   }
 
   // Fall back to OIDC claims for non-authelia tokens
-  return req.oidc?.user?.['sub'] || null;
+  return getEffectiveSub(req);
 }
 
 /**
@@ -36,4 +36,40 @@ export async function getUsernameFromAuth(req: Request): Promise<string | null> 
  */
 export function usernameMatches(authUsername: string, storedUsername: string): boolean {
   return stripAuthPrefix(authUsername) === stripAuthPrefix(storedUsername);
+}
+
+/**
+ * Gets the effective email for the current request context.
+ * During impersonation, returns the target user's email from the impersonation session.
+ * Otherwise returns the OIDC session user's email.
+ */
+export function getEffectiveEmail(req: Request): string | null {
+  if (req.appSession?.['impersonationUser']?.email) {
+    return (req.appSession['impersonationUser'].email as string).toLowerCase();
+  }
+  return (req.oidc?.user?.['email'] as string)?.toLowerCase() || null;
+}
+
+/**
+ * Gets the effective username for the current request context.
+ * During impersonation, returns the target user's username from the impersonation session.
+ * Otherwise returns the OIDC session user's username/nickname.
+ */
+export function getEffectiveUsername(req: Request): string | null {
+  if (req.appSession?.['impersonationUser']?.username) {
+    return req.appSession['impersonationUser'].username as string;
+  }
+  return (req.oidc?.user?.['nickname'] as string) || (req.oidc?.user?.['username'] as string) || null;
+}
+
+/**
+ * Gets the effective sub (user ID) for the current request context.
+ * During impersonation, returns the target user's sub from the impersonation session.
+ * Otherwise returns the OIDC session user's sub.
+ */
+export function getEffectiveSub(req: Request): string | null {
+  if (req.appSession?.['impersonationUser']?.sub) {
+    return req.appSession['impersonationUser'].sub as string;
+  }
+  return (req.oidc?.user?.['sub'] as string) || null;
 }
