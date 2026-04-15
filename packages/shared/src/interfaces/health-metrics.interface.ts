@@ -6,8 +6,8 @@ import type {
   FoundationTotalMembersResponse,
   FoundationTotalProjectsResponse,
   FoundationValueConcentrationResponse,
-  HealthMetricsSummaryCard,
-} from './dashboard-metric.interface';
+} from './analytics-data.interface';
+import type { HealthMetricsSummaryCard } from './dashboard-metric.interface';
 
 export interface HealthMetricsData {
   totalValue: FoundationValueConcentrationResponse | null;
