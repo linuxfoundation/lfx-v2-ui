@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 .badge-tag {
-  @apply inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[10px] font-medium border;
+  @apply inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-xs font-medium border;
+}
+
+.badge-card-overlay-link {
+  @apply absolute inset-0 z-10 rounded-md no-underline cursor-pointer;
 }
 
 .badge-credly-btn {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 w-fit
-    rounded-md border border-gray-300 text-xs font-medium text-gray-900
+    rounded-md border border-gray-300 text-xs font-medium text-gray-900 no-underline
     hover:bg-gray-50 transition-colors;
 }
 

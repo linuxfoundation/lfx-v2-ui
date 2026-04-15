@@ -11,17 +11,7 @@
   @apply absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500;
 }
 
-.badge-card-link {
-  @apply block w-full no-underline text-inherit cursor-pointer;
-
-  &:hover ::ng-deep .p-card {
-    @apply shadow-md;
-  }
-}
-
-
 :host ::ng-deep .badges-grid {
-  > a,
   > div {
     @apply h-full;
   }

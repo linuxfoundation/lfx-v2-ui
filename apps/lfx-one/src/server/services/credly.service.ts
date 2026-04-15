@@ -3,16 +3,11 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import { Badge, CredlyApiResponse, CredlyBadgeEntry } from '@lfx-one/shared/interfaces';
+import { Badge, CredlyApiResponse, CredlyBadgeEntry, CredlyCachedBadges } from '@lfx-one/shared/interfaces';
 import { isValidBadge, mapCredlyBadgeToBadge } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
-
-interface CachedBadges {
-  badges: Badge[];
-  expiresAt: number;
-}
 
 export class CredlyService {
   // TODO: Replace with AWS Secrets Manager fetch + in-memory cache
@@ -27,7 +22,7 @@ export class CredlyService {
   private static readonly maxCacheSize = 500;
 
   /** Per-user in-memory badge cache. Key is a sorted, joined email list. */
-  private readonly badgeCache = new Map<string, CachedBadges>();
+  private readonly badgeCache = new Map<string, CredlyCachedBadges>();
 
   /**
    * Fetch badges for one or more email addresses from the Credly API.

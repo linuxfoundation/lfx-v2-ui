@@ -47,6 +47,10 @@ export class BadgesDashboardComponent {
   protected readonly rowsPerPage = BADGES_PER_PAGE;
   protected readonly skeletonItems = Array.from({ length: SKELETON_COUNT });
 
+  // === View Children ===
+  protected readonly filtersPopover = viewChild<Popover>('filtersPopover');
+  protected readonly pageTopAnchor = viewChild<ElementRef<HTMLElement>>('pageTopAnchor');
+
   // === Forms ===
   protected readonly statusForm = new FormGroup({
     status: new FormControl<BadgeStatusFilter>('all', { nonNullable: true }),
@@ -55,10 +59,6 @@ export class BadgesDashboardComponent {
   protected readonly visibilityForm = new FormGroup({
     visibility: new FormControl<BadgeVisibilityFilter>('all', { nonNullable: true }),
   });
-
-  // === View Children ===
-  protected readonly filtersPopover = viewChild<Popover>('filtersPopover');
-  protected readonly pageTopAnchor = viewChild<ElementRef<HTMLElement>>('pageTopAnchor');
 
   // === Writable Signals ===
   protected readonly selectedFilter = signal<BadgeCategory | 'all'>('all');

@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { Badge } from './badge.interface';
+
 /** Raw Credly API badge entry as returned by GET /organizations/:orgId/badges */
 export interface CredlyBadgeEntry {
   id: string;
@@ -61,4 +63,10 @@ export interface CredlyApiResponse {
     previous_page_url: string | null;
     next_page_url: string | null;
   };
+}
+
+/** Cached Credly badge payload used by server-side in-memory cache. */
+export interface CredlyCachedBadges {
+  badges: Badge[];
+  expiresAt: number;
 }

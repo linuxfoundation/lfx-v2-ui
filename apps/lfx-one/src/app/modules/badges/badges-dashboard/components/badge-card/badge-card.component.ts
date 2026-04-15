@@ -23,9 +23,7 @@ export class BadgeCardComponent {
   // === Inputs ===
   public readonly badge = input.required<Badge>();
 
-  protected async shareBadge(event: MouseEvent, credlyUrl: string): Promise<void> {
-    event.stopPropagation();
-    event.preventDefault();
+  public async shareBadge(credlyUrl: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(credlyUrl);
       this.messageService.add({

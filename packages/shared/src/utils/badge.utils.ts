@@ -89,14 +89,45 @@ function buildCredlyProfileSlug(firstName: string, middleName: string, lastName:
   }
   nameParts.push(lastName);
 
-  const slug = nameParts
-    .join('-')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const normalizedSlug = collapseRepeatedHyphens(nameParts.join('-').toLowerCase().replace(/[^a-z0-9-]/g, '-'));
+  const slug = trimHyphens(normalizedSlug);
 
   return slug || undefined;
+}
+
+function collapseRepeatedHyphens(value: string): string {
+  let result = '';
+  let previousWasHyphen = false;
+
+  for (const char of value) {
+    if (char === '-') {
+      if (!previousWasHyphen) {
+        result += char;
+      }
+      previousWasHyphen = true;
+      continue;
+    }
+
+    result += char;
+    previousWasHyphen = false;
+  }
+
+  return result;
+}
+
+function trimHyphens(value: string): string {
+  let start = 0;
+  let end = value.length;
+
+  while (start < end && value[start] === '-') {
+    start++;
+  }
+
+  while (end > start && value[end - 1] === '-') {
+    end--;
+  }
+
+  return value.slice(start, end);
 }
 
 /**

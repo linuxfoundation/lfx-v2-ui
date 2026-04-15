@@ -130,20 +130,9 @@
     } @else {
       <div class="badges-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="badges-grid">
         @for (badge of paginatedBadges(); track badge.id) {
-          @if (badge.credlyUrl) {
-            <a
-              [href]="badge.credlyUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="badge-card-link"
-              [attr.aria-label]="'View ' + badge.title + ' credential on Credly'">
-              <lfx-badge-card [badge]="badge" />
-            </a>
-          } @else {
-            <div class="h-full">
-              <lfx-badge-card [badge]="badge" />
-            </div>
-          }
+          <div class="h-full">
+            <lfx-badge-card [badge]="badge" />
+          </div>
         }
       </div>
 
