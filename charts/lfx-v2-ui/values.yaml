@@ -185,6 +185,13 @@ environment:
   M2M_AUTH_AUDIENCE:
     value: "https://api-gw.dev.platform.linuxfoundation.org/"
 
+  # API Gateway — audience for the secondary silent access token
+  API_GW_AUDIENCE:
+    value: "https://api-gw.dev.platform.linuxfoundation.org/"
+  # API Gateway — base URL for outbound API calls (may differ from audience)
+  API_GW_BASE_URL:
+    value: "https://api-gw.dev.platform.linuxfoundation.org"
+
   # Environment identifier
   ENV:
     value: "production"

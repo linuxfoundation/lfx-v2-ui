@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, OnInit, Signal, signal } from '@angular/core';
 import { TagComponent } from '@app/shared/components/tag/tag.component';
 import { PersonaService } from '@app/shared/services/persona.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
@@ -18,7 +19,8 @@ import { EventsListComponent } from './components/events-list/events-list.compon
   templateUrl: './my-events-dashboard.component.html',
   styleUrl: './my-events-dashboard.component.scss',
 })
-export class MyEventsDashboardComponent {
+export class MyEventsDashboardComponent implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly personaService = inject(PersonaService);
   private readonly projectContextService = inject(ProjectContextService);
 
@@ -48,6 +50,14 @@ export class MyEventsDashboardComponent {
 
   protected onSearchQueryChange(value: string): void {
     this.selectedSearchQuery.set(value);
+  }
+
+  // TODO: TEMPORARY — remove after validating the API Gateway token
+  public ngOnInit(): void {
+    this.http.get('/api/user/salesforce-id').subscribe({
+      next: (response) => console.log('[salesforce-id]', response),
+      error: (err) => console.error('[salesforce-id] error', err),
+    });
   }
 
   protected onActiveTabChange(tab: EventTabId): void {
