@@ -377,6 +377,8 @@ export interface GetMyEventsOptions {
   startDateTo?: string;
   /** Filter events by country (e.g. "United States") */
   country?: string;
+  /** Project slugs from persona detection — scopes upcoming events to affiliated projects */
+  affiliatedProjectSlugs?: string[];
 }
 
 /**
@@ -409,4 +411,6 @@ export interface GetEventOrganizationsOptions {
   projectName?: string;
   /** When true, returns only foundations from the authenticated user's registered past events */
   isPast?: boolean;
+  /** Project slugs from persona detection — scopes upcoming foundations to affiliated projects */
+  affiliatedProjectSlugs?: string[];
 }

@@ -472,7 +472,7 @@ export class UserService {
    * @param limit - Optional limit on number of meetings to return
    * @returns Array of Meeting objects the user is registered for
    */
-  public async getUserMeetings(req: Request, email: string, projectUid?: string, limit?: number): Promise<Meeting[]> {
+  public async getUserMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<Meeting[]> {
     const meetingIds = await this.getUserRegisteredMeetingIds(req, email);
 
     logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', { meeting_count: meetingIds.size });
@@ -481,7 +481,13 @@ export class UserService {
       return [];
     }
 
-    return this.fetchByIdFilterAndLimit<Meeting>(req, meetingIds, '/itx/meetings', 'get_user_meetings', projectUid, limit);
+    let foundationProjectUids: Set<string> | undefined;
+    if (foundationUid) {
+      const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
+      foundationProjectUids = new Set(uids);
+    }
+
+    return this.fetchByIdFilterAndLimit<Meeting>(req, meetingIds, '/itx/meetings', 'get_user_meetings', projectUid, limit, foundationProjectUids);
   }
 
   /**
@@ -494,7 +500,7 @@ export class UserService {
    * @param limit - Optional limit on number of past meetings to return
    * @returns Array of PastMeeting objects the user participated in
    */
-  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number): Promise<PastMeeting[]> {
+  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<PastMeeting[]> {
     // Step 1: Get past meeting participant records for this user via query service
     const normalizedEmail = email.toLowerCase();
     const participantParams: Record<string, any> = {
@@ -525,8 +531,157 @@ export class UserService {
       return [];
     }
 
+    let foundationProjectUids: Set<string> | undefined;
+    if (foundationUid) {
+      const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
+      foundationProjectUids = new Set(uids);
+    }
+
     // Step 2: Fetch each past meeting and filter/limit
-    return this.fetchByIdFilterAndLimit<PastMeeting>(req, pastMeetingIds, '/itx/past_meetings', 'get_user_past_meetings', projectUid, limit);
+    return this.fetchByIdFilterAndLimit<PastMeeting>(
+      req,
+      pastMeetingIds,
+      '/itx/past_meetings',
+      'get_user_past_meetings',
+      projectUid,
+      limit,
+      foundationProjectUids
+    );
+  }
+
+  /**
+   * Gets all unique past meeting occurrence IDs (meeting_and_occurrence_id) the user participated in.
+   * Checks both email and username to find all participations.
+   * M2M token required: participant queries search across all participants in the index,
+   * which requires application-level credentials (user tokens lack cross-participant read access)
+   * @param req - Express request object
+   * @returns Array of unique meeting_and_occurrence_id strings
+   */
+  public async getPastMeetingOccurrenceIds(req: Request): Promise<string[]> {
+    const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
+    const username = await getUsernameFromAuth(req);
+
+    if (!email && !username) {
+      return [];
+    }
+
+    const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+    const occurrenceIds = new Set<string>();
+
+    if (email) {
+      const emailParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          { v: '1', type: 'v1_past_meeting_participant', tags: `email:${email}`, ...(pageToken && { page_token: pageToken }) },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      emailParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
+    }
+
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          { v: '1', type: 'v1_past_meeting_participant', tags: `username:${plainUsername}`, ...(pageToken && { page_token: pageToken }) },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
+    }
+
+    return [...occurrenceIds];
+  }
+
+  /**
+   * Gets all unique meeting IDs the user is registered for by querying registrant records
+   * Checks both email and username (fallback) to find all registrations.
+   * M2M token required: registrant queries search across all registrants in the index,
+   * which requires application-level credentials (user tokens lack cross-registrant read access)
+   * @param req - Express request object
+   * @param email - Optional user email address; if omitted, only username lookup is performed
+   * @returns Set of meeting IDs the user is registered for
+   */
+  public async getUserRegisteredMeetingIds(req: Request, email?: string): Promise<Set<string>> {
+    const normalizedEmail = email?.toLowerCase() ?? '';
+
+    const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+
+    const meetingIds = new Set<string>();
+
+    // Query registrants by email (only if email is available)
+    if (normalizedEmail) {
+      logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by email', { email: normalizedEmail });
+
+      const emailRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'v1_meeting_registrant',
+            parent: '',
+            tags: `email:${normalizedEmail}`,
+            page_size: 100,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      );
+
+      for (const r of emailRegistrants) {
+        meetingIds.add(r.meeting_id);
+      }
+    }
+
+    // Also try username-based lookup (fallback for cases where email doesn't match)
+    const username = await getUsernameFromAuth(req);
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+
+      logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by username', { username: plainUsername });
+
+      const usernameRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'v1_meeting_registrant',
+            parent: '',
+            tags: `username:${plainUsername}`,
+            page_size: 100,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      );
+
+      for (const r of usernameRegistrants) {
+        meetingIds.add(r.meeting_id);
+      }
+    }
+
+    logger.debug(req, 'get_user_registered_meeting_ids', 'Collected unique meeting IDs', {
+      total_unique_meeting_ids: meetingIds.size,
+    });
+
+    return meetingIds;
   }
 
   /**
@@ -539,7 +694,8 @@ export class UserService {
     endpoint: string,
     operation: string,
     projectUid?: string,
-    limit?: number
+    limit?: number,
+    projectUids?: Set<string>
   ): Promise<T[]> {
     const results: T[] = [];
 
@@ -563,12 +719,18 @@ export class UserService {
       }
     }
 
-    let filtered = projectUid ? results.filter((r) => r.project_uid === projectUid) : results;
+    let filtered = results;
+    if (projectUid) {
+      filtered = filtered.filter((r) => r.project_uid === projectUid);
+    } else if (projectUids && projectUids.size > 0) {
+      filtered = filtered.filter((r) => r.project_uid !== undefined && projectUids.has(r.project_uid));
+    }
 
     logger.debug(req, operation, 'Filtered results', {
       total_fetched: results.length,
       filtered: filtered.length,
       project_uid: projectUid ?? 'all',
+      foundation_filter: projectUids ? projectUids.size : 0,
     });
 
     if (limit !== undefined && limit > 0) {
@@ -576,91 +738,6 @@ export class UserService {
     }
 
     return filtered;
-  }
-
-  /**
-   * Gets all unique meeting IDs the user is registered for by querying registrant records
-   * Checks both email and username (fallback) to find all registrations.
-   * @param req - Express request object
-   * @param email - User's email address
-   * @returns Set of meeting IDs the user is registered for
-   */
-  private async getUserRegisteredMeetingIds(req: Request, email: string): Promise<Set<string>> {
-    const normalizedEmail = email.toLowerCase();
-
-    // M2M token required: registrant queries search across all registrants in the index,
-    // which requires application-level credentials (user tokens lack cross-registrant read access)
-    const m2mToken = await generateM2MToken(req);
-    const headers = { Authorization: `Bearer ${m2mToken}` };
-
-    // Query registrants by email
-    const emailParams: Record<string, any> = {
-      type: 'v1_meeting_registrant',
-      parent: '',
-      tags: `email:${normalizedEmail}`,
-      page_size: 100,
-    };
-
-    logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by email', { email: normalizedEmail });
-
-    const emailRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
-        req,
-        'LFX_V2_SERVICE',
-        '/query/resources',
-        'GET',
-        {
-          ...emailParams,
-          ...(pageToken && { page_token: pageToken }),
-        },
-        undefined,
-        headers
-      )
-    );
-
-    // Collect meeting IDs from email-based registrants
-    const meetingIds = new Set<string>(emailRegistrants.map((r) => r.meeting_id));
-
-    // Also try username-based lookup (fallback for cases where email doesn't match)
-    const username = await getUsernameFromAuth(req);
-    if (username) {
-      const plainUsername = stripAuthPrefix(username);
-      const usernameParams: Record<string, any> = {
-        type: 'v1_meeting_registrant',
-        parent: '',
-        tags: `username:${plainUsername}`,
-        page_size: 100,
-      };
-
-      logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by username', { username: plainUsername });
-
-      const usernameRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
-          req,
-          'LFX_V2_SERVICE',
-          '/query/resources',
-          'GET',
-          {
-            ...usernameParams,
-            ...(pageToken && { page_token: pageToken }),
-          },
-          undefined,
-          headers
-        )
-      );
-
-      // Merge username-based registrant meeting IDs
-      for (const r of usernameRegistrants) {
-        meetingIds.add(r.meeting_id);
-      }
-    }
-
-    logger.debug(req, 'get_user_registered_meeting_ids', 'Collected unique meeting IDs', {
-      email_registrants: emailRegistrants.length,
-      total_unique_meeting_ids: meetingIds.size,
-    });
-
-    return meetingIds;
   }
 
   /**
