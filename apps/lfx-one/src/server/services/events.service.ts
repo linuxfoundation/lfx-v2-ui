@@ -233,8 +233,7 @@ export class EventsService {
       const eventIdFilter = eventId ? 'AND EVENT_ID = ?' : '';
       const projectNameFilter = projectName ? 'AND PROJECT_NAME = ?' : '';
       const searchQueryFilter = searchQuery ? 'AND EVENT_NAME ILIKE ?' : '';
-      const 
-      = role ? this.buildRoleFilter(role) : { filter: '', binds: [] as string[] };
+      const roleFilterResult = role ? this.buildRoleFilter(role) : { filter: '', binds: [] as string[] };
       const statusFilterResult = status ? this.buildStatusFilter(status) : { filter: '', binds: [] as string[] };
 
       sql = `
