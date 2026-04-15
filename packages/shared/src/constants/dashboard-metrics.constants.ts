@@ -25,10 +25,42 @@ import type {
 // ============================================
 
 export const HEALTH_METRICS_SUMMARY_CARDS: readonly HealthMetricsSummaryCard[] = [
-  { key: 'totalValue', title: 'Total Value', icon: 'fa-solid fa-chart-bar fa-rotate-270', iconBgClass: 'bg-blue-100', iconTextClass: 'text-blue-600', format: 'currency', testId: 'health-metrics-card-total-value' },
-  { key: 'projects', title: 'Projects', icon: 'fa-solid fa-list-ul', iconBgClass: 'bg-emerald-50', iconTextClass: 'text-emerald-600', format: 'count', testId: 'health-metrics-card-projects' },
-  { key: 'members', title: 'Members', icon: 'fa-solid fa-user-group', iconBgClass: 'bg-blue-100', iconTextClass: 'text-blue-500', format: 'count', testId: 'health-metrics-card-members' },
-  { key: 'flywheel', title: 'Flywheel', icon: 'fa-light fa-arrows-spin', iconBgClass: 'bg-amber-50', iconTextClass: 'text-amber-500', format: 'percentage', testId: 'health-metrics-card-flywheel' },
+  {
+    key: 'totalValue',
+    title: 'Total Value',
+    icon: 'fa-solid fa-chart-bar fa-rotate-270',
+    iconBgClass: 'bg-blue-100',
+    iconTextClass: 'text-blue-600',
+    format: 'currency',
+    testId: 'health-metrics-card-total-value',
+  },
+  {
+    key: 'projects',
+    title: 'Projects',
+    icon: 'fa-solid fa-list-ul',
+    iconBgClass: 'bg-emerald-50',
+    iconTextClass: 'text-emerald-600',
+    format: 'count',
+    testId: 'health-metrics-card-projects',
+  },
+  {
+    key: 'members',
+    title: 'Members',
+    icon: 'fa-solid fa-user-group',
+    iconBgClass: 'bg-blue-100',
+    iconTextClass: 'text-blue-500',
+    format: 'count',
+    testId: 'health-metrics-card-members',
+  },
+  {
+    key: 'flywheel',
+    title: 'Flywheel',
+    icon: 'fa-light fa-arrows-spin',
+    iconBgClass: 'bg-amber-50',
+    iconTextClass: 'text-amber-500',
+    format: 'percentage',
+    testId: 'health-metrics-card-flywheel',
+  },
 ];
 
 export const HEALTH_METRICS_STATUS_COUNT = 8;
@@ -813,9 +845,9 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         protoDualSignal(
           'Positive Sentiment',
           `${brandHealth.sentiment.positive.toFixed(1)}%`,
-          brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [],
+          [],
           lfxColors.emerald[500],
-          `${brandHealth.sentimentMomChangePp >= 0 ? '+' : ''}${brandHealth.sentimentMomChangePp.toFixed(1)}pp MoM`,
+          formatPpMomChange(brandHealth.sentimentMomChangePp),
           brandHealth.sentimentMomChangePp >= 0 ? 'up' : 'down'
         ),
       ],

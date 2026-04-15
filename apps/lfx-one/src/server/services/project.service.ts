@@ -2681,10 +2681,7 @@ export class ProjectService {
    * @param range - Reporting range (default 'YTD')
    * @returns Participating orgs summary with member counts and engagement breakdown
    */
-  public async getParticipatingOrgsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<ParticipatingOrgsSummaryResponse> {
+  public async getParticipatingOrgsSummary(foundationSlug: string, range: string = 'YTD'): Promise<ParticipatingOrgsSummaryResponse> {
     interface ParticipatingOrgsRow {
       PROJECT_ID: string;
       TOTAL_ACTIVE_ACCOUNTS: number;
@@ -2771,10 +2768,7 @@ export class ProjectService {
    * @param range - Reporting range (default 'YTD')
    * @returns NPS summary response with score, counts, and period label
    */
-  public async getNpsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<NpsSummaryResponse> {
+  public async getNpsSummary(foundationSlug: string, range: string = 'YTD'): Promise<NpsSummaryResponse> {
     interface NpsSummaryRow {
       PROJECT_ID: string;
       NPS_SCORE: number;
@@ -2861,10 +2855,7 @@ export class ProjectService {
    * @param range - Reporting range (default 'YTD')
    * @returns Consolidated churn summary with current period, optional previous year, and trend
    */
-  public async getMembershipChurnPerTierSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<MembershipChurnPerTierSummaryResponse> {
+  public async getMembershipChurnPerTierSummary(foundationSlug: string, range: string = 'YTD'): Promise<MembershipChurnPerTierSummaryResponse> {
     interface ChurnSummaryRow {
       PROJECT_ID: string;
       CURRENT_CHURN_RATE_PCT: number | null;
@@ -2894,9 +2885,7 @@ export class ProjectService {
       COMPLETED_YEAR_4: null,
     };
     const previousOffset = effectiveRange in previousYearOffsetMap ? previousYearOffsetMap[effectiveRange] : 2;
-    const previousYearPredicate = previousOffset !== null
-      ? `EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - ${previousOffset}`
-      : null;
+    const previousYearPredicate = previousOffset !== null ? `EXTRACT(YEAR FROM year_start) = EXTRACT(YEAR FROM CURRENT_DATE()) - ${previousOffset}` : null;
 
     const comparisonAvailable = previousYearPredicate !== null;
 
@@ -3038,9 +3027,7 @@ export class ProjectService {
    * @param foundationSlug - Foundation slug used to resolve project_id
    * @returns Outstanding balance summary with risk breakdown
    */
-  public async getOutstandingBalanceSummary(
-    foundationSlug: string
-  ): Promise<OutstandingBalanceSummaryResponse> {
+  public async getOutstandingBalanceSummary(foundationSlug: string): Promise<OutstandingBalanceSummaryResponse> {
     interface OverviewRow {
       PROJECT_ID: string;
       OUTSTANDING_BALANCE: number | null;
@@ -3156,10 +3143,7 @@ export class ProjectService {
    * @param foundationSlug - Foundation slug used to resolve project_id
    * @returns Events summary response with total events, change, sponsorship, and goal
    */
-  public async getEventsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<EventsSummaryResponse> {
+  public async getEventsSummary(foundationSlug: string, range: string = 'YTD'): Promise<EventsSummaryResponse> {
     interface OverviewRow {
       PROJECT_ID: string;
       ALL_EVENTS: number;
@@ -3186,9 +3170,7 @@ export class ProjectService {
     const hasComparison = effectiveRange in comparisonMap;
     const comparisonSuffix = hasComparison ? comparisonMap[effectiveRange] : null;
 
-    const upcomingCol = effectiveRange === 'YTD'
-      ? `IFNULL(eo.UPCOMING_EVENTS${suffix}, 0)`
-      : '0';
+    const upcomingCol = effectiveRange === 'YTD' ? `IFNULL(eo.UPCOMING_EVENTS${suffix}, 0)` : '0';
 
     const changeExpr = comparisonSuffix
       ? `CASE
@@ -3198,9 +3180,7 @@ export class ProjectService {
         END`
       : '0';
 
-    const diffExpr = comparisonSuffix
-      ? `IFNULL(eo.EVENT_COUNT${suffix}, 0) - IFNULL(eo.EVENT_COUNT${comparisonSuffix}, 0)`
-      : '0';
+    const diffExpr = comparisonSuffix ? `IFNULL(eo.EVENT_COUNT${suffix}, 0) - IFNULL(eo.EVENT_COUNT${comparisonSuffix}, 0)` : '0';
 
     const overviewQuery = `
       WITH slug_resolve AS (
@@ -3286,10 +3266,7 @@ export class ProjectService {
    * @param range - Reporting window (default 'YTD')
    * @returns Normalized response with both enrollment and revenue values
    */
-  public async getTrainingCertificationSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<TrainingCertificationSummaryResponse> {
+  public async getTrainingCertificationSummary(foundationSlug: string, range: string = 'YTD'): Promise<TrainingCertificationSummaryResponse> {
     interface EnrollmentRow {
       PROJECT_ID: string;
       INSTRUCTOR_LED: number;
@@ -3377,10 +3354,7 @@ export class ProjectService {
    * @param range - Reporting window (default 'YTD')
    * @returns Normalized response with contributor counts and role distribution
    */
-  public async getCodeContributionSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Promise<CodeContributionSummaryResponse> {
+  public async getCodeContributionSummary(foundationSlug: string, range: string = 'YTD'): Promise<CodeContributionSummaryResponse> {
     interface CodeContributionRow {
       PROJECT_ID: string;
       TOTAL_CONTRIBUTORS: number;
@@ -3393,9 +3367,7 @@ export class ProjectService {
     }
 
     const validRanges: CodeContributionRange[] = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
-    const effectiveRange: CodeContributionRange = validRanges.includes(range as CodeContributionRange)
-      ? (range as CodeContributionRange)
-      : 'YTD';
+    const effectiveRange: CodeContributionRange = validRanges.includes(range as CodeContributionRange) ? (range as CodeContributionRange) : 'YTD';
     const rangeSuffix = this.getRangeSuffix(effectiveRange);
 
     const query = `
