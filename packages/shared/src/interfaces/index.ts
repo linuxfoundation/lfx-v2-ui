@@ -112,3 +112,6 @@ export * from './training.interface';
 
 // My Documents interfaces
 export * from './my-document.interface';
+
+// Health Metrics interfaces
+export * from './health-metrics.interface';

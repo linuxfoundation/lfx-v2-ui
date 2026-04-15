@@ -2194,7 +2194,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_nps_summary', startTime, error);
       next(error);
     }
   }
@@ -2232,7 +2231,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_participating_orgs_summary', startTime, error);
       next(error);
     }
   }
@@ -2279,7 +2277,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_membership_churn_per_tier_summary', startTime, error);
       next(error);
     }
   }
@@ -2320,7 +2317,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_events_summary', startTime, error);
       next(error);
     }
   }
@@ -2360,7 +2356,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_outstanding_balance_summary', startTime, error);
       next(error);
     }
   }
@@ -2406,7 +2401,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_training_certification_summary', startTime, error);
       next(error);
     }
   }
@@ -2453,7 +2447,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_code_contribution_summary', startTime, error);
       next(error);
     }
   }

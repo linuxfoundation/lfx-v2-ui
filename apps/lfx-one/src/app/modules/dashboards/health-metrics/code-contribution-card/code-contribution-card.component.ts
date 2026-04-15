@@ -5,25 +5,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 
 import type { CodeContributionSummaryResponse } from '@lfx-one/shared/interfaces';
-
-const DEFAULT_SUMMARY: CodeContributionSummaryResponse = {
-  dataAvailable: false,
-  projectId: '',
-  projectSlug: '',
-  range: 'YTD',
-  totalContributors: 0,
-  totalContributorsChange: 0,
-  newContributors: 0,
-  newContributorsChange: 0,
-  committers: 0,
-  maintainers: 0,
-  reviewers: 0,
-};
 
 @Component({
   selector: 'lfx-code-contribution-card',
@@ -40,7 +27,7 @@ export class CodeContributionCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly loading = signal(true);
-  protected readonly summaryData = signal<CodeContributionSummaryResponse>(DEFAULT_SUMMARY);
+  protected readonly summaryData = signal<CodeContributionSummaryResponse>(HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY);
 
   protected readonly hasContributorData = computed(() => this.summaryData().dataAvailable);
 
@@ -147,11 +134,11 @@ export class CodeContributionCardComponent {
         filter((slug): slug is string => !!slug),
         tap(() => {
           this.loading.set(true);
-          this.summaryData.set(DEFAULT_SUMMARY);
+          this.summaryData.set(HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY);
         }),
         switchMap((slug) =>
           this.analyticsService.getCodeContributionSummary(slug).pipe(
-            catchError(() => of(DEFAULT_SUMMARY))
+            catchError(() => of(HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY))
           )
         ),
         takeUntilDestroyed(this.destroyRef)

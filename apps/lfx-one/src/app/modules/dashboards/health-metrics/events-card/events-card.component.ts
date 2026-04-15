@@ -5,20 +5,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 import type { EventsSummaryResponse } from '@lfx-one/shared/interfaces';
-
-const DEFAULT_SUMMARY: EventsSummaryResponse = {
-  projectId: '',
-  totalEvents: 0,
-  eventChange: 0,
-  sponsorshipRevenue: 0,
-  sponsorshipGoal: 0,
-  sponsorshipProgressPct: 0,
-};
 
 @Component({
   selector: 'lfx-events-card',
@@ -35,7 +27,7 @@ export class EventsCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly loading = signal(true);
-  protected readonly summaryData = signal<EventsSummaryResponse>(DEFAULT_SUMMARY);
+  protected readonly summaryData = signal<EventsSummaryResponse>(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
 
   protected readonly formattedTotalEvents = computed(() => {
     return this.summaryData().totalEvents.toLocaleString();
@@ -107,11 +99,11 @@ export class EventsCardComponent {
         filter((slug): slug is string => !!slug),
         tap(() => {
           this.loading.set(true);
-          this.summaryData.set(DEFAULT_SUMMARY);
+          this.summaryData.set(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY);
         }),
         switchMap((slug) =>
           this.analyticsService.getEventsSummary(slug).pipe(
-            catchError(() => of(DEFAULT_SUMMARY))
+            catchError(() => of(HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY))
           )
         ),
         takeUntilDestroyed(this.destroyRef)

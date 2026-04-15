@@ -19,27 +19,7 @@ import { EventsCardComponent } from './events-card/events-card.component';
 import { TrainingCertificationCardComponent } from './training-certification-card/training-certification-card.component';
 import { CodeContributionCardComponent } from './code-contribution-card/code-contribution-card.component';
 
-import type {
-  FlywheelConversionResponse,
-  FoundationTotalMembersResponse,
-  FoundationTotalProjectsResponse,
-  FoundationValueConcentrationResponse,
-  HealthMetricsSummaryCard,
-} from '@lfx-one/shared/interfaces';
-
-interface HealthMetricsData {
-  totalValue: FoundationValueConcentrationResponse | null;
-  totalProjects: FoundationTotalProjectsResponse | null;
-  totalMembers: FoundationTotalMembersResponse | null;
-  flywheel: FlywheelConversionResponse | null;
-}
-
-interface DisplayCard {
-  config: HealthMetricsSummaryCard;
-  value: string;
-  changePercentage?: string;
-  trend?: 'up' | 'down';
-}
+import type { HealthMetricsSummaryCard, HealthMetricsData, DisplayCard } from '@lfx-one/shared/interfaces';
 
 const DEFAULT_DATA: HealthMetricsData = {
   totalValue: null,

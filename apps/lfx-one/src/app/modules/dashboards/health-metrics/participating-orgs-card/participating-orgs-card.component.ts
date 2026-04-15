@@ -5,30 +5,13 @@ import { isPlatformBrowser, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
-import { lfxColors } from '@lfx-one/shared/constants';
+import { HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY, lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { filter, map, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 
-import type { ParticipatingOrgsSummaryResponse } from '@lfx-one/shared/interfaces';
-
-const DEFAULT_SUMMARY: ParticipatingOrgsSummaryResponse = {
-  projectId: '',
-  totalActiveMembers: 0,
-  totalNewMembers: 0,
-  highEngagement: 0,
-  medEngagement: 0,
-  lowEngagement: 0,
-};
-
-interface EngagementSegment {
-  label: string;
-  count: number;
-  percent: number;
-  color: string;
-  dotColor: string;
-}
+import type { EngagementSegment, ParticipatingOrgsSummaryResponse } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-participating-orgs-card',
@@ -45,7 +28,7 @@ export class ParticipatingOrgsCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly loading = signal(true);
-  protected readonly summaryData = signal<ParticipatingOrgsSummaryResponse>(DEFAULT_SUMMARY);
+  protected readonly summaryData = signal<ParticipatingOrgsSummaryResponse>(HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY);
 
   protected readonly totalEngagement = computed(() => {
     const data = this.summaryData();
@@ -156,7 +139,7 @@ export class ParticipatingOrgsCardComponent {
         filter((slug): slug is string => !!slug),
         tap(() => {
           this.loading.set(true);
-          this.summaryData.set(DEFAULT_SUMMARY);
+          this.summaryData.set(HEALTH_METRICS_PARTICIPATING_ORGS_DEFAULT_SUMMARY);
         }),
         switchMap((slug) => this.analyticsService.getParticipatingOrgsSummary(slug)),
         takeUntilDestroyed(this.destroyRef)

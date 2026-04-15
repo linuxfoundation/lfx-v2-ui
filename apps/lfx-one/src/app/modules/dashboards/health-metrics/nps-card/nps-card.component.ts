@@ -5,23 +5,13 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HEALTH_METRICS_NPS_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 
 import type { NpsSummaryResponse } from '@lfx-one/shared/interfaces';
-
-const DEFAULT_NPS_SUMMARY: NpsSummaryResponse = {
-  projectId: '',
-  npsScore: 0,
-  promoters: 0,
-  passives: 0,
-  detractors: 0,
-  nonResponses: 0,
-  responses: 0,
-  lastUpdatedLabel: 'N/A',
-};
 
 @Component({
   selector: 'lfx-nps-card',
@@ -38,7 +28,7 @@ export class NpsCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly loading = signal(true);
-  protected readonly summaryData = signal<NpsSummaryResponse>(DEFAULT_NPS_SUMMARY);
+  protected readonly summaryData = signal<NpsSummaryResponse>(HEALTH_METRICS_NPS_DEFAULT_SUMMARY);
 
   private static readonly ARC_LENGTH = Math.PI * 80; // semicircle radius 80 ≈ 251.3
 
@@ -81,11 +71,11 @@ export class NpsCardComponent {
         filter((slug): slug is string => !!slug),
         tap(() => {
           this.loading.set(true);
-          this.summaryData.set(DEFAULT_NPS_SUMMARY);
+          this.summaryData.set(HEALTH_METRICS_NPS_DEFAULT_SUMMARY);
         }),
         switchMap((slug) =>
           this.analyticsService.getNpsSummary(slug).pipe(
-            catchError(() => of(DEFAULT_NPS_SUMMARY))
+            catchError(() => of(HEALTH_METRICS_NPS_DEFAULT_SUMMARY))
           )
         ),
         takeUntilDestroyed(this.destroyRef)

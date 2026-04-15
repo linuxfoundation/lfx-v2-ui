@@ -5,23 +5,12 @@ import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
+import { HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, filter, map, of, switchMap, tap } from 'rxjs';
 import { environment } from '@environments/environment';
 import type { OutstandingBalanceSummaryResponse } from '@lfx-one/shared/interfaces';
-
-const DEFAULT_SUMMARY: OutstandingBalanceSummaryResponse = {
-  projectId: '',
-  totalOutstandingBalance: 0,
-  totalMembersAtRisk: 0,
-  primaryRiskLevel: null,
-  primaryRiskAmount: 0,
-  overdueBreakdown: {
-    medium: { riskLevel: 'Medium', overdueRangeLabel: '60-89', outstandingBalance: 0, membersAtRisk: 0 },
-    high: { riskLevel: 'High', overdueRangeLabel: '90+', outstandingBalance: 0, membersAtRisk: 0 },
-  },
-};
 
 @Component({
   selector: 'lfx-outstanding-balance-card',
@@ -38,7 +27,7 @@ export class OutstandingBalanceCardComponent {
   private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly loading = signal(true);
-  protected readonly summaryData = signal<OutstandingBalanceSummaryResponse>(DEFAULT_SUMMARY);
+  protected readonly summaryData = signal<OutstandingBalanceSummaryResponse>(HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY);
   protected readonly formattedBalance = computed(() => {
     const value = this.summaryData().totalOutstandingBalance;
     return `$${value.toLocaleString()}`;
@@ -90,11 +79,11 @@ export class OutstandingBalanceCardComponent {
         filter((slug): slug is string => !!slug),
         tap(() => {
           this.loading.set(true);
-          this.summaryData.set(DEFAULT_SUMMARY);
+          this.summaryData.set(HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY);
         }),
         switchMap((slug) =>
           this.analyticsService.getOutstandingBalanceSummary(slug).pipe(
-            catchError(() => of(DEFAULT_SUMMARY))
+            catchError(() => of(HEALTH_METRICS_OUTSTANDING_BALANCE_DEFAULT_SUMMARY))
           )
         ),
         takeUntilDestroyed(this.destroyRef)
