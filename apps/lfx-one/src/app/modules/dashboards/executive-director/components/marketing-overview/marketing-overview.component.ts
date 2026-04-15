@@ -30,7 +30,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { TooltipModule } from 'primeng/tooltip';
-import { forkJoin, map, switchMap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, switchMap } from 'rxjs';
 
 import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
 import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
@@ -228,18 +228,28 @@ export class MarketingOverviewComponent {
     // foundation is selected — that is the default "all foundations" view for executive directors.
     const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
+    // Per-call catchError ensures a single failing Snowflake query degrades only its own card
+    // rather than taking down the whole dashboard; errors are still logged for visibility.
+    const safe = <T>(key: keyof EdEvolutionData, obs: Observable<T>): Observable<T> =>
+      obs.pipe(
+        catchError((err) => {
+          console.error(`[marketing-overview] Failed to load ${String(key)}:`, err);
+          return of(EMPTY_ED_EVOLUTION_DATA[key] as T);
+        })
+      );
+
     return toSignal(
       foundation$.pipe(
         switchMap((slug) =>
           forkJoin({
-            flywheel: this.analyticsService.getFlywheelConversion(slug),
-            memberAcquisition: this.analyticsService.getMemberAcquisition(slug),
-            memberRetention: this.analyticsService.getMemberRetention(slug),
-            engagedCommunity: this.analyticsService.getEngagedCommunity(slug),
-            eventGrowth: this.analyticsService.getEventGrowth(slug),
-            brandReach: this.analyticsService.getBrandReach(slug),
-            brandHealth: this.analyticsService.getBrandHealth(slug),
-            revenueImpact: this.analyticsService.getRevenueImpact(slug),
+            flywheel: safe('flywheel', this.analyticsService.getFlywheelConversion(slug)),
+            memberAcquisition: safe('memberAcquisition', this.analyticsService.getMemberAcquisition(slug)),
+            memberRetention: safe('memberRetention', this.analyticsService.getMemberRetention(slug)),
+            engagedCommunity: safe('engagedCommunity', this.analyticsService.getEngagedCommunity(slug)),
+            eventGrowth: safe('eventGrowth', this.analyticsService.getEventGrowth(slug)),
+            brandReach: safe('brandReach', this.analyticsService.getBrandReach(slug)),
+            brandHealth: safe('brandHealth', this.analyticsService.getBrandHealth(slug)),
+            revenueImpact: safe('revenueImpact', this.analyticsService.getRevenueImpact(slug)),
           })
         )
       ),
@@ -250,26 +260,32 @@ export class MarketingOverviewComponent {
   private initMarketingInsights(): Signal<string[]> {
     return computed(() => {
       const data = this.edEvolutionData();
-      const signals: { label: string; change: number; detail: string }[] = [
+      // `unit: 'pp'` indicates the change value is a percentage-point delta (difference
+      // between two percentages). Rendering it as "%" would misrepresent the metric.
+      const signals: { label: string; change: number; detail: string; unit: '%' | 'pp' }[] = [
         {
           label: 'Engaged community',
           change: data.engagedCommunity.changePercentage,
           detail: formatNumber(data.engagedCommunity.totalMembers),
+          unit: '%',
         },
         {
           label: 'Member base',
           change: data.memberAcquisition.changePercentage,
           detail: formatNumber(data.memberAcquisition.totalMembers),
+          unit: '%',
         },
         {
           label: 'Flywheel conversion',
           change: data.flywheel.reengagement.reengagementMomChange,
           detail: `${data.flywheel.reengagement.reengagementRate.toFixed(1)}%`,
+          unit: 'pp',
         },
         {
           label: 'Member retention',
           change: data.memberRetention.changePercentage,
           detail: `${data.memberRetention.renewalRate.toFixed(1)}%`,
+          unit: '%',
         },
       ];
 
@@ -277,7 +293,7 @@ export class MarketingOverviewComponent {
 
       return sorted.slice(0, 3).map((s) => {
         const direction = s.change > 0 ? 'up' : 'down';
-        return `${s.label} is ${direction} ${Math.abs(s.change).toFixed(1)}% — now at ${s.detail}`;
+        return `${s.label} is ${direction} ${Math.abs(s.change).toFixed(1)}${s.unit} — now at ${s.detail}`;
       });
     });
   }

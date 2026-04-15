@@ -264,7 +264,12 @@ export class EngagedCommunityDrawerComponent {
       if (brand.dailyTrend.length >= 8) {
         const recent4 = brand.dailyTrend.slice(-4).reduce((s, d) => s + d.sessions, 0);
         const prior4 = brand.dailyTrend.slice(-8, -4).reduce((s, d) => s + d.sessions, 0);
-        if (prior4 > 0) {
+        if (prior4 === 0 && recent4 > 0) {
+          insights.push({
+            text: `Weekly sessions started growing from a zero baseline (${formatNumber(recent4)} last 4 weeks)`,
+            type: 'driver',
+          });
+        } else if (prior4 > 0) {
           const monthDelta = ((recent4 - prior4) / prior4) * 100;
           if (monthDelta >= 10) {
             insights.push({ text: `Weekly sessions up ${monthDelta.toFixed(0)}% vs prior month (${formatNumber(recent4)} last 4 weeks)`, type: 'driver' });

@@ -3271,9 +3271,15 @@ export class ProjectService {
 
       const pipelineInfluenced = pipeline?.TOTAL_PIPELINE_YTD ?? 0;
       const wonRevenue = pipeline?.WON_REVENUE_YTD ?? 0;
-      const changePercentage = pipeline?.WON_REVENUE_YOY_CHANGE_PCT ?? 0;
-      const matchRate = pipeline?.CONVERSION_RATE_YTD ?? 0;
+      const wonDeals = pipeline?.WON_DEALS_YTD ?? 0;
       const totalDeals = pipeline?.TOTAL_DEALS_YTD ?? 0;
+      // In umbrella mode, recompute KPIs from the summed totals so the TLF headline stays consistent
+      // with the aggregated revenue/deal numbers (AVG across foundations weights small and large equally).
+      const priorYearRevenue = pipeline?.WON_REVENUE_PRIOR_YEAR ?? 0;
+      const umbrellaChangePct = priorYearRevenue > 0 ? ((wonRevenue - priorYearRevenue) / priorYearRevenue) * 100 : 0;
+      const changePercentage = isUmbrella ? umbrellaChangePct : (pipeline?.WON_REVENUE_YOY_CHANGE_PCT ?? 0);
+      const umbrellaMatchRate = totalDeals > 0 ? (wonDeals / totalDeals) * 100 : 0;
+      const matchRate = isUmbrella ? umbrellaMatchRate : (pipeline?.CONVERSION_RATE_YTD ?? 0);
 
       return {
         pipelineInfluenced,
@@ -3294,10 +3300,17 @@ export class ProjectService {
             ]
           : [],
         paidMedia: {
-          roas: ads?.LINEAR_ROAS_YTD ?? 0,
+          // Prefer the summed LINEAR_REVENUE_YTD over reconstructing from avg(roas) * sum(spend),
+          // which misstates revenue in umbrella mode and drifts from rounding in single-foundation mode.
+          roas: (() => {
+            const spend = ads?.TOTAL_SPEND_YTD ?? 0;
+            const revenue = ads?.LINEAR_REVENUE_YTD ?? 0;
+            if (isUmbrella) return spend > 0 ? revenue / spend : 0;
+            return ads?.LINEAR_ROAS_YTD ?? 0;
+          })(),
           impressions: ads?.TOTAL_IMPRESSIONS_YTD ?? 0,
           adSpend: ads?.TOTAL_SPEND_YTD ?? 0,
-          adRevenue: (ads?.LINEAR_ROAS_YTD ?? 0) * (ads?.TOTAL_SPEND_YTD ?? 0),
+          adRevenue: ads?.LINEAR_REVENUE_YTD ?? 0,
           monthlyTrend,
         },
         attributionChannels,

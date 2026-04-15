@@ -171,7 +171,7 @@
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Pipeline Influenced</span>
               @if (revenueImpactData().pipelineInfluenced > 0) {
-                <span class="text-2xl font-semibold text-gray-900">${{ revenueImpactData().pipelineInfluenced / 1000000 | number: '1.1-1' }}M</span>
+                <span class="text-2xl font-semibold text-gray-900">{{ formatMoney(revenueImpactData().pipelineInfluenced) }}</span>
               } @else {
                 <span class="text-2xl font-semibold text-gray-400">—</span>
               }
@@ -181,7 +181,7 @@
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Revenue Attributed</span>
               @if (revenueImpactData().revenueAttributed > 0) {
-                <span class="text-2xl font-semibold text-gray-900">${{ revenueImpactData().revenueAttributed / 1000000 | number: '1.1-1' }}M</span>
+                <span class="text-2xl font-semibold text-gray-900">{{ formatMoney(revenueImpactData().revenueAttributed) }}</span>
               } @else {
                 <span class="text-2xl font-semibold text-gray-400">—</span>
               }
