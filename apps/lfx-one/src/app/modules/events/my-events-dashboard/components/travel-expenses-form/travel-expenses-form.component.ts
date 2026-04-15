@@ -13,7 +13,6 @@ import { TravelFundExpenses } from '@lfx-one/shared/interfaces';
   selector: 'lfx-travel-expenses-form',
   imports: [ReactiveFormsModule, InputTextComponent, MessageComponent, CurrencyPipe],
   templateUrl: './travel-expenses-form.component.html',
-  styleUrl: './travel-expenses-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TravelExpensesFormComponent {

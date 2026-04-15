@@ -190,6 +190,17 @@ export type VisaRequestStep = 'select-event' | 'terms' | 'apply';
 export type TravelFundStep = 'select-event' | 'terms' | 'about-me' | 'expenses';
 
 /**
+ * Represents the render state of a single step in a multi-step dialog's step indicator
+ */
+export interface DialogStepState {
+  id: string;
+  label: string;
+  number: number;
+  isActive: boolean;
+  isCompleted: boolean;
+}
+
+/**
  * Parameters for fetching event requests (visa letters or travel fund) from the API
  */
 export interface GetEventRequestsParams {

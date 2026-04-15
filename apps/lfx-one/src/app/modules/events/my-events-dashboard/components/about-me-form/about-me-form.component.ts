@@ -21,7 +21,6 @@ const YES_NO_OPTIONS = [
   selector: 'lfx-about-me-form',
   imports: [ReactiveFormsModule, InputTextComponent, SelectComponent, TextareaComponent, CheckboxComponent],
   templateUrl: './about-me-form.component.html',
-  styleUrl: './about-me-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutMeFormComponent {
@@ -75,24 +74,6 @@ export class AboutMeFormComponent {
   }
 
   private buildFormValue(): TravelFundAboutMe {
-    const raw = this.form.getRawValue();
-    return {
-      firstName: raw.firstName,
-      lastName: raw.lastName,
-      email: raw.email,
-      citizenshipCountry: raw.citizenshipCountry,
-      profileLink: raw.profileLink,
-      company: raw.company,
-      canReceiveFunds: raw.canReceiveFunds,
-      travelFromCountry: raw.travelFromCountry,
-      openSourceInvolvement: raw.openSourceInvolvement,
-      isLgbtqia: raw.isLgbtqia,
-      isWoman: raw.isWoman,
-      isPersonWithDisability: raw.isPersonWithDisability,
-      isDiversityOther: raw.isDiversityOther,
-      preferNotToAnswer: raw.preferNotToAnswer,
-      attendingForCompany: raw.attendingForCompany,
-      willingToBlog: raw.willingToBlog,
-    };
+    return this.form.getRawValue() as TravelFundAboutMe;
   }
 }

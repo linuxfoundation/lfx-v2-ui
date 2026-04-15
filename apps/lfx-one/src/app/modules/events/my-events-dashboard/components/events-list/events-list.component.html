@@ -43,8 +43,8 @@
       (sortChange)="onPastSortChange($event)"
       data-testid="events-past-table" />
   } @else if (activeTab() === 'visa-letters') {
-    <lfx-visa-request [searchQuery]="searchQuery()" [status]="status()" data-testid="visa-requests-table" />
+    <lfx-event-request-list requestType="visa" [searchQuery]="searchQuery()" [status]="status()" data-testid="visa-requests-table" />
   } @else if (activeTab() === 'travel-funding') {
-    <lfx-travel-funding [searchQuery]="searchQuery()" [status]="status()" data-testid="travel-funding-table" />
+    <lfx-event-request-list requestType="travel-fund" [searchQuery]="searchQuery()" [status]="status()" data-testid="travel-funding-table" />
   }
 </div>

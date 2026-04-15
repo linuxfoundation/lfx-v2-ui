@@ -23,6 +23,7 @@ import {
   GetEventsOptions,
   GetUpcomingCountriesResponse,
   TravelFundApplication,
+  TravelFundRequestsResponse,
   VisaRequestApplication,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
@@ -411,7 +412,7 @@ export class EventsController {
     res: Response,
     next: NextFunction,
     operationName: string,
-    fetchFn: (req: Request, userEmail: string, options: GetEventRequestsOptions) => Promise<VisaRequestsResponse>
+    fetchFn: (req: Request, userEmail: string, options: GetEventRequestsOptions) => Promise<VisaRequestsResponse | TravelFundRequestsResponse>
   ): Promise<void> {
     const startTime = logger.startOperation(req, operationName, {
       has_query: Object.keys(req.query).length > 0,

@@ -1,0 +1,23 @@
+// Copyright The Linux Foundation and each contributor to LFX.
+// SPDX-License-Identifier: MIT
+
+/// Shared thin scrollbar styling for event dialog scroll containers.
+/// @param {Number} $max-height - Maximum height for the scroll container (default: 440px)
+@mixin scroll-area($max-height: 440px) {
+  max-height: $max-height;
+
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.slate.200') transparent;
+
+  &::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply rounded-sm bg-slate-200;
+  }
+}

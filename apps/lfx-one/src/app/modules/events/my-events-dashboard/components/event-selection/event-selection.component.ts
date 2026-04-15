@@ -6,12 +6,10 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
+import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { MyEvent } from '@lfx-one/shared/interfaces';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { catchError, debounceTime, finalize, of, skip } from 'rxjs';
 
 type TimeFilterValue = 'any' | 'this-month' | 'next-3-months';
@@ -20,7 +18,7 @@ const PAGE_SIZE = 12;
 
 @Component({
   selector: 'lfx-event-selection',
-  imports: [ButtonComponent, ReactiveFormsModule, SelectComponent, IconFieldModule, InputIconModule, InputTextModule],
+  imports: [ButtonComponent, ReactiveFormsModule, SelectComponent, InputTextComponent],
   templateUrl: './event-selection.component.html',
   styleUrl: './event-selection.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,8 +30,8 @@ export class EventSelectionComponent {
 
   public selectedEvent = model<MyEvent | null>(null);
 
-  // Search filter (plain signal — debounced before sending to API)
-  public searchQuery = signal('');
+  // Search via its own form (required by lfx-input-text); debounced separately to avoid extra API calls on each keystroke
+  public readonly searchForm = this.fb.group({ searchQuery: '' });
 
   // Time and location filters via reactive form (required by lfx-select)
   public readonly filtersForm = this.fb.group({
@@ -62,7 +60,7 @@ export class EventSelectionComponent {
   ];
 
   // Debounced search to avoid API calls on every keystroke
-  private readonly debouncedSearch = toSignal(toObservable(this.searchQuery).pipe(debounceTime(500)), { initialValue: '' });
+  private readonly debouncedSearch = toSignal(this.searchForm.get('searchQuery')!.valueChanges.pipe(debounceTime(500)), { initialValue: '' });
 
   // Combined server-side filter params — changing this resets pagination and triggers a reload
   private readonly activeFilters = computed(() => ({

@@ -1,29 +1,33 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Type, computed, inject, input, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
-import { PageChangeEvent, TagSeverity, TravelFundRequestsResponse } from '@lfx-one/shared/interfaces';
+import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
+import { PageChangeEvent, TagSeverity, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
+import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
+
+type RequestType = 'visa' | 'travel-fund';
 
 @Component({
-  selector: 'lfx-travel-funding',
+  selector: 'lfx-event-request-list',
   imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule],
   providers: [DialogService],
-  templateUrl: './travel-funding.component.html',
+  templateUrl: './event-request-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TravelFundingComponent {
+export class EventRequestListComponent {
   private readonly eventsService = inject(EventsService);
   private readonly dialogService = inject(DialogService);
 
+  public readonly requestType = input.required<RequestType>();
   public readonly searchQuery = input<string>('');
   public readonly status = input<string | null>(null);
 
@@ -32,7 +36,7 @@ export class TravelFundingComponent {
   protected readonly sortOrder = signal<'ASC' | 'DESC'>('DESC');
   protected readonly page = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
 
-  protected readonly travelFundRequestsResponse: Signal<TravelFundRequestsResponse> = this.initTravelFundRequests();
+  protected readonly requestsResponse: Signal<VisaRequestsResponse> = this.initRequests();
 
   protected readonly statusSeverityMap: Partial<Record<string, TagSeverity>> = {
     Submitted: 'info',
@@ -40,6 +44,17 @@ export class TravelFundingComponent {
     Denied: 'danger',
     Expired: 'secondary',
   };
+
+  protected readonly config = computed(() => {
+    const isVisa = this.requestType() === 'visa';
+    return {
+      dialogComponent: (isVisa ? VisaRequestApplicationDialogComponent : TravelFundApplicationDialogComponent) as Type<unknown>,
+      dialogHeader: isVisa ? 'Visa Letter Application' : 'Travel Funding Application',
+      buttonLabel: isVisa ? 'New Letter Application' : 'New Funding Application',
+      emptyMessage: isVisa ? 'No visa requests found' : 'No travel fund requests found',
+      testIdPrefix: isVisa ? 'visa-request' : 'travel-funding',
+    };
+  });
 
   protected readonly sortIcons = computed(() => {
     const field = this.sortField();
@@ -64,8 +79,8 @@ export class TravelFundingComponent {
   }
 
   public openApplicationDialog(): void {
-    this.dialogService.open(TravelFundApplicationDialogComponent, {
-      header: 'Travel Funding Application',
+    this.dialogService.open(this.config().dialogComponent, {
+      header: this.config().dialogHeader,
       width: '800px',
       modal: true,
       closable: true,
@@ -88,7 +103,7 @@ export class TravelFundingComponent {
     this.page.set({ offset: 0, pageSize: this.page().pageSize });
   }
 
-  private initTravelFundRequests(): Signal<TravelFundRequestsResponse> {
+  private initRequests(): Signal<VisaRequestsResponse> {
     return toSignal(
       toObservable(
         computed(() => ({
@@ -97,17 +112,21 @@ export class TravelFundingComponent {
           status: this.status() ?? undefined,
           sortField: this.sortField(),
           sortOrder: this.sortOrder(),
+          requestType: this.requestType(),
         }))
       ).pipe(
         tap(() => this.loading.set(true)),
-        switchMap(({ offset, pageSize, searchQuery, status, sortField, sortOrder }) =>
-          this.eventsService.getTravelFundRequests({ offset, pageSize, searchQuery, status, sortField, sortOrder }).pipe(
-            catchError(() => of(EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE)),
+        switchMap(({ offset, pageSize, searchQuery, status, sortField, sortOrder, requestType }) => {
+          const params = { offset, pageSize, searchQuery, status, sortField, sortOrder };
+          const emptyResponse = requestType === 'visa' ? EMPTY_VISA_REQUESTS_RESPONSE : EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE;
+          const fetch$ = requestType === 'visa' ? this.eventsService.getVisaRequests(params) : this.eventsService.getTravelFundRequests(params);
+          return fetch$.pipe(
+            catchError(() => of(emptyResponse)),
             finalize(() => this.loading.set(false))
-          )
-        )
+          );
+        })
       ),
-      { initialValue: EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE }
+      { initialValue: EMPTY_VISA_REQUESTS_RESPONSE }
     );
   }
 }

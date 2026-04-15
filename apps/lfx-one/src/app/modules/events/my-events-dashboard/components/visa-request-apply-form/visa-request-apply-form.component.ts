@@ -16,7 +16,6 @@ import { VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
   selector: 'lfx-visa-request-apply-form',
   imports: [ReactiveFormsModule, InputTextComponent, SelectComponent, TextareaComponent, CalendarComponent],
   templateUrl: './visa-request-apply-form.component.html',
-  styleUrl: './visa-request-apply-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VisaRequestApplyFormComponent {
@@ -62,17 +61,6 @@ export class VisaRequestApplyFormComponent {
   }
 
   private buildFormValue(): VisaRequestApplicantInfo {
-    const raw = this.form.getRawValue();
-    return {
-      firstName: raw.firstName,
-      lastName: raw.lastName,
-      email: raw.email,
-      passportNumber: raw.passportNumber,
-      citizenshipCountry: raw.citizenshipCountry,
-      passportExpiryDate: raw.passportExpiryDate,
-      embassyCity: raw.embassyCity,
-      company: raw.company,
-      mailingAddress: raw.mailingAddress,
-    };
+    return this.form.getRawValue() as VisaRequestApplicantInfo;
   }
 }

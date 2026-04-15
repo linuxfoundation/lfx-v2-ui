@@ -5,18 +5,14 @@
   <!-- Filters -->
   <div class="flex items-center gap-3" data-testid="event-selection-filters">
     <!-- Search -->
-    <p-iconfield class="flex-1">
-      <p-inputicon styleClass="fa-light fa-magnifying-glass text-gray-400" />
-      <input
-        pInputText
-        type="text"
-        class="w-full text-sm"
-        placeholder="Filter by Name"
-        [value]="searchQuery()"
-        (input)="searchQuery.set(inputEl.value)"
-        #inputEl
-        data-testid="event-selection-search" />
-    </p-iconfield>
+    <lfx-input-text
+      class="flex-1"
+      [form]="searchForm"
+      control="searchQuery"
+      icon="fa-light fa-magnifying-glass"
+      placeholder="Filter by Name"
+      styleClass="w-full"
+      data-testid="event-selection-search" />
 
     <!-- Time filter -->
     <lfx-select [form]="filtersForm" control="timeFilter" [options]="timeFilterOptions" data-testid="event-selection-time-filter" />

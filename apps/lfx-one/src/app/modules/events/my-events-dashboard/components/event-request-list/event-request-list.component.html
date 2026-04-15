@@ -3,34 +3,34 @@
 
 <div class="flex justify-end my-4 pr-4">
   <lfx-button
-    label="New Funding Application"
+    [label]="config().buttonLabel"
     icon="fa-light fa-plus"
     severity="primary"
     size="small"
     (onClick)="openApplicationDialog()"
-    [attr.data-testid]="'travel-funding-discover-button'" />
+    [attr.data-testid]="config().testIdPrefix + '-discover-button'" />
 </div>
 <lfx-table
-  [value]="travelFundRequestsResponse().data"
+  [value]="requestsResponse().data"
   [loading]="loading()"
   [lazy]="true"
-  [paginator]="travelFundRequestsResponse().total > 0"
+  [paginator]="requestsResponse().total > 0"
   [alwaysShowPaginator]="true"
-  [rows]="travelFundRequestsResponse().pageSize"
-  [first]="travelFundRequestsResponse().offset"
-  [totalRecords]="travelFundRequestsResponse().total"
+  [rows]="requestsResponse().pageSize"
+  [first]="requestsResponse().offset"
+  [totalRecords]="requestsResponse().total"
   [rowsPerPageOptions]="[10, 25, 50]"
   [showCurrentPageReport]="true"
   currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
   paginatorPosition="bottom"
   (onPage)="onPageChange($event)"
-  data-testid="travel-funding-data-table">
+  [attr.data-testid]="config().testIdPrefix + '-data-table'">
   <ng-template #header>
     <tr>
       <th
         scope="col"
         [attr.aria-sort]="sortField() === 'EVENT_NAME' ? (sortOrder() === 'ASC' ? 'ascending' : 'descending') : 'none'"
-        data-testid="travel-funding-sort-event-name">
+        [attr.data-testid]="config().testIdPrefix + '-sort-event-name'">
         <button type="button" class="flex cursor-pointer select-none items-center gap-1" (click)="onHeaderClick('EVENT_NAME')">
           Event Name <i [class]="sortIcons()['EVENT_NAME']"></i>
         </button>
@@ -38,7 +38,7 @@
       <th
         scope="col"
         [attr.aria-sort]="sortField() === 'EVENT_CITY' ? (sortOrder() === 'ASC' ? 'ascending' : 'descending') : 'none'"
-        data-testid="travel-funding-sort-location">
+        [attr.data-testid]="config().testIdPrefix + '-sort-location'">
         <button type="button" class="flex cursor-pointer select-none items-center gap-1" (click)="onHeaderClick('EVENT_CITY')">
           Location <i [class]="sortIcons()['EVENT_CITY']"></i>
         </button>
@@ -46,7 +46,7 @@
       <th
         scope="col"
         [attr.aria-sort]="sortField() === 'APPLICATION_DATE' ? (sortOrder() === 'ASC' ? 'ascending' : 'descending') : 'none'"
-        data-testid="travel-funding-sort-application-date">
+        [attr.data-testid]="config().testIdPrefix + '-sort-application-date'">
         <button type="button" class="flex cursor-pointer select-none items-center gap-1" (click)="onHeaderClick('APPLICATION_DATE')">
           Application Date <i [class]="sortIcons()['APPLICATION_DATE']"></i>
         </button>
@@ -56,7 +56,7 @@
   </ng-template>
 
   <ng-template #body let-request let-rowIndex="rowIndex">
-    <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'travel-funding-row-' + request.id">
+    <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="config().testIdPrefix + '-row-' + request.id">
       <!-- Event Name -->
       <td>
         <a
@@ -64,24 +64,27 @@
           target="_blank"
           rel="noopener noreferrer"
           class="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
-          [attr.data-testid]="'travel-funding-event-name-' + request.id">
+          [attr.data-testid]="config().testIdPrefix + '-event-name-' + request.id">
           {{ request.name }}
         </a>
       </td>
 
       <!-- Location -->
       <td>
-        <span class="text-sm text-gray-700" [attr.data-testid]="'travel-funding-location-' + request.id">{{ request.location }}</span>
+        <span class="text-sm text-gray-700" [attr.data-testid]="config().testIdPrefix + '-location-' + request.id">{{ request.location }}</span>
       </td>
 
       <!-- Application Date -->
       <td>
-        <span class="text-sm text-gray-700" [attr.data-testid]="'travel-funding-application-date-' + request.id">{{ request.applicationDate }}</span>
+        <span class="text-sm text-gray-700" [attr.data-testid]="config().testIdPrefix + '-application-date-' + request.id">{{ request.applicationDate }}</span>
       </td>
 
       <!-- Status -->
       <td>
-        <lfx-tag [value]="request.status" [severity]="statusSeverityMap[request.status] ?? 'info'" [attr.data-testid]="'travel-funding-status-' + request.id" />
+        <lfx-tag
+          [value]="request.status"
+          [severity]="statusSeverityMap[request.status] ?? 'info'"
+          [attr.data-testid]="config().testIdPrefix + '-status-' + request.id" />
       </td>
     </tr>
   </ng-template>
@@ -93,7 +96,7 @@
           <div class="text-center max-w-md">
             <div class="text-gray-400 mb-4">
               <i class="fa-light fa-eyes text-3xl mb-4"></i>
-              <h3 class="text-gray-600 mt-2">No travel fund requests found</h3>
+              <h3 class="text-gray-600 mt-2">{{ config().emptyMessage }}</h3>
             </div>
           </div>
         </div>

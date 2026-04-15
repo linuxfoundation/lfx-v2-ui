@@ -3,55 +3,17 @@
 
 <div class="flex flex-col" data-testid="travel-fund-application-dialog">
   <!-- Step indicator -->
-  <div class="flex items-center px-1 pb-5" data-testid="travel-fund-step-indicator">
-    @for (s of stepStates(); track s.id; let last = $last) {
-      <div class="flex items-center" [class.flex-1]="!last">
-        <div class="flex items-center gap-2 shrink-0">
-          <!-- Circle -->
-          <div
-            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-            [class.bg-blue-600]="s.isActive || s.isCompleted"
-            [class.text-white]="s.isActive || s.isCompleted"
-            [class.border-2]="!s.isActive && !s.isCompleted"
-            [class.border-gray-300]="!s.isActive && !s.isCompleted"
-            [class.text-gray-400]="!s.isActive && !s.isCompleted"
-            [attr.data-testid]="'travel-fund-step-circle-' + s.number">
-            @if (s.isCompleted) {
-              <i class="fa-light fa-check text-sm"></i>
-            } @else {
-              {{ s.number }}
-            }
-          </div>
-          <!-- Label -->
-          <span
-            class="text-sm whitespace-nowrap"
-            [class.font-semibold]="s.isActive"
-            [class.text-gray-900]="s.isActive"
-            [class.text-gray-400]="!s.isActive"
-            [attr.data-testid]="'travel-fund-step-label-' + s.number">
-            {{ s.label }}
-          </span>
-        </div>
-        <!-- Connecting line -->
-        @if (!last) {
-          <div class="mx-3 h-px flex-1 bg-gray-200"></div>
-        }
-      </div>
-    }
-  </div>
+  <lfx-step-indicator [stepStates]="stepStates()" testIdPrefix="travel-fund" />
 
   <!-- Step content -->
   <div class="scroll-area overflow-y-auto pr-1">
     @if (step() === 'select-event') {
       <lfx-event-selection [(selectedEvent)]="selectedEvent" />
-    }
-    @if (step() === 'terms') {
+    } @else if (step() === 'terms') {
       <lfx-travel-fund-terms />
-    }
-    @if (step() === 'about-me') {
+    } @else if (step() === 'about-me') {
       <lfx-about-me-form (formValidityChange)="aboutMeFormValid.set($event)" (formChange)="aboutMeData.set($event)" />
-    }
-    @if (step() === 'expenses') {
+    } @else if (step() === 'expenses') {
       <lfx-travel-expenses-form (formValidityChange)="expensesFormValid.set($event)" (formChange)="expensesData.set($event)" />
     }
   </div>

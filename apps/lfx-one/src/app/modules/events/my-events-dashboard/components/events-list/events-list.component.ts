@@ -9,13 +9,12 @@ import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/sha
 import { EventTab, EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { EventRequestListComponent } from '../event-request-list/event-request-list.component';
 import { EventsTableComponent } from '../events-table/events-table.component';
-import { TravelFundingComponent } from '../travel-funding/travel-funding.component';
-import { VisaRequestComponent } from '../visa-request/visa-request.component';
 
 @Component({
   selector: 'lfx-events-list',
-  imports: [NgClass, EventsTableComponent, TravelFundingComponent, VisaRequestComponent],
+  imports: [NgClass, EventsTableComponent, EventRequestListComponent],
   templateUrl: './events-list.component.html',
 })
 export class EventsListComponent {

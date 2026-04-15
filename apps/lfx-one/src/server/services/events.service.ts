@@ -578,6 +578,7 @@ export class EventsService {
         ${projectNameFilter}
         ${searchQueryFilter}
         ${statusFilter}
+      -- sortField is validated against VALID_VISA_REQUEST_SORT_FIELDS allowlist above; safe to interpolate
       ORDER BY ${sortField} ${normalizedSortOrder}
       LIMIT ${normalizedPageSize} OFFSET ${normalizedOffset}
     `;

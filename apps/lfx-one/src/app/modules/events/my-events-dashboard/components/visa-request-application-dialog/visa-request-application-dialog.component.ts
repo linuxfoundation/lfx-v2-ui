@@ -9,6 +9,7 @@ import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestS
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
+import { StepIndicatorComponent } from '../step-indicator/step-indicator.component';
 import { VisaRequestApplyFormComponent } from '../visa-request-apply-form/visa-request-apply-form.component';
 import { VisaRequestTermsComponent } from '../visa-request-terms/visa-request-terms.component';
 
@@ -16,7 +17,7 @@ const STEP_ORDER: VisaRequestStep[] = ['select-event', 'terms', 'apply'];
 
 @Component({
   selector: 'lfx-visa-request-application-dialog',
-  imports: [ButtonComponent, EventSelectionComponent, VisaRequestTermsComponent, VisaRequestApplyFormComponent],
+  imports: [ButtonComponent, EventSelectionComponent, StepIndicatorComponent, VisaRequestTermsComponent, VisaRequestApplyFormComponent],
   templateUrl: './visa-request-application-dialog.component.html',
   styleUrl: './visa-request-application-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

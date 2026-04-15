@@ -9,6 +9,7 @@ import { MyEvent, TravelFundAboutMe, TravelFundApplication, TravelFundExpenses, 
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
+import { StepIndicatorComponent } from '../step-indicator/step-indicator.component';
 import { TravelFundTermsComponent } from '../travel-fund-terms/travel-fund-terms.component';
 import { AboutMeFormComponent } from '../about-me-form/about-me-form.component';
 import { TravelExpensesFormComponent } from '../travel-expenses-form/travel-expenses-form.component';
@@ -17,7 +18,7 @@ const STEP_ORDER: TravelFundStep[] = ['select-event', 'terms', 'about-me', 'expe
 
 @Component({
   selector: 'lfx-travel-fund-application-dialog',
-  imports: [ButtonComponent, EventSelectionComponent, TravelFundTermsComponent, AboutMeFormComponent, TravelExpensesFormComponent],
+  imports: [ButtonComponent, EventSelectionComponent, StepIndicatorComponent, TravelFundTermsComponent, AboutMeFormComponent, TravelExpensesFormComponent],
   templateUrl: './travel-fund-application-dialog.component.html',
   styleUrl: './travel-fund-application-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
