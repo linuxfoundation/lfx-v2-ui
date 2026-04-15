@@ -10,14 +10,13 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { MessageComponent } from '@components/message/message.component';
-import { SelectComponent } from '@components/select/select.component';
-import { EmailManagementData, EmailOption, EmailPreferences, UpdateEmailPreferencesRequest, UserEmail } from '@lfx-one/shared/interfaces';
+import { EmailManagementData, UserEmail } from '@lfx-one/shared/interfaces';
 import { UserService } from '@services/user.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, finalize, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-profile-email',
@@ -29,7 +28,6 @@ import { BehaviorSubject, finalize, switchMap, tap } from 'rxjs';
     MessageComponent,
     ButtonComponent,
     BadgeComponent,
-    SelectComponent,
     ConfirmDialogModule,
     ToastModule,
     TooltipModule,
@@ -44,104 +42,127 @@ export class ProfileEmailComponent {
   // Refresh mechanism
   private refresh = new BehaviorSubject<void>(undefined);
 
+  // OTP flow state
+  public otpStep = signal(false);
+  public pendingEmail = signal('');
+  public sendingCode = signal(false);
+  public verifyingOtp = signal(false);
+
   // Forms
   public addEmailForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
   });
 
-  public preferencesForm = new FormGroup({
-    meetingEmailId: new FormControl<string | null>(null),
-    notificationEmailId: new FormControl<string | null>(null),
-    billingEmailId: new FormControl<string | null>(null),
+  public otpForm = new FormGroup({
+    otp: new FormControl('', [Validators.required, Validators.minLength(6)]),
   });
 
   // State signals
   public loading = signal(false);
-  public addingEmail = signal(false);
-  public updatingPreferences = signal(false);
 
-  // Data signals using toSignal with refresh
-  public emailData = this.initializeEmailData();
-  public emails = computed(() => this.emailData()?.emails || []);
-  public preferences = computed(() => this.emailData()?.preferences || null);
-  public emailOptions = this.initializeEmailOptions();
+  // Data signals
+  public emailData: Signal<EmailManagementData | null> = this.initializeEmailData();
 
-  // Computed values for template - never use functions in templates!
+  public allEmails = computed((): UserEmail[] => {
+    const data = this.emailData();
+    if (!data) return [];
+    const primary: UserEmail = { email: data.primary_email, verified: true };
+    const alternates = data.alternate_emails.filter((e) => e.email !== data.primary_email);
+    return [primary, ...alternates];
+  });
+
   public emailsWithMetadata = computed(() =>
-    this.emails().map((email) => ({
+    this.allEmails().map((email) => ({
       ...email,
-      isPrimary: email.is_primary,
-      isMeetingEmail: this.preferences()?.meeting_email_id === email.id,
-      isNotificationEmail: this.preferences()?.notification_email_id === email.id,
-      isBillingEmail: this.preferences()?.billing_email_id === email.id,
-      canDelete: this.emails().length > 1 && !email.is_primary,
-      canSetPrimary: !email.is_primary && email.is_verified,
+      isPrimary: email.email === this.emailData()?.primary_email,
+      canDelete: this.allEmails().length > 1 && email.email !== this.emailData()?.primary_email,
+      canSetPrimary: email.email !== this.emailData()?.primary_email && email.verified,
     }))
   );
+
   // Public methods
 
-  public addEmail(): void {
+  public sendVerificationCode(): void {
     if (this.addEmailForm.invalid) {
       return;
     }
 
     const email = this.addEmailForm.value.email!;
-    this.addingEmail.set(true);
+    this.sendingCode.set(true);
 
     this.userService
-      .addEmail(email)
-      .pipe(finalize(() => this.addingEmail.set(false)))
+      .sendEmailVerificationCode(email)
+      .pipe(finalize(() => this.sendingCode.set(false)))
       .subscribe({
-        next: () => {
-          this.addEmailForm.reset();
-          this.refresh.next();
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Email address added successfully',
-          });
+        next: (response) => {
+          if (response.success) {
+            this.pendingEmail.set(email);
+            this.otpStep.set(true);
+          } else {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: response.message || 'Failed to send verification code' });
+          }
         },
         error: (error) => {
-          const message = error.error?.message || 'Failed to add email address';
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: message,
-          });
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error?.message || 'Failed to send verification code' });
         },
       });
   }
 
-  public setPrimary(email: UserEmail): void {
-    if (email.is_primary) {
+  public verifyAndLink(): void {
+    if (this.otpForm.invalid) {
       return;
     }
 
-    // Only allow verified emails to be set as primary
-    if (!email.is_verified) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Only verified email addresses can be set as primary',
+    const otp = this.otpForm.value.otp!;
+    this.verifyingOtp.set(true);
+
+    this.userService
+      .verifyAndLinkEmail(this.pendingEmail(), otp)
+      .pipe(finalize(() => this.verifyingOtp.set(false)))
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.cancelOtpStep();
+            this.refresh.next();
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Email address added successfully' });
+          } else {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Error',
+              detail: response.message || 'Verification failed. Please check your code and try again.',
+            });
+          }
+        },
+        error: (error) => {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error?.message || 'Verification failed. Please try again.' });
+        },
       });
+  }
+
+  public cancelOtpStep(): void {
+    this.otpStep.set(false);
+    this.pendingEmail.set('');
+    this.addEmailForm.reset();
+    this.otpForm.reset();
+  }
+
+  public setPrimary(email: UserEmail): void {
+    if (email.email === this.emailData()?.primary_email) {
       return;
     }
 
-    this.userService.setPrimaryEmail(email.id).subscribe({
+    if (!email.verified) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Only verified email addresses can be set as primary' });
+      return;
+    }
+
+    this.userService.setPrimaryEmail(email.email).subscribe({
       next: () => {
         this.refresh.next();
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: 'Primary email updated successfully',
-        });
+        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Primary email updated successfully' });
       },
       error: () => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to update primary email',
-        });
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update primary email' });
       },
     });
   }
@@ -155,66 +176,17 @@ export class ProfileEmailComponent {
       acceptButtonStyleClass: 'p-button-danger p-button-sm',
       rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => {
-        this.userService.deleteEmail(email.id).subscribe({
+        this.userService.deleteEmail(email.email).subscribe({
           next: () => {
             this.refresh.next();
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: 'Email address deleted successfully',
-            });
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Email address deleted successfully' });
           },
           error: (error) => {
-            const message = error.error?.message || 'Failed to delete email address';
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: message,
-            });
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error?.message || 'Failed to delete email address' });
           },
         });
       },
     });
-  }
-
-  public resendVerification(email: UserEmail): void {
-    // For now, just show a success toast. In the future, this will call an API endpoint
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Verification Email Sent',
-      detail: `Verification email has been sent to ${email.email}`,
-    });
-  }
-
-  public updatePreferences(): void {
-    this.updatingPreferences.set(true);
-
-    const preferences: UpdateEmailPreferencesRequest = {
-      meeting_email_id: this.preferencesForm.value.meetingEmailId || null,
-      notification_email_id: this.preferencesForm.value.notificationEmailId || null,
-      billing_email_id: this.preferencesForm.value.billingEmailId || null,
-    };
-
-    this.userService
-      .updateEmailPreferences(preferences)
-      .pipe(finalize(() => this.updatingPreferences.set(false)))
-      .subscribe({
-        next: () => {
-          this.refresh.next();
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Email preferences updated successfully',
-          });
-        },
-        error: () => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to update email preferences',
-          });
-        },
-      });
   }
 
   // Private methods
@@ -224,37 +196,12 @@ export class ProfileEmailComponent {
       this.refresh.pipe(
         switchMap(() =>
           this.userService.getUserEmails().pipe(
-            tap((data) => {
-              this.initializePreferencesForm(data.preferences);
-            }),
+            catchError(() => of(null)),
             finalize(() => this.loading.set(false))
           )
         )
       ),
       { initialValue: null }
     );
-  }
-
-  private initializeEmailOptions(): Signal<EmailOption[]> {
-    return computed(() => {
-      // Only include verified emails in notification preferences
-      const verifiedEmails = this.emails()
-        .filter((email) => email.is_verified)
-        .map((email) => ({
-          label: email.email,
-          value: email.id,
-        }));
-      return verifiedEmails;
-    });
-  }
-
-  private initializePreferencesForm(preferences: EmailPreferences | null): void {
-    if (preferences && this.preferencesForm) {
-      this.preferencesForm.patchValue({
-        meetingEmailId: preferences.meeting_email_id,
-        notificationEmailId: preferences.notification_email_id,
-        billingEmailId: preferences.billing_email_id,
-      });
-    }
   }
 }

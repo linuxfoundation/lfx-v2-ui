@@ -5,6 +5,7 @@ import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   Auth0Identity,
+  EmailManagementData,
   LinkIdentityNatsResponse,
   ListIdentitiesNatsResponse,
   SendEmailVerificationResponse,
@@ -263,6 +264,90 @@ export class EmailVerificationService {
           success: false,
           error: 'Service temporarily unavailable',
           message: 'Unable to reach the identity linking service. Please try again later.',
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      };
+    }
+  }
+
+  /**
+   * Get all emails for the authenticated user from auth-service
+   * @param req - Express request object for logging
+   * @param userIdentifier - User's subject ID (e.g. auth0|123456789), username, or email — sent as raw string to auth-service which resolves it without JWT audience validation
+   * @returns Primary email and list of alternate emails
+   */
+  public async getUserEmails(req: Request, userIdentifier: string): Promise<EmailManagementData | null> {
+    const codec = this.natsService.getCodec();
+
+    logger.debug(req, 'get_user_emails', 'Fetching user emails via NATS');
+
+    try {
+      const response = await this.natsService.request(NatsSubjects.USER_EMAILS_READ, codec.encode(userIdentifier), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
+
+      const responseText = codec.decode(response.data);
+      const parsed = JSON.parse(responseText);
+
+      if (!parsed.success || !parsed.data) {
+        logger.warning(req, 'get_user_emails', 'NATS user_emails.read returned unsuccessful', {
+          error: parsed.error,
+          message: parsed.message,
+        });
+        return null;
+      }
+
+      logger.debug(req, 'get_user_emails', 'Fetched user emails', {
+        alternate_count: parsed.data.alternate_emails?.length ?? 0,
+      });
+
+      return parsed.data as EmailManagementData;
+    } catch (error) {
+      logger.warning(req, 'get_user_emails', 'Failed to fetch user emails via NATS', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Set an alternate email as the primary email for the user
+   * @param req - Express request object for logging
+   * @param authToken - Management token with sufficient scope (Flow C or M2M)
+   * @param email - The email address to make primary
+   * @returns Response indicating success or failure
+   */
+  public async setPrimaryEmail(req: Request, authToken: string, email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const codec = this.natsService.getCodec();
+
+    logger.debug(req, 'set_primary_email', 'Setting primary email via NATS', { email });
+
+    try {
+      const payload = JSON.stringify({ auth_token: authToken, email });
+      const response = await this.natsService.request(NatsSubjects.USER_EMAILS_SET_PRIMARY, codec.encode(payload), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
+
+      const responseText = codec.decode(response.data);
+      const parsed = JSON.parse(responseText);
+
+      logger.debug(req, 'set_primary_email', 'NATS set_primary_email response', {
+        success: parsed.success,
+        error: parsed.error,
+      });
+
+      return parsed;
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        return {
+          success: false,
+          error: 'Service temporarily unavailable',
+          message: 'Unable to reach the email service. Please try again later.',
         };
       }
 

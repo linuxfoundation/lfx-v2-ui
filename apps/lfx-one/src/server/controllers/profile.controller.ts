@@ -3,7 +3,6 @@
 
 import { AUTH0_TO_CDP_PROVIDER_MAP, CDP_PLATFORM_ICONS, CDP_TO_AUTH0_PROVIDER_MAP, IDENTITY_DISPLAY_PLATFORMS } from '@lfx-one/shared/constants';
 import {
-  AddEmailRequest,
   Auth0Identity,
   CdpIdentity,
   CdpWorkExperienceRequest,
@@ -12,7 +11,6 @@ import {
   IdentityDisplayState,
   ProfileAuthStatus,
   ProfileUpdateRequest,
-  UpdateEmailPreferencesRequest,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserProfile,
@@ -27,7 +25,6 @@ import { EmailVerificationService } from '../services/email-verification.service
 import { logger } from '../services/logger.service';
 import { ProfileAuthService } from '../services/profile-auth.service';
 import { SocialVerificationService } from '../services/social-verification.service';
-import { SupabaseService } from '../services/supabase.service';
 import { UserService } from '../services/user.service';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
@@ -41,7 +38,6 @@ export class ProfileController {
   private emailVerificationService: EmailVerificationService = new EmailVerificationService();
   private profileAuthService: ProfileAuthService = new ProfileAuthService();
   private socialVerificationService: SocialVerificationService = new SocialVerificationService();
-  private supabaseService: SupabaseService = new SupabaseService();
   private userService: UserService = new UserService();
 
   /**
@@ -289,42 +285,37 @@ export class ProfileController {
   }
 
   /**
-   * GET /api/profile/emails - Get current user's email management data
+   * GET /api/profile/emails - Get current user's email management data from auth-service via NATS
    */
   public async getUserEmails(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_emails');
 
     try {
-      const username = await getUsernameFromAuth(req);
+      const userSub = req.oidc?.user?.['sub'] as string | undefined;
 
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'get_user_emails',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!userSub) {
+        return next(
+          ServiceValidationError.forField('user_id', 'User authentication required', {
+            operation: 'get_user_emails',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
       }
 
-      const userId = await this.supabaseService.getUser(username);
+      const emailData = await this.emailVerificationService.getUserEmails(req, userSub);
 
-      if (!userId) {
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
-          operation: 'get_user_emails',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!emailData) {
+        return next(
+          new MicroserviceError('Failed to fetch email data from auth-service', 502, 'BAD_GATEWAY', {
+            operation: 'get_user_emails',
+            service: 'profile_controller',
+          })
+        );
       }
-
-      const emailData = await this.supabaseService.getEmailManagementData(userId.id);
 
       logger.success(req, 'get_user_emails', startTime, {
-        user_id: userId.id,
-        email_count: emailData.emails.length,
-        has_preferences: !!emailData.preferences,
+        alternate_email_count: emailData.alternate_emails?.length ?? 0,
       });
 
       res.json(emailData);
@@ -334,311 +325,96 @@ export class ProfileController {
   }
 
   /**
-   * POST /api/profile/emails - Add new email for current user
-   */
-  public async addUserEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'add_user_email', {
-      request_body_keys: Object.keys(req.body),
-    });
-
-    try {
-      const username = await getUsernameFromAuth(req);
-
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'add_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const user = await this.supabaseService.getUser(username);
-
-      if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
-          operation: 'add_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const { email }: AddEmailRequest = req.body;
-
-      if (!email || typeof email !== 'string') {
-        const validationError = ServiceValidationError.forField('email', 'Valid email address is required', {
-          operation: 'add_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        const validationError = ServiceValidationError.forField('email', 'Invalid email format', {
-          operation: 'add_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const newEmail = await this.supabaseService.addUserEmail(user.id, email);
-
-      logger.success(req, 'add_user_email', startTime, {
-        user_id: user.id,
-        email_id: newEmail.id,
-        email: newEmail.email,
-      });
-
-      res.status(201).json(newEmail);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('already in use')) {
-        const validationError = ServiceValidationError.forField('email', error.message, {
-          operation: 'add_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-        return next(validationError);
-      }
-      next(error);
-    }
-  }
-
-  /**
-   * DELETE /api/profile/emails/:emailId - Delete user email
+   * DELETE /api/profile/emails/:email - Delete (unlink) a user email via auth-service NATS
+   * The :email param is the URL-encoded email address to remove
    */
   public async deleteUserEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'delete_user_email', {
-      email_id: req.params['emailId'],
-    });
+    const emailAddress = decodeURIComponent(req.params['emailId'] ?? '');
+    const startTime = logger.startOperation(req, 'delete_user_email', { email: emailAddress });
 
     try {
-      const username = await getUsernameFromAuth(req);
-      const emailId = req.params['emailId'];
-
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'delete_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!emailAddress) {
+        return next(
+          ServiceValidationError.forField('email', 'Email address is required', {
+            operation: 'delete_user_email',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
       }
 
-      if (!emailId) {
-        const validationError = ServiceValidationError.forField('email_id', 'Email ID is required', {
-          operation: 'delete_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
+      const authToken = await this.profileAuthService.getManagementToken(req);
 
-        return next(validationError);
+      if (!authToken) {
+        return next(
+          new AuthenticationError('Unable to obtain management token for identity unlink', {
+            operation: 'delete_user_email',
+          })
+        );
       }
 
-      const user = await this.supabaseService.getUser(username);
+      const result = await this.emailVerificationService.unlinkIdentity(req, authToken, 'email', emailAddress);
 
-      if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
-          operation: 'delete_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!result.success) {
+        return next(
+          new MicroserviceError(result.message || 'Failed to delete email address', 502, 'BAD_GATEWAY', {
+            operation: 'delete_user_email',
+            service: 'profile_controller',
+          })
+        );
       }
 
-      await this.supabaseService.deleteUserEmail(emailId, user.id);
-
-      logger.success(req, 'delete_user_email', startTime, {
-        user_id: user.id,
-        email_id: emailId,
-      });
+      logger.success(req, 'delete_user_email', startTime, { email: emailAddress });
 
       res.status(204).send();
     } catch (error) {
-      if (error instanceof Error && (error.message.includes('Cannot delete') || error.message.includes('last email'))) {
-        const validationError = ServiceValidationError.forField('email_id', error.message, {
-          operation: 'delete_user_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-        return next(validationError);
-      }
       next(error);
     }
   }
 
   /**
-   * PUT /api/profile/emails/:emailId/primary - Set email as primary
+   * PUT /api/profile/emails/:email/primary - Set email as primary via auth-service NATS
+   * The :email param is the URL-encoded email address to make primary
    */
   public async setPrimaryEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'set_primary_email', {
-      email_id: req.params['emailId'],
-    });
+    const emailAddress = decodeURIComponent(req.params['emailId'] ?? '');
+    const startTime = logger.startOperation(req, 'set_primary_email', { email: emailAddress });
 
     try {
-      const username = await getUsernameFromAuth(req);
-      const emailId = req.params['emailId'];
-
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'set_primary_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!emailAddress) {
+        return next(
+          ServiceValidationError.forField('email', 'Email address is required', {
+            operation: 'set_primary_email',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
       }
 
-      if (!emailId) {
-        const validationError = ServiceValidationError.forField('email_id', 'Email ID is required', {
-          operation: 'set_primary_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
+      const authToken = await this.profileAuthService.getManagementToken(req);
 
-        return next(validationError);
+      if (!authToken) {
+        return next(
+          new AuthenticationError('Unable to obtain management token for set primary email', {
+            operation: 'set_primary_email',
+          })
+        );
       }
 
-      const user = await this.supabaseService.getUser(username);
+      const result = await this.emailVerificationService.setPrimaryEmail(req, authToken, emailAddress);
 
-      if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
-          operation: 'set_primary_email',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
+      if (!result.success) {
+        return next(
+          new MicroserviceError(result.message || 'Failed to set primary email', 502, 'BAD_GATEWAY', {
+            operation: 'set_primary_email',
+            service: 'profile_controller',
+          })
+        );
       }
 
-      await this.supabaseService.setPrimaryEmail(user.id, emailId);
-
-      logger.success(req, 'set_primary_email', startTime, {
-        user_id: user.id,
-        email_id: emailId,
-      });
+      logger.success(req, 'set_primary_email', startTime, { email: emailAddress });
 
       res.status(200).json({ message: 'Primary email updated successfully' });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * GET /api/profile/email-preferences - Get user email preferences
-   */
-  public async getEmailPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'get_email_preferences');
-
-    try {
-      const username = await getUsernameFromAuth(req);
-
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'get_email_preferences',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const user = await this.supabaseService.getUser(username);
-
-      if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'get_email_preferences',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const preferences = await this.supabaseService.getEmailPreferences(user.id);
-
-      logger.success(req, 'get_email_preferences', startTime, {
-        user_id: user.id,
-        has_preferences: !!preferences,
-      });
-
-      res.json(preferences);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * PUT /api/profile/email-preferences - Update user email preferences
-   */
-  public async updateEmailPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const startTime = logger.startOperation(req, 'update_email_preferences', {
-      request_body_keys: Object.keys(req.body),
-    });
-
-    try {
-      const username = await getUsernameFromAuth(req);
-
-      if (!username) {
-        const validationError = ServiceValidationError.forField('user_id', 'User authentication required', {
-          operation: 'update_email_preferences',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const user = await this.supabaseService.getUser(username);
-
-      if (!user) {
-        const validationError = ServiceValidationError.forField('user_id', 'User not found', {
-          operation: 'update_email_preferences',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const preferences: UpdateEmailPreferencesRequest = req.body;
-      const allowedFields = ['meeting_email_id', 'notification_email_id', 'billing_email_id'];
-      const updateData: any = {};
-
-      for (const [key, value] of Object.entries(preferences)) {
-        if (allowedFields.includes(key)) {
-          updateData[key] = value;
-        }
-      }
-
-      if (Object.keys(updateData).length === 0) {
-        const validationError = ServiceValidationError.forField('request_body', 'No valid fields provided for update', {
-          operation: 'update_email_preferences',
-          service: 'profile_controller',
-          path: req.path,
-        });
-
-        return next(validationError);
-      }
-
-      const updatedPreferences = await this.supabaseService.updateEmailPreferences(user.id, updateData);
-
-      logger.success(req, 'update_email_preferences', startTime, {
-        user_id: user.id,
-        updated_fields: Object.keys(updateData),
-      });
-
-      res.json(updatedPreferences);
     } catch (error) {
       next(error);
     }
@@ -697,6 +473,55 @@ export class ProfileController {
 
       res.json(tokenInfo);
     } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/profile/reset-password - Send password reset email via LF Login service
+   * Forwards the user's bearer token to the LF Login backend which triggers the reset email
+   */
+  public async sendPasswordResetEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'send_password_reset_email');
+
+    try {
+      const bearerToken = req.bearerToken;
+      const userEmail = (req.oidc?.user?.['email'] as string | undefined) || 'your registered email address';
+
+      if (!bearerToken) {
+        return next(
+          ServiceValidationError.forField('token', 'Authentication required', {
+            operation: 'send_password_reset_email',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
+      }
+
+      const lfLoginUrl = this.getLfLoginUrl();
+      const response = await fetch(`${lfLoginUrl}/api/user/password-link`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new MicroserviceError(`LF Login password reset failed: ${response.statusText}`, response.status, 'LF_LOGIN_ERROR', {
+          operation: 'send_password_reset_email',
+          service: 'profile_controller',
+          path: req.path,
+          errorBody: errorText,
+        });
+      }
+
+      logger.success(req, 'send_password_reset_email', startTime, { email: userEmail });
+
+      res.json({ message: `A password reset link has been sent to ${userEmail}.` });
+    } catch (error) {
+      logger.error(req, 'send_password_reset_email', startTime, error, {});
       next(error);
     }
   }
@@ -1774,6 +1599,26 @@ export class ProfileController {
    * 4. In CDP but NOT in auth-service, multi-LFID + verifiedBy=lfxOne → HIDDEN
    * 5. In CDP but NOT in auth-service (all other) → UNVERIFIED
    */
+  /**
+   * Derive the LF Login base URL from PCC_AUTH0_ISSUER_BASE_URL
+   */
+  private getLfLoginUrl(): string {
+    const issuerUrl = process.env['PCC_AUTH0_ISSUER_BASE_URL'] || '';
+
+    if (issuerUrl.includes('-dev')) {
+      return 'https://lf-login.dev.platform.linuxfoundation.org';
+    }
+    if (issuerUrl.includes('-staging') || issuerUrl.includes('-stg')) {
+      return 'https://lf-login.staging.platform.linuxfoundation.org';
+    }
+
+    if (!issuerUrl) {
+      logger.warning(undefined, 'get_lf_login_url', 'PCC_AUTH0_ISSUER_BASE_URL is not set, defaulting to production LF Login URL', {});
+    }
+
+    return 'https://lf-login.platform.linuxfoundation.org';
+  }
+
   private reconcileIdentities(
     req: Request,
     cdpIdentities: CdpIdentity[],

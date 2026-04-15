@@ -5,14 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import {
-  AddEmailRequest,
   CdpProjectAffiliation,
   ChangePasswordRequest,
   ProjectAffiliationPatchBody,
   CombinedProfile,
   CreateUserPermissionRequest,
   EmailManagementData,
-  EmailPreferences,
   EnrichedIdentity,
   Meeting,
   PastMeeting,
@@ -20,9 +18,7 @@ import {
   ProfileUpdateRequest,
   SendEmailVerificationResponse,
   TwoFactorSettings,
-  UpdateEmailPreferencesRequest,
   User,
-  UserEmail,
   VerifyAndLinkEmailResponse,
   WorkExperience,
   WorkExperienceCreateUpdateBody,
@@ -66,46 +62,26 @@ export class UserService {
   // Email management methods
 
   /**
-   * Get current user's email management data (emails + preferences)
+   * Get current user's email management data from auth-service via NATS
    */
   public getUserEmails(): Observable<EmailManagementData> {
     return this.http.get<EmailManagementData>('/api/profile/emails');
   }
 
   /**
-   * Add a new email address for the current user
+   * Delete an email address (unlinks the identity from auth0)
+   * @param email - The email address to delete
    */
-  public addEmail(email: string): Observable<UserEmail> {
-    const data: AddEmailRequest = { email };
-    return this.http.post<UserEmail>('/api/profile/emails', data).pipe(take(1));
-  }
-
-  /**
-   * Delete an email address
-   */
-  public deleteEmail(emailId: string): Observable<void> {
-    return this.http.delete<void>(`/api/profile/emails/${emailId}`).pipe(take(1));
+  public deleteEmail(email: string): Observable<void> {
+    return this.http.delete<void>(`/api/profile/emails/${encodeURIComponent(email)}`).pipe(take(1));
   }
 
   /**
    * Set an email as the primary email
+   * @param email - The email address to make primary
    */
-  public setPrimaryEmail(emailId: string): Observable<{ message: string }> {
-    return this.http.put<{ message: string }>(`/api/profile/emails/${emailId}/primary`, {}).pipe(take(1));
-  }
-
-  /**
-   * Get email preferences
-   */
-  public getEmailPreferences(): Observable<EmailPreferences | null> {
-    return this.http.get<EmailPreferences | null>('/api/profile/email-preferences').pipe(take(1));
-  }
-
-  /**
-   * Update email preferences
-   */
-  public updateEmailPreferences(preferences: UpdateEmailPreferencesRequest): Observable<EmailPreferences> {
-    return this.http.put<EmailPreferences>('/api/profile/email-preferences', preferences).pipe(take(1));
+  public setPrimaryEmail(email: string): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(`/api/profile/emails/${encodeURIComponent(email)}/primary`, {}).pipe(take(1));
   }
 
   // Password management methods
