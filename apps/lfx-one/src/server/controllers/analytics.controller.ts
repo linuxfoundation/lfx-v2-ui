@@ -219,6 +219,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(projectSlug)) {
+        throw ServiceValidationError.forField('projectSlug', 'Invalid projectSlug format', {
+          operation: 'get_membership_tier',
+        });
+      }
+
       const response = await this.organizationService.getMembershipTier(accountId, projectSlug);
 
       logger.success(req, 'get_membership_tier', startTime, {
@@ -349,6 +355,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(projectSlug)) {
+        throw ServiceValidationError.forField('projectSlug', 'Invalid projectSlug format', {
+          operation: 'get_training_enrollments',
+        });
+      }
+
       const response = await this.organizationService.getTrainingEnrollments(accountId, projectSlug);
 
       logger.success(req, 'get_training_enrollments', startTime, {
@@ -441,6 +453,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
+          operation: 'get_project_issues_resolution',
+        });
+      }
+
       const response = await this.projectService.getProjectIssuesResolution(slug, entityType);
 
       logger.success(req, 'get_project_issues_resolution', startTime, {
@@ -490,6 +508,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
+          operation: 'get_project_pull_requests_weekly',
+        });
+      }
+
       const response = await this.projectService.getProjectPullRequestsWeekly(slug, entityType);
 
       logger.success(req, 'get_project_pull_requests_weekly', startTime, {
@@ -519,6 +543,12 @@ export class AnalyticsController {
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
+          operation: 'get_contributors_mentored',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_contributors_mentored',
         });
       }
@@ -565,6 +595,12 @@ export class AnalyticsController {
       // Validate entityType
       if (entityType !== 'foundation' && entityType !== 'project') {
         throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_unique_contributors_weekly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_unique_contributors_weekly',
         });
       }
@@ -1169,6 +1205,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
+          operation: 'get_health_metrics_daily',
+        });
+      }
+
       const response = await this.projectService.getHealthMetricsDaily(slug, entityType);
 
       logger.success(req, 'get_health_metrics_daily', startTime, {
@@ -1211,6 +1253,12 @@ export class AnalyticsController {
       // Validate entityType
       if (entityType !== 'foundation' && entityType !== 'project') {
         throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_unique_contributors_daily',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_unique_contributors_daily',
         });
       }
@@ -1261,6 +1309,12 @@ export class AnalyticsController {
         });
       }
 
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
+          operation: 'get_health_events_monthly',
+        });
+      }
+
       const response = await this.projectService.getHealthEventsMonthly(slug, entityType);
 
       logger.success(req, 'get_health_events_monthly', startTime, {
@@ -1303,6 +1357,12 @@ export class AnalyticsController {
       // Validate entityType
       if (entityType !== 'foundation' && entityType !== 'project') {
         throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+          operation: 'get_code_commits_daily',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_code_commits_daily',
         });
       }

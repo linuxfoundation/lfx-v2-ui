@@ -1892,7 +1892,7 @@ export class ProjectService {
     } catch (error) {
       logger.warning(undefined, 'get_email_ctr', 'Failed to fetch email CTR from Snowflake', {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return { currentCtr: 0, changePercentage: 0, trend: 'up', monthlyData: [], monthlyLabels: [], campaignGroups: [], monthlySends: [], monthlyOpens: [] };
     }
@@ -2009,7 +2009,7 @@ export class ProjectService {
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return {
         totalReach: 0,
@@ -2212,7 +2212,7 @@ export class ProjectService {
     } catch (error) {
       logger.warning(undefined, 'get_social_media', 'Failed to fetch social media data, returning defaults', {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return {
         totalFollowers: 0,
@@ -3413,6 +3413,7 @@ export class ProjectService {
    * Queries ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_EVENT_GROWTH (single row YTD) and EVENT_GROWTH_TOP_EVENTS
    */
   public async getEventGrowth(foundationSlug: string): Promise<EventGrowthResponse> {
+    const startTime = Date.now();
     logger.debug(undefined, 'get_event_growth', 'Fetching event growth from Snowflake', { foundation_slug: foundationSlug });
 
     const defaultResponse: EventGrowthResponse = {
@@ -3548,9 +3549,8 @@ export class ProjectService {
         topEvents,
       };
     } catch (error) {
-      logger.warning(undefined, 'get_event_growth', 'Failed to fetch event growth from Snowflake', {
+      logger.error(undefined, 'get_event_growth', startTime, error instanceof Error ? error : new Error(String(error)), {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
@@ -3561,6 +3561,7 @@ export class ProjectService {
    * Combines SOCIAL_MEDIA_OVERVIEW (followers) and WEB_ACTIVITIES_SUMMARY (sessions)
    */
   public async getBrandReach(foundationSlug: string): Promise<BrandReachResponse> {
+    const startTime = Date.now();
     logger.debug(undefined, 'get_brand_reach', 'Fetching brand reach from Snowflake', { foundation_slug: foundationSlug });
 
     try {
@@ -3663,9 +3664,8 @@ export class ProjectService {
         weeklyTrend,
       };
     } catch (error) {
-      logger.warning(undefined, 'get_brand_reach', 'Failed to fetch brand reach from Snowflake', {
+      logger.error(undefined, 'get_brand_reach', startTime, error instanceof Error ? error : new Error(String(error)), {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
@@ -3676,6 +3676,7 @@ export class ProjectService {
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
    */
   public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+    const startTime = Date.now();
     logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
 
     const defaultResponse: BrandHealthResponse = {
@@ -3802,9 +3803,8 @@ export class ProjectService {
         topProjects,
       };
     } catch (error) {
-      logger.warning(undefined, 'get_brand_health', 'Failed to fetch brand health from Snowflake', {
+      logger.error(undefined, 'get_brand_health', startTime, error instanceof Error ? error : new Error(String(error)), {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
@@ -3815,6 +3815,7 @@ export class ProjectService {
    * Queries ANALYTICS.PLATINUM_LFX_ONE.PIPELINE_SUMMARY and PAID_ADS_ATTRIBUTION
    */
   public async getRevenueImpact(foundationSlug: string): Promise<RevenueImpactResponse> {
+    const startTime = Date.now();
     logger.debug(undefined, 'get_revenue_impact', 'Fetching revenue impact from Snowflake', { foundation_slug: foundationSlug });
 
     try {
@@ -4132,9 +4133,8 @@ export class ProjectService {
         },
       };
     } catch (error) {
-      logger.warning(undefined, 'get_revenue_impact', 'Failed to fetch revenue impact from Snowflake', {
+      logger.error(undefined, 'get_revenue_impact', startTime, error instanceof Error ? error : new Error(String(error)), {
         foundation_slug: foundationSlug,
-        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
