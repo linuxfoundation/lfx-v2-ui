@@ -44,6 +44,7 @@ export class VisaRequestApplicationDialogComponent {
   protected applicantData = signal<VisaRequestApplicantInfo | null>(null);
   protected submitting = signal(false);
   protected submitted = signal(false);
+  protected submittedEventName = signal('');
 
   protected readonly isNextDisabled = computed(() => {
     if (this.step() === 'select-event') return !this.selectedEvent();
@@ -105,6 +106,7 @@ export class VisaRequestApplicationDialogComponent {
       .subscribe({
         next: (response) => {
           if (response.success) {
+            this.submittedEventName.set(event.name);
             this.submitted.set(true);
           } else {
             this.messageService.add({

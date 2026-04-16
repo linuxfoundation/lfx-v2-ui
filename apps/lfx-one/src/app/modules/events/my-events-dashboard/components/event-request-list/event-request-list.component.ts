@@ -11,6 +11,7 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import { PageChangeEvent, RequestType, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, finalize, map, of, skip, switchMap, tap } from 'rxjs';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
@@ -26,6 +27,7 @@ export class EventRequestListComponent {
   private readonly eventsService = inject(EventsService);
   private readonly dialogService = inject(DialogService);
   private readonly userService = inject(UserService);
+  private readonly messageService = inject(MessageService);
 
   public readonly requestType = input.required<RequestType>();
   public readonly searchQuery = input<string>('');
@@ -115,7 +117,14 @@ export class EventRequestListComponent {
           const emptyResponse = requestType === 'visa' ? EMPTY_VISA_REQUESTS_RESPONSE : EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE;
           const fetch$ = requestType === 'visa' ? this.eventsService.getVisaRequests(params) : this.eventsService.getTravelFundRequests(params);
           return fetch$.pipe(
-            catchError(() => of(emptyResponse)),
+            catchError(() => {
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to load requests. Please try again.',
+              });
+              return of(emptyResponse);
+            }),
             finalize(() => this.loading.set(false))
           );
         })

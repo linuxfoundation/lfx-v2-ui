@@ -13,6 +13,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { ACCOMMODATION_PAID_BY_OPTIONS, ATTENDEE_TYPE_OPTIONS, COUNTRIES } from '@lfx-one/shared/constants';
 import { AttendeeAccommodationPaidBy, AttendeeType, OrgSearchResult, VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
 import { catchError, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 
@@ -25,6 +26,7 @@ import { catchError, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 export class VisaRequestApplyFormComponent {
   private readonly userService = inject(UserService);
   private readonly eventsService = inject(EventsService);
+  private readonly messageService = inject(MessageService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   public readonly formValidityChange = output<boolean>();
@@ -101,7 +103,14 @@ export class VisaRequestApplyFormComponent {
           }
           return this.eventsService.searchOrganizations(query).pipe(
             map((response) => response.data),
-            catchError(() => of([]))
+            catchError(() => {
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to search organizations. Please try again.',
+              });
+              return of([]);
+            })
           );
         })
       ),
