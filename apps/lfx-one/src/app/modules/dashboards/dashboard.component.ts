@@ -54,6 +54,10 @@ export class DashboardComponent {
     afterNextRender(() => {
       let index = 0;
       const interval = setInterval(() => {
+        if (this.personaLoaded()) {
+          clearInterval(interval);
+          return;
+        }
         index = (index + 1) % LOADING_MESSAGES.length;
         this.loadingText.set(LOADING_MESSAGES[index]);
       }, 2000);

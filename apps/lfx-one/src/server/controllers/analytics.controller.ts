@@ -2549,39 +2549,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_multi_foundation_summary');
 
     try {
-      const slugsParam = getStringQueryParam(req, 'slugs');
-
-      if (!slugsParam) {
-        throw ServiceValidationError.forField('slugs', 'slugs query parameter is required', {
-          operation: 'get_multi_foundation_summary',
-        });
-      }
-
-      const slugs = slugsParam
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-
-      if (slugs.length === 0) {
-        throw ServiceValidationError.forField('slugs', 'At least one foundation slug is required', {
-          operation: 'get_multi_foundation_summary',
-        });
-      }
-
-      if (slugs.length > 10) {
-        throw ServiceValidationError.forField('slugs', 'Maximum of 10 foundation slugs allowed per request', {
-          operation: 'get_multi_foundation_summary',
-        });
-      }
-
-      // Validate each slug format
-      for (const slug of slugs) {
-        if (!SLUG_PATTERN.test(slug) || slug.length > NAME_MAX_LENGTH) {
-          throw ServiceValidationError.forField('slugs', `Invalid foundation slug format: ${slug}`, {
-            operation: 'get_multi_foundation_summary',
-          });
-        }
-      }
+      const slugs = this.parseAndValidateSlugs(req);
 
       const response = await this.projectService.getMultiFoundationSummary(req, slugs);
 
@@ -2596,5 +2564,46 @@ export class AnalyticsController {
     } catch (error) {
       return next(error);
     }
+  }
+
+  /**
+   * Parse and validate a comma-separated slugs query parameter.
+   * @throws ServiceValidationError if the parameter is missing, empty, exceeds max count, or has invalid format
+   */
+  private parseAndValidateSlugs(req: Request, maxCount: number = 10): string[] {
+    const slugsParam = getStringQueryParam(req, 'slugs');
+
+    if (!slugsParam) {
+      throw ServiceValidationError.forField('slugs', 'slugs query parameter is required', {
+        operation: 'get_multi_foundation_summary',
+      });
+    }
+
+    const slugs = slugsParam
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    if (slugs.length === 0) {
+      throw ServiceValidationError.forField('slugs', 'At least one foundation slug is required', {
+        operation: 'get_multi_foundation_summary',
+      });
+    }
+
+    if (slugs.length > maxCount) {
+      throw ServiceValidationError.forField('slugs', `Maximum of ${maxCount} foundation slugs allowed per request`, {
+        operation: 'get_multi_foundation_summary',
+      });
+    }
+
+    for (const slug of slugs) {
+      if (!SLUG_PATTERN.test(slug) || slug.length > NAME_MAX_LENGTH) {
+        throw ServiceValidationError.forField('slugs', `Invalid foundation slug format: ${slug}`, {
+          operation: 'get_multi_foundation_summary',
+        });
+      }
+    }
+
+    return slugs;
   }
 }

@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { FoundationHealthScoreDistributionResponse } from './analytics-data.interface';
+
 /** Row in the "My Foundations and Projects" table */
 export interface PersonaProjectRow {
   projectUid: string;
@@ -21,14 +23,6 @@ export interface PersonaProjectRow {
   votingStatus: string | null;
 }
 
-/** Aggregated health summary across user foundations */
-export interface FoundationHealthSummaryData {
-  totalValue: number;
-  totalProjects: number;
-  totalMembers: number;
-  metricsTracked: number;
-}
-
 /** Summary pills data */
 export interface DashboardSummaryPills {
   foundationCount: number;
@@ -36,6 +30,12 @@ export interface DashboardSummaryPills {
   openSurveys: number;
   meetingsThisWeek: number;
   itemsNeedReview: number;
+}
+
+/** Role group for dashboard role summary display */
+export interface RoleGroup {
+  label: string;
+  names: string[];
 }
 
 /** Typed shape of the board_member detection extra payload from persona service */
@@ -65,13 +65,7 @@ export interface PerFoundationAnalytics {
   totalProjects: number;
   totalMembers: number;
   totalValue: number;
-  healthScores: {
-    excellent: number;
-    healthy: number;
-    stable: number;
-    unsteady: number;
-    critical: number;
-  };
+  healthScores: FoundationHealthScoreDistributionResponse;
 }
 
 /** Response from GET /api/analytics/multi-foundation-summary */

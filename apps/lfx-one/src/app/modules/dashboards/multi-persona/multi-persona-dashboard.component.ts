@@ -1,20 +1,24 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import {
   BoardMemberDetectionExtra,
   CommitteeMemberDetectionExtra,
   DashboardSummaryPills,
   EnrichedPersonaProject,
+  FoundationHealthScoreDistributionResponse,
   MultiFoundationSummaryResponse,
   PendingActionItem,
   PerFoundationAnalytics,
   PersonaProjectRow,
   ProjectContext,
+  Meeting,
+  RoleGroup,
 } from '@lfx-one/shared/interfaces';
 import { SurveyStatus } from '@lfx-one/shared/enums';
+import { getActiveOccurrences } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { LensService } from '@services/lens.service';
@@ -24,10 +28,30 @@ import { ProjectService } from '@services/project.service';
 import { SurveyService } from '@services/survey.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { BehaviorSubject, catchError, combineLatest, filter, map, of, switchMap, take } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, filter, forkJoin, map, of, switchMap, take } from 'rxjs';
 
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
 import { PendingActionsComponent } from '../components/pending-actions/pending-actions.component';
+
+const ROLE_PRIORITY: string[] = [
+  'Executive Director',
+  'Chair',
+  'Vice Chair',
+  'Treasurer',
+  'Secretary',
+  'Counsel',
+  'Director',
+  'Lead',
+  'TAC/TOC Representative',
+  'LF Staff',
+  'Developer Seat',
+  'Maintainer',
+  'Contributor',
+  'Member',
+  'None',
+];
+
+const VOTING_PRIORITY: string[] = ['Voting Rep', 'Alternate Voting Rep', 'Observer', 'Emeritus', 'None'];
 
 @Component({
   selector: 'lfx-multi-persona-dashboard',
@@ -46,26 +70,6 @@ export class MultiPersonaDashboardComponent {
   private readonly hiddenActionsService = inject(HiddenActionsService);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
-
-  private readonly rolePriority: string[] = [
-    'Executive Director',
-    'Chair',
-    'Vice Chair',
-    'Treasurer',
-    'Secretary',
-    'Counsel',
-    'Director',
-    'Lead',
-    'TAC/TOC Representative',
-    'LF Staff',
-    'Developer Seat',
-    'Maintainer',
-    'Contributor',
-    'Member',
-    'None',
-  ];
-
-  private readonly votingPriority: string[] = ['Voting Rep', 'Alternate Voting Rep', 'Observer', 'Emeritus', 'None'];
 
   // All detected projects (foundations + projects)
   protected readonly allProjects: Signal<EnrichedPersonaProject[]> = computed(() => this.personaService.detectedProjects());
@@ -86,10 +90,12 @@ export class MultiPersonaDashboardComponent {
   });
 
   protected readonly subtitleText: Signal<string> = this.initSubtitleText();
-  protected readonly roleGroups: Signal<{ label: string; names: string[] }[]> = this.initRoleGroups();
+  protected readonly roleGroups: Signal<RoleGroup[]> = this.initRoleGroups();
   protected readonly analyticsSummary: Signal<MultiFoundationSummaryResponse | null> = this.initAnalyticsSummary();
   protected readonly projectRows: Signal<PersonaProjectRow[]> = this.initProjectRows();
+  protected readonly summaryPillsLoading = signal(true);
   protected readonly summaryPills: Signal<DashboardSummaryPills> = this.initSummaryPills();
+  protected readonly pendingActionsLoading = signal(true);
   protected readonly pendingActions: Signal<PendingActionItem[]> = this.initPendingActions();
 
   public openRow(row: PersonaProjectRow): void {
@@ -140,10 +146,10 @@ export class MultiPersonaDashboardComponent {
     });
   }
 
-  private initRoleGroups(): Signal<{ label: string; names: string[] }[]> {
+  private initRoleGroups(): Signal<RoleGroup[]> {
     return computed(() => {
       const projects = this.allProjects();
-      const groups: { label: string; names: string[] }[] = [];
+      const groups: RoleGroup[] = [];
 
       const edProjects = projects.filter((p) => p.personas.includes('executive-director'));
       const boardProjects = projects.filter((p) => p.personas.includes('board-member'));
@@ -208,8 +214,8 @@ export class MultiPersonaDashboardComponent {
         if (a.type !== b.type) {
           return a.type === 'foundation' ? -1 : 1;
         }
-        const aRoleIdx = this.rolePriority.indexOf(a.role);
-        const bRoleIdx = this.rolePriority.indexOf(b.role);
+        const aRoleIdx = ROLE_PRIORITY.indexOf(a.role);
+        const bRoleIdx = ROLE_PRIORITY.indexOf(b.role);
         const roleCompare = (aRoleIdx === -1 ? 999 : aRoleIdx) - (bRoleIdx === -1 ? 999 : bRoleIdx);
         if (roleCompare !== 0) return roleCompare;
         return a.projectName.localeCompare(b.projectName);
@@ -225,19 +231,11 @@ export class MultiPersonaDashboardComponent {
         this.userService.getUserMeetings().pipe(catchError(() => of([]))),
       ]).pipe(
         map(([projects, surveys, meetings]) => {
+          this.summaryPillsLoading.set(false);
           const foundationCount = projects.filter((p) => p.isFoundation).length;
           const projectCount = projects.filter((p) => !p.isFoundation).length;
           const openSurveys = surveys.filter((s) => s.survey_status === SurveyStatus.OPEN || s.survey_status === SurveyStatus.SENT).length;
-          const now = new Date();
-          const startOfWeek = new Date(now);
-          startOfWeek.setDate(now.getDate() - now.getDay());
-          startOfWeek.setHours(0, 0, 0, 0);
-          const endOfWeek = new Date(startOfWeek);
-          endOfWeek.setDate(startOfWeek.getDate() + 7);
-          const meetingsThisWeek = meetings.filter((m) => {
-            const meetingDate = new Date(m.start_time || m.created_at);
-            return meetingDate >= startOfWeek && meetingDate < endOfWeek;
-          }).length;
+          const meetingsThisWeek = this.countMeetingsThisWeek(meetings);
 
           return {
             foundationCount,
@@ -255,15 +253,26 @@ export class MultiPersonaDashboardComponent {
   private initPendingActions(): Signal<PendingActionItem[]> {
     return toSignal(
       this.refresh$.pipe(
-        switchMap(() => toObservable(this.userFoundations).pipe(take(1))),
-        switchMap((foundations) => {
-          if (foundations.length === 0) return of([]);
-          const first = foundations[0];
-          return this.projectService
-            .getPendingActions(first.projectSlug, first.projectUid, this.personaService.currentPersona())
-            .pipe(catchError(() => of([])));
+        switchMap(() => {
+          this.pendingActionsLoading.set(true);
+          return toObservable(this.userFoundations).pipe(take(1));
         }),
-        map((actions) => actions.filter((item) => !this.hiddenActionsService.isActionHidden(item)).slice(0, 2))
+        switchMap((foundations) => {
+          if (foundations.length === 0) {
+            this.pendingActionsLoading.set(false);
+            return of([]);
+          }
+          const persona = this.personaService.currentPersona();
+          return forkJoin(
+            foundations.map((f) =>
+              this.projectService.getPendingActions(f.projectSlug, f.projectUid, persona).pipe(catchError(() => of([] as PendingActionItem[])))
+            )
+          ).pipe(map((results) => results.flat()));
+        }),
+        map((actions) => {
+          this.pendingActionsLoading.set(false);
+          return actions.filter((item) => !this.hiddenActionsService.isActionHidden(item)).slice(0, 5);
+        })
       ),
       { initialValue: [] }
     );
@@ -278,7 +287,7 @@ export class MultiPersonaDashboardComponent {
     // For sub-projects, show parent foundation name
     const parentFoundation = this.userFoundations().find((f) => f.projectUid === project.parentProjectUid);
     const parentName = parentFoundation?.projectName || '';
-    return parentName ? `${parentName}` : '';
+    return parentName;
   }
 
   private getRowRole(project: EnrichedPersonaProject): string {
@@ -311,7 +320,7 @@ export class MultiPersonaDashboardComponent {
       roles.push('Executive Director');
     }
     if (roles.length === 0) return 'Member';
-    return this.pickByPriority(roles, this.rolePriority) ?? roles[0];
+    return this.pickByPriority(roles, ROLE_PRIORITY) ?? roles[0];
   }
 
   private getHighestVotingStatus(project: EnrichedPersonaProject): string | null {
@@ -325,7 +334,7 @@ export class MultiPersonaDashboardComponent {
       }
     }
     if (statuses.length === 0) return null;
-    return this.pickByPriority(statuses, this.votingPriority) ?? statuses[0];
+    return this.pickByPriority(statuses, VOTING_PRIORITY) ?? statuses[0];
   }
 
   private pickByPriority(values: string[], priority: string[]): string | null {
@@ -337,24 +346,47 @@ export class MultiPersonaDashboardComponent {
     return null;
   }
 
-  private getHealthStatus(scores?: {
-    excellent: number;
-    healthy: number;
-    stable: number;
-    unsteady: number;
-    critical: number;
-  }): 'on-track' | 'watch' | 'needs-attention' {
+  private getHealthStatus(scores?: FoundationHealthScoreDistributionResponse): 'on-track' | 'watch' | 'needs-attention' {
     if (!scores) return 'on-track';
     if (scores.critical + scores.unsteady > 0) return 'needs-attention';
     if (scores.stable > 0) return 'watch';
     return 'on-track';
   }
 
-  private getHealthDetail(scores?: { excellent: number; healthy: number; stable: number; unsteady: number; critical: number }): string {
+  private getHealthDetail(scores?: FoundationHealthScoreDistributionResponse): string {
     if (!scores) return 'On Track';
     const needsAttention = scores.critical + scores.unsteady;
     if (needsAttention > 0) return `${needsAttention} need attention`;
     if (scores.stable > 0) return `${scores.stable} watch`;
     return 'On Track';
+  }
+
+  private countMeetingsThisWeek(meetings: Meeting[]): number {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    let count = 0;
+    for (const meeting of meetings) {
+      if (meeting.occurrences?.length > 0) {
+        // Recurring meeting: count active occurrences this week
+        for (const occ of getActiveOccurrences(meeting.occurrences)) {
+          const occDate = new Date(occ.start_time);
+          if (occDate >= startOfWeek && occDate < endOfWeek) {
+            count++;
+          }
+        }
+      } else {
+        // One-off meeting: check series start_time
+        const meetingDate = new Date(meeting.start_time);
+        if (meetingDate >= startOfWeek && meetingDate < endOfWeek) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 }
