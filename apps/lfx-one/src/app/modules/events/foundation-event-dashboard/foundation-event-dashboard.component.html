@@ -23,9 +23,9 @@
               @if (eventsList.eventsStatsLoading()) {
                 <p class="text-xl font-medium text-gray-400">&mdash;</p>
               } @else {
-                <p class="text-xl font-medium text-gray-900">{{ eventsList.registeredEventsCount() }}</p>
+                <p class="text-xl font-medium text-gray-900">{{ eventsList.tabCounts().upcoming + eventsList.tabCounts().past }}</p>
               }
-              <p class="text-sm font-normal text-gray-900">Registered Events</p>
+              <p class="text-sm font-normal text-gray-900">Total Events</p>
             </div>
           </div>
           <div class="flex items-center gap-3 p-4">

@@ -167,10 +167,10 @@ export class MeetingsDashboardComponent {
 
     // Me lens stat cards (computed from raw meeting signals)
     this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
-    this.upcomingCount = computed(() => this.rawUserMeetings().length);
+    this.upcomingCount = computed(() => this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).length);
     this.nextMeetingDate = this.initNextMeetingDate();
     this.pastThisMonthCount = this.initPastThisMonthCount();
-    this.recurringCount = computed(() => this.rawUserMeetings().filter((m) => m.recurrence !== null).length);
+    this.recurringCount = computed(() => this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).filter((m) => m.recurrence !== null).length);
     this.recordingsAvailableCount = this.initRecordingsAvailableCount();
     this.attendanceRate = this.initAttendanceRate();
     this.recurringAcrossLabel = this.initRecurringAcrossLabel();
@@ -595,7 +595,7 @@ export class MeetingsDashboardComponent {
 
   private initRecurringAcrossLabel(): Signal<string> {
     return computed(() => {
-      const recurring = this.rawUserMeetings().filter((m) => m.recurrence !== null);
+      const recurring = this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).filter((m) => m.recurrence !== null);
       const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
       const count = uniqueProjects.size;
       return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';

@@ -50,8 +50,6 @@ export class EventsListComponent {
     past: this.pastEvents().total,
   }));
 
-  public readonly registeredEventsCount = computed(() => this.upcomingEvents().total);
-
   public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.pastEventsLoading());
 
   public constructor() {

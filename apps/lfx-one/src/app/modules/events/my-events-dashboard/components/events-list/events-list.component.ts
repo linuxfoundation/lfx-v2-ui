@@ -59,7 +59,7 @@ export class EventsListComponent {
 
   // Me lens stat cards (public so parent can render them above filters)
   public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.pastEventsLoading());
-  public readonly registeredCount = computed(() => this.upcomingEvents().total);
+  public readonly registeredCount = computed(() => this.upcomingEvents().data.filter((e) => e.isRegistered).length);
   public readonly attendedCount = computed(() => this.pastEvents().total);
   public readonly nextEventName = computed(() => this.upcomingEvents().data[0]?.name ?? '');
   public readonly availableToJoinCount = computed(() => this.upcomingEvents().data.filter((e) => !e.isRegistered).length);
