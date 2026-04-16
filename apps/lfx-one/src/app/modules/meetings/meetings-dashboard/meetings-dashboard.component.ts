@@ -24,6 +24,7 @@ import {
   debounceTime,
   distinctUntilChanged,
   EMPTY,
+  expand,
   finalize,
   map,
   merge,
@@ -32,6 +33,7 @@ import {
   Subject,
   switchMap,
   tap,
+  toArray,
 } from 'rxjs';
 
 import { MeetingsTopBarComponent } from './components/meetings-top-bar/meetings-top-bar.component';
@@ -110,6 +112,8 @@ export class MeetingsDashboardComponent {
   private pastPageToken = signal<string | undefined>(undefined);
   private loadMoreUpcoming$ = new Subject<string>();
   private loadMorePast$ = new Subject<string>();
+  private fpUpcomingLoading = signal(false);
+  private fpPastLoading = signal(false);
 
   public constructor() {
     // Initialize project context first (needed for reactive data loading)
@@ -181,7 +185,7 @@ export class MeetingsDashboardComponent {
     this.rawFpPastMeetings = this.initializeRawFpPastMeetings();
 
     // Foundation/Project lens stat cards (computed from raw FP signals, not paginated)
-    this.fpStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
+    this.fpStatsLoading = computed(() => this.fpUpcomingLoading() || this.fpPastLoading());
     this.fpUpcomingCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().length : 0));
     this.fpPastCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpPastMeetings().length : 0));
     this.fpRecurringCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().filter((m) => m.recurrence !== null).length : 0));
@@ -616,9 +620,15 @@ export class MeetingsDashboardComponent {
           if (lens === 'me' || !project?.uid) {
             return of([] as Meeting[]);
           }
-          return this.meetingService.getMeetingsByProjectPaginated(project.uid, 50, undefined, undefined, undefined, undefined).pipe(
-            map((r) => this.filterAndSortUpcomingMeetings(r.data)),
-            catchError(() => of([] as Meeting[]))
+          const projectUid = project.uid;
+          this.fpUpcomingLoading.set(true);
+          const fetchPage = (pageToken?: string) => this.meetingService.getMeetingsByProjectPaginated(projectUid, 100, undefined, pageToken);
+          return fetchPage().pipe(
+            expand((response) => (response.page_token ? fetchPage(response.page_token) : EMPTY)),
+            toArray(),
+            map((responses) => this.filterAndSortUpcomingMeetings(responses.flatMap((r) => r.data))),
+            catchError(() => of([] as Meeting[])),
+            finalize(() => this.fpUpcomingLoading.set(false))
           );
         })
       ),
@@ -636,9 +646,15 @@ export class MeetingsDashboardComponent {
           if (lens === 'me' || !project?.uid) {
             return of([] as PastMeeting[]);
           }
-          return this.meetingService.getPastMeetingsByProjectPaginated(project.uid, 50, undefined, undefined, undefined).pipe(
-            map((r) => r.data),
-            catchError(() => of([] as PastMeeting[]))
+          const projectUid = project.uid;
+          this.fpPastLoading.set(true);
+          const fetchPage = (pageToken?: string) => this.meetingService.getPastMeetingsByProjectPaginated(projectUid, 100, pageToken);
+          return fetchPage().pipe(
+            expand((response) => (response.page_token ? fetchPage(response.page_token) : EMPTY)),
+            toArray(),
+            map((responses) => responses.flatMap((r) => r.data)),
+            catchError(() => of([] as PastMeeting[])),
+            finalize(() => this.fpPastLoading.set(false))
           );
         })
       ),
