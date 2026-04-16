@@ -311,5 +311,5 @@ export class MyService {
 The following are **not violations** in this codebase:
 
 - **Missing `ChangeDetectionStrategy.OnPush`** — not required with zoneless change detection
-- **Missing `standalone: true`** — Angular 20+ defaults to standalone
-- **`provideZonelessChangeDetection()`** — this is stable in Angular 20, NOT experimental
+- **Missing `standalone: true`** — Angular defaults components, directives, and pipes to standalone
+- **`provideZonelessChangeDetection()`** — this is stable, NOT experimental

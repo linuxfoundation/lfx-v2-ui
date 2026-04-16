@@ -213,7 +213,7 @@ Now hand off to the built-in `/review` command. This gives the review Claude's b
 
 Use the **Skill** tool to invoke `review` (the built-in `/review` command). Pass the PR number and the compiled context block as args:
 
-```
+```text
 <PR number> -- <compiled context from Phase 5>
 ```
 
