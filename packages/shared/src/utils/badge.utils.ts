@@ -7,6 +7,34 @@ import { CredlyBadgeEntry } from '../interfaces/credly.interface';
 
 const CREDLY_EDIT_FRAGMENT = '/edit#credly';
 
+const PROJECT_TAGS = new Set([
+  'cncf',
+  'risc-v',
+  'lf networking',
+  'openjs foundation',
+  'pytorch',
+  'hyperledger badges',
+  'open mainframe project',
+  'lf research',
+  'finops foundation',
+  'zephyr',
+  'egeria',
+  'presto',
+  'academy software foundation',
+  'opends4all',
+  'lf europe',
+  'cdf',
+  'core events badges',
+]);
+const CERTIFICATION_REPORTING_TAGS = new Set(['certification', 'finops foundation certifications']);
+const LEARNING_REPORTING_TAGS = new Set(['elearning', 'instructor-led training', 'express learning']);
+const CONTRIBUTOR_REPORTING_TAGS = new Set(['project maintainer/contributer', 'exam developer badges', 'exam contributor', 'course developer']);
+const SPEAKING_PATTERN = /speaker|keynote|panelist|presenter/;
+const MEMBERSHIP_PATTERN = /^openjs foundation/;
+const CONTRIBUTOR_PATTERN = /contributor|committer|maintainer|mentor|mentee|ambassador|evangelist|community leader|zero to merge/;
+const PROGRAM_COMMITTEE_PATTERN = /program committee|co-chair|chair:|advisory|steering committee|\btsc\b|organizer/;
+const ATTENDEE_PATTERN = /attendee/;
+
 /**
  * Map a raw Credly badge entry to the application Badge interface.
  * @param entry - Raw Credly API badge entry
@@ -89,7 +117,12 @@ function buildCredlyProfileSlug(firstName: string, middleName: string, lastName:
   }
   nameParts.push(lastName);
 
-  const normalizedSlug = collapseRepeatedHyphens(nameParts.join('-').toLowerCase().replace(/[^a-z0-9-]/g, '-'));
+  const normalizedSlug = collapseRepeatedHyphens(
+    nameParts
+      .join('-')
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+  );
   const slug = trimHyphens(normalizedSlug);
 
   return slug || undefined;
@@ -131,28 +164,71 @@ function trimHyphens(value: string): string {
 }
 
 /**
- * Infer a badge category from the Credly badge template.
- * Prefers the explicit type_category field from the API, falls back to name heuristics.
+ * Infer a badge category from Credly metadata.
+ * Uses business routing order from badge tab mapping docs.
+ * First matching rule wins.
  * @param entry - Raw Credly API badge entry
  * @returns Inferred BadgeCategory
  */
 export function inferBadgeCategory(entry: CredlyBadgeEntry): BadgeCategory {
-  // Prefer the explicit type_category from the API when available
-  const typeCategory = (entry.badge_template?.type_category ?? '').toLowerCase();
+  const badgeName = normalizeValue(entry.badge_template?.name);
+  const typeCategory = normalizeValue(entry.badge_template?.type_category);
+  const reportingTags = normalizeReportingTags(entry.badge_template?.reporting_tags);
+
+  // Certifications
+  if (hasAnyTag(reportingTags, CERTIFICATION_REPORTING_TAGS)) {
+    return typeCategory === 'validation' ? 'learning' : 'certifications';
+  }
   if (typeCategory === 'certification') return 'certifications';
-  if (typeCategory === 'membership') return 'memberships';
 
-  // Fall back to name-based heuristics
-  const name = (entry.badge_template?.name ?? '').toLowerCase();
+  // Learning
+  if (hasAnyTag(reportingTags, LEARNING_REPORTING_TAGS)) return 'learning';
+  if (typeCategory === 'learning') return 'learning';
 
-  if (name.includes('speaker') || name.includes('keynote')) return 'speaking';
-  if (name.includes('program committee')) return 'program-committee';
-  if (name.includes('attendee') || name.includes('participant') || name.includes('participation')) return 'event-participation';
-  if (name.includes('contributor') || name.includes('maintainer')) return 'contributors';
-  if (name.includes('member') || name.includes('membership')) return 'memberships';
+  // Speaking (guarded to avoid hijacking project-role badges)
+  if (SPEAKING_PATTERN.test(badgeName) && (reportingTags.includes('events') || hasOnlyProjectTags(reportingTags))) {
+    return 'speaking';
+  }
 
-  // Default — most LF Credly badges are certifications
-  return 'certifications';
+  // Memberships
+  if (MEMBERSHIP_PATTERN.test(badgeName) || badgeName === 'todo ospo associate') return 'memberships';
+
+  // Contributors - tag-based
+  if (hasAnyTag(reportingTags, CONTRIBUTOR_REPORTING_TAGS)) return 'contributors';
+
+  // Contributors - name-based
+  if (CONTRIBUTOR_PATTERN.test(badgeName)) return 'contributors';
+
+  // Event Participation (attendee-only, ordered before contributor catch-all)
+  if (ATTENDEE_PATTERN.test(badgeName)) return 'event-participation';
+
+  // Contributors - partial catch-all for validation/null with project-only tags
+  if ((typeCategory === 'validation' || !typeCategory) && hasOnlyProjectTags(reportingTags)) return 'contributors';
+
+  // Program Committee
+  if (PROGRAM_COMMITTEE_PATTERN.test(badgeName)) return 'program-committee';
+
+  // Event Participation
+  if (reportingTags.includes('events')) return 'event-participation';
+
+  // Catch-all
+  return 'contributors';
+}
+
+function normalizeValue(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function normalizeReportingTags(reportingTags: string[] | null | undefined): string[] {
+  return (reportingTags ?? []).map((tag) => normalizeValue(tag)).filter(Boolean);
+}
+
+function hasAnyTag(tags: string[], targetTags: Set<string>): boolean {
+  return tags.some((tag) => targetTags.has(tag));
+}
+
+function hasOnlyProjectTags(tags: string[]): boolean {
+  return tags.every((tag) => PROJECT_TAGS.has(tag));
 }
 
 /**

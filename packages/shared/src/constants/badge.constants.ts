@@ -11,6 +11,7 @@ export const BADGE_LABEL = {
 export const BADGE_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'all', label: 'All' },
   { id: 'certifications', label: 'Certifications' },
+  { id: 'learning', label: 'Learning' },
   { id: 'memberships', label: 'Memberships' },
   { id: 'speaking', label: 'Speaking' },
   { id: 'event-participation', label: 'Event Participation' },
@@ -20,6 +21,7 @@ export const BADGE_FILTER_OPTIONS: FilterPillOption[] = [
 
 export const BADGE_STATUS_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
   { id: 'active', label: 'Active' },
   { id: 'expired', label: 'Expired' },
 ];

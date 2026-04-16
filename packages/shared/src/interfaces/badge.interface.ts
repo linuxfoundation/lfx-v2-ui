@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 /** Badge category types matching the filter tabs */
-export type BadgeCategory = 'certifications' | 'memberships' | 'speaking' | 'event-participation' | 'contributors' | 'program-committee';
+export type BadgeCategory = 'certifications' | 'learning' | 'memberships' | 'speaking' | 'event-participation' | 'contributors' | 'program-committee';
 
 /** Badge status filter values */
-export type BadgeStatusFilter = 'all' | 'active' | 'expired';
+export type BadgeStatusFilter = 'all' | 'pending' | 'active' | 'expired';
 
 /** Badge visibility filter values */
 export type BadgeVisibilityFilter = 'all' | 'public' | 'private';

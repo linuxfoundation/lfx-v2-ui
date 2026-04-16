@@ -48,6 +48,7 @@ export interface CredlyBadgeEntry {
     type_category: string | null;
     level: string | null;
     skills: string[];
+    reporting_tags?: string[] | null;
   };
 }
 

@@ -120,8 +120,10 @@ export class BadgesDashboardComponent {
         result = result.filter((badge) => badge.category === categoryFilter);
       }
 
-      if (statusFilter === 'active') {
-        result = result.filter((badge) => !badge.isExpired);
+      if (statusFilter === 'pending') {
+        result = result.filter((badge) => badge.isPending);
+      } else if (statusFilter === 'active') {
+        result = result.filter((badge) => !badge.isPending && !badge.isExpired);
       } else if (statusFilter === 'expired') {
         result = result.filter((badge) => badge.isExpired);
       }
