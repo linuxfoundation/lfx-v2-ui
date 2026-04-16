@@ -3632,7 +3632,7 @@ export class ProjectService {
         }));
       } catch (socialError) {
         logger.debug(undefined, 'get_brand_reach', 'Social media query failed, returning web-only data', {
-          error: socialError instanceof Error ? socialError.message : 'Unknown error',
+          err: socialError instanceof Error ? socialError : new Error(String(socialError)),
         });
       }
 
