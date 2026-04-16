@@ -83,6 +83,9 @@ export class MeetingsDashboardComponent {
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
+  // Raw FP/project meetings for stat cards (independent of time-filter tab)
+  private rawFpUpcomingMeetings: Signal<Meeting[]>;
+  private rawFpPastMeetings: Signal<PastMeeting[]>;
   // Time-filtered meetings for deriving filter options (applies hasMeetingEnded for upcoming)
   private timeFilteredMeetings: Signal<(Meeting | PastMeeting)[]>;
 
@@ -161,57 +164,28 @@ export class MeetingsDashboardComponent {
     // Me lens stat cards (computed from raw meeting signals)
     this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
     this.upcomingCount = computed(() => this.rawUserMeetings().length);
-    this.nextMeetingDate = computed(() => {
-      const first = this.rawUserMeetings()[0];
-      if (!first) return '';
-      const occ = getCurrentOrNextOccurrence(first);
-      const d = new Date(occ ? occ.start_time : first.start_time);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    this.pastThisMonthCount = computed(() => {
-      const now = new Date();
-      return this.rawUserPastMeetings().filter((m) => {
-        const d = new Date(m.scheduled_start_time);
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      }).length;
-    });
+    this.nextMeetingDate = this.initNextMeetingDate();
+    this.pastThisMonthCount = this.initPastThisMonthCount();
     this.recurringCount = computed(() => this.rawUserMeetings().filter((m) => m.recurrence !== null).length);
-    this.recordingsAvailableCount = computed(() => {
-      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      return this.rawUserPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
-    });
-    this.attendanceRate = computed(() => {
-      const now = new Date();
-      const pastThisMonth = this.rawUserPastMeetings().filter((m) => {
-        const d = new Date(m.scheduled_start_time);
-        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      });
-      if (pastThisMonth.length === 0) return 0;
-      const attended = pastThisMonth.filter((m) => (m.attended_count ?? 0) > 0).length;
-      return Math.round((attended / pastThisMonth.length) * 100);
-    });
-    this.recurringAcrossLabel = computed(() => {
-      const recurring = this.rawUserMeetings().filter((m) => m.recurrence !== null);
-      const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
-      const count = uniqueProjects.size;
-      return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';
-    });
+    this.recordingsAvailableCount = this.initRecordingsAvailableCount();
+    this.attendanceRate = this.initAttendanceRate();
+    this.recurringAcrossLabel = this.initRecurringAcrossLabel();
 
     // Initialize data with reactive pattern
     this.upcomingMeetings = this.initializeUpcomingMeetings();
     this.pastMeetings = this.initializePastMeetings();
     this.filteredMeetings = this.initializeFilteredMeetings();
 
-    // Foundation/Project lens stat cards (computed from paginated data)
+    // Raw FP meetings for stat cards — fetched once, independent of time-filter tab
+    this.rawFpUpcomingMeetings = this.initializeRawFpUpcomingMeetings();
+    this.rawFpPastMeetings = this.initializeRawFpPastMeetings();
+
+    // Foundation/Project lens stat cards (computed from raw FP signals, not paginated)
     this.fpStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
-    this.fpUpcomingCount = computed(() => (this.activeLens() !== 'me' ? this.upcomingMeetings().length : 0));
-    this.fpPastCount = computed(() => (this.activeLens() !== 'me' ? this.pastMeetings().length : 0));
-    this.fpRecurringCount = computed(() => (this.activeLens() !== 'me' ? this.upcomingMeetings().filter((m) => m.recurrence !== null).length : 0));
-    this.fpRecordingsAvailableCount = computed(() => {
-      if (this.activeLens() === 'me') return 0;
-      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      return this.pastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
-    });
+    this.fpUpcomingCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().length : 0));
+    this.fpPastCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpPastMeetings().length : 0));
+    this.fpRecurringCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().filter((m) => m.recurrence !== null).length : 0));
+    this.fpRecordingsAvailableCount = this.initFpRecordingsAvailableCount();
 
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
     this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
@@ -573,6 +547,103 @@ export class MeetingsDashboardComponent {
 
       return [{ label: 'All Projects', value: null }, ...options];
     });
+  }
+
+  private initNextMeetingDate(): Signal<string> {
+    return computed(() => {
+      const first = this.filterAndSortUpcomingMeetings(this.rawUserMeetings())[0];
+      if (!first) return '';
+      const occ = getCurrentOrNextOccurrence(first);
+      const d = new Date(occ ? occ.start_time : first.start_time);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+  }
+
+  private initPastThisMonthCount(): Signal<number> {
+    return computed(() => {
+      const now = new Date();
+      return this.rawUserPastMeetings().filter((m) => {
+        const d = new Date(m.scheduled_start_time);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length;
+    });
+  }
+
+  private initRecordingsAvailableCount(): Signal<number> {
+    return computed(() => {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return this.rawUserPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
+    });
+  }
+
+  private initAttendanceRate(): Signal<number> {
+    return computed(() => {
+      const now = new Date();
+      const pastThisMonth = this.rawUserPastMeetings().filter((m) => {
+        const d = new Date(m.scheduled_start_time);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      });
+      if (pastThisMonth.length === 0) return 0;
+      const attended = pastThisMonth.filter((m) => (m.attended_count ?? 0) > 0).length;
+      return Math.round((attended / pastThisMonth.length) * 100);
+    });
+  }
+
+  private initRecurringAcrossLabel(): Signal<string> {
+    return computed(() => {
+      const recurring = this.rawUserMeetings().filter((m) => m.recurrence !== null);
+      const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
+      const count = uniqueProjects.size;
+      return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';
+    });
+  }
+
+  private initFpRecordingsAvailableCount(): Signal<number> {
+    return computed(() => {
+      if (this.activeLens() === 'me') return 0;
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return this.rawFpPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
+    });
+  }
+
+  private initializeRawFpUpcomingMeetings(): Signal<Meeting[]> {
+    const project$ = toObservable(this.project);
+    const lens$ = toObservable(this.activeLens);
+
+    return toSignal(
+      combineLatest([project$, lens$, this.refresh$]).pipe(
+        switchMap(([project, lens]) => {
+          if (lens === 'me' || !project?.uid) {
+            return of([] as Meeting[]);
+          }
+          return this.meetingService.getMeetingsByProjectPaginated(project.uid, 50, undefined, undefined, undefined, undefined).pipe(
+            map((r) => this.filterAndSortUpcomingMeetings(r.data)),
+            catchError(() => of([] as Meeting[]))
+          );
+        })
+      ),
+      { initialValue: [] as Meeting[] }
+    );
+  }
+
+  private initializeRawFpPastMeetings(): Signal<PastMeeting[]> {
+    const project$ = toObservable(this.project);
+    const lens$ = toObservable(this.activeLens);
+
+    return toSignal(
+      combineLatest([project$, lens$, this.refresh$]).pipe(
+        switchMap(([project, lens]) => {
+          if (lens === 'me' || !project?.uid) {
+            return of([] as PastMeeting[]);
+          }
+          return this.meetingService.getPastMeetingsByProjectPaginated(project.uid, 50, undefined, undefined, undefined).pipe(
+            map((r) => r.data),
+            catchError(() => of([] as PastMeeting[]))
+          );
+        })
+      ),
+      { initialValue: [] as PastMeeting[] }
+    );
   }
 
   private buildMeetingTypeFilters(meetingType: string | null): string[] | undefined {

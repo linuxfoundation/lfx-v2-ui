@@ -107,8 +107,6 @@ export class CommitteeDashboardComponent {
   public myTotalGroups: Signal<number>;
   public myPublicGroups: Signal<number>;
   public myActiveVoting: Signal<number>;
-  public myTotalMembers: Signal<number>;
-  public myPendingGroups: Signal<number>;
 
   private searchTerm: Signal<string>;
 
@@ -161,8 +159,6 @@ export class CommitteeDashboardComponent {
     this.myTotalGroups = computed(() => this.myCommittees().length);
     this.myPublicGroups = computed(() => this.myCommittees().filter((c) => c.public).length);
     this.myActiveVoting = computed(() => this.myCommittees().filter((c) => c.enable_voting).length);
-    this.myTotalMembers = computed(() => this.myCommittees().reduce((sum, c) => sum + (c.total_members || 0), 0));
-    this.myPendingGroups = computed(() => this.myCommittees().filter((c) => c.requires_review).length);
   }
 
   public openCreateDialog(): void {

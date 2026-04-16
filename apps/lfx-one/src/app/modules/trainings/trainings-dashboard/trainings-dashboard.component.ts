@@ -71,7 +71,6 @@ export class TrainingsDashboardComponent {
   protected readonly enrolledCount = computed(() => this.enrollments()?.length ?? 0);
   protected readonly completedCount = computed(() => this.completedTrainings()?.length ?? 0);
   protected readonly certificatesCount = computed(() => this.certifications()?.length ?? 0);
-  protected readonly inProgressCount = computed(() => this.enrollments()?.length ?? 0);
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {
