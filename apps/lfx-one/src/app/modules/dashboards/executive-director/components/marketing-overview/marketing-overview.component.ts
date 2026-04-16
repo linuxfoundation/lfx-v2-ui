@@ -202,12 +202,7 @@ export class MarketingOverviewComponent {
   protected readonly brandHealthData = computed<BrandHealthResponse>(() => this.edEvolutionData().brandHealth);
   protected readonly revenueImpactData = computed<RevenueImpactResponse>(() => this.edEvolutionData().revenueImpact);
 
-  protected readonly filteredCards = computed<DashboardMetricCard[]>(() => {
-    const cards = buildEdEvolutionMetrics(this.edEvolutionData());
-    const filterKey = this.selectedFilter();
-    if (filterKey === 'all') return cards;
-    return cards.filter((card) => card.category === filterKey);
-  });
+  protected readonly filteredCards: Signal<DashboardMetricCard[]> = this.initFilteredCards();
 
   protected readonly northStarCards = computed<DashboardMetricCard[]>(() => this.filteredCards().filter((c) => c.category === 'memberships'));
   protected readonly nonNorthStarCards = computed<DashboardMetricCard[]>(() => this.filteredCards().filter((c) => c.category !== 'memberships'));
@@ -229,6 +224,15 @@ export class MarketingOverviewComponent {
   }
 
   // === Private Initializers ===
+  private initFilteredCards(): Signal<DashboardMetricCard[]> {
+    return computed<DashboardMetricCard[]>(() => {
+      const cards = buildEdEvolutionMetrics(this.edEvolutionData());
+      const filterKey = this.selectedFilter();
+      if (filterKey === 'all') return cards;
+      return cards.filter((card) => card.category === filterKey);
+    });
+  }
+
   private initEdEvolutionData(): Signal<EdEvolutionData> {
     // ED dashboard intentionally falls back to `tlf` (the umbrella foundation) when no specific
     // foundation is selected — that is the default "all foundations" view for executive directors.
