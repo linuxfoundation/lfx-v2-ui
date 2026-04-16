@@ -36,8 +36,12 @@ export class SurveyService {
       query_params: Object.keys(query),
     });
 
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'survey',
     };
 
