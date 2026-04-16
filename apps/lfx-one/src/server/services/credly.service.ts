@@ -4,7 +4,7 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { Badge, CredlyApiResponse, CredlyBadgeEntry, CredlyCachedBadges } from '@lfx-one/shared/interfaces';
-import { isValidBadge, mapCredlyBadgeToBadge } from '@lfx-one/shared/utils';
+import { compareBadgesByIssuedDateDesc, isValidBadge, mapCredlyBadgeToBadge } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { logger } from './logger.service';
@@ -71,7 +71,7 @@ export class CredlyService {
       return true;
     });
 
-    const badges = unique.filter(isValidBadge).map(mapCredlyBadgeToBadge);
+    const badges = unique.filter(isValidBadge).map(mapCredlyBadgeToBadge).sort(compareBadgesByIssuedDateDesc);
 
     this.evictExpiredCacheEntries();
     this.badgeCache.set(cacheKey, {

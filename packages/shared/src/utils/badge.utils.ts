@@ -176,3 +176,16 @@ export function isValidBadge(entry: CredlyBadgeEntry): boolean {
 
   return !!(entry.id && entry.badge_template?.name && firstName && lastName && (entry.state === 'accepted' || entry.state === 'pending'));
 }
+
+/**
+ * Compare two badges by issue date, newest first.
+ * Invalid or missing dates are sorted last.
+ */
+export function compareBadgesByIssuedDateDesc(a: Pick<Badge, 'issuedDate'>, b: Pick<Badge, 'issuedDate'>): number {
+  return getIssuedDateTimestamp(b.issuedDate) - getIssuedDateTimestamp(a.issuedDate);
+}
+
+function getIssuedDateTimestamp(dateValue: string): number {
+  const issuedDate = new Date(dateValue).getTime();
+  return Number.isNaN(issuedDate) ? 0 : issuedDate;
+}
