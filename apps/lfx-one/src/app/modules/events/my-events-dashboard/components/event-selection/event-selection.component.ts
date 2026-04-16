@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, model, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { EventsService } from '@app/shared/services/events.service';
@@ -9,8 +9,8 @@ import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
-import { MyEvent, TimeFilterValue } from '@lfx-one/shared/interfaces';
-import { catchError, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { MyEvent, MyEventsResponse, TimeFilterValue } from '@lfx-one/shared/interfaces';
+import { catchError, combineLatest, debounceTime, finalize, of, scan, skip, switchMap, tap } from 'rxjs';
 import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.constants';
 @Component({
   selector: 'lfx-event-selection',
@@ -21,7 +21,6 @@ import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.cons
 })
 export class EventSelectionComponent {
   private readonly eventsService = inject(EventsService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
 
   public selectedEvent = model<MyEvent | null>(null);
@@ -42,8 +41,7 @@ export class EventSelectionComponent {
   // Events & pagination
   protected readonly loading = signal(true);
   protected readonly loadingMore = signal(false);
-  protected readonly additionalEvents = signal<MyEvent[]>([]);
-  private currentOffset = 0;
+  private currentOffset = signal(0);
 
   // Location filter options loaded once
   private readonly countriesResponse = this.initializeCountries();
@@ -72,7 +70,7 @@ export class EventSelectionComponent {
   private readonly initialEventsResponse = this.initializeEvents();
 
   // Combine initial events with any "load more" results
-  protected readonly allEvents = computed(() => [...this.initialEventsResponse().data, ...this.additionalEvents()]);
+  protected readonly allEvents = computed(() => this.initialEventsResponse().data);
   protected readonly hasMore = computed(() => this.allEvents().length < this.initialEventsResponse().total);
 
   public constructor() {
@@ -80,8 +78,7 @@ export class EventSelectionComponent {
     toObservable(this.activeFilters)
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
-        this.additionalEvents.set([]);
-        this.currentOffset = 0;
+        this.currentOffset.set(0);
       });
   }
 
@@ -90,20 +87,7 @@ export class EventSelectionComponent {
   }
 
   public onLoadMore(): void {
-    const nextOffset = this.currentOffset + EVENT_SELECTION_PAGE_SIZE;
-    this.loadingMore.set(true);
-
-    this.eventsService
-      .getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset: nextOffset, registeredOnly: true, ...this.activeFilters() })
-      .pipe(
-        catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
-        finalize(() => this.loadingMore.set(false)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe((response) => {
-        this.currentOffset = nextOffset;
-        this.additionalEvents.update((current) => [...current, ...response.data]);
-      });
+    this.currentOffset.update((current) => current + EVENT_SELECTION_PAGE_SIZE);
   }
 
   private computeTimeFilterParams(timeFilter: TimeFilterValue): { startDateFrom?: string; startDateTo?: string } {
@@ -126,14 +110,30 @@ export class EventSelectionComponent {
 
   private initializeEvents() {
     return toSignal(
-      toObservable(this.activeFilters).pipe(
-        tap(() => this.loading.set(true)),
-        switchMap((filters) =>
-          this.eventsService.getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset: 0, registeredOnly: true, ...filters }).pipe(
+      combineLatest([toObservable(this.activeFilters), toObservable(this.currentOffset)]).pipe(
+        tap(() => {
+          if (this.currentOffset() === 0) {
+            this.loading.set(true);
+          } else {
+            this.loadingMore.set(true);
+          }
+        }),
+        switchMap(([filters, offset]) =>
+          this.eventsService.getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset, registeredOnly: true, ...filters }).pipe(
             catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
-            finalize(() => this.loading.set(false))
+            finalize(() => {
+              this.loading.set(false);
+              this.loadingMore.set(false);
+            })
           )
-        )
+        ),
+        scan((acc, curr) => {
+          // Reset when offset is 0 (filter changed), otherwise accumulate
+          if (curr.offset === 0) {
+            return curr;
+          }
+          return { ...curr, data: [...acc.data, ...curr.data] };
+        }, EMPTY_MY_EVENTS_RESPONSE)
       ),
       { initialValue: EMPTY_MY_EVENTS_RESPONSE }
     );
