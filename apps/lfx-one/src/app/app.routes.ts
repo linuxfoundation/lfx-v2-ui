@@ -79,21 +79,21 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
       {
-        path: 'me/events',
-        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
+        path: 'me/training',
+        loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
       },
       {
         path: 'badges',
         loadChildren: () => import('./modules/badges/badges.routes').then((m) => m.BADGE_ROUTES),
       },
       {
-        path: 'me/training',
-        loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
+        path: 'events',
+        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
       },
       {
-        path: 'events',
-        data: { lens: 'foundation' },
-        loadChildren: () => import('./modules/events/events.routes').then((m) => m.FOUNDATION_EVENTS_ROUTES),
+        path: 'me/events',
+        redirectTo: 'events',
+        pathMatch: 'full',
       },
     ],
   },

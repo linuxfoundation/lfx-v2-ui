@@ -63,6 +63,10 @@ import {
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
+  EventGrowthResponse,
+  BrandReachResponse,
+  BrandHealthResponse,
+  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of } from 'rxjs';
 
@@ -829,11 +833,11 @@ export class AnalyticsService {
 
   /**
    * Get email click-through rate data
-   * @param foundationName - Foundation name to filter by (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug to filter by
    * @returns Observable of email CTR response
    */
-  public getEmailCtr(foundationName: string): Observable<EmailCtrResponse> {
-    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationName } }).pipe(
+  public getEmailCtr(foundationSlug: string): Observable<EmailCtrResponse> {
+    return this.http.get<EmailCtrResponse>('/api/analytics/email-ctr', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           currentCtr: 0,
@@ -852,11 +856,11 @@ export class AnalyticsService {
   /**
    * Get social media metrics from Snowflake Platinum tables
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW and SOCIAL_MEDIA_PLATFORM_BREAKDOWN
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social media response with followers, platforms, engagement, and trend data
    */
-  public getSocialMedia(foundationName: string): Observable<SocialMediaResponse> {
-    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationName } }).pipe(
+  public getSocialMedia(foundationSlug: string): Observable<SocialMediaResponse> {
+    return this.http.get<SocialMediaResponse>('/api/analytics/social-media', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalFollowers: 0,
@@ -872,11 +876,11 @@ export class AnalyticsService {
 
   /**
    * Get paid social reach metrics
-   * @param foundationName - Foundation name used to filter metrics (e.g., 'The Linux Foundation')
+   * @param foundationSlug - Foundation slug used to filter metrics
    * @returns Social reach response with ROAS, impressions, and monthly trends
    */
-  public getSocialReach(foundationName: string): Observable<SocialReachResponse> {
-    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationName } }).pipe(
+  public getSocialReach(foundationSlug: string): Observable<SocialReachResponse> {
+    return this.http.get<SocialReachResponse>('/api/analytics/social-reach', { params: { foundationSlug } }).pipe(
       catchError(() => {
         return of({
           totalReach: 0,
@@ -971,6 +975,20 @@ export class AnalyticsService {
             convertedToNewsletter: 0,
             convertedToCommunity: 0,
             convertedToWorkingGroup: 0,
+            convertedToTraining: 0,
+            convertedToCode: 0,
+            convertedToWeb: 0,
+          },
+          reengagement: {
+            totalReengaged: 0,
+            reengagementRate: 0,
+            reengagementMomChange: 0,
+            reengagedToNewsletter: 0,
+            reengagedToCommunity: 0,
+            reengagedToWorkingGroup: 0,
+            reengagedToTraining: 0,
+            reengagedToCode: 0,
+            reengagedToWeb: 0,
           },
           monthlyData: [],
         });
@@ -983,10 +1001,7 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project resolution
    * @returns Observable of NPS summary response; degrades to zeros on error
    */
-  public getNpsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<NpsSummaryResponse> {
+  public getNpsSummary(foundationSlug: string, range: string = 'YTD'): Observable<NpsSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
@@ -1012,10 +1027,7 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project_slug filter
    * @returns Observable of participating orgs summary response
    */
-  public getParticipatingOrgsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<ParticipatingOrgsSummaryResponse> {
+  public getParticipatingOrgsSummary(foundationSlug: string, range: string = 'YTD'): Observable<ParticipatingOrgsSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
@@ -1040,28 +1052,23 @@ export class AnalyticsService {
    * @param range - Reporting range (default 'YTD')
    * @returns Observable of churn summary; degrades to zeros on error
    */
-  public getMembershipChurnPerTierSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<MembershipChurnPerTierSummaryResponse> {
+  public getMembershipChurnPerTierSummary(foundationSlug: string, range: string = 'YTD'): Observable<MembershipChurnPerTierSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
     }
-    return this.http
-      .get<MembershipChurnPerTierSummaryResponse>('/api/analytics/membership-churn-per-tier-summary', { params })
-      .pipe(
-        catchError(() => {
-          return of({
-            projectId: '',
-            range: 'YTD',
-            comparisonAvailable: false,
-            currentPeriod: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
-            previousYear: null,
-            trend: null,
-          });
-        })
-      );
+    return this.http.get<MembershipChurnPerTierSummaryResponse>('/api/analytics/membership-churn-per-tier-summary', { params }).pipe(
+      catchError(() => {
+        return of({
+          projectId: '',
+          range: 'YTD',
+          comparisonAvailable: false,
+          currentPeriod: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
+          previousYear: null,
+          trend: null,
+        });
+      })
+    );
   }
 
   /**
@@ -1069,10 +1076,7 @@ export class AnalyticsService {
    * @param foundationSlug - Foundation slug for Snowflake project resolution
    * @returns Observable of events summary; degrades to zeros on error
    */
-  public getEventsSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<EventsSummaryResponse> {
+  public getEventsSummary(foundationSlug: string, range: string = 'YTD'): Observable<EventsSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
@@ -1094,55 +1098,45 @@ export class AnalyticsService {
     );
   }
 
-  public getTrainingCertificationSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<TrainingCertificationSummaryResponse> {
+  public getTrainingCertificationSummary(foundationSlug: string, range: string = 'YTD'): Observable<TrainingCertificationSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
     }
-    return this.http
-      .get<TrainingCertificationSummaryResponse>('/api/analytics/training-certification-summary', { params })
-      .pipe(
-        catchError(() => {
-          return of({
-            projectId: '',
-            range: (range || 'YTD') as TrainingCertificationSummaryResponse['range'],
-            enrollment: { instructorLed: 0, eLearning: 0, certExams: 0, edx: 0 },
-            revenue: { instructorLed: 0, eLearning: 0, certExams: 0 },
-          });
-        })
-      );
+    return this.http.get<TrainingCertificationSummaryResponse>('/api/analytics/training-certification-summary', { params }).pipe(
+      catchError(() => {
+        return of({
+          projectId: '',
+          range: (range || 'YTD') as TrainingCertificationSummaryResponse['range'],
+          enrollment: { instructorLed: 0, eLearning: 0, certExams: 0, edx: 0 },
+          revenue: { instructorLed: 0, eLearning: 0, certExams: 0 },
+        });
+      })
+    );
   }
 
-  public getCodeContributionSummary(
-    foundationSlug: string,
-    range: string = 'YTD'
-  ): Observable<CodeContributionSummaryResponse> {
+  public getCodeContributionSummary(foundationSlug: string, range: string = 'YTD'): Observable<CodeContributionSummaryResponse> {
     const params: Record<string, string> = { foundationSlug };
     if (range && range !== 'YTD') {
       params['range'] = range;
     }
-    return this.http
-      .get<CodeContributionSummaryResponse>('/api/analytics/code-contribution-summary', { params })
-      .pipe(
-        catchError(() => {
-          return of({
-            dataAvailable: false,
-            projectId: '',
-            projectSlug: '',
-            range: (range || 'YTD') as CodeContributionSummaryResponse['range'],
-            totalContributors: 0,
-            totalContributorsChange: 0,
-            newContributors: 0,
-            newContributorsChange: 0,
-            committers: 0,
-            maintainers: 0,
-            reviewers: 0,
-          });
-        })
-      );
+    return this.http.get<CodeContributionSummaryResponse>('/api/analytics/code-contribution-summary', { params }).pipe(
+      catchError(() => {
+        return of({
+          dataAvailable: false,
+          projectId: '',
+          projectSlug: '',
+          range: (range || 'YTD') as CodeContributionSummaryResponse['range'],
+          totalContributors: 0,
+          totalContributorsChange: 0,
+          newContributors: 0,
+          newContributorsChange: 0,
+          committers: 0,
+          maintainers: 0,
+          reviewers: 0,
+        });
+      })
+    );
   }
 
   public getOutstandingBalanceSummary(foundationSlug: string): Observable<OutstandingBalanceSummaryResponse> {
@@ -1161,6 +1155,98 @@ export class AnalyticsService {
           },
         });
       })
+    );
+  }
+
+  /**
+   * Get event growth metrics for the ED dashboard.
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting event growth totals, YoY changes, and monthly trend (or zeroed defaults on error)
+   */
+  public getEventGrowth(foundationSlug: string): Observable<EventGrowthResponse> {
+    return this.http.get<EventGrowthResponse>('/api/analytics/event-growth', { params: { foundationSlug } }).pipe(
+      catchError(() =>
+        of({
+          totalAttendees: 0,
+          totalRegistrants: 0,
+          totalEvents: 0,
+          totalRevenue: 0,
+          revenuePerAttendee: 0,
+          attendeeYoyChange: 0,
+          registrantYoyChange: 0,
+          revenueYoyChange: 0,
+          trend: 'up' as const,
+          monthlyData: [],
+          topEvents: [],
+        })
+      )
+    );
+  }
+
+  /**
+   * Get brand reach metrics for the ED dashboard (social followers + web sessions).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting reach totals, platform breakdowns, and weekly trend (or zeroed defaults on error)
+   */
+  public getBrandReach(foundationSlug: string): Observable<BrandReachResponse> {
+    return this.http.get<BrandReachResponse>('/api/analytics/brand-reach', { params: { foundationSlug } }).pipe(
+      catchError(() =>
+        of({
+          totalSocialFollowers: 0,
+          totalMonthlySessions: 0,
+          activePlatforms: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          socialPlatforms: [],
+          websiteDomains: [],
+          weeklyTrend: [],
+        })
+      )
+    );
+  }
+
+  /**
+   * Get brand health metrics for the ED dashboard (mention volume + sentiment breakdown).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting mention totals, sentiment percentages, and monthly history (or zeroed defaults on error)
+   */
+  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
+    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
+      catchError(() =>
+        of({
+          totalMentions: 0,
+          sentiment: { positive: 0, neutral: 0, negative: 0 },
+          sentimentMomChangePp: 0,
+          trend: 'up' as const,
+          monthlyMentions: [],
+          topProjects: [],
+        })
+      )
+    );
+  }
+
+  /**
+   * Get revenue impact metrics for the ED dashboard (attribution + paid media + event registration).
+   * @param foundationSlug Foundation slug used to filter Snowflake queries
+   * @returns Observable emitting pipeline/revenue totals, attribution breakdowns, and event registration data (or zeroed defaults on error)
+   */
+  public getRevenueImpact(foundationSlug: string): Observable<RevenueImpactResponse> {
+    return this.http.get<RevenueImpactResponse>('/api/analytics/revenue-impact', { params: { foundationSlug } }).pipe(
+      catchError(() =>
+        of({
+          pipelineInfluenced: 0,
+          revenueAttributed: 0,
+          matchRate: 0,
+          changePercentage: 0,
+          trend: 'up' as const,
+          attributionModels: { linear: 0, firstTouch: 0, lastTouch: 0 },
+          engagementTypes: [],
+          paidMedia: { roas: 0, impressions: 0, adSpend: 0, adRevenue: 0, monthlyTrend: [] },
+          attributionChannels: [],
+          projectBreakdown: [],
+          eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
+        })
+      )
     );
   }
 }

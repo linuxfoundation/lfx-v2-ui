@@ -18,3 +18,4 @@ export * from './number.utils';
 export * from './platform.utils';
 export * from './project.utils';
 export * from './badge.utils';
+export * from './marketing.utils';
