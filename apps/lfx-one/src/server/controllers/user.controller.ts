@@ -233,9 +233,9 @@ export class UserController {
     try {
       const profile = await this.userService.getApiGatewayProfile(req);
 
-      logger.success(req, 'get_salesforce_id', startTime, { salesforce_id: profile.ID });
+      logger.success(req, 'get_salesforce_id', startTime, {});
 
-      res.json(profile);
+      res.json({ id: profile.ID });
     } catch (error) {
       next(error);
     }

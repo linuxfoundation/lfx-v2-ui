@@ -6,7 +6,6 @@ import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@a
 import { MessageService } from 'primeng/api';
 import {
   AddEmailRequest,
-  ApiGatewayUserProfile,
   CdpProjectAffiliation,
   ChangePasswordRequest,
   ProjectAffiliationPatchBody,
@@ -287,8 +286,8 @@ export class UserService {
   /**
    * Fetches the current user's API Gateway profile (includes Salesforce ID).
    */
-  public getSalesforceId(): Observable<ApiGatewayUserProfile> {
-    return this.http.get<ApiGatewayUserProfile>('/api/user/salesforce-id').pipe(take(1));
+  public getSalesforceId(): Observable<{ id: string | null | undefined }> {
+    return this.http.get<{ id: string | null | undefined }>('/api/user/salesforce-id').pipe(take(1));
   }
 
   private initUserInitials(): Signal<string> {

@@ -509,7 +509,7 @@ export interface VisaRequestApplication {
   eventId: string;
   eventName: string;
   termsAccepted: boolean;
-  /** Salesforce user record ID — fetched from API Gateway and set by the server from the session */
+  /** Salesforce user record ID — ignored by the server; the server derives this from the authenticated session via the API Gateway profile */
   userId: string;
   applicantInfo: VisaRequestApplicantInfo;
 }

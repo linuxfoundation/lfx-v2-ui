@@ -42,7 +42,7 @@ export class VisaRequestApplyFormComponent {
     birthDate: [null as Date | null, Validators.required],
     embassyCity: ['', Validators.required],
     company: ['', Validators.required],
-    organizationID: [''],
+    organizationID: ['', Validators.required],
     mailingAddress: ['', Validators.required],
     attendeeType: ['' as AttendeeType, Validators.required],
     attendeeAccommodationPaidBy: ['' as AttendeeAccommodationPaidBy, Validators.required],

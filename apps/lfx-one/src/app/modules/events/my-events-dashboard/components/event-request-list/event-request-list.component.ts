@@ -143,10 +143,18 @@ export class EventRequestListComponent {
     return toSignal(
       this.userService.getSalesforceId().pipe(
         map((profile) => {
-          if (profile && profile.ID) {
-            this.userService.apiGatewayUserId.set(profile.ID);
+          if (profile?.id) {
+            this.userService.apiGatewayUserId.set(profile.id);
           }
-          return profile && profile.ID !== null;
+          return !!profile?.id;
+        }),
+        catchError(() => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Unable to verify your account. Please refresh the page.',
+          });
+          return of(false);
         }),
         finalize(() => this.isSalesforceIdLoading.set(false))
       ),

@@ -39,6 +39,7 @@ import { Request } from 'express';
 import { MicroserviceError } from '../errors';
 import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
+import { UserService } from './user.service';
 
 function formatDateField(date: Date | string | null | undefined): string | null {
   if (!date) return null;
@@ -47,9 +48,11 @@ function formatDateField(date: Date | string | null | undefined): string | null 
 
 export class EventsService {
   private snowflakeService: SnowflakeService;
+  private userService: UserService;
 
   public constructor() {
     this.snowflakeService = SnowflakeService.getInstance();
+    this.userService = new UserService();
   }
 
   public async getMyEvents(req: Request, userEmail: string, options: GetMyEventsOptions): Promise<MyEventsResponse> {
@@ -538,7 +541,10 @@ export class EventsService {
     }
 
     const { applicantInfo } = payload;
-    const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${payload.userId}/visaletterrequests`;
+    // Derive the user's Salesforce ID from the authenticated session — never trust client-provided userId
+    const profile = await this.userService.getApiGatewayProfile(req);
+    const serverUserId = profile.ID;
+    const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${serverUserId}/visaletterrequests`;
 
     // TODO: Remove hardcoding for eventID once dev is ready to support this
     // this is a workaround to get the visa letter application working on dev
@@ -560,8 +566,8 @@ export class EventsService {
       nameAsPerPassport: `${applicantInfo.firstName} ${applicantInfo.lastName}`,
       organizationID: applicantInfo.organizationID,
       passportNumber: applicantInfo.passportNumber,
-      requestingUserID: payload.userId,
-      userID: payload.userId,
+      requestingUserID: serverUserId,
+      userID: serverUserId,
       username: applicantInfo.email,
       ...(applicantInfo.embassyCity && { City: applicantInfo.embassyCity }),
       ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
