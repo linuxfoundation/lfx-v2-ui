@@ -2,6 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 /**
+ * NOTE: Property names in these interfaces intentionally use PascalCase to match the upstream
+ * API Gateway response contract (Salesforce-backed). This deviates from the project's camelCase
+ * convention; the casing must be preserved to correctly deserialize the raw JSON response.
+ * Shape derived from manual inspection of GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true.
+ * @source API Gateway /user-service/v1/me endpoint (no published OpenAPI spec)
+ */
+
+/**
  * Account associated with an API Gateway user profile
  * @description Organization/company account linked to the user's profile record
  */

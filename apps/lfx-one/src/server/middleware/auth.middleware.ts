@@ -270,7 +270,18 @@ async function extractApiGatewayToken(req: Request): Promise<void> {
     }
 
     const data = (await response.json()) as { access_token: string; expires_in: number };
-    const expiresAt = now + data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS;
+    const rawExpiresAt = now + data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS;
+
+    // Guard: if expires_in is too short to survive the buffer, fall back to half the raw
+    // expires_in to avoid an immediate-expiry hot loop hammering the IdP on every request.
+    const expiresAt = rawExpiresAt <= now ? now + Math.floor(data.expires_in / 2) : rawExpiresAt;
+
+    if (rawExpiresAt <= now) {
+      logger.warning(req, 'api_gateway_token', 'Token expires_in too short for buffer, using half of raw expiry as fallback', {
+        expires_in: data.expires_in,
+        buffer: TOKEN_EXPIRY_BUFFER_SECONDS,
+      });
+    }
 
     req.apiGatewayToken = data.access_token;
 

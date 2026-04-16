@@ -223,40 +223,20 @@ export class UserController {
 
   /**
    * GET /api/user/salesforce-id - Proxy test for the API Gateway token
-   * Calls GET https://api-gw.dev.platform.linuxfoundation.org/user-service/v1/me
-   * and returns the raw response to verify the token works end-to-end.
+   * TODO: TEMPORARY — calls UserService.getApiGatewayProfile() which proxies
+   * GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true and returns the raw
+   * response to verify the token works end-to-end.
    */
   public async getSalesforceId(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_salesforce_id', {});
 
     try {
-      if (!req.apiGatewayToken) {
-        logger.warning(req, 'get_salesforce_id', 'API Gateway token not available on request', {});
-        res.status(503).json({ error: 'API Gateway token not available — check API_GW_AUDIENCE env var and auth logs' });
-        return;
-      }
+      const { status, body } = await this.userService.getApiGatewayProfile(req);
 
-      const apiGwBaseUrl = `${(process.env['API_GW_AUDIENCE'] || '').replace(/\/+$/, '')}/user-service`;
-      const targetUrl = `${apiGwBaseUrl}/v1/me?basic=true`;
-      const upstream = await fetch(targetUrl, {
-        headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
-        signal: AbortSignal.timeout(30000),
-      });
+      logger.success(req, 'get_salesforce_id', startTime, { upstream_status: status });
 
-      const rawBody = await upstream.text();
-
-      let body: unknown;
-      try {
-        body = JSON.parse(rawBody);
-      } catch {
-        body = { raw: rawBody };
-      }
-
-      logger.success(req, 'get_salesforce_id', startTime, { upstream_status: upstream.status, target_url: targetUrl, body_length: rawBody.length });
-
-      res.status(upstream.status).json(body);
+      res.status(status).json(body);
     } catch (error) {
-      logger.error(req, 'get_salesforce_id', startTime, error, {});
       next(error);
     }
   }
