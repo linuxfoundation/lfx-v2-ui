@@ -540,13 +540,21 @@ export class EventsService {
     const { applicantInfo } = payload;
     const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${payload.userId}/visaletterrequests`;
 
+    // TODO: Remove hardcoding for eventID once dev is ready to support this
+    // this is a workaround to get the visa letter application working on dev
+    let eventID = payload.eventId;
+    if (apiGwAudience.includes('api-gw.dev')) {
+      eventID = 'lf68HvrPcdGx5kjGkW';
+    }
+
     const body = {
+      onBehalfRequest: false, // We're not including this in the form so we just default it
       attendeeAccommodationPaidBy: applicantInfo.attendeeAccommodationPaidBy,
       attendeeType: applicantInfo.attendeeType,
       birthCountry: applicantInfo.citizenshipCountry,
       birthDate: formatDateField(applicantInfo.birthDate),
       email: applicantInfo.email,
-      eventID: payload.eventId,
+      eventID: eventID,
       firstName: applicantInfo.firstName,
       lastName: applicantInfo.lastName,
       nameAsPerPassport: `${applicantInfo.firstName} ${applicantInfo.lastName}`,

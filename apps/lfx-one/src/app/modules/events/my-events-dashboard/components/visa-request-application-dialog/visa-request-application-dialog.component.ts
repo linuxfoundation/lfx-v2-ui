@@ -111,7 +111,14 @@ export class VisaRequestApplicationDialogComponent {
             this.submitting.set(false);
           }
         },
-        error: () => this.submitting.set(false),
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'An unexpected error occurred. Please try again.',
+          });
+          this.submitting.set(false);
+        },
       });
   }
 
