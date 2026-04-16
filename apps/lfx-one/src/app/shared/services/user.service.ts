@@ -6,6 +6,7 @@ import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@a
 import { MessageService } from 'primeng/api';
 import {
   AddEmailRequest,
+  ApiGatewayUserProfile,
   CdpProjectAffiliation,
   ChangePasswordRequest,
   ProjectAffiliationPatchBody,
@@ -44,6 +45,12 @@ export class UserService {
   public impersonator: WritableSignal<Impersonator | null> = signal<Impersonator | null>(null);
   public canImpersonate: WritableSignal<boolean> = signal<boolean>(false);
   public readonly userInitials: Signal<string> = this.initUserInitials();
+
+  /** Cached Salesforce user ID from the API Gateway — null until first fetch */
+  public readonly apiGatewayUserId = signal<string | null>(null);
+
+  /** Cached Salesforce Account/Organization ID from the API Gateway — null until first fetch */
+  public readonly apiGatewayOrganizationId = signal<string | null>(null);
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {
@@ -278,6 +285,13 @@ export class UserService {
    */
   public verifyAndLinkEmail(email: string, otp: string): Observable<VerifyAndLinkEmailResponse> {
     return this.http.post<VerifyAndLinkEmailResponse>('/api/profile/identities/email/verify', { email, otp }).pipe(take(1));
+  }
+
+  /**
+   * Fetches the current user's API Gateway profile (includes Salesforce ID).
+   */
+  public getSalesforceId(): Observable<ApiGatewayUserProfile> {
+    return this.http.get<ApiGatewayUserProfile>('/api/user/salesforce-id').pipe(take(1));
   }
 
   private initUserInitials(): Signal<string> {

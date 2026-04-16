@@ -463,6 +463,8 @@ export interface TravelFundApplication {
   eventId: string;
   eventName: string;
   termsAccepted: boolean;
+  /** Salesforce user record ID — fetched from API Gateway and set by the server from the session */
+  userId: string;
   aboutMe: TravelFundAboutMe;
   expenses: TravelFundExpenses;
 }
@@ -476,22 +478,39 @@ export interface TravelFundApplicationResponse {
 // Visa Request Application
 // ---------------------------------------------------------------------------
 
+/** Who pays for the attendee's accommodation — maps to attendeeAccommodationPaidBy in the user-service API */
+export type AttendeeAccommodationPaidBy = 'delegate' | 'delegates_company' | 'the_linux_foundation' | 'cncf';
+
+/** Attendee role at the event — maps to attendeeType in the user-service API */
+export type AttendeeType = 'attendee' | 'speaker';
+
 export interface VisaRequestApplicantInfo {
   firstName: string;
   lastName: string;
   email: string;
   passportNumber: string;
+  /** Country of citizenship — maps to birthCountry in the user-service API */
   citizenshipCountry: string;
   passportExpiryDate: Date | null;
   embassyCity: string;
   company: string;
   mailingAddress: string;
+  /** Who pays for the attendee's accommodation */
+  attendeeAccommodationPaidBy: AttendeeAccommodationPaidBy;
+  /** Attendee role at the event */
+  attendeeType: AttendeeType;
+  /** Date of birth */
+  birthDate: Date | null;
 }
 
 export interface VisaRequestApplication {
   eventId: string;
   eventName: string;
   termsAccepted: boolean;
+  /** Salesforce user record ID — fetched from API Gateway and set by the server from the session */
+  userId: string;
+  /** Salesforce Account/Organization ID — fetched from the API Gateway profile (Account.ID) */
+  organizationID: string;
   applicantInfo: VisaRequestApplicantInfo;
 }
 

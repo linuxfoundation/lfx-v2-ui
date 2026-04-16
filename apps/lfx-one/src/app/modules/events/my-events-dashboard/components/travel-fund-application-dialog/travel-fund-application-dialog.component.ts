@@ -4,6 +4,7 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
+import { UserService } from '@app/shared/services/user.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { MyEvent, TravelFundAboutMe, TravelFundApplication, TravelFundExpenses, TravelFundStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
@@ -25,6 +26,7 @@ import { TRAVEL_FUND_STEP_ORDER } from '@lfx-one/shared/constants/events.constan
 export class TravelFundApplicationDialogComponent {
   private readonly ref = inject(DynamicDialogRef);
   private readonly eventsService = inject(EventsService);
+  private readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -78,13 +80,17 @@ export class TravelFundApplicationDialogComponent {
   public onSubmitApplication(): void {
     const event = this.selectedEvent();
     const aboutMe = this.aboutMeData();
+    const userId = this.userService.apiGatewayUserId();
 
-    if (!event || !aboutMe) return;
+    if (!event || !aboutMe || !userId) return;
+
+    this.submitting.set(true);
 
     const payload: TravelFundApplication = {
       eventId: event.id,
       eventName: event.name,
       termsAccepted: this.termsAccepted(),
+      userId,
       aboutMe,
       expenses: this.expensesData() ?? {
         airfareCost: 0,
@@ -96,8 +102,6 @@ export class TravelFundApplicationDialogComponent {
         estimatedTotal: 0,
       },
     };
-
-    this.submitting.set(true);
 
     this.eventsService
       .submitTravelFundApplication(payload)

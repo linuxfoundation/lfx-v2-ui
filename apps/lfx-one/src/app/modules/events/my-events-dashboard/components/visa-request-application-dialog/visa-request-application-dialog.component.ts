@@ -4,6 +4,7 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
+import { UserService } from '@app/shared/services/user.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
@@ -24,6 +25,7 @@ import { VIS_REQUEST_STEP_ORDER } from '@lfx-one/shared/constants/events.constan
 export class VisaRequestApplicationDialogComponent {
   private readonly ref = inject(DynamicDialogRef);
   private readonly eventsService = inject(EventsService);
+  private readonly userService = inject(UserService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -74,17 +76,21 @@ export class VisaRequestApplicationDialogComponent {
   public onSubmitApplication(): void {
     const event = this.selectedEvent();
     const applicantInfo = this.applicantData();
+    const userId = this.userService.apiGatewayUserId();
+    const organizationID = this.userService.apiGatewayOrganizationId();
 
-    if (!event || !applicantInfo) return;
+    if (!event || !applicantInfo || !userId || !organizationID) return;
+
+    this.submitting.set(true);
 
     const payload: VisaRequestApplication = {
       eventId: event.id,
       eventName: event.name,
       termsAccepted: this.termsAccepted(),
+      userId,
+      organizationID,
       applicantInfo,
     };
-
-    this.submitting.set(true);
 
     this.eventsService
       .submitVisaRequestApplication(payload)

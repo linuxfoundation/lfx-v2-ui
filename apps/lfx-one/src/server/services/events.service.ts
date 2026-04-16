@@ -35,8 +35,14 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
+import { MicroserviceError } from '../errors';
 import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
+
+function formatDateField(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  return date instanceof Date ? date.toISOString() : date;
+}
 
 export class EventsService {
   private snowflakeService: SnowflakeService;
@@ -508,13 +514,79 @@ export class EventsService {
   }
 
   /**
-   * Stub: Submit a visa letter application.
-   * TODO: Replace with upstream microservice call once the API is available.
+   * Submit a visa letter application to the API Gateway user-service.
    */
   public async submitVisaRequestApplication(req: Request, payload: VisaRequestApplication): Promise<VisaRequestApplicationResponse> {
-    logger.debug(req, 'submit_visa_request_application', 'Received visa letter application', {
+    logger.debug(req, 'submit_visa_request_application', 'Submitting visa letter application', {
       event_id: payload.eventId,
       event_name: payload.eventName,
+    });
+
+    const apiGwAudience = process.env['API_GW_AUDIENCE'];
+
+    if (!apiGwAudience) {
+      throw new MicroserviceError('API_GW_AUDIENCE environment variable is not configured', 503, 'API_GATEWAY_MISCONFIGURED', {
+        operation: 'submit_visa_request_application',
+      });
+    }
+
+    if (!req.apiGatewayToken) {
+      throw new MicroserviceError('API Gateway token not available', 503, 'API_GATEWAY_UNAVAILABLE', {
+        operation: 'submit_visa_request_application',
+      });
+    }
+
+    const { applicantInfo } = payload;
+    const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${payload.userId}/visaletterrequests`;
+
+    const body = {
+      attendeeAccommodationPaidBy: applicantInfo.attendeeAccommodationPaidBy,
+      attendeeType: applicantInfo.attendeeType,
+      birthCountry: applicantInfo.citizenshipCountry,
+      birthDate: formatDateField(applicantInfo.birthDate),
+      email: applicantInfo.email,
+      eventID: payload.eventId,
+      firstName: applicantInfo.firstName,
+      lastName: applicantInfo.lastName,
+      nameAsPerPassport: `${applicantInfo.firstName} ${applicantInfo.lastName}`,
+      organizationID: payload.organizationID,
+      passportNumber: applicantInfo.passportNumber,
+      requestingUserID: payload.userId,
+      userID: payload.userId,
+      username: applicantInfo.email,
+      ...(applicantInfo.embassyCity && { City: applicantInfo.embassyCity }),
+      ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
+      ...(applicantInfo.mailingAddress && { addressLine01: applicantInfo.mailingAddress }),
+      ...(applicantInfo.passportExpiryDate && {
+        passportExpiryDate: formatDateField(applicantInfo.passportExpiryDate),
+      }),
+    };
+
+    logger.debug(req, 'submit_visa_request_application', 'Calling API Gateway visa endpoint', {
+      target_url: targetUrl,
+      event_id: payload.eventId,
+    });
+
+    const upstream = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${req.apiGatewayToken}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!upstream.ok) {
+      const errorText = await upstream.text().catch(() => '');
+      throw new MicroserviceError(`Visa letter API returned ${upstream.status}`, upstream.status, 'API_GATEWAY_ERROR', {
+        operation: 'submit_visa_request_application',
+        errorBody: errorText,
+      });
+    }
+
+    logger.debug(req, 'submit_visa_request_application', 'Visa letter application submitted successfully', {
+      event_id: payload.eventId,
     });
 
     return { success: true, message: 'Your visa letter application has been submitted successfully.' };

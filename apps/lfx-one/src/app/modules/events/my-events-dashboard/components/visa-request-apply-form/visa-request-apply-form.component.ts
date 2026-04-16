@@ -9,8 +9,8 @@ import { CalendarComponent } from '@components/calendar/calendar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { COUNTRIES } from '@lfx-one/shared/constants';
-import { VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
+import { ACCOMMODATION_PAID_BY_OPTIONS, ATTENDEE_TYPE_OPTIONS, COUNTRIES } from '@lfx-one/shared/constants';
+import { AttendeeAccommodationPaidBy, AttendeeType, VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
 import { startWith } from 'rxjs';
 
 @Component({
@@ -33,12 +33,17 @@ export class VisaRequestApplyFormComponent {
     passportNumber: ['', Validators.required],
     citizenshipCountry: ['', Validators.required],
     passportExpiryDate: [null as Date | null, Validators.required],
+    birthDate: [null as Date | null, Validators.required],
     embassyCity: ['', Validators.required],
     company: [''],
     mailingAddress: ['', Validators.required],
+    attendeeType: ['' as AttendeeType, Validators.required],
+    attendeeAccommodationPaidBy: ['' as AttendeeAccommodationPaidBy, Validators.required],
   });
 
   public readonly countryOptions = [...COUNTRIES];
+  public readonly attendeeTypeOptions = ATTENDEE_TYPE_OPTIONS;
+  public readonly accommodationOptions = ACCOMMODATION_PAID_BY_OPTIONS;
 
   public constructor() {
     this.form.get('email')?.disable();

@@ -4,6 +4,7 @@
 import { ChangeDetectionStrategy, Component, Type, computed, inject, input, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
+import { UserService } from '@app/shared/services/user.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { EventRequestStatusSeverityPipe } from '@app/shared/pipes/event-request-status-severity.pipe';
 import { TableComponent } from '@components/table/table.component';
@@ -11,7 +12,7 @@ import { TagComponent } from '@components/tag/tag.component';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VISA_REQUESTS_RESPONSE } from '@lfx-one/shared/constants';
 import { PageChangeEvent, RequestType, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, finalize, map, of, skip, switchMap, tap } from 'rxjs';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
 import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
 @Component({
@@ -24,6 +25,7 @@ import { VisaRequestApplicationDialogComponent } from '../visa-request-applicati
 export class EventRequestListComponent {
   private readonly eventsService = inject(EventsService);
   private readonly dialogService = inject(DialogService);
+  private readonly userService = inject(UserService);
 
   public readonly requestType = input.required<RequestType>();
   public readonly searchQuery = input<string>('');
@@ -33,8 +35,9 @@ export class EventRequestListComponent {
   protected readonly sortField = signal<string>('APPLICATION_DATE');
   protected readonly sortOrder = signal<'ASC' | 'DESC'>('DESC');
   protected readonly page = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
-
+  protected readonly isSalesforceIdLoading = signal(false);
   protected readonly requestsResponse: Signal<VisaRequestsResponse> = this.initRequests();
+  protected readonly isCreateEnabled: Signal<boolean> = this.initIsCreateEnabled();
 
   protected readonly config = computed(() => {
     const isVisa = this.requestType() === 'visa';
@@ -118,6 +121,30 @@ export class EventRequestListComponent {
         })
       ),
       { initialValue: EMPTY_VISA_REQUESTS_RESPONSE }
+    );
+  }
+
+  // Salesforce ID is required to create a new request
+  private initIsCreateEnabled(): Signal<boolean> {
+    if (this.userService.apiGatewayUserId()) {
+      return signal(true);
+    }
+
+    this.isSalesforceIdLoading.set(true);
+    return toSignal(
+      this.userService.getSalesforceId().pipe(
+        map((profile) => {
+          if (profile && profile.ID) {
+            this.userService.apiGatewayUserId.set(profile.ID);
+          }
+          if (profile?.Account?.ID) {
+            this.userService.apiGatewayOrganizationId.set(profile.Account.ID);
+          }
+          return profile && profile.ID !== null;
+        }),
+        finalize(() => this.isSalesforceIdLoading.set(false))
+      ),
+      { initialValue: false }
     );
   }
 }
