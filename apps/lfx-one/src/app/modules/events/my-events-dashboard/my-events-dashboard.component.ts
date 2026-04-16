@@ -5,24 +5,22 @@ import { Component, computed, inject, Signal, signal } from '@angular/core';
 import { TagComponent } from '@app/shared/components/tag/tag.component';
 import { PersonaService } from '@app/shared/services/persona.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
-import { LINKS_CONFIG, MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
+import { MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 import { EventTabId, FilterOption } from '@lfx-one/shared/interfaces';
+import { TooltipModule } from 'primeng/tooltip';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
 import { EventsTopBarComponent } from '../components/events-top-bar/events-top-bar.component';
-import { EventsInfoBannersComponent } from './components/events-info-banners/events-info-banners.component';
 import { EventsListComponent } from './components/events-list/events-list.component';
 
 @Component({
   selector: 'lfx-my-events-dashboard',
-  imports: [TagComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsInfoBannersComponent, EventsListComponent],
+  imports: [TagComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, TooltipModule],
   templateUrl: './my-events-dashboard.component.html',
   styleUrl: './my-events-dashboard.component.scss',
 })
 export class MyEventsDashboardComponent {
   private readonly personaService = inject(PersonaService);
   private readonly projectContextService = inject(ProjectContextService);
-
-  protected readonly linksConfig = LINKS_CONFIG;
 
   protected readonly activeTab = signal<EventTabId>('upcoming');
   protected readonly isPast = computed(() => this.activeTab() === 'past');

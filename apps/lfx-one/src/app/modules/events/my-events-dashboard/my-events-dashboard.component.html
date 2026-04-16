@@ -10,11 +10,17 @@
         <p class="mt-1 text-sm text-gray-500" data-testid="my-events-description">Events you are registered to attend across all foundations.</p>
         <lfx-tag [value]="foundationLabel()" severity="info" styleClass="mt-1" />
       </div>
-      <lfx-discover-events-button testId="my-events-discover-button" />
+      <div class="flex items-center gap-3">
+        <span
+          class="text-sm text-gray-400 underline decoration-dotted cursor-help"
+          pTooltip="Event registrations might take a while to show up. Just registered? It may take up to 1 hour to appear in your list."
+          tooltipPosition="left"
+          data-testid="my-events-registration-delay-hint">
+          Can't see your registered event?
+        </span>
+        <lfx-discover-events-button testId="my-events-discover-button" />
+      </div>
     </div>
-
-    <!-- Info Banners -->
-    <lfx-events-info-banners [discoverUrl]="linksConfig.EVENTS.DISCOVER" />
 
     <!-- Search and Filters -->
     <div class="bg-white rounded-lg border border-gray-200 p-4">
