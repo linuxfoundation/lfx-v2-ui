@@ -70,7 +70,7 @@ export class BadgesController {
       }
 
       const userEmails = await this.supabaseService.getUserEmails(user.id);
-      const verifiedEmails = userEmails.filter(e => e.is_verified).map(e => e.email.toLowerCase());
+      const verifiedEmails = userEmails.filter((e) => e.is_verified).map((e) => e.email.toLowerCase());
 
       logger.debug(req, 'resolve_user_emails', 'Resolved verified emails from Supabase', {
         total_emails: userEmails.length,

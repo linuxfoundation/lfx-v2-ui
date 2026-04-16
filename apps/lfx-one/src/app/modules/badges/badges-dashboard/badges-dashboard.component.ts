@@ -72,8 +72,17 @@ export class BadgesDashboardComponent {
   protected readonly hasActiveFilters = computed(() => this.selectedStatusFilter() !== 'all' || this.selectedVisibilityFilter() !== 'all');
   protected readonly filteredBadges = this.initializeFilteredBadges();
   protected readonly badgeCountLabel = computed(() => {
-    const count = this.filteredBadges().length;
-    return `Showing ${count} ${count === 1 ? BADGE_LABEL.singular : BADGE_LABEL.plural}`;
+    const total = this.filteredBadges().length;
+    if (total === 0) {
+      return `Showing 0 to 0 of 0 ${BADGE_LABEL.plural}`;
+    }
+
+    const safeFirst = Math.min(this.paginatorFirst(), total - 1);
+    const start = safeFirst + 1;
+    const end = Math.min(safeFirst + BADGES_PER_PAGE, total);
+    const badgeLabel = total === 1 ? BADGE_LABEL.singular : BADGE_LABEL.plural;
+
+    return `Showing ${start} to ${end} of ${total} ${badgeLabel}`;
   });
   protected readonly paginatedBadges = this.initializePaginatedBadges();
 
