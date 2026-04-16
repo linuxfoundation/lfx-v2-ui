@@ -137,9 +137,6 @@ export class EventRequestListComponent {
           if (profile && profile.ID) {
             this.userService.apiGatewayUserId.set(profile.ID);
           }
-          if (profile?.Account?.ID) {
-            this.userService.apiGatewayOrganizationId.set(profile.Account.ID);
-          }
           return profile && profile.ID !== null;
         }),
         finalize(() => this.isSalesforceIdLoading.set(false))

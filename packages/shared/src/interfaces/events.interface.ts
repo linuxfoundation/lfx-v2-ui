@@ -493,6 +493,8 @@ export interface VisaRequestApplicantInfo {
   citizenshipCountry: string;
   passportExpiryDate: Date | null;
   embassyCity: string;
+  /** Salesforce Account/Organization ID — fetched from the API Gateway profile (Account.ID) */
+  organizationID: string;
   company: string;
   mailingAddress: string;
   /** Who pays for the attendee's accommodation */
@@ -509,8 +511,6 @@ export interface VisaRequestApplication {
   termsAccepted: boolean;
   /** Salesforce user record ID — fetched from API Gateway and set by the server from the session */
   userId: string;
-  /** Salesforce Account/Organization ID — fetched from the API Gateway profile (Account.ID) */
-  organizationID: string;
   applicantInfo: VisaRequestApplicantInfo;
 }
 
@@ -521,3 +521,23 @@ export interface VisaRequestApplicationResponse {
 
 export type RequestType = 'visa' | 'travel-fund';
 export type TimeFilterValue = 'any' | 'this-month' | 'next-3-months';
+
+// ---------------------------------------------------------------------------
+// Organization Search
+// ---------------------------------------------------------------------------
+
+/**
+ * A single organization result from the API Gateway organization search endpoint.
+ * Only ID and Name are surfaced — the upstream response contains many additional fields.
+ */
+export interface OrgSearchResult {
+  id: string;
+  name: string;
+}
+
+/**
+ * Response for organization name search
+ */
+export interface OrgSearchResponse {
+  data: OrgSearchResult[];
+}

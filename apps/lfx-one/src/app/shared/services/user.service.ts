@@ -49,9 +49,6 @@ export class UserService {
   /** Cached Salesforce user ID from the API Gateway — null until first fetch */
   public readonly apiGatewayUserId = signal<string | null>(null);
 
-  /** Cached Salesforce Account/Organization ID from the API Gateway — null until first fetch */
-  public readonly apiGatewayOrganizationId = signal<string | null>(null);
-
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {
     return this.http.post(`/api/projects/${userData.project_uid}/permissions`, userData);

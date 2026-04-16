@@ -27,6 +27,7 @@ import {
   TravelFundApplication,
   TravelFundApplicationResponse,
   TravelFundRequestsResponse,
+  OrgSearchResponse,
   VisaRequest,
   VisaRequestApplication,
   VisaRequestApplicationResponse,
@@ -549,7 +550,7 @@ export class EventsService {
       firstName: applicantInfo.firstName,
       lastName: applicantInfo.lastName,
       nameAsPerPassport: `${applicantInfo.firstName} ${applicantInfo.lastName}`,
-      organizationID: payload.organizationID,
+      organizationID: applicantInfo.organizationID,
       passportNumber: applicantInfo.passportNumber,
       requestingUserID: payload.userId,
       userID: payload.userId,
@@ -604,6 +605,57 @@ export class EventsService {
     });
 
     return { success: true, message: 'Your travel fund application has been submitted successfully.' };
+  }
+
+  /**
+   * Search organizations by name via the API Gateway organization-service.
+   * Returns only ID and Name from the upstream response.
+   */
+  public async searchOrganizations(req: Request, name: string): Promise<OrgSearchResponse> {
+    logger.debug(req, 'search_organizations', 'Searching organizations by name', { name });
+
+    const apiGwAudience = process.env['API_GW_AUDIENCE'];
+
+    if (!apiGwAudience) {
+      throw new MicroserviceError('API_GW_AUDIENCE environment variable is not configured', 503, 'API_GATEWAY_MISCONFIGURED', {
+        operation: 'search_organizations',
+      });
+    }
+
+    if (!req.apiGatewayToken) {
+      throw new MicroserviceError('API Gateway token not available', 503, 'API_GATEWAY_UNAVAILABLE', {
+        operation: 'search_organizations',
+      });
+    }
+
+    const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/organization-service/v1/orgs/search?name=${encodeURIComponent(name)}`;
+
+    const upstream = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${req.apiGatewayToken}`,
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!upstream.ok) {
+      const errorText = await upstream.text().catch(() => '');
+      throw new MicroserviceError(`Organization search API returned ${upstream.status}`, upstream.status, 'API_GATEWAY_ERROR', {
+        operation: 'search_organizations',
+        errorBody: errorText,
+      });
+    }
+
+    const json = (await upstream.json()) as { Data?: { ID?: string; Name?: string }[] };
+    const items = json.Data ?? [];
+
+    const data = items
+      .filter((item): item is { ID: string; Name: string } => typeof item.ID === 'string' && typeof item.Name === 'string')
+      .map((item) => ({ id: item.ID, name: item.Name }));
+
+    logger.debug(req, 'search_organizations', 'Organization search complete', { result_count: data.length });
+
+    return { data };
   }
 
   private async executeEventRequestsQuery(

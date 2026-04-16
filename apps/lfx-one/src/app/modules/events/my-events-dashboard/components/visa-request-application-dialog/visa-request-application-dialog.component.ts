@@ -77,9 +77,8 @@ export class VisaRequestApplicationDialogComponent {
     const event = this.selectedEvent();
     const applicantInfo = this.applicantData();
     const userId = this.userService.apiGatewayUserId();
-    const organizationID = this.userService.apiGatewayOrganizationId();
 
-    if (!event || !applicantInfo || !userId || !organizationID) return;
+    if (!event || !applicantInfo || !userId) return;
 
     this.submitting.set(true);
 
@@ -88,7 +87,6 @@ export class VisaRequestApplicationDialogComponent {
       eventName: event.name,
       termsAccepted: this.termsAccepted(),
       userId,
-      organizationID,
       applicantInfo,
     };
 

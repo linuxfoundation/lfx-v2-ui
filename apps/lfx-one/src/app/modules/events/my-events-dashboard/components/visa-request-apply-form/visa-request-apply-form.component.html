@@ -140,15 +140,24 @@
       }
     </div>
     <div class="flex flex-col gap-1">
-      <label for="visa-company" class="text-sm font-medium text-gray-700">Company / Organization</label>
-      <lfx-input-text
-        [form]="form"
+      <label class="text-sm font-medium text-gray-700">Company / Organization <span class="text-red-500">*</span></label>
+      <lfx-autocomplete
+        [form]="orgForm"
         control="company"
-        id="visa-company"
-        size="small"
-        placeholder="Acme Corp"
+        [suggestions]="orgSuggestions()"
+        optionLabel="name"
+        placeholder="Search organization..."
         styleClass="w-full"
-        dataTest="visa-apply-company" />
+        [forceSelection]="true"
+        [showClear]="true"
+        [delay]="0"
+        dataTestId="visa-apply-company"
+        (completeMethod)="onOrgSearch($event)"
+        (onSelect)="onOrgSelect($event)"
+        (onClear)="onOrgClear()" />
+      @if (form.get('company')?.invalid && form.get('company')?.touched) {
+        <span class="text-xs text-red-500" data-testid="visa-apply-company-error">Company / Organization is required</span>
+      }
     </div>
   </div>
 
