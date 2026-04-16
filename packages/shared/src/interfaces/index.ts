@@ -128,3 +128,6 @@ export * from './impersonation.interface';
 
 // Health Metrics interfaces
 export * from './health-metrics.interface';
+
+// Multi-persona dashboard interfaces
+export * from './multi-persona-dashboard.interface';
