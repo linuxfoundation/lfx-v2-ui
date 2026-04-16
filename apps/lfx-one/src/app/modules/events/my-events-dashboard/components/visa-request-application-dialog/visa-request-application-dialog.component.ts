@@ -9,6 +9,7 @@ import { ButtonComponent } from '@components/button/button.component';
 import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { ApplicationSuccessComponent } from '../application-success/application-success.component';
 import { EventSelectionComponent } from '../event-selection/event-selection.component';
 import { StepIndicatorComponent } from '../step-indicator/step-indicator.component';
 import { VisaRequestApplyFormComponent } from '../visa-request-apply-form/visa-request-apply-form.component';
@@ -17,7 +18,14 @@ import { VIS_REQUEST_STEP_ORDER } from '@lfx-one/shared/constants/events.constan
 
 @Component({
   selector: 'lfx-visa-request-application-dialog',
-  imports: [ButtonComponent, EventSelectionComponent, StepIndicatorComponent, VisaRequestTermsComponent, VisaRequestApplyFormComponent],
+  imports: [
+    ApplicationSuccessComponent,
+    ButtonComponent,
+    EventSelectionComponent,
+    StepIndicatorComponent,
+    VisaRequestTermsComponent,
+    VisaRequestApplyFormComponent,
+  ],
   templateUrl: './visa-request-application-dialog.component.html',
   styleUrl: './visa-request-application-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +43,7 @@ export class VisaRequestApplicationDialogComponent {
   protected applyFormValid = signal(false);
   protected applicantData = signal<VisaRequestApplicantInfo | null>(null);
   protected submitting = signal(false);
+  protected submitted = signal(false);
 
   protected readonly isNextDisabled = computed(() => {
     if (this.step() === 'select-event') return !this.selectedEvent();
@@ -96,12 +105,7 @@ export class VisaRequestApplicationDialogComponent {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Success',
-              detail: 'Your visa letter application has been submitted successfully.',
-            });
-            this.ref.close({ submitted: true });
+            this.submitted.set(true);
           } else {
             this.messageService.add({
               severity: 'error',
