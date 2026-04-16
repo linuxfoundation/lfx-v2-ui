@@ -460,13 +460,6 @@ export class PersonaDetectionService {
   }
 
   /**
-   * Compute whether a project is foundation-level using business criteria.
-   * Mirrors the lfx-pcc hasHealthMetricDashboard logic mapped to V2 project fields:
-   * - Stage must be 'Active'
-   * - Legal entity type must not be 'Internal Allocation'
-   * - Funding model must include 'Membership'
-   */
-  /**
    * Extract unique organizations from board_member detection extras
    * The persona service includes organization data (Salesforce account ID, name, website)
    * in board_member detection extras — map these to Account objects for UI consumption
