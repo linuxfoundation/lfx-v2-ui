@@ -34,13 +34,13 @@ You must read and internalize the CLAUDE.md file(s) in the project and the user'
 
 ### Step 3: Upstream API Contract Validation (Backend Changes Only)
 
-**Skip this step entirely if the changes are frontend-only (no files under `src/server/`).** Only run upstream validation when backend proxy code was created or modified.
+**Skip this step entirely if the changes are frontend-only (no files under `apps/lfx-one/src/server/`).** Only run upstream validation when backend proxy code was created or modified.
 
 **This is critical for any backend changes.** The LFX One backend is a thin proxy layer to external Go microservices. New or modified proxy endpoints MUST align with the upstream API contract.
 
 #### When to Check
 
-- Any new file in `src/server/services/`, `src/server/controllers/`, or `src/server/routes/`
+- Any new file in `apps/lfx-one/src/server/services/`, `apps/lfx-one/src/server/controllers/`, or `apps/lfx-one/src/server/routes/`
 - Any modified service that calls `MicroserviceProxyService.proxyRequest()`
 - Any new API path or changed request/response shape
 
@@ -147,9 +147,9 @@ For each changed file, check against ALL applicable rules. Categories below:
 
 Every backend endpoint must follow: **service** → **controller** → **route**.
 
-- [ ] **Service** in `src/server/services/<name>.service.ts`
-- [ ] **Controller** in `src/server/controllers/<name>.controller.ts`
-- [ ] **Route** in `src/server/routes/<name>.route.ts`
+- [ ] **Service** in `apps/lfx-one/src/server/services/<name>.service.ts`
+- [ ] **Controller** in `apps/lfx-one/src/server/controllers/<name>.controller.ts`
+- [ ] **Route** in `apps/lfx-one/src/server/routes/<name>.route.ts`
 
 #### Backend: Service Rules
 

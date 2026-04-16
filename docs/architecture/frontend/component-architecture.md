@@ -281,7 +281,7 @@ Before creating a wrapper, **always research the PrimeNG component thoroughly**:
 ng generate component shared/components/[component-name] --skip-tests
 ```
 
-> **Note**: The `--standalone` flag is no longer needed — Angular 19+ defaults all components, directives, and pipes to standalone.
+> **Note**: The `--standalone` flag is no longer needed — Angular defaults components, directives, and pipes to standalone.
 
 #### Step 2: Define Input/Output Signals
 

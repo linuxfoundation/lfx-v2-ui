@@ -8,7 +8,7 @@ Standards for the shared package (`@lfx-one/shared`) and Snowflake SQL queries.
 
 ### 1. Interfaces in shared (SHOULD FIX)
 
-All interfaces belong in `packages/shared/src/interfaces/<name>.interface.ts`. Never define interfaces locally in components.
+Prefer defining reusable interfaces in `packages/shared/src/interfaces/<name>.interface.ts`. Truly local UI-only types with no reuse potential may remain local in a component, but shared or reusable interfaces should not be defined there.
 
 **Violation:**
 

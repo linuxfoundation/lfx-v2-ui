@@ -41,7 +41,7 @@ No direct `p-*` components in feature module templates. Must use `lfx-*` wrapper
 <lfx-button label="Save" /> <lfx-table [value]="items()">...</lfx-table>
 ```
 
-Common wrappers: `lfx-button`, `lfx-table`, `lfx-tag`, `lfx-input-text`, `lfx-select`, `lfx-dialog`, `lfx-checkbox`, `lfx-textarea`.
+Common wrappers: `lfx-button`, `lfx-table`, `lfx-tag`, `lfx-input-text`, `lfx-select`, `lfx-checkbox`, `lfx-textarea`.
 
 ---
 
@@ -241,7 +241,9 @@ Required on interactive elements (buttons, inputs, links, dialogs). Convention: 
 
 ## 11. Direct imports (NIT)
 
-Standalone components import directly, no barrel exports.
+Standalone components must be imported directly from their file path, not from barrel index files. However, shared package types ARE imported via subpath entrypoints (`@lfx-one/shared/interfaces`, `@lfx-one/shared/constants`).
+
+Do not import from the root `@lfx-one/shared` barrel; prefer subpath entrypoints.
 
 **Violation:**
 

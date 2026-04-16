@@ -38,6 +38,12 @@ This project has guided skills for common workflows. **Proactively suggest the r
 - "Run checks", "Lint and build", "Pre-PR validation"
 - Any indication that development work is finished
 
+**`/lfx-review-pr`** — match any of these intents:
+
+- "Review this PR", "Check PR quality", "Audit code changes"
+- "Review #123", "Is this PR ready to merge?"
+- Any mention of reviewing or auditing a pull request
+
 ## For Cowork Sessions
 
 Non-developer contributors use these skills as guided workflows. Follow these rules:

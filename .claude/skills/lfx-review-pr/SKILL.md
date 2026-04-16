@@ -94,7 +94,7 @@ Construct the Agent prompt as follows:
 > - `.claude/rules/development-rules.md` — license headers, no nested ternaries, flex+gap not space-y, data-testid
 > - `CLAUDE.md` — all project conventions
 >
-> For any backend files under `src/server/` that call upstream microservices, validate against the upstream API contract:
+> For any backend files under `apps/lfx-one/src/server/` that call upstream microservices, validate against the upstream API contract:
 >
 > ```bash
 > gh api repos/linuxfoundation/<repo>/contents/gen/http/openapi3.yaml --jq '.content' | base64 -d
@@ -136,7 +136,7 @@ If there are no previous review comments, note "No previous review comments foun
 
 ## Phase 4: Upstream API Contract Validation
 
-**Skip this phase entirely if no files under `src/server/` were changed.**
+**Skip this phase entirely if no files under `apps/lfx-one/src/server/` were changed.**
 
 ### Identify upstream calls
 

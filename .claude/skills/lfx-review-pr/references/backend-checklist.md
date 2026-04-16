@@ -205,7 +205,7 @@ return res.status(400).json({ error: 'Invalid input' });
 **Fix:**
 
 ```typescript
-import { ServiceValidationError } from '../errors/validation.error';
+import { ServiceValidationError } from '../errors/service-validation.error';
 import { AuthenticationError } from '../errors/authentication.error';
 import { MicroserviceError } from '../errors/microservice.error';
 
