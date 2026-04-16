@@ -1,12 +1,12 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<a
-  [href]="discoverUrl"
+<lfx-button
+  label="Discover Events"
+  icon="fa-light fa-arrow-up-right-from-square"
+  [link]="true"
+  [text]="true"
   [attr.data-testid]="testId()"
   target="_blank"
   rel="noopener noreferrer"
-  class="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1.5 whitespace-nowrap">
-  <i class="fa-light fa-arrow-up-right-from-square text-xs" aria-hidden="true"></i>
-  Discover Events
-</a>
+  [href]="discoverUrl" />

@@ -17,12 +17,12 @@ import { EventsListComponent } from './components/events-list/events-list.compon
 })
 export class MyEventsDashboardComponent {
   protected readonly activeTab = signal<EventTabId>('upcoming');
-  protected readonly isPast = computed(() => this.activeTab() === 'past');
-
   protected readonly selectedFoundation = signal<string | null>(null);
   protected readonly selectedRole = signal<string | null>(null);
   protected readonly selectedStatus = signal<string | null>(null);
   protected readonly selectedSearchQuery = signal('');
+
+  protected readonly isPast = computed(() => this.activeTab() === 'past');
 
   /** True when the active tab uses request-style filters (no role, no foundation, different statuses). */
   protected readonly isRequestTab = computed(() => this.activeTab() === 'visa-letters' || this.activeTab() === 'travel-funding');

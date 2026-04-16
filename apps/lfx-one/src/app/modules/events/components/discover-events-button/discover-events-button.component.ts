@@ -3,10 +3,11 @@
 
 import { Component, input } from '@angular/core';
 import { LINKS_CONFIG } from '@lfx-one/shared/constants';
+import { ButtonComponent } from '@components/button/button.component';
 
 @Component({
   selector: 'lfx-discover-events-button',
-  imports: [],
+  imports: [ButtonComponent],
   templateUrl: './discover-events-button.component.html',
 })
 export class DiscoverEventsButtonComponent {
