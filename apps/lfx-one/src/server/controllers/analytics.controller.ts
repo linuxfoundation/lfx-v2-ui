@@ -4,7 +4,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, ServiceValidationError } from '../errors';
-import { getStringQueryParam } from '../helpers/validation.helper';
+import { getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
@@ -432,23 +432,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_project_issues_resolution');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_project_issues_resolution',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_project_issues_resolution',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_project_issues_resolution',
         });
       }
@@ -487,23 +474,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_project_pull_requests_weekly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_project_pull_requests_weekly',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_project_pull_requests_weekly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_project_pull_requests_weekly',
         });
       }
@@ -578,23 +552,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_unique_contributors_weekly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_unique_contributors_weekly',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_unique_contributors_weekly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_unique_contributors_weekly',
         });
       }
@@ -1184,23 +1145,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_health_metrics_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_health_metrics_daily',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_health_metrics_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_health_metrics_daily',
         });
       }
@@ -1236,23 +1184,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_unique_contributors_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_unique_contributors_daily',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_unique_contributors_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_unique_contributors_daily',
         });
       }
@@ -1288,23 +1223,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_health_events_monthly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_health_events_monthly',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_health_events_monthly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_health_events_monthly',
         });
       }
@@ -1340,23 +1262,10 @@ export class AnalyticsController {
 
     try {
       const slug = getStringQueryParam(req, 'slug');
-      const entityType = getStringQueryParam(req, 'entityType') as 'foundation' | 'project' | undefined;
+      const entityType = parseEntityType(req, 'get_code_commits_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
-          operation: 'get_code_commits_daily',
-        });
-      }
-
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_code_commits_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
           operation: 'get_code_commits_daily',
         });
       }

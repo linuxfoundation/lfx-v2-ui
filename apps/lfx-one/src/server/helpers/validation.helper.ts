@@ -121,6 +121,20 @@ export function getStringQueryParam(req: Request, name: string): string | undefi
   return typeof value === 'string' ? value : undefined;
 }
 
+const VALID_ENTITY_TYPES = ['foundation', 'project'] as const;
+export type EntityType = (typeof VALID_ENTITY_TYPES)[number];
+
+export function parseEntityType(req: Request, operation: string): EntityType {
+  const raw = getStringQueryParam(req, 'entityType');
+  if (!raw) {
+    throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', { operation });
+  }
+  if (!VALID_ENTITY_TYPES.includes(raw as EntityType)) {
+    throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', { operation });
+  }
+  return raw as EntityType;
+}
+
 /**
  * Validates that a request body exists
  * @param body The request body to validate
