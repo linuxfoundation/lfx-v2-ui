@@ -789,9 +789,10 @@ export class CommitteeService {
         tags: `committee_uid:${committeeId}`,
       });
       return count;
-    } catch {
+    } catch (error) {
       logger.debug(req, 'get_mailing_list_count_by_committee', 'Failed to fetch mailing list count, defaulting to 0', {
         committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       return 0;
     }
