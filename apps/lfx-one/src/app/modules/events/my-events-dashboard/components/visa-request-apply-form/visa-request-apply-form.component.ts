@@ -11,6 +11,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { COUNTRIES } from '@lfx-one/shared/constants';
 import { VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
+import { startWith } from 'rxjs';
 
 @Component({
   selector: 'lfx-visa-request-apply-form',
@@ -51,11 +52,11 @@ export class VisaRequestApplyFormComponent {
       });
     }
 
-    this.form.statusChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    this.form.statusChanges.pipe(startWith(this.form.status), takeUntilDestroyed()).subscribe(() => {
       this.formValidityChange.emit(this.form.valid);
     });
 
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+    this.form.valueChanges.pipe(startWith(this.form.getRawValue()), takeUntilDestroyed()).subscribe(() => {
       this.formChange.emit(this.buildFormValue());
     });
   }

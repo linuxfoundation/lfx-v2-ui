@@ -10,7 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { MyEvent, MyEventsResponse, TimeFilterValue } from '@lfx-one/shared/interfaces';
-import { catchError, combineLatest, debounceTime, finalize, of, scan, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, EMPTY, finalize, of, scan, skip, switchMap, tap } from 'rxjs';
 import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.constants';
 @Component({
   selector: 'lfx-event-selection',
@@ -120,7 +120,15 @@ export class EventSelectionComponent {
         }),
         switchMap(([filters, offset]) =>
           this.eventsService.getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset, registeredOnly: true, ...filters }).pipe(
-            catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
+            catchError(() => {
+              if (offset === 0) {
+                // Initial load failed - show empty state
+                return of(EMPTY_MY_EVENTS_RESPONSE);
+              }
+              // Load more failed - revert offset so retry fetches the same page
+              this.currentOffset.update((curr) => Math.max(0, curr - EVENT_SELECTION_PAGE_SIZE));
+              return EMPTY; // Don't emit to scan, preserving existing data
+            }),
             finalize(() => {
               this.loading.set(false);
               this.loadingMore.set(false);

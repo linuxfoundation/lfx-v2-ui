@@ -269,7 +269,6 @@ export class EventsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_upcoming_countries', startTime, error, {});
       next(error);
     }
   }
@@ -331,7 +330,7 @@ export class EventsController {
     const startTime = logger.startOperation(req, 'submit_visa_request_application', {});
 
     try {
-      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User authentication required', { operation: 'submit_visa_request_application' });
@@ -358,7 +357,6 @@ export class EventsController {
       logger.success(req, 'submit_visa_request_application', startTime, { event_id: payload.eventId });
       res.json(result);
     } catch (error) {
-      logger.error(req, 'submit_visa_request_application', startTime, error, {});
       next(error);
     }
   }
@@ -372,7 +370,7 @@ export class EventsController {
     const startTime = logger.startOperation(req, 'submit_travel_fund_application', {});
 
     try {
-      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User authentication required', { operation: 'submit_travel_fund_application' });
@@ -403,7 +401,6 @@ export class EventsController {
       logger.success(req, 'submit_travel_fund_application', startTime, { event_id: payload.eventId });
       res.json(result);
     } catch (error) {
-      logger.error(req, 'submit_travel_fund_application', startTime, error, {});
       next(error);
     }
   }
@@ -420,7 +417,7 @@ export class EventsController {
     });
 
     try {
-      const userEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User authentication required', { operation: operationName });
@@ -454,7 +451,6 @@ export class EventsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, operationName, startTime, error, {});
       next(error);
     }
   }
