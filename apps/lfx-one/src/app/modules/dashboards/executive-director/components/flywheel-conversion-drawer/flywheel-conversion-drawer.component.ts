@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -17,7 +18,7 @@ import type { FlywheelConversionResponse, MarketingKeyInsight, MarketingRecommen
 @Component({
   selector: 'lfx-flywheel-conversion-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent, MarketingActionIconPipe],
+  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, ChartComponent, TagComponent, MarketingActionIconPipe],
   templateUrl: './flywheel-conversion-drawer.component.html',
   styleUrl: './flywheel-conversion-drawer.component.scss',
 })

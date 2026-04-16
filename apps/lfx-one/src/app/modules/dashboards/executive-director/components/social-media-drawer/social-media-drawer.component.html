@@ -59,7 +59,7 @@
             @if (drawerData().changePercentage !== 0) {
               <div class="flex items-center gap-2">
                 <span class="text-2xl font-semibold" [class]="drawerData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                  {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage.toFixed(1) }}%
+                  {{ drawerData().changePercentage > 0 ? '+' : '' }}{{ drawerData().changePercentage | number: '1.1-1' }}%
                 </span>
                 <i class="text-sm" [class]="drawerData().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
               </div>
@@ -181,7 +181,7 @@
                   </div>
                 </td>
                 <td class="text-right py-2.5 px-3 text-gray-900">{{ formatNumber(platform.followers) }}</td>
-                <td class="text-right py-2.5 px-3 text-gray-900">{{ platform.engagementRate.toFixed(1) }}%</td>
+                <td class="text-right py-2.5 px-3 text-gray-900">{{ platform.engagementRate | number: '1.1-1' }}%</td>
                 <td class="text-right py-2.5 px-3 text-gray-900">{{ platform.postsLast30Days }}</td>
                 <td class="text-right py-2.5 px-3 text-gray-900">{{ formatNumber(platform.impressions) }}</td>
               </tr>

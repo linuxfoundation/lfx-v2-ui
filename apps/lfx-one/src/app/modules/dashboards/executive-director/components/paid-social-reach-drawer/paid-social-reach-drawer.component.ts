@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
@@ -23,7 +24,7 @@ import type { SocialReachResponse, MarketingRecommendedAction, MarketingKeyInsig
 @Component({
   selector: 'lfx-paid-social-reach-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, SkeletonModule, TagComponent, MarketingActionIconPipe],
+  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, ChartComponent, SkeletonModule, TagComponent, MarketingActionIconPipe],
   templateUrl: './paid-social-reach-drawer.component.html',
   styleUrl: './paid-social-reach-drawer.component.scss',
 })

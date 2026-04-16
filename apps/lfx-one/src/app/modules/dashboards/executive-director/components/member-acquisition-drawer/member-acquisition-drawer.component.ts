@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -24,7 +25,7 @@ import type {
 @Component({
   selector: 'lfx-member-acquisition-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, DrawerModule, ChartComponent, TagComponent, FormatMoneyPipe, MarketingActionIconPipe],
+  imports: [ButtonComponent, CardComponent, DecimalPipe, DrawerModule, ChartComponent, TagComponent, FormatMoneyPipe, MarketingActionIconPipe],
   templateUrl: './member-acquisition-drawer.component.html',
   styleUrl: './member-acquisition-drawer.component.scss',
 })

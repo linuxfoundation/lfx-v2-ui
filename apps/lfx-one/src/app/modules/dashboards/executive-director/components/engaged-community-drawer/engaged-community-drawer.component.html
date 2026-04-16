@@ -42,7 +42,7 @@
           @if (data().changePercentage !== 0) {
             <div class="flex items-center gap-2">
               <span class="text-2xl font-semibold" [class]="data().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage.toFixed(1) }}%
+                {{ data().changePercentage > 0 ? '+' : '' }}{{ data().changePercentage | number: '1.1-1' }}%
               </span>
               <i class="text-sm" [class]="data().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
             </div>

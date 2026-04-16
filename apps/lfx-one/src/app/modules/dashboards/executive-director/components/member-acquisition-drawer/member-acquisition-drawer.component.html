@@ -56,13 +56,13 @@
         <lfx-card styleClass="flex-1">
           <div class="flex flex-col gap-1">
             <span class="text-sm text-gray-500">Renewal Rate</span>
-            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().renewalRate.toFixed(1) }}%</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().renewalRate | number: '1.1-1' }}%</span>
           </div>
         </lfx-card>
         <lfx-card styleClass="flex-1">
           <div class="flex flex-col gap-1">
             <span class="text-sm text-gray-500">Net Revenue Retention</span>
-            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().netRevenueRetention.toFixed(1) }}%</span>
+            <span class="text-2xl font-semibold text-gray-900">{{ retentionData().netRevenueRetention | number: '1.1-1' }}%</span>
           </div>
         </lfx-card>
         <lfx-card styleClass="flex-1">
@@ -71,7 +71,7 @@
             @if (retentionData().changePercentage !== 0) {
               <div class="flex items-center gap-2">
                 <span class="text-2xl font-semibold" [class]="retentionData().trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                  {{ retentionData().changePercentage > 0 ? '+' : '' }}{{ retentionData().changePercentage.toFixed(1) }}%
+                  {{ retentionData().changePercentage > 0 ? '+' : '' }}{{ retentionData().changePercentage | number: '1.1-1' }}%
                 </span>
                 <i class="text-sm" [class]="retentionData().trend === 'up' ? 'fa-light fa-arrow-up text-green-600' : 'fa-light fa-arrow-down text-red-600'"></i>
               </div>
@@ -191,7 +191,7 @@
             <div class="flex flex-col gap-1">
               <span class="text-sm text-gray-500">Match Rate</span>
               @if (revenueImpactData().matchRate > 0) {
-                <span class="text-2xl font-semibold text-gray-900">{{ revenueImpactData().matchRate.toFixed(1) }}%</span>
+                <span class="text-2xl font-semibold text-gray-900">{{ revenueImpactData().matchRate | number: '1.1-1' }}%</span>
               } @else {
                 <span class="text-2xl font-semibold text-gray-400">—</span>
               }
@@ -210,7 +210,7 @@
                 <div class="flex flex-col gap-1" data-testid="member-acquisition-drawer-deal-row">
                   <div class="flex items-center justify-between">
                     <span class="text-sm font-medium text-gray-900">{{ engagement.type }}</span>
-                    <span class="text-sm font-semibold text-gray-900">{{ engagement.percentage.toFixed(1) }}%</span>
+                    <span class="text-sm font-semibold text-gray-900">{{ engagement.percentage | number: '1.1-1' }}%</span>
                   </div>
                   <div class="w-full h-2 bg-gray-100 rounded-full">
                     <div class="h-2 bg-blue-500 rounded-full" [style.width.%]="engagement.percentage"></div>
