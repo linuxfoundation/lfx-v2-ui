@@ -84,6 +84,16 @@ export class MeetingsDashboardComponent {
   private rawUserMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
 
+  // Me lens stat cards
+  protected readonly meLensStatsLoading: Signal<boolean>;
+  protected readonly upcomingCount: Signal<number>;
+  protected readonly nextMeetingDate: Signal<string>;
+  protected readonly pastThisMonthCount: Signal<number>;
+  protected readonly recurringCount: Signal<number>;
+  protected readonly recordingsAvailableCount: Signal<number>;
+  protected readonly attendanceRate: Signal<number>;
+  protected readonly recurringAcrossLabel: Signal<string>;
+
   private upcomingPageToken = signal<string | undefined>(undefined);
   private pastPageToken = signal<string | undefined>(undefined);
   private loadMoreUpcoming$ = new Subject<string>();
@@ -129,6 +139,45 @@ export class MeetingsDashboardComponent {
     // Initialize Me lens data (fetched once, filtered client-side)
     this.rawUserMeetings = this.initializeRawUserMeetings();
     this.rawUserPastMeetings = this.initializeRawUserPastMeetings();
+
+    // Me lens stat cards (computed from raw meeting signals)
+    this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
+    this.upcomingCount = computed(() => this.rawUserMeetings().length);
+    this.nextMeetingDate = computed(() => {
+      const first = this.rawUserMeetings()[0];
+      if (!first) return '';
+      const occ = getCurrentOrNextOccurrence(first);
+      const d = new Date(occ ? occ.start_time : first.start_time);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    this.pastThisMonthCount = computed(() => {
+      const now = new Date();
+      return this.rawUserPastMeetings().filter((m) => {
+        const d = new Date(m.scheduled_start_time);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length;
+    });
+    this.recurringCount = computed(() => this.rawUserMeetings().filter((m) => m.recurrence !== null).length);
+    this.recordingsAvailableCount = computed(() => {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return this.rawUserPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
+    });
+    this.attendanceRate = computed(() => {
+      const now = new Date();
+      const pastThisMonth = this.rawUserPastMeetings().filter((m) => {
+        const d = new Date(m.scheduled_start_time);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      });
+      if (pastThisMonth.length === 0) return 0;
+      const attended = pastThisMonth.filter((m) => (m.attended_count ?? 0) > 0).length;
+      return Math.round((attended / pastThisMonth.length) * 100);
+    });
+    this.recurringAcrossLabel = computed(() => {
+      const recurring = this.rawUserMeetings().filter((m) => m.recurrence !== null);
+      const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
+      const count = uniqueProjects.size;
+      return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';
+    });
 
     // Initialize data with reactive pattern
     this.upcomingMeetings = this.initializeUpcomingMeetings();
