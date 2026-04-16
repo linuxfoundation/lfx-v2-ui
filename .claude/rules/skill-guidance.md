@@ -7,11 +7,12 @@ globs: '*'
 
 This project has guided skills for common workflows. **Proactively suggest the relevant skill** when a user's request matches one of these:
 
-| Skill        | When to Suggest                                                                                                               |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `/setup`     | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app     |
-| `/develop`   | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change |
-| `/preflight` | Before submitting a PR, check if code is ready, validate changes, verify a branch, finished development, review readiness     |
+| Skill            | When to Suggest                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `/setup`         | Getting started, first-time setup, broken environments, install failures, missing env vars, 1Password, how to run the app     |
+| `/develop`       | Add a feature, fix a bug, modify code, create components/services/endpoints/types, refactor, build, implement any code change |
+| `/preflight`     | Before submitting a PR, check if code is ready, validate changes, verify a branch, finished development, review readiness     |
+| `/lfx-review-pr` | Review a PR, audit code changes, check PR quality, validate a PR against standards                                            |
 
 ## Trigger Phrases
 
