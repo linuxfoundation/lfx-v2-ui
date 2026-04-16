@@ -37,7 +37,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
@@ -780,8 +780,7 @@ export class MeetingService {
     });
 
     // Resolve registrant_id — try email first, fall back to username
-    const rawEmail = req.oidc?.user?.['email'] as string | undefined;
-    const email = rawEmail?.toLowerCase();
+    const email = getEffectiveEmail(req) ?? undefined;
     let registrants: MeetingRegistrant[] = [];
 
     if (email) {
@@ -1154,6 +1153,10 @@ export class MeetingService {
     return newRegistrant;
   }
 
+  public async getMeetingProjectName<T extends Meeting>(req: Request, meetings: T[]): Promise<T[]> {
+    return this.projectService.enrichWithProjectData(req, meetings) as Promise<T[]>;
+  }
+
   /**
    * Fetches committee names for all unique committees referenced in meetings.
    * Returns a Map of committee UID -> committee name for merging into meeting data.
@@ -1197,17 +1200,4 @@ export class MeetingService {
     return nameMap;
   }
 
-  private async getMeetingProjectName(req: Request, meetings: Meeting[]): Promise<Meeting[]> {
-    const projectUids = [...new Set(meetings.map((m) => m.project_uid))];
-    const projects = await Promise.all(
-      projectUids.map(async (uid) => {
-        return await this.projectService.getProjectById(req, uid).catch(() => null);
-      })
-    );
-
-    return meetings.map((m) => {
-      const project = projects.find((p) => p?.uid === m.project_uid);
-      return { ...m, project_name: project?.name || '', project_slug: project?.slug || '' };
-    });
-  }
 }

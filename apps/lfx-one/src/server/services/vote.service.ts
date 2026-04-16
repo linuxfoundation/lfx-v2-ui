@@ -15,7 +15,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
@@ -256,10 +256,10 @@ export class VoteService {
    * Fetches votes the current user has been invited to.
    * Queries vote_response records by user_email and username using filters_or.
    */
-  public async getMyVotes(req: Request, projectUid?: string, foundationUid?: string): Promise<Vote[]> {
+  public async getMyVotes(req: Request): Promise<Vote[]> {
     const rawUsername = await getUsernameFromAuth(req);
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
-    const email = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+    const email = getEffectiveEmail(req);
 
     logger.debug(req, 'get_my_votes', 'Fetching votes for current user', {
       username,
@@ -285,7 +285,6 @@ export class VoteService {
         type: 'vote_response',
         page_size: 100,
         filters_or: filtersOr,
-        ...(projectUid && { tags: `project_uid:${projectUid}` }),
         ...(pageToken && { page_token: pageToken }),
       })
     );
@@ -329,16 +328,6 @@ export class VoteService {
         return new Date(b.end_time).getTime() - new Date(a.end_time).getTime();
       });
 
-    // Post-fetch safety net: filter by project_uid or foundation_uid if provided
-    if (projectUid) {
-      return sorted.filter((v) => v.project_uid === projectUid);
-    } else if (foundationUid) {
-      logger.debug(req, 'get_my_votes', 'Filtering by foundation', { foundation_uid: foundationUid });
-      const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
-      const uidSet = new Set(uids);
-      return sorted.filter((v) => uidSet.has(v.project_uid));
-    }
-
-    return sorted;
+    return this.projectService.enrichWithProjectData(req, sorted);
   }
 }

@@ -30,7 +30,7 @@ import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
 import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
@@ -506,7 +506,9 @@ export class UserService {
 
     const limited = limit !== undefined && limit > 0 ? meetings.slice(0, limit) : meetings;
 
-    return this.accessCheckService.addAccessToResources(req, limited, 'v1_meeting', 'organizer');
+    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+
+    return this.accessCheckService.addAccessToResources(req, enriched, 'v1_meeting', 'organizer');
   }
 
   /**
@@ -620,7 +622,9 @@ export class UserService {
 
     const limited = limit !== undefined && limit > 0 ? pastMeetings.slice(0, limit) : pastMeetings;
 
-    return this.accessCheckService.addAccessToResources(req, limited, 'v1_past_meeting', 'organizer');
+    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+
+    return this.accessCheckService.addAccessToResources(req, enriched, 'v1_past_meeting', 'organizer');
   }
 
   /**
@@ -632,7 +636,7 @@ export class UserService {
    * @returns Array of unique meeting_and_occurrence_id strings
    */
   public async getPastMeetingOccurrenceIds(req: Request): Promise<string[]> {
-    const email = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
+    const email = getEffectiveEmail(req) ?? undefined;
     const username = await getUsernameFromAuth(req);
 
     if (!email && !username) {
