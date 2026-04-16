@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NatsSubjects } from '@lfx-one/shared/enums';
+import { computeIsFoundation } from '@lfx-one/shared/utils';
 import {
   Account,
   AffiliatedProjectUidsCacheEntry,
@@ -10,7 +11,6 @@ import {
   PersonaDetectionResponse,
   PersonaProject,
   PersonaType,
-  Project,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -307,7 +307,7 @@ export class PersonaDetectionService {
           const projectData = await this.projectService.getProjectById(req, project.project_uid, false);
           projectName = projectData?.name || null;
           parentProjectUid = projectData?.parent_uid || null;
-          isFoundation = this.computeIsFoundation(projectData);
+          isFoundation = computeIsFoundation(projectData);
           logoUrl = projectData?.logo_url || null;
           description = projectData?.description || null;
         } catch {
@@ -373,7 +373,7 @@ export class PersonaDetectionService {
           projectSlug: projectData?.slug || '',
           projectName: projectData?.name || null,
           parentProjectUid: projectData?.parent_uid || null,
-          isFoundation: this.computeIsFoundation(projectData),
+          isFoundation: computeIsFoundation(projectData),
           logoUrl: projectData?.logo_url || null,
           description: projectData?.description || null,
           detections: [],
@@ -466,19 +466,6 @@ export class PersonaDetectionService {
    * - Legal entity type must not be 'Internal Allocation'
    * - Funding model must include 'Membership'
    */
-  private computeIsFoundation(project: Project | null): boolean {
-    if (!project) {
-      return false;
-    }
-
-    return (
-      project.stage === 'Active' &&
-      project.legal_entity_type !== 'Internal Allocation' &&
-      Array.isArray(project.funding_model) &&
-      project.funding_model.includes('Membership')
-    );
-  }
-
   /**
    * Extract unique organizations from board_member detection extras
    * The persona service includes organization data (Salesforce account ID, name, website)

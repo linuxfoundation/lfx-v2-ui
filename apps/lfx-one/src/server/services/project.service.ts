@@ -3,6 +3,7 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
+import { computeIsFoundation } from '@lfx-one/shared/utils';
 import {
   CodeCommitsDailyResponse,
   FoundationCodeCommitsDailyRow,
@@ -3412,6 +3413,46 @@ export class ProjectService {
     return uids;
   }
 
+  /**
+   * Enrich items that have a project_uid with project metadata (name, slug, is_foundation, parent_uid).
+   * Deduplicates project lookups across all items.
+   */
+  public async enrichWithProjectData<T extends { project_uid: string }>(
+    req: Request,
+    items: T[]
+  ): Promise<(T & { project_name: string; project_slug: string; is_foundation: boolean; parent_project_uid: string })[]> {
+    const projectUids = [...new Set(items.map((item) => item.project_uid).filter(Boolean))];
+
+    logger.debug(req, 'enrich_with_project_data', 'Enriching items with project metadata', {
+      item_count: items.length,
+      unique_projects: projectUids.length,
+    });
+
+    const projects = await Promise.all(
+      projectUids.map(async (uid) => {
+        return await this.getProjectById(req, uid, false).catch(() => null);
+      })
+    );
+
+    const projectMap = new Map(projects.filter((p): p is Project => p !== null).map((p) => [p.uid, p]));
+
+    logger.debug(req, 'enrich_with_project_data', 'Project enrichment complete', {
+      resolved: projectMap.size,
+      unresolved: projectUids.length - projectMap.size,
+    });
+
+    return items.map((item) => {
+      const project = projectMap.get(item.project_uid);
+      return {
+        ...item,
+        project_name: project?.name || '',
+        project_slug: project?.slug || '',
+        is_foundation: computeIsFoundation(project ?? null),
+        parent_project_uid: project?.parent_uid || '',
+      };
+    });
+  }
+
   private getRangeSuffix(range: string, convention: string = 'standard'): string {
     const map = ProjectService.rangeSuffixMap[convention];
     return map?.[range] ?? map?.['YTD'] ?? '_ytd';
@@ -3423,4 +3464,5 @@ export class ProjectService {
     const lastUnderscore = full.lastIndexOf('_');
     return { prefix: full.substring(0, lastUnderscore + 1), suffix: full.substring(lastUnderscore + 1) };
   }
+
 }
