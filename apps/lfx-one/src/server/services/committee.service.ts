@@ -468,6 +468,7 @@ export class CommitteeService {
     }
 
     // Fetch all committee_member records for the current user (paginated)
+    // When projectUid is provided (e.g. document service), scope the query for efficiency
     const tagsAll = [`username:${username}`];
     if (projectUid) {
       tagsAll.push(`project_uid:${projectUid}`);
