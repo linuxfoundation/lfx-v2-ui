@@ -11,7 +11,7 @@ export interface PersonaProjectRow {
   logoUrl: string | null;
   /** Whether this row represents a foundation or a sub-project */
   type: 'foundation' | 'project';
-  /** Descriptive subtitle: "N projects · N members" for foundations, "ParentName · N contributors" for projects */
+  /** Descriptive subtitle: "N projects · N members" for foundations, parent foundation name for projects */
   subtitle: string;
   /** Highest-priority role from detections: "Board Member", "Maintainer", "Chair", etc. */
   role: string;
@@ -36,6 +36,8 @@ export interface DashboardSummaryPills {
 export interface RoleGroup {
   label: string;
   names: string[];
+  /** Pre-formatted name list for display (e.g. "CNCF, TLF and OpenSSF") */
+  formattedNames: string;
 }
 
 /** Typed shape of the board_member detection extra payload from persona service */

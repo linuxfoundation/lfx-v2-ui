@@ -26,16 +26,7 @@
                   <i class="role-label__dot" [attr.data-role]="group.label"></i>
                   {{ group.label }}
                 </span>
-                <span class="text-gray-500">
-                  @for (name of group.names; track name) {
-                    @if (!$first && $last) {
-                      and
-                    } @else if (!$first) {
-                      ,
-                    }
-                    <strong class="font-medium text-gray-700">{{ name }}</strong>
-                  }
-                </span>
+                <span class="text-gray-500">{{ group.formattedNames }}</span>
               </div>
             }
           </div>
@@ -109,8 +100,11 @@
               <tr
                 class="group cursor-pointer transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
                 tabindex="0"
+                role="link"
+                [attr.aria-label]="'Open ' + row.projectName"
                 (click)="openRow(row)"
                 (keydown.enter)="openRow(row)"
+                (keydown.space)="$event.preventDefault(); openRow(row)"
                 [attr.data-testid]="'persona-row-' + row.projectSlug">
                 <!-- Name Column -->
                 <td class="py-4 pr-4">

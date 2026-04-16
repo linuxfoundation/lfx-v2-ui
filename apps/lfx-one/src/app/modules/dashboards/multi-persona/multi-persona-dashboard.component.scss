@@ -16,16 +16,25 @@
       @apply bg-red-500;
     }
 
-    &[data-role='Chair'] {
+    &[data-role='Chair'],
+    &[data-role='Vice Chair'] {
       @apply bg-orange-500;
+    }
+
+    &[data-role='Treasurer'] {
+      @apply bg-emerald-500;
+    }
+
+    &[data-role='Secretary'] {
+      @apply bg-purple-500;
+    }
+
+    &[data-role='Counsel'] {
+      @apply bg-red-400;
     }
 
     &[data-role='Maintainer'] {
       @apply bg-blue-500;
-    }
-
-    &[data-role='Contributor'] {
-      @apply bg-gray-400;
     }
   }
 }
@@ -45,16 +54,14 @@
 .role-badge {
   @apply inline-block rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700;
 
-  &[data-role='Executive Director'] {
+  &[data-role='Executive Director'],
+  &[data-role='Board Member'] {
     @apply border-red-200 bg-red-50 text-red-700;
   }
 
-  &[data-role='Chair'] {
-    @apply border-orange-200 bg-orange-50 text-orange-700;
-  }
-
+  &[data-role='Chair'],
   &[data-role='Vice Chair'] {
-    @apply border-orange-200 bg-orange-50 text-orange-600;
+    @apply border-orange-200 bg-orange-50 text-orange-700;
   }
 
   &[data-role='Treasurer'] {
@@ -69,15 +76,12 @@
     @apply border-red-200 bg-red-50 text-red-600;
   }
 
-  &[data-role='Board Member'] {
-    @apply border-red-200 bg-red-50 text-red-700;
-  }
-
   &[data-role='Maintainer'] {
     @apply border-blue-200 bg-blue-50 text-blue-700;
   }
 
-  &[data-role='Contributor'] {
+  &[data-role='Contributor'],
+  &[data-role='Member'] {
     @apply border-gray-200 bg-gray-50 text-gray-600;
   }
 }

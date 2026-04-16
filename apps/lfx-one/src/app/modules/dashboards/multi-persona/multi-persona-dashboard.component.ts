@@ -156,18 +156,15 @@ export class MultiPersonaDashboardComponent {
       const maintainerProjects = projects.filter((p) => p.personas.includes('maintainer'));
       const contributorProjects = projects.filter((p) => p.personas.includes('contributor') && !p.personas.includes('maintainer'));
 
-      if (edProjects.length > 0) {
-        groups.push({ label: 'Executive Director', names: edProjects.map((p) => p.projectName || p.projectSlug) });
-      }
-      if (boardProjects.length > 0) {
-        groups.push({ label: 'Board Member', names: boardProjects.map((p) => p.projectName || p.projectSlug) });
-      }
-      if (maintainerProjects.length > 0) {
-        groups.push({ label: 'Maintainer', names: maintainerProjects.map((p) => p.projectName || p.projectSlug) });
-      }
-      if (contributorProjects.length > 0) {
-        groups.push({ label: 'Contributor', names: contributorProjects.map((p) => p.projectName || p.projectSlug) });
-      }
+      const toGroup = (label: string, items: EnrichedPersonaProject[]): RoleGroup => {
+        const names = items.map((p) => p.projectName || p.projectSlug);
+        return { label, names, formattedNames: this.formatNameList(names) };
+      };
+
+      if (edProjects.length > 0) groups.push(toGroup('Executive Director', edProjects));
+      if (boardProjects.length > 0) groups.push(toGroup('Board Member', boardProjects));
+      if (maintainerProjects.length > 0) groups.push(toGroup('Maintainer', maintainerProjects));
+      if (contributorProjects.length > 0) groups.push(toGroup('Contributor', contributorProjects));
 
       return groups;
     });
@@ -388,5 +385,10 @@ export class MultiPersonaDashboardComponent {
       }
     }
     return count;
+  }
+
+  private formatNameList(names: string[]): string {
+    if (names.length <= 1) return names[0] || '';
+    return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
   }
 }

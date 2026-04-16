@@ -56,7 +56,7 @@ export class PersonaService {
   /** Whether the user holds any project-scoped persona (maintainer, contributor) */
   public readonly hasProjectRole: Signal<boolean>;
 
-  /** Whether persona data has been loaded from the API (or cookie had full data) */
+  /** Whether persona data has been loaded from the API after hydration */
   public readonly personaLoaded: WritableSignal<boolean>;
 
   public constructor() {

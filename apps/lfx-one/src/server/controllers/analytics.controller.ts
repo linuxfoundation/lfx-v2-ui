@@ -2579,10 +2579,14 @@ export class AnalyticsController {
       });
     }
 
-    const slugs = slugsParam
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    const slugs = [
+      ...new Set(
+        slugsParam
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+      ),
+    ];
 
     if (slugs.length === 0) {
       throw ServiceValidationError.forField('slugs', 'At least one foundation slug is required', {

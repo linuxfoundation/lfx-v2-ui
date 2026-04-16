@@ -404,7 +404,7 @@ export class PersonaDetectionService {
 
       if (detection.source === 'cdp_roles' && detection.extra) {
         const roles = detection.extra['roles'] as { role: string }[] | undefined;
-        if (roles?.some((r) => r.role.toLowerCase() === 'maintainer')) {
+        if (roles?.some((r) => typeof r.role === 'string' && r.role.toLowerCase() === 'maintainer')) {
           personas.add('maintainer');
           continue;
         }
