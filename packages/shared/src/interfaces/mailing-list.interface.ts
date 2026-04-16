@@ -103,9 +103,9 @@ export interface GroupsIOMailingList {
   /** Associated project slug (inherited from parent service) */
   project_slug: string;
   /** Whether the project is a foundation (top-level entity) */
-  is_foundation: boolean;
+  is_foundation?: boolean;
   /** Parent project UID (for subprojects under a foundation) */
-  parent_project_uid: string;
+  parent_project_uid?: string;
   /** Audit timestamp (nullable) */
   last_reviewed_at?: string | null;
   /** Auditor user ID (nullable) */

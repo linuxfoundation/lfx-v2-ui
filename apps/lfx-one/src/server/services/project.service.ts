@@ -3428,11 +3428,16 @@ export class ProjectService {
       unique_projects: projectUids.length,
     });
 
-    const projects = await Promise.all(
-      projectUids.map(async (uid) => {
-        return await this.getProjectById(req, uid, false).catch(() => null);
-      })
-    );
+    const projects: (Project | null)[] = [];
+    const batchSize = 10;
+
+    for (let i = 0; i < projectUids.length; i += batchSize) {
+      const batch = projectUids.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (uid) => this.getProjectById(req, uid, false).catch(() => null))
+      );
+      projects.push(...results);
+    }
 
     const projectMap = new Map(projects.filter((p): p is Project => p !== null).map((p) => [p.uid, p]));
 
@@ -3445,10 +3450,10 @@ export class ProjectService {
       const project = projectMap.get(item.project_uid);
       return {
         ...item,
-        project_name: project?.name || '',
-        project_slug: project?.slug || '',
+        project_name: project?.name || (item as any).project_name || '',
+        project_slug: project?.slug || (item as any).project_slug || '',
         is_foundation: computeIsFoundation(project ?? null),
-        parent_project_uid: project?.parent_uid || '',
+        parent_project_uid: project?.parent_uid || (item as any).parent_project_uid || '',
       };
     });
   }

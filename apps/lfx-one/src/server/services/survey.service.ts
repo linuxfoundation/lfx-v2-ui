@@ -244,10 +244,13 @@ export class SurveyService {
       });
 
     // Flatten project_uid from committees to top level for enrichment
-    const withProjectUid = sorted.map((s) => ({
-      ...s,
-      project_uid: s.committees?.[0]?.project_uid || '',
-    }));
+    const withProjectUid = sorted.map((s) => {
+      const projectUids = [...new Set((s.committees ?? []).map((c) => c.project_uid).filter(Boolean))];
+      return {
+        ...s,
+        project_uid: projectUids.length === 1 ? projectUids[0] : '',
+      };
+    });
 
     return this.projectService.enrichWithProjectData(req, withProjectUid);
   }

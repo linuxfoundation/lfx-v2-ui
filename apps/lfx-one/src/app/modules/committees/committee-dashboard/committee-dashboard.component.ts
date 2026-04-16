@@ -208,7 +208,8 @@ export class CommitteeDashboardComponent {
             return of([] as MyCommittee[]);
           }
           this.myCommitteesLoading.set(true);
-          return this.committeeService.getMyCommittees().pipe(
+          const projectUid = lens === 'me' ? undefined : project!.uid;
+          return this.committeeService.getMyCommittees(projectUid).pipe(
             catchError((error) => {
               console.error('Failed to load my committees:', error);
               this.myCommitteesLoading.set(false);

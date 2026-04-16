@@ -159,9 +159,9 @@ export interface Committee {
   /** Project URL slug (enriched for filtering) */
   project_slug?: string;
   /** Whether the project is a foundation (top-level entity) */
-  is_foundation: boolean;
+  is_foundation?: boolean;
   /** Parent project UID (for subprojects under a foundation) */
-  parent_project_uid: string;
+  parent_project_uid?: string;
   /** Foundation name this committee belongs to (populated from project hierarchy) */
   foundation_name?: string;
   /** Calendar visibility settings */

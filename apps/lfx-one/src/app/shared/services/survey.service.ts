@@ -45,6 +45,7 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
+  /** Returns surveys for the current user; foundation/project filtering is applied client-side. */
   public getMySurveys(): Observable<Survey[]> {
     return this.http.get<Survey[]>('/api/surveys/my-surveys').pipe(catchError(() => of([])));
   }

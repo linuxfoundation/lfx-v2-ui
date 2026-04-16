@@ -469,6 +469,9 @@ export class CommitteeService {
 
     // Fetch all committee_member records for the current user (paginated)
     const tagsAll = [`username:${username}`];
+    if (projectUid) {
+      tagsAll.push(`project_uid:${projectUid}`);
+    }
 
     const memberships = await fetchAllQueryResources<CommitteeMember>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {

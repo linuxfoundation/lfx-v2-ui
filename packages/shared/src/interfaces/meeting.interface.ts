@@ -235,9 +235,9 @@ export interface Meeting {
   /** Project slug */
   project_slug: string;
   /** Whether the project is a foundation (top-level entity) */
-  is_foundation: boolean;
+  is_foundation?: boolean;
   /** Parent project UID (for subprojects under a foundation) */
-  parent_project_uid: string;
+  parent_project_uid?: string;
 }
 
 /**

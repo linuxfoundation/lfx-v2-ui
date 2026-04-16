@@ -56,7 +56,7 @@ export class MyMeetingsComponent {
   private initRawMeetings() {
     return this.initLensSwitchedData<Meeting>(
       this.upcomingLoading,
-      () => this.userService.getUserMeetings(),
+      () => this.userService.getUserMeetings(100),
       (uid) => this.meetingService.getUpcomingMeetingsByProject(uid, 100)
     );
   }
@@ -64,7 +64,7 @@ export class MyMeetingsComponent {
   private initRawPastMeetings() {
     return this.initLensSwitchedData<PastMeeting>(
       this.pastLoading,
-      () => this.userService.getUserPastMeetings(),
+      () => this.userService.getUserPastMeetings(50),
       (uid) => this.meetingService.getPastMeetingsByProject(uid, 50)
     );
   }
