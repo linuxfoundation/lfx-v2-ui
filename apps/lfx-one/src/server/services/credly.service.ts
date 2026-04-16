@@ -144,7 +144,7 @@ export class CredlyService {
     } catch (error) {
       logger.warning(req, 'fetch_badges_for_email', 'Failed to fetch badges from Credly', {
         email: maskedEmail,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error instanceof Error ? error : new Error(String(error)),
       });
       return allEntries; // return whatever was collected before the error
     }

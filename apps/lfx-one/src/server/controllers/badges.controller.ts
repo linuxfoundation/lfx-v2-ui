@@ -40,8 +40,7 @@ export class BadgesController {
 
       res.json(badges);
     } catch (error) {
-      logger.error(req, 'get_badges', startTime, error, {});
-      next(error);
+      return next(error);
     }
   }
 
