@@ -113,7 +113,7 @@
     <p class="mb-6 text-sm text-gray-500" data-testid="badges-count">{{ badgeCountLabel() }}</p>
 
     <!-- Badge Grid -->
-    @if (filteredBadges().length === 0) {
+    @if (filteredBadgesCount() === 0) {
       <lfx-card data-testid="badges-empty-state-card">
         <div class="p-8 md:p-12">
           <div class="max-w-2xl mx-auto text-center flex flex-col gap-6">
@@ -136,11 +136,11 @@
         }
       </div>
 
-      @if (filteredBadges().length > rowsPerPage) {
+      @if (filteredBadgesCount() > rowsPerPage) {
         <p-paginator
           [first]="paginatorFirst()"
           [rows]="rowsPerPage"
-          [totalRecords]="filteredBadges().length"
+          [totalRecords]="filteredBadgesCount()"
           (onPageChange)="onPageChange($event)"
           styleClass="mt-6"
           data-testid="badges-paginator">

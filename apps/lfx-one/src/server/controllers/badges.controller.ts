@@ -82,7 +82,7 @@ export class BadgesController {
       return oidcEmail ? [oidcEmail] : [];
     } catch (error) {
       logger.warning(req, 'resolve_user_emails', 'Failed to resolve emails from Supabase, falling back to OIDC email', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error instanceof Error ? error : new Error(String(error)),
       });
       return oidcEmail ? [oidcEmail] : [];
     }

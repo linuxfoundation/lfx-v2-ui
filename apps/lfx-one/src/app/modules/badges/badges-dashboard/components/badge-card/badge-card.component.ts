@@ -23,19 +23,21 @@ export class BadgeCardComponent {
   // === Inputs ===
   public readonly badge = input.required<Badge>();
 
-  public async shareBadge(credlyUrl: string): Promise<void> {
+  protected async shareBadge(shareUrl: string): Promise<void> {
     try {
-      await navigator.clipboard.writeText(credlyUrl);
+      await navigator.clipboard.writeText(shareUrl);
       this.messageService.add({
         severity: 'success',
         summary: 'Copied',
         detail: 'Badge URL copied to clipboard',
       });
-    } catch {
+    } catch (error) {
       this.messageService.add({
+        key: 'support',
         severity: 'error',
         summary: 'Copy failed',
         detail: 'Unable to copy link to clipboard',
+        data: error,
       });
     }
   }

@@ -63,27 +63,12 @@ export class BadgesDashboardComponent {
   protected readonly loading = computed(() => this.badgeState().loading);
   protected readonly hasError = computed(() => this.badgeState().error);
   private readonly badges = computed(() => this.badgeState().data);
-  protected readonly selectedStatusFilter = toSignal(this.statusForm.controls.status.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
-    initialValue: 'all' as BadgeStatusFilter,
-  });
-  protected readonly selectedVisibilityFilter = toSignal(this.visibilityForm.controls.visibility.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
-    initialValue: 'all' as BadgeVisibilityFilter,
-  });
+  protected readonly selectedStatusFilter = this.initializeSelectedStatusFilter();
+  protected readonly selectedVisibilityFilter = this.initializeSelectedVisibilityFilter();
   protected readonly hasActiveFilters = computed(() => this.selectedStatusFilter() !== 'all' || this.selectedVisibilityFilter() !== 'all');
   protected readonly filteredBadges = this.initializeFilteredBadges();
-  protected readonly badgeCountLabel = computed(() => {
-    const total = this.filteredBadges().length;
-    if (total === 0) {
-      return `Showing 0 to 0 of 0 ${BADGE_LABEL.plural}`;
-    }
-
-    const safeFirst = Math.min(this.paginatorFirst(), total - 1);
-    const start = safeFirst + 1;
-    const end = Math.min(safeFirst + BADGES_PER_PAGE, total);
-    const badgeLabel = total === 1 ? BADGE_LABEL.singular : BADGE_LABEL.plural;
-
-    return `Showing ${start} to ${end} of ${total} ${badgeLabel}`;
-  });
+  protected readonly filteredBadgesCount = computed(() => this.filteredBadges().length);
+  protected readonly badgeCountLabel = this.initializeBadgeCountLabel();
   protected readonly paginatedBadges = this.initializePaginatedBadges();
 
   protected onFilterChange(filter: string): void {
@@ -109,6 +94,34 @@ export class BadgesDashboardComponent {
       ),
       { initialValue: { loading: true, error: false, data: [] } }
     );
+  }
+
+  private initializeSelectedStatusFilter(): Signal<BadgeStatusFilter> {
+    return toSignal(this.statusForm.controls.status.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
+      initialValue: 'all',
+    });
+  }
+
+  private initializeSelectedVisibilityFilter(): Signal<BadgeVisibilityFilter> {
+    return toSignal(this.visibilityForm.controls.visibility.valueChanges.pipe(tap(() => this.paginatorFirst.set(0))), {
+      initialValue: 'all',
+    });
+  }
+
+  private initializeBadgeCountLabel(): Signal<string> {
+    return computed(() => {
+      const total = this.filteredBadgesCount();
+      if (total === 0) {
+        return `Showing 0 to 0 of 0 ${BADGE_LABEL.plural}`;
+      }
+
+      const safeFirst = Math.min(this.paginatorFirst(), total - 1);
+      const start = safeFirst + 1;
+      const end = Math.min(safeFirst + BADGES_PER_PAGE, total);
+      const badgeLabel = total === 1 ? BADGE_LABEL.singular : BADGE_LABEL.plural;
+
+      return `Showing ${start} to ${end} of ${total} ${badgeLabel}`;
+    });
   }
 
   private initializeFilteredBadges(): Signal<Badge[]> {
