@@ -35,26 +35,7 @@ export class BrandHealthDrawerComponent {
     topProjects: [],
   });
 
-  // === Computed Signals ===
-  protected readonly mentionsTrendData: Signal<ChartData<'line'>> = computed(() => {
-    const { monthlyMentions } = this.data();
-    return {
-      labels: monthlyMentions.map((d) => d.month),
-      datasets: [
-        {
-          data: monthlyMentions.map((d) => d.value),
-          borderColor: lfxColors.blue[500],
-          backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointBackgroundColor: lfxColors.blue[500],
-        },
-      ],
-    };
-  });
-
+  // === Static Config ===
   protected readonly mentionsTrendOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -85,6 +66,8 @@ export class BrandHealthDrawerComponent {
     },
   };
 
+  // === Computed Signals ===
+  protected readonly mentionsTrendData: Signal<ChartData<'line'>> = this.initMentionsTrendData();
   protected readonly recommendedActions: Signal<MarketingRecommendedAction[]> = this.initRecommendedActions();
   protected readonly keyInsights: Signal<MarketingKeyInsight[]> = this.initKeyInsights();
   protected readonly attentionActions: Signal<MarketingRecommendedAction[]> = computed(() =>
@@ -103,6 +86,27 @@ export class BrandHealthDrawerComponent {
 
   protected onClose(): void {
     this.visible.set(false);
+  }
+
+  private initMentionsTrendData(): Signal<ChartData<'line'>> {
+    return computed(() => {
+      const { monthlyMentions } = this.data();
+      return {
+        labels: monthlyMentions.map((d) => d.month),
+        datasets: [
+          {
+            data: monthlyMentions.map((d) => d.value),
+            borderColor: lfxColors.blue[500],
+            backgroundColor: hexToRgba(lfxColors.blue[500], 0.1),
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: lfxColors.blue[500],
+          },
+        ],
+      };
+    });
   }
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
