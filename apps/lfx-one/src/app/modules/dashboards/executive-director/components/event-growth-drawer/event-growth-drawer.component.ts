@@ -41,10 +41,7 @@ export class EventGrowthDrawerComponent {
     topEvents: [],
   });
 
-  // === Sort state for Top Events table ===
-  protected readonly topEventsSortBy = signal<'attendees' | 'revenue'>('attendees');
-
-  // === Chart options (static config) ===
+  // === Static Config ===
   protected readonly monthlyChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -74,6 +71,9 @@ export class EventGrowthDrawerComponent {
       },
     },
   };
+
+  // === WritableSignals ===
+  protected readonly topEventsSortBy = signal<'attendees' | 'revenue'>('attendees');
 
   // === Computed Signals ===
   protected readonly sortedTopEvents: Signal<EventGrowthTopEventView[]> = this.initSortedTopEvents();

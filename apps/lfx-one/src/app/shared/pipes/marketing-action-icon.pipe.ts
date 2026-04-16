@@ -6,6 +6,7 @@ import { MARKETING_ACTION_ICON_MAP } from '@lfx-one/shared/constants';
 import { MarketingActionType } from '@lfx-one/shared/interfaces';
 
 @Pipe({
+  standalone: true,
   name: 'marketingActionIcon',
 })
 export class MarketingActionIconPipe implements PipeTransform {

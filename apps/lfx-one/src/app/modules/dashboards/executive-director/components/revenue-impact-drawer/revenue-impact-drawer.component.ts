@@ -46,11 +46,7 @@ export class RevenueImpactDrawerComponent {
     eventRegistrationAttribution: { channelBreakdown: [], monthlyTrend: [] },
   });
 
-  // === WritableSignals ===
-  protected readonly eventAttrSortBy = signal<'revenue' | 'sessions' | 'visitors'>('revenue');
-
-  // Tailwind background class per known channel — keeps colors in the build-time CSS layer
-  // rather than inline [style.background-color] so purge/safelist behavior is predictable.
+  // === Static Config ===
   private static readonly channelBgClass: Record<string, string> = {
     google_ads: 'bg-blue-500',
     facebook_ads: 'bg-blue-700',
@@ -61,7 +57,6 @@ export class RevenueImpactDrawerComponent {
   };
   private static readonly channelBgFallback = 'bg-gray-400';
 
-  // === Chart options (static config) ===
   protected readonly paidMediaTrendChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -153,6 +148,9 @@ export class RevenueImpactDrawerComponent {
       },
     },
   };
+
+  // === WritableSignals ===
+  protected readonly eventAttrSortBy = signal<'revenue' | 'sessions' | 'visitors'>('revenue');
 
   // === Computed Signals ===
   protected readonly paidMediaTrendChartData: Signal<ChartData<'bar'>> = this.initPaidMediaTrendChartData();
