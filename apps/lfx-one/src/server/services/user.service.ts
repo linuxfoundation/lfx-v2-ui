@@ -8,9 +8,13 @@ import {
   ActiveWeeksStreakRow,
   Meeting,
   MeetingOccurrence,
+  MeetingRegistrant,
+  PastMeeting,
+  PastMeetingParticipant,
   PendingActionItem,
   PersonaType,
   ProjectItem,
+  QueryServiceResponse,
   UserCodeCommitsResponse,
   UserCodeCommitsRow,
   UserMetadata,
@@ -24,11 +28,14 @@ import {
 import { parseToInt } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
-import { ResourceNotFoundError } from '../errors';
-import { isUserInvitedToMeeting } from '../helpers/meeting.helper';
+import { MicroserviceError, ResourceNotFoundError } from '../errors';
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
+import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
 import { MeetingService } from './meeting.service';
+import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { ProjectService } from './project.service';
 import { SnowflakeService } from './snowflake.service';
@@ -41,6 +48,8 @@ export class UserService {
   private snowflakeService: SnowflakeService;
   private meetingService: MeetingService;
   private projectService: ProjectService;
+  private microserviceProxy: MicroserviceProxyService;
+  private accessCheckService: AccessCheckService;
 
   private readonly twoWeeksMs = 14 * 24 * 60 * 60 * 1000;
   private readonly bufferMinutes = 40;
@@ -50,6 +59,8 @@ export class UserService {
     this.snowflakeService = SnowflakeService.getInstance();
     this.meetingService = new MeetingService();
     this.projectService = new ProjectService();
+    this.microserviceProxy = new MicroserviceProxyService();
+    this.accessCheckService = new AccessCheckService();
   }
 
   /**
@@ -116,10 +127,6 @@ export class UserService {
       // Validate required fields
       if (!updates.username) {
         throw new Error('Username is required');
-      }
-
-      if (!updates.token) {
-        throw new Error('Authentication token is required');
       }
 
       // Send the request via NATS
@@ -444,7 +451,7 @@ export class UserService {
   /**
    * Get all pending actions for a user based on persona
    * @param req - Express request object
-   * @param persona - User persona type (board-member, maintainer, core-developer)
+   * @param persona - User persona type (board-member, maintainer, contributor)
    * @param projectUid - Project UID for filtering
    * @param email - User email
    * @param projectSlug - Project slug for survey filtering
@@ -454,65 +461,408 @@ export class UserService {
     if (persona === 'board-member') {
       return this.getBoardMemberActions(req, email, projectSlug, projectUid);
     }
-    // Future personas: maintainer, core-developer can be added here
+    // Future personas: maintainer, contributor can be added here
     return [];
   }
 
   /**
-   * Fetches all meetings for the current user filtered by project
-   * Gets meetings the user has access to, then filters by invitation status
-   * using the same isUserInvitedToMeeting check as the meeting card endpoint
+   * Fetches meetings for the current user, optionally filtered by project
+   * Uses a reverse-query approach: first gets all registrant records for the user,
+   * then fetches only those meetings by ID — avoids the N+1 query problem.
    * @param req - Express request object
-   * @param email - User's email address for invitation check
-   * @param query - Query parameters for filtering
+   * @param email - User's email address for registrant lookup
+   * @param projectUid - Optional project UID to filter meetings by
    * @param limit - Optional limit on number of meetings to return
-   * @returns Array of Meeting objects the user is invited to
+   * @returns Array of Meeting objects the user is registered for
    */
-  public async getUserMeetings(req: Request, email: string, query: Record<string, any>, limit?: number): Promise<Meeting[]> {
-    // Step 1: Get ALL meetings by paginating through all pages
-    // TODO: Replace with a more efficient server-side filtering approach instead of client-side pagination
-    const allMeetings: Meeting[] = [];
-    let pageToken: string | undefined;
+  public async getUserMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<Meeting[]> {
+    const meetingIds = await this.getUserRegisteredMeetingIds(req, email);
 
-    do {
-      const pageQuery = { ...query, ...(pageToken && { page_token: pageToken }) };
-      const { data: meetings, page_token } = await this.meetingService.getMeetings(req, pageQuery, 'v1_meeting', true);
-      allMeetings.push(...meetings);
-      pageToken = page_token;
-    } while (pageToken);
+    logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', { meeting_count: meetingIds.size });
 
-    logger.debug(req, 'get_user_meetings', 'Retrieved all meetings from API', {
-      total_meetings: allMeetings.length,
+    if (meetingIds.size === 0) {
+      return [];
+    }
+
+    let foundationProjectUids: Set<string> | undefined;
+    if (foundationUid) {
+      const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
+      foundationProjectUids = new Set(uids);
+    }
+
+    const meetings = await this.fetchByIdFilterAndLimit<Meeting>(
+      req,
+      meetingIds,
+      '/itx/meetings',
+      'get_user_meetings',
+      projectUid,
+      undefined,
+      foundationProjectUids
+    );
+
+    // Sort by start_time ascending (soonest first) before applying limit
+    // so the limit returns the most relevant upcoming meetings
+    meetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+    const limited = limit !== undefined && limit > 0 ? meetings.slice(0, limit) : meetings;
+
+    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+
+    return this.accessCheckService.addAccessToResources(req, enriched, 'v1_meeting', 'organizer');
+  }
+
+  /**
+   * Fetches past meetings for the current user, optionally filtered by project
+   * Queries v1_past_meeting_participant by email to find composite meeting IDs,
+   * then fetches each past meeting via ITX endpoint.
+   * @param req - Express request object
+   * @param email - User's email address for participant lookup
+   * @param projectUid - Optional project UID to filter meetings by
+   * @param limit - Optional limit on number of past meetings to return
+   * @returns Array of PastMeeting objects the user participated in
+   */
+  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<PastMeeting[]> {
+    // Step 1: Get all past meeting participant records for this user via query service
+    // Uses fetchAllQueryResources to auto-paginate through all pages and dual email+username
+    // lookup for complete coverage (same pattern as getPastMeetingOccurrenceIds)
+    logger.debug(req, 'get_user_past_meetings', 'Starting past meeting lookup for user', {
+      has_project_filter: !!projectUid,
+      has_foundation_filter: !!foundationUid,
+      limit,
     });
 
-    if (allMeetings.length === 0) {
+    const normalizedEmail = email.toLowerCase();
+    const username = await getUsernameFromAuth(req);
+
+    // M2M token required: participant queries search across all participants in the index
+    const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+    const pastMeetingIds = new Set<string>();
+
+    // Query by email
+    const emailParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'v1_past_meeting_participant',
+          tags: `email:${normalizedEmail}`,
+          page_size: 100,
+          ...(pageToken && { page_token: pageToken }),
+        },
+        undefined,
+        headers
+      )
+    ).catch((error) => {
+      logger.warning(req, 'get_user_past_meetings', 'Email participant query failed, returning partial results', {
+        err: error,
+      });
+      return [];
+    });
+    emailParticipants.forEach((p) => p.meeting_and_occurrence_id && pastMeetingIds.add(p.meeting_and_occurrence_id));
+
+    // Also query by username for complete coverage
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'v1_past_meeting_participant',
+            tags: `username:${plainUsername}`,
+            page_size: 100,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      ).catch((error) => {
+        logger.warning(req, 'get_user_past_meetings', 'Username participant query failed, returning partial results', {
+          err: error,
+        });
+        return [];
+      });
+      usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && pastMeetingIds.add(p.meeting_and_occurrence_id));
+    }
+
+    logger.debug(req, 'get_user_past_meetings', 'Found past meeting participant IDs', {
+      total_ids: pastMeetingIds.size,
+      email_matches: emailParticipants.length,
+    });
+
+    if (pastMeetingIds.size === 0) {
+      return [];
+    }
+
+    let foundationProjectUids: Set<string> | undefined;
+    if (foundationUid) {
+      const uids = await this.projectService.getFoundationProjectUids(req, foundationUid);
+      foundationProjectUids = new Set(uids);
+    }
+
+    // Step 2: Fetch each past meeting and filter (limit applied after sorting)
+    const pastMeetings = await this.fetchByIdFilterAndLimit<PastMeeting>(
+      req,
+      pastMeetingIds,
+      '/itx/past_meetings',
+      'get_user_past_meetings',
+      projectUid,
+      undefined,
+      foundationProjectUids
+    );
+
+    // Sort by scheduled_start_time descending (most recent first) before applying limit
+    // so the limit returns the most recent meetings rather than an arbitrary subset
+    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time).getTime() - new Date(a.scheduled_start_time).getTime());
+
+    const limited = limit !== undefined && limit > 0 ? pastMeetings.slice(0, limit) : pastMeetings;
+
+    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+
+    return this.accessCheckService.addAccessToResources(req, enriched, 'v1_past_meeting', 'organizer');
+  }
+
+  /**
+   * Gets all unique past meeting occurrence IDs (meeting_and_occurrence_id) the user participated in.
+   * Checks both email and username to find all participations.
+   * M2M token required: participant queries search across all participants in the index,
+   * which requires application-level credentials (user tokens lack cross-participant read access)
+   * @param req - Express request object
+   * @returns Array of unique meeting_and_occurrence_id strings
+   */
+  public async getPastMeetingOccurrenceIds(req: Request): Promise<string[]> {
+    const email = getEffectiveEmail(req) ?? undefined;
+    const username = await getUsernameFromAuth(req);
+
+    if (!email && !username) {
       return [];
     }
 
     const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+    const occurrenceIds = new Set<string>();
 
-    // Step 2: Filter meetings by invitation status using the same helper as the meeting card endpoint
-    const inviteChecks = await Promise.all(
-      allMeetings.map(async (meeting) => {
-        const invited = await isUserInvitedToMeeting(req, meeting.id, email, m2mToken).catch(() => false);
-
-        logger.debug(req, 'get_user_meetings', 'Checked user invitation for meeting', {
-          meeting_id: meeting.id,
-          invited,
-        });
-
-        return invited ? meeting : null;
-      })
-    );
-
-    let filteredMeetings = inviteChecks.filter((m): m is Meeting => m !== null);
-
-    // Step 3: Apply limit if specified
-    if (limit !== undefined && limit > 0) {
-      filteredMeetings = filteredMeetings.slice(0, limit);
+    if (email) {
+      const emailParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          { v: '1', type: 'v1_past_meeting_participant', tags: `email:${email}`, ...(pageToken && { page_token: pageToken }) },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      emailParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
     }
 
-    return filteredMeetings;
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const usernameParticipants = await fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          { v: '1', type: 'v1_past_meeting_participant', tags: `username:${plainUsername}`, ...(pageToken && { page_token: pageToken }) },
+          undefined,
+          headers
+        )
+      ).catch(() => []);
+      usernameParticipants.forEach((p) => p.meeting_and_occurrence_id && occurrenceIds.add(p.meeting_and_occurrence_id));
+    }
+
+    return [...occurrenceIds];
+  }
+
+  /**
+   * Gets all unique meeting IDs the user is registered for by querying registrant records
+   * Checks both email and username (fallback) to find all registrations.
+   * M2M token required: registrant queries search across all registrants in the index,
+   * which requires application-level credentials (user tokens lack cross-registrant read access)
+   * @param req - Express request object
+   * @param email - Optional user email address; if omitted, only username lookup is performed
+   * @returns Set of meeting IDs the user is registered for
+   */
+  public async getUserRegisteredMeetingIds(req: Request, email?: string): Promise<Set<string>> {
+    const normalizedEmail = email?.toLowerCase() ?? '';
+
+    const m2mToken = await generateM2MToken(req);
+    const headers = { Authorization: `Bearer ${m2mToken}` };
+
+    const meetingIds = new Set<string>();
+
+    // Query registrants by email (only if email is available)
+    if (normalizedEmail) {
+      logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by email', { email: normalizedEmail });
+
+      const emailRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'v1_meeting_registrant',
+            parent: '',
+            tags: `email:${normalizedEmail}`,
+            page_size: 100,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      );
+
+      for (const r of emailRegistrants) {
+        meetingIds.add(r.meeting_id);
+      }
+    }
+
+    // Also try username-based lookup (fallback for cases where email doesn't match)
+    const username = await getUsernameFromAuth(req);
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+
+      logger.debug(req, 'get_user_registered_meeting_ids', 'Fetching registrants by username', { username: plainUsername });
+
+      const usernameRegistrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(
+          req,
+          'LFX_V2_SERVICE',
+          '/query/resources',
+          'GET',
+          {
+            type: 'v1_meeting_registrant',
+            parent: '',
+            tags: `username:${plainUsername}`,
+            page_size: 100,
+            ...(pageToken && { page_token: pageToken }),
+          },
+          undefined,
+          headers
+        )
+      );
+
+      for (const r of usernameRegistrants) {
+        meetingIds.add(r.meeting_id);
+      }
+    }
+
+    logger.debug(req, 'get_user_registered_meeting_ids', 'Collected unique meeting IDs', {
+      total_unique_meeting_ids: meetingIds.size,
+    });
+
+    return meetingIds;
+  }
+
+  /**
+   * TODO: TEMPORARY — Proxy call to GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true
+   * Used to validate the API Gateway token end-to-end. Will be removed once the API Gateway
+   * integration is confirmed working in all environments.
+   */
+  public async getApiGatewayProfile(req: Request): Promise<{ status: number; body: unknown }> {
+    if (!req.apiGatewayToken) {
+      throw new MicroserviceError('API Gateway token not available — check API_GW_AUDIENCE env var and auth logs', 503, 'API_GATEWAY_UNAVAILABLE', {
+        operation: 'get_salesforce_id',
+        service: 'user_service',
+      });
+    }
+
+    const apiGwAudience = process.env['API_GW_AUDIENCE'];
+
+    if (!apiGwAudience) {
+      throw new MicroserviceError('API_GW_AUDIENCE environment variable is not configured', 503, 'API_GATEWAY_MISCONFIGURED', {
+        operation: 'get_salesforce_id',
+        service: 'user_service',
+      });
+    }
+
+    logger.debug(req, 'get_api_gateway_profile', 'Calling API Gateway /user-service/v1/me');
+
+    const apiGwBaseUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service`;
+    const targetUrl = `${apiGwBaseUrl}/v1/me?basic=true`;
+
+    const upstream = await fetch(targetUrl, {
+      headers: { Authorization: `Bearer ${req.apiGatewayToken}` },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const rawBody = await upstream.text();
+
+    let body: unknown;
+
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      body = { raw: rawBody };
+    }
+
+    logger.debug(req, 'get_api_gateway_profile', 'API Gateway response received', { upstream_status: upstream.status, body_length: rawBody.length });
+
+    return { status: upstream.status, body };
+  }
+
+  /**
+   * Fetches resources by ID in parallel, filters by project, and applies limit.
+   * Shared by getUserMeetings and getUserPastMeetings.
+   */
+  private async fetchByIdFilterAndLimit<T extends { id: string; project_uid?: string }>(
+    req: Request,
+    ids: string[] | Set<string>,
+    endpoint: string,
+    operation: string,
+    projectUid?: string,
+    limit?: number,
+    projectUids?: Set<string>
+  ): Promise<T[]> {
+    const results: T[] = [];
+
+    const fetches = Array.from(ids).map(async (id) => {
+      try {
+        const resource = await this.microserviceProxy.proxyRequest<T>(req, 'LFX_V2_SERVICE', `${endpoint}/${id}`, 'GET');
+        resource.id = resource.id || id;
+        return resource;
+      } catch (error) {
+        logger.warning(req, operation, 'Skipping resource — upstream fetch failed', {
+          resource_id: id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      }
+    });
+
+    for (const result of await Promise.all(fetches)) {
+      if (result !== null) {
+        results.push(result);
+      }
+    }
+
+    let filtered = results;
+    if (projectUid) {
+      filtered = filtered.filter((r) => r.project_uid === projectUid);
+    } else if (projectUids && projectUids.size > 0) {
+      filtered = filtered.filter((r) => r.project_uid !== undefined && projectUids.has(r.project_uid));
+    }
+
+    logger.debug(req, operation, 'Filtered results', {
+      total_fetched: results.length,
+      filtered: filtered.length,
+      project_uid: projectUid ?? 'all',
+      foundation_filter: projectUids ? projectUids.size : 0,
+    });
+
+    if (limit !== undefined && limit > 0) {
+      filtered = filtered.slice(0, limit);
+    }
+
+    return filtered;
   }
 
   /**
@@ -527,14 +877,15 @@ export class UserService {
         return [];
       }),
 
-      this.getUserMeetings(req, email, { tags_all: [`project_uid:${projectUid}`, 'meeting_type:Board'] }).catch((error) => {
+      this.getUserMeetings(req, email, projectUid).catch((error) => {
         logger.warning(req, 'get_board_member_actions', 'Failed to fetch user meetings for pending actions', { err: error });
         return [];
       }),
     ]);
 
-    // Transform meetings to actions (within 2 weeks)
-    const meetingActions = this.transformMeetingsToActions(meetings);
+    // Filter to board meetings only, then transform to actions (within 2 weeks)
+    const boardMeetings = meetings.filter((m) => m.meeting_type?.toLowerCase() === 'board');
+    const meetingActions = this.transformMeetingsToActions(boardMeetings);
 
     return [...surveys, ...meetingActions];
   }
@@ -681,4 +1032,5 @@ export class UserService {
       };
     }
   }
+
 }

@@ -2,18 +2,11 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-  @if (committeesLoading()) {
-    <div class="flex justify-center items-center min-h-96">
-      <div class="text-center">
-        <i class="fa-light fa-spinner-third fa-spin text-3xl text-blue-600 mb-4"></i>
-        <p class="text-gray-600">Loading {{ committeeLabel.singular.toLowerCase() }} details...</p>
-      </div>
-    </div>
-  } @else {
-    <div class="flex flex-col gap-6">
-      <!-- Page Title with Create Group Button -->
+  <div class="flex flex-col gap-6">
+    <!-- Page Header -->
+    <div class="mt-3 mb-6">
       <div class="flex justify-between items-center w-full gap-4">
-        <h1>{{ committeeLabel.plural }}</h1>
+        <h1 class="font-display font-light text-2xl">{{ isMeLens() ? 'My ' + committeeLabel.plural : committeeLabel.plural }}</h1>
         @if (canCreateGroup()) {
           <lfx-button
             [label]="'Create ' + committeeLabel.singular"
@@ -25,47 +18,148 @@
           </lfx-button>
         }
       </div>
-      <p class="text-gray-500" data-testid="dashboard-hero-description">Manage {{ committeeLabel.plural.toLowerCase() }} and governance for your project.</p>
+      <p class="mt-1 text-sm text-gray-500" data-testid="dashboard-hero-description">
+        {{
+          isMeLens()
+            ? committeeLabel.plural + ' you are a member of across all foundations and projects.'
+            : 'Manage ' + committeeLabel.plural.toLowerCase() + ' and governance for your project.'
+        }}
+      </p>
+    </div>
 
-      <!-- Statistics Bar -->
-      @if (committees().length > 0) {
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="dashboard-stats-bar">
+    <!-- Statistics Bar -->
+    @if ((isMeLens() && myCommitteesLoading()) || (!isMeLens() && committeesLoading())) {
+      <div class="grid grid-cols-2 gap-4" [ngClass]="isMeLens() ? 'md:grid-cols-3' : 'md:grid-cols-4'" data-testid="dashboard-stats-bar">
+        @for (_ of isMeLens() ? [1, 2, 3] : [1, 2, 3, 4]; track _) {
           <lfx-card>
-            <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-gray-900">{{ totalCommittees() | number }}</p>
-              <p class="text-xs text-gray-500 mt-1">Total {{ committeeLabel.plural }}</p>
+            <div class="flex flex-col items-center py-2">
+              <p-skeleton width="2.5rem" height="2rem" borderRadius="4px" />
+              <div class="mt-1">
+                <p-skeleton width="5rem" height="0.75rem" borderRadius="4px" />
+              </div>
             </div>
           </lfx-card>
-          <lfx-card>
-            <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-gray-900">{{ publicCommittees() | number }}</p>
-              <p class="text-xs text-gray-500 mt-1">Public</p>
-            </div>
-          </lfx-card>
-          <lfx-card>
-            <div class="text-center py-2">
-              <p class="text-2xl font-semibold text-emerald-600">{{ activeVoting() | number }}</p>
-              <p class="text-xs text-gray-500 mt-1">Active Voting</p>
-            </div>
-          </lfx-card>
+        }
+      </div>
+    } @else if (isMeLens() ? myCommittees().length > 0 : committees().length > 0) {
+      <div class="grid grid-cols-2 gap-4" [ngClass]="isMeLens() ? 'md:grid-cols-3' : 'md:grid-cols-4'" data-testid="dashboard-stats-bar">
+        <lfx-card>
+          <div class="text-center py-2">
+            <p class="text-2xl font-semibold text-gray-900">{{ (isMeLens() ? myTotalGroups() : totalCommittees()) | number }}</p>
+            <p class="text-sm text-gray-500 mt-1">Total {{ committeeLabel.plural }}</p>
+          </div>
+        </lfx-card>
+        <lfx-card>
+          <div class="text-center py-2">
+            <p class="text-2xl font-semibold text-gray-900">{{ (isMeLens() ? myPublicGroups() : publicCommittees()) | number }}</p>
+            <p class="text-sm text-gray-500 mt-1">Public</p>
+          </div>
+        </lfx-card>
+        <lfx-card>
+          <div class="text-center py-2">
+            <p class="text-2xl font-semibold text-emerald-600">{{ (isMeLens() ? myActiveVoting() : activeVoting()) | number }}</p>
+            <p class="text-sm text-gray-500 mt-1">Active Voting</p>
+          </div>
+        </lfx-card>
+        @if (!isMeLens()) {
           <lfx-card>
             <div class="text-center py-2">
               <p class="text-2xl font-semibold text-gray-900">{{ totalMembers() | number }}</p>
-              <p class="text-xs text-gray-500 mt-1">Total Members</p>
+              <p class="text-sm text-gray-500 mt-1">Total Members</p>
             </div>
           </lfx-card>
-        </div>
-      }
+        }
+      </div>
+    }
 
-      <!-- My Groups Section -->
-      @if (myCommittees().length > 0) {
-        <div>
-          <div class="flex items-center gap-2 mb-4">
-            <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
-            <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ myCommittees().length }}</span>
+    <!-- Search & Filters (Me lens only) -->
+    @if (isMeLens()) {
+      <div class="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+          <div class="flex-1">
+            <lfx-input-text
+              [form]="searchForm"
+              control="search"
+              [placeholder]="'Search ' + committeeLabel.plural.toLowerCase() + '...'"
+              icon="fa-light fa-search"
+              styleClass="w-full"
+              size="small"
+              data-testid="committee-me-search-input"></lfx-input-text>
           </div>
+          @if (showFoundationFilter()) {
+            <div class="w-full sm:w-48">
+              <lfx-select
+                [form]="searchForm"
+                control="foundationFilter"
+                size="small"
+                [options]="foundationOptions()"
+                styleClass="w-full"
+                (onChange)="onFoundationFilterChange($event.value)"
+                data-testid="committee-foundation-filter"></lfx-select>
+            </div>
+          }
+          @if (showProjectFilter()) {
+            <div class="w-full sm:w-48">
+              <lfx-select
+                [form]="searchForm"
+                control="projectFilter"
+                size="small"
+                [options]="projectOptions()"
+                styleClass="w-full"
+                (onChange)="onProjectFilterChange($event.value)"
+                data-testid="committee-project-filter"></lfx-select>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- My Groups Section -->
+    @if (myCommitteesLoading()) {
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          @for (_ of [1, 2, 3]; track _) {
+            <lfx-card>
+              <div class="flex flex-col gap-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-col gap-2 flex-1">
+                    <p-skeleton width="60%" height="0.875rem" />
+                    <p-skeleton width="30%" height="0.75rem" />
+                  </div>
+                  <p-skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
+                </div>
+                <div class="flex items-center gap-4 pt-3 border-t border-gray-100">
+                  <p-skeleton width="5rem" height="0.75rem" />
+                  <p-skeleton width="3rem" height="0.75rem" />
+                  <p-skeleton width="1rem" height="0.75rem" borderRadius="2px" />
+                  <p-skeleton width="1rem" height="0.75rem" borderRadius="2px" />
+                </div>
+              </div>
+            </lfx-card>
+          }
+        </div>
+      </div>
+    } @else if (myCommittees().length > 0) {
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
+          <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ filteredMyCommittees().length }}</span>
+        </div>
+        @if (filteredMyCommittees().length === 0) {
+          <lfx-card>
+            <div class="flex items-center justify-center p-8">
+              <div class="text-center">
+                <i class="fa-light fa-eyes text-2xl text-gray-400 mb-2"></i>
+                <p class="text-sm text-gray-500">No {{ committeeLabel.plural.toLowerCase() }} found matching your filters</p>
+              </div>
+            </div>
+          </lfx-card>
+        } @else {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            @for (committee of myCommittees(); track committee.uid) {
+            @for (committee of filteredMyCommittees(); track committee.uid) {
               <div
                 class="block cursor-pointer"
                 tabindex="0"
@@ -80,7 +174,7 @@
                       <div class="min-w-0 flex-1">
                         <h3 class="text-sm font-semibold text-gray-900 truncate">{{ committee.display_name || committee.name }}</h3>
                         <div class="flex items-center gap-2 mt-1">
-                          <span class="text-xs text-gray-500">{{ committee.category }}</span>
+                          <span class="text-sm text-gray-500">{{ committee.category }}</span>
                           @if (!committee.public) {
                             <i class="fa-light fa-lock w-3 h-3 text-gray-400"></i>
                           }
@@ -96,7 +190,7 @@
 
                     <!-- Meta Row: Members + Voting + Channels -->
                     <div class="flex items-center gap-4 mt-auto pt-3 border-t border-gray-100">
-                      <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                      <div class="flex items-center gap-1.5 text-sm text-gray-500">
                         <i class="fa-light fa-users w-3.5 h-3.5"></i>
                         <span>{{ committee.total_members || 0 }} members</span>
                       </div>
@@ -110,7 +204,8 @@
                       @if (committee.mailing_list) {
                         <a
                           [href]="'mailto:' + committee.mailing_list"
-                          class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
+                          (click)="$event.stopPropagation()"
+                          class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 no-underline"
                           [pTooltip]="committee.mailing_list"
                           tooltipPosition="top"
                           aria-label="Mailing list">
@@ -126,7 +221,8 @@
                           [href]="committee.chat_channel"
                           target="_blank"
                           rel="noopener"
-                          class="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 no-underline"
+                          (click)="$event.stopPropagation()"
+                          class="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 no-underline"
                           [pTooltip]="committee.chat_channel | platformLabel"
                           tooltipPosition="top"
                           [attr.aria-label]="committee.chat_channel | platformLabel">
@@ -143,21 +239,43 @@
               </div>
             }
           </div>
-        </div>
-      } @else if (myCommitteesLoading()) {
-        <div>
-          <div class="flex items-center gap-2 mb-4">
-            <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
+        }
+      </div>
+    } @else if (isMeLens()) {
+      <lfx-card>
+        <div class="flex items-center justify-center p-16">
+          <div class="text-center max-w-md">
+            <div class="text-gray-400 mb-4">
+              <i class="fa-light fa-users text-[2rem] mb-4"></i>
+              <h3 class="text-gray-600 mt-2">You are not a member of any {{ committeeLabel.plural.toLowerCase() }} yet.</h3>
+            </div>
           </div>
-          <div class="flex items-center gap-2 text-gray-400 text-sm py-4">
-            <i class="fa-light fa-spinner-third fa-spin"></i>
-            <span>Loading your groups...</span>
-          </div>
         </div>
-      }
+      </lfx-card>
+    }
 
+    @if (!isMeLens()) {
       <!-- All Groups Section -->
-      @if (committees().length > 0) {
+      @if (committeesLoading()) {
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-2">
+            <p-skeleton width="6rem" height="1.25rem" borderRadius="4px" />
+            <p-skeleton width="1.5rem" height="1.25rem" borderRadius="1rem" />
+          </div>
+          <lfx-card>
+            <div class="flex flex-col gap-4 p-4">
+              @for (_ of [1, 2, 3, 4, 5]; track _) {
+                <div class="flex items-center gap-6">
+                  <p-skeleton width="25%" height="0.875rem" />
+                  <p-skeleton width="20%" height="0.875rem" />
+                  <p-skeleton width="15%" height="0.875rem" />
+                  <p-skeleton width="10%" height="0.875rem" />
+                </div>
+              }
+            </div>
+          </lfx-card>
+        </div>
+      } @else if (committees().length > 0) {
         <div class="flex items-center gap-2">
           <h2 class="text-lg font-semibold text-gray-900">All {{ committeeLabel.plural }}</h2>
           <span class="text-xs font-medium text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{{ totalCommittees() }}</span>
@@ -165,45 +283,47 @@
       }
 
       <!-- Content Area - Table or Cards -->
-      <div class="min-h-[400px]">
-        @if (committees().length === 0 && project()?.uid) {
-          <!-- Empty state: No committees exist -->
-          <lfx-card>
-            <div class="flex items-center justify-center p-16">
-              <div class="text-center max-w-md">
-                <div class="text-gray-400 mb-4">
-                  <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
-                  <h3 class="text-gray-600 mt-2">Your project has no {{ committeeLabel.plural.toLowerCase() }}, yet.</h3>
+      @if (!committeesLoading()) {
+        <div class="min-h-[400px]">
+          @if (committees().length === 0 && project()?.uid) {
+            <!-- Empty state: No committees exist -->
+            <lfx-card>
+              <div class="flex items-center justify-center p-16">
+                <div class="text-center max-w-md">
+                  <div class="text-gray-400 mb-4">
+                    <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
+                    <h3 class="text-gray-600 mt-2">Your project has no {{ committeeLabel.plural.toLowerCase() }}, yet.</h3>
+                  </div>
                 </div>
               </div>
-            </div>
-          </lfx-card>
-        } @else if (filteredCommittees().length === 0) {
-          <!-- Empty state: Committees exist but filters returned no results -->
-          <lfx-card>
-            <div class="flex items-center justify-center p-16">
-              <div class="text-center max-w-md">
-                <div class="text-gray-400 mb-4">
-                  <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
+            </lfx-card>
+          } @else if (filteredCommittees().length === 0) {
+            <!-- Empty state: Committees exist but filters returned no results -->
+            <lfx-card>
+              <div class="flex items-center justify-center p-16">
+                <div class="text-center max-w-md">
+                  <div class="text-gray-400 mb-4">
+                    <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold text-gray-900 mt-4">No {{ committeeLabel.plural.toLowerCase() }} Found</h3>
+                  <p class="text-gray-600 mt-2">Try adjusting your search or filter criteria</p>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-900 mt-4">No {{ committeeLabel.plural.toLowerCase() }} Found</h3>
-                <p class="text-gray-600 mt-2">Try adjusting your search or filter criteria</p>
               </div>
-            </div>
-          </lfx-card>
-        } @else {
-          <lfx-committee-table
-            [committees]="filteredCommittees()"
-            [canManageCommittee]="canCreateGroup()"
-            [myCommitteeUids]="myCommitteeUids()"
-            [searchForm]="searchForm"
-            [categoryOptions]="categories()"
-            [votingStatusOptions]="votingStatusOptions()"
-            (refresh)="refreshCommittees()"
-            (rowClick)="onCommitteeClick($event)">
-          </lfx-committee-table>
-        }
-      </div>
-    </div>
-  }
+            </lfx-card>
+          } @else {
+            <lfx-committee-table
+              [committees]="filteredCommittees()"
+              [canManageCommittee]="canCreateGroup()"
+              [myCommitteeUids]="myCommitteeUids()"
+              [searchForm]="searchForm"
+              [categoryOptions]="categories()"
+              [votingStatusOptions]="votingStatusOptions()"
+              (refresh)="refreshCommittees()"
+              (rowClick)="onCommitteeClick($event)">
+            </lfx-committee-table>
+          }
+        </div>
+      }
+    }
+  </div>
 </div>

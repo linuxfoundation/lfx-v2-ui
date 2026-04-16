@@ -83,11 +83,42 @@ export * from './my-activity.interface';
 // Filter interfaces
 export * from './filter.interface';
 
-// Lens interfaces
-export * from './lens.interface';
+// Profile interfaces
+export * from './profile.interface';
+
+// SSE interfaces
+export * from './sse.interface';
+
+// Copilot interfaces
+export * from './copilot.interface';
 
 // Committee application interfaces
 export * from './committee-application.interface';
 
 // Public committee interfaces
 export * from './public-committee.interface';
+
+// Lens interfaces
+export * from './lens.interface';
+
+// Persona detection interfaces
+export * from './persona-detection.interface';
+
+// Events interfaces (my events, foundation events, travel fund, visa request)
+export * from './events.interface';
+// Training interfaces
+export * from './training.interface';
+
+// TI (Thought Industries) interfaces
+export * from './ti.interface';
+
+// My Documents interfaces
+export * from './my-document.interface';
+
+// API Gateway user profile interfaces
+export * from './api-gateway-user-profile.interface';
+// Impersonation interfaces
+export * from './impersonation.interface';
+
+// Health Metrics interfaces
+export * from './health-metrics.interface';

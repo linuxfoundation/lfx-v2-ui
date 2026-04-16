@@ -2295,7 +2295,7 @@ export interface TrainingEnrollmentsResponse {
 // ============================================
 
 /**
- * Raw Snowflake row from PLATINUM.FOUNDATION_TOTAL_PROJECTS_DETAIL
+ * Raw Snowflake row from ANALYTICS.PLATINUM_LFX_ONE.FOUNDATION_TOTAL_PROJECTS_DETAIL
  */
 export interface FoundationProjectsDetailRow {
   FOUNDATION_SEGMENT_ID: string;
@@ -2617,4 +2617,584 @@ export interface OrgCertifiedEmployeesDistributionItem {
  */
 export interface OrgCertifiedEmployeesDistributionResponse {
   programs: OrgCertifiedEmployeesDistributionItem[];
+}
+
+// ============================================
+// Web Activities (Marketing Dashboard)
+// ============================================
+
+/**
+ * Web Activities summary row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.WEB_ACTIVITIES_SUMMARY
+ * Represents session/page view totals grouped by domain classification
+ */
+export interface WebActivitiesSummaryRow {
+  LF_SUB_DOMAIN_CLASSIFICATION: string;
+  TOTAL_SESSIONS: number;
+  TOTAL_PAGE_VIEWS: number;
+}
+
+/**
+ * Domain group breakdown in the API response
+ */
+export interface WebActivitiesDomainGroup {
+  domainGroup: string;
+  totalSessions: number;
+  totalPageViews: number;
+}
+
+/**
+ * API response for Web Activities Summary query
+ */
+export interface WebActivitiesSummaryResponse {
+  totalSessions: number;
+  totalPageViews: number;
+  domainGroups: WebActivitiesDomainGroup[];
+  dailyData: number[];
+  dailyLabels: string[];
+}
+
+// ============================================
+// Marketing Dashboard Shared Types
+// ============================================
+
+/**
+ * Recommended action for marketing drawers
+ */
+export type MarketingActionType =
+  | 'decline'
+  | 'growth'
+  | 'target'
+  | 'revenue'
+  | 'engagement'
+  | 'conversion'
+  | 'content'
+  | 'diversify'
+  | 'optimize'
+  | 'investigate'
+  | 'monitor';
+
+export interface MarketingRecommendedAction {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  dueLabel: string;
+  actionType: MarketingActionType;
+}
+
+/**
+ * Key insight for marketing drawers
+ */
+export interface MarketingKeyInsight {
+  text: string;
+  type: 'driver' | 'warning' | 'info';
+}
+
+export interface MarketingSplitByPriority {
+  attentionActions: MarketingRecommendedAction[];
+  attentionInsights: MarketingKeyInsight[];
+  performingActions: MarketingRecommendedAction[];
+  performingInsights: MarketingKeyInsight[];
+}
+
+// ============================================
+// Social Reach (Marketing Dashboard)
+// ============================================
+
+/**
+ * Social Reach row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_MONTH
+ * Monthly paid ad impressions aggregated per foundation
+ */
+export interface SocialReachRow {
+  MONTH: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Social Reach channel row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+ * Channel-level paid ad impressions aggregated per foundation
+ */
+export interface SocialReachChannelRow {
+  CHANNEL: string;
+  TOTAL_IMPRESSIONS: number;
+}
+
+/**
+ * Channel group for paid social reach breakdown
+ */
+export interface SocialReachChannelGroup {
+  channel: string;
+  totalImpressions: number;
+}
+
+/**
+ * API response for Paid Social query (ROAS + impressions)
+ */
+export interface SocialReachResponse {
+  totalReach: number;
+  roas: number;
+  totalSpend: number;
+  totalRevenue: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  monthlyRoas: number[];
+  channelGroups: SocialReachChannelGroup[];
+}
+
+// ============================================
+// Social Media (Marketing Dashboard)
+// ============================================
+
+/**
+ * Individual social media platform data
+ */
+export interface SocialMediaPlatform {
+  platform: string;
+  followers: number;
+  engagementRate: number;
+  postsLast30Days: number;
+  impressions: number;
+}
+
+/**
+ * Monthly social media metrics for trend chart
+ */
+export interface SocialMediaMonthlyData {
+  month: string;
+  totalFollowers: number;
+}
+
+/**
+ * API response for Social Media query
+ */
+export interface SocialMediaResponse {
+  totalFollowers: number;
+  totalPlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  platforms: SocialMediaPlatform[];
+  monthlyData: SocialMediaMonthlyData[];
+}
+
+// ============================================
+// Email CTR (Marketing Dashboard)
+// ============================================
+
+/**
+ * Email CTR row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_BY_MONTH
+ * Represents monthly email click-through rate data
+ */
+export interface EmailCtrRow {
+  CREATED_MONTH_DATE: string;
+  OVERALL_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+  TOTAL_OPENS: number;
+}
+
+/**
+ * Email CTR campaign row from Snowflake ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CTR_SUMMARY
+ * Campaign-level email metrics aggregated over the period
+ */
+export interface EmailCtrCampaignRow {
+  PROJECT_NAME: string;
+  AVG_CTR: number;
+  TOTAL_SENDS: number;
+  TOTAL_CLICKS: number;
+}
+
+/**
+ * Campaign group for email CTR breakdown
+ */
+export interface EmailCtrCampaignGroup {
+  campaignName: string;
+  classification: string;
+  avgCtr: number;
+}
+
+/**
+ * API response for Email CTR query
+ */
+export interface EmailCtrResponse {
+  currentCtr: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  monthlyData: number[];
+  monthlyLabels: string[];
+  campaignGroups: EmailCtrCampaignGroup[];
+  monthlySends: number[];
+  monthlyOpens: number[];
+}
+
+// ============================================
+// North Star Metrics (Executive Director Dashboard)
+// ============================================
+
+/**
+ * Monthly data point for North Star metric trend charts
+ */
+export interface NorthStarMonthlyDataPoint {
+  month: string;
+  value: number;
+}
+
+/**
+ * API response for Engaged Community Size metric
+ * Newsletter + community + WG + certified individuals (deduplicated)
+ */
+export interface EngagedCommunitySizeResponse {
+  totalMembers: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  breakdown: {
+    newsletterSubscribers: number;
+    communityMembers: number;
+    workingGroupMembers: number;
+    certifiedIndividuals: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Member Acquisition Rate metric
+ * New paying members/quarter + new member revenue (CAC not available in Snowflake)
+ */
+export interface MemberAcquisitionResponse {
+  totalMembers: number;
+  totalMembersMonthlyData: number[];
+  totalMembersMonthlyLabels: string[];
+  newMembersThisQuarter: number;
+  newMemberRevenue: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  quarterlyData: {
+    quarter: string;
+    newMembers: number;
+    revenue: number;
+  }[];
+}
+
+/**
+ * API response for Member Retention / NRR metric
+ * Annual renewal rate + net revenue retention
+ */
+export interface MemberRetentionResponse {
+  renewalRate: number;
+  netRevenueRetention: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  target: number;
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * API response for Flywheel Conversion Rate metric
+ * % of event attendees → newsletter/community/WG within 90 days
+ */
+export interface FlywheelConversionResponse {
+  conversionRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  funnel: {
+    eventAttendees: number;
+    convertedToNewsletter: number;
+    convertedToCommunity: number;
+    convertedToWorkingGroup: number;
+    convertedToTraining?: number;
+    convertedToCode?: number;
+    convertedToWeb?: number;
+  };
+  reengagement: {
+    totalReengaged: number;
+    reengagementRate: number;
+    reengagementMomChange: number;
+    reengagedToNewsletter: number;
+    reengagedToCommunity: number;
+    reengagedToWorkingGroup: number;
+    reengagedToTraining: number;
+    reengagedToCode: number;
+    reengagedToWeb: number;
+  };
+  monthlyData: NorthStarMonthlyDataPoint[];
+}
+
+/**
+ * Top event row for Event Growth drill-down
+ */
+export interface EventGrowthTopEvent {
+  name: string;
+  date: string;
+  attendees: number;
+  revenue: number;
+}
+
+/**
+ * Presentation-ready top event row with pre-formatted revenue string
+ * Used by the drawer component to avoid calling formatters from templates
+ */
+export interface EventGrowthTopEventView extends EventGrowthTopEvent {
+  formattedRevenue: string;
+}
+
+/**
+ * API response for Event Growth metric
+ * Total event attendees, event count, revenue, YoY growth, top events
+ */
+export interface EventGrowthResponse {
+  totalAttendees: number;
+  totalRegistrants: number;
+  totalEvents: number;
+  totalRevenue: number;
+  revenuePerAttendee: number;
+  attendeeYoyChange: number;
+  registrantYoyChange: number;
+  revenueYoyChange: number;
+  trend: 'up' | 'down';
+  monthlyData: NorthStarMonthlyDataPoint[];
+  topEvents: EventGrowthTopEvent[];
+}
+
+/**
+ * Social platform identifier — maps to a presentation icon + color in the shared constants layer
+ * New platforms must be added to MARKETING_SOCIAL_PLATFORM_MAP in @lfx-one/shared/constants/dashboard-metrics.constants.ts
+ */
+export type BrandReachPlatformType = 'linkedin' | 'twitter' | 'youtube' | 'facebook' | 'mastodon' | 'bluesky' | 'other';
+
+/**
+ * Social platform row for Brand Reach drill-down
+ * Icon + color mapping is handled in the component, not the data layer
+ */
+export interface BrandReachSocialPlatform {
+  name: string;
+  platformType: BrandReachPlatformType;
+  followers: number;
+}
+
+/**
+ * View-layer extension of BrandReachSocialPlatform that adds resolved presentation
+ * (icon class, color class) from MARKETING_SOCIAL_PLATFORM_MAP.
+ */
+export interface BrandReachSocialPlatformView extends BrandReachSocialPlatform {
+  icon: string;
+  colorClass: string;
+}
+
+/**
+ * Website domain row for Brand Reach drill-down
+ */
+export interface BrandReachWebsiteDomain {
+  domain: string;
+  sessions: number;
+}
+
+/**
+ * Weekly sessions data point for Brand Reach drill-down (bucketed by ISO week)
+ */
+export interface BrandReachWeeklyDataPoint {
+  week: string;
+  sessions: number;
+}
+
+/**
+ * API response for Brand Reach metric
+ * Digital reach across social platforms and owned websites
+ */
+export interface BrandReachResponse {
+  totalSocialFollowers: number;
+  totalMonthlySessions: number;
+  activePlatforms: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  socialPlatforms: BrandReachSocialPlatform[];
+  websiteDomains: BrandReachWebsiteDomain[];
+  weeklyTrend: BrandReachWeeklyDataPoint[];
+}
+
+/**
+ * Top project row for Brand Health drill-down
+ */
+export interface BrandHealthTopProject {
+  name: string;
+  mentions: number;
+}
+
+/**
+ * Sentiment breakdown for Brand Health drill-down
+ * Percentages out of 100
+ */
+export interface BrandHealthSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+/**
+ * API response for Brand Health metric
+ * Total mentions, sentiment breakdown, monthly mentions trend, top projects
+ */
+export interface BrandHealthResponse {
+  totalMentions: number;
+  sentiment: BrandHealthSentimentBreakdown;
+  sentimentMomChangePp: number;
+  trend: 'up' | 'down';
+  monthlyMentions: NorthStarMonthlyDataPoint[];
+  topProjects: BrandHealthTopProject[];
+}
+
+/**
+ * Engagement-type attribution row for Revenue Impact drill-down
+ */
+export interface RevenueImpactEngagementType {
+  type: string;
+  percentage: number;
+}
+
+/**
+ * Attribution model comparison for Revenue Impact drill-down
+ */
+export interface RevenueImpactAttributionModels {
+  linear: number;
+  firstTouch: number;
+  lastTouch: number;
+}
+
+/**
+ * Paid media metrics for Revenue Impact drill-down
+ */
+export interface RevenueImpactPaidMedia {
+  roas: number;
+  impressions: number;
+  adSpend: number;
+  adRevenue: number;
+  monthlyTrend: RevenueImpactPaidMediaMonth[];
+}
+
+/**
+ * Monthly paid media trend row for Revenue Impact drill-down
+ */
+export interface RevenueImpactPaidMediaMonth {
+  month: string;
+  spend: number;
+  revenue: number;
+  impressions: number;
+  roas: number;
+}
+
+/**
+ * Attribution channel breakdown row for Revenue Impact drill-down
+ */
+export interface RevenueImpactAttributionChannel {
+  channel: string;
+  impressions: number;
+  percentage: number;
+}
+
+/**
+ * Per-project paid-media breakdown for Revenue Impact drill-down.
+ * channelImpressions maps channel name → impressions in the last 6 months.
+ */
+export interface RevenueImpactProjectBreakdown {
+  project: string;
+  totalImpressions: number;
+  channelImpressions: Record<string, number>;
+}
+
+/**
+ * Event-registration attribution per-channel totals (last 6 complete months).
+ */
+export interface EventRegistrationAttributionChannel {
+  channel: string;
+  sessions: number;
+  uniqueVisitors: number;
+  lastTouchRevenue: number;
+}
+
+/**
+ * Event-registration attribution monthly row (for stacked bar).
+ */
+export interface EventRegistrationAttributionMonth {
+  month: string;
+  channel: string;
+  sessions: number;
+  lastTouchRevenue: number;
+}
+
+/**
+ * Event-registration attribution block on the Revenue Impact response.
+ */
+export interface EventRegistrationAttribution {
+  channelBreakdown: EventRegistrationAttributionChannel[];
+  monthlyTrend: EventRegistrationAttributionMonth[];
+}
+
+/**
+ * Presentation-ready event-attribution channel row with formatted last-touch revenue.
+ */
+export interface EventRegistrationAttributionChannelView extends EventRegistrationAttributionChannel {
+  formattedLastTouchRevenue: string;
+}
+
+/**
+ * Channel legend entry pre-computed for the project-breakdown table.
+ * Includes the Tailwind background class name so the template avoids [style.background-color].
+ */
+export interface RevenueImpactChannelLegendView {
+  channel: string;
+  label: string;
+  bgClass: string;
+}
+
+/**
+ * Per-project paid-media breakdown row enriched with per-channel segment data for rendering.
+ */
+export interface RevenueImpactProjectBreakdownView extends RevenueImpactProjectBreakdown {
+  formattedTotalImpressions: string;
+  segments: {
+    channel: string;
+    bgClass: string;
+    sharePercent: number;
+    title: string;
+  }[];
+}
+
+/**
+ * Attribution channel row enriched with formatted display strings for the template.
+ */
+export interface RevenueImpactAttributionChannelView extends RevenueImpactAttributionChannel {
+  label: string;
+  formattedPercentage: string;
+}
+
+/**
+ * API response for Revenue Impact (Marketing Attribution) metric
+ * Pipeline, revenue, attribution models, engagement channels, paid media
+ */
+export interface RevenueImpactResponse {
+  pipelineInfluenced: number;
+  revenueAttributed: number;
+  matchRate: number;
+  changePercentage: number;
+  trend: 'up' | 'down';
+  attributionModels: RevenueImpactAttributionModels;
+  engagementTypes: RevenueImpactEngagementType[];
+  paidMedia: RevenueImpactPaidMedia;
+  attributionChannels: RevenueImpactAttributionChannel[];
+  projectBreakdown: RevenueImpactProjectBreakdown[];
+  eventRegistrationAttribution: EventRegistrationAttribution;
+}
+
+/**
+ * Aggregated response for all ED Evolution dashboard API calls.
+ * Used by buildEdEvolutionMetrics() to convert API data into card UI models.
+ */
+export interface EdEvolutionData {
+  flywheel: FlywheelConversionResponse;
+  memberAcquisition: MemberAcquisitionResponse;
+  memberRetention: MemberRetentionResponse;
+  engagedCommunity: EngagedCommunitySizeResponse;
+  eventGrowth: EventGrowthResponse;
+  brandReach: BrandReachResponse;
+  brandHealth: BrandHealthResponse;
+  revenueImpact: RevenueImpactResponse;
 }

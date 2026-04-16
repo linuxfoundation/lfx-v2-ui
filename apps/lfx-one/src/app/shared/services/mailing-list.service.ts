@@ -10,10 +10,11 @@ import {
   GroupsIOMailingList,
   GroupsIOService,
   MailingListMember,
+  MyMailingList,
   QueryServiceCountResponse,
   UpdateMailingListMemberRequest,
 } from '@lfx-one/shared/interfaces';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 
 /**
  * Service for managing mailing list data
@@ -31,8 +32,17 @@ export class MailingListService {
     return this.http.get<GroupsIOMailingList[]>(this.baseUrl, { params });
   }
 
+  public getMailingListsByCommittee(committeeUid: string): Observable<GroupsIOMailingList[]> {
+    const params = new HttpParams().set('tags', `committee_uid:${committeeUid}`);
+    return this.http.get<GroupsIOMailingList[]>(this.baseUrl, { params });
+  }
+
   public getMailingLists(): Observable<GroupsIOMailingList[]> {
     return this.http.get<GroupsIOMailingList[]>(this.baseUrl);
+  }
+
+  public getMyMailingLists(): Observable<MyMailingList[]> {
+    return this.http.get<MyMailingList[]>(`${this.baseUrl}/my-mailing-lists`).pipe(catchError(() => of([])));
   }
 
   public getMailingList(uid: string): Observable<GroupsIOMailingList> {

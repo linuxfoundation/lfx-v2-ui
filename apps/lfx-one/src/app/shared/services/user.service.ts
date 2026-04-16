@@ -2,20 +2,32 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal, WritableSignal } from '@angular/core';
+import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { MessageService } from 'primeng/api';
 import {
   AddEmailRequest,
+  CdpProjectAffiliation,
   ChangePasswordRequest,
+  ProjectAffiliationPatchBody,
   CombinedProfile,
   CreateUserPermissionRequest,
   EmailManagementData,
   EmailPreferences,
+  EnrichedIdentity,
+  Impersonator,
   Meeting,
+  PastMeeting,
+  ProfileAuthStatus,
   ProfileUpdateRequest,
+  SendEmailVerificationResponse,
   TwoFactorSettings,
   UpdateEmailPreferencesRequest,
   User,
   UserEmail,
+  VerifyAndLinkEmailResponse,
+  WorkExperience,
+  WorkExperienceCreateUpdateBody,
+  WorkExperienceEntry,
 } from '@lfx-one/shared/interfaces';
 import { catchError, Observable, of, take } from 'rxjs';
 
@@ -24,9 +36,14 @@ import { catchError, Observable, of, take } from 'rxjs';
 })
 export class UserService {
   private readonly http = inject(HttpClient);
+  private readonly messageService = inject(MessageService);
 
   public authenticated: WritableSignal<boolean> = signal<boolean>(false);
   public user: WritableSignal<User | null> = signal<User | null>(null);
+  public impersonating: WritableSignal<boolean> = signal<boolean>(false);
+  public impersonator: WritableSignal<Impersonator | null> = signal<Impersonator | null>(null);
+  public canImpersonate: WritableSignal<boolean> = signal<boolean>(false);
+  public readonly userInitials: Signal<string> = this.initUserInitials();
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {
@@ -126,21 +143,153 @@ export class UserService {
   }
 
   /**
-   * Gets all meetings for the current authenticated user filtered by project
-   * Returns meetings the user is registered for or has access to
-   * @param projectUid - Project UID to filter meetings by
-   * @param limit - Optional limit on number of meetings to return
+   * Gets all meetings for the current authenticated user
+   * Returns meetings the user is registered for across all projects
    */
-  public getUserMeetings(projectUid: string, limit?: number): Observable<Meeting[]> {
-    const params: Record<string, string> = { projectUid };
-    if (limit !== undefined) {
-      params['limit'] = limit.toString();
-    }
-    return this.http.get<Meeting[]>('/api/user/meetings', { params }).pipe(
+  public getUserMeetings(): Observable<Meeting[]> {
+    return this.http.get<Meeting[]>('/api/user/meetings').pipe(
       catchError((error) => {
         console.error('Failed to load user meetings:', error);
         return of([]);
       })
     );
+  }
+
+  /**
+   * Gets past meetings for the current authenticated user
+   */
+  public getUserPastMeetings(): Observable<PastMeeting[]> {
+    return this.http.get<PastMeeting[]>('/api/user/past-meetings').pipe(
+      catchError((error) => {
+        console.error('Failed to load user past meetings:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get user's work experience
+   */
+  public getWorkExperience(): Observable<WorkExperience[]> {
+    return this.http.get<WorkExperience[]>('/api/profile/work-experience').pipe(catchError(() => of([])));
+  }
+
+  /**
+   * Get user's work experiences from CDP
+   */
+  public getWorkExperiences(): Observable<WorkExperienceEntry[]> {
+    return this.http.get<WorkExperienceEntry[]>('/api/profile/work-experiences').pipe(
+      catchError(() => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load work experiences.' });
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get user's CDP project affiliations (projects with org affiliations and roles)
+   */
+  public getCdpProjectAffiliations(): Observable<CdpProjectAffiliation[]> {
+    return this.http.get<CdpProjectAffiliation[]>('/api/profile/project-affiliations').pipe(
+      catchError(() => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load project affiliations.' });
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Check if the user has a valid Flow C management token for Auth0 identity operations
+   */
+  public getProfileAuthStatus(): Observable<ProfileAuthStatus> {
+    return this.http.get<ProfileAuthStatus>('/api/profile/auth/status').pipe(catchError(() => of({ authorized: false, configured: false })));
+  }
+
+  /**
+   * Get user's enriched identities (CDP cross-referenced with Auth0)
+   */
+  public getIdentities(): Observable<EnrichedIdentity[]> {
+    return this.http.get<EnrichedIdentity[]>('/api/profile/identities').pipe(
+      catchError(() => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load identities.' });
+        return of([] as EnrichedIdentity[]);
+      })
+    );
+  }
+
+  /**
+   * Reject an identity (mark as "not me") via CDP, and unlink from Auth0 if provider/auth0UserId provided
+   */
+  public rejectIdentity(identityId: string, provider?: string, auth0UserId?: string): Observable<{ success: boolean }> {
+    const body: Record<string, string> = {};
+    if (provider) {
+      body['provider'] = provider;
+    }
+    if (auth0UserId) {
+      body['auth0UserId'] = auth0UserId;
+    }
+    return this.http.patch<{ success: boolean }>(`/api/profile/identities/${identityId}`, body);
+  }
+
+  /**
+   * Confirm a work experience (mark as verified) via CDP
+   */
+  public confirmWorkExperience(id: string): Observable<{ success: boolean }> {
+    return this.http.patch<{ success: boolean }>(`/api/profile/work-experiences/${id}`, {});
+  }
+
+  /**
+   * Delete a work experience via CDP
+   */
+  public deleteWorkExperience(id: string): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(`/api/profile/work-experiences/${id}`);
+  }
+
+  /**
+   * Update an existing work experience via CDP
+   */
+  public updateWorkExperience(id: string, body: WorkExperienceCreateUpdateBody): Observable<{ success: boolean }> {
+    return this.http.put<{ success: boolean }>(`/api/profile/work-experiences/${id}`, body);
+  }
+
+  /**
+   * Create a new work experience via CDP
+   */
+  public createWorkExperience(body: WorkExperienceCreateUpdateBody): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>('/api/profile/work-experiences', body);
+  }
+
+  /**
+   * PATCH a project's affiliations via CDP
+   */
+  public patchProjectAffiliation(projectId: string, body: ProjectAffiliationPatchBody): Observable<{ success: boolean }> {
+    return this.http.patch<{ success: boolean }>(`/api/profile/project-affiliations/${projectId}`, body);
+  }
+
+  /**
+   * Send email verification code for identity linking
+   */
+  public sendEmailVerificationCode(email: string): Observable<SendEmailVerificationResponse> {
+    return this.http.post<SendEmailVerificationResponse>('/api/profile/identities/email/send-code', { email }).pipe(take(1));
+  }
+
+  /**
+   * Verify email OTP and link identity
+   */
+  public verifyAndLinkEmail(email: string, otp: string): Observable<VerifyAndLinkEmailResponse> {
+    return this.http.post<VerifyAndLinkEmailResponse>('/api/profile/identities/email/verify', { email, otp }).pipe(take(1));
+  }
+
+  private initUserInitials(): Signal<string> {
+    return computed(() => {
+      const name = this.user()?.name ?? '';
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 0 || !parts[0]) {
+        return '';
+      }
+      const first = parts[0][0] ?? '';
+      const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
+      return (first + last).toUpperCase();
+    });
   }
 }

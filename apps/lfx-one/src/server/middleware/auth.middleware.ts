@@ -6,8 +6,11 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError } from '../errors';
 import { logger } from '../services/logger.service';
+import { clearImpersonationSession, decodeJwtPayload } from '../utils/auth-helper';
 
 // OIDC middleware already provides req.oidc with authentication context
+
+const TOKEN_EXPIRY_BUFFER_SECONDS = 300;
 
 /**
  * Default route configuration for the application
@@ -22,6 +25,21 @@ const DEFAULT_ROUTE_CONFIG: RouteAuthConfig[] = [
 
   // Public meeting join - no authentication required
   { pattern: '/meetings/', type: 'ssr', auth: 'optional' },
+
+  // Flow C callback via /passwordless/callback — needs session auth but no bearer token
+  { pattern: '/passwordless/callback', type: 'ssr', auth: 'required', tokenRequired: false },
+
+  // Social identity verification callback — needs session auth but no bearer token
+  { pattern: '/social/callback', type: 'ssr', auth: 'required', tokenRequired: false },
+
+  // Social identity connect initiation — needs session auth but no bearer token (initiates redirect)
+  { pattern: '/api/profile/identities/social/connect', type: 'api', auth: 'required', tokenRequired: false },
+
+  // Profile auth callback — needs auth but no bearer token (Auth0 redirects here)
+  { pattern: '/api/profile/auth/callback', type: 'api', auth: 'required', tokenRequired: false },
+
+  // Profile auth start — needs auth but no bearer token (initiates redirect)
+  { pattern: '/api/profile/auth/start', type: 'api', auth: 'required', tokenRequired: false },
 
   // Protected API routes - require authentication and token
   { pattern: '/api', type: 'api', auth: 'required', tokenRequired: true },
@@ -89,6 +107,40 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
 
   try {
     if (req.oidc?.isAuthenticated()) {
+      // Check for active impersonation token first
+      const impersonationToken = req.appSession?.['impersonationToken'];
+      const impersonationExpiresAt = req.appSession?.['impersonationExpiresAt'];
+
+      if (impersonationToken && typeof impersonationToken === 'string' && impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
+        // Validate JWT payload is decodable before using
+        if (!decodeJwtPayload(impersonationToken)) {
+          // Malformed token — clean up and fall through to normal extraction
+          logger.warning(req, 'impersonation_token_malformed', 'Impersonation token has invalid JWT format, clearing session', {
+            path: req.path,
+          });
+          clearImpersonationSession(req);
+        } else {
+          req.bearerToken = impersonationToken;
+
+          logger.debug(req, 'impersonation_request', 'Request under impersonation', {
+            path: req.path,
+            impersonator_sub: req.appSession?.['impersonator']?.sub,
+            target_sub: req.appSession?.['impersonationUser']?.sub,
+          });
+          return { success: true, needsLogout: false };
+        }
+      }
+
+      // If impersonation token is expired, clear it and fall through to normal extraction
+      if (impersonationToken && impersonationExpiresAt && Date.now() >= impersonationExpiresAt) {
+        logger.warning(req, 'impersonation_token_expired', 'Impersonation token expired, clearing session', {
+          path: req.path,
+          impersonator: req.appSession?.['impersonator']?.email,
+          target: req.appSession?.['impersonationUser']?.email,
+        });
+        clearImpersonationSession(req);
+      }
+
       // Check if token exists and is expired
       if (req.oidc.accessToken?.isExpired()) {
         try {
@@ -145,6 +197,105 @@ async function extractBearerToken(req: Request, isOptionalRoute: boolean = false
     path: req.path,
   });
   return { success: false, needsLogout: false };
+}
+
+/**
+ * Silently fetches a second access token scoped to the API Gateway audience.
+ * Uses the existing refresh token from the OIDC session — no user interaction required.
+ * Result is cached in the session (with a 5-minute expiry buffer) and stored on req.apiGatewayToken.
+ * Failures are non-blocking; the request continues without the token.
+ */
+async function extractApiGatewayToken(req: Request): Promise<void> {
+  try {
+    // Serve from session cache if still valid
+    const now = Math.floor(Date.now() / 1000);
+    if (req.appSession?.apiGatewayToken && req.appSession.apiGatewayTokenExpiresAt && now < req.appSession.apiGatewayTokenExpiresAt) {
+      req.apiGatewayToken = req.appSession.apiGatewayToken;
+      logger.debug(req, 'api_gateway_token', 'Using cached API Gateway token');
+      return;
+    }
+
+    const apiGatewayAudience = process.env['API_GW_AUDIENCE'];
+    if (!apiGatewayAudience) {
+      logger.warning(req, 'api_gateway_token', 'API_GW_AUDIENCE env var is not set, skipping secondary token fetch');
+      return;
+    }
+
+    // express-openid-connect stores the full OIDC session (including refresh_token) in req.appSession
+
+    const refreshToken = req.appSession?.['refresh_token'] as string | undefined;
+    if (!refreshToken) {
+      logger.warning(req, 'api_gateway_token', 'No refresh_token in OIDC session — ensure offline_access scope is requested');
+      return;
+    }
+
+    const issuerBaseUrl = (process.env['PCC_AUTH0_ISSUER_BASE_URL'] || '').replace(/\/+$/, '');
+    const clientId = process.env['PCC_AUTH0_CLIENT_ID'] || '';
+    const clientSecret = process.env['PCC_AUTH0_CLIENT_SECRET'] || '';
+    const isAuthelia = issuerBaseUrl.includes('auth.k8s.orb.local');
+
+    let response: Awaited<ReturnType<typeof fetch>>;
+
+    if (isAuthelia) {
+      const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      response = await fetch(`${issuerBaseUrl}/api/oidc/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${credentials}`,
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          audience: apiGatewayAudience,
+        }),
+      });
+    } else {
+      response = await fetch(`${issuerBaseUrl}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+          audience: apiGatewayAudience,
+        }),
+      });
+    }
+
+    if (!response.ok) {
+      logger.warning(req, 'api_gateway_token', 'API Gateway token fetch returned non-OK status', { status: response.status });
+      return;
+    }
+
+    const data = (await response.json()) as { access_token: string; expires_in: number };
+    const rawExpiresAt = now + data.expires_in - TOKEN_EXPIRY_BUFFER_SECONDS;
+
+    // Guard: if expires_in is too short to survive the buffer, fall back to half the raw
+    // expires_in to avoid an immediate-expiry hot loop hammering the IdP on every request.
+    const expiresAt = rawExpiresAt <= now ? now + Math.floor(data.expires_in / 2) : rawExpiresAt;
+
+    if (rawExpiresAt <= now) {
+      logger.warning(req, 'api_gateway_token', 'Token expires_in too short for buffer, using half of raw expiry as fallback', {
+        expires_in: data.expires_in,
+        buffer: TOKEN_EXPIRY_BUFFER_SECONDS,
+      });
+    }
+
+    req.apiGatewayToken = data.access_token;
+
+    if (!req.appSession) req.appSession = {};
+    req.appSession.apiGatewayToken = data.access_token;
+    req.appSession.apiGatewayTokenExpiresAt = expiresAt;
+
+    logger.debug(req, 'api_gateway_token', 'API Gateway token fetched and cached');
+  } catch (error) {
+    // Non-blocking — log and continue without the token
+    logger.warning(req, 'api_gateway_token', 'Silent API Gateway token fetch failed, continuing without it', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 }
 
 /**
@@ -359,7 +510,10 @@ export function createAuthMiddleware(config: AuthConfig = DEFAULT_CONFIG) {
         needsLogout = tokenResult.needsLogout;
       }
 
-      // 4. Authentication context is already available in req.oidc
+      // 4. Silently fetch secondary API Gateway token when the user is authenticated
+      if (hasToken) {
+        await extractApiGatewayToken(req);
+      }
 
       // 5. Build result for decision making
       const result: AuthMiddlewareResult = {

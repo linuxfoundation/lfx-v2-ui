@@ -4,11 +4,18 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, ServiceValidationError } from '../errors';
+import { getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
 import { UserService } from '../services/user.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth } from '../utils/auth-helper';
+
+/** Allowed pattern for foundationSlug: lowercase alphanumeric and hyphens only */
+const SLUG_PATTERN = /^[a-z0-9-]+$/;
+
+/** Maximum allowed length for foundationSlug query parameter */
+const NAME_MAX_LENGTH = 200;
 
 /**
  * Controller for handling analytics HTTP requests
@@ -33,7 +40,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_active_weeks_streak');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -50,7 +57,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_active_weeks_streak', startTime, error);
       next(error);
     }
   }
@@ -63,7 +69,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_pull_requests_merged');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -80,7 +86,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_pull_requests_merged', startTime, error);
       next(error);
     }
   }
@@ -93,7 +98,7 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_code_commits');
 
     try {
-      const userEmail = req.oidc?.user?.['email'];
+      const userEmail = getEffectiveEmail(req);
 
       if (!userEmail) {
         throw new AuthenticationError('User email not found in authentication context', {
@@ -110,7 +115,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_code_commits', startTime, error);
       next(error);
     }
   }
@@ -141,7 +145,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_my_projects', startTime, error);
       next(error);
     }
   }
@@ -155,8 +158,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_certified_employees');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -166,6 +169,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_certified_employees',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_certified_employees',
         });
       }
@@ -182,7 +191,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_certified_employees', startTime, error);
       next(error);
     }
   }
@@ -196,8 +204,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_membership_tier');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const projectSlug = req.query['projectSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const projectSlug = getStringQueryParam(req, 'projectSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -207,6 +215,12 @@ export class AnalyticsController {
 
       if (!projectSlug) {
         throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_membership_tier',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(projectSlug)) {
+        throw ServiceValidationError.forField('projectSlug', 'Invalid projectSlug format', {
           operation: 'get_membership_tier',
         });
       }
@@ -222,7 +236,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_membership_tier', startTime, error);
       next(error);
     }
   }
@@ -236,8 +249,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_organization_maintainers');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -247,6 +260,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_organization_maintainers',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_organization_maintainers',
         });
       }
@@ -263,7 +282,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_organization_maintainers', startTime, error);
       next(error);
     }
   }
@@ -277,8 +295,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_organization_contributors');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -288,6 +306,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_organization_contributors',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_organization_contributors',
         });
       }
@@ -303,7 +327,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_organization_contributors', startTime, error);
       next(error);
     }
   }
@@ -317,8 +340,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_training_enrollments');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const projectSlug = req.query['projectSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const projectSlug = getStringQueryParam(req, 'projectSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -328,6 +351,12 @@ export class AnalyticsController {
 
       if (!projectSlug) {
         throw ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
+          operation: 'get_training_enrollments',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(projectSlug)) {
+        throw ServiceValidationError.forField('projectSlug', 'Invalid projectSlug format', {
           operation: 'get_training_enrollments',
         });
       }
@@ -343,7 +372,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_training_enrollments', startTime, error);
       next(error);
     }
   }
@@ -357,8 +385,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_event_attendance_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -368,6 +396,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_event_attendance_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_event_attendance_monthly',
         });
       }
@@ -384,7 +418,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_event_attendance_monthly', startTime, error);
       next(error);
     }
   }
@@ -398,8 +431,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_project_issues_resolution');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_project_issues_resolution');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -407,15 +440,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_project_issues_resolution',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_project_issues_resolution',
         });
       }
@@ -434,7 +460,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_project_issues_resolution', startTime, error);
       next(error);
     }
   }
@@ -448,8 +473,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_project_pull_requests_weekly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_project_pull_requests_weekly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -457,15 +482,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_project_pull_requests_weekly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_project_pull_requests_weekly',
         });
       }
@@ -482,7 +500,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_project_pull_requests_weekly', startTime, error);
       next(error);
     }
   }
@@ -496,10 +513,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_contributors_mentored');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
+      const slug = getStringQueryParam(req, 'slug');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
+          operation: 'get_contributors_mentored',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_contributors_mentored',
         });
       }
@@ -515,7 +538,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_contributors_mentored', startTime, error);
       next(error);
     }
   }
@@ -529,8 +551,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_unique_contributors_weekly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_unique_contributors_weekly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -538,15 +560,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_unique_contributors_weekly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_unique_contributors_weekly',
         });
       }
@@ -563,7 +578,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_unique_contributors_weekly', startTime, error);
       next(error);
     }
   }
@@ -577,10 +591,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_total_projects');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_total_projects',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_total_projects',
         });
       }
@@ -595,7 +615,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_total_projects', startTime, error);
       next(error);
     }
   }
@@ -609,10 +628,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_projects_detail');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_projects_detail',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_projects_detail',
         });
       }
@@ -626,7 +651,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_projects_detail', startTime, error);
       next(error);
     }
   }
@@ -640,10 +664,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_projects_lifecycle_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_projects_lifecycle_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_projects_lifecycle_distribution',
         });
       }
@@ -657,7 +687,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_projects_lifecycle_distribution', startTime, error);
       next(error);
     }
   }
@@ -671,10 +700,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_total_members');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_total_members',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_total_members',
         });
       }
@@ -689,7 +724,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_total_members', startTime, error);
       next(error);
     }
   }
@@ -703,10 +737,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_active_contributors_monthly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_active_contributors_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_active_contributors_monthly',
         });
       }
@@ -720,7 +760,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_active_contributors_monthly', startTime, error);
       next(error);
     }
   }
@@ -734,10 +773,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_contributors_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_contributors_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_contributors_distribution',
         });
       }
@@ -751,7 +796,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_contributors_distribution', startTime, error);
       next(error);
     }
   }
@@ -765,10 +809,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_software_value');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_software_value',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_software_value',
         });
       }
@@ -783,7 +833,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_software_value', startTime, error);
       next(error);
     }
   }
@@ -797,10 +846,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_value_concentration');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_value_concentration',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_value_concentration',
         });
       }
@@ -815,7 +870,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_value_concentration', startTime, error);
       next(error);
     }
   }
@@ -829,10 +883,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_maintainers',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_maintainers',
         });
       }
@@ -847,7 +907,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers', startTime, error);
       next(error);
     }
   }
@@ -861,10 +920,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers_monthly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_maintainers_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_maintainers_monthly',
         });
       }
@@ -878,7 +943,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers_monthly', startTime, error);
       next(error);
     }
   }
@@ -892,10 +956,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_maintainers_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_maintainers_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_maintainers_distribution',
         });
       }
@@ -909,7 +979,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_maintainers_distribution', startTime, error);
       next(error);
     }
   }
@@ -923,10 +992,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_events_quarterly');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_events_quarterly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_events_quarterly',
         });
       }
@@ -940,7 +1015,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_events_quarterly', startTime, error);
       next(error);
     }
   }
@@ -954,10 +1028,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_events_attendance_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_events_attendance_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_events_attendance_distribution',
         });
       }
@@ -971,7 +1051,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_events_attendance_distribution', startTime, error);
       next(error);
     }
   }
@@ -985,10 +1064,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_foundation_health_score_distribution');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_foundation_health_score_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_foundation_health_score_distribution',
         });
       }
@@ -1009,7 +1094,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_foundation_health_score_distribution', startTime, error);
       next(error);
     }
   }
@@ -1023,10 +1107,16 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_company_bus_factor');
 
     try {
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_company_bus_factor',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_company_bus_factor',
         });
       }
@@ -1041,7 +1131,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_company_bus_factor', startTime, error);
       next(error);
     }
   }
@@ -1055,8 +1144,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_health_metrics_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_health_metrics_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1064,15 +1153,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_health_metrics_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_health_metrics_daily',
         });
       }
@@ -1088,7 +1170,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_health_metrics_daily', startTime, error);
       next(error);
     }
   }
@@ -1102,8 +1183,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_unique_contributors_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_unique_contributors_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1111,15 +1192,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_unique_contributors_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_unique_contributors_daily',
         });
       }
@@ -1135,7 +1209,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_unique_contributors_daily', startTime, error);
       next(error);
     }
   }
@@ -1149,8 +1222,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_health_events_monthly');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_health_events_monthly');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1158,15 +1231,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_health_events_monthly',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_health_events_monthly',
         });
       }
@@ -1182,7 +1248,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_health_events_monthly', startTime, error);
       next(error);
     }
   }
@@ -1196,8 +1261,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_code_commits_daily');
 
     try {
-      const slug = req.query['slug'] as string | undefined;
-      const entityType = req.query['entityType'] as 'foundation' | 'project' | undefined;
+      const slug = getStringQueryParam(req, 'slug');
+      const entityType = parseEntityType(req, 'get_code_commits_daily');
 
       if (!slug) {
         throw ServiceValidationError.forField('slug', 'slug query parameter is required', {
@@ -1205,15 +1270,8 @@ export class AnalyticsController {
         });
       }
 
-      if (!entityType) {
-        throw ServiceValidationError.forField('entityType', 'entityType query parameter is required', {
-          operation: 'get_code_commits_daily',
-        });
-      }
-
-      // Validate entityType
-      if (entityType !== 'foundation' && entityType !== 'project') {
-        throw ServiceValidationError.forField('entityType', 'entityType must be "foundation" or "project"', {
+      if (!SLUG_PATTERN.test(slug)) {
+        throw ServiceValidationError.forField('slug', 'Invalid slug format', {
           operation: 'get_code_commits_daily',
         });
       }
@@ -1229,7 +1287,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_code_commits_daily', startTime, error);
       next(error);
     }
   }
@@ -1243,8 +1300,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_contributors_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1254,6 +1311,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_contributors_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_contributors_monthly',
         });
       }
@@ -1269,7 +1332,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_contributors_monthly', startTime, error);
       next(error);
     }
   }
@@ -1283,8 +1345,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_contributors_project_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1294,6 +1356,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_contributors_project_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_contributors_project_distribution',
         });
       }
@@ -1308,7 +1376,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_contributors_project_distribution', startTime, error);
       next(error);
     }
   }
@@ -1322,8 +1389,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1333,6 +1400,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_maintainers_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_maintainers_monthly',
         });
       }
@@ -1348,7 +1421,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_monthly', startTime, error);
       next(error);
     }
   }
@@ -1362,8 +1434,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1373,6 +1445,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_maintainers_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_maintainers_distribution',
         });
       }
@@ -1387,7 +1465,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_distribution', startTime, error);
       next(error);
     }
   }
@@ -1401,8 +1478,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_maintainers_key_members');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1412,6 +1489,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_maintainers_key_members',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_maintainers_key_members',
         });
       }
@@ -1426,7 +1509,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_maintainers_key_members', startTime, error);
       next(error);
     }
   }
@@ -1440,8 +1522,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_event_attendees_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1451,6 +1533,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_event_attendees_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_event_attendees_monthly',
         });
       }
@@ -1466,7 +1554,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_event_attendees_monthly', startTime, error);
       next(error);
     }
   }
@@ -1480,8 +1567,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_event_speakers_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1491,6 +1578,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_event_speakers_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_event_speakers_monthly',
         });
       }
@@ -1506,7 +1599,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_event_speakers_monthly', startTime, error);
       next(error);
     }
   }
@@ -1520,8 +1612,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_training_enrollments_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1531,6 +1623,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_training_enrollments_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_training_enrollments_monthly',
         });
       }
@@ -1546,7 +1644,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_training_enrollments_monthly', startTime, error);
       next(error);
     }
   }
@@ -1560,8 +1657,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_training_enrollments_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1571,6 +1668,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_training_enrollments_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_training_enrollments_distribution',
         });
       }
@@ -1585,7 +1688,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_training_enrollments_distribution', startTime, error);
       next(error);
     }
   }
@@ -1599,8 +1701,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_certified_employees_monthly');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1610,6 +1712,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_certified_employees_monthly',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_certified_employees_monthly',
         });
       }
@@ -1625,7 +1733,6 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_certified_employees_monthly', startTime, error);
       next(error);
     }
   }
@@ -1639,8 +1746,8 @@ export class AnalyticsController {
     const startTime = logger.startOperation(req, 'get_org_certified_employees_distribution');
 
     try {
-      const accountId = req.query['accountId'] as string | undefined;
-      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const accountId = getStringQueryParam(req, 'accountId');
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
 
       if (!accountId) {
         throw ServiceValidationError.forField('accountId', 'accountId query parameter is required', {
@@ -1650,6 +1757,12 @@ export class AnalyticsController {
 
       if (!foundationSlug) {
         throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_org_certified_employees_distribution',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
           operation: 'get_org_certified_employees_distribution',
         });
       }
@@ -1664,8 +1777,766 @@ export class AnalyticsController {
 
       res.json(response);
     } catch (error) {
-      logger.error(req, 'get_org_certified_employees_distribution', startTime, error);
       next(error);
+    }
+  }
+
+  // Marketing Analytics Endpoints
+  // All marketing endpoints (Web Activities, Email CTR, Social Reach, Social Media, and the
+  // ED dashboard KPIs) use `foundationSlug` — underlying Snowflake Platinum views key on a
+  // consistent FOUNDATION_SLUG / PROJECT_SLUG column.
+
+  /**
+   * GET /api/analytics/web-activities-summary
+   * Get web activities summary grouped by domain category
+   */
+  public async getWebActivitiesSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_web_activities_summary');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_web_activities_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_web_activities_summary',
+        });
+      }
+
+      const response = await this.projectService.getWebActivitiesSummary(foundationSlug);
+
+      logger.success(req, 'get_web_activities_summary', startTime, {
+        foundation_slug: foundationSlug,
+        total_sessions: response.totalSessions,
+        domain_groups_count: response.domainGroups.length,
+        daily_data_points: response.dailyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/email-ctr
+   * Get email click-through rate data
+   */
+  public async getEmailCtr(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_email_ctr');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_email_ctr',
+        });
+      }
+
+      if (foundationSlug.length > NAME_MAX_LENGTH) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug exceeds maximum length', {
+          operation: 'get_email_ctr',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_email_ctr',
+        });
+      }
+
+      const response = await this.projectService.getEmailCtr(foundationSlug);
+
+      logger.success(req, 'get_email_ctr', startTime, {
+        foundation_slug: foundationSlug,
+        current_ctr: response.currentCtr,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/social-reach
+   * Get paid social reach and ROAS data
+   */
+  public async getSocialReach(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_social_reach');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_social_reach',
+        });
+      }
+
+      if (foundationSlug.length > NAME_MAX_LENGTH) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug exceeds maximum length', {
+          operation: 'get_social_reach',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_social_reach',
+        });
+      }
+
+      const response = await this.projectService.getSocialReach(foundationSlug);
+
+      logger.success(req, 'get_social_reach', startTime, {
+        foundation_slug: foundationSlug,
+        total_reach: response.totalReach,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/social-media
+   * Get social media metrics from Snowflake Platinum tables
+   */
+  public async getSocialMedia(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_social_media');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_social_media',
+        });
+      }
+
+      if (foundationSlug.length > NAME_MAX_LENGTH) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug exceeds maximum length', {
+          operation: 'get_social_media',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_social_media',
+        });
+      }
+
+      const response = await this.projectService.getSocialMedia(foundationSlug);
+
+      logger.success(req, 'get_social_media', startTime, {
+        foundation_slug: foundationSlug,
+        total_followers: response.totalFollowers,
+        platforms_count: response.platforms.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // North Star Metrics Endpoints
+  // All North Star views use `foundationSlug` (FOUNDATION_SLUG column in NORTH_STAR_* tables)
+
+  /**
+   * GET /api/analytics/member-retention
+   * Get member retention and NRR metrics
+   */
+  public async getMemberRetention(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_member_retention');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_member_retention',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_member_retention',
+        });
+      }
+
+      const response = await this.projectService.getMemberRetention(foundationSlug);
+
+      logger.success(req, 'get_member_retention', startTime, {
+        foundation_slug: foundationSlug,
+        renewal_rate: response.renewalRate,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/member-acquisition
+   * Get member acquisition rate metrics
+   */
+  public async getMemberAcquisition(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_member_acquisition');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_member_acquisition',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_member_acquisition',
+        });
+      }
+
+      const response = await this.projectService.getMemberAcquisition(foundationSlug);
+
+      logger.success(req, 'get_member_acquisition', startTime, {
+        foundation_slug: foundationSlug,
+        new_members: response.newMembersThisQuarter,
+        quarterly_data_points: response.quarterlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/engaged-community
+   * Get engaged community size metrics
+   */
+  public async getEngagedCommunity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_engaged_community');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_engaged_community',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_engaged_community',
+        });
+      }
+
+      const response = await this.projectService.getEngagedCommunity(foundationSlug);
+
+      logger.success(req, 'get_engaged_community', startTime, {
+        foundation_slug: foundationSlug,
+        total_members: response.totalMembers,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/flywheel-conversion
+   * Get flywheel conversion rate metrics
+   */
+  public async getFlywheelConversion(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_flywheel_conversion');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_flywheel_conversion',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_flywheel_conversion',
+        });
+      }
+
+      const response = await this.projectService.getFlywheelConversion(foundationSlug);
+
+      logger.success(req, 'get_flywheel_conversion', startTime, {
+        foundation_slug: foundationSlug,
+        conversion_rate: response.conversionRate,
+        monthly_data_points: response.monthlyData.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/nps-summary
+   * Get Net Promoter Score summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getNpsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_nps_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_nps_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_nps_summary',
+        });
+      }
+
+      const response = await this.projectService.getNpsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_nps_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        nps_score: response.npsScore,
+        responses: response.responses,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/participating-orgs-summary
+   * Get participating organizations summary (membership counts + engagement breakdown)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getParticipatingOrgsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_participating_orgs_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_participating_orgs_summary',
+        });
+      }
+
+      const response = await this.projectService.getParticipatingOrgsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_participating_orgs_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        total_active_members: response.totalActiveMembers,
+        total_new_members: response.totalNewMembers,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/membership-churn-per-tier-summary
+   * Get consolidated membership churn per tier summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getMembershipChurnPerTierSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_membership_churn_per_tier_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_membership_churn_per_tier_summary',
+        });
+      }
+
+      const response = await this.projectService.getMembershipChurnPerTierSummary(foundationSlug, range);
+
+      logger.success(req, 'get_membership_churn_per_tier_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        comparison_available: response.comparisonAvailable,
+        current_churn_rate_pct: response.currentPeriod.churnRatePct,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/events-summary
+   * Get events summary for a foundation (total events, change, sponsorship vs goal)
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getEventsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_events_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_events_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_events_summary',
+        });
+      }
+
+      const response = await this.projectService.getEventsSummary(foundationSlug, range);
+
+      logger.success(req, 'get_events_summary', startTime, {
+        foundation_slug: foundationSlug,
+        range,
+        project_id: response.projectId,
+        total_events: response.totalEvents,
+        event_change: response.eventChange,
+        sponsorship_revenue: response.sponsorshipRevenue,
+        sponsorship_goal: response.sponsorshipGoal,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/outstanding-balance-summary
+   * Get outstanding balance summary for a foundation
+   * Query params: foundationSlug (required)
+   */
+  public async getOutstandingBalanceSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_outstanding_balance_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_outstanding_balance_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_outstanding_balance_summary',
+        });
+      }
+
+      const response = await this.projectService.getOutstandingBalanceSummary(foundationSlug);
+
+      logger.success(req, 'get_outstanding_balance_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        total_outstanding_balance: response.totalOutstandingBalance,
+        total_members_at_risk: response.totalMembersAtRisk,
+        primary_risk_level: response.primaryRiskLevel,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/training-certification-summary
+   * Get Training & Certification summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getTrainingCertificationSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_training_certification_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_training_certification_summary',
+        });
+      }
+
+      const response = await this.projectService.getTrainingCertificationSummary(foundationSlug, range);
+
+      logger.success(req, 'get_training_certification_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        range: response.range,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/code-contribution-summary
+   * Get Code Contribution summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getCodeContributionSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_code_contribution_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+      if (!validRanges.includes(range)) {
+        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
+          operation: 'get_code_contribution_summary',
+        });
+      }
+
+      const response = await this.projectService.getCodeContributionSummary(foundationSlug, range);
+
+      logger.success(req, 'get_code_contribution_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        range: response.range,
+        data_available: response.dataAvailable,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/event-growth
+   * Get event growth metrics (total attendees, top events by attendance/revenue)
+   */
+  public async getEventGrowth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_event_growth');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_event_growth',
+        });
+      }
+
+      const response = await this.projectService.getEventGrowth(foundationSlug);
+
+      logger.success(req, 'get_event_growth', startTime, {
+        foundation_slug: foundationSlug,
+        total_attendees: response.totalAttendees,
+        total_events: response.totalEvents,
+        top_events: response.topEvents.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/brand-reach
+   * Get brand reach metrics (total digital reach across social + owned sites)
+   */
+  public async getBrandReach(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_reach');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_reach',
+        });
+      }
+
+      const response = await this.projectService.getBrandReach(foundationSlug);
+
+      logger.success(req, 'get_brand_reach', startTime, {
+        foundation_slug: foundationSlug,
+        total_social_followers: response.totalSocialFollowers,
+        total_monthly_sessions: response.totalMonthlySessions,
+        social_platforms: response.socialPlatforms.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/brand-health
+   * Get brand health metrics (share of voice, sentiment, press mentions)
+   */
+  public async getBrandHealth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_brand_health');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_brand_health',
+        });
+      }
+
+      const response = await this.projectService.getBrandHealth(foundationSlug);
+
+      logger.success(req, 'get_brand_health', startTime, {
+        foundation_slug: foundationSlug,
+        total_mentions: response.totalMentions,
+        positive_sentiment: response.sentiment.positive,
+        top_projects: response.topProjects.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/revenue-impact
+   * Get marketing-attributed revenue metrics by engagement type
+   */
+  public async getRevenueImpact(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_revenue_impact');
+
+    try {
+      const foundationSlug = getStringQueryParam(req, 'foundationSlug');
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_revenue_impact',
+        });
+      }
+
+      const response = await this.projectService.getRevenueImpact(foundationSlug);
+
+      logger.success(req, 'get_revenue_impact', startTime, {
+        foundation_slug: foundationSlug,
+        pipeline_influenced: response.pipelineInfluenced,
+        revenue_attributed: response.revenueAttributed,
+        engagement_types: response.engagementTypes.length,
+      });
+
+      res.json(response);
+    } catch (error) {
+      return next(error);
     }
   }
 }

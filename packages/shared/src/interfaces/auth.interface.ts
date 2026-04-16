@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Account } from './account.interface';
+import type { Impersonator } from './impersonation.interface';
 import type { PersonaType } from './persona.interface';
 
 /**
@@ -54,10 +55,18 @@ export interface AuthContext {
   authenticated: boolean;
   /** User profile data (null if not authenticated) */
   user: User | null;
-  /** User's persona type (auto-determined from committee memberships, null if not a member of any committees) */
+  /** User's primary persona type (highest priority, auto-determined from committee memberships) */
   persona?: PersonaType | null;
+  /** All detected persona types from committee memberships */
+  personas?: PersonaType[];
   /** User's affiliated organizations from committee memberships */
   organizations?: Account[];
+  /** Whether the user has permission to impersonate other users */
+  canImpersonate?: boolean;
+  /** Whether the current session is impersonating another user */
+  impersonating?: boolean;
+  /** Information about the admin performing impersonation */
+  impersonator?: Impersonator;
 }
 
 /**

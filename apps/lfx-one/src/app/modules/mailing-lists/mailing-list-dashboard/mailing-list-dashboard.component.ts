@@ -1,26 +1,27 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, FormGroup } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL } from '@lfx-one/shared/constants';
-import { CommitteeReference, FilterOption, GroupsIOMailingList, GroupsIOService, ProjectContext } from '@lfx-one/shared/interfaces';
+import { CommitteeReference, FilterOption, GroupsIOMailingList, GroupsIOService, MyMailingList, ProjectContext } from '@lfx-one/shared/interfaces';
+import { LensService } from '@services/lens.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { MessageService } from 'primeng/api';
-import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, filter, finalize, of, startWith, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap, tap } from 'rxjs';
 
 import { MailingListTableComponent } from '../components/mailing-list-table/mailing-list-table.component';
 
 @Component({
   selector: 'lfx-mailing-list-dashboard',
-  imports: [ButtonComponent, CardComponent, MailingListTableComponent],
+  imports: [ButtonComponent, CardComponent, MailingListTableComponent, ReactiveFormsModule],
   templateUrl: './mailing-list-dashboard.component.html',
   styleUrl: './mailing-list-dashboard.component.scss',
 })
@@ -31,6 +32,7 @@ export class MailingListDashboardComponent {
   private readonly mailingListService = inject(MailingListService);
   private readonly personaService = inject(PersonaService);
   private readonly router = inject(Router);
+  private readonly lensService = inject(LensService);
   private readonly messageService = inject(MessageService);
 
   // Protected constants
@@ -50,12 +52,25 @@ export class MailingListDashboardComponent {
   private readonly committeeFilter: Signal<string | null> = this.initCommitteeFilter();
   private readonly statusFilter: Signal<string | null> = this.initStatusFilter();
 
+  // Lens
+  public readonly isMeLens: Signal<boolean> = computed(() => this.lensService.activeLens() === 'me');
+  public showFoundationFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
+  public showProjectFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
+  public myMailingListsLoading = signal<boolean>(true);
+
+  // Foundation + Project filter (Me lens only)
+  public foundationFilter: WritableSignal<string | null> = signal<string | null>(null);
+  public projectFilter: WritableSignal<string | null> = signal<string | null>(null);
+  public foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initializeFoundationOptions();
+  public projectOptions: Signal<{ label: string; value: string | null }[]> = this.initializeProjectOptions();
+
   // Complex computed/toSignal signals
   public readonly project: Signal<ProjectContext | null> = this.initProject();
   public readonly isMaintainer: Signal<boolean> = this.initIsMaintainer();
   public readonly isFoundationContext: Signal<boolean> = this.initIsFoundationContext();
   public readonly canCreateMailingList: Signal<boolean> = this.initCanCreateMailingList();
   public readonly mailingLists: Signal<GroupsIOMailingList[]> = this.initMailingLists();
+  public readonly myMailingLists: Signal<MyMailingList[]> = this.initMyMailingLists();
   public readonly committeeOptions: Signal<FilterOption[]> = this.initCommitteeOptions();
   public readonly statusOptions: Signal<FilterOption[]> = this.initStatusOptions();
   public readonly filteredMailingLists: Signal<GroupsIOMailingList[]> = this.initFilteredMailingLists();
@@ -96,12 +111,31 @@ export class MailingListDashboardComponent {
     this.router.navigate(['/mailing-lists', mailingList.uid]);
   }
 
+  /**
+   * Handle foundation filter change
+   */
+  public onFoundationFilterChange(value: string | null): void {
+    this.foundationFilter.set(value);
+    // Reset project filter when foundation changes
+    this.projectFilter.set(null);
+    this.searchForm.get('projectFilter')?.setValue(null);
+  }
+
+  /**
+   * Handle project filter change
+   */
+  public onProjectFilterChange(value: string | null): void {
+    this.projectFilter.set(value);
+  }
+
   // Private initializer functions
   private initializeSearchForm(): FormGroup {
     return new FormGroup({
       search: new FormControl<string>(''),
       committee: new FormControl<string | null>(null),
       status: new FormControl<string | null>(null),
+      foundationFilter: new FormControl<string | null>(null),
+      projectFilter: new FormControl<string | null>(null),
     });
   }
 
@@ -120,7 +154,7 @@ export class MailingListDashboardComponent {
   }
 
   private initProject(): Signal<ProjectContext | null> {
-    return computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+    return computed(() => this.projectContextService.activeContext());
   }
 
   private initIsMaintainer(): Signal<boolean> {
@@ -128,20 +162,21 @@ export class MailingListDashboardComponent {
   }
 
   private initIsFoundationContext(): Signal<boolean> {
-    return computed(() => !this.projectContextService.selectedProject() && !!this.projectContextService.selectedFoundation());
+    return computed(() => this.projectContextService.isFoundationContext());
   }
 
   private initCanCreateMailingList(): Signal<boolean> {
-    return computed(() => this.isMaintainer() && !this.isFoundationContext());
+    return computed(() => !this.isMeLens() && this.isMaintainer() && !this.isFoundationContext());
   }
 
   private initMailingLists(): Signal<GroupsIOMailingList[]> {
     const project$ = toObservable(this.project);
+    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      combineLatest([project$, this.refresh]).pipe(
-        switchMap(([project]) => {
-          if (!project?.uid) {
+      combineLatest([project$, this.refresh, lens$]).pipe(
+        switchMap(([project, , lens]) => {
+          if (lens === 'me' || !project?.uid) {
             this.mailingListsLoading.set(false);
             return of([]);
           }
@@ -159,7 +194,7 @@ export class MailingListDashboardComponent {
 
   private initCommitteeOptions(): Signal<FilterOption[]> {
     return computed(() => {
-      const mailingListsData = this.mailingLists();
+      const mailingListsData = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
 
       // Collect unique committees from all mailing lists
       const committeeMap = new Map<string, CommitteeReference>();
@@ -188,7 +223,7 @@ export class MailingListDashboardComponent {
 
   private initStatusOptions(): Signal<FilterOption[]> {
     return computed(() => {
-      const mailingListsData = this.mailingLists();
+      const mailingListsData = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
 
       // Count mailing lists by visibility status
       const publicCount = mailingListsData.filter((ml) => ml.public).length;
@@ -204,7 +239,18 @@ export class MailingListDashboardComponent {
 
   private initFilteredMailingLists(): Signal<GroupsIOMailingList[]> {
     return computed(() => {
-      let filtered = this.mailingLists();
+      let filtered: GroupsIOMailingList[] = this.isMeLens() ? this.myMailingLists() : this.mailingLists();
+
+      // Apply foundation/project filter (client-side, Me lens only)
+      if (this.isMeLens()) {
+        const project = this.projectFilter();
+        const foundation = this.foundationFilter();
+        if (project) {
+          filtered = filtered.filter((ml) => ml.project_uid === project);
+        } else if (foundation) {
+          filtered = filtered.filter((ml) => ml.project_uid === foundation || (ml.parent_project_uid === foundation && !ml.is_foundation));
+        }
+      }
 
       // Apply search filter
       const searchTerm = this.searchTerm()?.toLowerCase() || '';
@@ -244,13 +290,23 @@ export class MailingListDashboardComponent {
 
   private initServices(): Signal<GroupsIOService[]> {
     const project$ = toObservable(this.project);
+    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      project$.pipe(
+      combineLatest([project$, lens$]).pipe(
         tap(() => this.servicesLoaded.set(false)),
-        filter((project): project is NonNullable<typeof project> => project !== null),
-        switchMap((project) =>
-          this.mailingListService.getServicesByProject(project.uid).pipe(
+        switchMap(([project, lens]) => {
+          if (lens === 'me') {
+            this.servicesLoaded.set(true);
+            return of([]);
+          }
+
+          if (!project) {
+            this.servicesLoaded.set(true);
+            return of([]);
+          }
+
+          return this.mailingListService.getServicesByProject(project.uid).pipe(
             switchMap((services) => {
               if (services.length > 0) {
                 return of(services);
@@ -273,8 +329,8 @@ export class MailingListDashboardComponent {
               this.servicesLoaded.set(true);
               return of([]);
             })
-          )
-        )
+          );
+        })
       ),
       { initialValue: [] }
     );
@@ -282,5 +338,65 @@ export class MailingListDashboardComponent {
 
   private initHasNoServices(): Signal<boolean> {
     return computed(() => this.servicesLoaded() && this.availableServices().length === 0);
+  }
+
+  private initializeFoundationOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const items = this.myMailingLists();
+      const seen = new Map<string, string>();
+      for (const item of items) {
+        if (item.is_foundation && item.project_uid && !seen.has(item.project_uid)) {
+          seen.set(item.project_uid, item.project_name || item.project_uid);
+        }
+      }
+      const options = [...seen.entries()]
+        .map(([uid, name]) => ({ label: name, value: uid }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      return [{ label: 'All Foundations', value: null }, ...options];
+    });
+  }
+
+  private initializeProjectOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const items = this.myMailingLists();
+      const foundation = this.foundationFilter();
+      const seen = new Map<string, string>();
+      for (const item of items) {
+        if (!item.is_foundation && item.project_uid && !seen.has(item.project_uid)) {
+          if (foundation && item.parent_project_uid !== foundation) {
+            continue;
+          }
+          seen.set(item.project_uid, item.project_name || item.project_uid);
+        }
+      }
+      const options = [...seen.entries()]
+        .map(([uid, name]) => ({ label: name, value: uid }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      return [{ label: 'All Projects', value: null }, ...options];
+    });
+  }
+
+  private initMyMailingLists(): Signal<MyMailingList[]> {
+    const lens$ = toObservable(this.lensService.activeLens);
+
+    return toSignal(
+      combineLatest([lens$, this.refresh]).pipe(
+        switchMap(([lens]) => {
+          if (lens !== 'me') {
+            this.myMailingListsLoading.set(false);
+            return of([] as MyMailingList[]);
+          }
+          this.myMailingListsLoading.set(true);
+          return this.mailingListService.getMyMailingLists().pipe(
+            catchError(() => {
+              this.myMailingListsLoading.set(false);
+              return of([] as MyMailingList[]);
+            }),
+            finalize(() => this.myMailingListsLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
   }
 }

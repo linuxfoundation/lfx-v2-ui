@@ -18,7 +18,7 @@ The app is 100% [TypeScript](https://www.typescriptlang.org/).
   Signals, PrimeNG components, Tailwind CSS
 - **UI Framework**: PrimeNG 20 with custom LFX UI Core preset and Tailwind CSS integration
 - **Styling**: Tailwind CSS v3 with PrimeUI plugin, CSS layers architecture,
-  Google Fonts (Inter primary, Open Sans fallback)
+  Google Fonts (Inter primary) and Roboto Slab (display)
 - **Icons**: Font Awesome Pro via kits (no npm packages)
 - **Backend**: Express.js server with Angular 20 SSR, Auth0 authentication, Pino logging
 - **Infrastructure**: PM2 process management for production deployment
@@ -69,6 +69,7 @@ of conduct, development process, and how to submit pull requests.
 
    **Optional variables** (not needed for basic development):
    - `AI_PROXY_URL` / `AI_API_KEY` — For AI-powered features (meeting agenda generation)
+   - `TI_API_KEY` — For enriching course logo URLs via the Thought Industries API (training module); falls back to generic icons when absent
    - `TEST_USERNAME` / `TEST_PASSWORD` — For automated E2E testing
 
 #### Install and Run
@@ -167,7 +168,7 @@ lfx-one/
 - **CSS Layers**: Organized layer system (`tailwind-base, primeng, tailwind-utilities`)
 - **PrimeNG Integration**: Custom preset using LFX UI Core design system
 - **Tailwind CSS**: Utility-first styling with PrimeUI plugin integration
-- **Custom Fonts**: Google Fonts (Inter primary, Open Sans fallback) with CSS variables
+- **Custom Fonts**: Google Fonts (Inter primary, Roboto Slab display) with CSS variables
 
 ### Direct PrimeNG Usage
 
@@ -296,7 +297,7 @@ export class ExampleComponent {}
 - **Tailwind CSS v3** with PrimeUI plugin
 - **LFX UI Core** design system integration
 - **Font Awesome Pro** icons (via kits)
-- **Google Fonts** (Open Sans + Roboto Slab)
+- **Google Fonts** (Inter + Roboto Slab)
 
 ### Backend & Infrastructure
 

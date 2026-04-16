@@ -14,6 +14,34 @@
       data-testid="meetings-search-input"></lfx-input-text>
   </div>
 
+  <!-- Foundation Filter Dropdown -->
+  @if (showFoundationFilter()) {
+    <div class="w-full sm:w-48">
+      <lfx-select
+        [form]="searchForm"
+        control="foundationFilter"
+        size="small"
+        [options]="foundationOptions()"
+        styleClass="w-full"
+        (onChange)="onFoundationFilterChange($event.value)"
+        data-testid="foundation-filter-dropdown"></lfx-select>
+    </div>
+  }
+
+  <!-- Project Filter Dropdown -->
+  @if (showProjectFilter()) {
+    <div class="w-full sm:w-48">
+      <lfx-select
+        [form]="searchForm"
+        control="projectFilter"
+        size="small"
+        [options]="projectOptions()"
+        styleClass="w-full"
+        (onChange)="onProjectFilterChange($event.value)"
+        data-testid="project-filter-dropdown"></lfx-select>
+    </div>
+  }
+
   <!-- Meeting Type Filter Dropdown -->
   <div class="w-full sm:w-64">
     <lfx-select

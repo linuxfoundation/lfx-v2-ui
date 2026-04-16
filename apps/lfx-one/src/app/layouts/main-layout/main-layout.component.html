@@ -1,13 +1,47 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
+<!-- Impersonation Banner -->
+@if (userService.impersonating()) {
+  <div
+    class="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 bg-yellow-400 py-2 text-sm font-medium text-black"
+    data-testid="impersonation-banner">
+    <i class="fa-light fa-eye text-sm"></i>
+    <span
+      >Viewing as <strong>{{ userService.user()?.email }}</strong></span
+    >
+    <span class="text-black/60">— by {{ userService.impersonator()?.name }}</span>
+    <lfx-button label="Stop Impersonating" severity="contrast" size="small" (onClick)="stopImpersonation()" data-testid="stop-impersonation-button" />
+  </div>
+}
+
 <!-- Dev Toolbar (fixed at top) -->
 <lfx-dev-toolbar></lfx-dev-toolbar>
 
-<div class="flex min-h-screen" [ngClass]="{ 'pt-12': showDevToolbar() }">
-  <!-- Sidebar - Desktop -->
-  <div class="hidden lg:block w-64 flex-shrink-0 fixed left-0 bottom-0" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
-    <lfx-sidebar [items]="sidebarItems()" [footerItems]="sidebarFooterItems()" [showProjectSelector]="true"></lfx-sidebar>
+<div
+  class="flex min-h-screen"
+  [ngClass]="{
+    'pt-12': showDevToolbar(),
+  }">
+  <!-- Sidebar - Desktop: lens switcher (64px) + nav panel (280px) = 344px -->
+  <div
+    class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 z-40"
+    [ngClass]="{
+      'top-12': showDevToolbar(),
+      'top-0': !showDevToolbar(),
+    }">
+    <!-- Lens Switcher Column (64px) -->
+    <div class="w-16 flex-shrink-0" data-testid="lens-switcher-column">
+      <lfx-lens-switcher></lfx-lens-switcher>
+    </div>
+    <!-- Nav Panel (280px) -->
+    <div class="w-[280px] flex-shrink-0">
+      <lfx-sidebar
+        [items]="sidebarItems()"
+        [showMeSelector]="activeLens() === 'me'"
+        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+        [(selectorPanelOpen)]="selectorPanelOpen"></lfx-sidebar>
+    </div>
   </div>
 
   <!-- Sidebar - Mobile Drawer -->
@@ -16,9 +50,9 @@
     (visibleChange)="onDrawerVisibilityChange($event)"
     position="left"
     [modal]="true"
-    [dismissable]="true"
+    [dismissible]="true"
     [showCloseIcon]="true"
-    styleClass="lg:hidden w-86 mobile-sidebar-drawer"
+    styleClass="lg:hidden w-[344px] mobile-sidebar-drawer"
     data-testid="mobile-sidebar-drawer">
     <ng-template #header>
       <div class="flex items-center gap-3">
@@ -27,11 +61,36 @@
         </a>
       </div>
     </ng-template>
-    <lfx-sidebar [items]="sidebarItems()" [footerItems]="sidebarFooterItems()" [showProjectSelector]="true" [mobile]="true"></lfx-sidebar>
+    <!-- Mobile: lens switcher horizontal strip + nav -->
+    <div class="flex flex-col h-full">
+      <div class="border-b border-gray-100">
+        <lfx-lens-switcher [mobile]="true"></lfx-lens-switcher>
+      </div>
+      <div class="flex-1 min-h-0">
+        <lfx-sidebar
+          [items]="sidebarItems()"
+          [showMeSelector]="activeLens() === 'me'"
+          [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+          [(selectorPanelOpen)]="selectorPanelOpen"
+          [mobile]="true"></lfx-sidebar>
+      </div>
+    </div>
   </p-drawer>
 
+  <!-- Selector backdrop — covers main content area when project/foundation selector is open -->
+  <div
+    class="hidden lg:block fixed inset-0 bg-black/10 z-30 transition-opacity duration-300"
+    [ngClass]="{
+      'top-12': showDevToolbar(),
+      'top-0': !showDevToolbar(),
+      'opacity-100 pointer-events-auto': selectorPanelOpen(),
+      'opacity-0 pointer-events-none': !selectorPanelOpen(),
+    }"
+    (click)="selectorPanelOpen.set(false)"
+    data-testid="selector-backdrop"></div>
+
   <!-- Main Content Area -->
-  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-64 flex flex-col" data-testid="main-content">
+  <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[344px] flex flex-col" data-testid="main-content">
     <!-- Mobile Menu Button -->
     <div class="lg:hidden sticky z-30 bg-white border-b border-gray-200 px-5 py-3" [ngClass]="{ 'top-12': showDevToolbar(), 'top-0': !showDevToolbar() }">
       <button

@@ -11,8 +11,35 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
     children: [
+      // Me Lens dashboard (root route)
       {
         path: '',
+        pathMatch: 'full',
+        data: { lens: 'me' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Foundation Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'foundation/overview',
+        data: { lens: 'foundation' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Foundation Lens — Health Metrics page (ED-only)
+      {
+        path: 'foundation/health-metrics',
+        data: { lens: 'foundation' },
+        loadComponent: () => import('./modules/dashboards/health-metrics/health-metrics.component').then((m) => m.HealthMetricsComponent),
+      },
+      // Project Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'project/overview',
+        data: { lens: 'project' },
+        loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Org Lens dashboard (placeholder — reuses DashboardComponent for now)
+      {
+        path: 'org',
+        data: { lens: 'org' },
         loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
@@ -40,12 +67,24 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'documents',
+        loadChildren: () => import('./modules/documents/documents.routes').then((m) => m.DOCUMENT_ROUTES),
+      },
+      {
         path: 'settings',
         loadChildren: () => import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
       {
         path: 'profile',
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
+      },
+      {
+        path: 'me/training',
+        loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
+      },
+      {
+        path: 'events',
+        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
       },
     ],
   },

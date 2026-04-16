@@ -12,28 +12,36 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pinoHttp from 'pino-http';
 
+import { ProfileController } from './controllers/profile.controller';
 import { customErrorSerializer } from './helpers/error-serializer';
 import { validateAndSanitizeUrl } from './helpers/url-validation';
 import { authMiddleware } from './middleware/auth.middleware';
 import { apiErrorHandler } from './middleware/error-handler.middleware';
+import { apiRateLimiter, authRateLimiter, publicApiRateLimiter } from './middleware/rate-limit.middleware';
 import analyticsRouter from './routes/analytics.route';
 import committeesRouter from './routes/committees.route';
-import lensRouter from './routes/lens.route';
+import copilotRouter from './routes/copilot.route';
+import documentsRouter from './routes/documents.route';
+import eventsRouter from './routes/events.route';
+import impersonationRouter from './routes/impersonation.route';
 import mailingListsRouter from './routes/mailing-lists.route';
 import meetingsRouter from './routes/meetings.route';
 import organizationsRouter from './routes/organizations.route';
 import pastMeetingsRouter from './routes/past-meetings.route';
+import personaRouter from './routes/persona.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
+import trainingRouter from './routes/training.route';
 import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
 import { reqSerializer, resSerializer, serverLogger } from './server-logger';
 import { logger } from './services/logger.service';
-import { matchOrganizationNamesToAccounts } from './utils/organization-matcher';
-import { fetchUserPersonaAndOrganizations } from './utils/persona-helper';
+import { clearImpersonationSession, decodeJwtPayload } from './utils/auth-helper';
+import { resolvePersonaForSsr } from './utils/persona-helper';
 
 if (process.env['NODE_ENV'] !== 'production') {
   dotenv.config();
@@ -44,6 +52,10 @@ const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const angularApp = new AngularNodeAppEngine();
 const app = express();
+
+// Trust the first proxy (load balancer) so express-rate-limit and req.ip
+// correctly resolve client IPs from the X-Forwarded-For header
+app.set('trust proxy', 1);
 
 /**
  * Enable gzip/deflate compression for all responses.
@@ -157,9 +169,15 @@ app.use('/login', (req: Request, res: Response) => {
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
 
+// Apply rate limiting to API routes
+app.use('/public/api/', publicApiRateLimiter);
+app.use('/api/', apiRateLimiter);
+app.use('/login', authRateLimiter);
+
 // Mount API routes after authentication middleware
 // Public API routes
 app.use('/public/api/meetings', publicMeetingsRouter);
+app.use('/public/api/committees', publicCommitteesRouter);
 
 // Protected API routes
 app.use('/api/projects', projectsRouter);
@@ -172,12 +190,24 @@ app.use('/api/profile', profileRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/user', userRouter);
+app.use('/api/user', personaRouter);
 app.use('/api/votes', votesRouter);
 app.use('/api/surveys', surveysRouter);
-app.use('/api/lens', lensRouter);
+app.use('/api/copilot', copilotRouter);
+app.use('/api/documents', documentsRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/impersonate', impersonationRouter);
+app.use('/api/training', trainingRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
+
+// Flow C: Profile auth callback at /passwordless/callback (registered in Auth0 Profile Client)
+const profileCallbackController = new ProfileController();
+app.get('/passwordless/callback', authRateLimiter, (req, res) => profileCallbackController.handleProfileAuthCallback(req, res));
+
+// Social identity verification callback (GitHub/LinkedIn OAuth redirect)
+app.get('/social/callback', authRateLimiter, (req, res) => profileCallbackController.handleSocialCallback(req, res));
 
 /**
  * Handle all other requests by rendering the Angular application.
@@ -211,14 +241,53 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
       res.oidc.logout();
       return;
     }
+  }
 
-    // Fetch user persona and organizations based on committee membership (non-critical, don't block SSR)
-    // Note: fetchUserPersonaAndOrganizations handles errors internally and returns defaults on failure
-    const personaResult = await fetchUserPersonaAndOrganizations(req);
+  // Resolve persona: uses cookie if available, otherwise fetches via NATS (blocking)
+  if (auth.authenticated) {
+    const personaResult = await resolvePersonaForSsr(req, res);
     auth.persona = personaResult.persona;
+    auth.personas = personaResult.personas;
+    auth.organizations = personaResult.organizations ?? [];
+  }
 
-    // Match organization names to predefined accounts
-    auth.organizations = matchOrganizationNamesToAccounts(personaResult.organizationNames);
+  // Check if user can impersonate (from access token custom claim)
+  if (req.oidc?.accessToken?.access_token) {
+    try {
+      const payload = decodeJwtPayload(req.oidc.accessToken.access_token);
+      if (payload) {
+        auth.canImpersonate = payload['http://lfx.dev/claims/can_impersonate'] === true;
+      }
+    } catch {
+      // JWT decode failed — canImpersonate stays false
+    }
+  }
+
+  // Override user identity when impersonating
+  if (req.appSession?.['impersonationToken'] && req.appSession?.['impersonationUser']) {
+    const impersonationExpiresAt = req.appSession['impersonationExpiresAt'];
+    if (impersonationExpiresAt && Date.now() < impersonationExpiresAt) {
+      try {
+        const targetClaims = decodeJwtPayload(req.appSession['impersonationToken']);
+        if (!targetClaims) throw new Error('Invalid token format');
+
+        const impersonationUser = req.appSession['impersonationUser'];
+        if (!auth.user) throw new Error('No authenticated user for impersonation override');
+        Object.assign(auth.user, {
+          sub: targetClaims.sub,
+          email: targetClaims['http://lfx.dev/claims/email'] || '',
+          username: targetClaims['http://lfx.dev/claims/username'] || '',
+          'https://sso.linuxfoundation.org/claims/username': targetClaims['http://lfx.dev/claims/username'] || '',
+          name: impersonationUser?.name || targetClaims['http://lfx.dev/claims/username'] || '',
+          nickname: targetClaims['http://lfx.dev/claims/username'] || '',
+          picture: impersonationUser?.picture || auth.user?.picture || '',
+        });
+        auth.impersonating = true;
+        auth.impersonator = req.appSession['impersonator'];
+      } catch {
+        clearImpersonationSession(req);
+      }
+    }
   }
 
   // Build runtime config from environment variables
@@ -226,6 +295,7 @@ app.use('/**', async (req: Request, res: Response, next: NextFunction) => {
     launchDarklyClientId: process.env['LD_CLIENT_ID'] || '',
     dataDogRumClientId: process.env['DD_RUM_CLIENT_ID'] || '',
     dataDogRumApplicationId: process.env['DD_RUM_APPLICATION_ID'] || '',
+    allowedTracingUrls: [process.env['LFX_V2_SERVICE'], process.env['PCC_BASE_URL']].filter(Boolean) as string[],
   };
 
   angularApp

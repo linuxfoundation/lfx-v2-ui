@@ -15,6 +15,7 @@ import {
   MeetingRegistrant,
   MeetingRsvp,
   PaginatedResponse,
+  PastMeeting,
   PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -36,7 +37,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
@@ -205,6 +206,46 @@ export class MeetingService {
 
     logger.debug(req, 'get_meeting_by_id', 'Completed meeting fetch', {
       meeting_id: meetingUid,
+    });
+
+    return meeting;
+  }
+
+  /**
+   * Fetches a single past meeting by UID via ITX endpoint
+   */
+  public async getPastMeetingById(req: Request, pastMeetingUid: string): Promise<PastMeeting> {
+    logger.debug(req, 'get_past_meeting_by_id', 'Fetching past meeting by ID', {
+      past_meeting_id: pastMeetingUid,
+    });
+
+    const meeting = await this.microserviceProxy.proxyRequest<PastMeeting>(req, 'LFX_V2_SERVICE', `/itx/past_meetings/${pastMeetingUid}`, 'GET');
+
+    if (!meeting) {
+      throw new ResourceNotFoundError('Past Meeting', pastMeetingUid, {
+        operation: 'get_past_meeting_by_id',
+        service: 'meeting_service',
+        path: `/itx/past_meetings/${pastMeetingUid}`,
+      });
+    }
+
+    meeting.id = pastMeetingUid;
+
+    if (meeting.committees && meeting.committees.length > 0) {
+      logger.debug(req, 'get_past_meeting_by_id', 'Enriching past meeting with committee data', {
+        past_meeting_id: pastMeetingUid,
+        committee_count: meeting.committees.length,
+      });
+      const committeeNameMap = await this.getCommitteeNameMap(req, [meeting]);
+      meeting.committees = meeting.committees.map((c) => ({
+        uid: c.uid,
+        name: committeeNameMap.get(c.uid) || c.name,
+        allowed_voting_statuses: c.allowed_voting_statuses,
+      }));
+    }
+
+    logger.debug(req, 'get_past_meeting_by_id', 'Completed past meeting fetch', {
+      past_meeting_id: pastMeetingUid,
     });
 
     return meeting;
@@ -566,6 +607,57 @@ export class MeetingService {
   }
 
   /**
+   * Checks if a user was a participant in a past meeting by email
+   */
+  public async isUserPastMeetingParticipant(req: Request, pastMeetingUid: string, email: string, username?: string): Promise<boolean> {
+    logger.debug(req, 'is_user_past_meeting_participant', 'Checking if user was a past meeting participant', {
+      past_meeting_id: pastMeetingUid,
+      email,
+      username,
+    });
+
+    // Try email first
+    if (email) {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'v1_past_meeting_participant',
+          tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `email:${email}`],
+          page_size: 1,
+        }
+      );
+
+      if (resources.length > 0) return true;
+    }
+
+    // Fall back to username
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'v1_past_meeting_participant',
+          tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `username:${plainUsername}`],
+          page_size: 1,
+        }
+      );
+
+      if (resources.length > 0) return true;
+    }
+
+    logger.debug(req, 'is_user_past_meeting_participant', 'Participant check complete — no match found', {
+      past_meeting_id: pastMeetingUid,
+    });
+    return false;
+  }
+
+  /**
    * Fetches past meeting recording by past meeting UID
    */
   public async getPastMeetingRecording(req: Request, pastMeetingUid: string): Promise<PastMeetingRecording | null> {
@@ -576,7 +668,7 @@ export class MeetingService {
     try {
       const params = {
         type: 'v1_past_meeting_recording',
-        tags: pastMeetingUid,
+        tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
       };
 
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingRecording>>(
@@ -616,7 +708,7 @@ export class MeetingService {
     try {
       const params = {
         type: 'v1_past_meeting_summary',
-        tags: `past_meeting_id:${pastMeetingUid}`,
+        tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
       };
 
       const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingSummary>>(
@@ -688,8 +780,7 @@ export class MeetingService {
     });
 
     // Resolve registrant_id — try email first, fall back to username
-    const rawEmail = req.oidc?.user?.['email'] as string | undefined;
-    const email = rawEmail?.toLowerCase();
+    const email = getEffectiveEmail(req) ?? undefined;
     let registrants: MeetingRegistrant[] = [];
 
     if (email) {
@@ -983,7 +1074,7 @@ export class MeetingService {
   public async getPastMeetingAttachments(req: Request, pastMeetingUid: string): Promise<PastMeetingAttachment[]> {
     const params = {
       type: 'v1_past_meeting_attachment',
-      parent: `past_meeting:${pastMeetingUid}`,
+      tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
     };
 
     logger.debug(req, 'get_past_meeting_attachments', 'Fetching past meeting attachments', { past_meeting_id: pastMeetingUid });
@@ -1062,6 +1153,10 @@ export class MeetingService {
     return newRegistrant;
   }
 
+  public async getMeetingProjectName<T extends Meeting>(req: Request, meetings: T[]): Promise<T[]> {
+    return this.projectService.enrichWithProjectData(req, meetings) as Promise<T[]>;
+  }
+
   /**
    * Fetches committee names for all unique committees referenced in meetings.
    * Returns a Map of committee UID -> committee name for merging into meeting data.
@@ -1105,17 +1200,4 @@ export class MeetingService {
     return nameMap;
   }
 
-  private async getMeetingProjectName(req: Request, meetings: Meeting[]): Promise<Meeting[]> {
-    const projectUids = [...new Set(meetings.map((m) => m.project_uid))];
-    const projects = await Promise.all(
-      projectUids.map(async (uid) => {
-        return await this.projectService.getProjectById(req, uid).catch(() => null);
-      })
-    );
-
-    return meetings.map((m) => {
-      const project = projects.find((p) => p?.uid === m.project_uid);
-      return { ...m, project_name: project?.name || '', project_slug: project?.slug || '' };
-    });
-  }
 }

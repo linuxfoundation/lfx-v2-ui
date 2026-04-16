@@ -1,25 +1,24 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, Signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { NavigationEnd, Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { SelectButtonComponent } from '@components/select-button/select-button.component';
 import { SelectComponent } from '@components/select/select.component';
-import { ACCOUNTS, PERSONA_OPTIONS } from '@lfx-one/shared/constants';
-import { Account, PersonaType } from '@lfx-one/shared/interfaces';
+import { DEV_PERSONA_PRESETS } from '@lfx-one/shared/constants';
+import { DevPersonaPreset, isBoardScopedPersona } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
+import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { filter, map, startWith } from 'rxjs';
+import { skip } from 'rxjs';
 
 @Component({
   selector: 'lfx-dev-toolbar',
-  imports: [ReactiveFormsModule, SelectButtonComponent, SelectComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, SelectComponent, ButtonComponent],
   templateUrl: './dev-toolbar.component.html',
   styleUrl: './dev-toolbar.component.scss',
 })
@@ -28,60 +27,81 @@ export class DevToolbarComponent {
   protected readonly projectContextService = inject(ProjectContextService);
   private readonly accountContextService = inject(AccountContextService);
   private readonly cookieRegistry = inject(CookieRegistryService);
+  private readonly lensService = inject(LensService);
   private readonly featureFlagService = inject(FeatureFlagService);
-  private readonly router = inject(Router);
 
   // Feature flags
   protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
   protected readonly showOrganizationSelector = this.featureFlagService.getBooleanFlag('organization-selector', true);
 
-  // Organization selector options
-  protected readonly availableAccounts = ACCOUNTS;
+  // Organization selector options — includes detected orgs not in the predefined list
+  protected readonly availableAccounts = this.accountContextService.availableAccounts;
 
-  // Persona options for SelectButton
-  protected readonly personaOptions = PERSONA_OPTIONS;
+  // Dev persona presets for SelectButton
+  protected readonly personaPresets = DEV_PERSONA_PRESETS;
 
-  // TLF-only persona project override
-  protected readonly isTlfOnlyPersona = this.personaService.isTlfOnlyPersona;
+  // Track the active preset for conditional UI
+  protected readonly activePreset = signal<DevPersonaPreset>(DEV_PERSONA_PRESETS.find((p) => p.value === 'maintainer-single') ?? DEV_PERSONA_PRESETS[0]);
 
-  // Check if we're on the board dashboard page
-  protected readonly isOnBoardDashboard: Signal<boolean> = this.initIsOnBoardDashboard();
+  /** Label for the project/foundation selector */
+  protected readonly selectorLabel = computed(() => (isBoardScopedPersona(this.activePreset().primary) ? 'Foundation:' : 'Project:'));
+
+  /** Hide project selector on the "Me" lens */
+  protected readonly showProjectSelector = computed(() => this.lensService.activeLens() !== 'me');
+
+  /** Organization selector is only relevant on the foundation lens */
+  protected readonly isFoundationLens = computed(() => this.lensService.activeLens() === 'foundation');
 
   // Form for persona selector and organization selector
   public form: FormGroup;
 
   public constructor() {
+    // Find the initial preset matching the current persona
+    const currentPersona = this.personaService.currentPersona();
+    const allPersonas = this.personaService.allPersonas();
+    const initialPreset = this.findMatchingPreset(currentPersona, allPersonas);
+    this.activePreset.set(initialPreset);
+
     this.form = new FormGroup({
-      persona: new FormControl<PersonaType>(this.personaService.currentPersona(), [Validators.required]),
+      persona: new FormControl<string>(initialPreset.value, [Validators.required]),
       selectedAccountId: new FormControl<string>(this.accountContextService.selectedAccount().accountId),
-      selectedProjectUid: new FormControl<string>(this.projectContextService.selectedFoundation()?.uid || ''),
+      selectedProjectUid: new FormControl<string>(this.projectContextService.activeContextUid()),
     });
 
-    // Subscribe to persona changes
+    // Subscribe to persona preset changes
     this.form
       .get('persona')
       ?.valueChanges.pipe(takeUntilDestroyed())
-      .subscribe((value: PersonaType) => {
-        if (value === 'board-member' || value === 'executive-director') {
-          // TODO: DEMO - Remove when proper permissions are implemented
-          const tlfProject = this.projectContextService.availableProjects.find((p) => p.slug === 'tlf');
+      .subscribe((presetValue: string) => {
+        const preset = DEV_PERSONA_PRESETS.find((p) => p.value === presetValue);
+        if (!preset) {
+          return;
+        }
+
+        this.activePreset.set(preset);
+
+        if (isBoardScopedPersona(preset.primary)) {
+          // Board/ED: default to TLF foundation
+          const tlfProject = this.projectContextService.availableProjects().find((p) => p.slug === 'tlf');
           if (tlfProject) {
-            this.projectContextService.setFoundation({
-              uid: tlfProject.uid,
-              name: tlfProject.name,
-              slug: tlfProject.slug,
-            });
+            this.projectContextService.setFoundation({ uid: tlfProject.uid, name: tlfProject.name, slug: tlfProject.slug });
             this.form.get('selectedProjectUid')?.setValue(tlfProject.uid, { emitEvent: false });
           }
         } else {
-          // Navigate to the first project in the list that is not the TLF project
-          const firstProject = this.projectContextService.availableProjects.find((p) => p.slug !== 'tlf');
-          if (firstProject) {
-            this.projectContextService.setProject(firstProject);
+          // Project-scoped: keep current project if set, otherwise select first non-TLF project
+          const currentProject = this.projectContextService.selectedProject();
+          if (currentProject) {
+            this.form.get('selectedProjectUid')?.setValue(currentProject.uid, { emitEvent: false });
+          } else {
+            const firstProject = this.projectContextService.availableProjects().find((p) => p.slug !== 'tlf');
+            if (firstProject) {
+              this.projectContextService.setProject(firstProject);
+              this.form.get('selectedProjectUid')?.setValue(firstProject.uid, { emitEvent: false });
+            }
           }
         }
 
-        this.personaService.setPersona(value);
+        this.personaService.setPersonas(preset.primary, preset.personas, preset.multiProject ?? false, preset.multiFoundation ?? false);
       });
 
     // Subscribe to account selection changes
@@ -89,20 +109,42 @@ export class DevToolbarComponent {
       .get('selectedAccountId')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value) => {
-        const selectedAccount = ACCOUNTS.find((acc) => acc.accountId === value);
+        const selectedAccount = this.availableAccounts().find((acc) => acc.accountId === value);
         if (selectedAccount) {
-          this.accountContextService.setAccount(selectedAccount as Account);
+          this.accountContextService.setAccount(selectedAccount);
         }
       });
 
-    // Subscribe to board member project override changes
+    // Sync form when persona changes externally (e.g., after SSR persona detection)
+    toObservable(this.personaService.currentPersona)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe((persona) => {
+        const matchingPreset = this.findMatchingPreset(persona, this.personaService.allPersonas());
+        if (matchingPreset.value !== this.form.get('persona')?.value) {
+          this.activePreset.set(matchingPreset);
+          this.form.get('persona')?.setValue(matchingPreset.value, { emitEvent: false });
+        }
+      });
+
+    // Sync form when active context changes externally (e.g., lens switch, sidebar selection)
+    toObservable(this.projectContextService.activeContext)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe((ctx) => {
+        this.form.get('selectedProjectUid')?.setValue(ctx?.uid || '', { emitEvent: false });
+      });
+
+    // Subscribe to project/foundation selection changes
     this.form
       .get('selectedProjectUid')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((uid: string) => {
-        const project = this.projectContextService.availableProjects.find((p) => p.uid === uid);
+        const project = this.projectContextService.availableProjects().find((p) => p.uid === uid);
         if (project) {
-          this.projectContextService.setFoundation(project);
+          if (isBoardScopedPersona(this.personaService.currentPersona())) {
+            this.projectContextService.setFoundation(project);
+          } else {
+            this.projectContextService.setProject(project);
+          }
         }
       });
   }
@@ -119,15 +161,13 @@ export class DevToolbarComponent {
     }
   }
 
-  private initIsOnBoardDashboard(): Signal<boolean> {
-    return toSignal(
-      this.router.events.pipe(
-        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        map((event) => event.urlAfterRedirects),
-        startWith(this.router.url),
-        map((url) => url === '/' || url === '/dashboard' || url.startsWith('/dashboard?') || url.startsWith('/?'))
-      ),
-      { initialValue: this.router.url === '/' || this.router.url === '/dashboard' }
+  private findMatchingPreset(persona: string, allPersonas: string[]): DevPersonaPreset {
+    return (
+      DEV_PERSONA_PRESETS.find(
+        (p) => p.primary === persona && p.personas.length === allPersonas.length && p.personas.every((pp) => allPersonas.includes(pp))
+      ) ??
+      DEV_PERSONA_PRESETS.find((p) => p.primary === persona) ??
+      DEV_PERSONA_PRESETS[1]
     );
   }
 }

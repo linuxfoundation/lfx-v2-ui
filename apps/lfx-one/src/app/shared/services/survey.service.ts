@@ -3,8 +3,8 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Survey } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, take, throwError } from 'rxjs';
+import { CreateSurveyRequest, Survey } from '@lfx-one/shared/interfaces';
+import { catchError, Observable, of, take, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -45,6 +45,11 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
+  /** Returns surveys for the current user; foundation/project filtering is applied client-side. */
+  public getMySurveys(): Observable<Survey[]> {
+    return this.http.get<Survey[]>('/api/surveys/my-surveys').pipe(catchError(() => of([])));
+  }
+
   public getSurvey(surveyUid: string, projectId?: string): Observable<Survey> {
     let params = new HttpParams();
     if (projectId) {
@@ -57,6 +62,10 @@ export class SurveyService {
         return throwError(() => error);
       })
     );
+  }
+
+  public createSurvey(surveyData: CreateSurveyRequest): Observable<Survey> {
+    return this.http.post<Survey>('/api/surveys', surveyData).pipe(take(1));
   }
 
   public deleteSurvey(surveyUid: string): Observable<void> {

@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, ViewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { FilterPillOption } from '@lfx-one/shared/interfaces';
@@ -17,10 +17,11 @@ import {
 } from '@lfx-one/shared/constants';
 import { hexToRgba, parseLocalDateString } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
+import { LensService } from '@services/lens.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, Observable, of, switchMap, tap } from 'rxjs';
 
 import type {
   ActiveWeeksStreakResponse,
@@ -44,11 +45,12 @@ import type {
   styleUrl: './recent-progress.component.scss',
 })
 export class RecentProgressComponent {
-  @ViewChild(ScrollShadowDirective) protected scrollShadowDirective!: ScrollShadowDirective;
+  protected readonly scrollShadowDirective = viewChild(ScrollShadowDirective);
 
   private readonly personaService = inject(PersonaService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly lensService = inject(LensService);
 
   // Get project ID from context service
 
@@ -63,8 +65,9 @@ export class RecentProgressComponent {
     healthMetricsDaily: true,
     codeCommitsDaily: true,
   });
-  public readonly projectSlug = computed(() => this.projectContextService.selectedFoundation()?.slug || this.projectContextService.selectedProject()?.slug);
-  private readonly entityType = computed<'foundation' | 'project'>(() => (this.projectContextService.selectedFoundation() ? 'foundation' : 'project'));
+  public readonly projectSlug = computed(() => this.projectContextService.activeContext()?.slug);
+  private readonly entityType = computed<'foundation' | 'project'>(() => (this.projectContextService.isFoundationContext() ? 'foundation' : 'project'));
+  private readonly showProjectMetrics = computed(() => this.lensService.activeLens() === 'project' || this.personaService.currentPersona() === 'maintainer');
   private readonly activeWeeksStreakData = this.initializeActiveWeeksStreakData();
   private readonly pullRequestsMergedData = this.initializePullRequestsMergedData();
   private readonly codeCommitsData = this.initializeCodeCommitsData();
@@ -97,8 +100,7 @@ export class RecentProgressComponent {
   // Filtered cards - materializes card values while benefiting from individual signal memoization
   protected readonly filteredProgressItems = this.initializeFilteredProgressItems();
 
-  protected readonly currentPersona = computed(() => this.personaService.currentPersona());
-  protected readonly showFilterPills = computed(() => this.currentPersona() === 'maintainer');
+  protected readonly showFilterPills = computed(() => this.showProjectMetrics());
   protected readonly filterOptions: FilterPillOption[] = [
     { id: 'all', label: 'All' },
     { id: 'code', label: 'Code' },
@@ -110,8 +112,7 @@ export class RecentProgressComponent {
   }
 
   private getMetricConfig(title: string): DashboardMetricCard {
-    const persona = this.personaService.currentPersona();
-    const baseMetrics = persona === 'maintainer' ? MAINTAINER_PROGRESS_METRICS : CORE_DEVELOPER_PROGRESS_METRICS;
+    const baseMetrics = this.showProjectMetrics() ? MAINTAINER_PROGRESS_METRICS : CORE_DEVELOPER_PROGRESS_METRICS;
     return baseMetrics.find((m) => m.title === title) || MAINTAINER_PROGRESS_METRICS.find((m) => m.title === title)!;
   }
 
@@ -662,10 +663,10 @@ export class RecentProgressComponent {
 
   private initializeActiveWeeksStreakData() {
     return toSignal(
-      toObservable(this.personaService.currentPersona).pipe(
-        switchMap((persona) => {
-          // Only fetch for core-developer persona
-          if (persona === 'maintainer') {
+      toObservable(this.showProjectMetrics).pipe(
+        switchMap((isProjectScoped) => {
+          // Only fetch for contributor/user-scoped view
+          if (isProjectScoped) {
             this.loadingState.update((state) => ({ ...state, activeWeeksStreak: false }));
             return [{ data: [], currentStreak: 0, totalWeeks: 0 }];
           }
@@ -691,10 +692,10 @@ export class RecentProgressComponent {
 
   private initializePullRequestsMergedData() {
     return toSignal(
-      toObservable(this.personaService.currentPersona).pipe(
-        switchMap((persona) => {
-          // Only fetch for core-developer persona
-          if (persona === 'maintainer') {
+      toObservable(this.showProjectMetrics).pipe(
+        switchMap((isProjectScoped) => {
+          // Only fetch for contributor/user-scoped view
+          if (isProjectScoped) {
             this.loadingState.update((state) => ({ ...state, pullRequestsMerged: false }));
             return [{ data: [], totalPullRequests: 0, totalDays: 0 }];
           }
@@ -720,10 +721,10 @@ export class RecentProgressComponent {
 
   private initializeCodeCommitsData() {
     return toSignal(
-      toObservable(this.personaService.currentPersona).pipe(
-        switchMap((persona) => {
-          // Only fetch for core-developer persona
-          if (persona === 'maintainer') {
+      toObservable(this.showProjectMetrics).pipe(
+        switchMap((isProjectScoped) => {
+          // Only fetch for contributor/user-scoped view
+          if (isProjectScoped) {
             this.loadingState.update((state) => ({ ...state, codeCommits: false }));
             return [{ data: [], totalCommits: 0, totalDays: 0 }];
           }
@@ -748,191 +749,91 @@ export class RecentProgressComponent {
   }
 
   private initializeProjectIssuesResolutionData() {
-    return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, projectIssuesResolution: false }));
-            return [{ data: [], totalOpenedIssues: 0, totalClosedIssues: 0, resolutionRatePct: 0, medianDaysToClose: 0, totalDays: 0 }];
-          }
-          this.loadingState.update((state) => ({ ...state, projectIssuesResolution: true }));
-          const entityType = this.entityType();
-          return this.analyticsService.getProjectIssuesResolution(projectSlug, entityType).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, projectIssuesResolution: false }))),
-            catchError(() => {
-              this.loadingState.update((state) => ({ ...state, projectIssuesResolution: false }));
-              return of({ data: [], totalOpenedIssues: 0, totalClosedIssues: 0, resolutionRatePct: 0, medianDaysToClose: 0, totalDays: 0 });
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          data: [],
-          totalOpenedIssues: 0,
-          totalClosedIssues: 0,
-          resolutionRatePct: 0,
-          medianDaysToClose: 0,
-          totalDays: 0,
-        },
-      }
-    );
+    const defaultValue: ProjectIssuesResolutionResponse = {
+      data: [],
+      totalOpenedIssues: 0,
+      totalClosedIssues: 0,
+      resolutionRatePct: 0,
+      medianDaysToClose: 0,
+      totalDays: 0,
+    };
+
+    return this.maintainerGuardedFetch('projectIssuesResolution', defaultValue, (slug) => {
+      const entityType = this.entityType();
+      return this.analyticsService.getProjectIssuesResolution(slug, entityType);
+    });
   }
 
   private initializeProjectPullRequestsWeeklyData() {
-    return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: false }));
-            return [{ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 }];
-          }
-          this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: true }));
-          const entityType = this.entityType();
-          return this.analyticsService.getProjectPullRequestsWeekly(projectSlug, entityType).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: false }))),
-            catchError(() => {
-              this.loadingState.update((state) => ({ ...state, projectPullRequestsWeekly: false }));
-              return of({ data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 });
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          data: [],
-          totalMergedPRs: 0,
-          avgMergeTime: 0,
-          totalWeeks: 0,
-        },
-      }
-    );
+    const defaultValue: ProjectPullRequestsWeeklyResponse = { data: [], totalMergedPRs: 0, avgMergeTime: 0, totalWeeks: 0 };
+
+    return this.maintainerGuardedFetch('projectPullRequestsWeekly', defaultValue, (slug) => {
+      const entityType = this.entityType();
+      return this.analyticsService.getProjectPullRequestsWeekly(slug, entityType);
+    });
   }
 
   private initializeContributorsMentoredData() {
-    return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, contributorsMentored: false }));
-            return [{ data: [], totalMentored: 0, avgWeeklyNew: 0, totalWeeks: 0 }];
-          }
-          this.loadingState.update((state) => ({ ...state, contributorsMentored: true }));
-          return this.analyticsService.getContributorsMentored(projectSlug).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, contributorsMentored: false }))),
-            catchError(() => {
-              this.loadingState.update((state) => ({ ...state, contributorsMentored: false }));
-              return of({ data: [], totalMentored: 0, avgWeeklyNew: 0, totalWeeks: 0 });
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          data: [],
-          totalMentored: 0,
-          avgWeeklyNew: 0,
-          totalWeeks: 0,
-        },
-      }
-    );
+    const defaultValue: FoundationContributorsMentoredResponse = { data: [], totalMentored: 0, avgWeeklyNew: 0, totalWeeks: 0 };
+
+    return this.maintainerGuardedFetch('contributorsMentored', defaultValue, (slug) => this.analyticsService.getContributorsMentored(slug));
   }
 
   private initializeUniqueContributorsWeeklyData() {
-    return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: false }));
-            return [{ data: [], totalUniqueContributors: 0, avgUniqueContributors: 0, totalWeeks: 0 }];
-          }
-          this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: true }));
-          const entityType = this.entityType();
-          return this.analyticsService.getUniqueContributorsWeekly(projectSlug, entityType).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: false }))),
-            catchError(() => {
-              this.loadingState.update((state) => ({ ...state, uniqueContributorsWeekly: false }));
-              return of({ data: [], totalUniqueContributors: 0, avgUniqueContributors: 0, totalWeeks: 0 });
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          data: [],
-          totalUniqueContributors: 0,
-          avgUniqueContributors: 0,
-          totalWeeks: 0,
-        },
-      }
-    );
+    const defaultValue: UniqueContributorsWeeklyResponse = { data: [], totalUniqueContributors: 0, avgUniqueContributors: 0, totalWeeks: 0 };
+
+    return this.maintainerGuardedFetch('uniqueContributorsWeekly', defaultValue, (slug) => {
+      const entityType = this.entityType();
+      return this.analyticsService.getUniqueContributorsWeekly(slug, entityType);
+    });
   }
 
   private initializeHealthMetricsDailyData() {
-    return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, healthMetricsDaily: false }));
-            return [{ data: [], currentAvgHealthScore: 0, totalDays: 0 }];
-          }
-          this.loadingState.update((state) => ({ ...state, healthMetricsDaily: true }));
-          const entityType = this.entityType();
-          return this.analyticsService.getHealthMetricsDaily(projectSlug, entityType).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, healthMetricsDaily: false }))),
-            catchError(() => {
-              this.loadingState.update((state) => ({ ...state, healthMetricsDaily: false }));
-              return of({ data: [], currentAvgHealthScore: 0, totalDays: 0 });
-            })
-          );
-        })
-      ),
-      {
-        initialValue: {
-          data: [],
-          currentAvgHealthScore: 0,
-          totalDays: 0,
-        },
-      }
-    );
+    const defaultValue: HealthMetricsDailyResponse = { data: [], currentAvgHealthScore: 0, totalDays: 0 };
+
+    return this.maintainerGuardedFetch('healthMetricsDaily', defaultValue, (slug) => {
+      const entityType = this.entityType();
+      return this.analyticsService.getHealthMetricsDaily(slug, entityType);
+    });
   }
 
   private initializeCodeCommitsDailyData() {
+    const defaultValue: CodeCommitsDailyResponse = { data: [], totalCommits: 0, totalDays: 0 };
+
+    return this.maintainerGuardedFetch('codeCommitsDaily', defaultValue, (slug) => {
+      const entityType = this.entityType();
+      return this.analyticsService.getCodeCommitsDaily(slug, entityType);
+    });
+  }
+
+  private maintainerGuardedFetch<T>(loadingKey: string, defaultValue: T, fetchFn: (slug: string) => Observable<T>) {
     return toSignal(
-      toObservable(this.projectSlug).pipe(
-        switchMap((projectSlug) => {
-          if (!projectSlug) {
-            this.loadingState.update((state) => ({ ...state, codeCommitsDaily: false }));
-            return [{ data: [], totalCommits: 0, totalDays: 0 }];
+      combineLatest([toObservable(this.projectSlug), toObservable(this.showProjectMetrics)]).pipe(
+        switchMap(([projectSlug, isProjectScoped]) => {
+          if (!isProjectScoped || !projectSlug) {
+            this.loadingState.update((state) => ({ ...state, [loadingKey]: false }));
+            return [defaultValue];
           }
-          this.loadingState.update((state) => ({ ...state, codeCommitsDaily: true }));
-          const entityType = this.entityType();
-          return this.analyticsService.getCodeCommitsDaily(projectSlug, entityType).pipe(
-            tap(() => this.loadingState.update((state) => ({ ...state, codeCommitsDaily: false }))),
+          this.loadingState.update((state) => ({ ...state, [loadingKey]: true }));
+          return fetchFn(projectSlug).pipe(
+            tap(() => this.loadingState.update((state) => ({ ...state, [loadingKey]: false }))),
             catchError(() => {
-              this.loadingState.update((state) => ({ ...state, codeCommitsDaily: false }));
-              return of({ data: [], totalCommits: 0, totalDays: 0 });
+              this.loadingState.update((state) => ({ ...state, [loadingKey]: false }));
+              return of(defaultValue);
             })
           );
         })
       ),
-      {
-        initialValue: {
-          data: [],
-          totalCommits: 0,
-          totalDays: 0,
-        },
-      }
+      { initialValue: defaultValue }
     );
   }
 
   private initializeIsLoading() {
     return computed<boolean>(() => {
       const state = this.loadingState();
-      const persona = this.personaService.currentPersona();
 
-      if (persona === 'maintainer') {
-        // For maintainer, only check maintainer-specific metrics
+      if (this.showProjectMetrics()) {
+        // For project-scoped view, only check project-specific metrics
         return (
           state.projectIssuesResolution ||
           state.projectPullRequestsWeekly ||
@@ -943,7 +844,7 @@ export class RecentProgressComponent {
         );
       }
 
-      // For core-developer, only check core-developer-specific metrics
+      // For contributor, only check contributor-specific metrics
       return state.activeWeeksStreak || state.pullRequestsMerged || state.codeCommits;
     });
   }
@@ -1058,11 +959,10 @@ export class RecentProgressComponent {
 
   private initializeFilteredProgressItems() {
     return computed<DashboardMetricCard[]>(() => {
-      const persona = this.personaService.currentPersona();
       const filter = this.selectedFilter();
 
-      if (persona === 'maintainer') {
-        // Materialize maintainer card values
+      if (this.showProjectMetrics()) {
+        // Materialize project-scoped card values
         const allCards = [
           { card: this.issuesTrendCard(), category: 'code' },
           { card: this.prVelocityCard(), category: 'code' },
@@ -1078,7 +978,7 @@ export class RecentProgressComponent {
         return allCards.filter((item) => item.category === filter).map((item) => item.card);
       }
 
-      // Core developer - no filtering, just materialize card values
+      // Contributor - no filtering, just materialize card values
       return [this.activeWeeksStreakCard(), this.pullRequestsMergedCard(), this.codeCommitsCard()];
     });
   }

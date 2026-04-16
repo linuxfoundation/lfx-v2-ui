@@ -10,9 +10,11 @@ import { CardComponent } from '@components/card/card.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
 import { Committee, PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
+import { LensService } from '@services/lens.service';
+import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { VoteService } from '@services/vote.service';
-import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
 
 import { VoteResultsDrawerComponent } from '../components/vote-results-drawer/vote-results-drawer.component';
 import { VotesTableComponent } from '../components/votes-table/votes-table.component';
@@ -27,6 +29,8 @@ export class VotesDashboardComponent {
   // === Services ===
   private readonly voteService = inject(VoteService);
   private readonly committeeService = inject(CommitteeService);
+  private readonly lensService = inject(LensService);
+  private readonly personaService = inject(PersonaService);
   private readonly projectContextService = inject(ProjectContextService);
 
   // === Constants ===
@@ -47,6 +51,14 @@ export class VotesDashboardComponent {
   protected readonly rowsPerPage = signal<number>(10);
   protected readonly currentFirst = signal<number>(0);
   protected readonly totalRecords = signal<number>(0);
+  protected readonly myVotesLoading = signal<boolean>(true);
+  protected readonly foundationFilter = signal<string | null>(null);
+  protected readonly projectFilter = signal<string | null>(null);
+
+  // === Lens ===
+  protected readonly isMeLens: Signal<boolean> = computed(() => this.lensService.activeLens() === 'me');
+  public showFoundationFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
+  public showProjectFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
 
   // === Filter State ===
   protected readonly filters = signal<VoteFilterState>({ search: '', status: null, group: null });
@@ -61,7 +73,11 @@ export class VotesDashboardComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly votes: Signal<Vote[]> = this.initVotes();
   protected readonly selectedListVote: Signal<Vote | null> = this.initSelectedListVote();
+  protected readonly myVotes: Signal<Vote[]> = this.initMyVotes();
   protected readonly totalCount: Signal<number> = this.initTotalCount();
+  protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initializeFoundationOptions();
+  protected readonly projectOptions: Signal<{ label: string; value: string | null }[]> = this.initializeProjectOptions();
+  protected readonly filteredMyVotes: Signal<Vote[]> = this.initFilteredMyVotes();
 
   protected onViewVote(voteId: string): void {
     this.selectedVoteId.set(voteId);
@@ -94,6 +110,15 @@ export class VotesDashboardComponent {
     this.fetch$.next();
   }
 
+  protected onFoundationFilterChange(value: string | null): void {
+    this.foundationFilter.set(value);
+    this.projectFilter.set(null);
+  }
+
+  protected onProjectFilterChange(value: string | null): void {
+    this.projectFilter.set(value);
+  }
+
   protected onFiltersChange(state: VoteFilterState): void {
     this.pageTokens = [];
     this.currentFirst.set(0);
@@ -114,7 +139,7 @@ export class VotesDashboardComponent {
 
   // === Private Initializers ===
   private initProject(): Signal<ProjectContext | null> {
-    return computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+    return computed(() => this.projectContextService.activeContext());
   }
 
   private initSearchQuery(): Signal<string> {
@@ -123,11 +148,12 @@ export class VotesDashboardComponent {
 
   private initGroupOptions(): Signal<{ label: string; value: string | null }[]> {
     const project$ = toObservable(this.project);
+    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      project$.pipe(
-        switchMap((project) => {
-          if (!project?.uid) {
+      combineLatest([project$, lens$]).pipe(
+        switchMap(([project, lens]) => {
+          if (lens === 'me' || !project?.uid) {
             return of([]);
           }
           return this.committeeService.getCommitteesByProject(project.uid).pipe(catchError(() => of([])));
@@ -148,10 +174,14 @@ export class VotesDashboardComponent {
   private initTotalCount(): Signal<number> {
     const project$ = toObservable(this.project);
     const filters$ = toObservable(this.filters);
+    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      combineLatest([project$, filters$, this.refresh$]).pipe(
-        switchMap(([project]) => {
+      combineLatest([project$, filters$, this.refresh$, lens$]).pipe(
+        switchMap(([project, , , lens]) => {
+          if (lens === 'me') {
+            return of(0);
+          }
           if (!project?.uid) {
             return of(0);
           }
@@ -170,12 +200,13 @@ export class VotesDashboardComponent {
   private initVotes(): Signal<Vote[]> {
     const project$ = toObservable(this.project);
     const filters$ = toObservable(this.filters);
+    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      combineLatest([project$, filters$, this.fetch$]).pipe(
+      combineLatest([project$, filters$, this.fetch$, lens$]).pipe(
         tap(() => this.loading.set(true)),
-        switchMap(([project]) => {
-          if (!project?.uid) {
+        switchMap(([project, , , lens]) => {
+          if (lens === 'me' || !project?.uid) {
             this.loading.set(false);
             return of([]);
           }
@@ -219,7 +250,82 @@ export class VotesDashboardComponent {
     return computed(() => {
       const id = this.selectedVoteId();
       if (!id) return null;
-      return this.votes().find((v) => v.uid === id) || null;
+      const source = this.isMeLens() ? this.myVotes() : this.votes();
+      return source.find((v) => v.uid === id) || null;
+    });
+  }
+
+  private initMyVotes(): Signal<Vote[]> {
+    const lens$ = toObservable(this.lensService.activeLens);
+
+    return toSignal(
+      combineLatest([lens$, this.refresh$]).pipe(
+        switchMap(([lens]) => {
+          if (lens !== 'me') {
+            this.myVotesLoading.set(false);
+            return of([] as Vote[]);
+          }
+          this.myVotesLoading.set(true);
+          return this.voteService.getMyVotes().pipe(
+            catchError(() => {
+              this.myVotesLoading.set(false);
+              return of([] as Vote[]);
+            }),
+            finalize(() => this.myVotesLoading.set(false))
+          );
+        })
+      ),
+      { initialValue: [] }
+    );
+  }
+
+  private initializeFoundationOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const items = this.myVotes();
+      const seen = new Map<string, string>();
+      for (const item of items) {
+        if (item.is_foundation && item.project_uid && !seen.has(item.project_uid)) {
+          seen.set(item.project_uid, item.project_name || item.project_uid);
+        }
+      }
+      const options = [...seen.entries()]
+        .map(([uid, name]) => ({ label: name, value: uid }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      return [{ label: 'All Foundations', value: null }, ...options];
+    });
+  }
+
+  private initializeProjectOptions(): Signal<{ label: string; value: string | null }[]> {
+    return computed(() => {
+      const items = this.myVotes();
+      const foundation = this.foundationFilter();
+      const seen = new Map<string, string>();
+      for (const item of items) {
+        if (!item.is_foundation && item.project_uid && !seen.has(item.project_uid)) {
+          if (foundation && item.parent_project_uid !== foundation) continue;
+          seen.set(item.project_uid, item.project_name || item.project_uid);
+        }
+      }
+      const options = [...seen.entries()]
+        .map(([uid, name]) => ({ label: name, value: uid }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      return [{ label: 'All Projects', value: null }, ...options];
+    });
+  }
+
+  private initFilteredMyVotes(): Signal<Vote[]> {
+    return computed(() => {
+      let filtered = this.myVotes();
+      const project = this.projectFilter();
+      const foundation = this.foundationFilter();
+
+      if (project) {
+        filtered = filtered.filter((v) => v.project_uid === project);
+      } else if (foundation) {
+        filtered = filtered.filter((v) => v.project_uid === foundation || (v.parent_project_uid === foundation && !v.is_foundation));
+      }
+
+      return filtered;
     });
   }
 }

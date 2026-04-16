@@ -10,12 +10,14 @@
         [value]="meetingTypeInfo().label"
         [severity]="meetingTypeInfo().severity"
         [icon]="meetingTypeInfo().icon"
+        [styleClass]="meetingTypeInfo().styleClass"
         data-testid="dashboard-meeting-card-type-badge"></lfx-tag>
       @if (isRecurring()) {
         <lfx-tag
           [value]="meeting().recurrence | recurrenceSummary"
           severity="secondary"
           icon="fa-light fa-repeat"
+          styleClass="tag-recurring"
           pTooltip="This is a recurring meeting"
           data-testid="dashboard-meeting-card-recurring-badge"></lfx-tag>
       }
@@ -128,19 +130,50 @@
     <!-- Action buttons -->
     <div class="flex gap-2">
       <!-- See Meeting button - full width when alone, flex-1 when both buttons present -->
-      <lfx-button
-        class="w-full"
-        severity="secondary"
-        size="small"
-        styleClass="w-full"
-        label="See Meeting Details"
-        [href]="meetingDetailUrl()"
-        target="_blank"
-        type="button"
-        rel="noopener noreferrer"
-        [outlined]="true"
-        icon="fa-light fa-up-right-from-square text-xs"
-        data-testid="dashboard-meeting-card-see-button" />
+      @if (showDetailsButton()) {
+        @if (openDetailsInNewTab()) {
+          <lfx-button
+            class="w-full"
+            severity="secondary"
+            size="small"
+            styleClass="w-full"
+            label="View details"
+            [href]="meetingDetailHref()"
+            target="_blank"
+            type="button"
+            [outlined]="true"
+            icon="fa-light fa-up-right-from-square text-xs"
+            data-testid="dashboard-meeting-card-see-button" />
+        } @else {
+          <lfx-button
+            class="w-full"
+            severity="secondary"
+            size="small"
+            styleClass="w-full"
+            label="View details"
+            [routerLink]="meetingDetailUrl()"
+            [queryParams]="meetingDetailQueryParams()"
+            type="button"
+            [outlined]="true"
+            icon="fa-light fa-eye text-xs"
+            data-testid="dashboard-meeting-card-see-button" />
+        }
+      }
+
+      <!-- Watch Recording button -->
+      @if (recordingShareUrl()) {
+        <lfx-button
+          class="w-full"
+          severity="success"
+          size="small"
+          styleClass="w-full"
+          label="Watch Recording"
+          [href]="recordingShareUrl()!"
+          target="_blank"
+          type="button"
+          icon="fa-light fa-play text-xs"
+          data-testid="dashboard-meeting-card-recording-button" />
+      }
 
       <!-- Join Meeting button - right side when present -->
       @if (canJoinMeeting()) {

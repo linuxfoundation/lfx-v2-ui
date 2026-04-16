@@ -2,15 +2,18 @@
 /* SPDX-License-Identifier: MIT */
 
 /* Google Fonts - Must be at the very top */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;500;600&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Roboto+Slab:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;500;600&family=Roboto+Slab:wght@100..900&display=swap');
 
 @layer tailwind-base, primeng, tailwind-utilities;
 
 @layer tailwind-base {
   @tailwind base;
 
-  /* Typography Defaults - Apply Inter font family to all text elements */
-  h1,
+  /* Typography Defaults - Inter on html so it cascades to everything */
+  html {
+    font-family: var(--font-inter);
+  }
+
   h2,
   h3,
   h4,
@@ -20,7 +23,7 @@
   label,
   button,
   input {
-    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    font-family: var(--font-inter);
   }
 
   /* Heading styles - only apply to elements without text or font classes */
@@ -64,21 +67,32 @@
   @tailwind components;
   @tailwind utilities;
 }
-/* Custom font family theme variables */
-@theme {
-  /* Open Sans as the primary sans-serif font */
-  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+/* PrimeNG component overrides */
+.p-toggleswitch .p-toggleswitch-handle {
+  border-radius: 9999px;
+}
 
-  /* Inter as additional sans-serif font */
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td {
+  background: white;
+}
+
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr:not(:last-child) > td {
+  border-bottom: 1px solid #f1f5f9; /* slate-100 */
+}
+
+.p-menu .p-menu-item.text-red-500 .p-menu-item-content,
+.p-menu .p-menu-item.text-red-500 .p-menu-item-label,
+.p-menu .p-menu-item.text-red-500 .p-menu-item-icon {
+  color: inherit;
+}
+
+/* Font family CSS custom properties (Tailwind v3 — @theme is v4-only, use :root instead) */
+:root {
   --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-
-  /* Roboto Slab for headings and display text */
   --font-display: 'Roboto Slab', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-
-  /* Keep Roboto Slab as serif option too */
   --font-serif: 'Roboto Slab', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-
-  /* JetBrains Mono for code/SQL blocks */
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
@@ -118,6 +132,12 @@
 
   --p-fileupload-content-padding: 1rem;
 
+  /* Lighter placeholder text across all form fields */
+  --p-select-placeholder-color: #94a3b8;
+  --p-inputtext-placeholder-color: #94a3b8;
+  --p-multiselect-placeholder-color: #94a3b8;
+  --p-textarea-placeholder-color: #94a3b8;
+
   --p-checkbox-border-color: #cecece;
 
   --p-tab-list-border-color: none;
@@ -130,6 +150,32 @@
   --p-tag-font-size: 10.5px;
   --p-tag-font-weight: 400;
 
+  /* Meeting type badge colors */
+  --meeting-board: #8b5cf6;
+  --meeting-board-bg: #f3f4f6;
+  --meeting-maintainers: #0ea5e9;
+  --meeting-maintainers-bg: #f0f9ff;
+  --meeting-marketing: #f59e0b;
+  --meeting-marketing-bg: #fffbeb;
+  --meeting-technical: #10b981;
+  --meeting-technical-bg: #f0fdf4;
+  --meeting-legal: #ef4444;
+  --meeting-legal-bg: #fef2f2;
+  --meeting-other: #6b7280;
+  --meeting-other-bg: #f9fafb;
+
+  /* Feature badge colors */
+  --feature-recording: #ef4444;
+  --feature-recording-bg: #fef2f2;
+  --feature-youtube: #f59e0b;
+  --feature-youtube-bg: #fffbeb;
+  --feature-transcripts: #0ea5e9;
+  --feature-transcripts-bg: #f0f9ff;
+  --feature-ai: #10b981;
+  --feature-ai-bg: #f0fdf4;
+  --feature-chat: #8b5cf6;
+  --feature-chat-bg: #f5f3ff;
+
   /* Breadcrumb component styling */
   --p-breadcrumb-background: transparent;
   --p-breadcrumb-padding: 0;
@@ -138,6 +184,69 @@
   --p-card-shadow: none;
 
   --p-stepper-background: #fff;
+}
+
+/* Tag badge variant overrides — colors from Figma design tokens */
+.p-tag {
+  /* Private badge — solid fill */
+  &.tag-private {
+    background: #d4183d;
+    color: #fff;
+  }
+
+  /* Meeting type badges */
+  &.tag-meeting-board {
+    background: var(--meeting-board-bg);
+    color: var(--meeting-board);
+  }
+  &.tag-meeting-maintainers {
+    background: var(--meeting-maintainers-bg);
+    color: var(--meeting-maintainers);
+  }
+  &.tag-meeting-marketing {
+    background: var(--meeting-marketing-bg);
+    color: var(--meeting-marketing);
+  }
+  &.tag-meeting-technical {
+    background: var(--meeting-technical-bg);
+    color: var(--meeting-technical);
+  }
+  &.tag-meeting-legal {
+    background: var(--meeting-legal-bg);
+    color: var(--meeting-legal);
+  }
+  &.tag-meeting-other {
+    background: var(--meeting-other-bg);
+    color: var(--meeting-other);
+  }
+
+  /* Recurring badge */
+  &.tag-recurring {
+    background: var(--color-gray-100, #f3f4f6);
+    color: var(--card-foreground, oklch(0.145 0 0));
+  }
+
+  /* Feature badges */
+  &.tag-feature-youtube {
+    background: var(--feature-youtube-bg);
+    color: var(--feature-youtube);
+  }
+  &.tag-feature-recording {
+    background: var(--feature-recording-bg);
+    color: var(--feature-recording);
+  }
+  &.tag-feature-transcripts {
+    background: var(--feature-transcripts-bg);
+    color: var(--feature-transcripts);
+  }
+  &.tag-feature-ai {
+    background: var(--feature-ai-bg);
+    color: var(--feature-ai);
+  }
+  &.tag-feature-chat {
+    background: var(--feature-chat-bg);
+    color: var(--feature-chat);
+  }
 }
 
 html {
