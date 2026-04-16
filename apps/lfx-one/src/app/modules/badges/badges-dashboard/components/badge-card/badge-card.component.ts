@@ -33,7 +33,6 @@ export class BadgeCardComponent {
       });
     } catch (error) {
       this.messageService.add({
-        key: 'support',
         severity: 'error',
         summary: 'Copy failed',
         detail: 'Unable to copy link to clipboard',
