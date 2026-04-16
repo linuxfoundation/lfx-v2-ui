@@ -94,6 +94,13 @@ export class MeetingsDashboardComponent {
   protected readonly attendanceRate: Signal<number>;
   protected readonly recurringAcrossLabel: Signal<string>;
 
+  // Foundation/Project lens stat cards
+  protected readonly fpStatsLoading: Signal<boolean>;
+  protected readonly fpUpcomingCount: Signal<number>;
+  protected readonly fpPastCount: Signal<number>;
+  protected readonly fpRecurringCount: Signal<number>;
+  protected readonly fpRecordingsAvailableCount: Signal<number>;
+
   private upcomingPageToken = signal<string | undefined>(undefined);
   private pastPageToken = signal<string | undefined>(undefined);
   private loadMoreUpcoming$ = new Subject<string>();
@@ -183,6 +190,17 @@ export class MeetingsDashboardComponent {
     this.upcomingMeetings = this.initializeUpcomingMeetings();
     this.pastMeetings = this.initializePastMeetings();
     this.filteredMeetings = this.initializeFilteredMeetings();
+
+    // Foundation/Project lens stat cards (computed from paginated data)
+    this.fpStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
+    this.fpUpcomingCount = computed(() => (this.activeLens() !== 'me' ? this.upcomingMeetings().length : 0));
+    this.fpPastCount = computed(() => (this.activeLens() !== 'me' ? this.pastMeetings().length : 0));
+    this.fpRecurringCount = computed(() => (this.activeLens() !== 'me' ? this.upcomingMeetings().filter((m) => m.recurrence !== null).length : 0));
+    this.fpRecordingsAvailableCount = computed(() => {
+      if (this.activeLens() === 'me') return 0;
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return this.pastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
+    });
 
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
     this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
