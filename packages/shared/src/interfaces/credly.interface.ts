@@ -21,13 +21,13 @@ export interface CredlyBadgeEntry {
   issued_to_middle_name: string | null;
   issued_to_last_name: string;
   issuer_earner_id: string | null;
-  user: {
+  user?: {
     first_name: string;
     middle_name: string | null;
     last_name: string;
     url: string;
-  };
-  issuer: {
+  } | null;
+  issuer?: {
     summary: string;
     entities: Array<{
       label: string;
@@ -38,8 +38,8 @@ export interface CredlyBadgeEntry {
         name: string;
       };
     }>;
-  };
-  badge_template: {
+  } | null;
+  badge_template?: {
     id: string;
     name: string;
     description: string;
@@ -49,7 +49,7 @@ export interface CredlyBadgeEntry {
     level: string | null;
     skills: string[];
     reporting_tags?: string[] | null;
-  };
+  } | null;
 }
 
 /** Raw Credly API paginated response wrapper */

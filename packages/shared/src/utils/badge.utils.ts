@@ -53,6 +53,7 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
   const isPrivateBadge = !(entry.public ?? false);
   const acceptedBadgeUrl = isPrivateBadge ? (privateBadgeEditUrl ?? entry.badge_url ?? undefined) : (entry.badge_url ?? undefined);
   const credlyUrl = entry.state === 'pending' ? (entry.accept_badge_url ?? undefined) : acceptedBadgeUrl;
+  const shareUrl = entry.state === 'accepted' && (entry.public ?? false) ? (entry.badge_url ?? undefined) : undefined;
 
   return {
     id: entry.id,
@@ -73,7 +74,7 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
     expiresDate,
     imageUrl: entry.badge_template?.image_url ?? entry.image_url,
     credlyUrl,
-    shareUrl: entry.badge_url || undefined,
+    shareUrl,
   };
 }
 
