@@ -4261,7 +4261,7 @@ export class ProjectService {
       rejected: results.filter((r) => r.status === 'rejected').length,
     });
 
-    for (const result of results) {
+    results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
         const { slug, totalProjects, totalMembers, totalValue, healthScores } = result.value;
         perFoundation[slug] = { totalProjects, totalMembers, totalValue, healthScores };
@@ -4270,10 +4270,11 @@ export class ProjectService {
         aggregated.totalValue += totalValue;
       } else {
         logger.warning(req, 'get_multi_foundation_summary', 'Failed to fetch analytics for a foundation', {
+          slug: slugs[i],
           error: result.reason instanceof Error ? result.reason.message : String(result.reason),
         });
       }
-    }
+    });
 
     logger.debug(req, 'get_multi_foundation_summary', 'Completed multi-foundation summary', {
       total_slugs: slugs.length,
