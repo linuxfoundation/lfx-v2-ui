@@ -1,14 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { MarketingKeyInsight, MarketingRecommendedAction } from '../interfaces/analytics-data.interface';
+import { MarketingKeyInsight, MarketingRecommendedAction, MarketingSplitByPriority } from '../interfaces/analytics-data.interface';
 
-export interface MarketingSplitByPriority {
-  attentionActions: MarketingRecommendedAction[];
-  attentionInsights: MarketingKeyInsight[];
-  performingActions: MarketingRecommendedAction[];
-  performingInsights: MarketingKeyInsight[];
-}
+export type { MarketingSplitByPriority };
 
 export function splitByPriority(actions: MarketingRecommendedAction[], insights: MarketingKeyInsight[]): MarketingSplitByPriority {
   return {

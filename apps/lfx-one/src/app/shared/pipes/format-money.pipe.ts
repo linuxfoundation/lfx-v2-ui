@@ -5,6 +5,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 import { formatCurrency } from '@lfx-one/shared/utils';
 
 @Pipe({
+  standalone: true,
   name: 'formatMoney',
 })
 export class FormatMoneyPipe implements PipeTransform {
