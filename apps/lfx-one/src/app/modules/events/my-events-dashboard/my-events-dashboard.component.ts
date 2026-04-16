@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, Signal, signal } from '@angular/core';
-import { TagComponent } from '@app/shared/components/tag/tag.component';
 import { PersonaService } from '@app/shared/services/persona.service';
 import { ProjectContextService } from '@app/shared/services/project-context.service';
 import { MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
@@ -14,7 +13,7 @@ import { EventsListComponent } from './components/events-list/events-list.compon
 
 @Component({
   selector: 'lfx-my-events-dashboard',
-  imports: [TagComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, TooltipModule],
+  imports: [DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, TooltipModule],
   templateUrl: './my-events-dashboard.component.html',
   styleUrl: './my-events-dashboard.component.scss',
 })
