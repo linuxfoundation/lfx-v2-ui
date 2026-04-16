@@ -46,25 +46,19 @@ export class VoteService {
       type: 'vote',
     };
 
-    const { resources, page_token } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    const votes = await fetchAllQueryResources<Vote>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    logger.debug(req, 'get_votes', 'Fetched resources from query service', {
-      count: resources.length,
-    });
-
-    const votes: Vote[] = resources.map((resource) => resource.data);
 
     logger.debug(req, 'get_votes', 'Completed vote fetch', {
       final_count: votes.length,
     });
 
-    return { data: votes, page_token };
+    return { data: votes, page_token: undefined };
   }
 
   /**

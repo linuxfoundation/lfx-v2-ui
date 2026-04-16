@@ -78,9 +78,13 @@ export class CommitteeService {
       type: 'committee',
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
-
-    let committees = resources.map((resource) => resource.data);
+    let committees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
 
     // Get member count for each committee in parallel
     committees = await Promise.all(
@@ -292,15 +296,13 @@ export class CommitteeService {
       tags: `committee_uid:${committeeId}`,
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(
-      req,
-      'LFX_V2_SERVICE',
-      `/query/resources`,
-      'GET',
-      params
+    return fetchAllQueryResources<CommitteeMember>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    return resources.map((resource) => resource.data);
   }
 
   /**

@@ -189,15 +189,13 @@ export class MailingListService {
       type: 'groupsio_mailing_list',
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    let mailingLists = await fetchAllQueryResources<GroupsIOMailingList>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    let mailingLists = resources.map((resource) => resource.data);
 
     // Enrich with service data
     mailingLists = await this.enrichWithServices(req, mailingLists);
