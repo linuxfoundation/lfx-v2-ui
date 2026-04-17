@@ -89,6 +89,8 @@ export class MeetingsDashboardComponent {
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
+  // Pre-filtered/sorted upcoming meetings (shared source for Me lens stat cards)
+  private sortedUpcomingUserMeetings: Signal<Meeting[]>;
   // Raw FP/project meetings for stat cards (independent of time-filter tab)
   private rawFpUpcomingMeetings: Signal<Meeting[]>;
   private rawFpPastMeetings: Signal<PastMeeting[]>;
@@ -153,11 +155,13 @@ export class MeetingsDashboardComponent {
     // Initialize Me lens data (fetched once, filtered client-side)
     this.rawUserMeetings = this.initializeRawUserMeetings();
     this.rawUserPastMeetings = this.initializeRawUserPastMeetings();
+    // Single shared source for all Me-lens upcoming stats — avoids re-filtering rawUserMeetings on each stat signal
+    this.sortedUpcomingUserMeetings = computed(() => this.filterAndSortUpcomingMeetings(this.rawUserMeetings()));
     this.timeFilteredMeetings = computed(() => {
       if (this.timeFilter() === 'past') {
         return this.rawUserPastMeetings();
       }
-      return this.filterAndSortUpcomingMeetings(this.rawUserMeetings());
+      return this.sortedUpcomingUserMeetings();
     });
 
     // Filter options derived from time-filtered meetings (only show projects with meetings in current view)
@@ -167,12 +171,12 @@ export class MeetingsDashboardComponent {
     this.showFoundationFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
     this.showProjectFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
 
-    // Me lens stat cards (computed from raw meeting signals)
+    // Me lens stat cards (computed from shared sorted upcoming signal)
     this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
-    this.upcomingCount = computed(() => this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).length);
+    this.upcomingCount = computed(() => this.sortedUpcomingUserMeetings().length);
     this.nextMeetingDate = this.initNextMeetingDate();
     this.pastThisMonthCount = this.initPastThisMonthCount();
-    this.recurringCount = computed(() => this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).filter((m) => m.recurrence !== null).length);
+    this.recurringCount = computed(() => this.sortedUpcomingUserMeetings().filter((m) => m.recurrence !== null).length);
     this.recordingsAvailableCount = this.initRecordingsAvailableCount();
     this.attendanceRate = this.initAttendanceRate();
     this.recurringAcrossLabel = this.initRecurringAcrossLabel();
@@ -557,7 +561,7 @@ export class MeetingsDashboardComponent {
 
   private initNextMeetingDate(): Signal<string> {
     return computed(() => {
-      const first = this.filterAndSortUpcomingMeetings(this.rawUserMeetings())[0];
+      const first = this.sortedUpcomingUserMeetings()[0];
       if (!first) return '';
       const occ = getCurrentOrNextOccurrence(first);
       const d = new Date(occ ? occ.start_time : first.start_time);
@@ -597,7 +601,7 @@ export class MeetingsDashboardComponent {
 
   private initRecurringAcrossLabel(): Signal<string> {
     return computed(() => {
-      const recurring = this.filterAndSortUpcomingMeetings(this.rawUserMeetings()).filter((m) => m.recurrence !== null);
+      const recurring = this.sortedUpcomingUserMeetings().filter((m) => m.recurrence !== null);
       const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
       const count = uniqueProjects.size;
       return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';
