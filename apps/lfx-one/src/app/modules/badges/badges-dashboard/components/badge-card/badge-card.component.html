@@ -36,13 +36,13 @@
             <i class="fa-solid fa-clock text-orange-500 text-xs"></i>
             Expired
           </span>
-        } @else if (badge().isVerified) {
-          <span class="badge-tag border-blue-200 text-blue-600">
-            <i class="fa-solid fa-badge-check text-blue-500 text-xs"></i>
-            Verified
-          </span>
         }
-        @if (!badge().isPublic) {
+        @if (badge().isPublic) {
+          <span class="badge-tag border-green-200 text-green-600">
+            <i class="fa-solid fa-globe text-green-500 text-xs"></i>
+            Public
+          </span>
+        } @else {
           <span class="badge-tag border-gray-200 text-gray-500">
             <i class="fa-solid fa-lock text-gray-400 text-xs"></i>
             Private
@@ -95,11 +95,11 @@
             [href]="badge().credlyUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="badge-credly-btn"
-            [attr.aria-label]="'View ' + badge().title + ' credential on Credly'"
+            [class]="badge().isPublic ? 'badge-credly-btn' : 'badge-accept-btn'"
+            [attr.aria-label]="(badge().isPublic ? 'View ' : 'Accept ') + badge().title + ' credential on Credly'"
             data-testid="badge-credly-link">
             <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
-            {{ badge().isPending ? 'Accept in Credly' : 'View in Credly' }}
+            {{ badge().isPublic ? 'View in Credly' : 'Accept Badge' }}
           </a>
           @if (badge().shareUrl && badge().isPublic) {
             <button class="badge-share-btn" (click)="shareBadge(badge().shareUrl!)" aria-label="Copy badge URL to clipboard" data-testid="badge-share-btn">

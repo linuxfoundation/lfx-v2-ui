@@ -20,3 +20,9 @@
     rounded-md border border-gray-300 text-xs font-medium text-gray-600
     hover:bg-gray-50 transition-colors cursor-pointer bg-transparent;
 }
+
+.badge-accept-btn {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 w-fit
+    rounded-md border border-blue-500 text-xs font-medium text-blue-600 no-underline
+    hover:bg-blue-50 transition-colors;
+}
