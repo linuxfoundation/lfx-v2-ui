@@ -131,3 +131,6 @@ export * from './health-metrics.interface';
 
 // Multi-persona dashboard interfaces
 export * from './multi-persona-dashboard.interface';
+
+// Transaction interfaces
+export * from './transaction.interface';

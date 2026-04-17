@@ -37,6 +37,7 @@ import publicMeetingsRouter from './routes/public-meetings.route';
 import searchRouter from './routes/search.route';
 import surveysRouter from './routes/surveys.route';
 import trainingRouter from './routes/training.route';
+import transactionRouter from './routes/transaction.route';
 import userRouter from './routes/user.route';
 import votesRouter from './routes/votes.route';
 import { reqSerializer, resSerializer, serverLogger } from './server-logger';
@@ -200,6 +201,7 @@ app.use('/api/events', eventsRouter);
 app.use('/api/badges', badgesRouter);
 app.use('/api/impersonate', impersonationRouter);
 app.use('/api/training', trainingRouter);
+app.use('/api/transactions', transactionRouter);
 
 // Add API error handler middleware
 app.use('/api/*', apiErrorHandler);
