@@ -1,22 +1,18 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { CardComponent } from '@components/card/card.component';
-import { TagComponent } from '@app/shared/components/tag/tag.component';
-import { PersonaService } from '@app/shared/services/persona.service';
-import { ProjectContextService } from '@app/shared/services/project-context.service';
-import { LINKS_CONFIG, MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
+import { MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 import { EventTabId, FilterOption } from '@lfx-one/shared/interfaces';
 import { Tooltip } from 'primeng/tooltip';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
 import { EventsTopBarComponent } from '../components/events-top-bar/events-top-bar.component';
-import { EventsInfoBannersComponent } from './components/events-info-banners/events-info-banners.component';
 import { EventsListComponent } from './components/events-list/events-list.component';
 
 @Component({
   selector: 'lfx-my-events-dashboard',
-  imports: [CardComponent, TagComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsInfoBannersComponent, EventsListComponent, Tooltip],
+  imports: [CardComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, Tooltip],
   templateUrl: './my-events-dashboard.component.html',
 })
 export class MyEventsDashboardComponent {
