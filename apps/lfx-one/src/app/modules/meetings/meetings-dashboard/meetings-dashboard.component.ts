@@ -83,7 +83,7 @@ export class MeetingsDashboardComponent {
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
-  // Time-filtered meetings for deriving filter options (applies hasMeetingEnded for upcoming)
+  // Time-filtered meetings for deriving filter options (server now pre-filters past from upcoming)
   private timeFilteredMeetings: Signal<(Meeting | PastMeeting)[]>;
 
   private upcomingPageToken = signal<string | undefined>(undefined);
@@ -131,7 +131,7 @@ export class MeetingsDashboardComponent {
       if (this.timeFilter() === 'past') {
         return this.rawUserPastMeetings();
       }
-      return this.filterAndSortUpcomingMeetings(this.rawUserMeetings());
+      return this.sortUpcomingMeetings(this.rawUserMeetings());
     });
 
     // Filter options derived from time-filtered meetings (only show projects with meetings in current view)
@@ -265,7 +265,7 @@ export class MeetingsDashboardComponent {
       merge(meLens$, firstPage$, nextPage$).pipe(
         tap((response) => this.upcomingPageToken.set(response.page_token)),
         scan((acc: Meeting[], response: PageResult<Meeting>) => {
-          const filtered = this.filterAndSortUpcomingMeetings(response.data);
+          const filtered = this.sortUpcomingMeetings(response.data);
           return response.reset ? filtered : [...acc, ...filtered];
         }, [])
       ),
@@ -380,12 +380,18 @@ export class MeetingsDashboardComponent {
 
   private initializeRawUserPastMeetings(): Signal<PastMeeting[]> {
     const lens$ = toObservable(this.activeLens);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([lens$, this.refresh$]).pipe(
-        switchMap(([lens]) => {
+      combineLatest([lens$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([lens, timeFilter]) => {
           if (lens !== 'me') {
             return of([] as PastMeeting[]);
+          }
+          // Lazy-load: only fetch when the Past tab is active. EMPTY retains prior data
+          // in the signal so flipping back to Upcoming doesn't clear the cached past meetings.
+          if (timeFilter !== 'past') {
+            return EMPTY;
           }
           this.pastMeetingsLoading.set(true);
           return this.userService.getUserPastMeetings().pipe(
@@ -401,8 +407,9 @@ export class MeetingsDashboardComponent {
     );
   }
 
-  private filterAndSortUpcomingMeetings(meetings: Meeting[]): Meeting[] {
-    // TODO: Remove client-side filtering once API supports filtering by end time + 40-minute buffer
+  private sortUpcomingMeetings(meetings: Meeting[]): Meeting[] {
+    // Server filters past meetings before sending, but HTTP SWR cache can serve responses up to
+    // ~150s old. Re-apply the filter here as a safety net for meetings that ended after caching.
     const activeMeetings = meetings.filter((meeting) => {
       if (meeting.occurrences && meeting.occurrences.length > 0) {
         return meeting.occurrences.some((occurrence) => occurrence.status !== 'cancel' && !hasMeetingEnded(meeting, occurrence));
