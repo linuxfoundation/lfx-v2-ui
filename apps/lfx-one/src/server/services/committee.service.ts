@@ -260,22 +260,18 @@ export class CommitteeService {
       updatedCommittee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
     }
 
-    // Step 3: Update settings if provided
+    // Step 3: Update settings if provided — propagate errors so callers aren't misled
+    // (unlike the create path, there's no partial-success story here: if settings fail,
+    // the response should not echo writers/auditors as if they were persisted)
     if (hasSettingsUpdate) {
-      try {
-        await this.updateCommitteeSettings(req, committeeId, {
-          business_email_required,
-          is_audit_enabled,
-          show_meeting_attendees,
-          member_visibility,
-          writers,
-          auditors,
-        });
-      } catch {
-        logger.warning(req, 'update_committee_settings', 'Failed to update committee settings, but committee was updated successfully', {
-          committee_uid: committeeId,
-        });
-      }
+      await this.updateCommitteeSettings(req, committeeId, {
+        business_email_required,
+        is_audit_enabled,
+        show_meeting_attendees,
+        member_visibility,
+        writers,
+        auditors,
+      });
     }
 
     return {
@@ -778,7 +774,9 @@ export class CommitteeService {
 
     logger.debug(req, 'update_committee_settings', 'Committee settings updated successfully', {
       committee_uid: committeeId,
-      settings_data: settingsData,
+      updated_fields: Object.keys(settings).filter((k) => settings[k as keyof CommitteeSettingsData] !== undefined),
+      writers_count: settingsData.writers?.length,
+      auditors_count: settingsData.auditors?.length,
     });
   }
 

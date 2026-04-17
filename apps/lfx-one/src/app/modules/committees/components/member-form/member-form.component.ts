@@ -51,7 +51,7 @@ export class MemberFormComponent {
   public appointedByOptions = APPOINTED_BY_OPTIONS;
   public permissionOptions = [
     { label: 'Member', value: 'member' },
-    { label: 'Review', value: 'review' },
+    { label: 'Reviewer', value: 'review' },
     { label: 'Manage', value: 'manage' },
   ];
 
@@ -149,39 +149,58 @@ export class MemberFormComponent {
 
             if (username) {
               const { writers, auditors } = this.buildPermissionArrays(username, savedMember, permission);
-              return this.committeeService.updateCommitteePermissions(committeeId, writers, auditors).pipe(catchError(() => of(null)));
+              return this.committeeService.updateCommitteePermissions(committeeId, writers, auditors).pipe(
+                catchError(() => {
+                  this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Permission Update Failed',
+                    detail: `Member ${this.isEditing ? 'updated' : 'created'}, but the permission could not be saved. Please try again from the member menu.`,
+                    life: 6000,
+                  });
+                  return of(null);
+                })
+              );
+            }
+
+            if (permission !== 'member') {
+              this.messageService.add({
+                severity: 'warn',
+                summary: 'Permission Pending',
+                detail: 'Member saved. Elevated permissions require a user account — grant this permission once the user signs in.',
+                life: 6000,
+              });
             }
 
             return of(savedMember);
           })
         )
         .subscribe({
-        next: () => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: `Member ${this.isEditing ? 'updated' : 'created'} successfully`,
-          });
-          this.dialogRef.close(true);
-        },
-        error: (err: HttpErrorResponse) => {
-          this.submitting.set(false);
-          if (err.status === 409) {
+          next: () => {
+            this.submitting.set(false);
             this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: 'Member already exists',
+              severity: 'success',
+              summary: 'Success',
+              detail: `Member ${this.isEditing ? 'updated' : 'created'} successfully`,
             });
-          } else {
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: getHttpErrorDetail(err, `Failed to ${this.isEditing ? 'update' : 'create'} member. Please try again.`),
-            });
-          }
-        },
-      });
+            this.dialogRef.close(true);
+          },
+          error: (err: HttpErrorResponse) => {
+            this.submitting.set(false);
+            if (err.status === 409) {
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Member already exists',
+              });
+            } else {
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: getHttpErrorDetail(err, `Failed to ${this.isEditing ? 'update' : 'create'} member. Please try again.`),
+              });
+            }
+          },
+        });
     } else {
       this.form().markAllAsTouched();
     }
@@ -237,7 +256,8 @@ export class MemberFormComponent {
   private deriveInitialPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
     const committee = this.committee;
     if (!committee) return 'member';
-    const matches = (u: CommitteeUser) => (member.username && u.username === member.username) || u.email === member.email;
+    const memberEmail = member.email?.toLowerCase();
+    const matches = (u: CommitteeUser) => (member.username && u.username === member.username) || u.email?.toLowerCase() === memberEmail;
     if (committee.writers?.some(matches)) return 'manage';
     if (committee.auditors?.some(matches)) return 'review';
     return 'member';

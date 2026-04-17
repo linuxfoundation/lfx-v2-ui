@@ -40,7 +40,13 @@
             <span>Loading mailing lists…</span>
           </div>
         } @else if (associatedMailingLists().length === 0) {
-          <div class="text-[12.5px] text-gray-400 py-2">No mailing lists associated. Click "+ Add List" to link one.</div>
+          <div class="text-[12.5px] text-gray-400 py-2">
+            @if (canEdit()) {
+              No mailing lists associated. Click "+ Add List" to link one.
+            } @else {
+              No mailing lists associated.
+            }
+          </div>
         } @else {
           @for (ml of associatedMailingLists(); track ml.uid) {
             <div
@@ -101,7 +107,13 @@
             Permanently delete this group and all associated data including meetings, votes, surveys, and member records. This action cannot be undone.
           </p>
         </div>
-        <lfx-button label="Delete Group" severity="danger" size="small" icon="fa-light fa-trash" (onClick)="confirmDelete()" [loading]="deleting()"></lfx-button>
+        <lfx-button
+          label="Delete Group"
+          severity="danger"
+          size="small"
+          icon="fa-light fa-trash"
+          (onClick)="confirmDelete()"
+          [loading]="deleting()"></lfx-button>
       </div>
     </div>
   }

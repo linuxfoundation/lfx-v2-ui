@@ -132,9 +132,9 @@
               </td>
             }
             <td>
-              @if (getMemberPermission(member) !== 'member') {
-                <lfx-tag [value]="getMemberPermissionLabel(getMemberPermission(member))" [severity]="getMemberPermissionSeverity(getMemberPermission(member))">
-                </lfx-tag>
+              @let permission = getMemberPermission(member);
+              @if (permission !== 'member') {
+                <lfx-tag [value]="getMemberPermissionLabel(permission)" [severity]="getMemberPermissionSeverity(permission)"> </lfx-tag>
               }
             </td>
             <td class="text-right relative">

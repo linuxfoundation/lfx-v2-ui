@@ -15,13 +15,13 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, TagSeverity } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { Skeleton } from 'primeng/skeleton';
-import { debounceTime, distinctUntilChanged, startWith, take } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, of, startWith, take } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 import { AddMemberDialogComponent } from '../add-member-dialog/add-member-dialog.component';
@@ -117,7 +117,8 @@ export class CommitteeMembersComponent implements OnInit {
   public getMemberPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
     const committee = this.committee();
     if (!committee) return 'member';
-    const matches = (u: { username: string; email: string }) => (member.username && u.username === member.username) || u.email === member.email;
+    const memberEmail = member.email?.toLowerCase();
+    const matches = (u: { username: string; email: string }) => (member.username && u.username === member.username) || u.email?.toLowerCase() === memberEmail;
     if (committee.writers?.some(matches)) return 'manage';
     if (committee.auditors?.some(matches)) return 'review';
     return 'member';
@@ -241,6 +242,36 @@ export class CommitteeMembersComponent implements OnInit {
           summary: 'Member Removed',
           detail: `${memberName} has been removed from the committee`,
         });
+
+        // Clean up stale ACL entries — remove deleted member from writers/auditors.
+        // Best-effort: if this fails, warn but don't block the UI (member was already deleted).
+        const memberEmail = member.email?.toLowerCase();
+        const memberUsername = member.username;
+        const existingWriters: CommitteeUser[] = committee.writers ?? [];
+        const existingAuditors: CommitteeUser[] = committee.auditors ?? [];
+        const hadElevatedPermission =
+          existingWriters.some((w) => (memberUsername && w.username === memberUsername) || w.email?.toLowerCase() === memberEmail) ||
+          existingAuditors.some((a) => (memberUsername && a.username === memberUsername) || a.email?.toLowerCase() === memberEmail);
+
+        if (hadElevatedPermission) {
+          const writers = existingWriters.filter((w) => !(memberUsername && w.username === memberUsername) && w.email?.toLowerCase() !== memberEmail);
+          const auditors = existingAuditors.filter((a) => !(memberUsername && a.username === memberUsername) && a.email?.toLowerCase() !== memberEmail);
+
+          this.committeeService
+            .updateCommitteePermissions(committee.uid, writers, auditors)
+            .pipe(
+              catchError(() => {
+                this.messageService.add({
+                  severity: 'warn',
+                  summary: 'Permission Cleanup Failed',
+                  detail: `${memberName} was removed, but their elevated permission could not be revoked. Please update manually in settings.`,
+                  life: 6000,
+                });
+                return of(null);
+              })
+            )
+            .subscribe();
+        }
 
         // Refresh members list by re-fetching
         this.refreshMembers();
