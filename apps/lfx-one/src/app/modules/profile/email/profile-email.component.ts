@@ -161,19 +161,29 @@ export class ProfileEmailComponent {
       return;
     }
 
-    this.userService.setPrimaryEmail(email.email).subscribe({
-      next: () => {
-        this.refresh.next();
-        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Primary email updated successfully' });
-      },
-      error: (err: HttpErrorResponse) => {
-        if (err.error?.error === 'management_token_required' && err.error?.authorize_url) {
-          window.location.href = err.error.authorize_url;
+    this.userService
+      .getProfileAuthStatus()
+      .pipe(take(1))
+      .subscribe((status) => {
+        if (!status.authorized) {
+          window.location.href = '/api/profile/auth/start?returnTo=/profile/emails';
           return;
         }
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to update primary email' });
-      },
-    });
+
+        this.userService.setPrimaryEmail(email.email).subscribe({
+          next: () => {
+            this.refresh.next();
+            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Primary email updated successfully' });
+          },
+          error: (err: HttpErrorResponse) => {
+            if (err.error?.error === 'management_token_required' && err.error?.authorize_url) {
+              window.location.href = err.error.authorize_url;
+              return;
+            }
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to update primary email' });
+          },
+        });
+      });
   }
 
   public deleteEmail(email: UserEmail): void {
@@ -193,7 +203,7 @@ export class ProfileEmailComponent {
         }
 
         this.confirmationService.confirm({
-          message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
+          message: `Are you sure you want to delete ${email.email}? This action cannot be undone.`,
           header: 'Delete Email Address',
           acceptLabel: 'Delete',
           rejectLabel: 'Cancel',

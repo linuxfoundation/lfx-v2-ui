@@ -84,16 +84,6 @@ export interface PasswordStrength {
 }
 
 /**
- * Two-factor authentication settings
- */
-export interface TwoFactorSettings {
-  enabled: boolean;
-  method: 'app' | 'sms' | 'email' | null;
-  backup_codes_count: number;
-  last_used: string | null;
-}
-
-/**
  * User metadata object for profile updates
  */
 export interface UserMetadata {

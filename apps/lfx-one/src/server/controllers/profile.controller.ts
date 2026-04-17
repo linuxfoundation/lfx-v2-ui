@@ -35,12 +35,7 @@ import { generateM2MToken } from '../utils/m2m-token.util';
  * Controller for handling profile HTTP requests
  */
 export class ProfileController {
-  private static readonly allowedProfileReturnPaths: ReadonlySet<string> = new Set([
-    '/profile',
-    '/profile/emails',
-    '/profile/identities',
-    '/profile/password',
-  ]);
+  private static readonly allowedProfileReturnPaths: ReadonlySet<string> = new Set(['/profile', '/profile/emails', '/profile/identities', '/profile/password']);
 
   private auth0Service: Auth0Service = new Auth0Service();
   private cdpService: CdpService = new CdpService();
@@ -237,7 +232,7 @@ export class ProfileController {
         });
       } else {
         // Create appropriate error based on error type
-        let error: any;
+        let error: unknown;
 
         if (response.error === 'Service temporarily unavailable') {
           // Service unavailable error
@@ -606,7 +601,7 @@ export class ProfileController {
           : Promise.resolve([]),
       ]);
 
-      logger.info(req, 'get_identities', 'Raw identity data before reconciliation', {
+      logger.debug(req, 'get_identities', 'Raw identity data before reconciliation', {
         cdp_identities: cdpIdentities,
         auth_service_identities: auth0Identities,
       });
@@ -1451,9 +1446,10 @@ export class ProfileController {
         logger.success(req, 'send_email_verification', startTime, { email });
         res.json({ success: true, message: response.message || 'Verification code sent' });
       } else {
-        logger.debug(req, 'send_email_verification', 'Full verification response on failure', {
+        logger.debug(req, 'send_email_verification', 'Verification response on failure', {
           response_keys: Object.keys(response),
-          full_response: response,
+          error: response.error,
+          message: response.message,
         });
 
         if (response.error?.includes('already linked')) {

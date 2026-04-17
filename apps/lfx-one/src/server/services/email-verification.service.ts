@@ -56,6 +56,11 @@ export class EmailVerificationService {
 
       return parsed;
     } catch (error) {
+      logger.warning(req, 'send_email_verification_code', 'NATS send verification code failed', {
+        email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -67,7 +72,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to send verification code. Please try again.',
       };
     }
   }
@@ -104,6 +109,11 @@ export class EmailVerificationService {
 
       return parsed;
     } catch (error) {
+      logger.warning(req, 'verify_email_otp', 'NATS verify OTP failed', {
+        email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -115,7 +125,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to verify code. Please try again.',
       };
     }
   }
@@ -260,6 +270,10 @@ export class EmailVerificationService {
 
       return parsed;
     } catch (error) {
+      logger.warning(req, 'link_identity', 'NATS link identity failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -271,7 +285,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to link identity. Please try again.',
       };
     }
   }
@@ -345,6 +359,11 @@ export class EmailVerificationService {
 
       return parsed;
     } catch (error) {
+      logger.warning(req, 'set_primary_email', 'NATS set primary email failed', {
+        email,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -356,7 +375,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to update primary email. Please try again.',
       };
     }
   }
@@ -395,6 +414,12 @@ export class EmailVerificationService {
 
       return parsed;
     } catch (error) {
+      logger.warning(req, 'unlink_identity', 'NATS unlink identity failed', {
+        provider,
+        identity_id: identityId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -406,7 +431,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to unlink identity. Please try again.',
       };
     }
   }
@@ -431,6 +456,10 @@ export class EmailVerificationService {
       const parsed: ResetPasswordLinkNatsResponse = JSON.parse(codec.decode(response.data));
       return parsed;
     } catch (error) {
+      logger.warning(req, 'send_password_reset_link', 'NATS send password reset link failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return {
           success: false,
@@ -442,7 +471,7 @@ export class EmailVerificationService {
       return {
         success: false,
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        message: 'Failed to send password reset email. Please try again.',
       };
     }
   }
@@ -473,11 +502,15 @@ export class EmailVerificationService {
       const parsed = JSON.parse(codec.decode(response.data));
       return parsed;
     } catch (error) {
+      logger.warning(req, 'change_password', 'NATS change password failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
         return { success: false, error: 'Service temporarily unavailable', message: 'Unable to reach the password service. Please try again later.' };
       }
 
-      return { success: false, error: 'Internal server error', message: error instanceof Error ? error.message : 'An unexpected error occurred' };
+      return { success: false, error: 'Internal server error', message: 'Failed to change password. Please try again.' };
     }
   }
 
@@ -504,7 +537,7 @@ export class EmailVerificationService {
       const responseText = codec.decode(response.data);
       const parsed: ListIdentitiesNatsResponse = JSON.parse(responseText);
 
-      logger.info(req, 'list_identities', 'Raw NATS USER_IDENTITY_LIST response', {
+      logger.debug(req, 'list_identities', 'Raw NATS USER_IDENTITY_LIST response', {
         raw_response: responseText,
         parsed_success: parsed.success,
         parsed_data: parsed.data,

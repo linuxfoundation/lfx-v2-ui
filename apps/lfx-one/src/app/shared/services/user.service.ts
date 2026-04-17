@@ -20,7 +20,6 @@ import {
   ProfileUpdateRequest,
   SalesforceIdResponse,
   SendEmailVerificationResponse,
-  TwoFactorSettings,
   User,
   VerifyAndLinkEmailResponse,
   WorkExperience,
@@ -127,13 +126,6 @@ export class UserService {
    */
   public sendPasswordResetEmail(): Observable<{ message: string }> {
     return this.http.post<{ message: string }>('/api/profile/reset-password', {}).pipe(take(1));
-  }
-
-  /**
-   * Get two-factor authentication settings
-   */
-  public getTwoFactorSettings(): Observable<TwoFactorSettings> {
-    return this.http.get<TwoFactorSettings>('/api/profile/2fa-settings').pipe(take(1));
   }
 
   /**
