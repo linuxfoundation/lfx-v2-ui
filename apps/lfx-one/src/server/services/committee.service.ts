@@ -73,22 +73,34 @@ export class CommitteeService {
    * Fetches all committees based on query parameters
    */
   public async getCommittees(req: Request, query: Record<string, any> = {}): Promise<Committee[]> {
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'committee',
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
+    let committees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
 
-    let committees = resources.map((resource) => resource.data);
-
-    // Get member count for each committee in parallel
+    // Get member count and mailing list association for each committee in parallel
     committees = await Promise.all(
       committees.map(async (committee) => {
-        const memberCount = await this.getCommitteeMembersCount(req, committee.uid);
+        const [memberCount, mlCount] = await Promise.all([
+          this.getCommitteeMembersCount(req, committee.uid),
+          this.getMailingListCountByCommittee(req, committee.uid),
+        ]);
         return {
           ...committee,
           total_members: memberCount,
+          has_mailing_list: mlCount > 0,
         };
       })
     );
@@ -286,21 +298,23 @@ export class CommitteeService {
    * Fetches all members for a specific committee
    */
   public async getCommitteeMembers(req: Request, committeeId: string, query: Record<string, any> = {}): Promise<CommitteeMember[]> {
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'committee_member',
       tags: `committee_uid:${committeeId}`,
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(
-      req,
-      'LFX_V2_SERVICE',
-      `/query/resources`,
-      'GET',
-      params
+    return fetchAllQueryResources<CommitteeMember>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    return resources.map((resource) => resource.data);
   }
 
   /**
@@ -440,15 +454,13 @@ export class CommitteeService {
       tags_all: [`username:${username}`, `committee_category:${category}`],
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    const userMemberships = await fetchAllQueryResources<CommitteeMember>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        page_size: 100,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    const userMemberships = resources.map((resource) => resource.data);
 
     logger.debug(req, 'get_committee_members_by_category', 'Committee memberships retrieved', {
       username,
@@ -502,17 +514,21 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee details for each membership in parallel
+    // Fetch committee details, member count, and mailing list association in parallel
     const committeeUids = Array.from(membershipMap.keys());
     const committees = await Promise.all(
       committeeUids.map(async (uid) => {
         try {
-          const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${uid}`, 'GET');
-          const memberCount = await this.getCommitteeMembersCount(req, uid);
+          const [committee, memberCount, mlCount] = await Promise.all([
+            this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${uid}`, 'GET'),
+            this.getCommitteeMembersCount(req, uid),
+            this.getMailingListCountByCommittee(req, uid),
+          ]);
           const membership = membershipMap.get(uid)!;
           return {
             ...committee,
             total_members: memberCount,
+            has_mailing_list: mlCount > 0,
             my_role: membership.role,
             my_member_uid: membership.member_uid,
           } as MyCommittee;
@@ -760,5 +776,25 @@ export class CommitteeService {
       committee_uid: committeeId,
       settings_data: settingsData,
     });
+  }
+
+  /**
+   * Fetches count of mailing lists associated with a specific committee.
+   * Used to determine the has_mailing_list flag for committee list views.
+   */
+  private async getMailingListCountByCommittee(req: Request, committeeId: string): Promise<number> {
+    try {
+      const { count } = await this.microserviceProxy.proxyRequest<QueryServiceCountResponse>(req, 'LFX_V2_SERVICE', '/query/resources/count', 'GET', {
+        type: 'groupsio_mailing_list',
+        tags: `committee_uid:${committeeId}`,
+      });
+      return count;
+    } catch (error) {
+      logger.debug(req, 'get_mailing_list_count_by_committee', 'Failed to fetch mailing list count, defaulting to 0', {
+        committee_uid: committeeId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return 0;
+    }
   }
 }
