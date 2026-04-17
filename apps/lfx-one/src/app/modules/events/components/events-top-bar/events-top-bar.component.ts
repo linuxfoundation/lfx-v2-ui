@@ -24,6 +24,7 @@ export class EventsTopBarComponent {
   public readonly projectName = input<string | undefined>(undefined);
   /** When true, foundation options are scoped to the user's registered past events */
   public readonly isPast = input<boolean>(false);
+  public readonly searchPlaceholder = input<string>('Search events...');
   public readonly searchQueryChange = output<string>();
 
   public readonly searchForm: FormGroup = new FormGroup({

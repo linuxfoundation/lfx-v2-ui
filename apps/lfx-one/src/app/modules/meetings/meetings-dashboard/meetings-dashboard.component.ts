@@ -37,11 +37,12 @@ import {
   toArray,
 } from 'rxjs';
 
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { MeetingsTopBarComponent } from './components/meetings-top-bar/meetings-top-bar.component';
 
 @Component({
   selector: 'lfx-meetings-dashboard',
-  imports: [MeetingCardComponent, MeetingsTopBarComponent, ButtonComponent, CardComponent, OnRenderDirective],
+  imports: [MeetingCardComponent, MeetingsTopBarComponent, ButtonComponent, CardComponent, OnRenderDirective, EmptyStateComponent],
   templateUrl: './meetings-dashboard.component.html',
   styleUrl: './meetings-dashboard.component.scss',
 })

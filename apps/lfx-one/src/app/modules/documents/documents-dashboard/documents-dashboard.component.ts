@@ -16,6 +16,7 @@ import { MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { MyDocumentSourceTagPipe } from '@app/shared/pipes/my-document-source-tag.pipe';
 
 @Component({
@@ -30,6 +31,7 @@ import { MyDocumentSourceTagPipe } from '@app/shared/pipes/my-document-source-ta
     ReactiveFormsModule,
     DatePipe,
     MyDocumentSourceTagPipe,
+    EmptyStateComponent,
   ],
   templateUrl: './documents-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

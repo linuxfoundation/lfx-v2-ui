@@ -14,11 +14,12 @@ import { PageChangeEvent, RequestType, VisaRequestsResponse } from '@lfx-one/sha
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
 import { catchError, combineLatest, defer, finalize, map, of, skip, switchMap, tap } from 'rxjs';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
 import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
 @Component({
   selector: 'lfx-event-request-list',
-  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule, EventRequestStatusSeverityPipe],
+  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule, EventRequestStatusSeverityPipe, EmptyStateComponent],
   providers: [DialogService],
   templateUrl: './event-request-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +48,9 @@ export class EventRequestListComponent {
       dialogComponent: (isVisa ? VisaRequestApplicationDialogComponent : TravelFundApplicationDialogComponent) as Type<unknown>,
       dialogHeader: isVisa ? 'Visa Letter Application' : 'Travel Funding Application',
       buttonLabel: isVisa ? 'New Letter Application' : 'New Funding Application',
-      emptyMessage: isVisa ? 'No visa requests found' : 'No travel fund requests found',
+      emptyIcon: isVisa ? 'fa-light fa-passport' : 'fa-light fa-plane',
+      emptyTitle: isVisa ? 'No visa letter requests yet' : 'No travel funding requests yet',
+      emptySubtitle: isVisa ? 'Submit a request to get a visa support letter for an LF event.' : 'Submit an application to get travel funding for an LF event.',
       testIdPrefix: isVisa ? 'visa-request' : 'travel-funding',
     };
   });
