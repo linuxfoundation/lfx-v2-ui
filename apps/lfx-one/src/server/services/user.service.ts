@@ -26,7 +26,7 @@ import {
   UserPullRequestsResponse,
   UserPullRequestsRow,
 } from '@lfx-one/shared/interfaces';
-import { hasMeetingEnded, parseToInt } from '@lfx-one/shared/utils';
+import { getCurrentOrNextOccurrence, hasMeetingEnded, parseToInt } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { MicroserviceError, ResourceNotFoundError } from '../errors';
@@ -497,7 +497,15 @@ export class UserService {
       return !hasMeetingEnded(meeting);
     });
 
-    upcomingMeetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+    // Sort by the next active occurrence so recurring meetings — whose meeting.start_time is the
+    // series start (often in the past) — are ordered by when the user will actually attend next.
+    upcomingMeetings.sort((a, b) => {
+      const occurrenceA = getCurrentOrNextOccurrence(a);
+      const occurrenceB = getCurrentOrNextOccurrence(b);
+      const timeA = occurrenceA ? new Date(occurrenceA.start_time).getTime() : new Date(a.start_time).getTime();
+      const timeB = occurrenceB ? new Date(occurrenceB.start_time).getTime() : new Date(b.start_time).getTime();
+      return timeA - timeB;
+    });
 
     const enriched = await this.meetingService.getMeetingProjectName(req, upcomingMeetings);
 
