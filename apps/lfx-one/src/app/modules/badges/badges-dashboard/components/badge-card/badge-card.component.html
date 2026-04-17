@@ -95,11 +95,17 @@
             [href]="badge().credlyUrl"
             target="_blank"
             rel="noopener noreferrer"
-            [class]="badge().isPublic ? 'badge-credly-btn' : 'badge-accept-btn'"
-            [attr.aria-label]="(badge().isPublic ? 'View ' : 'Accept ') + badge().title + ' credential on Credly'"
+            [class]="badge().isPending ? 'badge-accept-btn' : 'badge-credly-btn'"
+            [attr.aria-label]="
+              badge().isPending
+                ? 'Accept ' + badge().title + ' credential on Credly'
+                : !badge().isPublic
+                  ? 'Manage privacy for ' + badge().title + ' credential on Credly'
+                  : 'View ' + badge().title + ' credential on Credly'
+            "
             data-testid="badge-credly-link">
             <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
-            {{ badge().isPublic ? 'View in Credly' : 'Accept Badge' }}
+            {{ badge().isPending ? 'Accept Badge' : badge().isPublic ? 'View in Credly' : 'Manage Privacy' }}
           </a>
           @if (badge().shareUrl && badge().isPublic) {
             <button type="button" class="badge-share-btn" (click)="shareBadge(badge().shareUrl!)" aria-label="Copy badge URL to clipboard" data-testid="badge-share-btn">
