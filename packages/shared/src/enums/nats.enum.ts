@@ -18,6 +18,8 @@ export enum NatsSubjects {
   USER_IDENTITY_LIST = 'lfx.auth-service.user_identity.list',
   USER_EMAILS_READ = 'lfx.auth-service.user_emails.read',
   USER_EMAILS_SET_PRIMARY = 'lfx.auth-service.user_emails.set_primary',
+  PASSWORD_RESET_LINK = 'lfx.auth-service.password.reset_link',
+  PASSWORD_UPDATE = 'lfx.auth-service.password.update',
   LOOKUP_V1_MAPPING = 'lfx.lookup_v1_mapping',
   PERSONAS_GET = 'lfx.personas-api.get',
 }

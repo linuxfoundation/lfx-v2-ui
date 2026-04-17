@@ -69,14 +69,6 @@ export class UserService {
   }
 
   /**
-   * Delete an email address (unlinks the identity from auth0)
-   * @param email - The email address to delete
-   */
-  public deleteEmail(email: string): Observable<void> {
-    return this.http.delete<void>(`/api/profile/emails/${encodeURIComponent(email)}`).pipe(take(1));
-  }
-
-  /**
    * Set an email as the primary email
    * @param email - The email address to make primary
    */

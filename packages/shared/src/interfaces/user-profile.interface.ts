@@ -34,6 +34,7 @@ export interface CombinedProfile {
 export interface UserEmail {
   email: string;
   verified: boolean;
+  user_id?: string;
 }
 
 /**

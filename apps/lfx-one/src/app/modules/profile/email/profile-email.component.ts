@@ -16,7 +16,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, finalize, of, switchMap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, catchError, finalize, of, switchMap, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-profile-email',
@@ -161,32 +162,60 @@ export class ProfileEmailComponent {
         this.refresh.next();
         this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Primary email updated successfully' });
       },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update primary email' });
+      error: (err: HttpErrorResponse) => {
+        if (err.error?.error === 'management_token_required' && err.error?.authorize_url) {
+          window.location.href = err.error.authorize_url;
+          return;
+        }
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to update primary email' });
       },
     });
   }
 
   public deleteEmail(email: UserEmail): void {
-    this.confirmationService.confirm({
-      message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
-      header: 'Delete Email Address',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger p-button-sm',
-      rejectButtonStyleClass: 'p-button-outlined p-button-sm',
-      accept: () => {
-        this.userService.deleteEmail(email.email).subscribe({
-          next: () => {
-            this.refresh.next();
-            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Email address deleted successfully' });
-          },
-          error: (error) => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error?.message || 'Failed to delete email address' });
+    if (!email.user_id) {
+      return;
+    }
+
+    const userId = email.user_id;
+
+    this.userService
+      .getProfileAuthStatus()
+      .pipe(take(1))
+      .subscribe((status) => {
+        if (!status.authorized) {
+          window.location.href = '/api/profile/auth/start?returnTo=/profile/emails';
+          return;
+        }
+
+        this.confirmationService.confirm({
+          message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
+          header: 'Delete Email Address',
+          acceptLabel: 'Delete',
+          rejectLabel: 'Cancel',
+          acceptButtonStyleClass: 'p-button-danger p-button-sm',
+          rejectButtonStyleClass: 'p-button-outlined p-button-sm',
+          accept: () => {
+            const identityId = `auth0:${userId}`;
+            this.userService
+              .rejectIdentity(identityId, 'email', userId)
+              .pipe(take(1))
+              .subscribe({
+                next: () => {
+                  this.refresh.next();
+                  this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Email address deleted successfully' });
+                },
+                error: (err: HttpErrorResponse) => {
+                  if (err.error?.error === 'management_token_required' && err.error?.authorize_url) {
+                    window.location.href = err.error.authorize_url;
+                    return;
+                  }
+                  this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Failed to delete email address' });
+                },
+              });
           },
         });
-      },
-    });
+      });
   }
 
   // Private methods

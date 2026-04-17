@@ -35,9 +35,6 @@ router.patch('/', (req, res, next) => profileController.updateUserMetadata(req, 
 // GET /api/profile/emails - Get current user's email management data
 router.get('/emails', (req, res, next) => profileController.getUserEmails(req, res, next));
 
-// DELETE /api/profile/emails/:email - Delete (unlink) a user email; :email is URL-encoded email address
-router.delete('/emails/:emailId', (req, res, next) => profileController.deleteUserEmail(req, res, next));
-
 // PUT /api/profile/emails/:email/primary - Set email as primary; :email is URL-encoded email address
 router.put('/emails/:emailId/primary', (req, res, next) => profileController.setPrimaryEmail(req, res, next));
 
@@ -46,6 +43,9 @@ router.get('/developer', (req, res, next) => profileController.getDeveloperToken
 
 // POST /api/profile/reset-password - Send password reset email via LF Login service
 router.post('/reset-password', (req, res, next) => profileController.sendPasswordResetEmail(req, res, next));
+
+// POST /api/profile/change-password - Change user's password
+router.post('/change-password', (req, res, next) => profileController.changePassword(req, res, next));
 
 // POST /api/profile/identities/email/send-code - Send email verification code
 router.post('/identities/email/send-code', (req, res, next) => profileController.sendEmailVerification(req, res, next));

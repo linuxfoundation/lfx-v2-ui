@@ -15,6 +15,7 @@ import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, catchError, finalize, of, switchMap } from 'rxjs';
 
 @Component({
@@ -135,7 +136,11 @@ export class ProfilePasswordComponent implements OnInit {
             detail: response.message || 'Password changed successfully!',
           });
         },
-        error: (error) => {
+        error: (error: HttpErrorResponse) => {
+          if (error.error?.error === 'management_token_required' && error.error?.authorize_url) {
+            window.location.href = error.error.authorize_url;
+            return;
+          }
           const message = error.error?.message || 'Failed to change password. Please try again.';
           this.messageService.add({
             severity: 'error',
@@ -160,7 +165,11 @@ export class ProfilePasswordComponent implements OnInit {
             detail: response.message || 'Password reset email has been sent to your registered email address!',
           });
         },
-        error: (error) => {
+        error: (error: HttpErrorResponse) => {
+          if (error.error?.error === 'management_token_required' && error.error?.authorize_url) {
+            window.location.href = error.error.authorize_url;
+            return;
+          }
           const message = error.error?.message || 'Failed to send password reset email. Please try again.';
           this.messageService.add({
             severity: 'error',

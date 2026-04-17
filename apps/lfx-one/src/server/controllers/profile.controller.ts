@@ -7,10 +7,12 @@ import {
   CdpIdentity,
   CdpWorkExperienceRequest,
   CombinedProfile,
+  EmailManagementData,
   EnrichedIdentity,
   IdentityDisplayState,
   ProfileAuthStatus,
   ProfileUpdateRequest,
+  UserEmail,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserProfile,
@@ -292,8 +294,9 @@ export class ProfileController {
 
     try {
       const userSub = req.oidc?.user?.['sub'] as string | undefined;
+      const sessionEmail = req.oidc?.user?.['email'] as string | undefined;
 
-      if (!userSub) {
+      if (!userSub || !sessionEmail) {
         return next(
           ServiceValidationError.forField('user_id', 'User authentication required', {
             operation: 'get_user_emails',
@@ -303,70 +306,31 @@ export class ProfileController {
         );
       }
 
-      const emailData = await this.emailVerificationService.getUserEmails(req, userSub);
+      const [freshEmails, identities] = await Promise.all([
+        this.emailVerificationService.getUserEmails(req, userSub),
+        this.emailVerificationService.listIdentities(req, userSub),
+      ]);
 
-      if (!emailData) {
-        return next(
-          new MicroserviceError('Failed to fetch email data from auth-service', 502, 'BAD_GATEWAY', {
-            operation: 'get_user_emails',
-            service: 'profile_controller',
-          })
-        );
-      }
+      const primaryEmail = freshEmails?.primary_email || sessionEmail;
+
+      const alternateEmails: UserEmail[] = identities
+        .filter((id) => id.provider === 'email' && !!id.profileData?.email && id.profileData.email !== primaryEmail)
+        .map((id) => ({
+          email: id.profileData!.email as string,
+          verified: id.profileData?.['email_verified'] === true,
+          user_id: id.user_id,
+        }));
+
+      const emailData: EmailManagementData = {
+        primary_email: primaryEmail,
+        alternate_emails: alternateEmails,
+      };
 
       logger.success(req, 'get_user_emails', startTime, {
-        alternate_email_count: emailData.alternate_emails?.length ?? 0,
+        alternate_email_count: alternateEmails.length,
       });
 
       res.json(emailData);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * DELETE /api/profile/emails/:email - Delete (unlink) a user email via auth-service NATS
-   * The :email param is the URL-encoded email address to remove
-   */
-  public async deleteUserEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const emailAddress = decodeURIComponent(req.params['emailId'] ?? '');
-    const startTime = logger.startOperation(req, 'delete_user_email', { email: emailAddress });
-
-    try {
-      if (!emailAddress) {
-        return next(
-          ServiceValidationError.forField('email', 'Email address is required', {
-            operation: 'delete_user_email',
-            service: 'profile_controller',
-            path: req.path,
-          })
-        );
-      }
-
-      const authToken = await this.profileAuthService.getManagementToken(req);
-
-      if (!authToken) {
-        return next(
-          new AuthenticationError('Unable to obtain management token for identity unlink', {
-            operation: 'delete_user_email',
-          })
-        );
-      }
-
-      const result = await this.emailVerificationService.unlinkIdentity(req, authToken, 'email', emailAddress);
-
-      if (!result.success) {
-        return next(
-          new MicroserviceError(result.message || 'Failed to delete email address', 502, 'BAD_GATEWAY', {
-            operation: 'delete_user_email',
-            service: 'profile_controller',
-          })
-        );
-      }
-
-      logger.success(req, 'delete_user_email', startTime, { email: emailAddress });
-
-      res.status(204).send();
     } catch (error) {
       next(error);
     }
@@ -391,14 +355,22 @@ export class ProfileController {
         );
       }
 
-      const authToken = await this.profileAuthService.getManagementToken(req);
+      const authToken = this.profileAuthService.getManagementToken(req);
 
       if (!authToken) {
-        return next(
-          new AuthenticationError('Unable to obtain management token for set primary email', {
-            operation: 'set_primary_email',
-          })
-        );
+        if (!this.profileAuthService.isProfileAuthConfigured()) {
+          res.status(501).json({
+            error: 'profile_auth_not_configured',
+            message: 'Changing the primary email is not available in this environment.',
+          });
+          return;
+        }
+        res.status(403).json({
+          error: 'management_token_required',
+          message: 'Profile authorization required to change the primary email',
+          authorize_url: '/api/profile/auth/start?returnTo=/profile/emails',
+        });
+        return;
       }
 
       const result = await this.emailVerificationService.setPrimaryEmail(req, authToken, emailAddress);
@@ -478,19 +450,38 @@ export class ProfileController {
   }
 
   /**
-   * POST /api/profile/reset-password - Send password reset email via LF Login service
-   * Forwards the user's bearer token to the LF Login backend which triggers the reset email
+   * POST /api/profile/reset-password - Send password reset link via auth-service NATS
+   * Uses the Flow C management token (update:current_user_metadata scope) to request
+   * Auth0 send the reset email to the user's primary email.
    */
   public async sendPasswordResetEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'send_password_reset_email');
 
     try {
-      const bearerToken = req.bearerToken;
       const userEmail = (req.oidc?.user?.['email'] as string | undefined) || 'your registered email address';
 
-      if (!bearerToken) {
+      const mgmtToken = this.profileAuthService.getManagementToken(req);
+      if (!mgmtToken) {
+        if (!this.profileAuthService.isProfileAuthConfigured()) {
+          res.status(501).json({
+            error: 'profile_auth_not_configured',
+            message: 'Password reset is not available in this environment.',
+          });
+          return;
+        }
+        res.status(403).json({
+          error: 'management_token_required',
+          message: 'Profile authorization required to send a password reset link',
+          authorize_url: `/api/profile/auth/start?returnTo=${encodeURIComponent((req.headers['referer'] as string) || '/profile/password')}`,
+        });
+        return;
+      }
+
+      const result = await this.emailVerificationService.sendPasswordResetLink(req, mgmtToken);
+
+      if (!result.success) {
         return next(
-          ServiceValidationError.forField('token', 'Authentication required', {
+          new MicroserviceError(result.message || 'Failed to send password reset link', 502, 'AUTH_SERVICE_ERROR', {
             operation: 'send_password_reset_email',
             service: 'profile_controller',
             path: req.path,
@@ -498,30 +489,67 @@ export class ProfileController {
         );
       }
 
-      const lfLoginUrl = this.getLfLoginUrl();
-      const response = await fetch(`${lfLoginUrl}/api/user/password-link`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new MicroserviceError(`LF Login password reset failed: ${response.statusText}`, response.status, 'LF_LOGIN_ERROR', {
-          operation: 'send_password_reset_email',
-          service: 'profile_controller',
-          path: req.path,
-          errorBody: errorText,
-        });
-      }
-
       logger.success(req, 'send_password_reset_email', startTime, { email: userEmail });
 
       res.json({ message: `A password reset link has been sent to ${userEmail}.` });
     } catch (error) {
-      logger.error(req, 'send_password_reset_email', startTime, error, {});
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/profile/change-password - Change user's password via auth-service NATS
+   * Uses the Flow C management token (update:current_user_metadata scope) since
+   * auth-service requires Management API audience for password updates.
+   */
+  public async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'change_password');
+
+    try {
+      const { current_password, new_password } = req.body as { current_password: string; new_password: string };
+
+      if (!current_password || !new_password) {
+        return next(
+          ServiceValidationError.forField('body', 'current_password and new_password are required', {
+            operation: 'change_password',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
+      }
+
+      const mgmtToken = this.profileAuthService.getManagementToken(req);
+      if (!mgmtToken) {
+        if (!this.profileAuthService.isProfileAuthConfigured()) {
+          res.status(501).json({
+            error: 'profile_auth_not_configured',
+            message: 'Changing your password is not available in this environment.',
+          });
+          return;
+        }
+        res.status(403).json({
+          error: 'management_token_required',
+          message: 'Profile authorization required to change your password',
+          authorize_url: `/api/profile/auth/start?returnTo=${encodeURIComponent((req.headers['referer'] as string) || '/profile/password')}`,
+        });
+        return;
+      }
+
+      const result = await this.emailVerificationService.changePassword(req, mgmtToken, current_password, new_password);
+
+      if (!result.success) {
+        return next(
+          new MicroserviceError(result.message || 'Failed to change password', 502, 'AUTH_SERVICE_ERROR', {
+            operation: 'change_password',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
+      }
+
+      logger.success(req, 'change_password', startTime, {});
+      res.json({ message: result.message || 'Password changed successfully' });
+    } catch (error) {
       next(error);
     }
   }
@@ -723,6 +751,13 @@ export class ProfileController {
             provider,
             auth0_user_id: auth0UserId,
           });
+          if (!this.profileAuthService.isProfileAuthConfigured()) {
+            res.status(501).json({
+              error: 'profile_auth_not_configured',
+              message: 'Removing this identity is not available in this environment.',
+            });
+            return;
+          }
           res.status(403).json({
             error: 'management_token_required',
             message: 'Profile authorization required to remove this identity',
@@ -1023,14 +1058,14 @@ export class ProfileController {
   public async startProfileAuth(req: Request, res: Response): Promise<void> {
     const startTime = logger.startOperation(req, 'profile_auth_start');
 
-    if (!this.profileAuthService.isProfileAuthConfigured()) {
-      logger.warning(req, 'profile_auth_start', 'Profile auth not configured', {});
-      res.status(501).json({ error: 'Profile authorization is not configured' });
-      return;
-    }
-
     const rawReturnTo = (req.query['returnTo'] as string) || '/profile';
     const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/profile';
+
+    if (!this.profileAuthService.isProfileAuthConfigured()) {
+      logger.warning(req, 'profile_auth_start', 'Profile auth not configured', {});
+      res.redirect(`${returnTo}?error=profile_auth_not_configured`);
+      return;
+    }
     const authorizeUrl = this.profileAuthService.getAuthorizationUrl(req, returnTo);
 
     logger.success(req, 'profile_auth_start', startTime, {
@@ -1599,26 +1634,6 @@ export class ProfileController {
    * 4. In CDP but NOT in auth-service, multi-LFID + verifiedBy=lfxOne → HIDDEN
    * 5. In CDP but NOT in auth-service (all other) → UNVERIFIED
    */
-  /**
-   * Derive the LF Login base URL from PCC_AUTH0_ISSUER_BASE_URL
-   */
-  private getLfLoginUrl(): string {
-    const issuerUrl = process.env['PCC_AUTH0_ISSUER_BASE_URL'] || '';
-
-    if (issuerUrl.includes('-dev')) {
-      return 'https://lf-login.dev.platform.linuxfoundation.org';
-    }
-    if (issuerUrl.includes('-staging') || issuerUrl.includes('-stg')) {
-      return 'https://lf-login.staging.platform.linuxfoundation.org';
-    }
-
-    if (!issuerUrl) {
-      logger.warning(undefined, 'get_lf_login_url', 'PCC_AUTH0_ISSUER_BASE_URL is not set, defaulting to production LF Login URL', {});
-    }
-
-    return 'https://lf-login.platform.linuxfoundation.org';
-  }
-
   private reconcileIdentities(
     req: Request,
     cdpIdentities: CdpIdentity[],

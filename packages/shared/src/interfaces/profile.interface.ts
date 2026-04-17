@@ -605,6 +605,15 @@ export interface UnlinkIdentityNatsResponse {
 }
 
 /**
+ * Response from NATS password reset link request
+ */
+export interface ResetPasswordLinkNatsResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+/**
  * Response from NATS user identity list request
  */
 export interface ListIdentitiesNatsResponse {

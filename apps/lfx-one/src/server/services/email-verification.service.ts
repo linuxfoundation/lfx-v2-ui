@@ -8,6 +8,7 @@ import {
   EmailManagementData,
   LinkIdentityNatsResponse,
   ListIdentitiesNatsResponse,
+  ResetPasswordLinkNatsResponse,
   SendEmailVerificationResponse,
   UnlinkIdentityNatsResponse,
   VerifyEmailOtpNatsResponse,
@@ -287,7 +288,8 @@ export class EmailVerificationService {
     logger.debug(req, 'get_user_emails', 'Fetching user emails via NATS');
 
     try {
-      const response = await this.natsService.request(NatsSubjects.USER_EMAILS_READ, codec.encode(userIdentifier), {
+      const payload = JSON.stringify({ user: { auth_token: userIdentifier } });
+      const response = await this.natsService.request(NatsSubjects.USER_EMAILS_READ, codec.encode(payload), {
         timeout: NATS_CONFIG.REQUEST_TIMEOUT,
       });
 
@@ -328,7 +330,7 @@ export class EmailVerificationService {
     logger.debug(req, 'set_primary_email', 'Setting primary email via NATS', { email });
 
     try {
-      const payload = JSON.stringify({ auth_token: authToken, email });
+      const payload = JSON.stringify({ user: { auth_token: authToken }, email });
       const response = await this.natsService.request(NatsSubjects.USER_EMAILS_SET_PRIMARY, codec.encode(payload), {
         timeout: NATS_CONFIG.REQUEST_TIMEOUT,
       });
@@ -406,6 +408,76 @@ export class EmailVerificationService {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'An unexpected error occurred',
       };
+    }
+  }
+
+  /**
+   * Send a password reset link via auth-service NATS
+   * @param req - Express request object for logging
+   * @param authToken - Management token with update:current_user_metadata scope
+   */
+  public async sendPasswordResetLink(req: Request, authToken: string): Promise<ResetPasswordLinkNatsResponse> {
+    const codec = this.natsService.getCodec();
+
+    logger.debug(req, 'send_password_reset_link', 'Requesting password reset link via NATS');
+
+    try {
+      const payload = JSON.stringify({ token: authToken });
+
+      const response = await this.natsService.request(NatsSubjects.PASSWORD_RESET_LINK, codec.encode(payload), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
+
+      const parsed: ResetPasswordLinkNatsResponse = JSON.parse(codec.decode(response.data));
+      return parsed;
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        return {
+          success: false,
+          error: 'Service temporarily unavailable',
+          message: 'Unable to reach the password reset service. Please try again later.',
+        };
+      }
+
+      return {
+        success: false,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      };
+    }
+  }
+
+  /**
+   * Change the user's password via auth-service NATS
+   * @param req - Express request object for logging
+   * @param bearerToken - User's Auth0 access token (must carry password:change scope)
+   * @param currentPassword - The user's current password
+   * @param newPassword - The desired new password
+   */
+  public async changePassword(
+    req: Request,
+    bearerToken: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const codec = this.natsService.getCodec();
+
+    logger.debug(req, 'change_password', 'Changing password via NATS');
+
+    try {
+      const payload = JSON.stringify({ token: bearerToken, current_password: currentPassword, new_password: newPassword });
+      const response = await this.natsService.request(NatsSubjects.PASSWORD_UPDATE, codec.encode(payload), {
+        timeout: NATS_CONFIG.REQUEST_TIMEOUT,
+      });
+
+      const parsed = JSON.parse(codec.decode(response.data));
+      return parsed;
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
+        return { success: false, error: 'Service temporarily unavailable', message: 'Unable to reach the password service. Please try again later.' };
+      }
+
+      return { success: false, error: 'Internal server error', message: error instanceof Error ? error.message : 'An unexpected error occurred' };
     }
   }
 
