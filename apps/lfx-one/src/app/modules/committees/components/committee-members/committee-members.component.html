@@ -133,9 +133,7 @@
             }
             <td>
               @let permission = getMemberPermission(member);
-              @if (permission !== 'member') {
-                <lfx-tag [value]="getMemberPermissionLabel(permission)" [severity]="getMemberPermissionSeverity(permission)"> </lfx-tag>
-              }
+              <lfx-tag [value]="getMemberPermissionLabel(permission)" [severity]="getMemberPermissionSeverity(permission)"> </lfx-tag>
             </td>
             <td class="text-right relative">
               <lfx-menu #memberActionMenu [model]="memberActionMenuItems" [popup]="true" appendTo="body"> </lfx-menu>
