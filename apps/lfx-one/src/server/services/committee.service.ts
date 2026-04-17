@@ -154,7 +154,9 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee settings for enrichment
+    // Fetch committee settings for enrichment.
+    // Settings (GET /committees/:uid/settings) is the authoritative source for writers/auditors —
+    // CommitteeFull (GET /committees/:uid) does not consistently return them in practice.
     const settings = await this.getCommitteeSettings(req, committeeId);
 
     const committeeWithEnrichment = {
@@ -200,11 +202,17 @@ export class CommitteeService {
    * Updates an existing committee using ETag for concurrency control
    */
   public async updateCommittee(req: Request, committeeId: string, data: CommitteeUpdateData): Promise<Committee> {
-    // Extract settings fields — everything else goes through PUT
-    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, ...committeeData } = data;
+    // Extract settings fields — writers/auditors belong to UpdateCommitteeSettingsRequestBody,
+    // NOT UpdateCommitteeBaseRequestBody, so they must go through the settings endpoint
+    const { business_email_required, is_audit_enabled, show_meeting_attendees, member_visibility, writers, auditors, ...committeeData } = data;
 
     const hasSettingsUpdate =
-      business_email_required !== undefined || is_audit_enabled !== undefined || show_meeting_attendees !== undefined || member_visibility !== undefined;
+      business_email_required !== undefined ||
+      is_audit_enabled !== undefined ||
+      show_meeting_attendees !== undefined ||
+      member_visibility !== undefined ||
+      writers !== undefined ||
+      auditors !== undefined;
     const hasCoreUpdate = Object.keys(committeeData).length > 0;
 
     let updatedCommittee: Committee;
@@ -260,6 +268,8 @@ export class CommitteeService {
           is_audit_enabled,
           show_meeting_attendees,
           member_visibility,
+          writers,
+          auditors,
         });
       } catch {
         logger.warning(req, 'update_committee_settings', 'Failed to update committee settings, but committee was updated successfully', {
@@ -274,6 +284,8 @@ export class CommitteeService {
       ...(is_audit_enabled !== undefined && { is_audit_enabled }),
       ...(show_meeting_attendees !== undefined && { show_meeting_attendees }),
       ...(member_visibility !== undefined && { member_visibility }),
+      ...(writers !== undefined && { writers }),
+      ...(auditors !== undefined && { auditors }),
       // Workaround: upstream committee-service PUT does not include mailing_list in the response body
       // (verified 2026-03-29). Prefer the upstream value if present; fall back to the request payload.
       // TODO: Remove this workaround once upstream echoes mailing_list in PUT responses.
@@ -738,31 +750,28 @@ export class CommitteeService {
   }
 
   /**
-   * Updates committee settings using ETag for concurrency control
+   * Updates committee settings using ETag for concurrency control.
+   * Fetches current settings first to preserve existing values (PUT replaces the full resource).
    */
   private async updateCommitteeSettings(req: Request, committeeId: string, settings: CommitteeSettingsData): Promise<void> {
-    const settingsData = {
-      ...(settings.business_email_required !== undefined && {
-        business_email_required: settings.business_email_required,
-      }),
-      ...(settings.is_audit_enabled !== undefined && {
-        is_audit_enabled: settings.is_audit_enabled,
-      }),
-      ...(settings.show_meeting_attendees !== undefined && {
-        show_meeting_attendees: settings.show_meeting_attendees,
-      }),
-      ...(settings.member_visibility !== undefined && {
-        member_visibility: settings.member_visibility,
-      }),
-    };
-
-    // Fetch settings with ETag
-    const { etag } = await this.etagService.fetchWithETag<CommitteeSettingsData>(
+    // Fetch current settings + ETag — need current data so the PUT doesn't wipe existing values
+    const { data: currentSettings, etag } = await this.etagService.fetchWithETag<CommitteeSettingsData>(
       req,
       'LFX_V2_SERVICE',
       `/committees/${committeeId}/settings`,
       'update_committee_settings'
     );
+
+    // Merge provided fields over current settings
+    const settingsData = {
+      ...currentSettings,
+      ...(settings.business_email_required !== undefined && { business_email_required: settings.business_email_required }),
+      ...(settings.is_audit_enabled !== undefined && { is_audit_enabled: settings.is_audit_enabled }),
+      ...(settings.show_meeting_attendees !== undefined && { show_meeting_attendees: settings.show_meeting_attendees }),
+      ...(settings.member_visibility !== undefined && { member_visibility: settings.member_visibility }),
+      ...(settings.writers !== undefined && { writers: settings.writers }),
+      ...(settings.auditors !== undefined && { auditors: settings.auditors }),
+    };
 
     // Update settings with ETag
     await this.etagService.updateWithETag(req, 'LFX_V2_SERVICE', `/committees/${committeeId}/settings`, etag, settingsData, 'update_committee_settings');

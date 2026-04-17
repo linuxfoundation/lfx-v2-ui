@@ -10,11 +10,12 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
 import { APPOINTED_BY_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
 import { formatDateToISOString, parseISODateString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { catchError, of, switchMap, take } from 'rxjs';
 import { getHttpErrorDetail } from '@shared/utils/http-error.utils';
 
 @Component({
@@ -48,6 +49,11 @@ export class MemberFormComponent {
   public roleOptions = MEMBER_ROLES;
   public votingStatusOptions = VOTING_STATUSES;
   public appointedByOptions = APPOINTED_BY_OPTIONS;
+  public permissionOptions = [
+    { label: 'Member', value: 'member' },
+    { label: 'Review', value: 'review' },
+    { label: 'Manage', value: 'manage' },
+  ];
 
   public constructor() {
     // Initialize config-based properties
@@ -134,7 +140,22 @@ export class MemberFormComponent {
         ? this.committeeService.updateCommitteeMember(committeeId, this.member!.uid as string, memberData)
         : this.committeeService.createCommitteeMember(committeeId, memberData);
 
-      operation.subscribe({
+      operation
+        .pipe(
+          take(1),
+          switchMap((savedMember: CommitteeMember) => {
+            const permission = formValue.permission;
+            const username = savedMember.username || this.member?.username;
+
+            if (username) {
+              const { writers, auditors } = this.buildPermissionArrays(username, savedMember, permission);
+              return this.committeeService.updateCommitteePermissions(committeeId, writers, auditors).pipe(catchError(() => of(null)));
+            }
+
+            return of(savedMember);
+          })
+        )
+        .subscribe({
         next: () => {
           this.submitting.set(false);
           this.messageService.add({
@@ -184,8 +205,42 @@ export class MemberFormComponent {
         role_end: parseISODateString(member.role?.end_date),
         voting_status_start: parseISODateString(member.voting?.start_date),
         voting_status_end: parseISODateString(member.voting?.end_date),
+        permission: this.deriveInitialPermission(member),
       });
     }
+  }
+
+  private buildPermissionArrays(
+    username: string,
+    member: CommitteeMember,
+    permission: 'manage' | 'review' | 'member'
+  ): { writers: CommitteeUser[]; auditors: CommitteeUser[] } {
+    const committee = this.committee;
+    const existingWriters = committee?.writers ?? [];
+    const existingAuditors = committee?.auditors ?? [];
+
+    const memberAsUser: CommitteeUser = {
+      username,
+      email: member.email,
+      name: [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email,
+    };
+
+    const writers = existingWriters.filter((w) => w.username !== username);
+    const auditors = existingAuditors.filter((a) => a.username !== username);
+
+    if (permission === 'manage') writers.push(memberAsUser);
+    else if (permission === 'review') auditors.push(memberAsUser);
+
+    return { writers, auditors };
+  }
+
+  private deriveInitialPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
+    const committee = this.committee;
+    if (!committee) return 'member';
+    const matches = (u: CommitteeUser) => (member.username && u.username === member.username) || u.email === member.email;
+    if (committee.writers?.some(matches)) return 'manage';
+    if (committee.auditors?.some(matches)) return 'review';
+    return 'member';
   }
 
   private buildOrganizationPayload(formValue: MemberFormValue): CreateCommitteeMemberRequest['organization'] {
@@ -215,6 +270,7 @@ export class MemberFormComponent {
         role_end: new FormControl(null),
         voting_status_start: new FormControl(null),
         voting_status_end: new FormControl(null),
+        permission: new FormControl<'manage' | 'review' | 'member'>('member'),
       },
       {
         validators: [

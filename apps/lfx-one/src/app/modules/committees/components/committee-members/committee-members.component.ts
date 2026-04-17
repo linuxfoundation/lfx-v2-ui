@@ -13,8 +13,9 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { MenuComponent } from '@components/menu/menu.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
+import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, TagSeverity } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -38,6 +39,7 @@ import { MemberFormComponent } from '../member-form/member-form.component';
     InputTextComponent,
     SelectComponent,
     TableComponent,
+    TagComponent,
     ConfirmDialogModule,
     DynamicDialogModule,
     Skeleton,
@@ -110,6 +112,27 @@ export class CommitteeMembersComponent implements OnInit {
     // Rebuild menu items so MenuItem.url reflects the selected member's email
     this.memberActionMenuItems = this.initializeMemberActionMenuItems(member);
     menuComponent.toggle(event);
+  }
+
+  public getMemberPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
+    const committee = this.committee();
+    if (!committee) return 'member';
+    const matches = (u: { username: string; email: string }) => (member.username && u.username === member.username) || u.email === member.email;
+    if (committee.writers?.some(matches)) return 'manage';
+    if (committee.auditors?.some(matches)) return 'review';
+    return 'member';
+  }
+
+  public getMemberPermissionSeverity(permission: 'manage' | 'review' | 'member'): TagSeverity {
+    if (permission === 'manage') return 'success';
+    if (permission === 'review') return 'info';
+    return 'secondary';
+  }
+
+  public getMemberPermissionLabel(permission: 'manage' | 'review' | 'member'): string {
+    if (permission === 'manage') return 'Manage';
+    if (permission === 'review') return 'Review';
+    return 'Member';
   }
 
   public openAddMemberDialog(): void {

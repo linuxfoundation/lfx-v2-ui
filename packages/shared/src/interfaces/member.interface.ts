@@ -138,6 +138,7 @@ export interface MemberFormValue {
   role_end: Date | null;
   voting_status_start: Date | null;
   voting_status_end: Date | null;
+  permission: 'manage' | 'review' | 'member';
 }
 
 /**
