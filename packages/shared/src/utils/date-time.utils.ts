@@ -35,7 +35,7 @@ export const formatDateToISOString = (date: Date | null | undefined): string | u
  * Converts a Date object to a full ISO 8601 UTC datetime string (e.g. "2019-02-28T11:49:27.000Z").
  * Use this when an API requires a complete datetime string rather than a date-only string.
  */
-export const formatDateToUTC = (date: Date | null | undefined): string | null => {
+export const formatDateToUTC = (date: Date | string | null | undefined): string | null => {
   if (!date) return null;
   return date instanceof Date ? date.toISOString() : date;
 };
