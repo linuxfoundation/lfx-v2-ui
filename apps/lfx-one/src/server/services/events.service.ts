@@ -564,7 +564,14 @@ export class EventsService {
       });
     }
 
-    const eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'] ?? payload.eventId;
+    let eventID = payload.eventId;
+    if (process.env['NODE_ENV'] !== 'production' && process.env['API_GW_DEV_EVENT_ID_OVERRIDE']) {
+      logger.warning(req, 'submit_visa_request_application', 'Using API_GW_DEV_EVENT_ID_OVERRIDE (dev-only)', {
+        override_event_id: process.env['API_GW_DEV_EVENT_ID_OVERRIDE'],
+        original_event_id: payload.eventId,
+      });
+      eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'];
+    }
 
     const body = {
       onBehalfRequest: false, // We're not including this in the form so we just default it
@@ -590,7 +597,7 @@ export class EventsService {
       }),
     };
 
-    logger.debug(req, 'submit_visa_request_application', 'Calling API Gateway visa endpoint', {
+    logger.info(req, 'submit_visa_request_application', 'Calling API Gateway visa endpoint', {
       target_url: '/user-service/v1/users/{userId}/visaletterrequests',
       event_id: payload.eventId,
     });
@@ -657,31 +664,43 @@ export class EventsService {
 
     const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/organization-service/v1/orgs/search?name=${encodeURIComponent(name)}`;
 
-    const upstream = await fetch(targetUrl, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${req.apiGatewayToken}`,
-      },
-      signal: AbortSignal.timeout(10000),
-    });
+    let upstream: Response;
+    try {
+      upstream = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${req.apiGatewayToken}`,
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (err) {
+      logger.warning(req, 'search_organizations', 'Upstream fetch failed, returning empty', {
+        name_length: name.length,
+        err,
+      });
+      return { data: [] };
+    }
 
     if (!upstream.ok) {
       const errorText = await upstream.text().catch(() => '');
-      throw new MicroserviceError(`Organization search API returned ${upstream.status}`, upstream.status, 'API_GATEWAY_ERROR', {
-        operation: 'search_organizations',
-        errorBody: errorText,
+      logger.warning(req, 'search_organizations', 'Upstream returned non-OK status, returning empty', {
+        status: upstream.status,
+        name_length: name.length,
+        errorBody: errorText.slice(0, 500),
       });
+      return { data: [] };
     }
 
-    const responseText = await upstream.text();
-    let json: { Data?: { ID?: string; Name?: string }[] };
+    let json: { Data?: { ID?: string; Name?: string }[] } = {};
     try {
-      json = JSON.parse(responseText) as { Data?: { ID?: string; Name?: string }[] };
-    } catch {
-      throw new MicroserviceError('Organization search API returned an invalid response body', 502, 'API_GATEWAY_INVALID_RESPONSE', {
-        operation: 'search_organizations',
-        errorBody: responseText.slice(0, 1000),
+      const rawBody = await upstream.text();
+      json = rawBody ? JSON.parse(rawBody) : {};
+    } catch (err) {
+      logger.warning(req, 'search_organizations', 'Upstream returned invalid JSON, returning empty', {
+        name_length: name.length,
+        err,
       });
+      return { data: [] };
     }
 
     const items = json.Data ?? [];
