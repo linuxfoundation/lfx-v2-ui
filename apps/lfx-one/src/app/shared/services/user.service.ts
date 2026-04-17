@@ -253,7 +253,9 @@ export class UserService {
     if (auth0UserId) {
       body['auth0UserId'] = auth0UserId;
     }
-    return this.http.patch<{ success: boolean }>(`/api/profile/identities/${identityId}`, body);
+    // Auth0 identity IDs contain URL-reserved characters (e.g. `|` in `auth0|abc123`);
+    // encode before interpolating so the PATCH route resolves reliably.
+    return this.http.patch<{ success: boolean }>(`/api/profile/identities/${encodeURIComponent(identityId)}`, body);
   }
 
   /**

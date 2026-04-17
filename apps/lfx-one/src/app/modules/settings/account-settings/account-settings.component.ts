@@ -51,7 +51,6 @@ export class AccountSettingsComponent {
   // OTP flow state
   public otpStep = signal(false);
   public pendingEmail = signal('');
-  public otpCode = signal('');
   public sendingCode = signal(false);
   public verifyingOtp = signal(false);
 
