@@ -13,7 +13,7 @@ import { OrganizationSearchComponent } from '@components/organization-search/org
 import { SelectComponent } from '@components/select/select.component';
 import { MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, CreateCommitteeMemberRequest, DialogMode, UserSearchResult } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteeUser, CreateCommitteeMemberRequest, DialogMode, UserSearchResult } from '@lfx-one/shared/interfaces';
 import { UserAvatarColorPipe } from '@pipes/user-avatar-color.pipe';
 import { UserInitialsPipe } from '@pipes/user-initials.pipe';
 import { CommitteeService } from '@services/committee.service';
@@ -22,7 +22,7 @@ import { SearchService } from '@services/search.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, take, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-add-member-dialog',
@@ -61,6 +61,7 @@ export class AddMemberDialogComponent {
     org_name: new FormControl<string>('', this.committee?.business_email_required || this.committee?.enable_voting ? [Validators.required] : []),
     org_domain: new FormControl<string>(''),
     subscribe_mailing_list: new FormControl<boolean>(true),
+    permission: new FormControl<'manage' | 'review' | 'member'>('member'),
   });
 
   public mode = signal<DialogMode>('search');
@@ -95,6 +96,11 @@ export class AddMemberDialogComponent {
 
   public readonly roleOptions = MEMBER_ROLES;
   public readonly votingStatusOptions = VOTING_STATUSES;
+  public readonly permissionOptions = [
+    { label: 'Member', value: 'member' },
+    { label: 'Review', value: 'review' },
+    { label: 'Manage', value: 'manage' },
+  ];
 
   public selectUser(user: UserSearchResult & { alreadyMember: boolean }): void {
     if (user.alreadyMember) return;
@@ -143,7 +149,35 @@ export class AddMemberDialogComponent {
       voting: formValue.voting_status ? { status: formValue.voting_status as CommitteeMemberVotingStatus, start_date: null, end_date: null } : null,
     };
 
-    this.committeeService.createCommitteeMember(committee.uid, memberData).subscribe({
+    this.committeeService
+      .createCommitteeMember(committee.uid, memberData)
+      .pipe(
+        take(1),
+        switchMap(() => {
+          const permission = formValue.permission;
+          const username = user.username;
+
+          if (username && permission !== 'member') {
+            const memberAsUser: CommitteeUser = {
+              username,
+              email: user.email,
+              name: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email,
+            };
+            const existingWriters = committee.writers ?? [];
+            const existingAuditors = committee.auditors ?? [];
+            const writers = existingWriters.filter((w) => w.username !== username);
+            const auditors = existingAuditors.filter((a) => a.username !== username);
+
+            if (permission === 'manage') writers.push(memberAsUser);
+            else if (permission === 'review') auditors.push(memberAsUser);
+
+            return this.committeeService.updateCommitteePermissions(committee.uid, writers, auditors).pipe(catchError(() => of(null)));
+          }
+
+          return of(null);
+        })
+      )
+      .subscribe({
       next: () => {
         // Best-effort mailing list subscription (non-blocking — failure is silently swallowed)
         const mailingListUid = committee.mailing_list;
