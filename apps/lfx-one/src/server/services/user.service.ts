@@ -804,7 +804,7 @@ export class UserService {
 
     const profile = (await upstream.json()) as ApiGatewayUserProfile;
 
-    logger.debug(req, 'get_api_gateway_profile', 'API Gateway profile received', { salesforce_id: profile.ID });
+    logger.debug(req, 'get_api_gateway_profile', 'API Gateway profile received', { salesforce_id: Boolean(profile.ID) });
 
     return profile;
   }
