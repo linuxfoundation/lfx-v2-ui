@@ -25,8 +25,6 @@ export interface PersonaProjectRow {
 
 /** Summary pills data */
 export interface DashboardSummaryPills {
-  foundationCount: number;
-  projectCount: number;
   openSurveys: number;
   meetingsCompletedThisWeek: number;
   meetingsUpcomingThisWeek: number;

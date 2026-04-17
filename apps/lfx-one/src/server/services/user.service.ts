@@ -602,14 +602,21 @@ export class UserService {
     // Sort by scheduled_start_time descending (most recent first)
     pastMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
 
-    // Populate participant and attended counts for each past meeting
+    // Populate participant and attended counts for each past meeting from the
+    // v1_past_meeting_participant records. Only fields derivable from participants
+    // are overwritten; committee_members_count is preserved from upstream.
     await Promise.all(
       pastMeetings.map(async (meeting) => {
-        const participants = await this.meetingService.getPastMeetingParticipants(req, meeting.id).catch(() => []);
+        const participants = await this.meetingService.getPastMeetingParticipants(req, meeting.id).catch((error) => {
+          logger.warning(req, 'get_user_past_meetings', 'Failed to fetch participants for past meeting', {
+            past_meeting_id: meeting.id,
+            err: error,
+          });
+          return [];
+        });
         meeting.participant_count = participants.length;
         meeting.attended_count = participants.filter((p) => p.is_attended).length;
         meeting.individual_registrants_count = participants.filter((p) => p.is_invited).length;
-        meeting.committee_members_count = 0;
       })
     );
 

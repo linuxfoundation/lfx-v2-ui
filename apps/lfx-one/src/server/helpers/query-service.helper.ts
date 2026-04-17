@@ -84,7 +84,7 @@ export async function fetchAllQueryResources<T>(req: Request, fetchPage: (pageTo
       logger.warning(req, 'fetch_all_query_resources', 'Pagination failed, returning partial results', {
         page,
         accumulated_count: results.length,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       break;
     }

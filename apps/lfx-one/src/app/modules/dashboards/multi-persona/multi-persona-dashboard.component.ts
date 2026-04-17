@@ -99,6 +99,12 @@ export class MultiPersonaDashboardComponent {
   protected readonly projectRows: Signal<PersonaProjectRow[]> = this.initProjectRows();
   protected readonly summaryPillsLoading = signal(true);
   protected readonly summaryPills: Signal<DashboardSummaryPills> = this.initSummaryPills();
+  protected readonly foundationCount: Signal<number> = computed(() => this.userFoundations().length);
+  protected readonly projectCount: Signal<number> = computed(() => this.allProjects().length - this.userFoundations().length);
+  protected readonly totalMeetingsThisWeek: Signal<number> = computed(() => {
+    const s = this.summaryPills();
+    return s.meetingsCompletedThisWeek + s.meetingsUpcomingThisWeek;
+  });
   protected readonly pendingActionsLoading = signal(true);
   protected readonly pendingActions: Signal<PendingActionItem[]> = this.initPendingActions();
 
@@ -229,22 +235,17 @@ export class MultiPersonaDashboardComponent {
   private initSummaryPills(): Signal<DashboardSummaryPills> {
     return toSignal(
       combineLatest([
-        toObservable(this.allProjects),
         this.surveyService.getMySurveys().pipe(catchError(() => of([]))),
         this.userService.getUserMeetings().pipe(catchError(() => of([]))),
         this.userService.getUserPastMeetings().pipe(catchError(() => of([]))),
       ]).pipe(
-        map(([projects, surveys, meetings, pastMeetings]) => {
+        map(([surveys, meetings, pastMeetings]) => {
           this.summaryPillsLoading.set(false);
-          const foundationCount = projects.filter((p) => p.isFoundation).length;
-          const projectCount = projects.filter((p) => !p.isFoundation).length;
           const openSurveys = surveys.filter((s) => s.survey_status === SurveyStatus.OPEN || s.survey_status === SurveyStatus.SENT).length;
           const upcoming = this.countUpcomingMeetingsThisWeek(meetings);
           const completed = this.countCompletedMeetingsThisWeek(pastMeetings);
 
           return {
-            foundationCount,
-            projectCount,
             openSurveys,
             meetingsCompletedThisWeek: completed,
             meetingsUpcomingThisWeek: upcoming,
@@ -254,8 +255,6 @@ export class MultiPersonaDashboardComponent {
       ),
       {
         initialValue: {
-          foundationCount: 0,
-          projectCount: 0,
           openSurveys: 0,
           meetingsCompletedThisWeek: 0,
           meetingsUpcomingThisWeek: 0,

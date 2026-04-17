@@ -41,13 +41,13 @@
         @if (hasFoundations()) {
           <div class="flex items-center gap-2 bg-blue-50 px-4 py-2.5">
             <i class="fa-solid fa-building-columns text-blue-600"></i>
-            <span class="font-semibold text-gray-900">{{ userFoundations().length }} foundations</span>
+            <span class="font-semibold text-gray-900">{{ foundationCount() }} foundations</span>
           </div>
         }
         @if (hasProjects()) {
           <div class="flex items-center gap-2 bg-blue-50 px-4 py-2.5">
             <i class="fa-solid fa-laptop-code text-blue-600"></i>
-            <span class="font-semibold text-gray-900">{{ allProjects().length - userFoundations().length }} projects</span>
+            <span class="font-semibold text-gray-900">{{ projectCount() }} projects</span>
           </div>
         }
         @if (summaryPillsLoading()) {
@@ -65,7 +65,7 @@
           <div class="flex items-center gap-2 bg-blue-50 px-4 py-2.5">
             <i class="fa-solid fa-calendar text-blue-600"></i>
             <span class="text-gray-700"
-              >{{ summaryPills().meetingsCompletedThisWeek + summaryPills().meetingsUpcomingThisWeek }} meetings this week
+              >{{ totalMeetingsThisWeek() }} meetings this week
               @if (summaryPills().meetingsUpcomingThisWeek > 0) {
                 <span> ({{ summaryPills().meetingsUpcomingThisWeek }} upcoming)</span>
               }

@@ -906,6 +906,7 @@ export class MeetingService {
         parent: `meeting:${meetingUid}`,
       };
 
+      let registrantsFetchFailed = false;
       const [rsvps, registrants] = await Promise.all([
         fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
           this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
@@ -919,13 +920,19 @@ export class MeetingService {
             ...(pageToken && { page_token: pageToken }),
           })
         ).catch((error) => {
-          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch registrants for RSVP filtering', {
+          registrantsFetchFailed = true;
+          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch registrants for RSVP filtering, returning unfiltered RSVPs', {
             meeting_id: meetingUid,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            err: error,
           });
           return [] as MeetingRegistrant[];
         }),
       ]);
+
+      // If the registrant fetch failed, return unfiltered RSVPs rather than hiding data.
+      if (registrantsFetchFailed) {
+        return rsvps;
+      }
 
       const activeRegistrantIds = new Set(registrants.map((r) => r.uid).filter(Boolean));
       const filtered = rsvps.filter((rsvp) => activeRegistrantIds.has(rsvp.registrant_id));
@@ -941,7 +948,7 @@ export class MeetingService {
     } catch (error) {
       logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch meeting RSVPs, returning empty array', {
         meeting_id: meetingUid,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return [];
     }
