@@ -95,6 +95,11 @@ export const routes: Routes = [
         redirectTo: 'events',
         pathMatch: 'full',
       },
+      {
+        path: 'me/badges',
+        redirectTo: 'badges',
+        pathMatch: 'full',
+      },
     ],
   },
   {
