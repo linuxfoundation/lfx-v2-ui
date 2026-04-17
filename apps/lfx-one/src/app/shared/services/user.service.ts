@@ -46,6 +46,8 @@ export class UserService {
   public impersonator: WritableSignal<Impersonator | null> = signal<Impersonator | null>(null);
   public canImpersonate: WritableSignal<boolean> = signal<boolean>(false);
   public readonly userInitials: Signal<string> = this.initUserInitials();
+  /** Cached Salesforce user ID from the API Gateway — null until first fetch */
+  public readonly apiGatewayUserId = signal<string | null>(null);
 
   private readonly userMeetingsRefresh$ = new Subject<void>();
   private readonly userPastMeetingsRefresh$ = new Subject<void>();
@@ -72,8 +74,6 @@ export class UserService {
         this.userPastMeetingsRefresh$.next();
       });
   }
-  /** Cached Salesforce user ID from the API Gateway — null until first fetch */
-  public readonly apiGatewayUserId = signal<string | null>(null);
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {

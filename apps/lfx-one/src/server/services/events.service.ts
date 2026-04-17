@@ -669,18 +669,18 @@ export class EventsService {
     const accommodationNumberOfNights = /^\d+$/.test(rawNights) ? Number(rawNights) : Number.NaN;
     const estimatedTotal = Number(expenses.estimatedTotal);
 
-    const missingFields: string[] = [];
-    if (!aboutMe.citizenshipCountry) missingFields.push('citizenshipCountry');
-    if (!aboutMe.organizationID) missingFields.push('organizationID');
-    if (!aboutMe.travelFromCountry) missingFields.push('travelFromCountry');
+    const validationErrors: string[] = [];
+    if (!aboutMe.citizenshipCountry) validationErrors.push('citizenshipCountry');
+    if (!aboutMe.organizationID) validationErrors.push('organizationID');
+    if (!aboutMe.travelFromCountry) validationErrors.push('travelFromCountry');
     if (!Number.isInteger(accommodationNumberOfNights) || accommodationNumberOfNights < 0 || accommodationNumberOfNights > 4) {
-      missingFields.push('accommodationNumberOfNights');
+      validationErrors.push('accommodationNumberOfNights');
     }
-    if (!Number.isFinite(estimatedTotal) || estimatedTotal <= 0) missingFields.push('estimatedTotal');
-    if (missingFields.length > 0) {
-      throw new MicroserviceError(`Missing required travel fund fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
+    if (!Number.isFinite(estimatedTotal) || estimatedTotal <= 0) validationErrors.push('estimatedTotal');
+    if (validationErrors.length > 0) {
+      throw new MicroserviceError(`Invalid travel fund request fields: ${validationErrors.join(', ')}`, 422, 'INVALID_REQUEST_FIELDS', {
         operation: 'submit_travel_fund_application',
-        errorBody: { missingFields },
+        errorBody: { validationErrors },
       });
     }
 
