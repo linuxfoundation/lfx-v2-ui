@@ -19,6 +19,9 @@
     display: none !important;
   }
 
+  // Fixed positioning so the panel stays in place when the page scrolls
+  position: fixed !important;
+
   // Force horizontal position to the right of the full sidebar (64px lens + 280px nav = 344px)
   left: 344px !important;
 
