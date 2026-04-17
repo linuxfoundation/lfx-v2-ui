@@ -55,7 +55,7 @@ export class ProfileEmailComponent {
   });
 
   public otpForm = new FormGroup({
-    otp: new FormControl('', [Validators.required, Validators.minLength(6)]),
+    otp: new FormControl('', [Validators.required, Validators.pattern(/^\d{6}$/)]),
   });
 
   // State signals

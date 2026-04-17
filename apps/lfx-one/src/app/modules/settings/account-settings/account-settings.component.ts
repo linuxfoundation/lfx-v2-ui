@@ -62,7 +62,7 @@ export class AccountSettingsComponent {
 
   // OTP form (step 2: enter code)
   public otpForm = new FormGroup({
-    otp: new FormControl('', [Validators.required, Validators.minLength(6)]),
+    otp: new FormControl('', [Validators.required, Validators.pattern(/^\d{6}$/)]),
   });
 
   // State signals
@@ -261,7 +261,7 @@ export class AccountSettingsComponent {
       .pipe(take(1))
       .subscribe((status) => {
         if (!status.authorized) {
-          window.location.href = '/api/profile/auth/start?returnTo=/settings/account';
+          window.location.href = '/api/profile/auth/start?returnTo=/settings';
           return;
         }
 
@@ -386,7 +386,7 @@ export class AccountSettingsComponent {
 
   public copyToken(): void {
     const token = this.developerToken();
-    if (!token) return;
+    if (!token || !isPlatformBrowser(this.platformId)) return;
 
     navigator.clipboard.writeText(token).then(() => {
       this.tokenCopied.set(true);
@@ -400,15 +400,15 @@ export class AccountSettingsComponent {
   // ══════════════════════════════════════════
 
   private initEmailData(): Signal<EmailManagementData | null> {
-    this.emailLoading.set(true);
     return toSignal(
       this.emailRefresh.pipe(
-        switchMap(() =>
-          this.userService.getUserEmails().pipe(
+        switchMap(() => {
+          this.emailLoading.set(true);
+          return this.userService.getUserEmails().pipe(
             catchError(() => of(null)),
             finalize(() => this.emailLoading.set(false))
-          )
-        )
+          );
+        })
       ),
       { initialValue: null }
     );

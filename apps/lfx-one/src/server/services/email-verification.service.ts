@@ -439,15 +439,15 @@ export class EmailVerificationService {
   /**
    * Send a password reset link via auth-service NATS
    * @param req - Express request object for logging
-   * @param authToken - Management token with update:current_user_metadata scope
+   * @param managementToken - Flow C management token (must carry update:current_user_metadata scope)
    */
-  public async sendPasswordResetLink(req: Request, authToken: string): Promise<ResetPasswordLinkNatsResponse> {
+  public async sendPasswordResetLink(req: Request, managementToken: string): Promise<ResetPasswordLinkNatsResponse> {
     const codec = this.natsService.getCodec();
 
     logger.debug(req, 'send_password_reset_link', 'Requesting password reset link via NATS');
 
     try {
-      const payload = JSON.stringify({ token: authToken });
+      const payload = JSON.stringify({ token: managementToken });
 
       const response = await this.natsService.request(NatsSubjects.PASSWORD_RESET_LINK, codec.encode(payload), {
         timeout: NATS_CONFIG.REQUEST_TIMEOUT,

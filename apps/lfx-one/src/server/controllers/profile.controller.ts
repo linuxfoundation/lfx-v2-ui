@@ -35,7 +35,13 @@ import { generateM2MToken } from '../utils/m2m-token.util';
  * Controller for handling profile HTTP requests
  */
 export class ProfileController {
-  private static readonly allowedProfileReturnPaths: ReadonlySet<string> = new Set(['/profile', '/profile/emails', '/profile/identities', '/profile/password']);
+  private static readonly allowedProfileReturnPaths: ReadonlySet<string> = new Set([
+    '/profile',
+    '/profile/emails',
+    '/profile/identities',
+    '/profile/password',
+    '/settings',
+  ]);
 
   private auth0Service: Auth0Service = new Auth0Service();
   private cdpService: CdpService = new CdpService();
@@ -298,7 +304,7 @@ export class ProfileController {
       const userSub = req.oidc?.user?.['sub'] as string | undefined;
       const sessionEmail = req.oidc?.user?.['email'] as string | undefined;
 
-      if (!userSub || !sessionEmail) {
+      if (!userSub) {
         return next(
           ServiceValidationError.forField('user_id', 'User authentication required', {
             operation: 'get_user_emails',
@@ -315,11 +321,21 @@ export class ProfileController {
 
       const primaryEmail = freshEmails?.primary_email || sessionEmail;
 
+      if (!primaryEmail) {
+        return next(
+          ServiceValidationError.forField('primary_email', 'Unable to resolve primary email for user', {
+            operation: 'get_user_emails',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
+      }
+
       const alternateEmails: UserEmail[] = freshEmails?.alternate_emails
         ? freshEmails.alternate_emails.map((ae) => ({
             email: ae.email,
             verified: ae.verified,
-            user_id: identities.find((id) => id.provider === 'email' && id.profileData?.email === ae.email)?.user_id,
+            user_id: ae.user_id ?? identities.find((id) => id.provider === 'email' && id.profileData?.email === ae.email)?.user_id,
           }))
         : identities
             .filter((id) => id.provider === 'email' && !!id.profileData?.email && id.profileData.email !== primaryEmail)
@@ -363,6 +379,17 @@ export class ProfileController {
         );
       }
 
+      const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailAddress)) {
+        return next(
+          ServiceValidationError.forField('email', 'Invalid email format', {
+            operation: 'set_primary_email',
+            service: 'profile_controller',
+            path: req.path,
+          })
+        );
+      }
+
       const authToken = this.profileAuthService.getManagementToken(req);
 
       if (!authToken) {
@@ -376,7 +403,7 @@ export class ProfileController {
         res.status(403).json({
           error: 'management_token_required',
           message: 'Profile authorization required to change the primary email',
-          authorize_url: '/api/profile/auth/start?returnTo=/profile/emails',
+          authorize_url: `/api/profile/auth/start?returnTo=${encodeURIComponent((req.headers['referer'] as string) || '/profile/emails')}`,
         });
         return;
       }
@@ -766,7 +793,7 @@ export class ProfileController {
           res.status(403).json({
             error: 'management_token_required',
             message: 'Profile authorization required to remove this identity',
-            authorize_url: '/api/profile/auth/start?returnTo=/profile/identities',
+            authorize_url: `/api/profile/auth/start?returnTo=${encodeURIComponent((req.headers['referer'] as string) || '/profile/identities')}`,
           });
           return;
         }
@@ -1542,7 +1569,7 @@ export class ProfileController {
             success: false,
             error: 'management_token_required',
             message: 'Profile authorization required',
-            authorize_url: '/api/profile/auth/start?returnTo=/profile/identities',
+            authorize_url: `/api/profile/auth/start?returnTo=${encodeURIComponent((req.headers['referer'] as string) || '/profile/emails')}`,
           });
           return;
         }
