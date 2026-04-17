@@ -74,14 +74,35 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
 
     // Only cache when detection succeeded — don't pin user to contributor on transient NATS failure
     if (!personaResult.error) {
+      const slimProjects = personaResult.projects?.map((p) => ({
+        projectUid: p.projectUid,
+        projectSlug: p.projectSlug,
+        projectName: p.projectName,
+        parentProjectUid: p.parentProjectUid,
+        isFoundation: p.isFoundation,
+        logoUrl: p.logoUrl,
+        description: p.description,
+        detections: [] as never[],
+        personas: [] as never[],
+      }));
+
       const cookieState: PersistedPersonaState = {
         primary: persona,
         all: personas,
         multiProject: personaResult.multiProject,
         multiFoundation: personaResult.multiFoundation,
         organizations,
-        projects: personaResult.projects,
+        projects: slimProjects,
       };
+
+      const serialized = JSON.stringify(cookieState);
+      if (Buffer.byteLength(serialized, 'utf8') > 3800) {
+        logger.warning(req, 'ssr_persona', 'Persona cookie payload too large, omitting projects', {
+          byteLength: Buffer.byteLength(serialized, 'utf8'),
+        });
+        delete cookieState.projects;
+      }
+
       res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/',
