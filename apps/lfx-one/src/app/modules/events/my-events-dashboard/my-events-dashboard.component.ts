@@ -13,7 +13,6 @@ import { EventsListComponent } from './components/events-list/events-list.compon
   selector: 'lfx-my-events-dashboard',
   imports: [DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, TooltipModule],
   templateUrl: './my-events-dashboard.component.html',
-  styleUrl: './my-events-dashboard.component.scss',
 })
 export class MyEventsDashboardComponent {
   protected readonly activeTab = signal<EventTabId>('upcoming');

@@ -41,6 +41,12 @@ export class DocumentsDashboardComponent {
 
   // === Constants ===
   protected readonly documentLabel = DOCUMENT_LABEL;
+  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
+    { label: 'All Sources', value: null },
+    { label: 'Link', value: 'link' as MyDocumentSource },
+    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
+    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+  ];
 
   // === Forms ===
   protected readonly filterForm = new FormGroup({
@@ -54,14 +60,6 @@ export class DocumentsDashboardComponent {
 
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
-
-  // === Static Options ===
-  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
-    { label: 'All Sources', value: null },
-    { label: 'Link', value: 'link' as MyDocumentSource },
-    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
-  ];
 
   // === Computed Signals ===
   protected readonly project = this.projectContextService.activeContext;
