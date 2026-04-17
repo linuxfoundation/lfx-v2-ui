@@ -132,8 +132,10 @@
               </td>
             }
             <td>
-              <lfx-tag [value]="getMemberPermissionLabel(getMemberPermission(member))" [severity]="getMemberPermissionSeverity(getMemberPermission(member))">
-              </lfx-tag>
+              @if (getMemberPermission(member) !== 'member') {
+                <lfx-tag [value]="getMemberPermissionLabel(getMemberPermission(member))" [severity]="getMemberPermissionSeverity(getMemberPermission(member))">
+                </lfx-tag>
+              }
             </td>
             <td class="text-right relative">
               <lfx-menu #memberActionMenu [model]="memberActionMenuItems" [popup]="true" appendTo="body"> </lfx-menu>

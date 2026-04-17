@@ -131,7 +131,7 @@ export class CommitteeMembersComponent implements OnInit {
 
   public getMemberPermissionLabel(permission: 'manage' | 'review' | 'member'): string {
     if (permission === 'manage') return 'Manage';
-    if (permission === 'review') return 'Review';
+    if (permission === 'review') return 'Reviewer';
     return 'Member';
   }
 
