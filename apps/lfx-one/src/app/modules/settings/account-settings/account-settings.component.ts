@@ -83,7 +83,7 @@ export class AccountSettingsComponent {
     this.allEmails().map((email) => ({
       ...email,
       isPrimary: email.email === this.emailData()?.primary_email,
-      canDelete: this.allEmails().length > 1 && email.email !== this.emailData()?.primary_email,
+      canDelete: this.allEmails().length > 1 && email.email !== this.emailData()?.primary_email && !!email.user_id,
       canSetPrimary: email.email !== this.emailData()?.primary_email && email.verified,
     }))
   );
@@ -266,7 +266,7 @@ export class AccountSettingsComponent {
         }
 
         this.confirmationService.confirm({
-          message: `Are you sure you want to delete <strong>${email.email}</strong>? This action cannot be undone.`,
+          message: `Are you sure you want to delete ${email.email}? This action cannot be undone.`,
           header: 'Delete Email Address',
           acceptLabel: 'Delete',
           rejectLabel: 'Cancel',

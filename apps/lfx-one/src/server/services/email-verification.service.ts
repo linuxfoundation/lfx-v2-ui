@@ -517,17 +517,17 @@ export class EmailVerificationService {
   /**
    * List linked identities for a user via NATS
    * @param req - Express request object for logging
-   * @param authToken - Management token or M2M token to identify the user
+   * @param userIdentifier - User's subject ID (e.g. auth0|123456789), username, or email — sent as raw string to auth-service which resolves it without JWT audience validation (same convention as getUserEmails)
    * @returns Array of Auth0 linked identities
    */
-  public async listIdentities(req: Request, authToken: string): Promise<Auth0Identity[]> {
+  public async listIdentities(req: Request, userIdentifier: string): Promise<Auth0Identity[]> {
     const codec = this.natsService.getCodec();
 
     logger.debug(req, 'list_identities', 'Listing user identities via NATS');
 
     try {
       const payload = JSON.stringify({
-        user: { auth_token: authToken },
+        user: { auth_token: userIdentifier },
       });
 
       const response = await this.natsService.request(NatsSubjects.USER_IDENTITY_LIST, codec.encode(payload), {

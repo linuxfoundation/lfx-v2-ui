@@ -335,7 +335,9 @@ export class ProfileController {
         ? freshEmails.alternate_emails.map((ae) => ({
             email: ae.email,
             verified: ae.verified,
-            user_id: ae.user_id ?? identities.find((id) => id.provider === 'email' && id.profileData?.email === ae.email)?.user_id,
+            user_id:
+              ae.user_id ??
+              identities.find((id) => id.provider === 'email' && id.profileData?.email?.toLowerCase().trim() === ae.email.toLowerCase().trim())?.user_id,
           }))
         : identities
             .filter((id) => id.provider === 'email' && !!id.profileData?.email && id.profileData.email !== primaryEmail)
@@ -493,8 +495,6 @@ export class ProfileController {
     const startTime = logger.startOperation(req, 'send_password_reset_email');
 
     try {
-      const userEmail = (req.oidc?.user?.['email'] as string | undefined) || 'your registered email address';
-
       const mgmtToken = this.profileAuthService.getManagementToken(req);
       if (!mgmtToken) {
         if (!this.profileAuthService.isProfileAuthConfigured()) {
@@ -524,9 +524,9 @@ export class ProfileController {
         );
       }
 
-      logger.success(req, 'send_password_reset_email', startTime, { email: userEmail });
+      logger.success(req, 'send_password_reset_email', startTime);
 
-      res.json({ message: `A password reset link has been sent to ${userEmail}.` });
+      res.json({ message: 'A password reset link has been sent to the primary email on file.' });
     } catch (error) {
       next(error);
     }

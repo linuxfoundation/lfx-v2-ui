@@ -76,7 +76,7 @@ export class ProfileEmailComponent {
     this.allEmails().map((email) => ({
       ...email,
       isPrimary: email.email === this.emailData()?.primary_email,
-      canDelete: this.allEmails().length > 1 && email.email !== this.emailData()?.primary_email,
+      canDelete: this.allEmails().length > 1 && email.email !== this.emailData()?.primary_email && !!email.user_id,
       canSetPrimary: email.email !== this.emailData()?.primary_email && email.verified,
     }))
   );
