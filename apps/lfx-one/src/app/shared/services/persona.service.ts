@@ -67,9 +67,9 @@ export class PersonaService {
     this.allPersonas = signal<PersonaType[]>(stored?.all ?? ['contributor']);
     this.multiProject = signal<boolean>(stored?.multiProject ?? false);
     this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
-    const authState = this.transferState.get(makeStateKey<AuthContext>('auth'), null);
-    this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>(authState?.personaProjects ?? {});
-    this.detectedProjects = signal<EnrichedPersonaProject[]>(authState?.projects ?? []);
+    const authState = this.transferState.get(makeStateKey<AuthContext>('auth'), { authenticated: false, user: null });
+    this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>(authState.personaProjects ?? {});
+    this.detectedProjects = signal<EnrichedPersonaProject[]>(authState.projects ?? []);
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
     this.hasBoardRole = this.initHasBoardRole();
     this.hasProjectRole = this.initHasProjectRole();
