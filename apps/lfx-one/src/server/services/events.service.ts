@@ -41,11 +41,6 @@ import { logger } from './logger.service';
 import { SnowflakeService } from './snowflake.service';
 import { UserService } from './user.service';
 
-function formatDateField(date: Date | string | null | undefined): string | null {
-  if (!date) return null;
-  return date instanceof Date ? date.toISOString() : date;
-}
-
 export class EventsService {
   private snowflakeService: SnowflakeService;
   private userService: UserService;
@@ -546,19 +541,14 @@ export class EventsService {
     const serverUserId = profile.ID;
     const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${serverUserId}/visaletterrequests`;
 
-    // TODO: Remove hardcoding for eventID once dev is ready to support this
-    // this is a workaround to get the visa letter application working on dev
-    let eventID = payload.eventId;
-    if (apiGwAudience.includes('api-gw.dev')) {
-      eventID = 'lf68HvrPcdGx5kjGkW';
-    }
+    const eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'] ?? payload.eventId;
 
     const body = {
       onBehalfRequest: false, // We're not including this in the form so we just default it
       attendeeAccommodationPaidBy: applicantInfo.attendeeAccommodationPaidBy,
       attendeeType: applicantInfo.attendeeType,
       birthCountry: applicantInfo.citizenshipCountry,
-      birthDate: formatDateField(applicantInfo.birthDate),
+      birthDate: EventsService.formatDateField(applicantInfo.birthDate),
       email: applicantInfo.email,
       eventID: eventID,
       firstName: applicantInfo.firstName,
@@ -573,7 +563,7 @@ export class EventsService {
       ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
       ...(applicantInfo.mailingAddress && { addressLine01: applicantInfo.mailingAddress }),
       ...(applicantInfo.passportExpiryDate && {
-        passportExpiryDate: formatDateField(applicantInfo.passportExpiryDate),
+        passportExpiryDate: EventsService.formatDateField(applicantInfo.passportExpiryDate),
       }),
     };
 
@@ -904,5 +894,10 @@ export class EventsService {
     if (city && country) return `${city}, ${country}`;
     if (location) return location;
     return city ?? country ?? 'Virtual';
+  }
+
+  private static formatDateField(date: Date | string | null | undefined): string | null {
+    if (!date) return null;
+    return date instanceof Date ? date.toISOString() : date;
   }
 }

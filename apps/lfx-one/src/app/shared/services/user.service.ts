@@ -19,6 +19,7 @@ import {
   PastMeeting,
   ProfileAuthStatus,
   ProfileUpdateRequest,
+  SalesforceIdResponse,
   SendEmailVerificationResponse,
   TwoFactorSettings,
   UpdateEmailPreferencesRequest,
@@ -286,8 +287,8 @@ export class UserService {
   /**
    * Fetches the current user's API Gateway profile (includes Salesforce ID).
    */
-  public getSalesforceId(): Observable<{ id: string | null | undefined }> {
-    return this.http.get<{ id: string | null | undefined }>('/api/user/salesforce-id').pipe(take(1));
+  public getSalesforceId(): Observable<SalesforceIdResponse> {
+    return this.http.get<SalesforceIdResponse>('/api/user/salesforce-id').pipe(take(1));
   }
 
   private initUserInitials(): Signal<string> {

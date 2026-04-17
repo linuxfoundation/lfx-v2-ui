@@ -139,9 +139,9 @@ export class EventRequestListComponent {
       return signal(true);
     }
 
-    this.isSalesforceIdLoading.set(true);
     return toSignal(
       this.userService.getSalesforceId().pipe(
+        tap({ subscribe: () => this.isSalesforceIdLoading.set(true) }),
         map((profile) => {
           if (profile?.id) {
             this.userService.apiGatewayUserId.set(profile.id);
