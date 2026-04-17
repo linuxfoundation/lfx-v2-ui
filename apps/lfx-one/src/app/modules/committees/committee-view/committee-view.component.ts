@@ -121,6 +121,19 @@ export class CommitteeViewComponent {
 
   public canEdit: Signal<boolean> = computed(() => !!this.committee()?.writer);
 
+  public canReview: Signal<boolean> = computed(() => {
+    if (this.canEdit()) return false;
+    const email = this.userService.user()?.email?.toLowerCase();
+    if (!email) return false;
+    return this.committee()?.auditors?.some((u) => u.email?.toLowerCase() === email) ?? false;
+  });
+
+  public myPermission: Signal<'manage' | 'review' | 'member'> = computed(() => {
+    if (this.canEdit()) return 'manage';
+    if (this.canReview()) return 'review';
+    return 'member';
+  });
+
   public hasChannels: Signal<boolean> = computed(() => {
     const c = this.committee();
     return this.associatedMailingLists().length > 0 || !!(c?.chat_channel || c?.website) || this.canEdit();
@@ -165,7 +178,7 @@ export class CommitteeViewComponent {
     { key: 'meetings', label: 'Meetings', icon: 'fa-calendar', visible: () => this.isMemberOrAdmin() },
     { key: 'surveys', label: 'Surveys', icon: 'fa-chart-simple', visible: () => this.isMemberOrAdmin() },
     { key: 'documents', label: 'Documents', icon: 'fa-folder-open', visible: () => this.isMemberOrAdmin() },
-    { key: 'settings', label: 'Settings', icon: 'fa-gear', visible: () => this.canEdit() },
+    { key: 'settings', label: 'Settings', icon: 'fa-gear', visible: () => this.canEdit() || this.canReview() },
   ];
 
   public visibleTabs: Signal<typeof this.tabConfig> = computed(() => this.tabConfig.filter((tab) => tab.visible()));
