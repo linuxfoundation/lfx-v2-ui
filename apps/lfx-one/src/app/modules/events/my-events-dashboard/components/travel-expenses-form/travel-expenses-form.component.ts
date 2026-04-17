@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { CurrencyPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, output } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -15,7 +15,7 @@ import { TravelFundExpenses } from '@lfx-one/shared/interfaces';
   templateUrl: './travel-expenses-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TravelExpensesFormComponent {
+export class TravelExpensesFormComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
 
   public readonly formValidityChange = output<boolean>();
@@ -38,12 +38,15 @@ export class TravelExpensesFormComponent {
   });
 
   public constructor() {
-    this.formValidityChange.emit(this.estimatedTotal() > 0);
-
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.formChange.emit(this.buildExpensesValue());
       this.formValidityChange.emit(this.estimatedTotal() > 0);
     });
+  }
+
+  public ngOnInit(): void {
+    this.formChange.emit(this.buildExpensesValue());
+    this.formValidityChange.emit(this.estimatedTotal() > 0);
   }
 
   private buildExpensesValue(): TravelFundExpenses {

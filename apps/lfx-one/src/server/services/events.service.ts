@@ -664,11 +664,18 @@ export class EventsService {
 
     const { aboutMe, expenses } = payload;
 
+    // Parse numeric fields up-front so validation and body construction share the same values
+    const accommodationNumberOfNights = parseInt(String(aboutMe.accommodationNumberOfNights), 10);
+    const estimatedTotal = Number(expenses.estimatedTotal);
+
     const missingFields: string[] = [];
     if (!aboutMe.citizenshipCountry) missingFields.push('citizenshipCountry');
     if (!aboutMe.organizationID) missingFields.push('organizationID');
     if (!aboutMe.travelFromCountry) missingFields.push('travelFromCountry');
-    if (expenses.estimatedTotal <= 0) missingFields.push('estimatedTotal');
+    if (!Number.isInteger(accommodationNumberOfNights) || accommodationNumberOfNights < 0 || accommodationNumberOfNights > 4) {
+      missingFields.push('accommodationNumberOfNights');
+    }
+    if (!Number.isFinite(estimatedTotal) || estimatedTotal <= 0) missingFields.push('estimatedTotal');
     if (missingFields.length > 0) {
       throw new MicroserviceError(`Missing required travel fund fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
         operation: 'submit_travel_fund_application',
@@ -686,7 +693,7 @@ export class EventsService {
     }
 
     const body = {
-      accommodationNumberOfNights: parseInt(String(aboutMe.accommodationNumberOfNights), 10) || 0,
+      accommodationNumberOfNights,
       citizenshipCountry: aboutMe.citizenshipCountry,
       email: aboutMe.email,
       eventID: eventID,
@@ -695,7 +702,7 @@ export class EventsService {
       onBehalfRequest: false,
       organizationID: aboutMe.organizationID,
       requestingUserID: serverUserId,
-      travelCostEstimationUSD: expenses.estimatedTotal,
+      travelCostEstimationUSD: estimatedTotal,
       travelingFromCountry: aboutMe.travelFromCountry,
       userID: serverUserId,
       username: aboutMe.email,

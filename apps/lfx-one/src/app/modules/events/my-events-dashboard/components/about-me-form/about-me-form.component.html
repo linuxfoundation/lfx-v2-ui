@@ -190,6 +190,10 @@
         <span class="text-xs text-red-500" data-testid="about-me-accommodation-nights-error">
           @if (form.get('accommodationNumberOfNights')?.hasError('max')) {
             Maximum 4 nights allowed
+          } @else if (form.get('accommodationNumberOfNights')?.hasError('min')) {
+            Number of nights cannot be negative
+          } @else if (form.get('accommodationNumberOfNights')?.hasError('pattern')) {
+            Please enter a whole number
           } @else {
             Number of nights is required
           }
