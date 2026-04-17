@@ -7,7 +7,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { calculateRsvpCounts, Meeting, MeetingOccurrence, MeetingRsvp, PastMeeting, Project, RsvpCounts } from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
-import { catchError, finalize, of, switchMap, tap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-rsvp-details',
@@ -53,17 +53,16 @@ export class MeetingRsvpDetailsComponent {
           // Past meetings use attended_count/participant_count from the meeting data
           // RSVPs only apply to upcoming meetings
           if (this.pastMeeting()) {
-            this.loading.set(false);
             return of([] as MeetingRsvp[]);
           }
           return this.meetingService.getMeetingRsvps(meeting.id).pipe(
             catchError((error) => {
               console.error('Failed to fetch meeting RSVPs:', error);
               return of([]);
-            }),
-            finalize(() => this.loading.set(false))
+            })
           );
-        })
+        }),
+        tap(() => this.loading.set(false))
       ),
       { initialValue: [] }
     );

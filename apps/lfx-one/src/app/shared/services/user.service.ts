@@ -3,6 +3,7 @@
 
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import {
   AddEmailRequest,
@@ -29,7 +30,7 @@ import {
   WorkExperienceCreateUpdateBody,
   WorkExperienceEntry,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, shareReplay, startWith, Subject, switchMap, take } from 'rxjs';
+import { catchError, distinctUntilChanged, map, Observable, of, shareReplay, skip, startWith, Subject, switchMap, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -49,6 +50,27 @@ export class UserService {
   private readonly userPastMeetingsRefresh$ = new Subject<void>();
   private userMeetings$: Observable<Meeting[]> | null = null;
   private userPastMeetings$: Observable<PastMeeting[]> | null = null;
+
+  public constructor() {
+    // Invalidate cached user-scoped observables when the authenticated user or
+    // impersonation changes, so existing subscribers don't see stale data from
+    // the previous user. Keyed on username (covers both login/logout and
+    // impersonation start/stop). Skip the initial emission since the caches
+    // are lazy-initialized and haven't been populated yet.
+    toObservable(this.user)
+      .pipe(
+        map((u) => u?.username ?? null),
+        distinctUntilChanged(),
+        skip(1),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        this.userMeetings$ = null;
+        this.userPastMeetings$ = null;
+        this.userMeetingsRefresh$.next();
+        this.userPastMeetingsRefresh$.next();
+      });
+  }
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {

@@ -604,16 +604,21 @@ export class UserService {
 
     // Populate participant and attended counts for each past meeting from the
     // v1_past_meeting_participant records. Only fields derivable from participants
-    // are overwritten; committee_members_count is preserved from upstream.
+    // are overwritten, and only on successful fetch; committee_members_count is
+    // preserved from upstream. On fetch failure, upstream counts are preserved
+    // to avoid flashing "0 of 0" during transient query-service errors.
     await Promise.all(
       pastMeetings.map(async (meeting) => {
         const participants = await this.meetingService.getPastMeetingParticipants(req, meeting.id).catch((error) => {
-          logger.warning(req, 'get_user_past_meetings', 'Failed to fetch participants for past meeting', {
+          logger.warning(req, 'get_user_past_meetings', 'Failed to fetch participants for past meeting, preserving upstream counts', {
             past_meeting_id: meeting.id,
             err: error,
           });
-          return [];
+          return null;
         });
+        if (participants === null) {
+          return;
+        }
         meeting.participant_count = participants.length;
         meeting.attended_count = participants.filter((p) => p.is_attended).length;
         meeting.individual_registrants_count = participants.filter((p) => p.is_invited).length;
@@ -627,7 +632,7 @@ export class UserService {
 
   /**
    * Gets all unique past meeting occurrence IDs (meeting_and_occurrence_id) the user participated in.
-   * Checks both email and username to find all participation in past meetings.
+   * Checks both email and username to find all participation records.
    * M2M token required: participant queries search across all participants in the index,
    * which requires application-level credentials (user tokens lack cross-participant read access)
    * @param req - Express request object

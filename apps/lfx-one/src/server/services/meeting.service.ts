@@ -914,14 +914,17 @@ export class MeetingService {
             ...(pageToken && { page_token: pageToken }),
           })
         ),
-        fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
-          this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-            ...registrantParams,
-            ...(pageToken && { page_token: pageToken }),
-          })
+        fetchAllQueryResources<MeetingRegistrant>(
+          req,
+          (pageToken) =>
+            this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+              ...registrantParams,
+              ...(pageToken && { page_token: pageToken }),
+            }),
+          { failOnPartial: true }
         ).catch((error) => {
           registrantsFetchFailed = true;
-          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch registrants for RSVP filtering, returning unfiltered RSVPs', {
+          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch complete registrants for RSVP filtering, returning unfiltered RSVPs', {
             meeting_id: meetingUid,
             err: error,
           });

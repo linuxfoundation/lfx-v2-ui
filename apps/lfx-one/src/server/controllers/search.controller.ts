@@ -67,7 +67,6 @@ export class SearchController {
         ...(name ? { name: name as string } : {}),
         ...(tags ? { tags: tags as string } : {}),
         type: type as 'committee_member' | 'meeting_registrant',
-        offset: req.query['offset'] ? parseInt(req.query['offset'] as string, 10) : undefined,
       };
 
       // Perform the search
