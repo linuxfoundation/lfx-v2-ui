@@ -80,6 +80,7 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
         multiProject: personaResult.multiProject,
         multiFoundation: personaResult.multiFoundation,
         organizations,
+        projects: personaResult.projects,
       };
       res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
         maxAge: 30 * 24 * 60 * 60 * 1000,
