@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import type { Account } from './account.interface';
+import type { Impersonator } from './impersonation.interface';
+import type { EnrichedPersonaProject, PersonaProject } from './persona-detection.interface';
 import type { PersonaType } from './persona.interface';
 
 /**
@@ -60,6 +62,16 @@ export interface AuthContext {
   personas?: PersonaType[];
   /** User's affiliated organizations from committee memberships */
   organizations?: Account[];
+  /** Enriched projects from persona detection — hydrated via TransferState */
+  projects?: EnrichedPersonaProject[];
+  /** Persona-to-project mapping from persona detection — hydrated via TransferState */
+  personaProjects?: Partial<Record<PersonaType, PersonaProject[]>>;
+  /** Whether the user has permission to impersonate other users */
+  canImpersonate?: boolean;
+  /** Whether the current session is impersonating another user */
+  impersonating?: boolean;
+  /** Information about the admin performing impersonation */
+  impersonator?: Impersonator;
 }
 
 /**

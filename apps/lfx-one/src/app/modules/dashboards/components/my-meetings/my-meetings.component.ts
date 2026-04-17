@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { getActiveOccurrences } from '@lfx-one/shared';
 import { LensService } from '@services/lens.service';
@@ -18,7 +18,7 @@ import type { Meeting, MeetingWithOccurrence, PastMeeting } from '@lfx-one/share
 
 @Component({
   selector: 'lfx-my-meetings',
-  imports: [DashboardMeetingCardComponent, ButtonComponent, CardComponent, SkeletonModule],
+  imports: [DashboardMeetingCardComponent, CardComponent, SkeletonModule, RouterLink],
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
@@ -34,7 +34,7 @@ export class MyMeetingsComponent {
   protected readonly upcomingLoading = signal(true);
   protected readonly pastLoading = signal(true);
 
-  private readonly selectedProject = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  private readonly selectedProject = computed(() => this.projectContextService.activeContext());
 
   // Raw data from API — switches data source based on active lens
   private readonly rawMeetings = this.initRawMeetings();
@@ -56,16 +56,16 @@ export class MyMeetingsComponent {
   private initRawMeetings() {
     return this.initLensSwitchedData<Meeting>(
       this.upcomingLoading,
-      () => this.userService.getUserMeetings(100),
-      (uid) => this.meetingService.getUpcomingMeetingsByProject(uid, 100)
+      () => this.userService.getUserMeetings(),
+      (uid) => this.meetingService.getUpcomingMeetingsByProject(uid)
     );
   }
 
   private initRawPastMeetings() {
     return this.initLensSwitchedData<PastMeeting>(
       this.pastLoading,
-      () => this.userService.getUserPastMeetings(50),
-      (uid) => this.meetingService.getPastMeetingsByProject(uid, 50)
+      () => this.userService.getUserPastMeetings(),
+      (uid) => this.meetingService.getPastMeetingsByProject(uid)
     );
   }
 

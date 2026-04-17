@@ -4,7 +4,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CreateSurveyRequest, Survey } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, take, throwError } from 'rxjs';
+import { catchError, Observable, of, take, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -17,12 +17,8 @@ export class SurveyService {
   }
 
   /** Fetches surveys scoped to a committee via `tags=committee_uid:{uid}` query parameter. */
-  public getSurveysByCommittee(committeeUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
+  public getSurveysByCommittee(committeeUid: string, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('tags', `committee_uid:${committeeUid}`);
-
-    if (limit !== undefined) {
-      params = params.set('page_size', limit.toString());
-    }
 
     if (orderBy) {
       params = params.set('order', orderBy);
@@ -31,18 +27,19 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
-  public getSurveysByProject(projectUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
+  public getSurveysByProject(projectUid: string, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
-
-    if (limit) {
-      params = params.set('page_size', limit);
-    }
 
     if (orderBy) {
       params = params.set('order', orderBy);
     }
 
     return this.getSurveys(params);
+  }
+
+  /** Returns surveys for the current user; foundation/project filtering is applied client-side. */
+  public getMySurveys(): Observable<Survey[]> {
+    return this.http.get<Survey[]>('/api/surveys/my-surveys').pipe(catchError(() => of([])));
   }
 
   public getSurvey(surveyUid: string, projectId?: string): Observable<Survey> {

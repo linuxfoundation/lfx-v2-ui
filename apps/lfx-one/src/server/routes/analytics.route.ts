@@ -149,4 +149,34 @@ router.get('/member-acquisition', (req, res, next) => analyticsController.getMem
 router.get('/engaged-community', (req, res, next) => analyticsController.getEngagedCommunity(req, res, next));
 router.get('/flywheel-conversion', (req, res, next) => analyticsController.getFlywheelConversion(req, res, next));
 
+// Participating organizations summary endpoint (health metrics page)
+router.get('/participating-orgs-summary', (req, res, next) => analyticsController.getParticipatingOrgsSummary(req, res, next));
+
+// NPS summary endpoint (health metrics page)
+router.get('/nps-summary', (req, res, next) => analyticsController.getNpsSummary(req, res, next));
+
+// Membership churn per tier summary endpoint (health metrics page)
+router.get('/membership-churn-per-tier-summary', (req, res, next) => analyticsController.getMembershipChurnPerTierSummary(req, res, next));
+
+// Events summary endpoint (health metrics page)
+router.get('/events-summary', (req, res, next) => analyticsController.getEventsSummary(req, res, next));
+
+// Outstanding balance summary endpoint (health metrics page)
+router.get('/outstanding-balance-summary', (req, res, next) => analyticsController.getOutstandingBalanceSummary(req, res, next));
+
+// Training & Certification summary endpoint (health metrics page)
+router.get('/training-certification-summary', (req, res, next) => analyticsController.getTrainingCertificationSummary(req, res, next));
+
+// Code Contribution summary endpoint (health metrics page)
+router.get('/code-contribution-summary', (req, res, next) => analyticsController.getCodeContributionSummary(req, res, next));
+
+// ED dashboard marketing endpoints — backed by ANALYTICS.PLATINUM_LFX_ONE.* Snowflake views
+router.get('/event-growth', (req, res, next) => analyticsController.getEventGrowth(req, res, next));
+router.get('/brand-reach', (req, res, next) => analyticsController.getBrandReach(req, res, next));
+router.get('/brand-health', (req, res, next) => analyticsController.getBrandHealth(req, res, next));
+router.get('/revenue-impact', (req, res, next) => analyticsController.getRevenueImpact(req, res, next));
+
+// Multi-foundation summary endpoint (multi-foundation dashboard)
+router.get('/multi-foundation-summary', (req, res, next) => analyticsController.getMultiFoundationSummary(req, res, next));
+
 export default router;

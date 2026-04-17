@@ -35,7 +35,7 @@ export class SettingsDashboardComponent {
   public users: Signal<ProjectPermissionUser[]>;
   public loading: WritableSignal<boolean> = signal(true);
   public refresh$: BehaviorSubject<void> = new BehaviorSubject<void>(undefined);
-  public project = computed(() => this.projectContextService.selectedProject() || this.projectContextService.selectedFoundation());
+  public project = computed(() => this.projectContextService.activeContext());
 
   protected readonly menuItems: MenuItem[] = [
     {

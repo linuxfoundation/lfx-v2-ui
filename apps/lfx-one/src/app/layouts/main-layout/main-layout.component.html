@@ -1,10 +1,28 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
+<!-- Impersonation Banner -->
+@if (userService.impersonating()) {
+  <div
+    class="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 bg-yellow-400 py-2 text-sm font-medium text-black"
+    data-testid="impersonation-banner">
+    <i class="fa-light fa-eye text-sm"></i>
+    <span
+      >Viewing as <strong>{{ userService.user()?.email }}</strong></span
+    >
+    <span class="text-black/60">— by {{ userService.impersonator()?.name }}</span>
+    <lfx-button label="Stop Impersonating" severity="contrast" size="small" (onClick)="stopImpersonation()" data-testid="stop-impersonation-button" />
+  </div>
+}
+
 <!-- Dev Toolbar (fixed at top) -->
 <lfx-dev-toolbar></lfx-dev-toolbar>
 
-<div class="flex min-h-screen" [ngClass]="{ 'pt-12': showDevToolbar() }">
+<div
+  class="flex min-h-screen"
+  [ngClass]="{
+    'pt-12': showDevToolbar(),
+  }">
   <!-- Sidebar - Desktop: lens switcher (64px) + nav panel (280px) = 344px -->
   <div
     class="hidden lg:flex flex-row flex-shrink-0 fixed left-0 bottom-0 z-40"
@@ -12,7 +30,7 @@
       'top-12': showDevToolbar(),
       'top-0': !showDevToolbar(),
     }">
-    <!-- Lens Switcher Column (w-16 = 64px) -->
+    <!-- Lens Switcher Column (64px) -->
     <div class="w-16 flex-shrink-0" data-testid="lens-switcher-column">
       <lfx-lens-switcher></lfx-lens-switcher>
     </div>
@@ -21,7 +39,8 @@
       <lfx-sidebar
         [items]="sidebarItems()"
         [showMeSelector]="activeLens() === 'me'"
-        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"></lfx-sidebar>
+        [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+        [(selectorPanelOpen)]="selectorPanelOpen"></lfx-sidebar>
     </div>
   </div>
 
@@ -52,10 +71,23 @@
           [items]="sidebarItems()"
           [showMeSelector]="activeLens() === 'me'"
           [showProjectSelector]="activeLens() === 'project' || activeLens() === 'foundation'"
+          [(selectorPanelOpen)]="selectorPanelOpen"
           [mobile]="true"></lfx-sidebar>
       </div>
     </div>
   </p-drawer>
+
+  <!-- Selector backdrop — covers main content area when project/foundation selector is open -->
+  <div
+    class="hidden lg:block fixed inset-0 bg-black/10 z-30 transition-opacity duration-300"
+    [ngClass]="{
+      'top-12': showDevToolbar(),
+      'top-0': !showDevToolbar(),
+      'opacity-100 pointer-events-auto': selectorPanelOpen(),
+      'opacity-0 pointer-events-none': !selectorPanelOpen(),
+    }"
+    (click)="selectorPanelOpen.set(false)"
+    data-testid="selector-backdrop"></div>
 
   <!-- Main Content Area -->
   <main class="flex-1 min-w-0 transition-all duration-300 lg:ml-[344px] flex flex-col" data-testid="main-content">

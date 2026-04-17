@@ -72,10 +72,11 @@ export class CommitteeController {
    */
   public async getMyCommittees(req: Request, res: Response, next: NextFunction): Promise<void> {
     const projectUid = req.query['project_uid'] as string | undefined;
-    const startTime = logger.startOperation(req, 'get_my_committees', { project_uid: projectUid });
+    const foundationUid = req.query['foundation_uid'] as string | undefined;
+    const startTime = logger.startOperation(req, 'get_my_committees', { project_uid: projectUid, foundation_uid: foundationUid });
 
     try {
-      const myCommittees = await this.committeeService.getMyCommittees(req, projectUid);
+      const myCommittees = await this.committeeService.getMyCommittees(req, projectUid, foundationUid);
 
       logger.success(req, 'get_my_committees', startTime, {
         committee_count: myCommittees.length,
@@ -527,7 +528,6 @@ export class CommitteeController {
 
       res.json(documents);
     } catch (error) {
-      logger.error(req, 'get_committee_documents', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -594,7 +594,6 @@ export class CommitteeController {
 
       res.status(201).json(newDocument);
     } catch (error) {
-      logger.error(req, 'create_committee_document', startTime, error, { committee_id: id });
       next(error);
     }
   }
@@ -657,7 +656,6 @@ export class CommitteeController {
 
       res.status(204).send();
     } catch (error) {
-      logger.error(req, 'delete_committee_document', startTime, error, { committee_id: id, document_id: documentId });
       next(error);
     }
   }
@@ -698,7 +696,6 @@ export class CommitteeController {
 
       res.json(children);
     } catch (error) {
-      logger.error(req, 'get_committee_children', startTime, error, { parent_id: id });
       next(error);
     }
   }
@@ -808,7 +805,6 @@ export class CommitteeController {
       res.setHeader('Cache-Control', 'public, max-age=900'); // 15 minutes — reduces load from calendar clients polling every 15-60 minutes
       res.send(ics);
     } catch (error) {
-      logger.error(req, 'get_committee_calendar', startTime, error, { committee_id: id });
       next(error);
     }
   }

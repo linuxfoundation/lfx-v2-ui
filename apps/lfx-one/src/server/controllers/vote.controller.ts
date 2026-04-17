@@ -23,14 +23,13 @@ export class VoteController {
     });
 
     try {
-      const { data, page_token } = await this.voteService.getVotes(req, req.query as Record<string, any>);
+      const votes = await this.voteService.getVotes(req, req.query as Record<string, any>);
 
       logger.success(req, 'get_votes', startTime, {
-        vote_count: data.length,
-        has_more_pages: !!page_token,
+        vote_count: votes.length,
       });
 
-      res.json({ data, page_token });
+      res.json({ data: votes });
     } catch (error) {
       next(error);
     }
@@ -52,6 +51,25 @@ export class VoteController {
       });
 
       res.json({ count });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /votes/my-votes
+   */
+  public async getMyVotes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_votes');
+
+    try {
+      const myVotes = await this.voteService.getMyVotes(req);
+
+      logger.success(req, 'get_my_votes', startTime, {
+        vote_count: myVotes.length,
+      });
+
+      res.json(myVotes);
     } catch (error) {
       next(error);
     }

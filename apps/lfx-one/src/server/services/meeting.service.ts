@@ -9,6 +9,8 @@ import {
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   CreateMeetingRsvpRequest,
+  ITXCreateMeetingResponseRequest,
+  ITXMeetingResponseResult,
   Meeting,
   MeetingAttachment,
   MeetingJoinURL,
@@ -28,8 +30,6 @@ import {
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UpdatePastMeetingSummaryRequest,
-  ITXCreateMeetingResponseRequest,
-  ITXMeetingResponseResult,
 } from '@lfx-one/shared/interfaces';
 import { mapITXResponseToMeetingRsvp, transformV1SummaryToV2 } from '@lfx-one/shared/utils';
 import { Request } from 'express';
@@ -37,7 +37,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
@@ -381,7 +381,6 @@ export class MeetingService {
     const params: Record<string, any> = {
       type: 'v1_meeting_registrant',
       tags: `meeting_id:${meetingUid}`,
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants', 'Fetching meeting registrants', { meeting_id: meetingUid, params });
@@ -443,7 +442,6 @@ export class MeetingService {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`email:${email}`, `meeting_id:${meetingUid}`],
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants_by_email', 'Fetching meeting registrants by email params', { meeting_id: meetingUid, email, params });
@@ -473,7 +471,6 @@ export class MeetingService {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`username:${plainUsername}`, `meeting_id:${meetingUid}`],
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants_by_username', 'Fetching meeting registrants by username', { meeting_id: meetingUid, username: plainUsername });
@@ -595,7 +592,6 @@ export class MeetingService {
     const params = {
       type: 'v1_past_meeting_participant',
       tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
-      page_size: 100,
     };
 
     return fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
@@ -604,6 +600,55 @@ export class MeetingService {
         ...(pageToken && { page_token: pageToken }),
       })
     );
+  }
+
+  /**
+   * Checks if a user was a participant in a past meeting by email
+   */
+  public async isUserPastMeetingParticipant(req: Request, pastMeetingUid: string, email: string, username?: string): Promise<boolean> {
+    logger.debug(req, 'is_user_past_meeting_participant', 'Checking if user was a past meeting participant', {
+      past_meeting_id: pastMeetingUid,
+      email,
+      username,
+    });
+
+    // Try email first
+    if (email) {
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'v1_past_meeting_participant',
+          tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `email:${email}`],
+        }
+      );
+
+      if (resources.length > 0) return true;
+    }
+
+    // Fall back to username
+    if (username) {
+      const plainUsername = stripAuthPrefix(username);
+      const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          type: 'v1_past_meeting_participant',
+          tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `username:${plainUsername}`],
+        }
+      );
+
+      if (resources.length > 0) return true;
+    }
+
+    logger.debug(req, 'is_user_past_meeting_participant', 'Participant check complete — no match found', {
+      past_meeting_id: pastMeetingUid,
+    });
+    return false;
   }
 
   /**
@@ -729,8 +774,7 @@ export class MeetingService {
     });
 
     // Resolve registrant_id — try email first, fall back to username
-    const rawEmail = req.oidc?.user?.['email'] as string | undefined;
-    const email = rawEmail?.toLowerCase();
+    const email = getEffectiveEmail(req) ?? undefined;
     let registrants: MeetingRegistrant[] = [];
 
     if (email) {
@@ -778,7 +822,7 @@ export class MeetingService {
       operation: 'create_meeting_rsvp_poll',
       pollFn: async () => {
         const allRsvps = await this.getMeetingRsvps(req, meetingUid);
-        return allRsvps.some((r) => r.id === rsvp.id && r.response === rsvp.response);
+        return allRsvps.some((r) => r.id === rsvp.id && r.response_type === rsvp.response_type);
       },
       maxRetries: 5,
       retryDelayMs: 1000,
@@ -843,28 +887,71 @@ export class MeetingService {
   }
 
   /**
-   * Get all RSVPs for a meeting
+   * Get all RSVPs for a meeting, filtered to current registrants only.
+   * The v1_meeting_rsvp records persist historical RSVPs including for registrants
+   * who have since been removed or re-registered with a new registrant_id. We filter
+   * to only those RSVPs whose registrant_id matches a currently-active registrant.
    */
   public async getMeetingRsvps(req: Request, meetingUid: string): Promise<MeetingRsvp[]> {
     logger.debug(req, 'get_meeting_rsvps', 'Fetching meeting RSVPs', { meeting_id: meetingUid });
 
     try {
-      const params = {
+      const rsvpParams = {
         tags: `meeting_id:${meetingUid}`,
         type: 'v1_meeting_rsvp',
-        page_size: 100,
       };
 
-      return await fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          ...params,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      );
+      const registrantParams = {
+        type: 'v1_meeting_registrant',
+        parent: `meeting:${meetingUid}`,
+      };
+
+      let registrantsFetchFailed = false;
+      const [rsvps, registrants] = await Promise.all([
+        fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            ...rsvpParams,
+            ...(pageToken && { page_token: pageToken }),
+          })
+        ),
+        fetchAllQueryResources<MeetingRegistrant>(
+          req,
+          (pageToken) =>
+            this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+              ...registrantParams,
+              ...(pageToken && { page_token: pageToken }),
+            }),
+          { failOnPartial: true }
+        ).catch((error) => {
+          registrantsFetchFailed = true;
+          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch complete registrants for RSVP filtering, returning unfiltered RSVPs', {
+            meeting_id: meetingUid,
+            err: error,
+          });
+          return [] as MeetingRegistrant[];
+        }),
+      ]);
+
+      // If the registrant fetch failed, return unfiltered RSVPs rather than hiding data.
+      if (registrantsFetchFailed) {
+        return rsvps;
+      }
+
+      const activeRegistrantIds = new Set(registrants.map((r) => r.uid).filter(Boolean));
+      const filtered = rsvps.filter((rsvp) => activeRegistrantIds.has(rsvp.registrant_id));
+
+      logger.debug(req, 'get_meeting_rsvps', 'Filtered RSVPs to active registrants', {
+        meeting_id: meetingUid,
+        raw_rsvp_count: rsvps.length,
+        active_registrant_count: activeRegistrantIds.size,
+        filtered_rsvp_count: filtered.length,
+      });
+
+      return filtered;
     } catch (error) {
       logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch meeting RSVPs, returning empty array', {
         meeting_id: meetingUid,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return [];
     }
@@ -1103,6 +1190,10 @@ export class MeetingService {
     return newRegistrant;
   }
 
+  public async getMeetingProjectName<T extends Meeting>(req: Request, meetings: T[]): Promise<T[]> {
+    return this.projectService.enrichWithProjectData(req, meetings) as Promise<T[]>;
+  }
+
   /**
    * Fetches committee names for all unique committees referenced in meetings.
    * Returns a Map of committee UID -> committee name for merging into meeting data.
@@ -1144,19 +1235,5 @@ export class MeetingService {
     }
 
     return nameMap;
-  }
-
-  private async getMeetingProjectName(req: Request, meetings: Meeting[]): Promise<Meeting[]> {
-    const projectUids = [...new Set(meetings.map((m) => m.project_uid))];
-    const projects = await Promise.all(
-      projectUids.map(async (uid) => {
-        return await this.projectService.getProjectById(req, uid).catch(() => null);
-      })
-    );
-
-    return meetings.map((m) => {
-      const project = projects.find((p) => p?.uid === m.project_uid);
-      return { ...m, project_name: project?.name || '', project_slug: project?.slug || '' };
-    });
   }
 }

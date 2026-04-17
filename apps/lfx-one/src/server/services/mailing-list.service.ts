@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { MailingListMemberDeliveryMode, MailingListMemberModStatus } from '@lfx-one/shared/enums';
 import {
   CreateGroupsIOServiceRequest,
   CreateMailingListMemberRequest,
@@ -8,6 +9,7 @@ import {
   GroupsIOMailingList,
   GroupsIOService,
   MailingListMember,
+  MyMailingList,
   QueryServiceCountResponse,
   QueryServiceResponse,
   UpdateGroupsIOServiceRequest,
@@ -17,9 +19,12 @@ import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint, pollUntilIndexed } from '../helpers/poll-endpoint.helper';
+import { fetchAllQueryResources } from '../helpers/query-service.helper';
+import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
+import { ProjectService } from './project.service';
 
 /**
  * Service for handling mailing list business logic
@@ -28,10 +33,12 @@ import { MicroserviceProxyService } from './microservice-proxy.service';
 export class MailingListService {
   private accessCheckService: AccessCheckService;
   private microserviceProxy: MicroserviceProxyService;
+  private projectService: ProjectService;
 
   public constructor() {
     this.accessCheckService = new AccessCheckService();
     this.microserviceProxy = new MicroserviceProxyService();
+    this.projectService = new ProjectService();
   }
 
   // ============================================
@@ -42,20 +49,21 @@ export class MailingListService {
    * Fetches all Groups.io services based on query parameters
    */
   public async getServices(req: Request, query: Record<string, unknown> = {}): Promise<GroupsIOService[]> {
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'groupsio_service',
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOService>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    const services = await fetchAllQueryResources<GroupsIOService>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOService>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    const services = resources.map((resource) => resource.data);
 
     // Add writer access field to all services
     return await this.accessCheckService.addAccessToResources(req, services, 'groupsio_service');
@@ -177,20 +185,21 @@ export class MailingListService {
    * Fetches all mailing lists based on query parameters
    */
   public async getMailingLists(req: Request, query: Record<string, unknown> = {}): Promise<GroupsIOMailingList[]> {
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'groupsio_mailing_list',
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    let mailingLists = await fetchAllQueryResources<GroupsIOMailingList>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    let mailingLists = resources.map((resource) => resource.data);
 
     // Enrich with service data
     mailingLists = await this.enrichWithServices(req, mailingLists);
@@ -329,6 +338,137 @@ export class MailingListService {
   }
 
   // ============================================
+  // My Mailing Lists (Me Lens)
+  // ============================================
+
+  /**
+   * Fetches mailing lists the current user is a member of.
+   * Queries by both email and username to ensure complete coverage.
+   */
+  public async getMyMailingLists(req: Request): Promise<MyMailingList[]> {
+    // Get user identity from auth context
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req);
+
+    logger.debug(req, 'get_my_mailing_lists', 'Fetching mailing lists for current user', {
+      username,
+      has_email: !!email,
+    });
+
+    if (!username && !email) {
+      return [];
+    }
+
+    // Query groupsio_member records by both email and username in parallel (with full pagination)
+    const memberQueries: Promise<MailingListMember[]>[] = [];
+
+    if (email) {
+      memberQueries.push(
+        fetchAllQueryResources<MailingListMember>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            v: '1',
+            type: 'groupsio_member',
+            tags_all: [`email:${email}`],
+            ...(pageToken && { page_token: pageToken }),
+          })
+        )
+      );
+    }
+
+    if (username) {
+      memberQueries.push(
+        fetchAllQueryResources<MailingListMember>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            v: '1',
+            type: 'groupsio_member',
+            tags_all: [`username:${username}`],
+            ...(pageToken && { page_token: pageToken }),
+          })
+        )
+      );
+    }
+
+    const results = await Promise.all(memberQueries);
+
+    // Deduplicate members by uid (a member might match both email and username)
+    const memberMap = new Map<string, MailingListMember>();
+    for (const members of results) {
+      for (const member of members) {
+        memberMap.set(member.uid, member);
+      }
+    }
+
+    const allMembers = Array.from(memberMap.values());
+
+    if (allMembers.length === 0) {
+      return [];
+    }
+
+    logger.debug(req, 'get_my_mailing_lists', 'Found user memberships', {
+      username,
+      has_email: !!email,
+      membership_count: allMembers.length,
+    });
+
+    // Build a map of mailing_list_uid → member details for quick lookup
+    const membershipMap = new Map<string, { delivery_mode: MailingListMemberDeliveryMode; mod_status: MailingListMemberModStatus; member_uid: string }>();
+    for (const m of allMembers) {
+      membershipMap.set(m.mailing_list_uid, {
+        delivery_mode: m.delivery_mode || MailingListMemberDeliveryMode.NORMAL,
+        mod_status: m.mod_status || MailingListMemberModStatus.NONE,
+        member_uid: m.uid,
+      });
+    }
+
+    // Fetch mailing list details for each membership in parallel
+    const mailingListUids = Array.from(membershipMap.keys());
+    const mailingLists = await Promise.all(
+      mailingListUids.map(async (uid) => {
+        try {
+          const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOMailingList>>(
+            req,
+            'LFX_V2_SERVICE',
+            '/query/resources',
+            'GET',
+            {
+              type: 'groupsio_mailing_list',
+              tags: `groupsio_mailing_list_uid:${uid}`,
+            }
+          );
+
+          if (!resources || resources.length === 0) {
+            return null;
+          }
+
+          const mailingList = resources[0].data;
+          const membership = membershipMap.get(uid)!;
+          return {
+            ...mailingList,
+            my_delivery_mode: membership.delivery_mode,
+            my_mod_status: membership.mod_status,
+            my_member_uid: membership.member_uid,
+          } as MyMailingList;
+        } catch (error) {
+          logger.warning(req, 'get_my_mailing_lists', 'Failed to enrich mailing list membership, skipping', {
+            mailing_list_uid: uid,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return null;
+        }
+      })
+    );
+
+    const result = mailingLists.filter((ml): ml is MyMailingList => ml !== null);
+
+    // Enrich with service data for correct email display in UI
+    const enrichedWithServices = (await this.enrichWithServices(req, result)) as MyMailingList[];
+
+    // Enrich with project data (name, slug, logo, etc.)
+    return this.projectService.enrichWithProjectData(req, enrichedWithServices);
+  }
+
+  // ============================================
   // Mailing List Member Methods
   // ============================================
 
@@ -336,21 +476,22 @@ export class MailingListService {
    * Fetches all members for a mailing list using query service
    */
   public async getMembers(req: Request, mailingListId: string, query: Record<string, unknown> = {}): Promise<MailingListMember[]> {
+    const queryFilters = { ...query };
+    delete queryFilters['page_token'];
+    delete queryFilters['page_size'];
+
     const params = {
-      ...query,
+      ...queryFilters,
       type: 'groupsio_member',
       tags: `mailing_list_uid:${mailingListId}`,
     };
 
-    const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(
-      req,
-      'LFX_V2_SERVICE',
-      '/query/resources',
-      'GET',
-      params
+    const members = await fetchAllQueryResources<MailingListMember>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<MailingListMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        ...params,
+        ...(pageToken && { page_token: pageToken }),
+      })
     );
-
-    const members = resources.map((resource) => resource.data);
 
     // Add writer access field to all members
     return await this.accessCheckService.addAccessToResources(req, members, 'groupsio_member');

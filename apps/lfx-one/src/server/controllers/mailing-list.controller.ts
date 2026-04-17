@@ -238,6 +238,25 @@ export class MailingListController {
   }
 
   /**
+   * GET /mailing-lists/my-mailing-lists
+   */
+  public async getMyMailingLists(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_my_mailing_lists');
+
+    try {
+      const myMailingLists = await this.mailingListService.getMyMailingLists(req);
+
+      logger.success(req, 'get_my_mailing_lists', startTime, {
+        mailing_list_count: myMailingLists.length,
+      });
+
+      res.json(myMailingLists);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /mailing-lists/:id
    */
   public async getMailingListById(req: Request, res: Response, next: NextFunction): Promise<void> {

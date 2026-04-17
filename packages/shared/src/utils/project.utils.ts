@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { EnrichedPersonaProject, ProjectContext } from '../interfaces';
+import type { EnrichedPersonaProject, Project, ProjectContext } from '../interfaces';
 
 /**
  * Convert an EnrichedPersonaProject to a ProjectContext
@@ -15,9 +15,27 @@ export function toProjectContext(project: EnrichedPersonaProject): ProjectContex
 }
 
 /**
- * Determine if a project is a foundation (top-level) within a given set of projects.
- * A project is a foundation if its parentProjectUid is absent or not in the set.
+ * Determine if a project should be treated as a foundation (top-level).
+ * Uses the computed `isFoundation` flag attached during persona enrichment
+ * on `EnrichedPersonaProject`, rather than a raw field from the upstream project model.
  */
-export function isFoundationProject(project: EnrichedPersonaProject, validProjectIds: Set<string>): boolean {
-  return !project.parentProjectUid || project.parentProjectUid === '' || !validProjectIds.has(project.parentProjectUid);
+export function isFoundationProject(project: EnrichedPersonaProject): boolean {
+  return project.isFoundation;
+}
+
+/**
+ * Determine if a raw Project from the upstream API is a foundation (top-level entity).
+ * A foundation project is Active, not an Internal Allocation, and funded by Membership.
+ */
+export function computeIsFoundation(project: Project | null): boolean {
+  if (!project) {
+    return false;
+  }
+
+  return (
+    project.stage === 'Active' &&
+    project.legal_entity_type !== 'Internal Allocation' &&
+    Array.isArray(project.funding_model) &&
+    project.funding_model.includes('Membership')
+  );
 }

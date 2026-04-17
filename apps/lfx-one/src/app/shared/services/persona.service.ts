@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { HttpClient } from '@angular/common/http';
-import { afterNextRender, computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { afterNextRender, computed, inject, Injectable, makeStateKey, Signal, signal, TransferState, WritableSignal } from '@angular/core';
 import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
 import {
+  Account,
+  AuthContext,
   EnrichedPersonaProject,
   isBoardScopedPersona,
   isProjectScopedPersona,
@@ -17,17 +19,18 @@ import {
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 import { catchError, of, take } from 'rxjs';
 
+import { AccountContextService } from './account-context.service';
 import { CookieRegistryService } from './cookie-registry.service';
-import { ProjectContextService } from './project-context.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PersonaService {
   private readonly http = inject(HttpClient);
-  private readonly projectContextService = inject(ProjectContextService);
   private readonly cookieService = inject(SsrCookieService);
   private readonly cookieRegistry = inject(CookieRegistryService);
+  private readonly accountContextService = inject(AccountContextService);
+  private readonly transferState = inject(TransferState);
 
   public readonly currentPersona: WritableSignal<PersonaType>;
   public readonly allPersonas: WritableSignal<PersonaType[]>;
@@ -44,6 +47,9 @@ export class PersonaService {
   /** Full enriched projects from persona detection — source of truth for sidebar hierarchy */
   public readonly detectedProjects: WritableSignal<EnrichedPersonaProject[]>;
 
+  /** Last known organizations from persona detection — preserved across persona switches */
+  private readonly lastKnownOrganizations: WritableSignal<Account[]> = signal<Account[]>([]);
+
   public readonly isBoardScoped: Signal<boolean>;
 
   /** Whether the user holds any board-scoped persona (board-member, executive-director) */
@@ -52,25 +58,35 @@ export class PersonaService {
   /** Whether the user holds any project-scoped persona (maintainer, contributor) */
   public readonly hasProjectRole: Signal<boolean>;
 
+  /** Whether persona data has been loaded from the API after hydration */
+  public readonly personaLoaded: WritableSignal<boolean>;
+
   public constructor() {
     const stored = this.loadFromCookie();
     this.currentPersona = signal<PersonaType>(stored?.primary ?? 'contributor');
     this.allPersonas = signal<PersonaType[]>(stored?.all ?? ['contributor']);
     this.multiProject = signal<boolean>(stored?.multiProject ?? false);
     this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
-    this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>({});
-    this.detectedProjects = signal<EnrichedPersonaProject[]>([]);
+    const authState = this.transferState.get(makeStateKey<AuthContext>('auth'), { authenticated: false, user: null });
+    this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>(authState.personaProjects ?? {});
+    this.detectedProjects = signal<EnrichedPersonaProject[]>(authState.projects ?? []);
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
     this.hasBoardRole = this.initHasBoardRole();
     this.hasProjectRole = this.initHasProjectRole();
+    // Always start as not loaded — SSR renders the loading skeleton, browser hydrates it,
+    // then the API response sets this to true and renders the correct dashboard.
+    // This avoids the flash of stale cookie data (contributor) before the real persona loads.
+    this.personaLoaded = signal(false);
 
-    // Refresh persona data from API after hydration (browser only)
-    // Skip if cookie was loaded AND personaProjects is already populated;
-    // cookie only stores primary/all/multi* — personaProjects needs the API
+    // Always refresh persona data from API after hydration (browser only).
+    // Cookie provides initial SSR values; the API is the primary source of truth
+    // for personaProjects, detectedProjects, and organizations.
+    // Note: this is intentionally unconditional — the cookie cannot carry
+    // personaProjects or detectedProjects, so the API refresh is always needed.
+    // The per-user NATS load is bounded by the persona service's stale-while-revalidate
+    // cache (< 10 min = cached, 10 min–24 h = background refresh, > 24 h = sync fetch).
     afterNextRender(() => {
-      if (!stored || Object.keys(this.personaProjects()).length === 0) {
-        this.refreshFromApi();
-      }
+      this.refreshFromApi();
     });
   }
 
@@ -85,16 +101,15 @@ export class PersonaService {
    * Set the active persona and update state
    * Sets the primary persona, the full list of active personas, and access flags
    */
-  public setPersonas(primary: PersonaType, all: PersonaType[], multiProject = false, multiFoundation = false): void {
+  public setPersonas(primary: PersonaType, all: PersonaType[], multiProject = false, multiFoundation = false, organizations?: Account[]): void {
     this.currentPersona.set(primary);
     this.allPersonas.set(all);
     this.multiProject.set(multiProject);
     this.multiFoundation.set(multiFoundation);
-    this.persistToCookie({ primary, all, multiProject, multiFoundation });
-
-    if (this.isBoardScoped()) {
-      this.projectContextService.clearProject();
+    if (organizations !== undefined) {
+      this.lastKnownOrganizations.set(organizations);
     }
+    this.persistToCookie({ primary, all, multiProject, multiFoundation, organizations: this.lastKnownOrganizations() });
   }
 
   /**
@@ -114,6 +129,7 @@ export class PersonaService {
             currentPersona: this.currentPersona(),
             allPersonas: this.allPersonas(),
           });
+          this.personaLoaded.set(true);
           return;
         }
 
@@ -124,8 +140,28 @@ export class PersonaService {
         // Update persona state if API returned data — reuse setPersonas() for
         // consistent side effects (board-scoped project clearing, cookie persistence)
         if (response.personas.length > 0) {
-          this.setPersonas(response.personas[0], response.personas, response.multiProject, response.multiFoundation);
+          this.setPersonas(response.personas[0], response.personas, response.multiProject, response.multiFoundation, response.organizations);
+        } else if (response.organizations) {
+          // Persist organizations even when no personas changed (edge case: board member without persona roles)
+          this.lastKnownOrganizations.set(response.organizations);
+          this.persistToCookie({
+            primary: this.currentPersona(),
+            all: this.allPersonas(),
+            multiProject: this.multiProject(),
+            multiFoundation: this.multiFoundation(),
+            organizations: response.organizations,
+          });
         }
+
+        // Always sync organizations to account context service (including empty arrays to clear stale state)
+        if (response.organizations) {
+          if (response.organizations.length > 0) {
+            console.info('[PersonaService] Detected organizations:', response.organizations);
+          }
+          this.accountContextService.initializeUserOrganizations(response.organizations);
+        }
+
+        this.personaLoaded.set(true);
       });
   }
 

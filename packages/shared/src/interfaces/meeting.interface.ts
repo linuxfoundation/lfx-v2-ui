@@ -234,6 +234,10 @@ export interface Meeting {
   project_name: string;
   /** Project slug */
   project_slug: string;
+  /** Whether the project is a foundation (top-level entity) */
+  is_foundation?: boolean;
+  /** Parent project UID (for subprojects under a foundation) */
+  parent_project_uid?: string;
 }
 
 /**
@@ -894,7 +898,7 @@ export interface MeetingRsvp {
   /** User's email address */
   email: string;
   /** User's RSVP response */
-  response: RsvpResponse;
+  response_type: RsvpResponse;
   /** Scope of the RSVP (which occurrences it applies to) */
   scope: RsvpScope;
   /** Occurrence ID (empty string when no specific occurrence) */
@@ -994,4 +998,34 @@ export interface UrlMetadataRequest {
 /** Response body for POST /api/url-metadata */
 export interface UrlMetadataResponse {
   results: UrlMetadata[];
+}
+
+/**
+ * Response from public past meeting endpoint
+ * @description Returns meeting details with tiered access — full_access indicates whether
+ * the user has permission to view enrichment data (summary, recording, attachments)
+ * via the existing authenticated endpoints
+ */
+export interface PublicPastMeetingResponse {
+  meeting: PastMeeting;
+  project: { name: string; slug: string; logo_url: string; uid: string; parent_uid: string };
+  full_access: boolean;
+}
+
+/**
+ * Parsed section from an AI-generated meeting summary
+ * @description Represents a structured section extracted from markdown `##` headings
+ * in meeting summaries, with visual styling metadata for display
+ */
+export interface SummarySection {
+  /** Section heading text (from ## heading) */
+  heading: string;
+  /** Section body content (markdown between headings) */
+  content: string;
+  /** Font Awesome icon class for the section */
+  icon: string;
+  /** Tailwind border-left color class */
+  borderColor: string;
+  /** Tailwind text color class for the icon */
+  iconColor: string;
 }

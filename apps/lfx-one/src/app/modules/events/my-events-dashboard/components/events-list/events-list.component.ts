@@ -2,19 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, inject, input, Signal, signal, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { EventTab, EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
-import { catchError, combineLatest, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { EventRequestListComponent } from '../event-request-list/event-request-list.component';
 import { EventsTableComponent } from '../events-table/events-table.component';
 
 @Component({
   selector: 'lfx-events-list',
-  imports: [NgClass, EventsTableComponent],
+  imports: [NgClass, EventsTableComponent, EventRequestListComponent],
   templateUrl: './events-list.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsListComponent {
   private readonly eventsService = inject(EventsService);
@@ -24,6 +26,8 @@ export class EventsListComponent {
   public readonly searchQuery = input<string>('');
   public readonly role = input<string | null>(null);
   public readonly status = input<string | null>(null);
+
+  public readonly activeTabChange = output<EventTabId>();
 
   protected readonly activeTab = signal<EventTabId>('upcoming');
 
@@ -48,10 +52,17 @@ export class EventsListComponent {
     { id: 'travel-funding', label: 'Travel Funding' },
   ];
 
-  protected readonly tabCounts = computed(() => ({
+  public readonly tabCounts = computed(() => ({
     upcoming: this.upcomingEvents().total,
     past: this.pastEvents().total,
   }));
+
+  // Me lens stat cards (public so parent can render them above filters)
+  public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.pastEventsLoading());
+  public readonly registeredCount = computed(() => this.upcomingEvents().data.filter((e) => e.isRegistered).length);
+  public readonly attendedCount = computed(() => this.pastEvents().total);
+  public readonly nextEventName = computed(() => this.upcomingEvents().data[0]?.name ?? '');
+  public readonly availableToJoinCount = computed(() => this.upcomingEvents().data.filter((e) => !e.isRegistered).length);
 
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
@@ -65,6 +76,7 @@ export class EventsListComponent {
 
   protected setActiveTab(tab: EventTabId): void {
     this.activeTab.set(tab);
+    this.activeTabChange.emit(tab);
   }
 
   protected onUpcomingPageChange(event: PageChangeEvent): void {
@@ -124,6 +136,7 @@ export class EventsListComponent {
           sortOrder: sortOrderSignal(),
         }))
       ).pipe(
+        debounceTime(0),
         tap(() => loadingSignal.set(true)),
         switchMap(({ offset, pageSize, projectName, searchQuery, role, status, sortField, sortOrder }) =>
           this.eventsService.getMyEvents({ isPast, offset, pageSize, projectName, searchQuery, role, status, sortField, sortOrder }).pipe(

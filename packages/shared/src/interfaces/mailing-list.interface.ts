@@ -102,6 +102,10 @@ export interface GroupsIOMailingList {
   project_name: string;
   /** Associated project slug (inherited from parent service) */
   project_slug: string;
+  /** Whether the project is a foundation (top-level entity) */
+  is_foundation?: boolean;
+  /** Parent project UID (for subprojects under a foundation) */
+  parent_project_uid?: string;
   /** Audit timestamp (nullable) */
   last_reviewed_at?: string | null;
   /** Auditor user ID (nullable) */
@@ -124,6 +128,19 @@ export interface GroupsIOMailingList {
   subscriber_count: number;
   /** Whether the current user has write access (response-only, set by access check) */
   writer?: boolean;
+}
+
+/**
+ * Mailing list with current user's membership details
+ * @description Extended mailing list data including the user's subscription info for "me" lens views
+ */
+export interface MyMailingList extends GroupsIOMailingList {
+  /** User's delivery mode in this mailing list (e.g., "Normal", "Digest", "None") */
+  my_delivery_mode: MailingListMemberDeliveryMode;
+  /** User's moderation status in this mailing list (e.g., "none", "moderator", "owner") */
+  my_mod_status: MailingListMemberModStatus;
+  /** User's member UID in this mailing list */
+  my_member_uid?: string;
 }
 
 /**

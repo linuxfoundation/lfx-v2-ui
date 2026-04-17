@@ -24,6 +24,12 @@ export const routes: Routes = [
         data: { lens: 'foundation' },
         loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent),
       },
+      // Foundation Lens — Health Metrics page (ED-only)
+      {
+        path: 'foundation/health-metrics',
+        data: { lens: 'foundation' },
+        loadComponent: () => import('./modules/dashboards/health-metrics/health-metrics.component').then((m) => m.HealthMetricsComponent),
+      },
       // Project Lens dashboard (placeholder — reuses DashboardComponent for now)
       {
         path: 'project/overview',
@@ -61,6 +67,10 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/surveys/surveys.routes').then((m) => m.SURVEY_ROUTES),
       },
       {
+        path: 'documents',
+        loadChildren: () => import('./modules/documents/documents.routes').then((m) => m.DOCUMENT_ROUTES),
+      },
+      {
         path: 'settings',
         loadChildren: () => import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
@@ -69,13 +79,12 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
       {
-        path: 'me/events',
-        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
+        path: 'me/training',
+        loadChildren: () => import('./modules/trainings/trainings.routes').then((m) => m.TRAINING_ROUTES),
       },
       {
         path: 'events',
-        data: { lens: 'foundation' },
-        loadChildren: () => import('./modules/events/events.routes').then((m) => m.FOUNDATION_EVENTS_ROUTES),
+        loadChildren: () => import('./modules/events/events.routes').then((m) => m.EVENTS_ROUTES),
       },
     ],
   },

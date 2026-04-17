@@ -68,6 +68,8 @@ export interface PastMeetingAttachment {
   uid: string;
   /** Hyphenated meeting and occurrence ID (e.g., "12343245463-1630560600000") */
   meeting_and_occurrence_id: string;
+  /** ID of the originating active meeting */
+  meeting_id: string;
   /** Attachment type: 'file' for uploaded files, 'link' for external URLs */
   type: 'file' | 'link';
   /** Category of the attachment */
@@ -98,6 +100,20 @@ export interface PastMeetingAttachment {
   updated_at?: string;
   /** User who last updated the attachment */
   updated_by?: AttachmentUserInfo;
+}
+
+/**
+ * Display metadata for a file attachment based on its extension
+ */
+export interface FileTypeDisplay {
+  /** Font Awesome icon class */
+  icon: string;
+  /** Tailwind background color class */
+  bgColor: string;
+  /** Tailwind text color class */
+  textColor: string;
+  /** Short uppercase label (e.g. 'PDF', 'DOCX') */
+  label: string;
 }
 
 /**

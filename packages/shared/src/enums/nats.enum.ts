@@ -6,6 +6,7 @@
  */
 export enum NatsSubjects {
   PROJECT_SLUG_TO_UID = 'lfx.projects-api.slug_to_uid',
+  PROJECT_GET_NAME = 'lfx.projects-api.get_name',
   USER_METADATA_UPDATE = 'lfx.auth-service.user_metadata.update',
   USER_METADATA_READ = 'lfx.auth-service.user_metadata.read',
   EMAIL_TO_USERNAME = 'lfx.auth-service.email_to_username',
@@ -22,4 +23,5 @@ export enum NatsSubjects {
   PASSWORD_UPDATE = 'lfx.auth-service.password.update',
   LOOKUP_V1_MAPPING = 'lfx.lookup_v1_mapping',
   PERSONAS_GET = 'lfx.personas-api.get',
+  IMPERSONATION_TOKEN_EXCHANGE = 'lfx.auth-service.impersonation.token_exchange',
 }

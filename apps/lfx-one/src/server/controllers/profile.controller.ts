@@ -626,7 +626,6 @@ export class ProfileController {
 
       res.json(displayIdentities);
     } catch (error) {
-      logger.error(req, 'get_identities', startTime, error);
       next(error);
     }
   }
@@ -662,7 +661,6 @@ export class ProfileController {
 
       res.json(workExperiences);
     } catch (error) {
-      logger.error(req, 'get_work_experiences', startTime, error);
       next(error);
     }
   }
@@ -698,7 +696,6 @@ export class ProfileController {
 
       res.json(affiliations);
     } catch (error) {
-      logger.error(req, 'get_project_affiliations', startTime, error);
       next(error);
     }
   }
@@ -790,7 +787,6 @@ export class ProfileController {
       logger.success(req, 'reject_identity', startTime, { lfid, identity_id: identityId });
       res.json({ success: true });
     } catch (error) {
-      logger.error(req, 'reject_identity', startTime, error);
       next(error);
     }
   }
@@ -835,7 +831,6 @@ export class ProfileController {
       logger.success(req, 'confirm_work_experience', startTime, { lfid, work_experience_id: workExperienceId });
       res.json({ success: true });
     } catch (error) {
-      logger.error(req, 'confirm_work_experience', startTime, error);
       next(error);
     }
   }
@@ -892,7 +887,6 @@ export class ProfileController {
       logger.success(req, 'patch_project_affiliation', startTime, { lfid, project_id: projectId, affiliation_count: affiliations.length });
       res.json({ success: true });
     } catch (error) {
-      logger.error(req, 'patch_project_affiliation', startTime, error);
       next(error);
     }
   }
@@ -937,7 +931,6 @@ export class ProfileController {
       logger.success(req, 'delete_work_experience', startTime, { lfid, work_experience_id: workExperienceId });
       res.json({ success: true });
     } catch (error) {
-      logger.error(req, 'delete_work_experience', startTime, error);
       next(error);
     }
   }
@@ -1004,7 +997,6 @@ export class ProfileController {
       logger.success(req, 'update_work_experience', startTime, { lfid, work_experience_id: workExperienceId });
       res.json({ success: true });
     } catch (error) {
-      logger.error(req, 'update_work_experience', startTime, error);
       next(error);
     }
   }
@@ -1059,7 +1051,6 @@ export class ProfileController {
       logger.success(req, 'create_work_experience', startTime, { lfid });
       res.status(201).json({ success: true });
     } catch (error) {
-      logger.error(req, 'create_work_experience', startTime, error);
       next(error);
     }
   }
@@ -1484,7 +1475,6 @@ export class ProfileController {
         }
       }
     } catch (error) {
-      logger.error(req, 'send_email_verification', startTime, error);
       next(error);
     }
   }
@@ -1629,7 +1619,6 @@ export class ProfileController {
       logger.success(req, 'verify_and_link_email', startTime, { email });
       res.json({ success: true, message: 'Email identity verified and linked successfully' });
     } catch (error) {
-      logger.error(req, 'verify_and_link_email', startTime, error);
       next(error);
     }
   }

@@ -6,8 +6,8 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
-import { ACCOUNTS, DEV_PERSONA_PRESETS } from '@lfx-one/shared/constants';
-import { Account, DevPersonaPreset, isBoardScopedPersona } from '@lfx-one/shared/interfaces';
+import { DEV_PERSONA_PRESETS } from '@lfx-one/shared/constants';
+import { DevPersonaPreset, isBoardScopedPersona } from '@lfx-one/shared/interfaces';
 import { AccountContextService } from '@services/account-context.service';
 import { CookieRegistryService } from '@services/cookie-registry.service';
 import { FeatureFlagService } from '@services/feature-flag.service';
@@ -34,8 +34,8 @@ export class DevToolbarComponent {
   protected readonly showDevToolbar = this.featureFlagService.getBooleanFlag('dev-toolbar', true);
   protected readonly showOrganizationSelector = this.featureFlagService.getBooleanFlag('organization-selector', true);
 
-  // Organization selector options
-  protected readonly availableAccounts = ACCOUNTS;
+  // Organization selector options — includes detected orgs not in the predefined list
+  protected readonly availableAccounts = this.accountContextService.availableAccounts;
 
   // Dev persona presets for SelectButton
   protected readonly personaPresets = DEV_PERSONA_PRESETS;
@@ -65,11 +65,7 @@ export class DevToolbarComponent {
     this.form = new FormGroup({
       persona: new FormControl<string>(initialPreset.value, [Validators.required]),
       selectedAccountId: new FormControl<string>(this.accountContextService.selectedAccount().accountId),
-      selectedProjectUid: new FormControl<string>(
-        isBoardScopedPersona(currentPersona)
-          ? this.projectContextService.selectedFoundation()?.uid || ''
-          : this.projectContextService.selectedProject()?.uid || this.projectContextService.selectedFoundation()?.uid || ''
-      ),
+      selectedProjectUid: new FormControl<string>(this.projectContextService.activeContextUid()),
     });
 
     // Subscribe to persona preset changes
@@ -113,9 +109,9 @@ export class DevToolbarComponent {
       .get('selectedAccountId')
       ?.valueChanges.pipe(takeUntilDestroyed())
       .subscribe((value) => {
-        const selectedAccount = ACCOUNTS.find((acc) => acc.accountId === value);
+        const selectedAccount = this.availableAccounts().find((acc) => acc.accountId === value);
         if (selectedAccount) {
-          this.accountContextService.setAccount(selectedAccount as Account);
+          this.accountContextService.setAccount(selectedAccount);
         }
       });
 
@@ -128,6 +124,13 @@ export class DevToolbarComponent {
           this.activePreset.set(matchingPreset);
           this.form.get('persona')?.setValue(matchingPreset.value, { emitEvent: false });
         }
+      });
+
+    // Sync form when active context changes externally (e.g., lens switch, sidebar selection)
+    toObservable(this.projectContextService.activeContext)
+      .pipe(skip(1), takeUntilDestroyed())
+      .subscribe((ctx) => {
+        this.form.get('selectedProjectUid')?.setValue(ctx?.uid || '', { emitEvent: false });
       });
 
     // Subscribe to project/foundation selection changes

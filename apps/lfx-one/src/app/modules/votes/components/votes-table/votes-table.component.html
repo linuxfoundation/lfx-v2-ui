@@ -15,28 +15,50 @@
           data-testid="votes-search-input"></lfx-input-text>
       </div>
 
+      @if (showFoundationFilter()) {
+        <div class="w-full sm:w-56">
+          <lfx-select
+            [form]="searchForm"
+            control="foundationFilter"
+            size="small"
+            [options]="foundationOptions()"
+            [filter]="true"
+            filterPlaceholder="Search foundations..."
+            styleClass="w-full"
+            (onChange)="onFoundationFilterChange($event.value)"
+            data-testid="votes-foundation-filter">
+          </lfx-select>
+        </div>
+      }
+      @if (showProjectFilter()) {
+        <div class="w-full sm:w-56">
+          <lfx-select
+            [form]="searchForm"
+            control="projectFilter"
+            size="small"
+            [options]="projectOptions()"
+            [filter]="true"
+            filterPlaceholder="Search projects..."
+            styleClass="w-full"
+            (onChange)="projectFilterChange.emit($event.value)"
+            data-testid="votes-project-filter">
+          </lfx-select>
+        </div>
+      }
+
       <div class="w-full sm:w-auto sm:shrink-0">
         <lfx-select
           [form]="searchForm"
           control="group"
           size="small"
           [options]="groupOptions()"
-          placeholder="All Groups"
-          [showClear]="true"
           [filter]="true"
           filterPlaceholder="Search groups..."
           data-testid="votes-group-filter"></lfx-select>
       </div>
 
       <div class="w-full sm:w-auto sm:shrink-0">
-        <lfx-select
-          [form]="searchForm"
-          control="status"
-          size="small"
-          [options]="statusOptions()"
-          placeholder="All Statuses"
-          [showClear]="true"
-          data-testid="votes-status-filter"></lfx-select>
+        <lfx-select [form]="searchForm" control="status" size="small" [options]="statusOptions()" data-testid="votes-status-filter"></lfx-select>
       </div>
 
       <ng-content select="[tableActions]"></ng-content>

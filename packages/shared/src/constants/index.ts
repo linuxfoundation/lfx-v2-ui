@@ -43,3 +43,5 @@ export * from './links.config';
 export * from './copilot.constants';
 export * from './committee-documents.constants';
 export * from './lens.constants';
+export * from './training.constants';
+export * from './documents.constants';

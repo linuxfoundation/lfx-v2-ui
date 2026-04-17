@@ -3,6 +3,7 @@
 
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import {
   CdpProjectAffiliation,
@@ -12,10 +13,12 @@ import {
   CreateUserPermissionRequest,
   EmailManagementData,
   EnrichedIdentity,
+  Impersonator,
   Meeting,
   PastMeeting,
   ProfileAuthStatus,
   ProfileUpdateRequest,
+  SalesforceIdResponse,
   SendEmailVerificationResponse,
   TwoFactorSettings,
   User,
@@ -24,7 +27,7 @@ import {
   WorkExperienceCreateUpdateBody,
   WorkExperienceEntry,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, take } from 'rxjs';
+import { catchError, distinctUntilChanged, map, Observable, of, shareReplay, skip, startWith, Subject, switchMap, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -35,7 +38,38 @@ export class UserService {
 
   public authenticated: WritableSignal<boolean> = signal<boolean>(false);
   public user: WritableSignal<User | null> = signal<User | null>(null);
+  public impersonating: WritableSignal<boolean> = signal<boolean>(false);
+  public impersonator: WritableSignal<Impersonator | null> = signal<Impersonator | null>(null);
+  public canImpersonate: WritableSignal<boolean> = signal<boolean>(false);
   public readonly userInitials: Signal<string> = this.initUserInitials();
+  /** Cached Salesforce user ID from the API Gateway — null until first fetch */
+  public readonly apiGatewayUserId = signal<string | null>(null);
+
+  private readonly userMeetingsRefresh$ = new Subject<void>();
+  private readonly userPastMeetingsRefresh$ = new Subject<void>();
+  private userMeetings$: Observable<Meeting[]> | null = null;
+  private userPastMeetings$: Observable<PastMeeting[]> | null = null;
+
+  public constructor() {
+    // Invalidate cached user-scoped observables when the authenticated user or
+    // impersonation changes, so existing subscribers don't see stale data from
+    // the previous user. Keyed on username (covers both login/logout and
+    // impersonation start/stop). Skip the initial emission since the caches
+    // are lazy-initialized and haven't been populated yet.
+    toObservable(this.user)
+      .pipe(
+        map((u) => u?.username ?? null),
+        distinctUntilChanged(),
+        skip(1),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        this.userMeetings$ = null;
+        this.userPastMeetings$ = null;
+        this.userMeetingsRefresh$.next();
+        this.userPastMeetingsRefresh$.next();
+      });
+  }
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {
@@ -107,38 +141,63 @@ export class UserService {
   }
 
   /**
-   * Gets all meetings for the current authenticated user
-   * Returns meetings the user is registered for across all projects
-   * @param limit - Optional limit on number of meetings to return
+   * Gets all meetings for the current authenticated user.
+   * Returns a shared, cached observable. Call refreshUserMeetings() after
+   * any mutation that could change the list (e.g. new registration) to
+   * push fresh data to all subscribers.
    */
-  public getUserMeetings(limit?: number): Observable<Meeting[]> {
-    const params: Record<string, string> = {};
-    if (limit !== undefined) {
-      params['limit'] = limit.toString();
+  public getUserMeetings(): Observable<Meeting[]> {
+    if (!this.userMeetings$) {
+      this.userMeetings$ = this.userMeetingsRefresh$.pipe(
+        startWith(undefined),
+        switchMap(() =>
+          this.http.get<Meeting[]>('/api/user/meetings').pipe(
+            catchError((error) => {
+              console.error('Failed to load user meetings:', error);
+              return of([]);
+            })
+          )
+        ),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
     }
-    return this.http.get<Meeting[]>('/api/user/meetings', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load user meetings:', error);
-        return of([]);
-      })
-    );
+    return this.userMeetings$;
   }
 
   /**
-   * Gets past meetings for the current authenticated user
-   * @param limit - Optional limit on number of past meetings to return
+   * Gets past meetings for the current authenticated user.
+   * Call refreshUserPastMeetings() to re-fetch.
    */
-  public getUserPastMeetings(limit?: number): Observable<PastMeeting[]> {
-    const params: Record<string, string> = {};
-    if (limit !== undefined) {
-      params['limit'] = limit.toString();
+  public getUserPastMeetings(): Observable<PastMeeting[]> {
+    if (!this.userPastMeetings$) {
+      this.userPastMeetings$ = this.userPastMeetingsRefresh$.pipe(
+        startWith(undefined),
+        switchMap(() =>
+          this.http.get<PastMeeting[]>('/api/user/past-meetings').pipe(
+            catchError((error) => {
+              console.error('Failed to load user past meetings:', error);
+              return of([]);
+            })
+          )
+        ),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
     }
-    return this.http.get<PastMeeting[]>('/api/user/past-meetings', { params }).pipe(
-      catchError((error) => {
-        console.error('Failed to load user past meetings:', error);
-        return of([]);
-      })
-    );
+    return this.userPastMeetings$;
+  }
+
+  /**
+   * Re-fetch the user's upcoming meetings. All current subscribers receive the new data.
+   */
+  public refreshUserMeetings(): void {
+    this.userMeetingsRefresh$.next();
+  }
+
+  /**
+   * Re-fetch the user's past meetings. All current subscribers receive the new data.
+   */
+  public refreshUserPastMeetings(): void {
+    this.userPastMeetingsRefresh$.next();
   }
 
   /**
@@ -252,6 +311,13 @@ export class UserService {
    */
   public verifyAndLinkEmail(email: string, otp: string): Observable<VerifyAndLinkEmailResponse> {
     return this.http.post<VerifyAndLinkEmailResponse>('/api/profile/identities/email/verify', { email, otp }).pipe(take(1));
+  }
+
+  /**
+   * Fetches the current user's API Gateway profile (includes Salesforce ID).
+   */
+  public getSalesforceId(): Observable<SalesforceIdResponse> {
+    return this.http.get<SalesforceIdResponse>('/api/user/salesforce-id').pipe(take(1));
   }
 
   private initUserInitials(): Signal<string> {
