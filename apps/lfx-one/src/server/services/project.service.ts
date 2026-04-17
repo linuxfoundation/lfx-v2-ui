@@ -3,19 +3,34 @@
 
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
-import { computeIsFoundation } from '@lfx-one/shared/utils';
 import {
+  BrandHealthResponse,
+  BrandHealthTopProject,
+  BrandReachPlatformType,
+  BrandReachResponse,
   CodeCommitsDailyResponse,
+  CodeContributionRange,
+  CodeContributionSummaryResponse,
+  EmailCtrResponse,
+  EngagedCommunitySizeResponse,
+  EventGrowthResponse,
+  EventGrowthTopEvent,
+  EventsSummaryResponse,
+  FlywheelConversionResponse,
+  FoundationActiveContributorsMonthlyResponse,
+  FoundationActiveContributorsMonthlyRow,
   FoundationCodeCommitsDailyRow,
+  FoundationContributorsDistributionResponse,
+  FoundationContributorsDistributionRow,
   FoundationContributorsMentoredResponse,
   FoundationContributorsMentoredRow,
-  FoundationHealthEventsMonthlyRow,
-  FoundationHealthScoreDistributionResponse,
-  FoundationHealthScoreDistributionRow,
   FoundationEventsAttendanceDistributionResponse,
   FoundationEventsAttendanceDistributionRow,
   FoundationEventsQuarterlyResponse,
   FoundationEventsQuarterlyRow,
+  FoundationHealthEventsMonthlyRow,
+  FoundationHealthScoreDistributionResponse,
+  FoundationHealthScoreDistributionRow,
   FoundationMaintainersDailyRow,
   FoundationMaintainersDistributionResponse,
   FoundationMaintainersDistributionRow,
@@ -26,25 +41,30 @@ import {
   FoundationProjectsDetailRow,
   FoundationProjectsLifecycleDistributionResponse,
   FoundationProjectsLifecycleDistributionRow,
-  LifecycleStage,
   FoundationSoftwareValueResponse,
-  FoundationValueConcentrationResponse,
-  FoundationValueConcentrationRow,
-  FoundationTotalProjectsMonthlyRow,
   FoundationTopProjectBySoftwareValueRow,
   FoundationTotalMembersResponse,
+  FoundationTotalProjectsMonthlyRow,
   FoundationTotalProjectsResponse,
-  FoundationActiveContributorsMonthlyRow,
-  FoundationActiveContributorsMonthlyResponse,
-  FoundationContributorsDistributionResponse,
-  FoundationContributorsDistributionRow,
   FoundationUniqueContributorsDailyRow,
+  FoundationValueConcentrationResponse,
+  FoundationValueConcentrationRow,
   HealthEventsMonthlyResponse,
   HealthMetricsAggregatedRow,
   HealthMetricsDailyResponse,
+  LifecycleStage,
+  MemberAcquisitionResponse,
+  MemberRetentionResponse,
+  MembershipChurnPerTierSummaryResponse,
   MonthlyMemberCountWithFoundation,
+  MultiFoundationSummaryResponse,
+  NorthStarMonthlyDataPoint,
+  NpsSummaryResponse,
+  OutstandingBalanceSummaryResponse,
+  ParticipatingOrgsSummaryResponse,
   PendingActionItem,
   PendingSurveyRow,
+  PerFoundationAnalytics,
   Project,
   ProjectCodeCommitsDailyRow,
   ProjectHealthEventsMonthlyRow,
@@ -60,34 +80,16 @@ import {
   ProjectSlugToIdResponse,
   ProjectUniqueContributorsDailyRow,
   QueryServiceResponse,
+  RevenueImpactResponse,
+  SocialMediaResponse,
+  SocialReachResponse,
+  TrainingCertificationSummaryResponse,
   UniqueContributorsDailyResponse,
   UniqueContributorsWeeklyResponse,
   UniqueContributorsWeeklyRow,
   WebActivitiesSummaryResponse,
-  EmailCtrResponse,
-  SocialMediaResponse,
-  SocialReachResponse,
-  MemberRetentionResponse,
-  MemberAcquisitionResponse,
-  EngagedCommunitySizeResponse,
-  FlywheelConversionResponse,
-  NorthStarMonthlyDataPoint,
-  MembershipChurnPerTierSummaryResponse,
-  NpsSummaryResponse,
-  OutstandingBalanceSummaryResponse,
-  ParticipatingOrgsSummaryResponse,
-  EventsSummaryResponse,
-  TrainingCertificationSummaryResponse,
-  CodeContributionSummaryResponse,
-  CodeContributionRange,
-  EventGrowthResponse,
-  EventGrowthTopEvent,
-  BrandReachResponse,
-  BrandReachPlatformType,
-  BrandHealthResponse,
-  BrandHealthTopProject,
-  RevenueImpactResponse,
 } from '@lfx-one/shared/interfaces';
+import { computeIsFoundation } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { ResourceNotFoundError, ServiceValidationError } from '../errors';
@@ -154,7 +156,6 @@ export class ProjectService {
     const params = {
       ...query,
       type: 'project',
-      page_size: 100,
     };
 
     const resources = await fetchAllQueryResources<Project>(req, (pageToken) =>
@@ -4156,7 +4157,6 @@ export class ProjectService {
         v: '1',
         type: 'project',
         parent: `project:${foundationUid}`,
-        page_size: 200,
       });
       for (const r of resources) {
         if (r.data?.uid) {
@@ -4194,9 +4194,7 @@ export class ProjectService {
 
     for (let i = 0; i < projectUids.length; i += batchSize) {
       const batch = projectUids.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map(async (uid) => this.getProjectById(req, uid, false).catch(() => null))
-      );
+      const results = await Promise.all(batch.map(async (uid) => this.getProjectById(req, uid, false).catch(() => null)));
       projects.push(...results);
     }
 
@@ -4219,6 +4217,73 @@ export class ProjectService {
     });
   }
 
+  /**
+   * Get aggregated analytics across multiple foundations in a single request
+   * Fetches total projects, total members, value concentration, and health score
+   * distribution for each slug in parallel, then aggregates.
+   * Individual foundation failures are handled gracefully — they are logged and skipped.
+   * @param req - Express request for logger correlation
+   * @param slugs - Array of foundation slugs (e.g., ['cncf', 'tlf', 'lf-energy'])
+   * @returns Aggregated totals and per-foundation breakdown
+   */
+  public async getMultiFoundationSummary(req: Request, slugs: string[]): Promise<MultiFoundationSummaryResponse> {
+    logger.debug(req, 'get_multi_foundation_summary', 'Fetching analytics for multiple foundations', {
+      slug_count: slugs.length,
+      slugs,
+    });
+
+    const perFoundation: Record<string, PerFoundationAnalytics> = {};
+    const aggregated = { totalValue: 0, totalProjects: 0, totalMembers: 0 };
+
+    const results = await Promise.allSettled(
+      slugs.map(async (slug) => {
+        const [totalProjectsData, totalMembersData, valueConcentrationData, healthScoreData] = await Promise.all([
+          this.getFoundationTotalProjects(slug),
+          this.getFoundationTotalMembers(slug),
+          this.getFoundationValueConcentration(slug),
+          this.getFoundationHealthScoreDistribution(slug),
+        ]);
+
+        return {
+          slug,
+          totalProjects: totalProjectsData.totalProjects,
+          totalMembers: totalMembersData.totalMembers,
+          totalValue: valueConcentrationData.totalValue,
+          healthScores: healthScoreData,
+        };
+      })
+    );
+
+    logger.debug(req, 'get_multi_foundation_summary', 'All foundation queries resolved', {
+      fulfilled: results.filter((r) => r.status === 'fulfilled').length,
+      rejected: results.filter((r) => r.status === 'rejected').length,
+    });
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        const { slug, totalProjects, totalMembers, totalValue, healthScores } = result.value;
+        perFoundation[slug] = { totalProjects, totalMembers, totalValue, healthScores };
+        aggregated.totalProjects += totalProjects;
+        aggregated.totalMembers += totalMembers;
+        aggregated.totalValue += totalValue;
+      } else {
+        logger.warning(req, 'get_multi_foundation_summary', 'Failed to fetch analytics for a foundation', {
+          slug: slugs[i],
+          error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+        });
+      }
+    });
+
+    logger.debug(req, 'get_multi_foundation_summary', 'Completed multi-foundation summary', {
+      total_slugs: slugs.length,
+      successful: Object.keys(perFoundation).length,
+      aggregated_projects: aggregated.totalProjects,
+      aggregated_members: aggregated.totalMembers,
+    });
+
+    return { aggregated, perFoundation };
+  }
+
   private getRangeSuffix(range: string, convention: string = 'standard'): string {
     const map = ProjectService.rangeSuffixMap[convention];
     return map?.[range] ?? map?.['YTD'] ?? '_ytd';
@@ -4230,5 +4295,4 @@ export class ProjectService {
     const lastUnderscore = full.lastIndexOf('_');
     return { prefix: full.substring(0, lastUnderscore + 1), suffix: full.substring(lastUnderscore + 1) };
   }
-
 }

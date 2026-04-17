@@ -26,7 +26,7 @@ const DETECTION_SOURCE_MAP: Record<string, PersonaType> = {
 };
 
 /** Persona priority order (highest first) for sorting */
-const PERSONA_PRIORITY: PersonaType[] = ['board-member', 'executive-director', 'maintainer', 'contributor'];
+const PERSONA_PRIORITY: PersonaType[] = ['executive-director', 'board-member', 'maintainer', 'contributor'];
 
 /** TTL for the affiliated-project-UIDs cache, in milliseconds */
 const AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS = 15_000;
@@ -404,7 +404,7 @@ export class PersonaDetectionService {
 
       if (detection.source === 'cdp_roles' && detection.extra) {
         const roles = detection.extra['roles'] as { role: string }[] | undefined;
-        if (roles?.some((r) => r.role === 'Maintainer')) {
+        if (roles?.some((r) => typeof r.role === 'string' && r.role.toLowerCase() === 'maintainer')) {
           personas.add('maintainer');
           continue;
         }
@@ -415,6 +415,13 @@ export class PersonaDetectionService {
 
     if (personas.size === 0) {
       personas.add('contributor');
+    }
+
+    // Contributor is implied by any specific role — if a project already has
+    // board-member, executive-director, or maintainer, drop contributor so the
+    // project only appears under the more specific persona(s).
+    if (personas.size > 1 && personas.has('contributor')) {
+      personas.delete('contributor');
     }
 
     return Array.from(personas);

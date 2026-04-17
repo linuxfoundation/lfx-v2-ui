@@ -6,6 +6,7 @@ import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
+  ApiGatewayUserProfile,
   Meeting,
   MeetingOccurrence,
   MeetingRegistrant,
@@ -472,10 +473,9 @@ export class UserService {
    * @param req - Express request object
    * @param email - User's email address for registrant lookup
    * @param projectUid - Optional project UID to filter meetings by
-   * @param limit - Optional limit on number of meetings to return
    * @returns Array of Meeting objects the user is registered for
    */
-  public async getUserMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<Meeting[]> {
+  public async getUserMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
     const meetingIds = await this.getUserRegisteredMeetingIds(req, email);
 
     logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', { meeting_count: meetingIds.size });
@@ -490,23 +490,12 @@ export class UserService {
       foundationProjectUids = new Set(uids);
     }
 
-    const meetings = await this.fetchByIdFilterAndLimit<Meeting>(
-      req,
-      meetingIds,
-      '/itx/meetings',
-      'get_user_meetings',
-      projectUid,
-      undefined,
-      foundationProjectUids
-    );
+    const meetings = await this.fetchByIdFilter<Meeting>(req, meetingIds, '/itx/meetings', 'get_user_meetings', projectUid, foundationProjectUids);
 
-    // Sort by start_time ascending (soonest first) before applying limit
-    // so the limit returns the most relevant upcoming meetings
+    // Sort by start_time ascending (soonest first)
     meetings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
-    const limited = limit !== undefined && limit > 0 ? meetings.slice(0, limit) : meetings;
-
-    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+    const enriched = await this.meetingService.getMeetingProjectName(req, meetings);
 
     return this.accessCheckService.addAccessToResources(req, enriched, 'v1_meeting', 'organizer');
   }
@@ -518,17 +507,15 @@ export class UserService {
    * @param req - Express request object
    * @param email - User's email address for participant lookup
    * @param projectUid - Optional project UID to filter meetings by
-   * @param limit - Optional limit on number of past meetings to return
    * @returns Array of PastMeeting objects the user participated in
    */
-  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, limit?: number, foundationUid?: string): Promise<PastMeeting[]> {
+  public async getUserPastMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<PastMeeting[]> {
     // Step 1: Get all past meeting participant records for this user via query service
     // Uses fetchAllQueryResources to auto-paginate through all pages and dual email+username
     // lookup for complete coverage (same pattern as getPastMeetingOccurrenceIds)
     logger.debug(req, 'get_user_past_meetings', 'Starting past meeting lookup for user', {
       has_project_filter: !!projectUid,
       has_foundation_filter: !!foundationUid,
-      limit,
     });
 
     const normalizedEmail = email.toLowerCase();
@@ -549,7 +536,6 @@ export class UserService {
         {
           type: 'v1_past_meeting_participant',
           tags: `email:${normalizedEmail}`,
-          page_size: 100,
           ...(pageToken && { page_token: pageToken }),
         },
         undefined,
@@ -575,7 +561,6 @@ export class UserService {
           {
             type: 'v1_past_meeting_participant',
             tags: `username:${plainUsername}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -606,30 +591,49 @@ export class UserService {
     }
 
     // Step 2: Fetch each past meeting and filter (limit applied after sorting)
-    const pastMeetings = await this.fetchByIdFilterAndLimit<PastMeeting>(
+    const pastMeetings = await this.fetchByIdFilter<PastMeeting>(
       req,
       pastMeetingIds,
       '/itx/past_meetings',
       'get_user_past_meetings',
       projectUid,
-      undefined,
       foundationProjectUids
     );
 
-    // Sort by scheduled_start_time descending (most recent first) before applying limit
-    // so the limit returns the most recent meetings rather than an arbitrary subset
-    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time).getTime() - new Date(a.scheduled_start_time).getTime());
+    // Sort by scheduled_start_time descending (most recent first)
+    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
 
-    const limited = limit !== undefined && limit > 0 ? pastMeetings.slice(0, limit) : pastMeetings;
+    // Populate participant and attended counts for each past meeting from the
+    // v1_past_meeting_participant records. Only fields derivable from participants
+    // are overwritten, and only on successful fetch; committee_members_count is
+    // preserved from upstream. On fetch failure, upstream counts are preserved
+    // to avoid flashing "0 of 0" during transient query-service errors.
+    await Promise.all(
+      pastMeetings.map(async (meeting) => {
+        const participants = await this.meetingService.getPastMeetingParticipants(req, meeting.id).catch((error) => {
+          logger.warning(req, 'get_user_past_meetings', 'Failed to fetch participants for past meeting, preserving upstream counts', {
+            past_meeting_id: meeting.id,
+            err: error,
+          });
+          return null;
+        });
+        if (participants === null) {
+          return;
+        }
+        meeting.participant_count = participants.length;
+        meeting.attended_count = participants.filter((p) => p.is_attended).length;
+        meeting.individual_registrants_count = participants.filter((p) => p.is_invited).length;
+      })
+    );
 
-    const enriched = await this.meetingService.getMeetingProjectName(req, limited);
+    const enriched = await this.meetingService.getMeetingProjectName(req, pastMeetings);
 
     return this.accessCheckService.addAccessToResources(req, enriched, 'v1_past_meeting', 'organizer');
   }
 
   /**
    * Gets all unique past meeting occurrence IDs (meeting_and_occurrence_id) the user participated in.
-   * Checks both email and username to find all participations.
+   * Checks both email and username to find all participation records.
    * M2M token required: participant queries search across all participants in the index,
    * which requires application-level credentials (user tokens lack cross-participant read access)
    * @param req - Express request object
@@ -712,7 +716,6 @@ export class UserService {
             type: 'v1_meeting_registrant',
             parent: '',
             tags: `email:${normalizedEmail}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -742,7 +745,6 @@ export class UserService {
             type: 'v1_meeting_registrant',
             parent: '',
             tags: `username:${plainUsername}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -763,14 +765,14 @@ export class UserService {
   }
 
   /**
-   * TODO: TEMPORARY — Proxy call to GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true
-   * Used to validate the API Gateway token end-to-end. Will be removed once the API Gateway
-   * integration is confirmed working in all environments.
+   * Fetches the current user's profile from the API Gateway (/user-service/v1/me).
+   * Returns the Salesforce-backed user profile including the Salesforce record ID (ID field).
+   * Used by downstream operations that require the user's Salesforce ID (e.g. visa and travel fund submissions).
    */
-  public async getApiGatewayProfile(req: Request): Promise<{ status: number; body: unknown }> {
+  public async getApiGatewayProfile(req: Request): Promise<ApiGatewayUserProfile> {
     if (!req.apiGatewayToken) {
       throw new MicroserviceError('API Gateway token not available — check API_GW_AUDIENCE env var and auth logs', 503, 'API_GATEWAY_UNAVAILABLE', {
-        operation: 'get_salesforce_id',
+        operation: 'get_api_gateway_profile',
         service: 'user_service',
       });
     }
@@ -779,7 +781,7 @@ export class UserService {
 
     if (!apiGwAudience) {
       throw new MicroserviceError('API_GW_AUDIENCE environment variable is not configured', 503, 'API_GATEWAY_MISCONFIGURED', {
-        operation: 'get_salesforce_id',
+        operation: 'get_api_gateway_profile',
         service: 'user_service',
       });
     }
@@ -794,32 +796,41 @@ export class UserService {
       signal: AbortSignal.timeout(30000),
     });
 
-    const rawBody = await upstream.text();
-
-    let body: unknown;
-
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
-      body = { raw: rawBody };
+    if (!upstream.ok) {
+      throw new MicroserviceError(`API Gateway returned ${upstream.status}`, upstream.status, 'API_GATEWAY_ERROR', {
+        operation: 'get_api_gateway_profile',
+        service: 'user_service',
+      });
     }
 
-    logger.debug(req, 'get_api_gateway_profile', 'API Gateway response received', { upstream_status: upstream.status, body_length: rawBody.length });
+    const rawBody = await upstream.text().catch(() => '');
+    let profile: ApiGatewayUserProfile;
 
-    return { status: upstream.status, body };
+    try {
+      profile = JSON.parse(rawBody) as ApiGatewayUserProfile;
+    } catch {
+      throw new MicroserviceError('API Gateway returned invalid JSON', 502, 'API_GATEWAY_INVALID_RESPONSE', {
+        operation: 'get_api_gateway_profile',
+        service: 'user_service',
+        errorBody: rawBody.slice(0, 500),
+      });
+    }
+
+    logger.debug(req, 'get_api_gateway_profile', 'API Gateway profile received', { salesforce_id: Boolean(profile.ID) });
+
+    return profile;
   }
 
   /**
-   * Fetches resources by ID in parallel, filters by project, and applies limit.
+   * Fetches resources by ID in parallel, filters by project.
    * Shared by getUserMeetings and getUserPastMeetings.
    */
-  private async fetchByIdFilterAndLimit<T extends { id: string; project_uid?: string }>(
+  private async fetchByIdFilter<T extends { id: string; project_uid?: string }>(
     req: Request,
     ids: string[] | Set<string>,
     endpoint: string,
     operation: string,
     projectUid?: string,
-    limit?: number,
     projectUids?: Set<string>
   ): Promise<T[]> {
     const results: T[] = [];
@@ -857,10 +868,6 @@ export class UserService {
       project_uid: projectUid ?? 'all',
       foundation_filter: projectUids ? projectUids.size : 0,
     });
-
-    if (limit !== undefined && limit > 0) {
-      filtered = filtered.slice(0, limit);
-    }
 
     return filtered;
   }
@@ -1032,5 +1039,4 @@ export class UserService {
       };
     }
   }
-
 }
