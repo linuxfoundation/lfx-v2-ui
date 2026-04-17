@@ -35,7 +35,7 @@ export class AboutMeFormComponent {
     citizenshipCountry: ['', Validators.required],
     profileLink: ['', Validators.required],
     company: ['', Validators.required],
-    organizationID: [''],
+    organizationID: ['', Validators.required],
     canReceiveFunds: ['', Validators.required],
     travelFromCountry: ['', Validators.required],
     accommodationNumberOfNights: [0, [Validators.required, Validators.min(0), Validators.max(4), Validators.pattern(/^\d+$/)]],
