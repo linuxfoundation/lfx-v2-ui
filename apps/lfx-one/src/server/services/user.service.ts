@@ -614,9 +614,9 @@ export class UserService {
 
   /**
    * Gets all unique past meeting occurrence IDs (meeting_and_occurrence_id) the user participated in.
-   * Checks both email and username to find all participation records.
-   * M2M token required: participant queries search across all participants in the index,
-   * which requires application-level credentials (user tokens lack cross-participant read access)
+   * Checks both email and username to find all participation records. Uses the user's bearer token;
+   * the query service enforces ACL via the `viewer` relation on `v1_past_meeting`, which
+   * `host`/`invitee`/`attendee` relations grant transitively.
    * @param req - Express request object
    * @returns Array of unique meeting_and_occurrence_id strings
    */

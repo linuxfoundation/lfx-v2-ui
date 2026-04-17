@@ -87,11 +87,10 @@ export class UserController {
         action_count: pendingActions.length,
       });
 
-      // User-scoped cache: Vary: X-User-Sub keys by current identity (set by userIdentityInterceptor).
-      res.set({
-        'Cache-Control': 'private, max-age=30, stale-while-revalidate=120',
-        Vary: 'X-User-Sub',
-      });
+      // Private, revalidate-every-time — server recomputes the response for the real
+      // authenticated identity on every hit, so 304 (cache-reuse) only fires when the server
+      // confirms the body is unchanged for this user. See getUserMeetings for full rationale.
+      res.set('Cache-Control', 'private, no-cache');
       res.json(pendingActions);
     } catch (error) {
       next(error);
@@ -135,14 +134,12 @@ export class UserController {
         meeting_count: meetings.length,
       });
 
-      // Browser-only cache, fresh for 30s, stale-while-revalidate for 2min.
-      // Vary: X-User-Sub — set by the userIdentityInterceptor on the frontend so the cache key
-      // changes on login/logout/impersonation. Using the sub (stable within a session) instead
-      // of the rolling session cookie avoids invalidating on every request.
-      res.set({
-        'Cache-Control': 'private, max-age=30, stale-while-revalidate=120',
-        Vary: 'X-User-Sub',
-      });
+      // Private, revalidate-every-time. Browser stores the body + ETag, but must check with the
+      // server (If-None-Match) before serving. The server recomputes the response for the real
+      // authenticated identity on every hit, so cross-user cache reads are impossible: different
+      // users produce different bodies → different ETags → 200 with fresh data. 304 responses
+      // skip the body entirely, which is where the bandwidth/parse savings come from.
+      res.set('Cache-Control', 'private, no-cache');
       res.json(meetings);
     } catch (error) {
       next(error);
@@ -186,12 +183,8 @@ export class UserController {
         past_meeting_count: pastMeetings.length,
       });
 
-      // Past meetings change less frequently; cache longer but still private/browser-only.
-      // Vary: X-User-Sub — see getUserMeetings for rationale.
-      res.set({
-        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
-        Vary: 'X-User-Sub',
-      });
+      // Private, revalidate-every-time — see getUserMeetings for full rationale.
+      res.set('Cache-Control', 'private, no-cache');
       res.json(pastMeetings);
     } catch (error) {
       next(error);

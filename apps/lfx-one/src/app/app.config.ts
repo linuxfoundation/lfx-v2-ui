@@ -11,7 +11,6 @@ import { lfxPreset } from '@linuxfoundation/lfx-ui-core';
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 import { authenticationInterceptor } from '@shared/interceptors/authentication.interceptor';
-import { userIdentityInterceptor } from '@shared/interceptors/user-identity.interceptor';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { DialogService } from 'primeng/dynamicdialog';
@@ -37,7 +36,7 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes, withPreloading(CustomPreloadingStrategy), withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideClientHydration(withEventReplay(), withIncrementalHydration(), withHttpTransferCacheOptions({ includeHeaders: ['Authorization'] })),
-    provideHttpClient(withFetch(), withInterceptors([authenticationInterceptor, userIdentityInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authenticationInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
