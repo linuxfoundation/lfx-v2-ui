@@ -75,7 +75,7 @@
           <!-- Type column -->
           <td>
             @if (transaction.transactionType) {
-              <lfx-tag [value]="transaction.transactionType" severity="secondary" [styleClass]="getTypeStyleClass(transaction.transactionType)" />
+              <lfx-tag [value]="transaction.transactionType" severity="secondary" [styleClass]="transaction.transactionType | transactionTypeStyle" />
             } @else {
               <span class="text-xs text-gray-400">&mdash;</span>
             }

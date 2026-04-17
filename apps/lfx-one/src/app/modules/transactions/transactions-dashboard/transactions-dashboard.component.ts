@@ -4,7 +4,7 @@
 // Generated with [Claude Code](https://claude.ai/code)
 
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   TRANSACTION_TYPE_BUNDLE,
@@ -19,6 +19,7 @@ import { FilterPillOption, Transaction } from '@lfx-one/shared/interfaces';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { TransactionTypeStylePipe } from '@pipes/transaction-type-style.pipe';
 import { TransactionService } from '@services/transaction.service';
 
 const PAGE_SUBTITLE = 'View your Linux Foundation purchase history. Recent purchases may take up to 48 hours to appear.';
@@ -33,15 +34,6 @@ const TAB_OPTIONS: FilterPillOption[] = [
   { id: 'individual-support', label: 'Individual Support' },
 ];
 
-const TYPE_STYLE_MAP: Record<string, string> = {
-  [TRANSACTION_TYPE_EVENT]: '!bg-blue-50 !text-blue-700',
-  [TRANSACTION_TYPE_TRAINING]: '!bg-emerald-50 !text-emerald-700',
-  [TRANSACTION_TYPE_CERTIFICATION]: '!bg-violet-50 !text-violet-700',
-  [TRANSACTION_TYPE_SUBSCRIPTION]: '!bg-amber-50 !text-amber-700',
-  [TRANSACTION_TYPE_INDIVIDUAL_SUPPORT]: '!bg-rose-50 !text-rose-700',
-  [TRANSACTION_TYPE_BUNDLE]: '!bg-teal-50 !text-teal-700',
-};
-
 const TAB_TYPE_MAP: Record<string, string> = {
   'event-tickets': TRANSACTION_TYPE_EVENT,
   training: TRANSACTION_TYPE_TRAINING,
@@ -53,7 +45,7 @@ const TAB_TYPE_MAP: Record<string, string> = {
 
 @Component({
   selector: 'lfx-transactions-dashboard',
-  imports: [FilterPillsComponent, TableComponent, TagComponent, CurrencyPipe, DatePipe],
+  imports: [FilterPillsComponent, TableComponent, TagComponent, CurrencyPipe, DatePipe, TransactionTypeStylePipe],
   templateUrl: './transactions-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -82,22 +74,10 @@ export class TransactionsDashboardComponent {
   protected readonly firstIndex: Signal<number> = computed(() => (this.filteredTransactions().length === 0 ? 0 : (this.currentPage() - 1) * this.pageSize + 1));
   protected readonly lastIndex: Signal<number> = computed(() => Math.min(this.currentPage() * this.pageSize, this.filteredTransactions().length));
 
-  public constructor() {
-    // Reset to page 1 when tab or filtered data changes
-    effect(() => {
-      this.filteredTransactions();
-      this.currentPage.set(1);
-    });
-  }
-
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {
     this.activeTab.set(tabId);
-  }
-
-  protected getTypeStyleClass(transactionType: string | null): string {
-    if (!transactionType) return '';
-    return TYPE_STYLE_MAP[transactionType] ?? '';
+    this.currentPage.set(1);
   }
 
   protected goToPage(page: number): void {
