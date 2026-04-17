@@ -14,7 +14,7 @@
           class="flex items-center gap-1.5 text-sm text-gray-600 cursor-help"
           tabindex="0"
           role="note"
-          aria-label="Event registration delay notice"
+          aria-describedby="my-events-registration-delay-description"
           pTooltip="Event registrations might take a while to show up. Just registered? It may take up to 1 hour to appear in your list."
           tooltipPosition="bottom"
           appendTo="body"
@@ -22,6 +22,7 @@
           <i class="fa-light fa-face-monocle text-lg" aria-hidden="true"></i>
           <span class="underline decoration-dotted">Can't see your registered event?</span>
         </span>
+        <span id="my-events-registration-delay-description" class="sr-only">Event registrations might take a while to show up. Just registered? It may take up to 1 hour to appear in your list.</span>
         <lfx-discover-events-button testId="my-events-discover-button" />
       </div>
     </div>
