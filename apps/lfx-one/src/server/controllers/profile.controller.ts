@@ -35,6 +35,13 @@ import { generateM2MToken } from '../utils/m2m-token.util';
  * Controller for handling profile HTTP requests
  */
 export class ProfileController {
+  private static readonly allowedProfileReturnPaths: ReadonlySet<string> = new Set([
+    '/profile',
+    '/profile/emails',
+    '/profile/identities',
+    '/profile/password',
+  ]);
+
   private auth0Service: Auth0Service = new Auth0Service();
   private cdpService: CdpService = new CdpService();
   private emailVerificationService: EmailVerificationService = new EmailVerificationService();
@@ -313,13 +320,19 @@ export class ProfileController {
 
       const primaryEmail = freshEmails?.primary_email || sessionEmail;
 
-      const alternateEmails: UserEmail[] = identities
-        .filter((id) => id.provider === 'email' && !!id.profileData?.email && id.profileData.email !== primaryEmail)
-        .map((id) => ({
-          email: id.profileData!.email as string,
-          verified: id.profileData?.['email_verified'] === true,
-          user_id: id.user_id,
-        }));
+      const alternateEmails: UserEmail[] = freshEmails?.alternate_emails
+        ? freshEmails.alternate_emails.map((ae) => ({
+            email: ae.email,
+            verified: ae.verified,
+            user_id: identities.find((id) => id.provider === 'email' && id.profileData?.email === ae.email)?.user_id,
+          }))
+        : identities
+            .filter((id) => id.provider === 'email' && !!id.profileData?.email && id.profileData.email !== primaryEmail)
+            .map((id) => ({
+              email: id.profileData!.email as string,
+              verified: id.profileData?.['email_verified'] === true,
+              user_id: id.user_id,
+            }));
 
       const emailData: EmailManagementData = {
         primary_email: primaryEmail,
@@ -341,7 +354,7 @@ export class ProfileController {
    * The :email param is the URL-encoded email address to make primary
    */
   public async setPrimaryEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
-    const emailAddress = decodeURIComponent(req.params['emailId'] ?? '');
+    const emailAddress = req.params['emailId'] ?? '';
     const startTime = logger.startOperation(req, 'set_primary_email', { email: emailAddress });
 
     try {
@@ -1058,8 +1071,7 @@ export class ProfileController {
   public async startProfileAuth(req: Request, res: Response): Promise<void> {
     const startTime = logger.startOperation(req, 'profile_auth_start');
 
-    const rawReturnTo = (req.query['returnTo'] as string) || '/profile';
-    const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/profile';
+    const returnTo = this.normalizeProfileReturnTo(req.query['returnTo']);
 
     if (!this.profileAuthService.isProfileAuthConfigured()) {
       logger.warning(req, 'profile_auth_start', 'Profile auth not configured', {});
@@ -1085,8 +1097,7 @@ export class ProfileController {
     const code = req.query['code'] as string;
     const state = req.query['state'] as string;
     const error = req.query['error'] as string;
-    const rawReturnTo = (req.appSession?.['profileAuthReturnTo'] as string) || '/profile';
-    const returnTo = rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/profile';
+    const returnTo = this.normalizeProfileReturnTo(req.appSession?.['profileAuthReturnTo']);
 
     if (error) {
       logger.error(req, 'profile_auth_callback', startTime, new Error(`Auth0 returned error: ${error}`), {
@@ -1790,6 +1801,19 @@ export class ProfileController {
     }
 
     return { enriched, notInCdpCount };
+  }
+
+  private normalizeProfileReturnTo(raw: unknown): string {
+    const DEFAULT = '/profile';
+    if (typeof raw !== 'string' || raw.length === 0) return DEFAULT;
+    try {
+      // Accepts both relative paths and full URLs (e.g. req.headers['referer']).
+      // Only pathname is used — host, query, and fragment are discarded.
+      const { pathname } = new URL(raw, 'http://internal');
+      return ProfileController.allowedProfileReturnPaths.has(pathname) ? pathname : DEFAULT;
+    } catch {
+      return DEFAULT;
+    }
   }
 
   /**

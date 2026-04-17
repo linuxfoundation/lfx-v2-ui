@@ -35,7 +35,7 @@ router.patch('/', (req, res, next) => profileController.updateUserMetadata(req, 
 // GET /api/profile/emails - Get current user's email management data
 router.get('/emails', (req, res, next) => profileController.getUserEmails(req, res, next));
 
-// PUT /api/profile/emails/:email/primary - Set email as primary; :email is URL-encoded email address
+// PUT /api/profile/emails/:emailId/primary - Set email as primary; :emailId is the email address
 router.put('/emails/:emailId/primary', (req, res, next) => profileController.setPrimaryEmail(req, res, next));
 
 // GET /api/profile/developer - Get current user's developer token information

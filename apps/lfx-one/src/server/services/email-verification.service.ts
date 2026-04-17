@@ -450,13 +450,13 @@ export class EmailVerificationService {
   /**
    * Change the user's password via auth-service NATS
    * @param req - Express request object for logging
-   * @param bearerToken - User's Auth0 access token (must carry password:change scope)
+   * @param managementToken - Flow C management token (must carry update:current_user_metadata scope)
    * @param currentPassword - The user's current password
    * @param newPassword - The desired new password
    */
   public async changePassword(
     req: Request,
-    bearerToken: string,
+    managementToken: string,
     currentPassword: string,
     newPassword: string
   ): Promise<{ success: boolean; message?: string; error?: string }> {
@@ -465,7 +465,7 @@ export class EmailVerificationService {
     logger.debug(req, 'change_password', 'Changing password via NATS');
 
     try {
-      const payload = JSON.stringify({ token: bearerToken, current_password: currentPassword, new_password: newPassword });
+      const payload = JSON.stringify({ token: managementToken, current_password: currentPassword, new_password: newPassword });
       const response = await this.natsService.request(NatsSubjects.PASSWORD_UPDATE, codec.encode(payload), {
         timeout: NATS_CONFIG.REQUEST_TIMEOUT,
       });

@@ -134,8 +134,12 @@ export class ProfileEmailComponent {
             });
           }
         },
-        error: (error) => {
-          this.messageService.add({ severity: 'error', summary: 'Error', detail: error.error?.message || 'Verification failed. Please try again.' });
+        error: (err: HttpErrorResponse) => {
+          if (err.error?.error === 'management_token_required' && err.error?.authorize_url) {
+            window.location.href = err.error.authorize_url;
+            return;
+          }
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Verification failed. Please try again.' });
         },
       });
   }
@@ -220,15 +224,15 @@ export class ProfileEmailComponent {
 
   // Private methods
   private initializeEmailData(): Signal<EmailManagementData | null> {
-    this.loading.set(true);
     return toSignal(
       this.refresh.pipe(
-        switchMap(() =>
-          this.userService.getUserEmails().pipe(
+        switchMap(() => {
+          this.loading.set(true);
+          return this.userService.getUserEmails().pipe(
             catchError(() => of(null)),
             finalize(() => this.loading.set(false))
-          )
-        )
+          );
+        })
       ),
       { initialValue: null }
     );
