@@ -644,3 +644,6 @@ export interface EditChairsDialogData {
 }
 
 export type CommitteeTab = 'overview' | 'members' | 'votes' | 'meetings' | 'surveys' | 'documents' | 'settings';
+
+/** Permission level for a committee member. */
+export type CommitteePermissionLevel = 'manage' | 'review' | 'member';

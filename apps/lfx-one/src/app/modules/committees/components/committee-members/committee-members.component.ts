@@ -15,7 +15,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { COMMITTEE_LABEL } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
+import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, TagSeverity } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -114,7 +114,7 @@ export class CommitteeMembersComponent implements OnInit {
     menuComponent.toggle(event);
   }
 
-  public getMemberPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
+  public getMemberPermission(member: CommitteeMember): CommitteePermissionLevel {
     const committee = this.committee();
     if (!committee) return 'member';
     const memberEmail = member.email?.toLowerCase();
@@ -124,13 +124,13 @@ export class CommitteeMembersComponent implements OnInit {
     return 'member';
   }
 
-  public getMemberPermissionSeverity(permission: 'manage' | 'review' | 'member'): TagSeverity {
+  public getMemberPermissionSeverity(permission: CommitteePermissionLevel): TagSeverity {
     if (permission === 'manage') return 'success';
     if (permission === 'review') return 'info';
     return 'secondary';
   }
 
-  public getMemberPermissionLabel(permission: 'manage' | 'review' | 'member'): string {
+  public getMemberPermissionLabel(permission: CommitteePermissionLevel): string {
     if (permission === 'manage') return 'Manage';
     if (permission === 'review') return 'Reviewer';
     return 'Member';

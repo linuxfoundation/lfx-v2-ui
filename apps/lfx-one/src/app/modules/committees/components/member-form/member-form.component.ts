@@ -9,8 +9,8 @@ import { CalendarComponent } from '@components/calendar/calendar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
-import { APPOINTED_BY_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
-import { Committee, CommitteeMember, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
+import { APPOINTED_BY_OPTIONS, COMMITTEE_PERMISSION_OPTIONS, LINKEDIN_PROFILE_PATTERN, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
+import { Committee, CommitteeMember, CommitteePermissionLevel, CommitteeUser, CreateCommitteeMemberRequest, MemberFormValue } from '@lfx-one/shared/interfaces';
 import { formatDateToISOString, parseISODateString } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MessageService } from 'primeng/api';
@@ -49,11 +49,7 @@ export class MemberFormComponent {
   public roleOptions = MEMBER_ROLES;
   public votingStatusOptions = VOTING_STATUSES;
   public appointedByOptions = APPOINTED_BY_OPTIONS;
-  public permissionOptions = [
-    { label: 'Member', value: 'member' },
-    { label: 'Reviewer', value: 'review' },
-    { label: 'Manage', value: 'manage' },
-  ];
+  public permissionOptions = [...COMMITTEE_PERMISSION_OPTIONS];
 
   public constructor() {
     // Initialize config-based properties
@@ -232,7 +228,7 @@ export class MemberFormComponent {
   private buildPermissionArrays(
     username: string,
     member: CommitteeMember,
-    permission: 'manage' | 'review' | 'member'
+    permission: CommitteePermissionLevel
   ): { writers: CommitteeUser[]; auditors: CommitteeUser[] } {
     const committee = this.committee;
     const existingWriters = committee?.writers ?? [];
@@ -256,7 +252,7 @@ export class MemberFormComponent {
     return { writers, auditors };
   }
 
-  private deriveInitialPermission(member: CommitteeMember): 'manage' | 'review' | 'member' {
+  private deriveInitialPermission(member: CommitteeMember): CommitteePermissionLevel {
     const committee = this.committee;
     if (!committee) return 'member';
     const memberEmail = member.email?.toLowerCase();
@@ -293,7 +289,7 @@ export class MemberFormComponent {
         role_end: new FormControl(null),
         voting_status_start: new FormControl(null),
         voting_status_end: new FormControl(null),
-        permission: new FormControl<'manage' | 'review' | 'member'>('member'),
+        permission: new FormControl<CommitteePermissionLevel>('member'),
       },
       {
         validators: [

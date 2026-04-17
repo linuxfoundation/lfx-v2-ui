@@ -11,9 +11,17 @@ import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { OrganizationSearchComponent } from '@components/organization-search/organization-search.component';
 import { SelectComponent } from '@components/select/select.component';
-import { MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
+import { COMMITTEE_PERMISSION_OPTIONS, MEMBER_ROLES, VOTING_STATUSES } from '@lfx-one/shared/constants';
 import { CommitteeMemberRole, CommitteeMemberVotingStatus } from '@lfx-one/shared/enums';
-import { Committee, CommitteeMember, CommitteeUser, CreateCommitteeMemberRequest, DialogMode, UserSearchResult } from '@lfx-one/shared/interfaces';
+import {
+  Committee,
+  CommitteeMember,
+  CommitteePermissionLevel,
+  CommitteeUser,
+  CreateCommitteeMemberRequest,
+  DialogMode,
+  UserSearchResult,
+} from '@lfx-one/shared/interfaces';
 import { UserAvatarColorPipe } from '@pipes/user-avatar-color.pipe';
 import { UserInitialsPipe } from '@pipes/user-initials.pipe';
 import { CommitteeService } from '@services/committee.service';
@@ -61,7 +69,7 @@ export class AddMemberDialogComponent {
     org_name: new FormControl<string>('', this.committee?.business_email_required || this.committee?.enable_voting ? [Validators.required] : []),
     org_domain: new FormControl<string>(''),
     subscribe_mailing_list: new FormControl<boolean>(true),
-    permission: new FormControl<'manage' | 'review' | 'member'>('member'),
+    permission: new FormControl<CommitteePermissionLevel>('member'),
   });
 
   public mode = signal<DialogMode>('search');
@@ -96,11 +104,7 @@ export class AddMemberDialogComponent {
 
   public readonly roleOptions = MEMBER_ROLES;
   public readonly votingStatusOptions = VOTING_STATUSES;
-  public readonly permissionOptions = [
-    { label: 'Member', value: 'member' },
-    { label: 'Reviewer', value: 'review' },
-    { label: 'Manage', value: 'manage' },
-  ];
+  public readonly permissionOptions = [...COMMITTEE_PERMISSION_OPTIONS];
 
   public selectUser(user: UserSearchResult & { alreadyMember: boolean }): void {
     if (user.alreadyMember) return;

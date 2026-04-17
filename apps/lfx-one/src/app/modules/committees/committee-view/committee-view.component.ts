@@ -13,7 +13,15 @@ import { BreadcrumbComponent } from '@components/breadcrumb/breadcrumb.component
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { RouteLoadingComponent } from '@components/loading/route-loading.component';
-import { Committee, CommitteeMember, CommitteeMemberVisibility, CommitteeTab, getCommitteeCategorySeverity, TagSeverity } from '@lfx-one/shared';
+import {
+  Committee,
+  CommitteeMember,
+  CommitteeMemberVisibility,
+  CommitteePermissionLevel,
+  CommitteeTab,
+  getCommitteeCategorySeverity,
+  TagSeverity,
+} from '@lfx-one/shared';
 import { GroupsIOMailingList } from '@lfx-one/shared/interfaces';
 import { COMMITTEE_VALID_TABS } from '@lfx-one/shared/constants';
 import { getChatPlatformIcon, getChatPlatformLabel, getRepoPlatformIcon, getRepoPlatformLabel } from '@lfx-one/shared/utils';
@@ -128,7 +136,7 @@ export class CommitteeViewComponent {
     return this.committee()?.auditors?.some((u) => u.email?.toLowerCase() === email) ?? false;
   });
 
-  public myPermission: Signal<'manage' | 'review' | 'member'> = computed(() => {
+  public myPermission: Signal<CommitteePermissionLevel> = computed(() => {
     if (this.canEdit()) return 'manage';
     if (this.canReview()) return 'review';
     return 'member';
@@ -210,6 +218,11 @@ export class CommitteeViewComponent {
   public refreshMembers(): void {
     this.membersLoading.set(true);
     this.membersRefresh.update((v) => v + 1);
+  }
+
+  public onMembersRefreshed(): void {
+    this.refreshMembers();
+    this.refreshCommittee();
   }
 
   public handleTabNavigation(tabWithContext: string): void {
