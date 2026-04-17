@@ -30,9 +30,9 @@ export interface Transaction {
  */
 export interface TransactionRow {
   _KEY: string;
-  USER_NAME: string;
-  USER_EMAIL: string | null;
-  USER_ID: string | null;
+  USER_NAME?: string;
+  USER_EMAIL?: string | null;
+  USER_ID?: string | null;
   ORDER_ID: string;
   NAME: string | null;
   NET_REVENUE: number | null;
