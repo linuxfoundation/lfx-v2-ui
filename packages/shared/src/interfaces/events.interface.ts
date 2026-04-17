@@ -463,7 +463,7 @@ export interface TravelFundApplication {
   eventId: string;
   eventName: string;
   termsAccepted: boolean;
-  /** Salesforce user record ID — fetched from API Gateway and set by the server from the session */
+  /** Salesforce user record ID — client-provided in the request shape; the server should ignore it and derive/validate the effective user from the session */
   userId: string;
   aboutMe: TravelFundAboutMe;
   expenses: TravelFundExpenses;
@@ -493,7 +493,7 @@ export interface VisaRequestApplicantInfo {
   citizenshipCountry: string;
   passportExpiryDate: Date | null;
   embassyCity: string;
-  /** Salesforce Account/Organization ID — fetched from the API Gateway profile (Account.ID) */
+  /** Organization ID — selected from the autocomplete component */
   organizationID: string;
   company: string;
   mailingAddress: string;

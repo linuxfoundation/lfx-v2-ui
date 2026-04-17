@@ -222,10 +222,11 @@ export class UserController {
   }
 
   /**
-   * GET /api/user/salesforce-id - Returns the current user's API Gateway profile
-   * Proxies GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true and returns the
-   * Salesforce-backed user profile. The ID field is used by downstream operations
-   * such as visa letter and travel fund applications.
+   * GET /api/user/salesforce-id - Returns the current user's Salesforce ID
+   * Proxies GET ${API_GW_AUDIENCE}/user-service/v1/me?basic=true and returns only
+   * an object containing the profile ID in the shape `{ id: profile.ID }`.
+   * The ID field is used by downstream operations such as visa letter and travel
+   * fund applications.
    */
   public async getSalesforceId(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_salesforce_id', {});

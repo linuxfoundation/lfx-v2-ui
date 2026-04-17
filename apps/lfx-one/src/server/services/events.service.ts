@@ -569,7 +569,7 @@ export class EventsService {
     };
 
     logger.debug(req, 'submit_visa_request_application', 'Calling API Gateway visa endpoint', {
-      target_url: targetUrl,
+      target_url: '/user-service/v1/users/{userId}/visaletterrequests',
       event_id: payload.eventId,
     });
 
@@ -896,5 +896,4 @@ export class EventsService {
     if (location) return location;
     return city ?? country ?? 'Virtual';
   }
-
 }

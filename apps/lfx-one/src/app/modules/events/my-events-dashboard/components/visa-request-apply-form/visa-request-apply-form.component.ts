@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, inject, output, Signal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, output, Signal, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { EventsService } from '@app/shared/services/events.service';
@@ -58,6 +58,10 @@ export class VisaRequestApplyFormComponent {
   protected readonly orgSearchQuery = signal('');
   protected readonly orgSuggestions: Signal<OrgSearchResult[]> = this.initOrgSuggestions();
 
+  protected readonly isCompanyInvalid = computed(
+    () => this.form.get('company')?.invalid && (this.form.get('company')?.touched || this.orgForm.get('company')?.touched || this.orgForm.get('company')?.dirty)
+  );
+
   public constructor() {
     this.form.get('email')?.disable();
 
@@ -71,7 +75,7 @@ export class VisaRequestApplyFormComponent {
     }
 
     this.form.statusChanges.pipe(startWith(this.form.status), takeUntilDestroyed()).subscribe(() => {
-      this.formValidityChange.emit(this.form.valid);
+      this.formValidityChange.emit(this.form.valid && !this.isCompanyInvalid());
     });
 
     this.form.valueChanges.pipe(startWith(this.form.getRawValue()), takeUntilDestroyed()).subscribe(() => {
@@ -91,6 +95,14 @@ export class VisaRequestApplyFormComponent {
   public onOrgClear(): void {
     this.form.patchValue({ company: '', organizationID: '' });
     this.orgSearchQuery.set('');
+  }
+
+  public onOrgBlur(): void {
+    const orgValue = this.orgForm.get('company')?.value;
+    if (!orgValue) {
+      this.form.patchValue({ company: '', organizationID: '' });
+      this.form.get('company')?.markAsTouched();
+    }
   }
 
   private initOrgSuggestions(): Signal<OrgSearchResult[]> {

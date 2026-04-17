@@ -13,7 +13,7 @@ import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_TRAVEL_FUND_REQUESTS_RESPONSE, EMPTY_VI
 import { PageChangeEvent, RequestType, VisaRequestsResponse } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogModule } from 'primeng/dynamicdialog';
-import { catchError, combineLatest, finalize, map, of, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, defer, finalize, map, of, skip, switchMap, tap } from 'rxjs';
 import { TravelFundApplicationDialogComponent } from '../travel-fund-application-dialog/travel-fund-application-dialog.component';
 import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
 @Component({
@@ -140,13 +140,22 @@ export class EventRequestListComponent {
     }
 
     return toSignal(
-      this.userService.getSalesforceId().pipe(
-        tap({ subscribe: () => this.isSalesforceIdLoading.set(true) }),
+      defer(() => {
+        this.isSalesforceIdLoading.set(true);
+        return this.userService.getSalesforceId();
+      }).pipe(
         map((profile) => {
           if (profile?.id) {
             this.userService.apiGatewayUserId.set(profile.id);
+            return true;
           }
-          return !!profile?.id;
+
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Your account is missing the required Salesforce ID. Please contact support.',
+          });
+          return false;
         }),
         catchError(() => {
           this.messageService.add({

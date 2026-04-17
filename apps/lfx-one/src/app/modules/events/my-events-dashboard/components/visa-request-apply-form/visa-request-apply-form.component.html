@@ -154,8 +154,9 @@
         dataTestId="visa-apply-company"
         (completeMethod)="onOrgSearch($event)"
         (onSelect)="onOrgSelect($event)"
-        (onClear)="onOrgClear()" />
-      @if (form.get('company')?.invalid && form.get('company')?.touched) {
+        (onClear)="onOrgClear()"
+        (onBlur)="onOrgBlur()" />
+      @if (isCompanyInvalid()) {
         <span class="text-xs text-red-500" data-testid="visa-apply-company-error">Company / Organization is required</span>
       }
     </div>
