@@ -33,7 +33,7 @@
     // Force horizontal position to the right of the full sidebar (64px lens + 280px nav = 344px)
     left: 344px !important;
 
-    // Align popover top with the trigger top (sidebar top + py-4 padding = 16px)
+    // Pin the popover 4px from the top of the viewport
     top: 4px !important;
 
     // When dev toolbar is visible, offset by its height (48px)
