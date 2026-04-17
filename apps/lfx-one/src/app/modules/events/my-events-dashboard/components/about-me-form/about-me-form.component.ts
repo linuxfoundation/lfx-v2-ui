@@ -74,6 +74,10 @@ export class AboutMeFormComponent {
   }
 
   private buildFormValue(): TravelFundAboutMe {
-    return this.form.getRawValue() as TravelFundAboutMe;
+    const raw = this.form.getRawValue();
+    return {
+      ...raw,
+      accommodationNumberOfNights: parseInt(String(raw.accommodationNumberOfNights), 10) || 0,
+    };
   }
 }

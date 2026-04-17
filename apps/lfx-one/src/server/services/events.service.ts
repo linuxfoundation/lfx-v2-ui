@@ -668,7 +668,7 @@ export class EventsService {
     if (!aboutMe.citizenshipCountry) missingFields.push('citizenshipCountry');
     if (!aboutMe.organizationID) missingFields.push('organizationID');
     if (!aboutMe.travelFromCountry) missingFields.push('travelFromCountry');
-    if (!expenses.estimatedTotal) missingFields.push('estimatedTotal');
+    if (expenses.estimatedTotal <= 0) missingFields.push('estimatedTotal');
     if (missingFields.length > 0) {
       throw new MicroserviceError(`Missing required travel fund fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
         operation: 'submit_travel_fund_application',

@@ -38,15 +38,11 @@ export class TravelExpensesFormComponent {
   });
 
   public constructor() {
-    // No required fields — form is always valid
-    this.formValidityChange.emit(true);
-
-    this.form.statusChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-      this.formValidityChange.emit(this.form.valid);
-    });
+    this.formValidityChange.emit(this.estimatedTotal() > 0);
 
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.formChange.emit(this.buildExpensesValue());
+      this.formValidityChange.emit(this.estimatedTotal() > 0);
     });
   }
 
