@@ -673,7 +673,17 @@ export class EventsService {
       });
     }
 
-    const json = (await upstream.json()) as { Data?: { ID?: string; Name?: string }[] };
+    const responseText = await upstream.text();
+    let json: { Data?: { ID?: string; Name?: string }[] };
+    try {
+      json = JSON.parse(responseText) as { Data?: { ID?: string; Name?: string }[] };
+    } catch {
+      throw new MicroserviceError('Organization search API returned an invalid response body', 502, 'API_GATEWAY_INVALID_RESPONSE', {
+        operation: 'search_organizations',
+        errorBody: responseText.slice(0, 1000),
+      });
+    }
+
     const items = json.Data ?? [];
 
     const data = items
