@@ -257,6 +257,8 @@ export class CommitteeMembersComponent implements OnInit {
           const writers = existingWriters.filter((w) => !(memberUsername && w.username === memberUsername) && w.email?.toLowerCase() !== memberEmail);
           const auditors = existingAuditors.filter((a) => !(memberUsername && a.username === memberUsername) && a.email?.toLowerCase() !== memberEmail);
 
+          // Refresh only after the permission cleanup settles — avoids a race where the
+          // committee re-fetch returns stale writers/auditors before the settings PUT completes.
           this.committeeService
             .updateCommitteePermissions(committee.uid, writers, auditors)
             .pipe(
@@ -270,11 +272,10 @@ export class CommitteeMembersComponent implements OnInit {
                 return of(null);
               })
             )
-            .subscribe();
+            .subscribe({ next: () => this.refreshMembers() });
+        } else {
+          this.refreshMembers();
         }
-
-        // Refresh members list by re-fetching
-        this.refreshMembers();
       },
       error: (err: HttpErrorResponse) => {
         this.isDeleting.set(false);
