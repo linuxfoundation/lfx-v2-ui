@@ -32,6 +32,7 @@ import {
   scan,
   Subject,
   switchMap,
+  take,
   tap,
   toArray,
 } from 'rxjs';
@@ -82,6 +83,9 @@ export class MeetingsDashboardComponent {
   public hasMore: Signal<boolean>;
   public autoLoadTriggerIndex: Signal<number>;
 
+  private fpUpcomingLoading = signal(false);
+  private fpPastLoading = signal(false);
+
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
@@ -112,8 +116,6 @@ export class MeetingsDashboardComponent {
   private pastPageToken = signal<string | undefined>(undefined);
   private loadMoreUpcoming$ = new Subject<string>();
   private loadMorePast$ = new Subject<string>();
-  private fpUpcomingLoading = signal(false);
-  private fpPastLoading = signal(false);
 
   public constructor() {
     // Initialize project context first (needed for reactive data loading)
@@ -622,9 +624,10 @@ export class MeetingsDashboardComponent {
           }
           const projectUid = project.uid;
           this.fpUpcomingLoading.set(true);
-          const fetchPage = (pageToken?: string) => this.meetingService.getMeetingsByProjectPaginated(projectUid, 100, undefined, pageToken);
+          const fetchPage = (pageToken?: string) => this.meetingService.getMeetingsByProjectPaginated(projectUid, undefined, pageToken);
           return fetchPage().pipe(
             expand((response) => (response.page_token ? fetchPage(response.page_token) : EMPTY)),
+            take(10),
             toArray(),
             map((responses) => this.filterAndSortUpcomingMeetings(responses.flatMap((r) => r.data))),
             catchError(() => of([] as Meeting[])),
@@ -648,9 +651,10 @@ export class MeetingsDashboardComponent {
           }
           const projectUid = project.uid;
           this.fpPastLoading.set(true);
-          const fetchPage = (pageToken?: string) => this.meetingService.getPastMeetingsByProjectPaginated(projectUid, 100, pageToken);
+          const fetchPage = (pageToken?: string) => this.meetingService.getPastMeetingsByProjectPaginated(projectUid, pageToken);
           return fetchPage().pipe(
             expand((response) => (response.page_token ? fetchPage(response.page_token) : EMPTY)),
+            take(10),
             toArray(),
             map((responses) => responses.flatMap((r) => r.data)),
             catchError(() => of([] as PastMeeting[])),
