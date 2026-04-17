@@ -244,8 +244,11 @@ export class MemberFormComponent {
       name: [member.first_name, member.last_name].filter(Boolean).join(' ') || member.email,
     };
 
-    const writers = existingWriters.filter((w) => w.username !== username);
-    const auditors = existingAuditors.filter((a) => a.username !== username);
+    const memberEmail = member.email?.toLowerCase();
+    const matchesMember = (u: CommitteeUser) => u.username === username || u.email?.toLowerCase() === memberEmail;
+
+    const writers = existingWriters.filter((w) => !matchesMember(w));
+    const auditors = existingAuditors.filter((a) => !matchesMember(a));
 
     if (permission === 'manage') writers.push(memberAsUser);
     else if (permission === 'review') auditors.push(memberAsUser);
