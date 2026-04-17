@@ -555,6 +555,8 @@ export class EventsService {
     if (!applicantInfo.birthDate) missingFields.push('birthDate');
     if (!applicantInfo.citizenshipCountry) missingFields.push('citizenshipCountry');
     if (!applicantInfo.passportNumber) missingFields.push('passportNumber');
+    if (!applicantInfo.organizationID) missingFields.push('organizationID');
+    if (!applicantInfo.embassyCity) missingFields.push('embassyCity');
     if (missingFields.length > 0) {
       throw new MicroserviceError(`Missing required visa request fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
         operation: 'submit_visa_request_application',
@@ -580,7 +582,7 @@ export class EventsService {
       requestingUserID: serverUserId,
       userID: serverUserId,
       username: applicantInfo.email,
-      ...(applicantInfo.embassyCity && { City: applicantInfo.embassyCity }),
+      City: applicantInfo.embassyCity,
       ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
       ...(applicantInfo.mailingAddress && { addressLine01: applicantInfo.mailingAddress }),
       ...(applicantInfo.passportExpiryDate && {

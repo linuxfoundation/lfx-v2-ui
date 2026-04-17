@@ -802,7 +802,18 @@ export class UserService {
       });
     }
 
-    const profile = (await upstream.json()) as ApiGatewayUserProfile;
+    const rawBody = await upstream.text().catch(() => '');
+    let profile: ApiGatewayUserProfile;
+
+    try {
+      profile = JSON.parse(rawBody) as ApiGatewayUserProfile;
+    } catch {
+      throw new MicroserviceError('API Gateway returned invalid JSON', 502, 'API_GATEWAY_INVALID_RESPONSE', {
+        operation: 'get_api_gateway_profile',
+        service: 'user_service',
+        errorBody: rawBody.slice(0, 500),
+      });
+    }
 
     logger.debug(req, 'get_api_gateway_profile', 'API Gateway profile received', { salesforce_id: Boolean(profile.ID) });
 

@@ -28,6 +28,7 @@ export class OrgSearchFieldComponent {
   public readonly orgForm = new FormGroup({ company: new FormControl<OrgSearchResult | null>(null) });
 
   protected readonly orgSearchQuery = signal('');
+  protected readonly orgSearchHasError = signal(false);
   protected readonly orgSuggestions: Signal<OrgSearchResult[]> = this.initOrgSuggestions();
 
   protected readonly isCompanyInvalid = computed(() => {
@@ -65,16 +66,23 @@ export class OrgSearchFieldComponent {
         debounceTime(400),
         switchMap((query) => {
           if (!query) {
+            this.orgSearchHasError.set(false);
             return of([]);
           }
           return this.eventsService.searchOrganizations(query).pipe(
-            map((response) => response.data),
+            map((response) => {
+              this.orgSearchHasError.set(false);
+              return response.data;
+            }),
             catchError(() => {
-              this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to search organizations. Please try again.',
-              });
+              if (!this.orgSearchHasError()) {
+                this.orgSearchHasError.set(true);
+                this.messageService.add({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: 'Failed to search organizations. Please try again.',
+                });
+              }
               return of([]);
             })
           );
