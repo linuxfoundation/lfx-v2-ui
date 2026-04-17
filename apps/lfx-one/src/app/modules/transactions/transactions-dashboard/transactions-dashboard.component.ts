@@ -64,11 +64,11 @@ export class TransactionsDashboardComponent {
   // ─── Configuration ─────────────────────────────────────────────────────────
   protected readonly subtitle = PAGE_SUBTITLE;
   protected readonly tabOptions = TAB_OPTIONS;
+  protected readonly pageSize = 10;
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
   protected readonly activeTab = signal<string>('all');
   protected readonly currentPage = signal<number>(1);
-  protected readonly pageSize = 10;
 
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly transactions: Signal<Transaction[] | undefined> = this.initTransactions();
