@@ -264,5 +264,5 @@ export function compareBadgesByIssuedDateDesc(a: Pick<Badge, 'issuedDate'>, b: P
 
 function getIssuedDateTimestamp(dateValue: string): number {
   const issuedDate = new Date(dateValue).getTime();
-  return Number.isNaN(issuedDate) ? 0 : issuedDate;
+  return Number.isNaN(issuedDate) ? -Infinity : issuedDate;
 }

@@ -178,8 +178,8 @@ export class CredlyService {
       }
     }
     // If still over the limit after expiry eviction, remove oldest entries (insertion order)
-    if (this.badgeCache.size >= CredlyService.maxCacheSize) {
-      const overflow = this.badgeCache.size - CredlyService.maxCacheSize + 1;
+    if (this.badgeCache.size > CredlyService.maxCacheSize) {
+      const overflow = this.badgeCache.size - CredlyService.maxCacheSize;
       let removed = 0;
       for (const key of this.badgeCache.keys()) {
         this.badgeCache.delete(key);
