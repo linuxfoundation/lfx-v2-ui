@@ -82,7 +82,7 @@ export class TransactionsDashboardComponent {
   protected readonly firstIndex: Signal<number> = computed(() => (this.filteredTransactions().length === 0 ? 0 : (this.currentPage() - 1) * this.pageSize + 1));
   protected readonly lastIndex: Signal<number> = computed(() => Math.min(this.currentPage() * this.pageSize, this.filteredTransactions().length));
 
-  constructor() {
+  public constructor() {
     // Reset to page 1 when tab or filtered data changes
     effect(() => {
       this.filteredTransactions();
