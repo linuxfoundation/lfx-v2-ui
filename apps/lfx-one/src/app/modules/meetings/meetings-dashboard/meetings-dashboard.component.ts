@@ -344,8 +344,8 @@ export class MeetingsDashboardComponent {
         scan((acc: PastMeeting[], response: PageResult<PastMeeting>) => {
           // TODO: Remove client-side sorting once API supports sorting by scheduled_start_time
           const sorted = response.data.sort((a, b) => {
-            const timeA = new Date(a.scheduled_start_time).getTime();
-            const timeB = new Date(b.scheduled_start_time).getTime();
+            const timeA = new Date(a.scheduled_start_time ?? a.start_time).getTime();
+            const timeB = new Date(b.scheduled_start_time ?? b.start_time).getTime();
             return timeB - timeA;
           });
           return response.reset ? sorted : [...acc, ...sorted];
@@ -480,9 +480,7 @@ export class MeetingsDashboardComponent {
         }
       }
 
-      const options = [...seen.entries()]
-        .map(([uid, name]) => ({ label: name, value: uid }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+      const options = [...seen.entries()].map(([uid, name]) => ({ label: name, value: uid })).sort((a, b) => a.label.localeCompare(b.label));
 
       return [{ label: 'All Foundations', value: null }, ...options];
     });
@@ -504,9 +502,7 @@ export class MeetingsDashboardComponent {
         }
       }
 
-      const options = [...seen.entries()]
-        .map(([uid, name]) => ({ label: name, value: uid }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+      const options = [...seen.entries()].map(([uid, name]) => ({ label: name, value: uid })).sort((a, b) => a.label.localeCompare(b.label));
 
       return [{ label: 'All Projects', value: null }, ...options];
     });

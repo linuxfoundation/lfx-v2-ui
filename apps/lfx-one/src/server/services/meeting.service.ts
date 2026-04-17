@@ -9,6 +9,8 @@ import {
   CreateMeetingRegistrantRequest,
   CreateMeetingRequest,
   CreateMeetingRsvpRequest,
+  ITXCreateMeetingResponseRequest,
+  ITXMeetingResponseResult,
   Meeting,
   MeetingAttachment,
   MeetingJoinURL,
@@ -28,8 +30,6 @@ import {
   UpdateMeetingRegistrantRequest,
   UpdateMeetingRequest,
   UpdatePastMeetingSummaryRequest,
-  ITXCreateMeetingResponseRequest,
-  ITXMeetingResponseResult,
 } from '@lfx-one/shared/interfaces';
 import { mapITXResponseToMeetingRsvp, transformV1SummaryToV2 } from '@lfx-one/shared/utils';
 import { Request } from 'express';
@@ -381,7 +381,6 @@ export class MeetingService {
     const params: Record<string, any> = {
       type: 'v1_meeting_registrant',
       tags: `meeting_id:${meetingUid}`,
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants', 'Fetching meeting registrants', { meeting_id: meetingUid, params });
@@ -443,7 +442,6 @@ export class MeetingService {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`email:${email}`, `meeting_id:${meetingUid}`],
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants_by_email', 'Fetching meeting registrants by email params', { meeting_id: meetingUid, email, params });
@@ -473,7 +471,6 @@ export class MeetingService {
       type: 'v1_meeting_registrant',
       parent: '',
       tags_all: [`username:${plainUsername}`, `meeting_id:${meetingUid}`],
-      page_size: 100,
     };
 
     logger.debug(req, 'get_meeting_registrants_by_username', 'Fetching meeting registrants by username', { meeting_id: meetingUid, username: plainUsername });
@@ -595,7 +592,6 @@ export class MeetingService {
     const params = {
       type: 'v1_past_meeting_participant',
       tags: `meeting_and_occurrence_id:${pastMeetingUid}`,
-      page_size: 100,
     };
 
     return fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
@@ -626,7 +622,6 @@ export class MeetingService {
         {
           type: 'v1_past_meeting_participant',
           tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `email:${email}`],
-          page_size: 1,
         }
       );
 
@@ -644,7 +639,6 @@ export class MeetingService {
         {
           type: 'v1_past_meeting_participant',
           tags_all: [`meeting_and_occurrence_id:${pastMeetingUid}`, `username:${plainUsername}`],
-          page_size: 1,
         }
       );
 
@@ -902,7 +896,6 @@ export class MeetingService {
       const params = {
         tags: `meeting_id:${meetingUid}`,
         type: 'v1_meeting_rsvp',
-        page_size: 100,
       };
 
       return await fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
@@ -1199,5 +1192,4 @@ export class MeetingService {
 
     return nameMap;
   }
-
 }

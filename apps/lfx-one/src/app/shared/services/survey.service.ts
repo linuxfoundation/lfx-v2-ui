@@ -20,10 +20,6 @@ export class SurveyService {
   public getSurveysByCommittee(committeeUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('tags', `committee_uid:${committeeUid}`);
 
-    if (limit !== undefined) {
-      params = params.set('page_size', limit.toString());
-    }
-
     if (orderBy) {
       params = params.set('order', orderBy);
     }
@@ -33,10 +29,6 @@ export class SurveyService {
 
   public getSurveysByProject(projectUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
-
-    if (limit) {
-      params = params.set('page_size', limit);
-    }
 
     if (orderBy) {
       params = params.set('order', orderBy);

@@ -29,7 +29,7 @@ import {
   WorkExperienceCreateUpdateBody,
   WorkExperienceEntry,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of, take } from 'rxjs';
+import { catchError, Observable, of, shareReplay, take } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -44,6 +44,9 @@ export class UserService {
   public impersonator: WritableSignal<Impersonator | null> = signal<Impersonator | null>(null);
   public canImpersonate: WritableSignal<boolean> = signal<boolean>(false);
   public readonly userInitials: Signal<string> = this.initUserInitials();
+
+  private userMeetings$: Observable<Meeting[]> | null = null;
+  private userPastMeetings$: Observable<PastMeeting[]> | null = null;
 
   // Create a new user with permissions
   public createUserWithPermissions(userData: CreateUserPermissionRequest): Observable<any> {
@@ -147,24 +150,32 @@ export class UserService {
    * Returns meetings the user is registered for across all projects
    */
   public getUserMeetings(): Observable<Meeting[]> {
-    return this.http.get<Meeting[]>('/api/user/meetings').pipe(
-      catchError((error) => {
-        console.error('Failed to load user meetings:', error);
-        return of([]);
-      })
-    );
+    if (!this.userMeetings$) {
+      this.userMeetings$ = this.http.get<Meeting[]>('/api/user/meetings').pipe(
+        catchError((error) => {
+          console.error('Failed to load user meetings:', error);
+          return of([]);
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+    }
+    return this.userMeetings$;
   }
 
   /**
    * Gets past meetings for the current authenticated user
    */
   public getUserPastMeetings(): Observable<PastMeeting[]> {
-    return this.http.get<PastMeeting[]>('/api/user/past-meetings').pipe(
-      catchError((error) => {
-        console.error('Failed to load user past meetings:', error);
-        return of([]);
-      })
-    );
+    if (!this.userPastMeetings$) {
+      this.userPastMeetings$ = this.http.get<PastMeeting[]>('/api/user/past-meetings').pipe(
+        catchError((error) => {
+          console.error('Failed to load user past meetings:', error);
+          return of([]);
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+    }
+    return this.userPastMeetings$;
   }
 
   /**

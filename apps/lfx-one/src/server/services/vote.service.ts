@@ -1,14 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import {
-  CreateVoteRequest,
-  QueryServiceCountResponse,
-  QueryServiceResponse,
-  UpdateVoteRequest,
-  Vote,
-  VoteResultsResponse,
-} from '@lfx-one/shared/interfaces';
+import { CreateVoteRequest, QueryServiceCountResponse, QueryServiceResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -51,7 +44,6 @@ export class VoteService {
     const votes = await fetchAllQueryResources<Vote>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
-        page_size: 100,
         ...(pageToken && { page_token: pageToken }),
       })
     );
@@ -279,7 +271,6 @@ export class VoteService {
     const responses = await fetchAllQueryResources<{ vote_uid: string }>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<{ vote_uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'vote_response',
-        page_size: 100,
         filters_or: filtersOr,
         ...(pageToken && { page_token: pageToken }),
       })

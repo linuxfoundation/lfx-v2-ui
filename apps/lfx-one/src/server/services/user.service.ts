@@ -549,7 +549,6 @@ export class UserService {
         {
           type: 'v1_past_meeting_participant',
           tags: `email:${normalizedEmail}`,
-          page_size: 100,
           ...(pageToken && { page_token: pageToken }),
         },
         undefined,
@@ -575,7 +574,6 @@ export class UserService {
           {
             type: 'v1_past_meeting_participant',
             tags: `username:${plainUsername}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -618,7 +616,7 @@ export class UserService {
 
     // Sort by scheduled_start_time descending (most recent first) before applying limit
     // so the limit returns the most recent meetings rather than an arbitrary subset
-    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time).getTime() - new Date(a.scheduled_start_time).getTime());
+    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
 
     const limited = limit !== undefined && limit > 0 ? pastMeetings.slice(0, limit) : pastMeetings;
 
@@ -712,7 +710,6 @@ export class UserService {
             type: 'v1_meeting_registrant',
             parent: '',
             tags: `email:${normalizedEmail}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -742,7 +739,6 @@ export class UserService {
             type: 'v1_meeting_registrant',
             parent: '',
             tags: `username:${plainUsername}`,
-            page_size: 100,
             ...(pageToken && { page_token: pageToken }),
           },
           undefined,
@@ -1032,5 +1028,4 @@ export class UserService {
       };
     }
   }
-
 }
