@@ -237,6 +237,8 @@ export class CommitteeService {
         writer: _writer,
         project_name: _projectName,
         foundation_name: _foundationName,
+        writers: _writers,
+        auditors: _auditors,
         ...mutableFields
       } = currentCommittee;
       /* eslint-enable @typescript-eslint/no-unused-vars */

@@ -169,8 +169,10 @@ export class AddMemberDialogComponent {
             };
             const existingWriters = committee.writers ?? [];
             const existingAuditors = committee.auditors ?? [];
-            const writers = existingWriters.filter((w) => w.username !== username);
-            const auditors = existingAuditors.filter((a) => a.username !== username);
+            const memberEmail = user.email?.toLowerCase();
+            const matchesMember = (u: CommitteeUser) => u.username === username || u.email?.toLowerCase() === memberEmail;
+            const writers = existingWriters.filter((w) => !matchesMember(w));
+            const auditors = existingAuditors.filter((a) => !matchesMember(a));
 
             if (permission === 'manage') writers.push(memberAsUser);
             else if (permission === 'review') auditors.push(memberAsUser);
