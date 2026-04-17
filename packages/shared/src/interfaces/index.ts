@@ -125,6 +125,3 @@ export * from './health-metrics.interface';
 
 // Multi-persona dashboard interfaces
 export * from './multi-persona-dashboard.interface';
-
-// Salesforce ID response interfaces
-export * from './salesforce-id-response.interface';

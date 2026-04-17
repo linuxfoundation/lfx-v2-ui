@@ -541,3 +541,14 @@ export interface OrgSearchResult {
 export interface OrgSearchResponse {
   data: OrgSearchResult[];
 }
+
+// ---------------------------------------------------------------------------
+// Salesforce ID
+// ---------------------------------------------------------------------------
+
+/**
+ * Response from the /api/user/salesforce-id endpoint.
+ */
+export interface SalesforceIdResponse {
+  id: string;
+}

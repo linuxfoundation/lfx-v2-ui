@@ -34,6 +34,7 @@ import {
   VisaRequestRow,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
+import { formatDateToISOString } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { MicroserviceError } from '../errors';
@@ -548,7 +549,7 @@ export class EventsService {
       attendeeAccommodationPaidBy: applicantInfo.attendeeAccommodationPaidBy,
       attendeeType: applicantInfo.attendeeType,
       birthCountry: applicantInfo.citizenshipCountry,
-      birthDate: EventsService.formatDateField(applicantInfo.birthDate),
+      birthDate: formatDateToISOString(applicantInfo.birthDate),
       email: applicantInfo.email,
       eventID: eventID,
       firstName: applicantInfo.firstName,
@@ -563,7 +564,7 @@ export class EventsService {
       ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
       ...(applicantInfo.mailingAddress && { addressLine01: applicantInfo.mailingAddress }),
       ...(applicantInfo.passportExpiryDate && {
-        passportExpiryDate: EventsService.formatDateField(applicantInfo.passportExpiryDate),
+        passportExpiryDate: formatDateToISOString(applicantInfo.passportExpiryDate),
       }),
     };
 
@@ -896,8 +897,4 @@ export class EventsService {
     return city ?? country ?? 'Virtual';
   }
 
-  private static formatDateField(date: Date | string | null | undefined): string | null {
-    if (!date) return null;
-    return date instanceof Date ? date.toISOString() : date;
-  }
 }
