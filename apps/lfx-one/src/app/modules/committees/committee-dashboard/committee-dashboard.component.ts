@@ -25,6 +25,7 @@ import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize
 
 import { PlatformIconPipe } from '@app/shared/pipes/platform-icon.pipe';
 import { PlatformLabelPipe } from '@app/shared/pipes/platform-label.pipe';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
 
 @Component({
@@ -42,6 +43,7 @@ import { CommitteeTableComponent } from '../components/committee-table/committee
     PlatformLabelPipe,
     SkeletonModule,
     TooltipModule,
+    EmptyStateComponent,
   ],
   templateUrl: './committee-dashboard.component.html',
   styleUrl: './committee-dashboard.component.scss',

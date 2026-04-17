@@ -1,35 +1,34 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal, ViewChild, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
-import { EventTab, EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
+import { EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { EventRequestListComponent } from '../event-request-list/event-request-list.component';
 import { EventsTableComponent } from '../events-table/events-table.component';
 
 @Component({
   selector: 'lfx-events-list',
-  imports: [NgClass, EventsTableComponent, EventRequestListComponent],
+  imports: [EventsTableComponent, EventRequestListComponent, EmptyStateComponent],
   templateUrl: './events-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsListComponent {
+  @ViewChild(EventRequestListComponent) private readonly requestListRef?: EventRequestListComponent;
+
   private readonly eventsService = inject(EventsService);
   private readonly messageService = inject(MessageService);
 
+  public readonly activeTab = input<EventTabId>('upcoming');
   public readonly foundation = input<string | null>(null);
   public readonly searchQuery = input<string>('');
   public readonly role = input<string | null>(null);
   public readonly status = input<string | null>(null);
-
-  public readonly activeTabChange = output<EventTabId>();
-
-  protected readonly activeTab = signal<EventTabId>('upcoming');
 
   protected readonly upcomingEventsLoading = signal(true);
   protected readonly pastEventsLoading = signal(true);
@@ -45,13 +44,6 @@ export class EventsListComponent {
   protected readonly upcomingEvents: Signal<MyEventsResponse> = this.initializeUpcomingEvents();
   protected readonly pastEvents: Signal<MyEventsResponse> = this.initializePastEvents();
 
-  protected readonly tabs: EventTab[] = [
-    { id: 'upcoming', label: 'Upcoming', countKey: 'upcoming' },
-    { id: 'past', label: 'Past', countKey: 'past' },
-    { id: 'visa-letters', label: 'Visa Letters' },
-    { id: 'travel-funding', label: 'Travel Funding' },
-  ];
-
   public readonly tabCounts = computed(() => ({
     upcoming: this.upcomingEvents().total,
     past: this.pastEvents().total,
@@ -64,6 +56,11 @@ export class EventsListComponent {
   public readonly nextEventName = computed(() => this.upcomingEvents().data[0]?.name ?? '');
   public readonly availableToJoinCount = computed(() => this.upcomingEvents().data.filter((e) => !e.isRegistered).length);
 
+  /** Delegates to the currently rendered EventRequestListComponent (visa-letters / travel-funding tabs). */
+  public openCurrentRequestDialog(): void {
+    this.requestListRef?.openApplicationDialog();
+  }
+
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
     combineLatest([toObservable(this.foundation), toObservable(this.searchQuery), toObservable(this.role), toObservable(this.status)])
@@ -72,11 +69,6 @@ export class EventsListComponent {
         this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
         this.pastEventsPage.set({ offset: 0, pageSize: this.pastEventsPage().pageSize });
       });
-  }
-
-  protected setActiveTab(tab: EventTabId): void {
-    this.activeTab.set(tab);
-    this.activeTabChange.emit(tab);
   }
 
   protected onUpcomingPageChange(event: PageChangeEvent): void {

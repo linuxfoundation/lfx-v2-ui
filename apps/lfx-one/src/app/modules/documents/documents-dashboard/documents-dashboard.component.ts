@@ -14,10 +14,11 @@ import { DocumentService } from '@services/document.service';
 import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 
 @Component({
   selector: 'lfx-documents-dashboard',
-  imports: [CardComponent, InputTextComponent, SelectComponent, DocumentsTableComponent, ReactiveFormsModule],
+  imports: [CardComponent, InputTextComponent, SelectComponent, DocumentsTableComponent, EmptyStateComponent, ReactiveFormsModule],
   templateUrl: './documents-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

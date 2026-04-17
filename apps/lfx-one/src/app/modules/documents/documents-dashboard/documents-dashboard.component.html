@@ -8,6 +8,16 @@
     <p class="mt-1 text-sm text-gray-500" data-testid="documents-dashboard-description">{{ pageDescription() }}</p>
   </div>
 
+  <!-- Primary empty state: no documents at all -->
+  @if (!loading() && documents().length === 0) {
+    <lfx-empty-state
+      icon="fa-light fa-file-lines"
+      title="No documents yet"
+      subtitle="Documents, links, and attachments from your groups and meetings will appear here."
+      data-testid="documents-empty-state">
+    </lfx-empty-state>
+  } @else {
+
   <!-- Filter Bar + Table -->
   <lfx-card data-testid="documents-table-card">
     <!-- Filters -->
@@ -111,4 +121,6 @@
     <!-- Table -->
     <lfx-documents-table [documents]="filteredDocuments()" [loading]="loading()" [showFoundation]="true" testIdPrefix="documents"> </lfx-documents-table>
   </lfx-card>
+
+  }
 </div>
