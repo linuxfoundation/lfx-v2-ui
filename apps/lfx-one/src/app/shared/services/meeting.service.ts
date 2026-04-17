@@ -64,7 +64,7 @@ export class MeetingService {
     );
   }
 
-  public getMeetingsByProject(uid: string, limit?: number, orderBy?: string): Observable<Meeting[]> {
+  public getMeetingsByProject(uid: string, orderBy?: string): Observable<Meeting[]> {
     let params = new HttpParams().set('tags', `project_uid:${uid}`);
 
     if (orderBy) {
@@ -75,7 +75,7 @@ export class MeetingService {
   }
 
   /** Fetches upcoming meetings scoped to a committee via `tags=committee_uid:{id}` query parameter. */
-  public getMeetingsByCommittee(committeeId: string, limit?: number, orderBy?: string): Observable<Meeting[]> {
+  public getMeetingsByCommittee(committeeId: string, orderBy?: string): Observable<Meeting[]> {
     let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
 
     if (orderBy) {
@@ -110,7 +110,7 @@ export class MeetingService {
    * (e.g. `updated_desc`). The `order` param with dot-notation is only for `/api/meetings`
    * which proxies to the meeting service.
    */
-  public getPastMeetingsByCommittee(committeeId: string, limit?: number, sort?: string): Observable<PastMeeting[]> {
+  public getPastMeetingsByCommittee(committeeId: string, sort?: string): Observable<PastMeeting[]> {
     let params = new HttpParams().set('tags', `committee_uid:${committeeId}`);
 
     if (sort) {
@@ -136,11 +136,11 @@ export class MeetingService {
       );
   }
 
-  public getRecentMeetingsByProject(uid: string, limit: number = 3): Observable<Meeting[]> {
-    return this.getMeetingsByProject(uid, limit, 'updated_at.desc');
+  public getRecentMeetingsByProject(uid: string): Observable<Meeting[]> {
+    return this.getMeetingsByProject(uid, 'updated_at.desc');
   }
 
-  public getUpcomingMeetingsByProject(uid: string, limit: number = 3): Observable<Meeting[]> {
+  public getUpcomingMeetingsByProject(uid: string): Observable<Meeting[]> {
     const params = new HttpParams().set('tags', `project_uid:${uid}`);
 
     // TODO: Add filter for upcoming meetings
@@ -148,7 +148,7 @@ export class MeetingService {
     return this.getMeetings(params).pipe(map((response) => response.data));
   }
 
-  public getPastMeetingsByProject(uid: string, limit: number = 3): Observable<PastMeeting[]> {
+  public getPastMeetingsByProject(uid: string): Observable<PastMeeting[]> {
     const params = new HttpParams().set('tags', `project_uid:${uid}`);
 
     // TODO: Add sort parameter once API supports sorting by scheduled_start_time
@@ -160,7 +160,6 @@ export class MeetingService {
 
   public getMeetingsByProjectPaginated(
     uid: string,
-    limit?: number,
     orderBy?: string,
     pageToken?: string,
     searchName?: string,
@@ -186,7 +185,6 @@ export class MeetingService {
 
   public getPastMeetingsByProjectPaginated(
     uid: string,
-    limit?: number,
     pageToken?: string,
     searchName?: string,
     filters?: string[]

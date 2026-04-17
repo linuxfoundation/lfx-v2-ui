@@ -17,7 +17,7 @@ export class SurveyService {
   }
 
   /** Fetches surveys scoped to a committee via `tags=committee_uid:{uid}` query parameter. */
-  public getSurveysByCommittee(committeeUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
+  public getSurveysByCommittee(committeeUid: string, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('tags', `committee_uid:${committeeUid}`);
 
     if (orderBy) {
@@ -27,7 +27,7 @@ export class SurveyService {
     return this.getSurveys(params);
   }
 
-  public getSurveysByProject(projectUid: string, limit?: number, orderBy?: string): Observable<Survey[]> {
+  public getSurveysByProject(projectUid: string, orderBy?: string): Observable<Survey[]> {
     let params = new HttpParams().set('parent', `project:${projectUid}`);
 
     if (orderBy) {
