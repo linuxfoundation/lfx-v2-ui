@@ -440,6 +440,7 @@ export interface TravelFundAboutMe {
   organizationID?: string;
   canReceiveFunds: string;
   travelFromCountry: string;
+  accommodationNumberOfNights: number;
   openSourceInvolvement: string;
   isLgbtqia: boolean;
   isWoman: boolean;
