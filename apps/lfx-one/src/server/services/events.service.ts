@@ -34,7 +34,7 @@ import {
   VisaRequestRow,
   VisaRequestsResponse,
 } from '@lfx-one/shared/interfaces';
-import { formatDateToISOString } from '@lfx-one/shared/utils';
+import { formatDateToUTC } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { MicroserviceError } from '../errors';
@@ -549,7 +549,7 @@ export class EventsService {
       attendeeAccommodationPaidBy: applicantInfo.attendeeAccommodationPaidBy,
       attendeeType: applicantInfo.attendeeType,
       birthCountry: applicantInfo.citizenshipCountry,
-      birthDate: formatDateToISOString(applicantInfo.birthDate),
+      birthDate: formatDateToUTC(applicantInfo.birthDate),
       email: applicantInfo.email,
       eventID: eventID,
       firstName: applicantInfo.firstName,
@@ -564,7 +564,7 @@ export class EventsService {
       ...(applicantInfo.company && { jobTitle: applicantInfo.company }),
       ...(applicantInfo.mailingAddress && { addressLine01: applicantInfo.mailingAddress }),
       ...(applicantInfo.passportExpiryDate && {
-        passportExpiryDate: formatDateToISOString(applicantInfo.passportExpiryDate),
+        passportExpiryDate: formatDateToUTC(applicantInfo.passportExpiryDate),
       }),
     };
 

@@ -139,27 +139,7 @@
         <span class="text-xs text-red-500" data-testid="visa-apply-embassy-city-error">Embassy city is required</span>
       }
     </div>
-    <div class="flex flex-col gap-1">
-      <label class="text-sm font-medium text-gray-700">Company / Organization <span class="text-red-500">*</span></label>
-      <lfx-autocomplete
-        [form]="orgForm"
-        control="company"
-        [suggestions]="orgSuggestions()"
-        optionLabel="name"
-        placeholder="Search organization..."
-        styleClass="w-full"
-        [forceSelection]="true"
-        [showClear]="true"
-        [delay]="0"
-        dataTestId="visa-apply-company"
-        (completeMethod)="onOrgSearch($event)"
-        (onSelect)="onOrgSelect($event)"
-        (onClear)="onOrgClear()"
-        (onBlur)="onOrgBlur()" />
-      @if (isCompanyInvalid()) {
-        <span class="text-xs text-red-500" data-testid="visa-apply-company-error">Company / Organization is required</span>
-      }
-    </div>
+    <lfx-org-search-field [form]="form" />
   </div>
 
   <!-- Row 5: Mailing Address (full width) -->
