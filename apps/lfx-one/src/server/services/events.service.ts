@@ -665,7 +665,8 @@ export class EventsService {
     const { aboutMe, expenses } = payload;
 
     // Parse numeric fields up-front so validation and body construction share the same values
-    const accommodationNumberOfNights = parseInt(String(aboutMe.accommodationNumberOfNights), 10);
+    const rawNights = String(aboutMe.accommodationNumberOfNights).trim();
+    const accommodationNumberOfNights = /^\d+$/.test(rawNights) ? Number(rawNights) : Number.NaN;
     const estimatedTotal = Number(expenses.estimatedTotal);
 
     const missingFields: string[] = [];
