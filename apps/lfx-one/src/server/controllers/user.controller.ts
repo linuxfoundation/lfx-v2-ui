@@ -234,6 +234,13 @@ export class UserController {
     try {
       const profile = await this.userService.getApiGatewayProfile(req);
 
+      if (!profile.ID) {
+        throw new ServiceValidationError(
+          [{ field: 'id', message: 'Salesforce ID not found for this user', code: 'SALESFORCE_ID_NOT_FOUND' }],
+          'Salesforce ID not found'
+        );
+      }
+
       logger.success(req, 'get_salesforce_id', startTime, {});
 
       res.json({ id: profile.ID });

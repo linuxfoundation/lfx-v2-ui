@@ -540,7 +540,27 @@ export class EventsService {
     // Derive the user's Salesforce ID from the authenticated session — never trust client-provided userId
     const profile = await this.userService.getApiGatewayProfile(req);
     const serverUserId = profile.ID;
+
+    if (!serverUserId) {
+      throw new MicroserviceError('Salesforce ID not found in API Gateway profile — cannot submit visa request', 422, 'SALESFORCE_ID_NOT_FOUND', {
+        operation: 'submit_visa_request_application',
+      });
+    }
+
     const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/user-service/v1/users/${serverUserId}/visaletterrequests`;
+
+    const missingFields: string[] = [];
+    if (!applicantInfo.attendeeType) missingFields.push('attendeeType');
+    if (!applicantInfo.attendeeAccommodationPaidBy) missingFields.push('attendeeAccommodationPaidBy');
+    if (!applicantInfo.birthDate) missingFields.push('birthDate');
+    if (!applicantInfo.citizenshipCountry) missingFields.push('citizenshipCountry');
+    if (!applicantInfo.passportNumber) missingFields.push('passportNumber');
+    if (missingFields.length > 0) {
+      throw new MicroserviceError(`Missing required visa request fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
+        operation: 'submit_visa_request_application',
+        errorBody: { missingFields },
+      });
+    }
 
     const eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'] ?? payload.eventId;
 
