@@ -822,7 +822,7 @@ export class MeetingService {
       operation: 'create_meeting_rsvp_poll',
       pollFn: async () => {
         const allRsvps = await this.getMeetingRsvps(req, meetingUid);
-        return allRsvps.some((r) => r.id === rsvp.id && r.response === rsvp.response);
+        return allRsvps.some((r) => r.id === rsvp.id && r.response_type === rsvp.response_type);
       },
       maxRetries: 5,
       retryDelayMs: 1000,
@@ -887,23 +887,57 @@ export class MeetingService {
   }
 
   /**
-   * Get all RSVPs for a meeting
+   * Get all RSVPs for a meeting, filtered to current registrants only.
+   * The v1_meeting_rsvp records persist historical RSVPs including for registrants
+   * who have since been removed or re-registered with a new registrant_id. We filter
+   * to only those RSVPs whose registrant_id matches a currently-active registrant.
    */
   public async getMeetingRsvps(req: Request, meetingUid: string): Promise<MeetingRsvp[]> {
     logger.debug(req, 'get_meeting_rsvps', 'Fetching meeting RSVPs', { meeting_id: meetingUid });
 
     try {
-      const params = {
+      const rsvpParams = {
         tags: `meeting_id:${meetingUid}`,
         type: 'v1_meeting_rsvp',
       };
 
-      return await fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          ...params,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      );
+      const registrantParams = {
+        type: 'v1_meeting_registrant',
+        parent: `meeting:${meetingUid}`,
+      };
+
+      const [rsvps, registrants] = await Promise.all([
+        fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            ...rsvpParams,
+            ...(pageToken && { page_token: pageToken }),
+          })
+        ),
+        fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            ...registrantParams,
+            ...(pageToken && { page_token: pageToken }),
+          })
+        ).catch((error) => {
+          logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch registrants for RSVP filtering', {
+            meeting_id: meetingUid,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return [] as MeetingRegistrant[];
+        }),
+      ]);
+
+      const activeRegistrantIds = new Set(registrants.map((r) => r.uid).filter(Boolean));
+      const filtered = rsvps.filter((rsvp) => activeRegistrantIds.has(rsvp.registrant_id));
+
+      logger.debug(req, 'get_meeting_rsvps', 'Filtered RSVPs to active registrants', {
+        meeting_id: meetingUid,
+        raw_rsvp_count: rsvps.length,
+        active_registrant_count: activeRegistrantIds.size,
+        filtered_rsvp_count: filtered.length,
+      });
+
+      return filtered;
     } catch (error) {
       logger.warning(req, 'get_meeting_rsvps', 'Failed to fetch meeting RSVPs, returning empty array', {
         meeting_id: meetingUid,

@@ -77,8 +77,17 @@ export async function fetchAllQueryResources<T>(req: Request, fetchPage: (pageTo
       page,
       accumulated_count: results.length,
     });
-    response = await fetchWithRetry(req, () => fetchPage(response.page_token), { page });
-    results.push(...response.resources.map((resource) => resource.data));
+    try {
+      response = await fetchWithRetry(req, () => fetchPage(response.page_token), { page });
+      results.push(...response.resources.map((resource) => resource.data));
+    } catch (error) {
+      logger.warning(req, 'fetch_all_query_resources', 'Pagination failed, returning partial results', {
+        page,
+        accumulated_count: results.length,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      break;
+    }
   }
 
   if (page > 1) {

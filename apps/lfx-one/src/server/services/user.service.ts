@@ -602,6 +602,17 @@ export class UserService {
     // Sort by scheduled_start_time descending (most recent first)
     pastMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
 
+    // Populate participant and attended counts for each past meeting
+    await Promise.all(
+      pastMeetings.map(async (meeting) => {
+        const participants = await this.meetingService.getPastMeetingParticipants(req, meeting.id).catch(() => []);
+        meeting.participant_count = participants.length;
+        meeting.attended_count = participants.filter((p) => p.is_attended).length;
+        meeting.individual_registrants_count = participants.filter((p) => p.is_invited).length;
+        meeting.committee_members_count = 0;
+      })
+    );
+
     const enriched = await this.meetingService.getMeetingProjectName(req, pastMeetings);
 
     return this.accessCheckService.addAccessToResources(req, enriched, 'v1_past_meeting', 'organizer');
