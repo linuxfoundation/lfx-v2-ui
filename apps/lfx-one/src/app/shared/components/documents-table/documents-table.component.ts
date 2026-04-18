@@ -54,6 +54,7 @@ export class DocumentsTableComponent {
         meetingTitle: doc.groupOrMeetingName,
         summaryContent: doc.summaryContent ?? '',
         approved: false,
+        readOnly: true,
       },
     });
   }

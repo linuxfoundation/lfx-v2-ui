@@ -27,6 +27,7 @@ export class SummaryModalComponent {
   private readonly summaryUid = this.dialogConfig.data.summaryUid as string;
   private readonly pastMeetingUid = this.dialogConfig.data.pastMeetingUid as string;
   public readonly meetingTitle = this.dialogConfig.data.meetingTitle as string;
+  public readonly readOnly = signal(!!(this.dialogConfig.data.readOnly as boolean | undefined));
 
   // Edit mode state
   public readonly isEditMode: WritableSignal<boolean> = signal(false);

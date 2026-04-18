@@ -39,27 +39,31 @@
       </div>
       <lfx-button label="Save" size="small" severity="info" [loading]="isSaving()" data-testid="save-edit-button" (click)="saveEdit()"></lfx-button>
     } @else {
-      <div class="flex gap-2">
-        <lfx-button label="Edit" icon="fa-light fa-pen" size="small" severity="secondary" data-testid="edit-button" (click)="enterEditMode()"></lfx-button>
-        @if (!isApproved()) {
-          <lfx-button
-            label="Approve"
-            icon="fa-light fa-check"
-            size="small"
-            severity="success"
-            [loading]="isApproving()"
-            data-testid="approve-button"
-            (click)="approve()"></lfx-button>
-        } @else {
-          <lfx-button
-            label="Approved"
-            icon="fa-light fa-check-circle"
-            size="small"
-            severity="success"
-            [disabled]="true"
-            data-testid="approved-badge"></lfx-button>
-        }
-      </div>
+      @if (!readOnly()) {
+        <div class="flex gap-2">
+          <lfx-button label="Edit" icon="fa-light fa-pen" size="small" severity="secondary" data-testid="edit-button" (click)="enterEditMode()"></lfx-button>
+          @if (!isApproved()) {
+            <lfx-button
+              label="Approve"
+              icon="fa-light fa-check"
+              size="small"
+              severity="success"
+              [loading]="isApproving()"
+              data-testid="approve-button"
+              (click)="approve()"></lfx-button>
+          } @else {
+            <lfx-button
+              label="Approved"
+              icon="fa-light fa-check-circle"
+              size="small"
+              severity="success"
+              [disabled]="true"
+              data-testid="approved-badge"></lfx-button>
+          }
+        </div>
+      } @else {
+        <span></span>
+      }
       <lfx-button label="Close" size="small" severity="secondary" data-testid="close-button" (click)="onClose()"></lfx-button>
     }
   </div>
