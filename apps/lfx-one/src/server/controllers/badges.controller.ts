@@ -3,6 +3,7 @@
 
 import { NextFunction, Request, Response } from 'express';
 
+import { AuthenticationError } from '../errors';
 import { CredlyService } from '../services/credly.service';
 import { EmailVerificationService } from '../services/email-verification.service';
 import { logger } from '../services/logger.service';
@@ -17,8 +18,8 @@ export class BadgesController {
    * Get badges for the authenticated user from Credly.
    * Resolves primary + alternate verified emails via email-verification.service
    * (NATS) so badges earned under secondary addresses are included.
-   * The OIDC session email is always included as a safety net.
-   * Falls back to OIDC email only if the service lookup fails.
+   * The effective/session email is always included as a safety net.
+   * Falls back to the effective/session email only if the service lookup fails.
    */
   public async getBadges(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_badges');
@@ -27,10 +28,7 @@ export class BadgesController {
       const emails = await this.resolveUserEmails(req);
 
       if (emails.length === 0) {
-        logger.warning(req, 'get_badges', 'No resolvable email for authenticated user, returning empty badges', {});
-        logger.success(req, 'get_badges', startTime, { email_count: 0, badge_count: 0 });
-        res.json([]);
-        return;
+        return next(new AuthenticationError('User authentication required', { operation: 'get_badges' }));
       }
 
       const badges = await this.credlyService.getBadgesForEmails(req, emails);
