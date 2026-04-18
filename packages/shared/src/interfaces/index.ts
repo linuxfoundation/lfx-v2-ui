@@ -137,3 +137,6 @@ export * from './multi-persona-dashboard.interface';
 
 // Transaction interfaces
 export * from './transaction.interface';
+
+// Supabase interfaces
+export * from './supabase.interface';

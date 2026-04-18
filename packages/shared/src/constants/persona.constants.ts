@@ -31,7 +31,7 @@ export const ROLE_PRIORITY: readonly string[] = [
   'Developer Seat',
   'Maintainer',
   'Contributor',
-  'Committee Member',
+  'Group Member',
   'None',
 ] as const;
 
