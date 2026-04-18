@@ -167,8 +167,8 @@
       </div>
     }
 
-    <!-- My Groups Section -->
-    @if (myCommitteesLoading()) {
+    <!-- My Groups Section — only visible on Me lens -->
+    @if (isMeLens() && myCommitteesLoading()) {
       <div>
         <div class="flex items-center gap-2 mb-4">
           <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
@@ -195,7 +195,7 @@
           }
         </div>
       </div>
-    } @else if (myCommittees().length > 0 && isMeLens()) {
+    } @else if (isMeLens() && myCommittees().length > 0) {
       <div>
         <div class="flex items-center gap-2 mb-4">
           <h2 class="text-lg font-semibold text-gray-900">My {{ committeeLabel.plural }}</h2>
