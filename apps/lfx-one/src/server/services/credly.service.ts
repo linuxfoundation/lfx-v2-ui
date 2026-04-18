@@ -10,9 +10,23 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 
 export class CredlyService {
-  private readonly apiUrl = process.env['CREDLY_API_URL'] || '';
-  private readonly orgId = process.env['CREDLY_ORG_ID'] || '';
-  private readonly authToken = process.env['CREDLY_API_TOKEN'] || '';
+  // Resolved lazily on first access so dotenv has finished loading,
+  // then memoized — env is stable after startup.
+  private _apiUrl: string | undefined;
+  private _orgId: string | undefined;
+  private _authToken: string | undefined;
+
+  private get apiUrl(): string {
+    return (this._apiUrl ??= process.env['CREDLY_API_URL'] || '');
+  }
+
+  private get orgId(): string {
+    return (this._orgId ??= process.env['CREDLY_ORG_ID'] || '');
+  }
+
+  private get authToken(): string {
+    return (this._authToken ??= process.env['CREDLY_API_TOKEN'] || '');
+  }
 
   private static readonly requestTimeoutMs = 15_000;
   private static readonly maxPaginationPages = 20;
