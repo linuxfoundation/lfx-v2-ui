@@ -22,7 +22,8 @@ const ALLOWED_DOWNLOAD_HOSTS = new Set<string>(
     .filter(Boolean)
 );
 
-// Block private/reserved IP ranges to prevent SSRF even if misconfigured in the allowlist.
+// Block literal private/reserved IP hostnames as a secondary guard.
+// Note: does not prevent DNS rebinding — the allowlist is the primary SSRF control.
 const PRIVATE_IP_PATTERNS = [
   /^localhost$/i,
   /^127\.\d+\.\d+\.\d+$/,
@@ -68,7 +69,12 @@ export class DocumentController {
         throw ServiceValidationError.forField('url', 'url query parameter is required');
       }
 
-      const parsed = new URL(rawUrl);
+      let parsed: URL;
+      try {
+        parsed = new URL(rawUrl);
+      } catch {
+        throw ServiceValidationError.forField('url', 'Invalid URL');
+      }
       if (!['http:', 'https:'].includes(parsed.protocol)) {
         throw ServiceValidationError.forField('url', 'Only http and https URLs are supported');
       }
@@ -104,10 +110,10 @@ export class DocumentController {
       res.setHeader('Content-Disposition', `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`);
       if (contentLength) res.setHeader('Content-Length', contentLength);
 
-      logger.success(req, 'download_document', startTime, { filename });
-
       // Use pipeline() so stream errors propagate and connections aren't left hanging.
       await pipeline(Readable.fromWeb(upstream.body as any), res);
+
+      logger.success(req, 'download_document', startTime, { filename });
     } catch (error) {
       next(error);
     }
