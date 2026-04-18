@@ -2,11 +2,36 @@
 // SPDX-License-Identifier: MIT
 
 import { NextFunction, Request, Response } from 'express';
+import { Readable } from 'stream';
 import { URL } from 'url';
 
 import { ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { DocumentService } from '../services/document.service';
+
+const UID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+// Patterns that match private/reserved IP ranges to prevent SSRF
+const PRIVATE_IP_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d+\.\d+\.\d+$/,
+  /^0\.\d+\.\d+\.\d+$/,
+  /^10\.\d+\.\d+\.\d+$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+  /^192\.168\.\d+\.\d+$/,
+  /^169\.254\.\d+\.\d+$/, // link-local / AWS IMDS
+  /^::1$/,
+  /^fc[0-9a-f]{2}:/i, // IPv6 ULA
+  /^fe80:/i, // IPv6 link-local
+];
+
+function isAllowedDownloadHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (PRIVATE_IP_PATTERNS.some((p) => p.test(host))) return false;
+  // Require at least one dot to rule out single-label hostnames (e.g. 'metadata')
+  if (!host.includes('.')) return false;
+  return true;
+}
 
 /**
  * Controller for handling My Documents HTTP requests
@@ -33,18 +58,26 @@ export class DocumentController {
         throw ServiceValidationError.forField('url', 'Only http and https URLs are supported');
       }
 
-      const upstream = await fetch(rawUrl);
+      if (!isAllowedDownloadHost(parsed.hostname)) {
+        throw ServiceValidationError.forField('url', 'URL hostname is not allowed');
+      }
+
+      // redirect: 'error' prevents redirect-based SSRF — any redirect causes fetch to throw
+      const upstream = await fetch(rawUrl, { redirect: 'error' });
       if (!upstream.ok) {
         throw new Error(`Upstream responded with ${upstream.status}`);
       }
 
       const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = upstream.headers.get('content-length');
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      if (contentLength) res.setHeader('Content-Length', contentLength);
 
-      const buffer = await upstream.arrayBuffer();
-      logger.success(req, 'download_document', startTime, { filename, bytes: buffer.byteLength });
-      res.send(Buffer.from(buffer));
+      logger.success(req, 'download_document', startTime, { filename });
+
+      // Stream directly to the client instead of buffering the entire file in memory
+      Readable.fromWeb(upstream.body as any).pipe(res);
     } catch (error) {
       next(error);
     }
@@ -59,6 +92,15 @@ export class DocumentController {
     });
 
     try {
+      const { project_uid, committee_uid } = req.query as Record<string, string | undefined>;
+
+      if (project_uid && !UID_PATTERN.test(project_uid)) {
+        throw ServiceValidationError.forField('project_uid', 'Invalid project_uid format');
+      }
+      if (committee_uid && !UID_PATTERN.test(committee_uid)) {
+        throw ServiceValidationError.forField('committee_uid', 'Invalid committee_uid format');
+      }
+
       const documents = await this.documentService.getMyDocuments(req, req.query as Record<string, any>);
 
       logger.success(req, 'get_my_documents', startTime, {

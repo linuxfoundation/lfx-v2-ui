@@ -8,7 +8,7 @@ import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DocumentsTableComponent } from '@components/documents-table/documents-table.component';
-import { DOCUMENT_LABEL } from '@lfx-one/shared/constants';
+import { DOCUMENT_LABEL, MEETING_GROUP_SOURCES } from '@lfx-one/shared/constants';
 import { MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -29,9 +29,9 @@ export class DocumentsDashboardComponent {
   protected readonly documentLabel = DOCUMENT_LABEL;
   protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
     { label: 'All Sources', value: null },
-    { label: 'Link', value: 'link' as MyDocumentSource },
-    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+    { label: 'Link', value: 'link' },
+    { label: 'Meeting', value: 'meeting' },
+    { label: 'Mailing List', value: 'mailing_list' },
   ];
 
   // === Forms ===
@@ -125,8 +125,8 @@ export class DocumentsDashboardComponent {
         if (
           query &&
           !doc.name.toLowerCase().includes(query) &&
-          !doc.foundationName.toLowerCase().includes(query) &&
-          !doc.groupOrMeetingName.toLowerCase().includes(query)
+          !(doc.foundationName ?? '').toLowerCase().includes(query) &&
+          !(doc.groupOrMeetingName ?? '').toLowerCase().includes(query)
         ) {
           return false;
         }
@@ -134,8 +134,7 @@ export class DocumentsDashboardComponent {
         if (group && doc.groupOrMeetingUid !== group) return false;
         if (meeting && doc.meetingId !== meeting && doc.pastMeetingId !== meeting) return false;
         if (mailingList && doc.mailingListId !== mailingList) return false;
-        const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
-        if (source && doc.source !== source && !(source === 'meeting' && meetingGroupSources.includes(doc.source))) return false;
+        if (source && doc.source !== source && !(source === 'meeting' && MEETING_GROUP_SOURCES.includes(doc.source))) return false;
         return true;
       });
     });

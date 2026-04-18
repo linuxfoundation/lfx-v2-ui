@@ -74,9 +74,14 @@ export class DocumentService {
     ]);
 
     // When scoped to a specific committee, filter memberships to that committee only.
-    // If the user is not a member, scopedCommittees will be empty and committee-based
-    // fetches return [] early — access control is enforced implicitly.
     const scopedCommittees = committeeUid ? myCommittees.filter((c) => c.uid === committeeUid) : myCommittees;
+
+    // If a committeeUid was requested but the user isn't a member, return early.
+    // No further fetches are needed — access control is enforced by membership.
+    if (committeeUid && scopedCommittees.length === 0) {
+      logger.info(req, 'get_my_documents', 'Committee UID provided but user is not a member — returning empty', { committee_uid: committeeUid });
+      return [];
+    }
 
     // Stage 1.5 — When scoped to a committee, fetch ALL of the committee's meetings and
     // past meetings via parent references — no user-attendance gate. This is the correct
@@ -104,7 +109,7 @@ export class DocumentService {
     // Stage 2 — Fetch all raw items in parallel (no meeting enrichment yet)
     const [committeeLinkItems, groupsioItems, rawMeetingAttachments, rawPastAttachments, rawPastRecordings, rawTranscripts, rawSummaries] = await Promise.all([
       this.getCommitteeDocuments(req, scopedCommittees),
-      this.getGroupsIOArtifacts(req, projectUid ?? scopedCommittees.find((c) => c.project_uid)?.project_uid, committeeUid),
+      this.getGroupsIOArtifacts(req, projectUid ?? scopedCommittees.find((c) => c.project_uid)?.project_uid, committeeUid, scopedCommittees),
       this.fetchRawMeetingAttachments(req, projectUid, committeeMeetingIds),
       this.fetchRawPastMeetingAttachments(req, effectivePastMeetingIds, projectUid),
       this.fetchRawPastMeetingRecordings(req, effectivePastMeetingIds, projectUid),
@@ -218,7 +223,7 @@ export class DocumentService {
 
   // ─── GroupsIO / Mailing List Artifacts ──────────────────────────────────────
 
-  private async getGroupsIOArtifacts(req: Request, projectUid?: string, committeeUid?: string): Promise<MyDocumentItem[]> {
+  private async getGroupsIOArtifacts(req: Request, projectUid?: string, committeeUid?: string, committees?: MyCommittee[]): Promise<MyDocumentItem[]> {
     let tags: string;
     if (committeeUid) {
       tags = `committee_uid:${committeeUid}`;
@@ -246,15 +251,18 @@ export class DocumentService {
 
     logger.info(req, 'get_my_documents', 'Fetched groupsio artifacts', { tags, artifact_count: artifacts.length });
 
+    const committeeMap = new Map(committees?.map((c) => [c.uid, c]) ?? []);
+
     return artifacts.map((a): MyDocumentItem => {
       const url = a.type === 'link' ? a.link_url : (a.download_url ?? a.link_url);
+      const committee = a.committee_uid ? committeeMap.get(a.committee_uid) : undefined;
       return {
         id: `groupsio_artifact:${a.artifact_id}`,
         name: a.filename || a.link_url || a.artifact_id,
         source: (a.type === 'file' ? 'file' : 'mailing_list') as MyDocumentSource,
         foundationName: '',
         foundationUid: a.project_uid || undefined,
-        groupOrMeetingName: '',
+        groupOrMeetingName: committee?.name || '',
         groupOrMeetingUid: a.committee_uid || '',
         date: a.created_at || '',
         url,
@@ -275,12 +283,15 @@ export class DocumentService {
       committee_uid: committeeUid,
     });
 
-    const meetings = await fetchAllQueryResources<V1MeetingQueryResult>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<V1MeetingQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'v1_meeting',
-        parent: `committee:${committeeUid}`,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    const meetings = await fetchAllQueryResources<V1MeetingQueryResult>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<V1MeetingQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting',
+          parent: `committee:${committeeUid}`,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     ).catch((err) => {
       logger.warning(req, 'get_my_documents', 'Failed to fetch committee meeting IDs', {
         committee_uid: committeeUid,
@@ -302,12 +313,15 @@ export class DocumentService {
       committee_uid: committeeUid,
     });
 
-    const pastMeetings = await fetchAllQueryResources<V1PastMeetingQueryResult>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<V1PastMeetingQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'v1_past_meeting',
-        parent: `committee:${committeeUid}`,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    const pastMeetings = await fetchAllQueryResources<V1PastMeetingQueryResult>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<V1PastMeetingQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_past_meeting',
+          parent: `committee:${committeeUid}`,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     ).catch((err) => {
       logger.warning(req, 'get_my_documents', 'Failed to fetch committee past-meeting IDs', {
         committee_uid: committeeUid,

@@ -12,6 +12,11 @@ import { Observable } from 'rxjs';
 export class DocumentService {
   private readonly http = inject(HttpClient);
 
+  /**
+   * Fetches documents for the current user, optionally scoped to a project and/or committee.
+   * @param projectUid - Filter to documents belonging to this project (foundation)
+   * @param committeeUid - Further scope to a specific committee within the project
+   */
   public getMyDocuments(projectUid?: string | null, committeeUid?: string | null): Observable<MyDocumentItem[]> {
     let params = new HttpParams();
     if (projectUid) params = params.set('project_uid', projectUid);

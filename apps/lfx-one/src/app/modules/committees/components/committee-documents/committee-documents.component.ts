@@ -8,6 +8,7 @@ import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DocumentsTableComponent } from '@components/documents-table/documents-table.component';
+import { MEETING_GROUP_SOURCES } from '@lfx-one/shared/constants';
 import { Committee, MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
@@ -37,9 +38,9 @@ export class CommitteeDocumentsComponent {
   // === Static Options ===
   protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
     { label: 'All Sources', value: null },
-    { label: 'Link', value: 'link' as MyDocumentSource },
-    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+    { label: 'Link', value: 'link' },
+    { label: 'Meeting', value: 'meeting' },
+    { label: 'Mailing List', value: 'mailing_list' },
   ];
 
   // === Computed Signals ===
@@ -85,13 +86,11 @@ export class CommitteeDocumentsComponent {
       const docs = this.documents();
       const query = this.searchQuery().toLowerCase().trim();
       const source = this.sourceFilter();
-      const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
-
       return docs.filter((doc) => {
-        if (query && !doc.name.toLowerCase().includes(query) && !doc.groupOrMeetingName.toLowerCase().includes(query)) {
+        if (query && !doc.name.toLowerCase().includes(query) && !(doc.groupOrMeetingName ?? '').toLowerCase().includes(query)) {
           return false;
         }
-        if (source && doc.source !== source && !(source === 'meeting' && meetingGroupSources.includes(doc.source))) {
+        if (source && doc.source !== source && !(source === 'meeting' && MEETING_GROUP_SOURCES.includes(doc.source))) {
           return false;
         }
         return true;
