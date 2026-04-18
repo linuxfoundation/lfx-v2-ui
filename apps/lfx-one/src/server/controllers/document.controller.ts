@@ -11,7 +11,17 @@ import { DocumentService } from '../services/document.service';
 
 const UID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
-// Patterns that match private/reserved IP ranges to prevent SSRF
+// Allowlist of hostnames permitted for the server-side download proxy.
+// Populated from DOCUMENT_DOWNLOAD_HOST_ALLOWLIST (comma-separated) at startup.
+// Requests to any other host are rejected before fetch() is called.
+const ALLOWED_DOWNLOAD_HOSTS: Set<string> = new Set(
+  (process.env['DOCUMENT_DOWNLOAD_HOST_ALLOWLIST'] ?? '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+// Secondary guard: block private/reserved IP ranges even if they somehow appear in the allowlist.
 const PRIVATE_IP_PATTERNS = [
   /^localhost$/i,
   /^127\.\d+\.\d+\.\d+$/,
@@ -28,8 +38,9 @@ const PRIVATE_IP_PATTERNS = [
 function isAllowedDownloadHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   if (PRIVATE_IP_PATTERNS.some((p) => p.test(host))) return false;
-  // Require at least one dot to rule out single-label hostnames (e.g. 'metadata')
   if (!host.includes('.')) return false;
+  // When an allowlist is configured, only permitted hostnames may be proxied.
+  if (ALLOWED_DOWNLOAD_HOSTS.size > 0 && !ALLOWED_DOWNLOAD_HOSTS.has(host)) return false;
   return true;
 }
 
