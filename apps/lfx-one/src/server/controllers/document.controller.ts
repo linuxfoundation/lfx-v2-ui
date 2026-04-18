@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NextFunction, Request, Response } from 'express';
+import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import { URL } from 'url';
 
@@ -88,16 +89,25 @@ export class DocumentController {
         throw new Error(`Upstream responded with ${upstream.status}`);
       }
 
+      if (!upstream.body) {
+        throw new Error('Upstream returned no response body');
+      }
+
       const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
       const contentLength = upstream.headers.get('content-length');
+
+      // RFC 5987: emit both ASCII fallback filename= and filename*=UTF-8'' for full Unicode support.
+      // Strip quotes and control characters from the ASCII fallback to keep the header safe.
+      const safeAscii = filename.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+      const encoded = encodeURIComponent(filename);
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${safeAscii}"; filename*=UTF-8''${encoded}`);
       if (contentLength) res.setHeader('Content-Length', contentLength);
 
       logger.success(req, 'download_document', startTime, { filename });
 
-      // Stream directly to the client instead of buffering the entire file in memory
-      Readable.fromWeb(upstream.body as any).pipe(res);
+      // Use pipeline() so stream errors propagate and connections aren't left hanging.
+      await pipeline(Readable.fromWeb(upstream.body as any), res);
     } catch (error) {
       next(error);
     }

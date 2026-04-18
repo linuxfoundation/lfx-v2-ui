@@ -259,7 +259,7 @@ export class DocumentService {
       return {
         id: `groupsio_artifact:${a.artifact_id}`,
         name: a.filename || a.link_url || a.artifact_id,
-        source: (a.type === 'file' ? 'file' : 'mailing_list') as MyDocumentSource,
+        source: 'mailing_list' as MyDocumentSource,
         foundationName: '',
         foundationUid: a.project_uid || undefined,
         groupOrMeetingName: committee?.name || '',
