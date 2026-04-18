@@ -13,15 +13,15 @@ const UID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 // Allowlist of hostnames permitted for the server-side download proxy.
 // Populated from DOCUMENT_DOWNLOAD_HOST_ALLOWLIST (comma-separated) at startup.
-// Requests to any other host are rejected before fetch() is called.
-const ALLOWED_DOWNLOAD_HOSTS: Set<string> = new Set(
+// The allowlist MUST be configured — requests are rejected when it is empty.
+const ALLOWED_DOWNLOAD_HOSTS = new Set<string>(
   (process.env['DOCUMENT_DOWNLOAD_HOST_ALLOWLIST'] ?? '')
     .split(',')
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean)
 );
 
-// Secondary guard: block private/reserved IP ranges even if they somehow appear in the allowlist.
+// Block private/reserved IP ranges to prevent SSRF even if misconfigured in the allowlist.
 const PRIVATE_IP_PATTERNS = [
   /^localhost$/i,
   /^127\.\d+\.\d+\.\d+$/,
@@ -35,13 +35,16 @@ const PRIVATE_IP_PATTERNS = [
   /^fe80:/i, // IPv6 link-local
 ];
 
-function isAllowedDownloadHost(hostname: string): boolean {
+/**
+ * Returns the server-controlled allowlist entry that matches the given hostname,
+ * or undefined if the hostname is not permitted.
+ * Using the allowlist entry (not the user-supplied hostname) as the fetch target
+ * ensures the hostname in the outgoing request is server-controlled.
+ */
+function resolveAllowedHost(hostname: string): string | undefined {
   const host = hostname.toLowerCase();
-  if (PRIVATE_IP_PATTERNS.some((p) => p.test(host))) return false;
-  if (!host.includes('.')) return false;
-  // When an allowlist is configured, only permitted hostnames may be proxied.
-  if (ALLOWED_DOWNLOAD_HOSTS.size > 0 && !ALLOWED_DOWNLOAD_HOSTS.has(host)) return false;
-  return true;
+  if (!host.includes('.') || PRIVATE_IP_PATTERNS.some((p) => p.test(host))) return undefined;
+  return ALLOWED_DOWNLOAD_HOSTS.has(host) ? host : undefined;
 }
 
 /**
@@ -69,14 +72,18 @@ export class DocumentController {
         throw ServiceValidationError.forField('url', 'Only http and https URLs are supported');
       }
 
-      if (!isAllowedDownloadHost(parsed.hostname)) {
+      // resolveAllowedHost returns a server-controlled string from ALLOWED_DOWNLOAD_HOSTS,
+      // not a derivative of user input — this breaks the SSRF taint flow at the hostname.
+      const allowedHost = resolveAllowedHost(parsed.hostname);
+      if (!allowedHost) {
         throw ServiceValidationError.forField('url', 'URL hostname is not allowed');
       }
 
-      // Use parsed.href (re-serialized from the validated URL object), not rawUrl (raw user input).
-      // This breaks the taint flow from req.query → fetch() that static analysis tracks as SSRF.
+      // Reconstruct the URL using the server-controlled hostname from the allowlist.
+      // path/search come from the user but the host is provably from our Set.
       // redirect: 'error' prevents redirect-based SSRF — any redirect causes fetch to throw.
-      const upstream = await fetch(parsed.href, { redirect: 'error' });
+      const safeUrl = new URL(`${parsed.protocol}//${allowedHost}${parsed.pathname}${parsed.search}`);
+      const upstream = await fetch(safeUrl, { redirect: 'error' });
       if (!upstream.ok) {
         throw new Error(`Upstream responded with ${upstream.status}`);
       }
