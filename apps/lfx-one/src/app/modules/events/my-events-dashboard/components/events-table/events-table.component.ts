@@ -8,12 +8,11 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { MyEventsResponse, PageChangeEvent, SortChangeEvent, TagSeverity } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
-import { TooltipModule } from 'primeng/tooltip';
 import { take } from 'rxjs/operators';
 
 @Component({
   selector: 'lfx-events-table',
-  imports: [TableComponent, TagComponent, ButtonComponent, TooltipModule],
+  imports: [TableComponent, TagComponent, ButtonComponent],
   templateUrl: './events-table.component.html',
 })
 export class EventsTableComponent {
@@ -64,6 +63,10 @@ export class EventsTableComponent {
 
   protected onHeaderClick(field: string): void {
     this.sortChange.emit({ field });
+  }
+
+  protected openUrl(url: string): void {
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   protected downloadCertificate(eventId: string): void {

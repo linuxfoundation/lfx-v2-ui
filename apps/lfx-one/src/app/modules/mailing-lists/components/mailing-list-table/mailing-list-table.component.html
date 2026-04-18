@@ -125,7 +125,7 @@
             } @else {
               <a
                 [routerLink]="['/mailing-lists', mailingList.uid]"
-                class="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                class="lfx-table-name-link text-sm"
                 [attr.data-testid]="'mailing-list-title-' + mailingList.uid">
                 {{ mailingList.title }}
               </a>
@@ -146,7 +146,7 @@
 
           <!-- Description Column -->
           <td>
-            <div class="line-clamp-2 text-xs">
+            <div class="line-clamp-2 text-sm text-gray-700">
               {{ (mailingList.description | stripHtml) || '-' }}
             </div>
           </td>
@@ -183,7 +183,7 @@
           </td>
 
           <!-- Subscribers Column -->
-          <td>{{ mailingList.subscriber_count }}</td>
+          <td><span class="text-sm text-gray-700">{{ mailingList.subscriber_count }}</span></td>
         } @else {
           <!-- PMO View Row -->
           <!-- Mailing List Column -->
@@ -194,17 +194,17 @@
                   {{ mailingList.title }}
                 </span>
               } @else {
-                <a [routerLink]="['/mailing-lists', mailingList.uid]" class="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                <a [routerLink]="['/mailing-lists', mailingList.uid]" class="lfx-table-name-link text-sm">
                   {{ mailingList.title }}
                 </a>
               }
-              <span class="text-sm text-gray-500">{{ mailingList | groupEmail }}</span>
+              <span class="text-xs text-gray-500">{{ mailingList | groupEmail }}</span>
             </div>
           </td>
 
           <!-- Description Column -->
           <td>
-            <div class="line-clamp-2 text-xs">
+            <div class="line-clamp-2 text-sm text-gray-700">
               {{ (mailingList.description | stripHtml) || '-' }}
             </div>
           </td>
@@ -232,11 +232,11 @@
 
           <!-- Subscribers Column -->
           <td [attr.data-testid]="'mailing-list-subscribers-' + mailingList.uid">
-            {{ mailingList.subscriber_count }}
+            <span class="text-sm text-gray-700">{{ mailingList.subscriber_count }}</span>
           </td>
 
           <!-- Emails Sent Column -->
-          <td>-</td>
+          <td><span class="text-sm text-gray-700">-</span></td>
 
           <!-- Actions Column - Hidden for board members -->
           @if (!isBoardMember()) {

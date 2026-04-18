@@ -21,9 +21,17 @@
     </lfx-empty-state>
   } @else {
     <!-- Filter Bar + Table -->
-    <lfx-card styleClass="[&_.p-card-body]:!px-5" data-testid="documents-table-card">
+    <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="documents-table-card">
+      <!-- Source Tabs -->
+      <lfx-card-tabs-bar
+        [options]="sourceTabOptions"
+        [selectedFilter]="sourceTab()"
+        (filterChange)="onSourceTabChange($event)"
+        data-testid="documents-source-tabs">
+      </lfx-card-tabs-bar>
+
       <!-- Filters -->
-      <div class="pb-2 mb-2">
+      <div class="px-5 pt-4 pb-3">
         <div class="flex flex-wrap items-center gap-2">
           <!-- Search -->
           <div class="flex-1 min-w-48">
@@ -101,132 +109,120 @@
               data-testid="documents-mailing-list-filter">
             </lfx-select>
           </div>
-
-          <!-- Source filter -->
-          <div class="w-32 shrink-0 overflow-hidden">
-            <lfx-select
-              [form]="filterForm"
-              control="source"
-              size="small"
-              [options]="sourceOptions"
-              placeholder="All Sources"
-              [showClear]="true"
-              styleClass="w-full"
-              data-testid="documents-source-filter">
-            </lfx-select>
-          </div>
         </div>
       </div>
 
-      <!-- Filtered empty state: documents exist but no results match -->
-      @if (!loading() && filteredDocuments().length === 0) {
-        <lfx-empty-state
-          [withCard]="false"
-          icon="fa-light fa-file-lines"
-          title="No documents found"
-          subtitle="Try adjusting your search or filter criteria."
-          data-testid="documents-filtered-empty-state">
-        </lfx-empty-state>
-      } @else {
-        <!-- Table -->
-        <lfx-table
-          [value]="filteredDocuments()"
-          [paginator]="true"
-          [rows]="10"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          [loading]="loading()"
-          [showPageLinks]="false"
-          [showFirstLastIcon]="false"
-          [showCurrentPageReport]="true"
-          currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
-          data-testid="documents-table">
-          <ng-template #header>
-            <tr>
-              <th class="w-[35%]">Name</th>
-              <th class="w-[20%]">Foundation</th>
-              <th class="w-[20%]">Group / Meeting</th>
-              <th class="w-[10%]">Source</th>
-              <th class="w-[10%]">Date</th>
-              <th class="w-[5%]">Actions</th>
-            </tr>
-          </ng-template>
+      <div class="px-5 pb-5">
+        <!-- Filtered empty state: documents exist but no results match -->
+        @if (!loading() && filteredDocuments().length === 0) {
+          <lfx-empty-state
+            [withCard]="false"
+            icon="fa-light fa-file-lines"
+            title="No documents found"
+            subtitle="Try adjusting your search or filter criteria."
+            data-testid="documents-filtered-empty-state">
+          </lfx-empty-state>
+        } @else {
+          <!-- Table -->
+          <lfx-table
+            [value]="filteredDocuments()"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+            [loading]="loading()"
+            [showPageLinks]="false"
+            [showFirstLastIcon]="false"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+            data-testid="documents-table">
+            <ng-template #header>
+              <tr>
+                <th class="w-[35%]">Name</th>
+                <th class="w-[20%]">Foundation</th>
+                <th class="w-[20%]">Group / Meeting</th>
+                <th class="w-[10%]">Source</th>
+                <th class="w-[10%]">Date</th>
+                <th class="w-[5%]">Actions</th>
+              </tr>
+            </ng-template>
 
-          <ng-template #body let-doc let-rowIndex="rowIndex">
-            <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'documents-row-' + doc.id">
-              <!-- Name column -->
-              <td>
-                <div class="flex items-center gap-2">
-                  <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')" class="text-base shrink-0"></i>
-                  @if (doc.url) {
-                    <button
-                      type="button"
-                      class="text-blue-600 hover:text-blue-700 hover:underline font-medium text-xs text-left bg-transparent border-none cursor-pointer p-0 truncate"
-                      (click)="openDocument(doc)"
-                      [attr.data-testid]="'documents-name-' + doc.id">
-                      {{ doc.name }}
-                    </button>
-                  } @else {
-                    <span class="text-xs text-gray-900 truncate">{{ doc.name }}</span>
-                  }
-                </div>
-              </td>
+            <ng-template #body let-doc let-rowIndex="rowIndex">
+              <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'documents-row-' + doc.id">
+                <!-- Name column -->
+                <td>
+                  <div class="flex items-center gap-2">
+                    <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')" class="text-base shrink-0"></i>
+                    @if (doc.url) {
+                      <button
+                        type="button"
+                        class="lfx-table-name-link text-sm text-left bg-transparent border-none p-0 truncate"
+                        (click)="openDocument(doc)"
+                        [attr.data-testid]="'documents-name-' + doc.id">
+                        {{ doc.name }}
+                      </button>
+                    } @else {
+                      <span class="text-sm text-gray-900 truncate">{{ doc.name }}</span>
+                    }
+                  </div>
+                </td>
 
-              <!-- Foundation column -->
-              <td>
-                <span class="text-xs text-gray-700">{{ doc.foundationName || '—' }}</span>
-              </td>
+                <!-- Foundation column -->
+                <td>
+                  <span class="text-sm text-gray-700">{{ doc.foundationName || '—' }}</span>
+                </td>
 
-              <!-- Group / Meeting column -->
-              <td>
-                <span class="text-xs text-gray-700">{{ doc.groupOrMeetingName || '—' }}</span>
-              </td>
+                <!-- Group / Meeting column -->
+                <td>
+                  <span class="text-sm text-gray-700">{{ doc.groupOrMeetingName || '—' }}</span>
+                </td>
 
-              <!-- Source column -->
-              <td>
-                <lfx-tag
-                  [value]="doc.source | myDocumentSourceTag: 'label'"
-                  [severity]="doc.source | myDocumentSourceTag: 'severity'"
-                  [attr.data-testid]="'documents-source-tag-' + doc.id">
-                </lfx-tag>
-              </td>
+                <!-- Source column -->
+                <td>
+                  <lfx-tag
+                    [value]="doc.source | myDocumentSourceTag: 'label'"
+                    [severity]="doc.source | myDocumentSourceTag: 'severity'"
+                    [attr.data-testid]="'documents-source-tag-' + doc.id">
+                  </lfx-tag>
+                </td>
 
-              <!-- Date column -->
-              <td>
-                <span class="text-xs text-gray-700">{{ doc.date | date: 'MMM d, y' }}</span>
-              </td>
+                <!-- Date column -->
+                <td>
+                  <span class="text-sm text-gray-700">{{ doc.date | date: 'MMM d, y' }}</span>
+                </td>
 
-              <!-- Actions column -->
-              <td>
-                <div class="flex items-center justify-end gap-1">
-                  @if (doc.source === 'file' && doc.attachmentUid) {
-                    <lfx-button
-                      icon="fa-light fa-arrow-down-to-line"
-                      severity="primary"
-                      size="small"
-                      [text]="true"
-                      (onClick)="openDocument(doc)"
-                      [attr.data-testid]="'documents-download-' + doc.id"
-                      tooltip="Download"
-                      tooltipPosition="top">
-                    </lfx-button>
-                  } @else if (doc.url) {
-                    <lfx-button
-                      [icon]="doc.source === 'recording' ? 'fa-solid fa-circle-play' : 'fa-light fa-arrow-up-right-from-square'"
-                      severity="primary"
-                      size="small"
-                      [text]="true"
-                      (onClick)="openDocument(doc)"
-                      [attr.data-testid]="'documents-open-' + doc.id"
-                      [tooltip]="doc.source === 'recording' ? 'Play recording' : 'Open'"
-                      tooltipPosition="top">
-                    </lfx-button>
-                  }
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </lfx-table>
-      }
+                <!-- Actions column -->
+                <td>
+                  <div class="flex items-center justify-end gap-1">
+                    @if (doc.source === 'file' && doc.attachmentUid) {
+                      <lfx-button
+                        icon="fa-light fa-arrow-down-to-line"
+                        severity="primary"
+                        size="small"
+                        [text]="true"
+                        (onClick)="openDocument(doc)"
+                        [attr.data-testid]="'documents-download-' + doc.id"
+                        tooltip="Download"
+                        tooltipPosition="top">
+                      </lfx-button>
+                    } @else if (doc.url) {
+                      <lfx-button
+                        [icon]="doc.source === 'recording' ? 'fa-solid fa-circle-play' : 'fa-light fa-arrow-up-right-from-square'"
+                        severity="primary"
+                        size="small"
+                        [text]="true"
+                        (onClick)="openDocument(doc)"
+                        [attr.data-testid]="'documents-open-' + doc.id"
+                        [tooltip]="doc.source === 'recording' ? 'Play recording' : 'Open'"
+                        tooltipPosition="top">
+                      </lfx-button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </lfx-table>
+        }
+      </div>
     </lfx-card>
   }
   </div>

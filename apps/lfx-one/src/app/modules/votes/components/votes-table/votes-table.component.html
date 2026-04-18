@@ -1,8 +1,15 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card styleClass="[&_.p-card-body]:!px-5" data-testid="votes-table-card">
-  <div class="pb-2 mb-2">
+<lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="votes-table-card">
+  <lfx-card-tabs-bar
+    [options]="statusTabOptions"
+    [selectedFilter]="statusTab()"
+    (filterChange)="onStatusTabChange($event)"
+    data-testid="votes-status-tabs">
+  </lfx-card-tabs-bar>
+
+  <div class="px-5 pt-4 pb-3">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       <div class="flex-1 min-w-0">
         <lfx-input-text
@@ -57,16 +64,13 @@
           data-testid="votes-group-filter"></lfx-select>
       </div>
 
-      <div class="w-full sm:w-auto sm:shrink-0">
-        <lfx-select [form]="searchForm" control="status" size="small" [options]="statusOptions()" data-testid="votes-status-filter"></lfx-select>
-      </div>
-
       <ng-content select="[tableActions]"></ng-content>
     </div>
   </div>
 
+  <div class="px-5 pb-5">
   <lfx-table
-    [value]="votes()"
+    [value]="displayedVotes()"
     [paginator]="true"
     [rows]="rowsPerPage()"
     [first]="first()"
@@ -100,7 +104,7 @@
         <td>
           <button
             type="button"
-            class="text-blue-600 hover:text-blue-700 hover:underline font-medium text-xs text-left bg-transparent border-none cursor-pointer p-0"
+            class="lfx-table-name-link text-sm text-left bg-transparent border-none p-0"
             (click)="onViewVote(vote.uid)"
             [attr.data-testid]="'votes-name-' + vote.uid">
             {{ vote.name }}
@@ -118,20 +122,20 @@
         </td>
 
         <td>
-          <span class="text-xs text-slate-900" [attr.data-testid]="'votes-responses-' + vote.uid">
+          <span class="text-sm text-gray-700" [attr.data-testid]="'votes-responses-' + vote.uid">
             {{ vote.num_response_received }}
           </span>
         </td>
 
-        <td class="text-xs text-slate-900">
+        <td>
           @if (vote.status === PollStatus.ENDED) {
-            <span>{{ vote.end_time | date: 'MMM d, y' }}</span>
+            <span class="text-sm text-gray-700">{{ vote.end_time | date: 'MMM d, y' }}</span>
           } @else if (vote.status === PollStatus.DISABLED) {
-            <span class="text-gray-500">Draft</span>
+            <span class="text-sm text-gray-700">Draft</span>
           } @else if (vote.end_time) {
-            <span>{{ vote.end_time | relativeDueDate }}</span>
+            <span class="text-sm text-gray-700">{{ vote.end_time | relativeDueDate }}</span>
           } @else {
-            <span>-</span>
+            <span class="text-sm text-gray-700">-</span>
           }
         </td>
 
@@ -208,6 +212,7 @@
       </tr>
     </ng-template>
   </lfx-table>
+  </div>
 </lfx-card>
 
 <p-confirmDialog></p-confirmDialog>

@@ -3,17 +3,18 @@
 
 import { DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, input, OnInit, output, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { POLL_STATUS_LABELS, PollStatus, VOTE_LABEL } from '@lfx-one/shared';
-import { Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
+import { PollStatus, VOTE_LABEL } from '@lfx-one/shared';
+import { FilterPillOption, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
@@ -21,12 +22,13 @@ import { VoteService } from '@services/vote.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs';
+import { combineLatest, debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
 
 @Component({
   selector: 'lfx-votes-table',
   imports: [
     CardComponent,
+    CardTabsBarComponent,
     TableComponent,
     TagComponent,
     ButtonComponent,
@@ -54,6 +56,11 @@ export class VotesTableComponent implements OnInit {
   // === Constants ===
   protected readonly voteLabel = VOTE_LABEL;
   protected readonly PollStatus = PollStatus;
+  protected readonly statusTabOptions: FilterPillOption[] = [
+    { id: 'all', label: 'All' },
+    { id: PollStatus.ACTIVE, label: 'Active' },
+    { id: PollStatus.ENDED, label: 'Ended' },
+  ];
 
   // === Inputs ===
   public readonly votes = input.required<Vote[]>();
@@ -80,18 +87,18 @@ export class VotesTableComponent implements OnInit {
 
   // === Writable Signals ===
   protected readonly isDeleting = signal(false);
+  protected readonly statusTab = signal<string>('all');
 
   // === Forms ===
   public searchForm = new FormGroup({
     search: new FormControl<string>(''),
-    status: new FormControl<PollStatus | null>(null),
     group: new FormControl<string | null>(null),
     foundationFilter: new FormControl<string | null>(null),
     projectFilter: new FormControl<string | null>(null),
   });
 
   // === Computed Signals ===
-  protected readonly statusOptions: Signal<{ label: string; value: PollStatus | null }[]> = this.initStatusOptions();
+  protected readonly displayedVotes: Signal<Vote[]> = this.initDisplayedVotes();
 
   // === Lifecycle ===
   public ngOnInit(): void {
@@ -105,6 +112,10 @@ export class VotesTableComponent implements OnInit {
 
   protected onViewResults(voteId: string): void {
     this.viewResults.emit(voteId);
+  }
+
+  protected onStatusTabChange(tab: string): void {
+    this.statusTab.set(tab);
   }
 
   protected onFoundationFilterChange(value: string | null): void {
@@ -161,36 +172,30 @@ export class VotesTableComponent implements OnInit {
 
   // === Private Initializers ===
   private initFormSubscriptions(): void {
-    this.searchForm.valueChanges
+    combineLatest([
+      this.searchForm.valueChanges.pipe(startWith(this.searchForm.value), debounceTime(300), distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))),
+      toObservable(this.statusTab),
+    ])
       .pipe(
-        debounceTime(300),
-        distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
-        map((value) => ({
-          search: value.search ?? '',
-          status: value.status ?? null,
-          group: value.group ?? null,
+        map(([formValue, statusTab]) => ({
+          search: formValue.search ?? '',
+          status: statusTab !== 'all' ? (statusTab as PollStatus) : null,
+          group: formValue.group ?? null,
         })),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((filters) => this.filtersChange.emit(filters));
   }
 
-  private initStatusOptions(): Signal<{ label: string; value: PollStatus | null }[]> {
+  private initDisplayedVotes(): Signal<Vote[]> {
     return computed(() => {
-      const options: { label: string; value: PollStatus | null }[] = [{ label: 'All Statuses', value: null }];
+      // For lazy (server-side paginated) mode, the server handles status filtering via filtersChange
+      if (this.lazy()) return this.votes();
 
-      const statusOrder: PollStatus[] = [PollStatus.ACTIVE, PollStatus.DISABLED, PollStatus.ENDED];
-      for (const status of statusOrder) {
-        const shouldShowStatus = status !== PollStatus.DISABLED || this.hasPMOAccess();
-        if (shouldShowStatus) {
-          options.push({
-            label: POLL_STATUS_LABELS[status],
-            value: status,
-          });
-        }
-      }
-
-      return options;
+      // For client-side mode (Me lens), filter locally by status tab
+      const tab = this.statusTab();
+      if (tab === 'all') return this.votes();
+      return this.votes().filter((v) => (v.status as string).toLowerCase() === tab);
     });
   }
 }

@@ -7,12 +7,13 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { DOCUMENT_LABEL } from '@lfx-one/shared/constants';
-import { MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
+import { FilterPillOption, MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
@@ -23,6 +24,7 @@ import { MyDocumentSourceTagPipe } from '@app/shared/pipes/my-document-source-ta
   selector: 'lfx-documents-dashboard',
   imports: [
     CardComponent,
+    CardTabsBarComponent,
     ButtonComponent,
     InputTextComponent,
     SelectComponent,
@@ -43,11 +45,11 @@ export class DocumentsDashboardComponent {
 
   // === Constants ===
   protected readonly documentLabel = DOCUMENT_LABEL;
-  protected readonly sourceOptions: { label: string; value: MyDocumentSource | null }[] = [
-    { label: 'All Sources', value: null },
-    { label: 'Link', value: 'link' as MyDocumentSource },
-    { label: 'Meeting', value: 'meeting' as MyDocumentSource },
-    { label: 'Mailing List', value: 'mailing_list' as MyDocumentSource },
+  protected readonly sourceTabOptions: FilterPillOption[] = [
+    { id: 'all', label: 'All Sources' },
+    { id: 'link', label: 'Links' },
+    { id: 'meeting', label: 'Meetings' },
+    { id: 'mailing_list', label: 'Mailing Lists' },
   ];
 
   // === Forms ===
@@ -57,11 +59,11 @@ export class DocumentsDashboardComponent {
     group: new FormControl<string | null>(null),
     meeting: new FormControl<string | null>(null),
     mailingList: new FormControl<string | null>(null),
-    source: new FormControl<MyDocumentSource | null>(null),
   });
 
   // === Writable Signals ===
   protected readonly loading = signal<boolean>(true);
+  protected readonly sourceTab = signal<string>('all');
 
   // === Computed Signals ===
   protected readonly project = this.projectContextService.activeContext;
@@ -70,7 +72,6 @@ export class DocumentsDashboardComponent {
   protected readonly groupFilter: Signal<string | null> = this.initGroupFilter();
   protected readonly meetingFilter: Signal<string | null> = this.initMeetingFilter();
   protected readonly mailingListFilter: Signal<string | null> = this.initMailingListFilter();
-  protected readonly sourceFilter: Signal<MyDocumentSource | null> = this.initSourceFilter();
   protected readonly documents: Signal<MyDocumentItem[]> = this.initDocuments();
   protected readonly filteredDocuments: Signal<MyDocumentItem[]> = this.initFilteredDocuments();
   protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initFoundationOptions();
@@ -79,6 +80,10 @@ export class DocumentsDashboardComponent {
   protected readonly mailingListOptions: Signal<{ label: string; value: string | null }[]> = this.initMailingListOptions();
 
   // === Protected Methods ===
+  protected onSourceTabChange(tab: string): void {
+    this.sourceTab.set(tab);
+  }
+
   protected openDocument(doc: MyDocumentItem): void {
     if (!doc.url) return;
     try {
@@ -120,10 +125,6 @@ export class DocumentsDashboardComponent {
     return toSignal(this.filterForm.controls.mailingList.valueChanges.pipe(startWith<string | null>(null)), { initialValue: null });
   }
 
-  private initSourceFilter(): Signal<MyDocumentSource | null> {
-    return toSignal(this.filterForm.controls.source.valueChanges.pipe(startWith<MyDocumentSource | null>(null)), { initialValue: null });
-  }
-
   private initDocuments(): Signal<MyDocumentItem[]> {
     return toSignal(
       toObservable(this.project).pipe(
@@ -148,7 +149,7 @@ export class DocumentsDashboardComponent {
       const group = this.groupFilter();
       const meeting = this.meetingFilter();
       const mailingList = this.mailingListFilter();
-      const source = this.sourceFilter();
+      const sourceTab = this.sourceTab();
 
       return docs.filter((doc) => {
         if (
@@ -163,8 +164,10 @@ export class DocumentsDashboardComponent {
         if (group && doc.groupOrMeetingUid !== group) return false;
         if (meeting && doc.meetingId !== meeting && doc.pastMeetingId !== meeting) return false;
         if (mailingList && doc.mailingListId !== mailingList) return false;
-        const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
-        if (source && doc.source !== source && !(source === 'meeting' && meetingGroupSources.includes(doc.source))) return false;
+        if (sourceTab !== 'all') {
+          const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
+          if (doc.source !== sourceTab && !(sourceTab === 'meeting' && meetingGroupSources.includes(doc.source))) return false;
+        }
         return true;
       });
     });
