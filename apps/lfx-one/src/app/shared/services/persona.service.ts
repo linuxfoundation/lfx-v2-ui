@@ -17,7 +17,7 @@ import {
   VALID_PERSONAS,
 } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
-import { catchError, of, take } from 'rxjs';
+import { catchError, Observable, of, take, tap } from 'rxjs';
 
 import { AccountContextService } from './account-context.service';
 import { CookieRegistryService } from './cookie-registry.service';
@@ -42,6 +42,8 @@ export class PersonaService {
   public readonly hasBoardRole: Signal<boolean>;
   public readonly hasProjectRole: Signal<boolean>;
   public readonly personaLoaded: WritableSignal<boolean>;
+  /** True once enriched persona data has been fetched this session — guards against redundant refetches on re-navigation. */
+  public readonly enrichedPersonasLoaded: WritableSignal<boolean> = signal<boolean>(false);
   /** Writer on the tenant root project — bypasses nav persona filtering */
   public readonly isRootWriter: WritableSignal<boolean> = signal<boolean>(false);
 
@@ -76,6 +78,28 @@ export class PersonaService {
     this.persistToCookie({ primary, all, organizations: this.lastKnownOrganizations() });
   }
 
+  /**
+   * Fetches personas with enriched project metadata (name/logo/parent/description).
+   * Overwrites the same signals as the initial refresh so downstream consumers upgrade automatically.
+   * No-ops after the first successful fetch unless `force=true` — callers can trigger this on every
+   * consumer init without causing redundant network traffic.
+   */
+  public refreshEnrichedPersonas(force: boolean = false): Observable<PersonaApiResponse | null> {
+    if (this.enrichedPersonasLoaded() && !force) {
+      return of(null);
+    }
+    return this.http.get<PersonaApiResponse>('/api/user/personas?enriched=true').pipe(
+      take(1),
+      catchError(() => of(null)),
+      tap((response) => {
+        this.applyPersonaResponse(response);
+        if (response && !response.error) {
+          this.enrichedPersonasLoaded.set(true);
+        }
+      })
+    );
+  }
+
   private refreshFromApi(): void {
     this.http
       .get<PersonaApiResponse>('/api/user/personas')
@@ -83,43 +107,45 @@ export class PersonaService {
         take(1),
         catchError(() => of(null))
       )
-      .subscribe((response) => {
-        if (!response || response.error) {
-          console.warn('[PersonaService] Persona API returned error or empty response, using fallback:', {
-            error: response?.error,
-            currentPersona: this.currentPersona(),
-            allPersonas: this.allPersonas(),
-          });
-          this.isRootWriter.set(false);
-          this.personaLoaded.set(true);
-          return;
-        }
+      .subscribe((response) => this.applyPersonaResponse(response));
+  }
 
-        console.info('[PersonaService] Persona detection response:', response);
-        this.personaProjects.set(response.personaProjects);
-        this.detectedProjects.set(response.projects);
-        this.isRootWriter.set(response.isRootWriter ?? false);
-
-        if (response.personas.length > 0) {
-          this.setPersonas(response.personas[0], response.personas, response.organizations);
-        } else if (response.organizations) {
-          this.lastKnownOrganizations.set(response.organizations);
-          this.persistToCookie({
-            primary: this.currentPersona(),
-            all: this.allPersonas(),
-            organizations: response.organizations,
-          });
-        }
-
-        if (response.organizations) {
-          if (response.organizations.length > 0) {
-            console.info('[PersonaService] Detected organizations:', response.organizations);
-          }
-          this.accountContextService.initializeUserOrganizations(response.organizations);
-        }
-
-        this.personaLoaded.set(true);
+  private applyPersonaResponse(response: PersonaApiResponse | null): void {
+    if (!response || response.error) {
+      console.warn('[PersonaService] Persona API returned error or empty response, using fallback:', {
+        error: response?.error,
+        currentPersona: this.currentPersona(),
+        allPersonas: this.allPersonas(),
       });
+      this.isRootWriter.set(false);
+      this.personaLoaded.set(true);
+      return;
+    }
+
+    console.info('[PersonaService] Persona detection response:', response);
+    this.personaProjects.set(response.personaProjects);
+    this.detectedProjects.set(response.projects);
+    this.isRootWriter.set(response.isRootWriter ?? false);
+
+    if (response.personas.length > 0) {
+      this.setPersonas(response.personas[0], response.personas, response.organizations);
+    } else if (response.organizations) {
+      this.lastKnownOrganizations.set(response.organizations);
+      this.persistToCookie({
+        primary: this.currentPersona(),
+        all: this.allPersonas(),
+        organizations: response.organizations,
+      });
+    }
+
+    if (response.organizations) {
+      if (response.organizations.length > 0) {
+        console.info('[PersonaService] Detected organizations:', response.organizations);
+      }
+      this.accountContextService.initializeUserOrganizations(response.organizations);
+    }
+
+    this.personaLoaded.set(true);
   }
 
   private persistToCookie(state: PersistedPersonaState): void {

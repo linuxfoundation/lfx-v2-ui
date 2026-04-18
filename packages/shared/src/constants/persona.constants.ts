@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DevPersonaPreset, PersonaOption, PersonaType } from '../interfaces';
+import { BOARD_SCOPED_PERSONAS, DevPersonaPreset, PersonaOption, PersonaType } from '../interfaces';
 
 export const PERSONA_COOKIE_KEY = 'lfx-active-persona-preset';
 
@@ -13,8 +13,36 @@ export const DETECTION_SOURCE_MAP: Readonly<Partial<Record<string, PersonaType>>
 /** Sort order, highest first. */
 export const PERSONA_PRIORITY: readonly PersonaType[] = ['executive-director', 'board-member', 'maintainer', 'contributor'] as const;
 
+/** Board-scoped personas in priority order. Used to pick a default foundation on lens entry. */
+export const BOARD_SCOPED_PERSONA_PRIORITY: readonly PersonaType[] = PERSONA_PRIORITY.filter((p) => BOARD_SCOPED_PERSONAS.has(p));
+
+/** Role label priority for dashboard sorting, highest first. */
+export const ROLE_PRIORITY: readonly string[] = [
+  'Executive Director',
+  'Chair',
+  'Vice Chair',
+  'Treasurer',
+  'Secretary',
+  'Counsel',
+  'Director',
+  'Lead',
+  'TAC/TOC Representative',
+  'LF Staff',
+  'Developer Seat',
+  'Maintainer',
+  'Contributor',
+  'Committee Member',
+  'None',
+] as const;
+
+/** Voting status priority for dashboard sorting, highest first. */
+export const VOTING_STATUS_PRIORITY: readonly string[] = ['Voting Rep', 'Alternate Voting Rep', 'Observer', 'Emeritus', 'None'] as const;
+
 export const AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS = 15_000;
 export const PERSONAS_CACHE_TTL_MS = 15_000;
+
+/** When persona-detected projects exceed this count, enrichment switches from per-project GETs to a single paginated query-service fetch. */
+export const PERSONA_ENRICHMENT_BULK_THRESHOLD = 20;
 
 export const ROOT_PROJECT_SLUG = 'ROOT';
 export const ROOT_PROJECT_UID_CACHE_TTL_MS = 60 * 60 * 1000;

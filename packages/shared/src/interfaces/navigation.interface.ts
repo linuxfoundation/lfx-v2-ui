@@ -1,6 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { Signal, WritableSignal } from '@angular/core';
+import type { Subject } from 'rxjs';
+
 import type { Lens } from './lens.interface';
 
 export type NavLens = Extract<Lens, 'foundation' | 'project'>;
@@ -51,4 +54,21 @@ export interface LensItemsQuery {
   sort: 'name_asc';
   page_token?: string;
   name?: string;
+}
+
+/** Internal per-lens reactive state container used by NavigationService. */
+export interface LensState {
+  searchTerm: WritableSignal<string>;
+  items: Signal<LensItem[]>;
+  loading: WritableSignal<boolean>;
+  loaded: WritableSignal<boolean>;
+  nextPageToken: WritableSignal<string | null>;
+  hasMore: Signal<boolean>;
+  bypassActive: WritableSignal<boolean>;
+  personaFetchFailed: WritableSignal<boolean>;
+  loadMore$: Subject<string>;
+  reload$: Subject<void>;
+  pendingDefaultSelection: WritableSignal<boolean>;
+  /** Incremented on every reset; nextPage emissions tagged with the current value at dispatch. Stale pages are dropped. */
+  generation: WritableSignal<number>;
 }

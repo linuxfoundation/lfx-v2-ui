@@ -5,30 +5,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { LENS_DEFAULT_ROUTES, NAV_SEARCH_DEBOUNCE_MS } from '@lfx-one/shared/constants';
-import { LensItem, LensItemsResponse, LensPage, NavLens, TaggedLensPage } from '@lfx-one/shared/interfaces';
+import { BOARD_SCOPED_PERSONA_PRIORITY, LENS_DEFAULT_ROUTES, NAV_SEARCH_DEBOUNCE_MS } from '@lfx-one/shared/constants';
+import { LensItem, LensItemsResponse, LensPage, LensState, NavLens, TaggedLensPage } from '@lfx-one/shared/interfaces';
 import { lensItemToProjectContext } from '@lfx-one/shared/utils';
 import { MessageService } from 'primeng/api';
 import { catchError, debounceTime, distinctUntilChanged, EMPTY, filter, map, merge, Observable, of, scan, skip, Subject, switchMap, tap } from 'rxjs';
 
 import { LensService } from './lens.service';
+import { PersonaService } from './persona.service';
 import { ProjectContextService } from './project-context.service';
-
-interface LensState {
-  searchTerm: WritableSignal<string>;
-  items: Signal<LensItem[]>;
-  loading: WritableSignal<boolean>;
-  loaded: WritableSignal<boolean>;
-  nextPageToken: WritableSignal<string | null>;
-  hasMore: Signal<boolean>;
-  bypassActive: WritableSignal<boolean>;
-  personaFetchFailed: WritableSignal<boolean>;
-  loadMore$: Subject<string>;
-  reload$: Subject<void>;
-  pendingDefaultSelection: WritableSignal<boolean>;
-  /** Incremented on every reset; nextPage emissions tagged with the current value at dispatch. Stale pages are dropped. */
-  generation: WritableSignal<number>;
-}
 
 @Injectable({
   providedIn: 'root',
@@ -37,6 +22,7 @@ export class NavigationService {
   private readonly http = inject(HttpClient);
   private readonly lensService = inject(LensService);
   private readonly projectContextService = inject(ProjectContextService);
+  private readonly personaService = inject(PersonaService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
@@ -117,12 +103,25 @@ export class NavigationService {
       return;
     }
 
-    const context = lensItemToProjectContext(page.items[0]);
+    const defaultItem = lens === 'foundation' ? this.pickFoundationByPersonaPriority(page.items) : page.items[0];
+    const context = lensItemToProjectContext(defaultItem);
     if (lens === 'foundation') {
       this.projectContextService.setFoundation(context);
     } else {
       this.projectContextService.setProject(context);
     }
+  }
+
+  /** Prefer a foundation the user is ED of, then Board Member of; fall back to the first item. */
+  private pickFoundationByPersonaPriority(items: LensItem[]): LensItem {
+    const personaProjects = this.personaService.personaProjects();
+    for (const persona of BOARD_SCOPED_PERSONA_PRIORITY) {
+      const personaUids = new Set((personaProjects[persona] ?? []).map((p) => p.projectUid));
+      if (personaUids.size === 0) continue;
+      const match = items.find((item) => personaUids.has(item.uid));
+      if (match) return match;
+    }
+    return items[0];
   }
 
   private handleEmptyLensResponse(lens: NavLens, page: LensPage): void {
