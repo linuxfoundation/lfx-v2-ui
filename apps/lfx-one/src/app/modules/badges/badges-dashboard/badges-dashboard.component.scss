@@ -11,7 +11,7 @@
   @apply absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500;
 }
 
-:host ::ng-deep .badges-grid {
+:host ::ng-deep [data-testid='badges-grid'] {
   > div {
     @apply h-full;
   }

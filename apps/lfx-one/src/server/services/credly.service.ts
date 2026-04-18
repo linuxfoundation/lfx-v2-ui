@@ -10,16 +10,22 @@ import { Request } from 'express';
 import { logger } from './logger.service';
 
 export class CredlyService {
-  // TODO: Replace with AWS Secrets Manager fetch + in-memory cache
   private readonly apiUrl = process.env['CREDLY_API_URL'] || '';
   private readonly orgId = process.env['CREDLY_ORG_ID'] || '';
   private readonly authToken = process.env['CREDLY_API_TOKEN'] || '';
 
   private static readonly requestTimeoutMs = 15_000;
   private static readonly maxPaginationPages = 20;
-  private static readonly maxEmailsPerQuery = 10;
-  private static readonly cacheTtlMs = 30 * 60 * 1_000; // 30 minutes
-  private static readonly maxCacheSize = 500;
+  private static readonly emailBatchSize = 10;
+  private static readonly cacheTtlMs = (() => {
+    const env = parseInt(process.env['CREDLY_CACHE_TTL_MS'] ?? '', 10);
+    return Number.isNaN(env) ? 30 * 60 * 1_000 : env;
+  })();
+  private static readonly pendingCacheTtlMs = 5 * 60 * 1_000;
+  private static readonly maxCacheSize = (() => {
+    const env = parseInt(process.env['CREDLY_CACHE_MAX_SIZE'] ?? '', 10);
+    return Number.isNaN(env) ? 500 : env;
+  })();
 
   /** Per-user in-memory badge cache. Key is a sorted, joined email list. */
   private readonly badgeCache = new Map<string, CredlyCachedBadges>();
@@ -40,28 +46,33 @@ export class CredlyService {
       return [];
     }
 
-    // Normalize before capping: sort + dedupe so the same logical set always maps to the same cache key
+    // Normalize: sort + dedupe so the same logical set always maps to the same cache key
     const normalizedEmails = [...new Set(emails.map((e) => e.toLowerCase()))].sort();
-    const emailsToQuery = normalizedEmails.slice(0, CredlyService.maxEmailsPerQuery);
-    if (normalizedEmails.length > CredlyService.maxEmailsPerQuery) {
-      logger.warning(req, 'get_badges_for_emails', 'Email count exceeds limit, truncating', {
-        total: normalizedEmails.length,
-        limit: CredlyService.maxEmailsPerQuery,
-      });
-    }
 
-    const cacheKey = emailsToQuery.join(',');
+    const cacheKey = normalizedEmails.join(',');
     const cached = this.badgeCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
       logger.debug(req, 'get_badges_for_emails', 'Returning cached badges', {
-        email_count: emailsToQuery.length,
+        email_count: normalizedEmails.length,
         badge_count: cached.badges.length,
       });
       return cached.badges;
     }
 
-    const results = await Promise.all(emailsToQuery.map((email) => this.fetchBadgesForEmail(req, email)));
-    const allEntries = results.flat();
+    // Chunk into batches to avoid overwhelming the Credly API while handling >10 addresses
+    const batches = this.chunkArray(normalizedEmails, CredlyService.emailBatchSize);
+    if (batches.length > 1) {
+      logger.debug(req, 'get_badges_for_emails', 'Querying emails in batches', {
+        total_emails: normalizedEmails.length,
+        batch_count: batches.length,
+      });
+    }
+
+    const allEntries: CredlyBadgeEntry[] = [];
+    for (const batch of batches) {
+      const batchResults = await Promise.all(batch.map((email) => this.fetchBadgesForEmail(req, email)));
+      allEntries.push(...batchResults.flat());
+    }
 
     // Deduplicate by badge ID (a user with multiple emails may have the same badge issued to each)
     const seen = new Set<string>();
@@ -74,13 +85,14 @@ export class CredlyService {
     const badges = unique.filter(isValidBadge).map(mapCredlyBadgeToBadge).sort(compareBadgesByIssuedDateDesc);
 
     this.evictExpiredCacheEntries();
+    const ttl = badges.some((b) => b.isPending) ? CredlyService.pendingCacheTtlMs : CredlyService.cacheTtlMs;
     this.badgeCache.set(cacheKey, {
       badges,
-      expiresAt: Date.now() + CredlyService.cacheTtlMs,
+      expiresAt: Date.now() + ttl,
     });
 
     logger.debug(req, 'get_badges_for_emails', 'Fetched badges for user emails', {
-      email_count: emails.length,
+      email_count: normalizedEmails.length,
       raw_count: allEntries.length,
       deduplicated_count: unique.length,
       badge_count: badges.length,
@@ -164,6 +176,14 @@ export class CredlyService {
     } catch {
       return false;
     }
+  }
+
+  private chunkArray<T>(arr: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
   }
 
   /**

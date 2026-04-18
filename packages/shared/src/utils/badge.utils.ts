@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+// Generated with [Claude Code](https://claude.ai/code)
+
 import { BADGE_FILTER_OPTIONS } from '../constants/badge.constants';
 import { Badge, BadgeCategory } from '../interfaces/badge.interface';
 import { CredlyBadgeEntry } from '../interfaces/credly.interface';
@@ -48,10 +50,10 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
   const middleName = (entry.user?.middle_name ?? entry.issued_to_middle_name ?? '').trim();
   const lastName = (entry.user?.last_name ?? entry.issued_to_last_name ?? '').trim();
   const credlyOrigin = getTrustedCredlyOrigin(entry.user?.url, entry.badge_url, entry.accept_badge_url);
-  const credlyProfileSlug = getCredlyProfileSlug(entry.user?.url) ?? buildCredlyProfileSlug(firstName, middleName, lastName);
+  const credlyProfileSlug = getCredlyProfileSlug(entry.user?.url);
   const privateBadgeEditUrl = credlyProfileSlug && credlyOrigin ? `${credlyOrigin}/users/${credlyProfileSlug}${CREDLY_EDIT_FRAGMENT}` : undefined;
   const isPrivateBadge = !(entry.public ?? false);
-  const acceptedBadgeUrl = isPrivateBadge ? (privateBadgeEditUrl ?? entry.badge_url ?? undefined) : (entry.badge_url ?? undefined);
+  const acceptedBadgeUrl = isPrivateBadge ? privateBadgeEditUrl : (entry.badge_url ?? undefined);
   const credlyUrl = entry.state === 'pending' ? (entry.accept_badge_url ?? undefined) : acceptedBadgeUrl;
   const shareUrl = entry.state === 'accepted' && (entry.public ?? false) ? (entry.badge_url ?? undefined) : undefined;
 
@@ -68,7 +70,6 @@ export function mapCredlyBadgeToBadge(entry: CredlyBadgeEntry): Badge {
     lastName,
     credentialId: entry.issuer_earner_id ?? entry.id,
     isVerified: entry.state === 'accepted',
-    isExpired: false, // computed client-side from expiresDate to avoid cache staleness
     isPublic: entry.public ?? false,
     isPending: entry.state === 'pending',
     expiresDate,
@@ -108,60 +109,6 @@ function getCredlyProfileSlug(userUrl?: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-function buildCredlyProfileSlug(firstName: string, middleName: string, lastName: string): string | undefined {
-  if (!firstName || !lastName) return undefined;
-  const nameParts = [firstName];
-  if (middleName) {
-    nameParts.push(middleName);
-  }
-  nameParts.push(lastName);
-
-  const normalizedSlug = collapseRepeatedHyphens(
-    nameParts
-      .join('-')
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-  );
-  const slug = trimHyphens(normalizedSlug);
-
-  return slug || undefined;
-}
-
-function collapseRepeatedHyphens(value: string): string {
-  let result = '';
-  let previousWasHyphen = false;
-
-  for (const char of value) {
-    if (char === '-') {
-      if (!previousWasHyphen) {
-        result += char;
-      }
-      previousWasHyphen = true;
-      continue;
-    }
-
-    result += char;
-    previousWasHyphen = false;
-  }
-
-  return result;
-}
-
-function trimHyphens(value: string): string {
-  let start = 0;
-  let end = value.length;
-
-  while (start < end && value[start] === '-') {
-    start++;
-  }
-
-  while (end > start && value[end - 1] === '-') {
-    end--;
-  }
-
-  return value.slice(start, end);
 }
 
 /**

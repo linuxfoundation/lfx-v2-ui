@@ -13,7 +13,7 @@ import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CardComponent } from '@components/card/card.component';
 import { BADGE_FILTER_OPTIONS, BADGE_LABEL, BADGE_STATUS_SELECT_OPTIONS, BADGE_VISIBILITY_SELECT_OPTIONS } from '@lfx-one/shared';
-import { Badge, BadgeCategory, BadgeState, BadgeStatusFilter, BadgeVisibilityFilter } from '@lfx-one/shared/interfaces';
+import { BadgeCategory, BadgeState, BadgeStatusFilter, BadgeVisibilityFilter, EnrichedBadge } from '@lfx-one/shared/interfaces';
 import { catchError, map, of, startWith, tap } from 'rxjs';
 
 import { BadgesService } from '../../../shared/services/badges.service';
@@ -66,10 +66,11 @@ export class BadgesDashboardComponent {
   protected readonly selectedStatusFilter = this.initializeSelectedStatusFilter();
   protected readonly selectedVisibilityFilter = this.initializeSelectedVisibilityFilter();
   protected readonly hasActiveFilters = computed(() => this.selectedStatusFilter() !== 'all' || this.selectedVisibilityFilter() !== 'all');
+  protected readonly filterButtonAriaLabel = computed(() => (this.hasActiveFilters() ? 'Open filter options (filters active)' : 'Open filter options'));
   protected readonly filteredBadges = this.initializeFilteredBadges();
   protected readonly filteredBadgesCount = computed(() => this.filteredBadges().length);
   protected readonly badgeCountLabel = this.initializeBadgeCountLabel();
-  protected readonly paginatedBadges = this.initializePaginatedBadges();
+  protected readonly paginatedBadges: Signal<EnrichedBadge[]> = this.initializePaginatedBadges();
 
   protected onFilterChange(filter: string): void {
     this.selectedFilter.set(filter as BadgeCategory | 'all');
@@ -89,7 +90,10 @@ export class BadgesDashboardComponent {
     return toSignal(
       this.badgesService.getBadges().pipe(
         map((data): BadgeState => ({ loading: false, error: false, data })),
-        catchError(() => of<BadgeState>({ loading: false, error: true, data: [] })),
+        catchError((err) => {
+          console.error('[badges] Failed to load badges', err);
+          return of<BadgeState>({ loading: false, error: true, data: [], errorMessage: err instanceof Error ? err.message : String(err) });
+        }),
         startWith<BadgeState>({ loading: true, error: false, data: [] })
       ),
       { initialValue: { loading: true, error: false, data: [] } }
@@ -124,7 +128,7 @@ export class BadgesDashboardComponent {
     });
   }
 
-  private initializeFilteredBadges(): Signal<Badge[]> {
+  private initializeFilteredBadges(): Signal<EnrichedBadge[]> {
     return computed(() => {
       const now = new Date();
       const categoryFilter = this.selectedFilter();
@@ -133,7 +137,7 @@ export class BadgesDashboardComponent {
 
       // Enrich with isExpired here so it re-evaluates against the current time
       // whenever a filter interaction triggers this computed to re-run
-      let result = this.badges().map((badge) => ({
+      let result: EnrichedBadge[] = this.badges().map((badge) => ({
         ...badge,
         isExpired: !!badge.expiresDate && new Date(badge.expiresDate) < now,
       }));
@@ -160,7 +164,7 @@ export class BadgesDashboardComponent {
     });
   }
 
-  private initializePaginatedBadges(): Signal<Badge[]> {
+  private initializePaginatedBadges(): Signal<EnrichedBadge[]> {
     return computed(() => {
       const first = this.paginatorFirst();
       return this.filteredBadges().slice(first, first + BADGES_PER_PAGE);

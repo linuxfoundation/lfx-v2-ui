@@ -10,7 +10,7 @@ export type BadgeStatusFilter = 'all' | 'pending' | 'active' | 'expired';
 /** Badge visibility filter values */
 export type BadgeVisibilityFilter = 'all' | 'public' | 'private';
 
-/** Badge entity representing an earned achievement */
+/** Badge entity representing an earned achievement (wire type — no client-derived fields) */
 export interface Badge {
   /** Unique badge identifier */
   id: string;
@@ -36,8 +36,6 @@ export interface Badge {
   credentialId: string;
   /** Whether the badge state is accepted/verified */
   isVerified: boolean;
-  /** Whether the badge credential has expired */
-  isExpired: boolean;
   /** Whether the earner has made the badge publicly visible on Credly */
   isPublic: boolean;
   /** Whether the badge is in pending state (awaiting acceptance by the earner) */
@@ -52,9 +50,17 @@ export interface Badge {
   shareUrl?: string;
 }
 
+/** Client-side enriched badge — extends Badge with fields derived from the current timestamp */
+export interface EnrichedBadge extends Badge {
+  /** Whether the badge credential has expired — computed client-side from expiresDate to avoid cache staleness */
+  isExpired: boolean;
+}
+
 /** State container for badge data loading */
 export interface BadgeState {
   loading: boolean;
   error: boolean;
   data: Badge[];
+  /** Error message surfaced from the caught error for debugging */
+  errorMessage?: string;
 }

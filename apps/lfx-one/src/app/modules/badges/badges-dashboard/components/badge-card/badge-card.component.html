@@ -10,13 +10,13 @@
         rel="noopener noreferrer"
         class="badge-card-overlay-link"
         [attr.aria-label]="'View ' + badge().title + ' credential on Credly'"
-        data-testid="badge-card-link">
+        [attr.data-testid]="'badge-card-link-' + badge().id">
       </a>
     }
     <!-- Top Row: Image + Tags -->
     <div class="flex items-start justify-between">
       @if (badge().imageUrl) {
-        <img [src]="badge().imageUrl" [alt]="badge().title" class="w-16 h-16 object-contain" data-testid="badge-image" />
+        <img [src]="badge().imageUrl" [alt]="badge().title" class="w-16 h-16 object-contain" [attr.data-testid]="'badge-image-' + badge().id" />
       } @else {
         <div class="w-16 h-16 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-shield-check text-2xl text-blue-600"></i>
@@ -103,12 +103,12 @@
                   ? 'Manage privacy for ' + badge().title + ' credential on Credly'
                   : 'View ' + badge().title + ' credential on Credly'
             "
-            data-testid="badge-credly-link">
+            [attr.data-testid]="'badge-credly-link-' + badge().id">
             <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
             {{ badge().isPending ? 'Accept Badge' : badge().isPublic ? 'View in Credly' : 'Manage Privacy' }}
           </a>
           @if (badge().shareUrl && badge().isPublic) {
-            <button type="button" class="badge-share-btn" (click)="shareBadge(badge().shareUrl!)" aria-label="Copy badge URL to clipboard" data-testid="badge-share-btn">
+            <button type="button" class="badge-share-btn" (click)="shareBadge(badge().shareUrl!)" aria-label="Copy badge URL to clipboard" [attr.data-testid]="'badge-share-btn-' + badge().id">
               <i class="fa-light fa-link text-xs"></i>
               Share Badge
             </button>

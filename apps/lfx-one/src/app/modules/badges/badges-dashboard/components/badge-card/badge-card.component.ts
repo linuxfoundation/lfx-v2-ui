@@ -6,7 +6,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { CardComponent } from '@components/card/card.component';
-import { Badge } from '@lfx-one/shared/interfaces';
+import { EnrichedBadge } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 
 @Component({
@@ -21,9 +21,18 @@ export class BadgeCardComponent {
   private readonly messageService = inject(MessageService);
 
   // === Inputs ===
-  public readonly badge = input.required<Badge>();
+  public readonly badge = input.required<EnrichedBadge>();
 
   protected async shareBadge(shareUrl: string): Promise<void> {
+    if (!navigator.clipboard?.writeText) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Copy not supported',
+        detail: 'Clipboard access is unavailable in this browser.',
+      });
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(shareUrl);
       this.messageService.add({

@@ -54,7 +54,7 @@ export interface CredlyBadgeEntry {
 
 /** Raw Credly API paginated response wrapper */
 export interface CredlyApiResponse {
-  data: CredlyBadgeEntry[];
+  data?: CredlyBadgeEntry[];
   metadata: {
     count: number;
     current_page: number;
