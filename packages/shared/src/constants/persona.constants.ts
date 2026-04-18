@@ -5,7 +5,7 @@ import { DevPersonaPreset, PersonaOption, PersonaType } from '../interfaces';
 
 export const PERSONA_COOKIE_KEY = 'lfx-active-persona-preset';
 
-export const DETECTION_SOURCE_MAP: Readonly<Record<string, PersonaType>> = {
+export const DETECTION_SOURCE_MAP: Readonly<Partial<Record<string, PersonaType>>> = {
   board_member: 'board-member',
   executive_director: 'executive-director',
 } as const;

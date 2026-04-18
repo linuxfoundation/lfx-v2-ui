@@ -48,14 +48,17 @@ export interface PersonaProject {
   projectName: string | null;
 }
 
-export interface PersonaApiResponse {
+export interface PersonaDetections {
   personaProjects: Partial<Record<PersonaType, PersonaProject[]>>;
   personas: PersonaType[];
   projects: EnrichedPersonaProject[];
   organizations: Account[];
-  /** Writer on the tenant root project — bypasses nav persona filtering. */
-  isRootWriter: boolean;
   error: string | null;
+}
+
+export interface PersonaApiResponse extends PersonaDetections {
+  /** Writer on the tenant root project — bypasses nav persona filtering. Request-scoped, not cached. */
+  isRootWriter: boolean;
 }
 
 export interface SsrPersonaResult {
@@ -74,6 +77,6 @@ export interface AffiliatedProjectUidsCacheEntry {
 
 /** Stores in-flight promise to collapse concurrent lookups. */
 export interface PersonaApiResponseCacheEntry {
-  promise: Promise<PersonaApiResponse>;
+  promise: Promise<PersonaDetections>;
   expiresAt: number;
 }

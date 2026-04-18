@@ -5,9 +5,9 @@ import { LENS_PERSONA_MAP, NAV_MAX_UPSTREAM_ITERATIONS, NAV_MIN_ITEMS_PER_RESPON
 import {
   EnrichedPersonaProject,
   GetLensItemsParams,
-  Lens,
   LensItem,
   LensItemsResponse,
+  NavLens,
   PersonaApiResponse,
   PersonaType,
   Project,
@@ -72,12 +72,16 @@ export class NavigationService {
       currentResponse = next.response;
     }
 
-    // Filtered response already contains the full persona-accessible set — no more pages.
+    // With persona filtering, only suppress next-page token when we've proven completeness.
+    // If the loop exited due to the iteration cap, keep the token so the client can continue.
     if (eligibleUids) {
-      lastToken = null;
+      const fullyCollected = accumulated.length >= eligibleUids.size;
+      if (fullyCollected || upstreamFailed) {
+        lastToken = null;
+      }
     }
 
-    logger.debug(req, 'get_lens_items', 'Built lens items', {
+    logger.debug(req, 'build_lens_items', 'Built lens items', {
       lens,
       item_count: accumulated.length,
       upstream_iterations: iterations,
@@ -100,16 +104,20 @@ export class NavigationService {
   private async fetchPersona(req: Request): Promise<{ persona: PersonaApiResponse | null; failed: boolean }> {
     try {
       const persona = await personaDetectionService.getPersonas(req);
+      if (persona.error) {
+        logger.warning(req, 'fetch_persona', 'Persona fetch returned error, falling back to lens-scoped results only', { error: persona.error });
+        return { persona: null, failed: true };
+      }
       return { persona, failed: false };
     } catch (error) {
-      logger.warning(req, 'get_lens_items', 'Persona fetch failed, falling back to lens-scoped results only', { err: error });
+      logger.warning(req, 'fetch_persona', 'Persona fetch failed, falling back to lens-scoped results only', { err: error });
       return { persona: null, failed: true };
     }
   }
 
   private async fetchUpstreamPage(
     req: Request,
-    lens: Lens,
+    lens: NavLens,
     pageToken: string | undefined,
     name: string | undefined
   ): Promise<{ response: QueryServiceResponse<Project> | null; failed: boolean }> {
@@ -118,12 +126,12 @@ export class NavigationService {
       const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Project>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', query);
       return { response, failed: false };
     } catch (error) {
-      logger.warning(req, 'get_lens_items', 'Upstream query failed', { err: error, lens, has_page_token: !!pageToken });
+      logger.warning(req, 'fetch_upstream_page', 'Upstream query failed', { err: error, lens, has_page_token: !!pageToken });
       return { response: null, failed: true };
     }
   }
 
-  private filterPageResources(resources: QueryServiceResponse<Project>['resources'], lens: Lens, eligibleUids: Set<string> | null): Project[] {
+  private filterPageResources(resources: QueryServiceResponse<Project>['resources'], lens: NavLens, eligibleUids: Set<string> | null): Project[] {
     let projects = resources.map((r) => r.data);
     // legal_entity_type negation isn't supported by the filter grammar — re-check locally.
     if (lens === 'foundation') {
@@ -135,7 +143,7 @@ export class NavigationService {
     return projects;
   }
 
-  private buildQuery(lens: Lens, pageToken: string | undefined, name: string | undefined): Record<string, any> {
+  private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): Record<string, any> {
     const base: Record<string, any> = {
       type: 'project',
       filters: ['stage:Active'],

@@ -19,7 +19,7 @@ export interface LensItemsResponse {
   bypass_active: boolean;
   persona_fetch_failed: boolean;
   upstream_failed: boolean;
-  lens: Lens;
+  lens: NavLens;
 }
 
 /** `reset=true` marks a fresh first page vs. an append emission. */
@@ -30,6 +30,12 @@ export interface LensPage {
   personaFetchFailed: boolean;
   upstreamFailed: boolean;
   reset: boolean;
+}
+
+/** Carries the dispatch generation so stale responses can be filtered out of the merged stream. */
+export interface TaggedLensPage {
+  page: LensPage;
+  generation: number;
 }
 
 export interface GetLensItemsParams {

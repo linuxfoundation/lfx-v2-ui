@@ -17,6 +17,7 @@ import {
   PersonaApiResponse,
   PersonaApiResponseCacheEntry,
   PersonaDetectionResponse,
+  PersonaDetections,
   PersonaProject,
   PersonaType,
 } from '@lfx-one/shared/interfaces';
@@ -93,9 +94,27 @@ export class PersonaDetectionService {
     const email = getEffectiveEmail(req) || '';
     const cacheKey = username || email;
 
+    // isRootWriter is request-scoped (bearer-token dependent) — resolve per-request and merge.
+    const [detections, isRootWriter] = await Promise.all([this.getPersonaDetections(req, username, email, cacheKey), this.checkRootWriter(req)]);
+    return { ...detections, isRootWriter };
+  }
+
+  public async checkRootWriter(req: Request): Promise<boolean> {
+    const cached = this.rootWriterRequestCache.get(req);
+    if (cached) return cached;
+
+    const promise = this.resolveRootUid(req).then((rootUid) => {
+      if (!rootUid) return false;
+      return this.accessCheckService.checkSingleAccess(req, { resource: 'project', id: rootUid, access: 'writer' });
+    });
+    this.rootWriterRequestCache.set(req, promise);
+    return promise;
+  }
+
+  private async getPersonaDetections(req: Request, username: string, email: string, cacheKey: string): Promise<PersonaDetections> {
     // No stable identifier — bypass cache to prevent cross-user data leaks.
     if (!cacheKey) {
-      return this.computePersonas(req, username, email);
+      return this.computePersonaDetections(req, username, email);
     }
 
     const cached = this.personasCache.get(cacheKey);
@@ -107,7 +126,7 @@ export class PersonaDetectionService {
     }
 
     // Stored before await so concurrent callers share the fetch.
-    const promise = this.computePersonas(req, username, email);
+    const promise = this.computePersonaDetections(req, username, email);
     this.personasCache.set(cacheKey, { promise, expiresAt: Date.now() + PERSONAS_CACHE_TTL_MS });
 
     // Evict failed lookups so the next caller retries instead of being pinned for the TTL.
@@ -120,18 +139,6 @@ export class PersonaDetectionService {
       () => this.personasCache.delete(cacheKey)
     );
 
-    return promise;
-  }
-
-  public async checkRootWriter(req: Request): Promise<boolean> {
-    const cached = this.rootWriterRequestCache.get(req);
-    if (cached) return cached;
-
-    const promise = this.resolveRootUid(req).then((rootUid) => {
-      if (!rootUid) return false;
-      return this.accessCheckService.checkSingleAccess(req, { resource: 'project', id: rootUid, access: 'writer' });
-    });
-    this.rootWriterRequestCache.set(req, promise);
     return promise;
   }
 
@@ -156,13 +163,13 @@ export class PersonaDetectionService {
     }
   }
 
-  private async computePersonas(req: Request, username: string, email: string): Promise<PersonaApiResponse> {
+  private async computePersonaDetections(req: Request, username: string, email: string): Promise<PersonaDetections> {
     logger.debug(req, 'get_personas', 'Fetching personas from detection service', {
       username,
       email: email ? '***' : 'empty',
     });
 
-    const [detectionResponse, isRootWriter] = await Promise.all([this.fetchPersonaDetections(req, username, email), this.checkRootWriter(req)]);
+    const detectionResponse = await this.fetchPersonaDetections(req, username, email);
 
     if (detectionResponse.error) {
       logger.warning(req, 'get_personas', 'Persona detection returned error', {
@@ -175,7 +182,6 @@ export class PersonaDetectionService {
         personas: ['contributor'],
         projects: [],
         organizations: [],
-        isRootWriter,
         error: detectionResponse.error.message,
       };
     }
@@ -188,7 +194,6 @@ export class PersonaDetectionService {
         personas: ['contributor'],
         projects: [],
         organizations: [],
-        isRootWriter,
         error: null,
       };
     }
@@ -209,7 +214,6 @@ export class PersonaDetectionService {
       personas,
       projects,
       organizations: this.extractOrganizations(req, projects),
-      isRootWriter,
       error: null,
     };
   }
@@ -295,10 +299,7 @@ export class PersonaDetectionService {
 
       return normalized;
     } catch (error) {
-      logger.warning(req, 'fetch_persona_detections', 'NATS persona detection failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        error_name: error instanceof Error ? error.constructor.name : 'Unknown',
-      });
+      logger.warning(req, 'fetch_persona_detections', 'NATS persona detection failed', { err: error });
 
       return { projects: [], error: { code: 'nats_error', message: 'Failed to fetch persona detections' } };
     }

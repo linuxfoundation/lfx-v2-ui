@@ -6,7 +6,7 @@ import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@a
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { LENS_DEFAULT_ROUTES, NAV_SEARCH_DEBOUNCE_MS } from '@lfx-one/shared/constants';
-import { LensItem, LensItemsResponse, LensPage, NavLens } from '@lfx-one/shared/interfaces';
+import { LensItem, LensItemsResponse, LensPage, NavLens, TaggedLensPage } from '@lfx-one/shared/interfaces';
 import { lensItemToProjectContext } from '@lfx-one/shared/utils';
 import { MessageService } from 'primeng/api';
 import { catchError, debounceTime, distinctUntilChanged, EMPTY, filter, map, merge, Observable, of, scan, skip, Subject, switchMap, tap } from 'rxjs';
@@ -26,6 +26,8 @@ interface LensState {
   loadMore$: Subject<string>;
   reload$: Subject<void>;
   pendingDefaultSelection: WritableSignal<boolean>;
+  /** Incremented on every reset; nextPage emissions tagged with the current value at dispatch. Stale pages are dropped. */
+  generation: WritableSignal<number>;
 }
 
 @Injectable({
@@ -146,6 +148,7 @@ export class NavigationService {
     const bypassActive = signal<boolean>(false);
     const personaFetchFailed = signal<boolean>(false);
     const pendingDefaultSelection = signal<boolean>(false);
+    const generation = signal<number>(0);
     const loadMore$ = new Subject<string>();
     const reload$ = new Subject<void>();
 
@@ -158,12 +161,26 @@ export class NavigationService {
       bypassActive,
       personaFetchFailed,
       pendingDefaultSelection,
+      generation,
       loadMore$,
       reload$
     );
     const hasMore = computed(() => nextPageToken() !== null);
 
-    return { searchTerm, items, loading, loaded, nextPageToken, hasMore, bypassActive, personaFetchFailed, pendingDefaultSelection, loadMore$, reload$ };
+    return {
+      searchTerm,
+      items,
+      loading,
+      loaded,
+      nextPageToken,
+      hasMore,
+      bypassActive,
+      personaFetchFailed,
+      pendingDefaultSelection,
+      generation,
+      loadMore$,
+      reload$,
+    };
   }
 
   private initItems(
@@ -175,6 +192,7 @@ export class NavigationService {
     bypassActive: WritableSignal<boolean>,
     personaFetchFailed: WritableSignal<boolean>,
     pendingDefaultSelection: WritableSignal<boolean>,
+    generation: WritableSignal<number>,
     loadMore$: Subject<string>,
     reload$: Subject<void>
   ): Signal<LensItem[]> {
@@ -183,14 +201,20 @@ export class NavigationService {
 
     const reloadTriggered$ = reload$.pipe(map(() => searchTerm()));
 
-    const firstPage$: Observable<LensPage> = merge(searchTriggered$, reloadTriggered$).pipe(
-      switchMap((term) => this.fetchSinglePage(lens, term, null, loading, true))
+    const firstPage$ = merge(searchTriggered$, reloadTriggered$).pipe(
+      switchMap((term) => {
+        generation.update((g) => g + 1);
+        return this.fetchSinglePage(lens, term, null, loading, true, generation());
+      })
     );
 
-    const nextPage$: Observable<LensPage> = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false)));
+    const nextPage$ = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false, generation())));
 
     return toSignal(
       merge(firstPage$, nextPage$).pipe(
+        // Drop responses from a superseded generation (e.g., a scroll fetch that lands after a new search reset).
+        filter(({ generation: pageGen }) => pageGen === generation()),
+        map(({ page }) => page),
         tap((page) => {
           nextPageToken.set(page.nextPageToken);
           bypassActive.set(page.bypassActive);
@@ -207,16 +231,26 @@ export class NavigationService {
     );
   }
 
-  private fetchSinglePage(lens: NavLens, term: string, pageToken: string | null, loading: WritableSignal<boolean>, reset: boolean): Observable<LensPage> {
+  private fetchSinglePage(
+    lens: NavLens,
+    term: string,
+    pageToken: string | null,
+    loading: WritableSignal<boolean>,
+    reset: boolean,
+    generation: number
+  ): Observable<TaggedLensPage> {
     loading.set(true);
     return this.fetchPage(lens, term, pageToken).pipe(
-      map((response) => this.toLensPage(response, reset)),
+      map((response) => ({ page: this.toLensPage(response, reset), generation })),
       tap(() => loading.set(false)),
       catchError(() => {
         // Reset failures emit an empty page so handleEmptyLensResponse can redirect; scroll-triggered failures stay silent.
         loading.set(false);
         if (reset) {
-          return of<LensPage>({ items: [], nextPageToken: null, bypassActive: false, personaFetchFailed: false, upstreamFailed: true, reset: true });
+          return of({
+            page: { items: [], nextPageToken: null, bypassActive: false, personaFetchFailed: false, upstreamFailed: true, reset: true },
+            generation,
+          });
         }
         return EMPTY;
       })

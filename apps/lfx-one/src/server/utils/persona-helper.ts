@@ -89,7 +89,7 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
     };
   } catch (error) {
     logger.warning(req, 'ssr_persona', 'Persona detection failed during SSR, defaulting to contributor', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      err: error,
       path: req.path,
     });
 
