@@ -61,11 +61,13 @@ export class BadgesController {
 
       if (!userSub) {
         const userIdentifier = await getUsernameFromAuth(req);
-        if (!userIdentifier) {
-          logger.debug(req, 'resolve_user_emails', 'No user identifier from auth, using session email only', {});
-          return sessionEmail ? [sessionEmail] : [];
+        // Try email-verification service with whatever identifier we have
+        const identifier = userIdentifier ?? sessionEmail;
+        if (!identifier) {
+          logger.debug(req, 'resolve_user_emails', 'No user identifier from auth, returning empty', {});
+          return [];
         }
-        return await this.resolveEmailsFromService(req, userIdentifier, sessionEmail);
+        return await this.resolveEmailsFromService(req, identifier, sessionEmail);
       }
 
       return await this.resolveEmailsFromService(req, userSub, sessionEmail);
