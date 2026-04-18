@@ -89,6 +89,15 @@ export class DocumentsDashboardComponent {
     }
   }
 
+  protected downloadDocument(doc: MyDocumentItem): void {
+    if (!doc.url) return;
+    const proxyUrl = `/api/documents/download?url=${encodeURIComponent(doc.url)}&filename=${encodeURIComponent(doc.name || 'download')}`;
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = doc.name || 'download';
+    a.click();
+  }
+
   // === Private Initializers ===
   private initSearchQuery(): Signal<string> {
     return toSignal(

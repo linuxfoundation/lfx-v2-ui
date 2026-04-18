@@ -182,24 +182,46 @@
             <div class="flex items-center justify-end gap-1">
               @if (doc.source === 'file' && doc.attachmentUid) {
                 <lfx-button
-                  icon="fa-light fa-arrow-down-to-line"
+                  icon="fa-solid fa-arrow-down-to-line"
                   severity="primary"
                   size="small"
                   [text]="true"
-                  (onClick)="openDocument(doc)"
+                  (onClick)="downloadDocument(doc)"
                   [attr.data-testid]="'documents-download-' + doc.id"
                   tooltip="Download"
                   tooltipPosition="top">
                 </lfx-button>
-              } @else if (doc.url) {
+              } @else if (doc.source === 'recording' && doc.url) {
                 <lfx-button
-                  [icon]="doc.source === 'recording' ? 'fa-solid fa-circle-play' : 'fa-light fa-arrow-up-right-from-square'"
+                  icon="fa-solid fa-circle-play"
                   severity="primary"
                   size="small"
                   [text]="true"
                   (onClick)="openDocument(doc)"
                   [attr.data-testid]="'documents-open-' + doc.id"
-                  [tooltip]="doc.source === 'recording' ? 'Play recording' : 'Open'"
+                  tooltip="Play recording"
+                  tooltipPosition="top">
+                </lfx-button>
+              } @else if ((doc.source === 'transcript' || doc.source === 'summary') && doc.url) {
+                <lfx-button
+                  icon="fa-solid fa-arrow-up-right-from-square"
+                  severity="primary"
+                  size="small"
+                  [text]="true"
+                  (onClick)="openDocument(doc)"
+                  [attr.data-testid]="'documents-open-' + doc.id"
+                  tooltip="Open"
+                  tooltipPosition="top">
+                </lfx-button>
+              } @else if (doc.url) {
+                <lfx-button
+                  icon="fa-solid fa-arrow-down-to-line"
+                  severity="primary"
+                  size="small"
+                  [text]="true"
+                  (onClick)="downloadDocument(doc)"
+                  [attr.data-testid]="'documents-open-' + doc.id"
+                  tooltip="Download"
                   tooltipPosition="top">
                 </lfx-button>
               }

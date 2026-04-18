@@ -95,7 +95,7 @@ export class DocumentService {
     // Stage 2 — Fetch all raw items in parallel (no meeting enrichment yet)
     const [committeeLinkItems, groupsioItems, rawMeetingAttachments, rawPastAttachments, rawPastRecordings, rawTranscripts, rawSummaries] = await Promise.all([
       this.getCommitteeDocuments(req, scopedCommittees),
-      this.getGroupsIOArtifacts(req, scopedCommittees),
+      this.getGroupsIOArtifacts(req, projectUid ?? scopedCommittees.find((c) => c.project_uid)?.project_uid),
       this.fetchRawMeetingAttachments(req, projectUid),
       this.fetchRawPastMeetingAttachments(req, effectiveOccurrenceIds, projectUid),
       this.fetchRawPastMeetingRecordings(req, effectiveOccurrenceIds, projectUid),
@@ -129,15 +129,18 @@ export class DocumentService {
 
     const allDocuments = [...committeeLinkItems, ...groupsioItems, ...meetingAttachmentItems, ...pastMeetingItems];
 
-    // Stage 4 — Resolve foundation names for meeting-sourced docs via project service HTTP
-    // Committee and mailing list docs already have foundation names from committee service data.
-    const meetingSourced: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary', 'meeting'];
-    const foundationUids = [...new Set(allDocuments.filter((d) => meetingSourced.includes(d.source) && d.foundationUid).map((d) => d.foundationUid as string))];
+    // Stage 4 — Resolve foundation names for docs that have a foundationUid but no foundationName
+    const needsNameResolution: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary', 'meeting', 'mailing_list'];
+    const foundationUids = [
+      ...new Set(
+        allDocuments.filter((d) => needsNameResolution.includes(d.source) && d.foundationUid && !d.foundationName).map((d) => d.foundationUid as string)
+      ),
+    ];
 
     const foundationNames = await this.fetchProjectNames(req, foundationUids);
 
     const enrichedDocuments = allDocuments.map((doc) => {
-      if (meetingSourced.includes(doc.source) && doc.foundationUid) {
+      if (needsNameResolution.includes(doc.source) && doc.foundationUid && !doc.foundationName) {
         const name = foundationNames.get(doc.foundationUid);
         return name ? { ...doc, foundationName: name } : doc;
       }
@@ -206,44 +209,39 @@ export class DocumentService {
 
   // ─── GroupsIO / Mailing List Artifacts ──────────────────────────────────────
 
-  private async getGroupsIOArtifacts(req: Request, myCommittees: MyCommittee[]): Promise<MyDocumentItem[]> {
-    if (myCommittees.length === 0) {
+  private async getGroupsIOArtifacts(req: Request, projectUid?: string): Promise<MyDocumentItem[]> {
+    if (!projectUid) {
       return [];
     }
 
-    const filtersOr = myCommittees.map((c) => `committee_uid:${c.uid}`);
-
-    logger.debug(req, 'get_my_documents', 'Fetching groupsio artifacts via filters_or', {
-      committee_count: myCommittees.length,
-    });
+    logger.debug(req, 'get_my_documents', 'Fetching groupsio artifacts', { project_uid: projectUid });
 
     const artifacts = await fetchAllQueryResources<GroupsIOArtifactQueryResult>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<GroupsIOArtifactQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        v: '1',
         type: 'groupsio_artifact',
-        filters_or: filtersOr,
+        tags: `project_uid:${projectUid}`,
         ...(pageToken && { page_token: pageToken }),
       })
     ).catch((err) => {
       logger.warning(req, 'get_my_documents', 'Failed to fetch groupsio artifacts', {
+        project_uid: projectUid,
         error: err instanceof Error ? err.message : 'Unknown error',
       });
       return [];
     });
 
-    const committeeMap = new Map(myCommittees.map((c) => [c.uid, c]));
+    logger.info(req, 'get_my_documents', 'Fetched groupsio artifacts', { project_uid: projectUid, artifact_count: artifacts.length });
 
     return artifacts.map((a): MyDocumentItem => {
-      const committee = a.committee_uid ? committeeMap.get(a.committee_uid) : undefined;
       const url = a.type === 'link' ? a.link_url : (a.download_url ?? a.link_url);
       return {
         id: `groupsio_artifact:${a.artifact_id}`,
         name: a.filename || a.link_url || a.artifact_id,
-        source: 'mailing_list' as MyDocumentSource,
-        foundationName: committee?.foundation_name || committee?.project_name || '',
-        foundationUid: committee?.project_uid || a.project_uid || undefined,
-        groupOrMeetingName: committee?.name || '',
-        groupOrMeetingUid: committee?.uid || a.committee_uid || '',
+        source: (a.type === 'file' ? 'file' : 'mailing_list') as MyDocumentSource,
+        foundationName: '',
+        foundationUid: a.project_uid || undefined,
+        groupOrMeetingName: '',
+        groupOrMeetingUid: a.committee_uid || '',
         date: a.created_at || '',
         url,
         mailingListId: a.group_id ? String(a.group_id) : undefined,
