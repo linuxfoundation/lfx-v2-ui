@@ -567,7 +567,6 @@ export interface SendEmailVerificationResponse {
   success: boolean;
   message?: string;
   error?: string;
-  linkedTo?: string;
 }
 
 /**

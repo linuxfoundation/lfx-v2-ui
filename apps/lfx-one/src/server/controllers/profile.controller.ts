@@ -1480,11 +1480,10 @@ export class ProfileController {
         });
 
         if (response.error?.includes('already linked')) {
-          // Fallback chain: response field → EMAIL_TO_USERNAME → EMAIL_TO_SUB
+          // Upstream auth-service emits the "already linked" error without identifying the
+          // owning account, so resolve it here via EMAIL_TO_USERNAME → EMAIL_TO_SUB lookups.
           const linkedTo =
-            response.linkedTo ||
-            (await this.emailVerificationService.resolveEmailToUsername(req, email)) ||
-            (await this.emailVerificationService.resolveEmailToSub(req, email));
+            (await this.emailVerificationService.resolveEmailToUsername(req, email)) || (await this.emailVerificationService.resolveEmailToSub(req, email));
 
           const message = linkedTo
             ? `This email is already linked to account: ${linkedTo}`
