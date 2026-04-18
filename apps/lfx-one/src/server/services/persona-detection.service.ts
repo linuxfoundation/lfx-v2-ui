@@ -16,6 +16,7 @@ import {
 import { Request } from 'express';
 
 import { getEffectiveEmail, getEffectiveUsername } from '../utils/auth-helper';
+import { AccessCheckService } from './access-check.service';
 import { logger } from './logger.service';
 import { NatsService } from './nats.service';
 
@@ -27,6 +28,7 @@ import { NatsService } from './nats.service';
  */
 export class PersonaDetectionService {
   private readonly natsService: NatsService;
+  private readonly accessCheckService: AccessCheckService;
 
   /**
    * Short-lived per-user cache for affiliated project UIDs.
@@ -43,8 +45,18 @@ export class PersonaDetectionService {
    */
   private readonly personasCache = new Map<string, PersonaApiResponseCacheEntry>();
 
+  /**
+   * Per-request memoization for checkRootWriter. A single HTTP request may call
+   * checkRootWriter multiple times (e.g. nav endpoint checks it first, then falls
+   * through to getPersonas which also needs it). WeakMap keyed by the Request
+   * object ensures one /access-check call per request, with automatic cleanup
+   * when the request object is GC'd.
+   */
+  private readonly rootWriterRequestCache = new WeakMap<Request, Promise<boolean>>();
+
   public constructor() {
     this.natsService = new NatsService();
+    this.accessCheckService = new AccessCheckService();
 
     // Sweep expired cache entries every 60 s — well above the 15 s TTL — so
     // entries that are never re-requested don't accumulate indefinitely.
@@ -173,9 +185,8 @@ export class PersonaDetectionService {
       email: email ? '***' : 'empty',
     });
 
-    const detectionResponse = await this.fetchPersonaDetections(req, username, email);
-
-    const isRootWriter = this.computeIsRootWriter(req, detectionResponse);
+    // Fire persona detection + root-writer access check in parallel — independent calls.
+    const [detectionResponse, isRootWriter] = await Promise.all([this.fetchPersonaDetections(req, username, email), this.checkRootWriter(req)]);
 
     if (detectionResponse.error) {
       logger.warning(req, 'get_personas', 'Persona detection returned error', {
@@ -228,26 +239,34 @@ export class PersonaDetectionService {
   }
 
   /**
-   * Detect whether the user has writer access on the tenant ROOT project.
-   * Scans the raw (pre-enrichment) detection response for the configured root project UID
-   * and any detection with source === 'writer'. Used only for nav lens filtering
-   * bypass — this is intentionally not surfaced as a PersonaType.
+   * Check whether the user has writer access on the tenant ROOT project.
+   * Uses the /access-check upstream with the user's bearer token — authoritative,
+   * no username-to-sub translation needed (unlike scanning the persona response
+   * for `source: "writer"` detections). Returns false when LFX_ROOT_PROJECT_UID
+   * is unset so local/dev environments without the config degrade gracefully.
+   *
+   * Memoized per-request via WeakMap so multiple callers within one HTTP request
+   * (nav endpoint pre-check + persona-detection internal check) share one upstream call.
    */
-  private computeIsRootWriter(req: Request, response: PersonaDetectionResponse): boolean {
+  public async checkRootWriter(req: Request): Promise<boolean> {
+    const cached = this.rootWriterRequestCache.get(req);
+    if (cached) return cached;
+
     const rootUid = process.env['LFX_ROOT_PROJECT_UID'];
     if (!rootUid) {
-      logger.warning(req, 'compute_is_root_writer', 'LFX_ROOT_PROJECT_UID is not set — defaulting isRootWriter to false');
-      return false;
+      logger.warning(req, 'check_root_writer', 'LFX_ROOT_PROJECT_UID is not set — defaulting isRootWriter to false');
+      const falsePromise = Promise.resolve(false);
+      this.rootWriterRequestCache.set(req, falsePromise);
+      return falsePromise;
     }
 
-    for (const project of response.projects) {
-      if (project.project_uid !== rootUid) continue;
-      if (project.detections.some((d) => d.source === 'writer')) {
-        return true;
-      }
-    }
-
-    return false;
+    const promise = this.accessCheckService.checkSingleAccess(req, {
+      resource: 'project',
+      id: rootUid,
+      access: 'writer',
+    });
+    this.rootWriterRequestCache.set(req, promise);
+    return promise;
   }
 
   /** Fetch persona detections and resolve to a deduplicated list of project slugs. */

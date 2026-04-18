@@ -42,6 +42,7 @@ export class ProjectSelectorComponent {
   protected readonly items: Signal<LensItem[]> = this.initializeItems();
   protected readonly loading: Signal<boolean> = this.initializeLoading();
   protected readonly hasMore: Signal<boolean> = this.initializeHasMore();
+  protected readonly autoLoadTriggerIndex: Signal<number> = this.initializeAutoLoadTriggerIndex();
 
   public constructor() {
     // Forward the reactive form value to the NavigationService's search pipeline.
@@ -99,5 +100,15 @@ export class ProjectSelectorComponent {
 
   private initializeHasMore(): Signal<boolean> {
     return computed(() => this.navigationService.hasMore(this.lens())());
+  }
+
+  /**
+   * Sentinel lives 8 items from the end of the list so scrolling into the last 8
+   * triggers the next-page fetch. Computing the index as a signal means each page
+   * load shifts the sentinel's position — Angular destroys and re-creates the
+   * OnRenderDirective instance, which re-fires afterNextRender for the new page.
+   */
+  private initializeAutoLoadTriggerIndex(): Signal<number> {
+    return computed(() => Math.max(0, this.items().length - 8));
   }
 }

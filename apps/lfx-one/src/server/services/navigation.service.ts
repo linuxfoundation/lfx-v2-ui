@@ -36,13 +36,23 @@ export class NavigationService {
   public async getLensItems(req: Request, params: GetLensItemsParams): Promise<LensItemsResponse> {
     const { lens, pageToken, name } = params;
 
-    // Fetch personas + first upstream page in parallel — neither depends on the other
-    // until the persona filter is applied, so this saves ~500ms per request compared
-    // to the previous sequential version.
-    const [personaResult, firstPage] = await Promise.all([this.fetchPersona(req), this.fetchUpstreamPage(req, lens, pageToken, name)]);
+    // STEP 1: Parallel — writer-on-root check + first upstream page. Root writers bypass
+    // the persona filter entirely, so deferring the persona fetch until we confirm they're
+    // NOT a root writer saves the slow NATS roundtrip for the hot path (admins). Non-root
+    // users pay a small latency cost (persona fetch is serial after this step) in exchange.
+    const [bypassActive, firstPage] = await Promise.all([personaDetectionService.checkRootWriter(req), this.fetchUpstreamPage(req, lens, pageToken, name)]);
 
-    const { persona, failed: personaFetchFailed } = personaResult;
-    const bypassActive = !!persona?.isRootWriter;
+    // STEP 2: Fetch personas only when we need to filter. checkRootWriter is memoized per
+    // request, so the second call inside fetchPersona→getPersonas hits the cache (one
+    // /access-check per request, regardless of how many services ask).
+    let persona: PersonaApiResponse | null = null;
+    let personaFetchFailed = false;
+    if (!bypassActive) {
+      const personaResult = await this.fetchPersona(req);
+      persona = personaResult.persona;
+      personaFetchFailed = personaResult.failed;
+    }
+
     const shouldFilter = !bypassActive && !personaFetchFailed && !!persona;
     const eligibleUids = shouldFilter && persona ? this.collectEligibleProjectUids(persona.projects, LENS_PERSONA_MAP[lens]) : null;
 
@@ -147,6 +157,7 @@ export class NavigationService {
     const base: Record<string, any> = {
       type: 'project',
       filters: ['stage:Active'],
+      sort: 'name_asc',
     };
 
     // Foundation lens narrows further to membership-funded projects — matches the
