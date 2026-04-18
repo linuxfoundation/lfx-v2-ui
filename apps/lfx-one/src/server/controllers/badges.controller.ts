@@ -44,9 +44,11 @@ export class BadgesController {
   }
 
   /**
-   * Resolve all verified email addresses for the authenticated user.
-   * Queries auth-service via NATS for the full email list, filters to verified only.
-   * Falls back to the single OIDC session email if auth-service lookup fails.
+   * Resolve email addresses for the authenticated user used to look up Credly badges.
+   * Queries auth-service via NATS and returns the primary email plus any alternate
+   * emails flagged verified by auth-service (the primary has no separate verified flag,
+   * so it is always included). Falls back to the single OIDC session email if the
+   * auth-service lookup fails or returns no usable addresses.
    */
   private async resolveUserEmails(req: Request): Promise<string[]> {
     const oidcEmail = (req.oidc?.user?.['email'] as string | undefined)?.toLowerCase();
@@ -67,7 +69,10 @@ export class BadgesController {
     const verifiedEmails: string[] = [];
 
     const add = (email: string): void => {
-      const lower = email.toLowerCase();
+      if (!email) return;
+      const trimmed = email.trim();
+      if (!trimmed) return;
+      const lower = trimmed.toLowerCase();
       if (!seen.has(lower)) {
         seen.add(lower);
         verifiedEmails.push(lower);

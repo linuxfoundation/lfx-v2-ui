@@ -15,6 +15,8 @@ export class CredlyService {
   private _apiUrl: string | undefined;
   private _orgId: string | undefined;
   private _authToken: string | undefined;
+  private _cacheTtlMs: number | undefined;
+  private _maxCacheSize: number | undefined;
 
   private get apiUrl(): string {
     return (this._apiUrl ??= process.env['CREDLY_API_URL'] || '');
@@ -28,18 +30,26 @@ export class CredlyService {
     return (this._authToken ??= process.env['CREDLY_API_TOKEN'] || '');
   }
 
+  private get cacheTtlMs(): number {
+    if (this._cacheTtlMs === undefined) {
+      const env = parseInt(process.env['CREDLY_CACHE_TTL_MS'] ?? '', 10);
+      this._cacheTtlMs = Number.isNaN(env) ? 30 * 60 * 1_000 : env;
+    }
+    return this._cacheTtlMs;
+  }
+
+  private get maxCacheSize(): number {
+    if (this._maxCacheSize === undefined) {
+      const env = parseInt(process.env['CREDLY_CACHE_MAX_SIZE'] ?? '', 10);
+      this._maxCacheSize = Number.isNaN(env) ? 500 : env;
+    }
+    return this._maxCacheSize;
+  }
+
   private static readonly requestTimeoutMs = 15_000;
   private static readonly maxPaginationPages = 20;
   private static readonly emailBatchSize = 10;
-  private static readonly cacheTtlMs = (() => {
-    const env = parseInt(process.env['CREDLY_CACHE_TTL_MS'] ?? '', 10);
-    return Number.isNaN(env) ? 30 * 60 * 1_000 : env;
-  })();
   private static readonly pendingCacheTtlMs = 5 * 60 * 1_000;
-  private static readonly maxCacheSize = (() => {
-    const env = parseInt(process.env['CREDLY_CACHE_MAX_SIZE'] ?? '', 10);
-    return Number.isNaN(env) ? 500 : env;
-  })();
 
   /** Per-user in-memory badge cache. Key is a sorted, joined email list. */
   private readonly badgeCache = new Map<string, CredlyCachedBadges>();
@@ -99,7 +109,7 @@ export class CredlyService {
     const badges = unique.filter(isValidBadge).map(mapCredlyBadgeToBadge).sort(compareBadgesByIssuedDateDesc);
 
     this.evictExpiredCacheEntries();
-    const ttl = badges.some((b) => b.isPending) ? CredlyService.pendingCacheTtlMs : CredlyService.cacheTtlMs;
+    const ttl = badges.some((b) => b.isPending) ? CredlyService.pendingCacheTtlMs : this.cacheTtlMs;
     this.badgeCache.set(cacheKey, {
       badges,
       expiresAt: Date.now() + ttl,
@@ -212,8 +222,8 @@ export class CredlyService {
       }
     }
     // If still over the limit after expiry eviction, remove oldest entries (insertion order)
-    if (this.badgeCache.size > CredlyService.maxCacheSize) {
-      const overflow = this.badgeCache.size - CredlyService.maxCacheSize;
+    if (this.badgeCache.size > this.maxCacheSize) {
+      const overflow = this.badgeCache.size - this.maxCacheSize;
       let removed = 0;
       for (const key of this.badgeCache.keys()) {
         this.badgeCache.delete(key);
