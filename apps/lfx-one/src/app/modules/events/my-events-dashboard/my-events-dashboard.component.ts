@@ -1,10 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, viewChild } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { MY_EVENT_STATUS_OPTIONS, VISA_REQUEST_STATUS_OPTIONS } from '@lfx-one/shared/constants';
 import { EventTabId, FilterOption, FilterPillOption } from '@lfx-one/shared/interfaces';
 import { Tooltip } from 'primeng/tooltip';
@@ -14,10 +14,12 @@ import { EventsListComponent } from './components/events-list/events-list.compon
 
 @Component({
   selector: 'lfx-my-events-dashboard',
-  imports: [ButtonComponent, CardComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, Tooltip, FilterPillsComponent],
+  imports: [ButtonComponent, CardComponent, CardTabsBarComponent, DiscoverEventsButtonComponent, EventsTopBarComponent, EventsListComponent, Tooltip],
   templateUrl: './my-events-dashboard.component.html',
 })
 export class MyEventsDashboardComponent {
+  private readonly eventsListRef = viewChild(EventsListComponent);
+
   protected readonly activeTab = signal<EventTabId>('upcoming');
 
   protected readonly tabOptions: FilterPillOption[] = [
@@ -47,6 +49,9 @@ export class MyEventsDashboardComponent {
   protected readonly requestButtonLabel = computed(() =>
     this.activeTab() === 'visa-letters' ? 'New Letter Application' : 'New Funding Application'
   );
+
+  /** Delegates to EventsListComponent — lifted here to avoid template forward-reference issues. */
+  protected readonly showFiltersBar = computed(() => this.eventsListRef()?.showFiltersBar() ?? true);
 
   protected onFoundationChange(value: string | null): void {
     this.selectedFoundation.set(value);

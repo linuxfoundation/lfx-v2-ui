@@ -5,7 +5,6 @@ import { ChangeDetectionStrategy, Component, Type, computed, inject, input, Sign
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { UserService } from '@app/shared/services/user.service';
-import { ButtonComponent } from '@components/button/button.component';
 import { EventRequestStatusSeverityPipe } from '@app/shared/pipes/event-request-status-severity.pipe';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
@@ -19,7 +18,7 @@ import { TravelFundApplicationDialogComponent } from '../travel-fund-application
 import { VisaRequestApplicationDialogComponent } from '../visa-request-application-dialog/visa-request-application-dialog.component';
 @Component({
   selector: 'lfx-event-request-list',
-  imports: [TableComponent, TagComponent, ButtonComponent, DynamicDialogModule, EventRequestStatusSeverityPipe, EmptyStateComponent],
+  imports: [TableComponent, TagComponent, DynamicDialogModule, EventRequestStatusSeverityPipe, EmptyStateComponent],
   providers: [DialogService],
   templateUrl: './event-request-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +40,9 @@ export class EventRequestListComponent {
   protected readonly isSalesforceIdLoading = signal(false);
   protected readonly requestsResponse: Signal<VisaRequestsResponse> = this.initRequests();
   protected readonly isCreateEnabled: Signal<boolean> = this.initIsCreateEnabled();
+
+  /** True while loading or when at least one result exists — parent uses this to decide whether to show the filter bar. */
+  public readonly hasData = computed(() => this.loading() || this.requestsResponse().data.length > 0);
 
   protected readonly config = computed(() => {
     const isVisa = this.requestType() === 'visa';

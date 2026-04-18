@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal, ViewChild, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
@@ -19,7 +19,7 @@ import { EventsTableComponent } from '../events-table/events-table.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsListComponent {
-  @ViewChild(EventRequestListComponent) private readonly requestListRef?: EventRequestListComponent;
+  private readonly requestListRef = viewChild(EventRequestListComponent);
 
   private readonly eventsService = inject(EventsService);
   private readonly messageService = inject(MessageService);
@@ -56,9 +56,23 @@ export class EventsListComponent {
   public readonly nextEventName = computed(() => this.upcomingEvents().data[0]?.name ?? '');
   public readonly availableToJoinCount = computed(() => this.upcomingEvents().data.filter((e) => !e.isRegistered).length);
 
+  /**
+   * True when the filter/search bar should be visible:
+   * always show when filters are active; hide only on a true empty state (no data + no filters).
+   */
+  public readonly showFiltersBar = computed(() => {
+    const tab = this.activeTab();
+    const hasFilters = !!(this.foundation() || this.searchQuery() || this.role() || this.status());
+    if (hasFilters) return true;
+    if (tab === 'upcoming') return this.upcomingEventsLoading() || this.upcomingEvents().data.length > 0;
+    if (tab === 'past') return this.pastEventsLoading() || this.pastEvents().data.length > 0;
+    // For visa-letters / travel-funding tabs — delegate to the rendered request list
+    return this.requestListRef()?.hasData() ?? true;
+  });
+
   /** Delegates to the currently rendered EventRequestListComponent (visa-letters / travel-funding tabs). */
   public openCurrentRequestDialog(): void {
-    this.requestListRef?.openApplicationDialog();
+    this.requestListRef()?.openApplicationDialog();
   }
 
   public constructor() {
