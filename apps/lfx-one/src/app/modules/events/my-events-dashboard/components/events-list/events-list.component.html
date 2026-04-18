@@ -5,12 +5,24 @@
   <!-- Tab Content -->
   @if (activeTab() === 'upcoming') {
     @if (!upcomingEventsLoading() && upcomingEvents().data.length === 0) {
-      <lfx-empty-state
-        [withCard]="false"
-        icon="fa-light fa-calendar"
-        title="No upcoming events"
-        subtitle="Events you're registered for and available to attend will appear here."
-        data-testid="events-upcoming-empty-state" />
+      @if (isFiltered()) {
+        <lfx-empty-state
+          [withCard]="false"
+          icon="fa-light fa-eyes"
+          title="No results found"
+          subtitle="Try adjusting your filters criteria"
+          ctaLabel="Reset filters"
+          ctaIcon="fa-light fa-arrow-rotate-left"
+          (ctaClick)="resetFilters.emit()"
+          data-testid="events-upcoming-empty-state" />
+      } @else {
+        <lfx-empty-state
+          [withCard]="false"
+          icon="fa-light fa-calendar"
+          title="No upcoming events"
+          subtitle="Events you're registered for and available to attend will appear here."
+          data-testid="events-upcoming-empty-state" />
+      }
     } @else {
       <lfx-events-table
         [eventsResponse]="upcomingEvents()"
@@ -23,12 +35,24 @@
     }
   } @else if (activeTab() === 'past') {
     @if (!pastEventsLoading() && pastEvents().data.length === 0) {
-      <lfx-empty-state
-        [withCard]="false"
-        icon="fa-light fa-calendar"
-        title="No past events"
-        subtitle="Events you've attended will appear here."
-        data-testid="events-past-empty-state" />
+      @if (isFiltered()) {
+        <lfx-empty-state
+          [withCard]="false"
+          icon="fa-light fa-eyes"
+          title="No results found"
+          subtitle="Try adjusting your filters criteria"
+          ctaLabel="Reset filters"
+          ctaIcon="fa-light fa-arrow-rotate-left"
+          (ctaClick)="resetFilters.emit()"
+          data-testid="events-past-empty-state" />
+      } @else {
+        <lfx-empty-state
+          [withCard]="false"
+          icon="fa-light fa-calendar"
+          title="No past events"
+          subtitle="Events you've attended will appear here."
+          data-testid="events-past-empty-state" />
+      }
     } @else {
       <lfx-events-table
         [eventsResponse]="pastEvents()"

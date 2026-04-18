@@ -8,6 +8,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
@@ -15,6 +16,7 @@ import { TagComponent } from '@components/tag/tag.component';
 import { SURVEY_LABEL, SURVEY_TYPE_LABELS, SurveyStatus } from '@lfx-one/shared';
 import { FilterPillOption } from '@lfx-one/shared/interfaces';
 import { Survey } from '@lfx-one/shared/interfaces';
+import { DueDateLabelPipe } from '@pipes/due-date-label.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { SurveyStatusLabelPipe } from '@pipes/survey-status-label.pipe';
 import { SurveyStatusSeverityPipe } from '@pipes/survey-status-severity.pipe';
@@ -38,8 +40,10 @@ import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
     SurveyStatusLabelPipe,
     SurveyStatusSeverityPipe,
     RelativeDueDatePipe,
+    DueDateLabelPipe,
     TooltipModule,
     ConfirmDialogModule,
+    EmptyStateComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './surveys-table.component.html',
@@ -95,6 +99,11 @@ export class SurveysTableComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly typeOptions: Signal<{ label: string; value: string | null }[]> = this.initTypeOptions();
   protected readonly filteredSurveys: Signal<Survey[]> = this.initFilteredSurveys();
+  protected readonly isFiltered = computed(() =>
+    this.searchTerm() !== '' || this.statusTab() !== 'all' || this.groupFilter() !== null || this.typeFilter() !== null
+  );
+
+  protected readonly rppOptions = computed<number[] | undefined>(() => (this.filteredSurveys().length > 10 ? [10, 25, 50] : undefined));
 
   // === Protected Methods ===
   protected onFoundationFilterChange(value: string | null): void {
@@ -122,6 +131,15 @@ export class SurveysTableComponent {
 
   protected onViewResults(surveyId: string): void {
     this.viewResults.emit(surveyId);
+  }
+
+  protected resetFilters(): void {
+    this.searchForm.reset({ search: '', group: null, surveyType: null, foundationFilter: null, projectFilter: null });
+    this.statusTab.set('all');
+    this.groupFilter.set(null);
+    this.typeFilter.set(null);
+    this.foundationFilterChange.emit(null);
+    this.projectFilterChange.emit(null);
   }
 
   protected onDeleteSurvey(survey: Survey): void {

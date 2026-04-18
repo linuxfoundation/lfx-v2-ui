@@ -3,10 +3,13 @@
 
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, output, Signal } from '@angular/core';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { switchMap, startWith } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
@@ -38,6 +41,7 @@ import { TooltipModule } from 'primeng/tooltip';
     CommitteeCategorySeverityPipe,
     PlatformIconPipe,
     PlatformLabelPipe,
+    EmptyStateComponent,
   ],
   templateUrl: './committee-table.component.html',
   styleUrl: './committee-table.component.scss',
@@ -63,6 +67,18 @@ export class CommitteeTableComponent {
 
   // State
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
+
+  private readonly formValue = toSignal(
+    toObservable(this.searchForm).pipe(switchMap((form) => form.valueChanges.pipe(startWith(form.value)))),
+    { initialValue: {} as Record<string, unknown> }
+  );
+
+  protected readonly isFiltered = computed(() => {
+    const v = this.formValue();
+    return !!v['search'] || !!v['category'] || !!v['votingStatus'] || !!v['foundationFilter'] || !!v['projectFilter'];
+  });
+
+  protected readonly rppOptions = computed<number[] | undefined>(() => (this.committees().length > 10 ? [10, 25, 50] : undefined));
 
   // Outputs
   public readonly refresh = output<void>();
@@ -123,5 +139,11 @@ export class CommitteeTableComponent {
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);
+  }
+
+  protected resetFilters(): void {
+    this.searchForm().patchValue({ search: '', category: null, votingStatus: null, foundationFilter: null, projectFilter: null });
+    this.foundationFilterChange.emit(null);
+    this.projectFilterChange.emit(null);
   }
 }

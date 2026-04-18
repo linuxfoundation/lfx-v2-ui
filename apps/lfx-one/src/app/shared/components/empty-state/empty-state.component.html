@@ -27,7 +27,9 @@
 
       <!-- CTA -->
       @if (ctaLabel() && ctaRoute()) {
-        <lfx-button [label]="ctaLabel()!" severity="primary" size="small" [routerLink]="ctaRoute()!"></lfx-button>
+        <lfx-button [label]="ctaLabel()!" [icon]="ctaIcon()" severity="primary" size="small" [routerLink]="ctaRoute()!"></lfx-button>
+      } @else if (ctaLabel()) {
+        <lfx-button [label]="ctaLabel()!" [icon]="ctaIcon()" severity="primary" size="small" [outlined]="true" (onClick)="ctaClick.emit()"></lfx-button>
       }
     </div>
   </div>

@@ -157,7 +157,7 @@
       </div>
     }
 
-    <!-- Top Bar with Search, Meeting Type Filter, and Time Filter -->
+    <!-- Top Bar with Tabs, Search, and Meeting Type Filter -->
     <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg border border-gray-200 p-4 -mx-0 mb-8">
       @if (upcomingMeetings() || pastMeetings()) {
         <lfx-meetings-top-bar
@@ -166,7 +166,7 @@
           [projectOptions]="projectOptions()"
           [showFoundationFilter]="showFoundationFilter()"
           [showProjectFilter]="showProjectFilter()"
-          [initialTimeFilter]="timeFilter()"
+          [timeFilter]="timeFilter()"
           (meetingTypeChange)="onMeetingTypeChange($event)"
           (foundationFilterChange)="onFoundationFilterChange($event)"
           (projectFilterChange)="onProjectFilterChange($event)"
@@ -191,18 +191,28 @@
           </div>
         }
       </div>
-    } @else if (upcomingMeetings().length === 0 && timeFilter() === 'upcoming') {
+    } @else if (upcomingMeetings().length === 0 && timeFilter() === 'upcoming' && !isFiltered()) {
       <lfx-empty-state
         icon="fa-light fa-calendar"
         [title]="activeLens() === 'me' ? 'No upcoming meetings' : 'No meetings yet'"
         [subtitle]="activeLens() === 'me' ? 'Meetings from your committees and projects will appear here.' : 'Schedule a meeting to get started.'"
         data-testid="meetings-empty-state">
       </lfx-empty-state>
+    } @else if (pastMeetings().length === 0 && timeFilter() === 'past' && !isFiltered()) {
+      <lfx-empty-state
+        icon="fa-light fa-clock-rotate-left"
+        title="No past meetings"
+        [subtitle]="activeLens() === 'me' ? 'Your past meetings will appear here.' : 'Past meetings will appear here once they have occurred.'"
+        data-testid="meetings-empty-state-past">
+      </lfx-empty-state>
     } @else if (filteredMeetings().length === 0 && (project()?.uid || activeLens() === 'me')) {
       <lfx-empty-state
-        icon="fa-light fa-calendar"
-        title="No meetings found"
-        subtitle="Try adjusting your search or filter criteria."
+        icon="fa-light fa-eyes"
+        title="No results found"
+        subtitle="Try adjusting your filters criteria"
+        ctaLabel="Reset filters"
+        ctaIcon="fa-light fa-arrow-rotate-left"
+        (ctaClick)="resetFilters()"
         data-testid="meetings-empty-state-filtered">
       </lfx-empty-state>
     } @else if (filteredMeetings().length > 0) {

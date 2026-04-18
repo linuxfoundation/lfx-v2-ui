@@ -119,7 +119,8 @@
           [foundation]="selectedFoundation()"
           [searchQuery]="selectedSearchQuery()"
           [role]="selectedRole()"
-          [status]="selectedStatus()" />
+          [status]="selectedStatus()"
+          (resetFilters)="resetFilters()" />
       </div>
     </lfx-card>
   </div>

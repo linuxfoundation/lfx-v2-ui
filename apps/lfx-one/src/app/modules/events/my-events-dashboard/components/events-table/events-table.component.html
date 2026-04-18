@@ -6,15 +6,17 @@
   [loading]="loading()"
   [lazy]="true"
   [paginator]="eventsResponse().total > 0"
-  [alwaysShowPaginator]="true"
-  [rows]="eventsResponse().pageSize"
+  [rows]="10"
   [first]="eventsResponse().offset"
   [totalRecords]="eventsResponse().total"
-  [rowsPerPageOptions]="[10, 25, 50]"
+  [rowsPerPageOptions]="rppOptions()"
   [showCurrentPageReport]="true"
+  [showFirstLastIcon]="false"
   currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
   paginatorPosition="bottom"
+  selectionMode="single"
   (onPage)="onPageChange($event)"
+  (onRowSelect)="onTableRowSelect($event)"
   data-testid="events-data-table">
   <ng-template #header>
     <tr>
@@ -65,19 +67,14 @@
     <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'event-row-' + event.id">
       <!-- Event Name -->
       <td>
-        <a
-          [href]="event.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="lfx-table-name-link text-sm"
-          [attr.data-testid]="'event-name-' + event.id">
+        <span class="text-sm font-medium text-gray-900" [attr.data-testid]="'event-name-' + event.id">
           {{ event.name }}
-        </a>
+        </span>
       </td>
 
       <!-- Foundation -->
       <td>
-        <lfx-tag [value]="event.foundation" severity="secondary" [attr.data-testid]="'event-foundation-' + event.id" />
+        <lfx-tag [value]="event.foundation" styleClass="tag-neutral" [attr.data-testid]="'event-foundation-' + event.id" />
       </td>
 
       <!-- Date -->
@@ -93,7 +90,7 @@
       <!-- Role -->
       <td>
         @if (event.role) {
-          <lfx-tag [value]="event.role" [severity]="roleSeverityMap[event.role] ?? 'secondary'" [attr.data-testid]="'event-role-' + event.id" />
+          <lfx-tag [value]="event.role" styleClass="tag-neutral" [attr.data-testid]="'event-role-' + event.id" />
         } @else {
           <span class="text-xs text-gray-400">—</span>
         }
@@ -124,24 +121,16 @@
       @if (!isPastEvents()) {
         <td>
           <div class="flex justify-end">
-            @if (event.isRegistered) {
-              <lfx-button
-                label="View Event"
-                severity="secondary"
-                [outlined]="true"
-                size="small"
-                styleClass="whitespace-nowrap"
-                (onClick)="openUrl(event.url)"
-                [attr.data-testid]="'event-view-button-' + event.id" />
-            } @else {
+            @if (!event.isRegistered) {
               <lfx-button
                 label="Register"
+                icon="fa-light fa-ticket"
                 severity="primary"
                 [outlined]="true"
                 size="small"
-                styleClass="whitespace-nowrap"
+                styleClass="whitespace-nowrap w-[112px]"
                 (onClick)="openUrl(event.registrationUrl)"
-                [attr.data-testid]="'event-view-button-' + event.id" />
+                [attr.data-testid]="'event-register-button-' + event.id" />
             }
           </div>
         </td>

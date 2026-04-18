@@ -77,4 +77,11 @@ export class MyEventsDashboardComponent {
     this.selectedStatus.set(null);
     this.selectedSearchQuery.set('');
   }
+
+  protected resetFilters(): void {
+    this.selectedFoundation.set(null);
+    this.selectedRole.set(null);
+    this.selectedStatus.set(null);
+    this.selectedSearchQuery.set('');
+  }
 }

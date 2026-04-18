@@ -71,7 +71,7 @@
           subtitle="This project has no mailing lists set up yet."
           data-testid="mailing-list-project-empty-state">
         </lfx-empty-state>
-      } @else if (isMeLens() && !myMailingListsLoading() && filteredMailingLists().length === 0) {
+      } @else if (isMeLens() && !myMailingListsLoading() && filteredMailingLists().length === 0 && !isFiltered()) {
         <lfx-empty-state
           icon="fa-light fa-envelope"
           [title]="'No ' + mailingListLabelPlural.toLowerCase() + ' yet'"

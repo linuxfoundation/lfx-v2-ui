@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { ButtonComponent } from '@components/button/button.component';
@@ -20,6 +20,10 @@ export class EmptyStateComponent {
   public readonly subtitle = input<string>('');
   public readonly ctaLabel = input<string | undefined>(undefined);
   public readonly ctaRoute = input<string[] | undefined>(undefined);
+  public readonly ctaIcon = input<string | undefined>(undefined);
   /** Set to false when the component is already inside a card-like container */
   public readonly withCard = input(true);
+
+  // === Outputs ===
+  public readonly ctaClick = output<void>();
 }

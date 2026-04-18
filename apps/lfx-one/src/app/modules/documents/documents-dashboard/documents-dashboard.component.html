@@ -117,20 +117,22 @@
         @if (!loading() && filteredDocuments().length === 0) {
           <lfx-empty-state
             [withCard]="false"
-            icon="fa-light fa-file-lines"
-            title="No documents found"
-            subtitle="Try adjusting your search or filter criteria."
+            icon="fa-light fa-eyes"
+            title="No results found"
+            subtitle="Try adjusting your filters criteria"
+            ctaLabel="Reset filters"
+            ctaIcon="fa-light fa-arrow-rotate-left"
+            (ctaClick)="resetFilters()"
             data-testid="documents-filtered-empty-state">
           </lfx-empty-state>
         } @else {
           <!-- Table -->
           <lfx-table
             [value]="filteredDocuments()"
-            [paginator]="true"
+            [paginator]="filteredDocuments().length > 0"
             [rows]="10"
-            [rowsPerPageOptions]="[10, 25, 50]"
+            [rowsPerPageOptions]="rppOptions()"
             [loading]="loading()"
-            [showPageLinks]="false"
             [showFirstLastIcon]="false"
             [showCurrentPageReport]="true"
             currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
@@ -142,7 +144,7 @@
                 <th class="w-[20%]">Group / Meeting</th>
                 <th class="w-[10%]">Source</th>
                 <th class="w-[10%]">Date</th>
-                <th class="w-[5%]">Actions</th>
+                <th class="w-auto"></th>
               </tr>
             </ng-template>
 
@@ -151,18 +153,10 @@
                 <!-- Name column -->
                 <td>
                   <div class="flex items-center gap-2">
-                    <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')" class="text-base shrink-0"></i>
-                    @if (doc.url) {
-                      <button
-                        type="button"
-                        class="lfx-table-name-link text-sm text-left bg-transparent border-none p-0 truncate"
-                        (click)="openDocument(doc)"
-                        [attr.data-testid]="'documents-name-' + doc.id">
-                        {{ doc.name }}
-                      </button>
-                    } @else {
-                      <span class="text-sm text-gray-900 truncate">{{ doc.name }}</span>
-                    }
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 bg-white shrink-0 shadow">
+                      <i [class]="doc.source | myDocumentSourceTag: 'icon'" class="text-gray-900 text-base"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900 truncate" [attr.data-testid]="'documents-name-' + doc.id">{{ doc.name }}</span>
                   </div>
                 </td>
 
@@ -195,26 +189,39 @@
                   <div class="flex items-center justify-end gap-1">
                     @if (doc.source === 'file' && doc.attachmentUid) {
                       <lfx-button
+                        label="Download"
                         icon="fa-light fa-arrow-down-to-line"
-                        severity="primary"
+                        severity="secondary"
                         size="small"
-                        [text]="true"
+                        [outlined]="true"
+                        styleClass="whitespace-nowrap w-[148px]"
                         (onClick)="openDocument(doc)"
-                        [attr.data-testid]="'documents-download-' + doc.id"
-                        tooltip="Download"
-                        tooltipPosition="top">
+                        [attr.data-testid]="'documents-download-' + doc.id">
                       </lfx-button>
                     } @else if (doc.url) {
-                      <lfx-button
-                        [icon]="doc.source === 'recording' ? 'fa-solid fa-circle-play' : 'fa-light fa-arrow-up-right-from-square'"
-                        severity="primary"
-                        size="small"
-                        [text]="true"
-                        (onClick)="openDocument(doc)"
-                        [attr.data-testid]="'documents-open-' + doc.id"
-                        [tooltip]="doc.source === 'recording' ? 'Play recording' : 'Open'"
-                        tooltipPosition="top">
-                      </lfx-button>
+                      @if (doc.source === 'recording') {
+                        <lfx-button
+                          label="Watch recording"
+                          icon="fa-light fa-circle-play"
+                          severity="secondary"
+                          size="small"
+                          [outlined]="true"
+                          styleClass="whitespace-nowrap w-[148px]"
+                          (onClick)="openDocument(doc)"
+                          [attr.data-testid]="'documents-open-' + doc.id">
+                        </lfx-button>
+                      } @else {
+                        <lfx-button
+                          label="Open"
+                          icon="fa-light fa-arrow-up-right-from-square"
+                          severity="secondary"
+                          size="small"
+                          [outlined]="true"
+                          styleClass="whitespace-nowrap w-[148px]"
+                          (onClick)="openDocument(doc)"
+                          [attr.data-testid]="'documents-open-' + doc.id">
+                        </lfx-button>
+                      }
                     }
                   </div>
                 </td>

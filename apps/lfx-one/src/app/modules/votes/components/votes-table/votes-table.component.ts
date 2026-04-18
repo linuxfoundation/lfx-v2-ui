@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe } from '@angular/common';
-import { Component, computed, DestroyRef, inject, input, OnInit, output, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
@@ -17,6 +18,7 @@ import { PollStatus, VOTE_LABEL } from '@lfx-one/shared';
 import { FilterPillOption, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { PollStatusLabelPipe } from '@pipes/poll-status-label.pipe';
 import { PollStatusSeverityPipe } from '@pipes/poll-status-severity.pipe';
+import { DueDateLabelPipe } from '@pipes/due-date-label.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { VoteService } from '@services/vote.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -40,13 +42,15 @@ import { combineLatest, debounceTime, distinctUntilChanged, map, startWith } fro
     PollStatusLabelPipe,
     PollStatusSeverityPipe,
     RelativeDueDatePipe,
+    DueDateLabelPipe,
     TooltipModule,
     ConfirmDialogModule,
+    EmptyStateComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: './votes-table.component.html',
 })
-export class VotesTableComponent implements OnInit {
+export class VotesTableComponent {
   // === Injections ===
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -88,6 +92,7 @@ export class VotesTableComponent implements OnInit {
   // === Writable Signals ===
   protected readonly isDeleting = signal(false);
   protected readonly statusTab = signal<string>('all');
+  private readonly filterState = signal<VoteFilterState>({ search: '', status: null, group: null });
 
   // === Forms ===
   public searchForm = new FormGroup({
@@ -99,9 +104,19 @@ export class VotesTableComponent implements OnInit {
 
   // === Computed Signals ===
   protected readonly displayedVotes: Signal<Vote[]> = this.initDisplayedVotes();
+  protected readonly isFiltered = computed(() => {
+    if (this.lazy()) return false;
+    const f = this.filterState();
+    return this.statusTab() !== 'all' || !!f.search || !!f.group;
+  });
 
-  // === Lifecycle ===
-  public ngOnInit(): void {
+  protected readonly rppOptions = computed<number[] | undefined>(() => {
+    const count = this.lazy() ? this.totalRecords() : this.displayedVotes().length;
+    return count > 10 ? [10, 25, 50] : undefined;
+  });
+
+  // === Constructor ===
+  public constructor() {
     this.initFormSubscriptions();
   }
 
@@ -135,6 +150,13 @@ export class VotesTableComponent implements OnInit {
     } else {
       this.viewVote.emit(vote.uid);
     }
+  }
+
+  protected resetFilters(): void {
+    this.searchForm.reset({ search: '', group: null, foundationFilter: null, projectFilter: null });
+    this.statusTab.set('all');
+    this.foundationFilterChange.emit(null);
+    this.projectFilterChange.emit(null);
   }
 
   protected onDeleteVote(vote: Vote): void {
@@ -184,18 +206,38 @@ export class VotesTableComponent implements OnInit {
         })),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((filters) => this.filtersChange.emit(filters));
+      .subscribe((filters) => {
+        this.filterState.set(filters);
+        this.filtersChange.emit(filters);
+      });
   }
 
   private initDisplayedVotes(): Signal<Vote[]> {
     return computed(() => {
-      // For lazy (server-side paginated) mode, the server handles status filtering via filtersChange
-      if (this.lazy()) return this.votes();
+      const allVotes = this.votes();
 
-      // For client-side mode (Me lens), filter locally by status tab
+      // For lazy (server-side paginated) mode, the server handles all filtering via filtersChange
+      if (this.lazy()) return allVotes;
+
+      // For client-side mode (Me lens), apply all filters locally
+      const filters = this.filterState();
+      let filtered = allVotes;
+
       const tab = this.statusTab();
-      if (tab === 'all') return this.votes();
-      return this.votes().filter((v) => (v.status as string).toLowerCase() === tab);
+      if (tab !== 'all') {
+        filtered = filtered.filter((v) => (v.status as string).toLowerCase() === tab);
+      }
+
+      if (filters.search) {
+        const term = filters.search.toLowerCase();
+        filtered = filtered.filter((v) => v.name.toLowerCase().includes(term));
+      }
+
+      if (filters.group) {
+        filtered = filtered.filter((v) => v.committee_name === filters.group);
+      }
+
+      return filtered;
     });
   }
 }

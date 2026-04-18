@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, input, Signal, signal, viewChild, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
@@ -32,6 +32,8 @@ export class EventsListComponent {
 
   protected readonly upcomingEventsLoading = signal(true);
   protected readonly pastEventsLoading = signal(true);
+  private readonly statsUpcomingLoading = signal(true);
+  private readonly statsPastLoading = signal(true);
 
   protected readonly upcomingEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
   protected readonly pastEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
@@ -44,17 +46,20 @@ export class EventsListComponent {
   protected readonly upcomingEvents: Signal<MyEventsResponse> = this.initializeUpcomingEvents();
   protected readonly pastEvents: Signal<MyEventsResponse> = this.initializePastEvents();
 
-  public readonly tabCounts = computed(() => ({
-    upcoming: this.upcomingEvents().total,
-    past: this.pastEvents().total,
-  }));
+  // Unfiltered stats signals — fetched once, independent of filter/search inputs
+  private readonly statsUpcoming: Signal<MyEventsResponse> = this.initializeStatsUpcoming();
+  private readonly statsPast: Signal<MyEventsResponse> = this.initializeStatsPast();
 
-  // Me lens stat cards (public so parent can render them above filters)
-  public readonly eventsStatsLoading = computed(() => this.upcomingEventsLoading() || this.pastEventsLoading());
-  public readonly registeredCount = computed(() => this.upcomingEvents().data.filter((e) => e.isRegistered).length);
-  public readonly attendedCount = computed(() => this.pastEvents().total);
-  public readonly nextEventName = computed(() => this.upcomingEvents().data[0]?.name ?? '');
-  public readonly availableToJoinCount = computed(() => this.upcomingEvents().data.filter((e) => !e.isRegistered).length);
+  // Me lens stat cards — derived from unfiltered data so filters don't affect totals
+  public readonly eventsStatsLoading = computed(() => this.statsUpcomingLoading() || this.statsPastLoading());
+  public readonly registeredCount = computed(() => this.statsUpcoming().data.filter((e) => e.isRegistered).length);
+  public readonly attendedCount = computed(() => this.statsPast().total);
+  public readonly nextEventName = computed(() => this.statsUpcoming().data[0]?.name ?? '');
+  public readonly availableToJoinCount = computed(() => this.statsUpcoming().data.filter((e) => !e.isRegistered).length);
+  public readonly tabCounts = computed(() => ({
+    upcoming: this.statsUpcoming().total,
+    past: this.statsPast().total,
+  }));
 
   /**
    * True when the filter/search bar should be visible:
@@ -69,6 +74,12 @@ export class EventsListComponent {
     // For visa-letters / travel-funding tabs — delegate to the rendered request list
     return this.requestListRef()?.hasData() ?? true;
   });
+
+  public readonly resetFilters = output<void>();
+
+  protected readonly isFiltered = computed(() =>
+    !!(this.foundation() || this.searchQuery() || this.role() || this.status())
+  );
 
   /** Delegates to the currently rendered EventRequestListComponent (visa-letters / travel-funding tabs). */
   public openCurrentRequestDialog(): void {
@@ -121,6 +132,26 @@ export class EventsListComponent {
 
   private initializePastEvents(): Signal<MyEventsResponse> {
     return this.initializeEvents(true, this.pastEventsPage, this.pastEventsLoading, this.pastSortField, this.pastSortOrder);
+  }
+
+  private initializeStatsUpcoming(): Signal<MyEventsResponse> {
+    return toSignal(
+      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: 1000 }).pipe(
+        catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
+        finalize(() => this.statsUpcomingLoading.set(false))
+      ),
+      { initialValue: EMPTY_MY_EVENTS_RESPONSE }
+    );
+  }
+
+  private initializeStatsPast(): Signal<MyEventsResponse> {
+    return toSignal(
+      this.eventsService.getMyEvents({ isPast: true, offset: 0, pageSize: 1 }).pipe(
+        catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
+        finalize(() => this.statsPastLoading.set(false))
+      ),
+      { initialValue: EMPTY_MY_EVENTS_RESPONSE }
+    );
   }
 
   private initializeEvents(

@@ -42,6 +42,8 @@ export class EventsTableComponent {
     Cancelled: 'danger',
   };
 
+  protected readonly rppOptions = computed<number[] | undefined>(() => (this.eventsResponse().total > 10 ? [10, 25, 50] : undefined));
+
   protected readonly sortIcons = computed(() => {
     const field = this.sortField();
     const order = this.sortOrder();
@@ -63,6 +65,12 @@ export class EventsTableComponent {
 
   protected onHeaderClick(field: string): void {
     this.sortChange.emit({ field });
+  }
+
+  protected onTableRowSelect(event: { data: { url?: string } }): void {
+    if (event.data?.url) {
+      this.openUrl(event.data.url);
+    }
   }
 
   protected openUrl(url: string): void {

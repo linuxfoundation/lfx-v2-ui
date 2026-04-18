@@ -74,6 +74,7 @@ export class DocumentsDashboardComponent {
   protected readonly mailingListFilter: Signal<string | null> = this.initMailingListFilter();
   protected readonly documents: Signal<MyDocumentItem[]> = this.initDocuments();
   protected readonly filteredDocuments: Signal<MyDocumentItem[]> = this.initFilteredDocuments();
+  protected readonly rppOptions = computed<number[] | undefined>(() => (this.filteredDocuments().length > 10 ? [10, 25, 50] : undefined));
   protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initFoundationOptions();
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly meetingOptions: Signal<{ label: string; value: string | null }[]> = this.initMeetingOptions();
@@ -82,6 +83,11 @@ export class DocumentsDashboardComponent {
   // === Protected Methods ===
   protected onSourceTabChange(tab: string): void {
     this.sourceTab.set(tab);
+  }
+
+  protected resetFilters(): void {
+    this.filterForm.reset({ search: '', foundation: null, group: null, meeting: null, mailingList: null });
+    this.sourceTab.set('all');
   }
 
   protected openDocument(doc: MyDocumentItem): void {

@@ -216,6 +216,17 @@ export class MeetingsDashboardComponent {
     });
   }
 
+  protected readonly isFiltered = computed(() =>
+    !!this.debouncedSearchQuery() || !!this.meetingTypeFilter() || !!this.foundationFilter() || !!this.projectFilter()
+  );
+
+  public resetFilters(): void {
+    this.searchQuery.set('');
+    this.meetingTypeFilter.set(null);
+    this.foundationFilter.set(null);
+    this.projectFilter.set(null);
+  }
+
   public loadMore(): void {
     const isPast = this.timeFilter() === 'past';
     const pageToken = isPast ? this.pastPageToken() : this.upcomingPageToken();

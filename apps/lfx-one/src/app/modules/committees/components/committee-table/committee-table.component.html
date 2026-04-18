@@ -75,9 +75,12 @@
 
   <lfx-table
     [value]="committees()"
-    [paginator]="committees().length > 10"
+    [paginator]="committees().length > 0"
     [rows]="10"
-    [rowsPerPageOptions]="[10, 25, 50]"
+    [rowsPerPageOptions]="rppOptions()"
+    [showFirstLastIcon]="false"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
     sortField="name"
     [sortOrder]="1"
     selectionMode="single"
@@ -92,9 +95,6 @@
         <th>Channels</th>
         <th>Voting</th>
         <th>Last Updated</th>
-        @if (!canManageCommittee()) {
-          <th class="min-w-[120px]">Status</th>
-        }
         @if (canManageCommittee()) {
           <th></th>
         }
@@ -118,7 +118,7 @@
         </td>
         <td>
           @let category = committee.category || 'Other';
-          <lfx-tag [value]="category" [severity]="category | committeeCategorySeverity"></lfx-tag>
+          <lfx-tag [value]="category" styleClass="tag-neutral"></lfx-tag>
         </td>
         <td class="min-w-[200px]">
           <div class="max-w-[300px] line-clamp-2 text-sm text-gray-700">
@@ -184,48 +184,13 @@
         <td>
           @if (committee.enable_voting) {
             <span class="inline-flex items-center" pTooltip="Voting enabled" tooltipPosition="top" tabindex="0" aria-label="Voting enabled">
-              <i class="fa-light fa-check w-4 h-4 text-emerald-600" aria-hidden="true"></i>
+              <i class="fa-solid fa-circle-check w-4 h-4 text-emerald-600" aria-hidden="true"></i>
             </span>
           } @else {
             <span class="text-gray-400 text-xs" aria-label="Voting disabled">—</span>
           }
         </td>
         <td><span class="text-sm text-gray-700">{{ committee.updated_at | date: 'MMM d, y' }}</span></td>
-        @if (!canManageCommittee()) {
-          <td class="whitespace-nowrap">
-            @if (myCommitteeUids().has(committee.uid)) {
-              <div class="flex items-center gap-2">
-                <lfx-tag value="Joined" severity="success"></lfx-tag>
-                @if (committee.join_mode === 'open' || committee.join_mode === 'invite_only') {
-                  <lfx-button
-                    icon="fa-light fa-paper-plane"
-                    severity="secondary"
-                    size="small"
-                    [outlined]="true"
-                    [text]="true"
-                    pTooltip="Invite — coming soon"
-                    tooltipPosition="top"
-                    [disabled]="true"
-                    [attr.data-testid]="'committee-invite-' + committee.uid">
-                  </lfx-button>
-                }
-              </div>
-            } @else if (committee.public && (committee.join_mode === 'open' || committee.join_mode === 'application')) {
-              <lfx-button
-                [label]="committee.join_mode === 'application' ? 'Request' : 'Join'"
-                severity="info"
-                size="small"
-                [outlined]="true"
-                (onClick)="joinGroup(committee)"
-                [attr.data-testid]="'committee-join-' + committee.uid">
-              </lfx-button>
-            } @else if (committee.public && committee.join_mode === 'invite_only') {
-              <span class="text-xs text-gray-500 italic">Invite only</span>
-            } @else {
-              <span class="text-xs text-gray-400 italic">{{ committee.public ? 'Closed' : 'Private' }}</span>
-            }
-          </td>
-        }
         @if (canManageCommittee()) {
           <td>
             <div class="flex items-center justify-end gap-1">
@@ -260,9 +225,25 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="8">
-          <i class="fa-light fa-folder-open text-3xl text-gray-400 mb-2"></i>
-          <p class="text-sm text-gray-500">No {{ committeeLabel.plural.toLowerCase() }} found</p>
+        <td [attr.colspan]="canManageCommittee() ? 8 : 7">
+          @if (isFiltered()) {
+            <lfx-empty-state
+              [withCard]="false"
+              icon="fa-light fa-eyes"
+              title="No results found"
+              subtitle="Try adjusting your filters criteria"
+              ctaLabel="Reset filters"
+              ctaIcon="fa-light fa-arrow-rotate-left"
+              (ctaClick)="resetFilters()">
+            </lfx-empty-state>
+          } @else {
+            <lfx-empty-state
+              [withCard]="false"
+              icon="fa-light fa-people-group"
+              title="No {{ committeeLabel.plural.toLowerCase() }} found"
+              subtitle="There are no {{ committeeLabel.plural.toLowerCase() }} to display.">
+            </lfx-empty-state>
+          }
         </td>
       </tr>
     </ng-template>
