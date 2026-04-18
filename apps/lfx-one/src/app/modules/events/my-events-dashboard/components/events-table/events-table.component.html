@@ -69,7 +69,7 @@
           [href]="event.url"
           target="_blank"
           rel="noopener noreferrer"
-          class="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          class="lfx-table-name-link text-sm"
           [attr.data-testid]="'event-name-' + event.id">
           {{ event.name }}
         </a>
@@ -77,23 +77,17 @@
 
       <!-- Foundation -->
       <td>
-        <div class="max-w-[120px]" [pTooltip]="event.foundation" tooltipPosition="top">
-          <lfx-tag
-            [value]="event.foundation"
-            severity="secondary"
-            styleClass="!block !truncate !max-w-full"
-            [attr.data-testid]="'event-foundation-' + event.id" />
-        </div>
+        <lfx-tag [value]="event.foundation" severity="secondary" [attr.data-testid]="'event-foundation-' + event.id" />
       </td>
 
       <!-- Date -->
       <td>
-        <span class="text-xs text-gray-700">{{ event.date }}</span>
+        <span class="text-sm text-gray-700">{{ event.date }}</span>
       </td>
 
       <!-- Location -->
       <td>
-        <span class="text-xs text-gray-700">{{ event.location }}</span>
+        <span class="text-sm text-gray-700">{{ event.location }}</span>
       </td>
 
       <!-- Role -->
@@ -130,16 +124,25 @@
       @if (!isPastEvents()) {
         <td>
           <div class="flex justify-end">
-            <lfx-button
-              [label]="event.isRegistered ? 'View Event' : 'Register'"
-              severity="primary"
-              [outlined]="true"
-              [href]="event.isRegistered ? event.url : event.registrationUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              size="small"
-              styleClass="whitespace-nowrap"
-              [attr.data-testid]="'event-view-button-' + event.id" />
+            @if (event.isRegistered) {
+              <lfx-button
+                label="View Event"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                styleClass="whitespace-nowrap"
+                (onClick)="openUrl(event.url)"
+                [attr.data-testid]="'event-view-button-' + event.id" />
+            } @else {
+              <lfx-button
+                label="Register"
+                severity="primary"
+                [outlined]="true"
+                size="small"
+                styleClass="whitespace-nowrap"
+                (onClick)="openUrl(event.registrationUrl)"
+                [attr.data-testid]="'event-view-button-' + event.id" />
+            }
           </div>
         </td>
       }

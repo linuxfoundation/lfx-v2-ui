@@ -107,7 +107,7 @@
             @if (isBoardMember()) {
               <span class="text-sm font-medium">{{ committee.name || '-' }}</span>
             } @else {
-              <a [routerLink]="['/groups', committee.uid]" class="text-sm font-medium">
+              <a [routerLink]="['/groups', committee.uid]" class="lfx-table-name-link text-sm">
                 {{ committee.name || '-' }}
               </a>
             }
@@ -121,7 +121,7 @@
           <lfx-tag [value]="category" [severity]="category | committeeCategorySeverity"></lfx-tag>
         </td>
         <td class="min-w-[200px]">
-          <div class="max-w-[300px] line-clamp-2 text-xs">
+          <div class="max-w-[300px] line-clamp-2 text-sm text-gray-700">
             @if (committee.description) {
               {{ committee.description }}
             } @else {
@@ -130,10 +130,7 @@
           </div>
         </td>
         <td>
-          <a [routerLink]="['/groups', committee.uid]">
-            <!-- prettier-ignore -->
-            {{ (committee.total_members ?? 0) | number }}
-          </a>
+          <span class="text-sm text-gray-700">{{ (committee.total_members ?? 0) | number }}</span>
         </td>
         <td>
           <!-- Channels: mailing_list is the direct email string; has_mailing_list is an enriched boolean from query-service association -->
@@ -193,7 +190,7 @@
             <span class="text-gray-400 text-xs" aria-label="Voting disabled">—</span>
           }
         </td>
-        <td>{{ committee.updated_at | date: 'MMM d, y' }}</td>
+        <td><span class="text-sm text-gray-700">{{ committee.updated_at | date: 'MMM d, y' }}</span></td>
         @if (!canManageCommittee()) {
           <td class="whitespace-nowrap">
             @if (myCommitteeUids().has(committee.uid)) {
@@ -223,9 +220,9 @@
                 [attr.data-testid]="'committee-join-' + committee.uid">
               </lfx-button>
             } @else if (committee.public && committee.join_mode === 'invite_only') {
-              <span class="text-sm text-gray-500 italic">Invite only</span>
+              <span class="text-xs text-gray-500 italic">Invite only</span>
             } @else {
-              <span class="text-sm text-gray-400 italic">{{ committee.public ? 'Closed' : 'Private' }}</span>
+              <span class="text-xs text-gray-400 italic">{{ committee.public ? 'Closed' : 'Private' }}</span>
             }
           </td>
         }
