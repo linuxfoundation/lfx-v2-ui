@@ -1,11 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Generated with [Claude Code](https://claude.ai/code)
-
 import { NextFunction, Request, Response } from 'express';
 
-import { AuthenticationError } from '../errors';
 import { CredlyService } from '../services/credly.service';
 import { EmailVerificationService } from '../services/email-verification.service';
 import { logger } from '../services/logger.service';
@@ -30,7 +27,10 @@ export class BadgesController {
       const emails = await this.resolveUserEmails(req);
 
       if (emails.length === 0) {
-        return next(new AuthenticationError('User authentication required', { operation: 'get_badges' }));
+        logger.warning(req, 'get_badges', 'No resolvable email for authenticated user, returning empty badges', {});
+        logger.success(req, 'get_badges', startTime, { email_count: 0, badge_count: 0 });
+        res.json([]);
+        return;
       }
 
       const badges = await this.credlyService.getBadgesForEmails(req, emails);
