@@ -56,6 +56,10 @@ export class CommitteeTableComponent {
   public searchForm = input.required<FormGroup>();
   public categoryOptions = input.required<{ label: string; value: string | null }[]>();
   public votingStatusOptions = input.required<{ label: string; value: string | null }[]>();
+  public showFoundationFilter = input<boolean>(false);
+  public showProjectFilter = input<boolean>(false);
+  public foundationOptions = input<{ label: string; value: string | null }[]>([]);
+  public projectOptions = input<{ label: string; value: string | null }[]>([]);
 
   // State
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
@@ -63,6 +67,8 @@ export class CommitteeTableComponent {
   // Outputs
   public readonly refresh = output<void>();
   public readonly rowClick = output<Committee>();
+  public readonly foundationFilterChange = output<string | null>();
+  public readonly projectFilterChange = output<string | null>();
 
   public joinGroup(committee: Committee): void {
     const joinMode = committee.join_mode || 'closed';

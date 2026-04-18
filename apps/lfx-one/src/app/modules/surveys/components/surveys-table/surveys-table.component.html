@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card data-testid="surveys-table-card">
+<lfx-card styleClass="[&_.p-card-body]:!px-5" data-testid="surveys-table-card">
   <div class="pb-2 mb-2">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       <div class="flex-1 min-w-0">
@@ -98,7 +98,7 @@
     </ng-template>
 
     <ng-template #body let-survey let-rowIndex="rowIndex">
-      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + survey.uid" class="hover:bg-slate-50">
+      <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'surveys-row-' + survey.uid">
         <td>
           <button
             type="button"

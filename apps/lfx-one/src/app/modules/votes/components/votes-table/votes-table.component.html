@@ -1,7 +1,7 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<lfx-card data-testid="votes-table-card">
+<lfx-card styleClass="[&_.p-card-body]:!px-5" data-testid="votes-table-card">
   <div class="pb-2 mb-2">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       <div class="flex-1 min-w-0">
@@ -163,9 +163,10 @@
               } @else {
                 <lfx-button
                   label="Results"
-                  severity="primary"
+                  severity="secondary"
+                  [outlined]="true"
                   size="small"
-                  [text]="true"
+                  styleClass="whitespace-nowrap"
                   (onClick)="onViewResults(vote.uid)"
                   [attr.data-testid]="'votes-results-' + vote.uid">
                 </lfx-button>
@@ -175,17 +176,19 @@
                 <lfx-button
                   label="Review"
                   severity="primary"
+                  [outlined]="true"
                   size="small"
-                  [text]="true"
+                  styleClass="whitespace-nowrap"
                   (onClick)="onViewVote(vote.uid)"
                   [attr.data-testid]="'votes-cast-' + vote.uid">
                 </lfx-button>
               } @else if (vote.status === PollStatus.ENDED) {
                 <lfx-button
                   label="Results"
-                  severity="primary"
+                  severity="secondary"
+                  [outlined]="true"
                   size="small"
-                  [text]="true"
+                  styleClass="whitespace-nowrap"
                   (onClick)="onViewResults(vote.uid)"
                   [attr.data-testid]="'votes-results-' + vote.uid">
                 </lfx-button>

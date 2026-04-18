@@ -34,11 +34,15 @@
       }
     }
 
-    // Selectable table rows
+    // Selectable table rows — cursor + hover background to signal clickability
     &.lfx-table-selectable {
       .p-datatable-tbody {
         tr {
-          @apply cursor-pointer;
+          @apply cursor-pointer transition-colors duration-150;
+
+          &:hover {
+            @apply bg-slate-100;
+          }
         }
       }
     }

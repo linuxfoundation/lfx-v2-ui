@@ -79,30 +79,26 @@
 
     <!-- Events Card: tabs + search + list all in one -->
     <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="events-main-card">
-      <!-- Tab Pills -->
-      <div class="flex items-center justify-between px-4 py-4" data-testid="events-tab-pills-wrapper">
-        <lfx-filter-pills
-          [options]="tabOptions"
-          [selectedFilter]="activeTab()"
-          (filterChange)="onActiveTabChange($event)"
-          data-testid="events-tab-pills" />
+      <!-- Tab Pills Bar -->
+      <lfx-card-tabs-bar
+        [options]="tabOptions"
+        [selectedFilter]="activeTab()"
+        (filterChange)="onActiveTabChange($event)"
+        data-testid="events-tab-pills">
         @if (isRequestTab()) {
           <lfx-button
             [label]="requestButtonLabel()"
             icon="fa-light fa-plus"
-            [text]="true"
             severity="primary"
             size="small"
             (onClick)="eventsList.openCurrentRequestDialog()"
             data-testid="events-new-request-button" />
         }
-      </div>
+      </lfx-card-tabs-bar>
 
-      <!-- Divider -->
-      <div class="border-b border-gray-200"></div>
-
-      <!-- Search and Filters -->
-      <div class="p-4 border-b border-gray-200">
+      <!-- Search and Filters (hidden on true empty state — no data and no active filters) -->
+      @if (showFiltersBar()) {
+      <div class="px-5 pt-4 pb-3">
         <lfx-events-top-bar
           [isFoundationFilter]="!isRequestTab()"
           [showRoleFilter]="!isRequestTab()"
@@ -114,15 +110,18 @@
           (roleChange)="onRoleChange($event)"
           (statusChange)="onStatusChange($event)" />
       </div>
+      }
 
       <!-- Events List -->
-      <lfx-events-list
-        #eventsList
-        [activeTab]="activeTab()"
-        [foundation]="selectedFoundation()"
-        [searchQuery]="selectedSearchQuery()"
-        [role]="selectedRole()"
-        [status]="selectedStatus()" />
+      <div class="px-5 pb-5">
+        <lfx-events-list
+          #eventsList
+          [activeTab]="activeTab()"
+          [foundation]="selectedFoundation()"
+          [searchQuery]="selectedSearchQuery()"
+          [role]="selectedRole()"
+          [status]="selectedStatus()" />
+      </div>
     </lfx-card>
   </div>
 </div>
