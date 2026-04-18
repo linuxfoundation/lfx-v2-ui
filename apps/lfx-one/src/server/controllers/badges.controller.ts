@@ -9,7 +9,7 @@ import { AuthenticationError } from '../errors';
 import { CredlyService } from '../services/credly.service';
 import { EmailVerificationService } from '../services/email-verification.service';
 import { logger } from '../services/logger.service';
-import { getUsernameFromAuth } from '../utils/auth-helper';
+import { getEffectiveEmail, getEffectiveSub, getUsernameFromAuth } from '../utils/auth-helper';
 
 export class BadgesController {
   private readonly credlyService = new CredlyService();
@@ -18,8 +18,10 @@ export class BadgesController {
   /**
    * GET /api/badges
    * Get badges for the authenticated user from Credly.
-   * Resolves all verified emails via email-verification.service (NATS) so badges
-   * earned under secondary addresses are included. Falls back to OIDC email on failure.
+   * Resolves primary + alternate verified emails via email-verification.service
+   * (NATS) so badges earned under secondary addresses are included.
+   * The OIDC session email is always included as a safety net.
+   * Falls back to OIDC email only if the service lookup fails.
    */
   public async getBadges(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_badges');
@@ -45,44 +47,46 @@ export class BadgesController {
   }
 
   /**
-   * Resolve all verified email addresses for the authenticated user.
-   * Fetches primary + alternate emails via email-verification.service (NATS).
-   * Falls back to the single OIDC session email if the lookup fails.
+   * Resolve email addresses for the authenticated user.
+   * Fetches primary + verified alternate emails via email-verification.service (NATS).
+   * The OIDC/effective session email is always included to cover cases where the
+   * service response doesn't include it. Falls back to session email only on failure.
+   * Uses impersonation-aware helpers so badges resolve correctly during CTE sessions.
    */
   private async resolveUserEmails(req: Request): Promise<string[]> {
-    const oidcEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
+    const sessionEmail = getEffectiveEmail(req);
 
     try {
-      const userSub = req.oidc?.user?.['sub'] as string | undefined;
+      const userSub = getEffectiveSub(req);
 
       if (!userSub) {
-        const username = await getUsernameFromAuth(req);
-        if (!username) {
-          logger.debug(req, 'resolve_user_emails', 'No user identifier from auth, using OIDC email only', {});
-          return oidcEmail ? [oidcEmail] : [];
+        const userIdentifier = await getUsernameFromAuth(req);
+        if (!userIdentifier) {
+          logger.debug(req, 'resolve_user_emails', 'No user identifier from auth, using session email only', {});
+          return sessionEmail ? [sessionEmail] : [];
         }
-        // Fall back to username-based lookup
-        return await this.resolveEmailsFromService(req, username, oidcEmail);
+        return await this.resolveEmailsFromService(req, userIdentifier, sessionEmail);
       }
 
-      return await this.resolveEmailsFromService(req, userSub, oidcEmail);
+      return await this.resolveEmailsFromService(req, userSub, sessionEmail);
     } catch (error) {
-      logger.warning(req, 'resolve_user_emails', 'Failed to resolve emails, falling back to OIDC email', {
+      logger.warning(req, 'resolve_user_emails', 'Failed to resolve emails, falling back to session email', {
         err: error instanceof Error ? error : new Error(String(error)),
       });
-      return oidcEmail ? [oidcEmail] : [];
+      return sessionEmail ? [sessionEmail] : [];
     }
   }
 
   /**
    * Fetch emails from email-verification.service and dedupe into a flat list.
+   * Includes primary email, verified alternates, and the session email as a safety net.
    */
-  private async resolveEmailsFromService(req: Request, userIdentifier: string, oidcEmail: string | undefined): Promise<string[]> {
+  private async resolveEmailsFromService(req: Request, userIdentifier: string, sessionEmail: string | null): Promise<string[]> {
     const emailData = await this.emailVerificationService.getUserEmails(req, userIdentifier);
 
     if (!emailData) {
-      logger.debug(req, 'resolve_user_emails', 'Email service returned no data, using OIDC email only', {});
-      return oidcEmail ? [oidcEmail] : [];
+      logger.debug(req, 'resolve_user_emails', 'Email service returned no data, using session email only', {});
+      return sessionEmail ? [sessionEmail] : [];
     }
 
     // Collect primary + verified alternates, deduped and lowercased
@@ -98,12 +102,12 @@ export class BadgesController {
       }
     }
 
-    // Ensure OIDC email is included even if not in the service response
-    if (oidcEmail) {
-      allEmails.add(oidcEmail);
+    // Always include session email as safety net
+    if (sessionEmail) {
+      allEmails.add(sessionEmail.toLowerCase());
     }
 
-    logger.debug(req, 'resolve_user_emails', 'Resolved verified emails via email-verification.service', {
+    logger.debug(req, 'resolve_user_emails', 'Resolved emails via email-verification.service', {
       resolved_count: allEmails.size,
       source: 'email-verification',
     });
