@@ -1,36 +1,22 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { TableComponent } from '@components/table/table.component';
-import { TagComponent } from '@components/tag/tag.component';
+import { DocumentsTableComponent } from '@components/documents-table/documents-table.component';
 import { DOCUMENT_LABEL } from '@lfx-one/shared/constants';
 import { MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap } from 'rxjs';
-import { MyDocumentSourceTagPipe } from '@app/shared/pipes/my-document-source-tag.pipe';
 
 @Component({
   selector: 'lfx-documents-dashboard',
-  imports: [
-    CardComponent,
-    ButtonComponent,
-    InputTextComponent,
-    SelectComponent,
-    TableComponent,
-    TagComponent,
-    ReactiveFormsModule,
-    DatePipe,
-    MyDocumentSourceTagPipe,
-  ],
+  imports: [CardComponent, InputTextComponent, SelectComponent, DocumentsTableComponent, ReactiveFormsModule],
   templateUrl: './documents-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -75,28 +61,6 @@ export class DocumentsDashboardComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly meetingOptions: Signal<{ label: string; value: string | null }[]> = this.initMeetingOptions();
   protected readonly mailingListOptions: Signal<{ label: string; value: string | null }[]> = this.initMailingListOptions();
-
-  // === Protected Methods ===
-  protected openDocument(doc: MyDocumentItem): void {
-    if (!doc.url) return;
-    try {
-      const url = new URL(doc.url);
-      if (['http:', 'https:'].includes(url.protocol)) {
-        window.open(doc.url, '_blank', 'noopener,noreferrer');
-      }
-    } catch {
-      // Invalid URL — silently ignore
-    }
-  }
-
-  protected downloadDocument(doc: MyDocumentItem): void {
-    if (!doc.url) return;
-    const proxyUrl = `/api/documents/download?url=${encodeURIComponent(doc.url)}&filename=${encodeURIComponent(doc.name || 'download')}`;
-    const a = document.createElement('a');
-    a.href = proxyUrl;
-    a.download = doc.name || 'download';
-    a.click();
-  }
 
   // === Private Initializers ===
   private initSearchQuery(): Signal<string> {
