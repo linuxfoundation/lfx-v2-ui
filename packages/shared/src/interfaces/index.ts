@@ -109,6 +109,12 @@ export * from './persona-detection.interface';
 
 // Events interfaces (my events, foundation events, travel fund, visa request)
 export * from './events.interface';
+
+// Badge interfaces
+export * from './badge.interface';
+
+// Credly interfaces
+export * from './credly.interface';
 // Training interfaces
 export * from './training.interface';
 
@@ -128,3 +134,6 @@ export * from './health-metrics.interface';
 
 // Multi-persona dashboard interfaces
 export * from './multi-persona-dashboard.interface';
+
+// Transaction interfaces
+export * from './transaction.interface';
