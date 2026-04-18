@@ -50,7 +50,7 @@ const ROLE_PRIORITY: string[] = [
   'Developer Seat',
   'Maintainer',
   'Contributor',
-  'Member',
+  'Group Member',
   'None',
 ];
 
@@ -337,7 +337,7 @@ export class MultiPersonaDashboardComponent {
     if (project.personas.includes('executive-director')) {
       roles.push('Executive Director');
     }
-    if (roles.length === 0) return 'Member';
+    if (roles.length === 0) return 'Group Member';
     return this.pickByPriority(roles, ROLE_PRIORITY) ?? roles[0];
   }
 
