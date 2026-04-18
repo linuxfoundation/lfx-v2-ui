@@ -31,7 +31,7 @@
       <td>
         <div class="flex items-center gap-2">
           <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' ' + (doc.source | myDocumentSourceTag: 'iconClass')" class="text-base shrink-0"></i>
-          @if (doc.source === 'summary') {
+          @if (doc.source === 'summary' && doc.summaryContent) {
             <button
               type="button"
               class="text-blue-600 hover:text-blue-700 hover:underline font-medium text-xs text-left bg-transparent border-none cursor-pointer p-0 truncate"
@@ -39,6 +39,8 @@
               [attr.data-testid]="testIdPrefix() + '-name-' + doc.id">
               {{ doc.name }}
             </button>
+          } @else if (doc.source === 'summary') {
+            <span class="text-xs text-gray-900 truncate" [attr.data-testid]="testIdPrefix() + '-name-' + doc.id">{{ doc.name }}</span>
           } @else if (doc.url) {
             <button
               type="button"
@@ -110,9 +112,10 @@
               severity="primary"
               size="small"
               [text]="true"
+              [disabled]="!doc.summaryContent"
               (onClick)="previewSummary(doc)"
               [attr.data-testid]="testIdPrefix() + '-preview-' + doc.id"
-              tooltip="Preview"
+              [tooltip]="doc.summaryContent ? 'Preview' : 'Summary not available'"
               tooltipPosition="top">
             </lfx-button>
           } @else if (doc.source === 'transcript' && doc.url) {
