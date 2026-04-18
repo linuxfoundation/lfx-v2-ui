@@ -60,6 +60,8 @@ export interface PastMeetingSummaryQueryResult {
   zoom_meeting_topic?: string;
   summary_start_time?: string;
   created_at: string;
+  content?: string;
+  edited_content?: string;
 }
 
 /** Raw shape returned by query service for `v1_meeting` resource type (minimal fields for ID extraction) */
