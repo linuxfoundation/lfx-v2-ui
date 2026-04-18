@@ -73,7 +73,7 @@
   [(visible)]="resultsDrawerVisible"
   [surveyId]="selectedSurveyId()"
   [listSurvey]="selectedListSurvey()"
-  [hasPMOAccess]="canWrite()"
+  [hasPMOAccess]="!isMeLens() && canWrite()"
   (duplicate)="onDuplicateSurvey($event)"
   (closeSurvey)="onCloseSurvey($event)"
   data-testid="survey-results-drawer">

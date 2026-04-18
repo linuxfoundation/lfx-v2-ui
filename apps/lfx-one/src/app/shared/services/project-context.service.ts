@@ -42,7 +42,7 @@ export class ProjectContextService {
   // Available projects filtered for the active lens
   public readonly availableProjects: Signal<ProjectContext[]> = this.initAvailableProjects();
 
-  // Writer permission for the active project (Foundation/Project lens only)
+  // Writer permission for the current active context
   public readonly canWrite: Signal<boolean> = this.initCanWrite();
 
   public constructor() {
