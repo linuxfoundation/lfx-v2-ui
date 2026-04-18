@@ -642,6 +642,10 @@ export class DocumentService {
   private mapPastMeetingSummaries(summaries: PastMeetingSummaryQueryResult[], meetingDetails: MeetingDetails): MyDocumentItem[] {
     return summaries.map((s): MyDocumentItem => {
       const meeting = meetingDetails.get(s.meeting_id);
+      // Prefer edited content; fall back to original. Encode as a data URL so
+      // the "Open" action opens the raw markdown text directly in a browser tab.
+      const rawContent = s.edited_content || s.content;
+      const url = rawContent ? `data:text/plain;charset=utf-8,${encodeURIComponent(rawContent)}` : undefined;
       return {
         id: `past_meeting_summary:${s.id}`,
         name: s.summary_title || s.zoom_meeting_topic || 'Meeting Summary',
@@ -652,6 +656,7 @@ export class DocumentService {
         groupOrMeetingUid: s.meeting_and_occurrence_id,
         date: s.summary_start_time || s.created_at,
         pastMeetingId: s.meeting_and_occurrence_id,
+        url,
       };
     });
   }
