@@ -43,3 +43,12 @@ export interface GetLensItemsParams {
   pageToken?: string;
   name?: string;
 }
+
+/** Upstream query-service params for lens-item lookups. */
+export interface LensItemsQuery {
+  type: 'project';
+  filters: string[];
+  sort: 'name_asc';
+  page_token?: string;
+  name?: string;
+}

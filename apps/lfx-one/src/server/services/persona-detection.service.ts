@@ -103,10 +103,16 @@ export class PersonaDetectionService {
     const cached = this.rootWriterRequestCache.get(req);
     if (cached) return cached;
 
-    const promise = this.resolveRootUid(req).then((rootUid) => {
-      if (!rootUid) return false;
-      return this.accessCheckService.checkSingleAccess(req, { resource: 'project', id: rootUid, access: 'writer' });
-    });
+    // Degrade to false on failure so transient access-check errors don't 500 callers that rely on this as a bypass hint.
+    const promise = this.resolveRootUid(req)
+      .then((rootUid) => {
+        if (!rootUid) return false;
+        return this.accessCheckService.checkSingleAccess(req, { resource: 'project', id: rootUid, access: 'writer' });
+      })
+      .catch((error) => {
+        logger.warning(req, 'check_root_writer', 'Root-writer check failed, assuming no bypass', { err: error });
+        return false;
+      });
     this.rootWriterRequestCache.set(req, promise);
     return promise;
   }
@@ -151,12 +157,13 @@ export class PersonaDetectionService {
       const codec = this.natsService.getCodec();
       const response = await this.natsService.request(NatsSubjects.PROJECT_SLUG_TO_UID, codec.encode(ROOT_PROJECT_SLUG), { timeout: 5000 });
       const uid = codec.decode(response.data).trim();
-      const resolved = uid || null;
-      this.rootProjectUidCache = { uid: resolved, expiresAt: Date.now() + ROOT_PROJECT_UID_CACHE_TTL_MS };
-      if (!resolved) {
+      if (!uid) {
+        // Don't cache empty responses — a transient glitch would disable bypass for ROOT_PROJECT_UID_CACHE_TTL_MS.
         logger.warning(req, 'resolve_root_uid', 'ROOT slug resolved to empty UID', { slug: ROOT_PROJECT_SLUG });
+        return null;
       }
-      return resolved;
+      this.rootProjectUidCache = { uid, expiresAt: Date.now() + ROOT_PROJECT_UID_CACHE_TTL_MS };
+      return uid;
     } catch (error) {
       logger.warning(req, 'resolve_root_uid', 'ROOT slug→UID NATS lookup failed', { err: error, slug: ROOT_PROJECT_SLUG });
       return null;

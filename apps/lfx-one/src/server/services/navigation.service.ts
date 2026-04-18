@@ -6,6 +6,7 @@ import {
   EnrichedPersonaProject,
   GetLensItemsParams,
   LensItem,
+  LensItemsQuery,
   LensItemsResponse,
   NavLens,
   PersonaApiResponse,
@@ -143,20 +144,13 @@ export class NavigationService {
     return projects;
   }
 
-  private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): Record<string, any> {
-    const base: Record<string, any> = {
-      type: 'project',
-      filters: ['stage:Active'],
-      sort: 'name_asc',
-    };
-
+  private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): LensItemsQuery {
     // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
-    if (lens === 'foundation') {
-      base['filters'] = ['stage:Active', 'funding_model:Membership'];
-    }
+    const filters = lens === 'foundation' ? ['stage:Active', 'funding_model:Membership'] : ['stage:Active'];
+    const base: LensItemsQuery = { type: 'project', filters, sort: 'name_asc' };
 
-    if (pageToken) base['page_token'] = pageToken;
-    if (name) base['name'] = name;
+    if (pageToken) base.page_token = pageToken;
+    if (name) base.name = name;
 
     return base;
   }
