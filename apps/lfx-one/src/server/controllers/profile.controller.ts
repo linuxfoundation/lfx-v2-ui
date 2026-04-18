@@ -621,7 +621,7 @@ export class ProfileController {
         auth0Sub
           ? this.auth0Service.getUserIdentities(req, auth0Sub).catch((err: unknown) => {
               logger.warning(req, 'get_identities', 'Auth0 identity fetch failed, continuing without cross-reference', {
-                error: err instanceof Error ? err.message : 'Unknown error',
+                err,
               });
               return [] as Auth0Identity[];
             })
@@ -1193,14 +1193,14 @@ export class ProfileController {
                     if (emailIdentity) {
                       this.cdpService.verifyIdentityForUser(req, lfid, emailIdentity.id).catch((err: unknown) => {
                         logger.warning(req, 'profile_auth_callback', 'CDP verify failed (non-blocking)', {
-                          error: err instanceof Error ? err.message : 'Unknown',
+                          err,
                         });
                       });
                     }
                   })
                   .catch((err: unknown) => {
                     logger.warning(req, 'profile_auth_callback', 'CDP identity lookup failed (non-blocking)', {
-                      error: err instanceof Error ? err.message : 'Unknown',
+                      err,
                     });
                   });
 
@@ -1221,7 +1221,7 @@ export class ProfileController {
         } catch (err) {
           logger.warning(req, 'profile_auth_callback', 'Pending verification error (non-blocking)', {
             email: pending.email,
-            error: err instanceof Error ? err.message : 'Unknown',
+            err,
           });
         }
       }
@@ -1399,14 +1399,14 @@ export class ProfileController {
               this.cdpService.verifyIdentityForUser(req, lfid, identity.id).catch((err: unknown) => {
                 logger.warning(req, 'social_auth_callback', 'CDP verify failed (non-blocking)', {
                   identity_id: identity.id,
-                  error: err instanceof Error ? err.message : 'Unknown',
+                  err,
                 });
               });
             }
           })
           .catch((err: unknown) => {
             logger.warning(req, 'social_auth_callback', 'CDP identity lookup failed (non-blocking)', {
-              error: err instanceof Error ? err.message : 'Unknown',
+              err,
             });
           });
       }
@@ -1628,14 +1628,14 @@ export class ProfileController {
           if (emailIdentity) {
             this.cdpService.verifyIdentityForUser(req, lfid, emailIdentity.id).catch((err: unknown) => {
               logger.warning(req, 'verify_and_link_email', 'CDP verify failed (non-blocking)', {
-                error: err instanceof Error ? err.message : 'Unknown',
+                err,
               });
             });
           }
         })
         .catch((err: unknown) => {
           logger.warning(req, 'verify_and_link_email', 'CDP identity lookup failed (non-blocking)', {
-            error: err instanceof Error ? err.message : 'Unknown',
+            err,
           });
         });
 
@@ -1703,7 +1703,7 @@ export class ProfileController {
           this.cdpService.verifyIdentityForUser(req, lfid, cdp.id, lfid).catch((err: unknown) => {
             logger.warning(req, 'reconcile_identities', 'Auto-verify LFID failed (non-blocking)', {
               identity_id: cdp.id,
-              error: err instanceof Error ? err.message : 'Unknown',
+              err,
             });
           });
         }
@@ -1717,7 +1717,7 @@ export class ProfileController {
             logger.warning(req, 'reconcile_identities', 'Auto-verify failed (non-blocking)', {
               identity_id: cdp.id,
               platform: cdp.platform,
-              error: err instanceof Error ? err.message : 'Unknown',
+              err,
             });
           });
         }
@@ -1790,7 +1790,7 @@ export class ProfileController {
             logger.warning(req, 'reconcile_identities', 'CDP identity create failed (non-blocking)', {
               platform: cdpPlatform,
               value,
-              error: err instanceof Error ? err.message : 'Unknown',
+              err,
             });
           });
       }

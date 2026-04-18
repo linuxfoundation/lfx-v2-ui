@@ -58,7 +58,7 @@ export class EmailVerificationService {
     } catch (error) {
       logger.warning(req, 'send_email_verification_code', 'NATS send verification code failed', {
         email,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -111,7 +111,7 @@ export class EmailVerificationService {
     } catch (error) {
       logger.warning(req, 'verify_email_otp', 'NATS verify OTP failed', {
         email,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -177,7 +177,7 @@ export class EmailVerificationService {
     } catch (error) {
       logger.warning(req, 'resolve_email_to_username', 'Failed to resolve email to username', {
         email,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return null;
     }
@@ -231,7 +231,7 @@ export class EmailVerificationService {
     } catch (error) {
       logger.warning(req, 'resolve_email_to_sub', 'Failed to resolve email to sub', {
         email,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return null;
     }
@@ -271,7 +271,7 @@ export class EmailVerificationService {
       return parsed;
     } catch (error) {
       logger.warning(req, 'link_identity', 'NATS link identity failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -325,7 +325,7 @@ export class EmailVerificationService {
       return parsed.data as EmailManagementData;
     } catch (error) {
       logger.warning(req, 'get_user_emails', 'Failed to fetch user emails via NATS', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return null;
     }
@@ -361,7 +361,7 @@ export class EmailVerificationService {
     } catch (error) {
       logger.warning(req, 'set_primary_email', 'NATS set primary email failed', {
         email,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -417,7 +417,7 @@ export class EmailVerificationService {
       logger.warning(req, 'unlink_identity', 'NATS unlink identity failed', {
         provider,
         identity_id: identityId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -457,7 +457,7 @@ export class EmailVerificationService {
       return parsed;
     } catch (error) {
       logger.warning(req, 'send_password_reset_link', 'NATS send password reset link failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -503,7 +503,7 @@ export class EmailVerificationService {
       return parsed;
     } catch (error) {
       logger.warning(req, 'change_password', 'NATS change password failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
 
       if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('503'))) {
@@ -559,7 +559,7 @@ export class EmailVerificationService {
       return parsed.data;
     } catch (error) {
       logger.warning(req, 'list_identities', 'Failed to list identities via NATS, returning empty array', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        err: error,
       });
       return [];
     }
