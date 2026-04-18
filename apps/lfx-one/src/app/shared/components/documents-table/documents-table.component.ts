@@ -51,7 +51,7 @@ export class DocumentsTableComponent {
       data: {
         summaryUid: doc.summaryUid ?? doc.id.replace('past_meeting_summary:', ''),
         pastMeetingUid: doc.groupOrMeetingUid,
-        meetingTitle: doc.name,
+        meetingTitle: doc.groupOrMeetingName,
         summaryContent: doc.summaryContent ?? '',
         approved: false,
       },
