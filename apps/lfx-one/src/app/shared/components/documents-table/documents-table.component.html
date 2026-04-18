@@ -42,7 +42,13 @@
               {{ doc.name }}
             </button>
           } @else if (doc.source === 'summary') {
-            <span class="text-xs text-gray-900 truncate min-w-0" [pTooltip]="doc.name" tooltipPosition="top" [attr.data-testid]="testIdPrefix() + '-name-' + doc.id">{{ doc.name }}</span>
+            <span
+              class="text-xs text-gray-900 truncate min-w-0"
+              [pTooltip]="doc.name"
+              tooltipPosition="top"
+              [attr.data-testid]="testIdPrefix() + '-name-' + doc.id"
+              >{{ doc.name }}</span
+            >
           } @else if (doc.url) {
             <button
               type="button"
@@ -111,17 +117,17 @@
               tooltipPosition="top">
             </lfx-button>
           } @else if (doc.source === 'summary') {
-            <lfx-button
-              icon="fa-solid fa-eye"
-              severity="primary"
-              size="small"
-              [text]="true"
-              [disabled]="!doc.summaryContent"
-              (onClick)="previewSummary(doc)"
-              [attr.data-testid]="testIdPrefix() + '-preview-' + doc.id"
-              [tooltip]="doc.summaryContent ? 'Preview' : 'Summary not available'"
-              tooltipPosition="top">
-            </lfx-button>
+            <span [pTooltip]="doc.summaryContent ? 'Preview' : 'Summary not available'" tooltipPosition="top" class="inline-flex">
+              <lfx-button
+                icon="fa-solid fa-eye"
+                severity="primary"
+                size="small"
+                [text]="true"
+                [disabled]="!doc.summaryContent"
+                (onClick)="previewSummary(doc)"
+                [attr.data-testid]="testIdPrefix() + '-preview-' + doc.id">
+              </lfx-button>
+            </span>
           } @else if (doc.source === 'transcript' && doc.url) {
             <lfx-button
               icon="fa-solid fa-arrow-up-right-from-square"

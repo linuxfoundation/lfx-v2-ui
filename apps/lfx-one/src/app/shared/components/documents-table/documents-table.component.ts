@@ -49,7 +49,7 @@ export class DocumentsTableComponent {
       draggable: false,
       resizable: false,
       data: {
-        summaryUid: doc.summaryUid ?? doc.id.replace('past_meeting_summary:', ''),
+        summaryUid: doc.summaryUid,
         pastMeetingUid: doc.groupOrMeetingUid,
         meetingTitle: doc.groupOrMeetingName,
         summaryContent: doc.summaryContent ?? '',
