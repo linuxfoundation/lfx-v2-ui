@@ -70,11 +70,16 @@ test.describe('Badges Dashboard', () => {
       await expect(filterBtn).toHaveAttribute('aria-label', 'Open filter options (filters active)');
     }
   });
+});
 
-  test('error state renders when API fails', async ({ page }) => {
-    // Intercept the badges API and simulate failure
+test.describe('Badges Dashboard error state', () => {
+  test.beforeEach(async ({ page }) => {
     await page.route('**/api/badges', (route) => route.fulfill({ status: 500, body: 'Internal Server Error' }));
     await page.goto(BADGES_URL, { waitUntil: 'domcontentloaded' });
+    await expect(page).not.toHaveURL(/auth0\.com/);
+  });
+
+  test('error state renders when API fails', async ({ page }) => {
     await expect(page.getByTestId('badges-error-state-card')).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
   });
 });

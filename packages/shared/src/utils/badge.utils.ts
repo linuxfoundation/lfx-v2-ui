@@ -176,7 +176,7 @@ function hasAnyTag(tags: string[], targetTags: Set<string>): boolean {
 }
 
 function hasOnlyProjectTags(tags: string[]): boolean {
-  return tags.every((tag) => PROJECT_TAGS.has(tag));
+  return tags.length > 0 && tags.every((tag) => PROJECT_TAGS.has(tag));
 }
 
 /**

@@ -3,7 +3,7 @@
 
 // Generated with [Claude Code](https://claude.ai/code)
 
-import type { FilterPillOption } from '../interfaces/dashboard-metric.interface';
+import type { FilterPillOption } from '../interfaces';
 
 export const BADGE_LABEL = {
   singular: 'Badge',
