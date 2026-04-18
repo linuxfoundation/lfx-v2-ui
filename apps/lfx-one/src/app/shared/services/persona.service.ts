@@ -107,7 +107,18 @@ export class PersonaService {
         take(1),
         catchError(() => of(null))
       )
-      .subscribe((response) => this.applyPersonaResponse(response));
+      .subscribe((response) => {
+        // If enriched resolved first, preserve its project metadata instead of clobbering with the sparse payload.
+        if (this.enrichedPersonasLoaded() && response && !response.error) {
+          this.applyPersonaResponse({
+            ...response,
+            projects: this.detectedProjects(),
+            personaProjects: this.personaProjects(),
+          });
+          return;
+        }
+        this.applyPersonaResponse(response);
+      });
   }
 
   private applyPersonaResponse(response: PersonaApiResponse | null): void {

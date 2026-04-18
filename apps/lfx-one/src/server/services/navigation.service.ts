@@ -44,7 +44,21 @@ export class NavigationService {
       personaFetchFailed = personaResult.failed;
     }
 
-    const shouldFilter = !bypassActive && !personaFetchFailed && !!persona;
+    // Fail closed: a persona-fetch failure must not fall through to unfiltered lens items.
+    // The frontend surfaces the "Unable to load" toast when items is empty + persona_fetch_failed.
+    if (!bypassActive && personaFetchFailed) {
+      logger.warning(req, 'build_lens_items', 'Persona fetch failed, returning empty lens items to fail closed', { lens });
+      return {
+        items: [],
+        next_page_token: null,
+        bypass_active: false,
+        persona_fetch_failed: true,
+        upstream_failed: firstPage.failed,
+        lens,
+      };
+    }
+
+    const shouldFilter = !bypassActive && !!persona;
     const eligibleUids = shouldFilter && persona ? this.collectEligibleProjectUids(persona.projects, LENS_PERSONA_MAP[lens]) : null;
 
     // targetCount=0 when filtering with no eligible projects skips the loop body entirely.

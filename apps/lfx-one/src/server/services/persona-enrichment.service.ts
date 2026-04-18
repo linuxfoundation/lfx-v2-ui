@@ -14,8 +14,8 @@ import {
 import { computeIsFoundation } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
-import { personaDetectionService } from '../utils/persona-helper';
 import { logger } from './logger.service';
+import { PersonaDetectionService } from './persona-detection.service';
 import { ProjectService } from './project.service';
 
 /**
@@ -24,9 +24,11 @@ import { ProjectService } from './project.service';
  */
 export class PersonaEnrichmentService {
   private readonly projectService: ProjectService;
+  private readonly personaDetectionService: PersonaDetectionService;
 
-  public constructor() {
+  public constructor(personaDetectionService: PersonaDetectionService) {
     this.projectService = new ProjectService();
+    this.personaDetectionService = personaDetectionService;
   }
 
   /**
@@ -34,7 +36,7 @@ export class PersonaEnrichmentService {
    * On error or empty projects, returns the base response unchanged so callers degrade gracefully.
    */
   public async getEnrichedPersonas(req: Request): Promise<PersonaApiResponse> {
-    const base = await personaDetectionService.getPersonas(req);
+    const base = await this.personaDetectionService.getPersonas(req);
 
     if (base.error || base.projects.length === 0) {
       logger.debug(req, 'get_enriched_personas', 'Skipping enrichment — no projects or upstream error', {

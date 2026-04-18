@@ -13,7 +13,7 @@ import { PersonaEnrichmentService } from '../services/persona-enrichment.service
 const DEFAULT_PERSONA: PersonaType = 'contributor';
 
 export const personaDetectionService = new PersonaDetectionService();
-export const personaEnrichmentService = new PersonaEnrichmentService();
+export const personaEnrichmentService = new PersonaEnrichmentService(personaDetectionService);
 
 // Hybrid: use cookie if present (non-blocking), else fetch via NATS (blocking + sets cookie).
 export async function resolvePersonaForSsr(req: Request, res: Response): Promise<SsrPersonaResult> {
