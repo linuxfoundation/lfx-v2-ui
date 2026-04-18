@@ -4,8 +4,16 @@
 import { TagSeverity } from '../interfaces/components.interface';
 import { MyDocumentSource } from '../interfaces/my-document.interface';
 
+
 /** Label constant for the documents feature — follows the existing COMMITTEE_LABEL, MAILING_LIST_LABEL pattern. */
 export const DOCUMENT_LABEL = { singular: 'Document', plural: 'Documents' };
+
+/**
+ * Source types that are grouped under the "Meeting" filter option.
+ * File attachments, recordings, transcripts, and summaries are all
+ * produced by meetings and should match when filtering by 'meeting'.
+ */
+export const MEETING_GROUP_SOURCES: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
 
 /** Tag configuration for each My Documents source type. */
 export const MY_DOCUMENT_SOURCE_TAGS: Record<MyDocumentSource, { value: string; severity: TagSeverity; icon: string; iconClass: string }> = {
