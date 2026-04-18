@@ -3,24 +3,24 @@
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, input, model, Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ProjectSelectorComponent } from '@components/project-selector/project-selector.component';
 import { environment } from '@environments/environment';
 import { PERSONA_OPTIONS } from '@lfx-one/shared/constants';
-import { EnrichedPersonaProject, SidebarMenuItem } from '@lfx-one/shared/interfaces';
-import { toProjectContext } from '@lfx-one/shared/utils';
+import { LensItem, NavLens, ProjectContext, SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { lensItemToProjectContext } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
+import { NavigationService } from '@services/navigation.service';
 import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
-import { filter } from 'rxjs';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'lfx-sidebar',
-  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, ProjectSelectorComponent],
+  imports: [NgClass, NgTemplateOutlet, RouterModule, AvatarComponent, BadgeComponent, ProjectSelectorComponent, SkeletonModule],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })
@@ -28,6 +28,7 @@ export class SidebarComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly personaService = inject(PersonaService);
   private readonly lensService = inject(LensService);
+  private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
 
   // Input properties
@@ -41,14 +42,13 @@ export class SidebarComponent {
   public readonly selectorPanelOpen = model<boolean>(false);
 
   protected readonly activeLens = this.lensService.activeLens;
-  protected readonly projects = computed(() => this.personaService.detectedProjects());
-  protected readonly selectorProjects = computed(() => {
-    const available = this.projectContextService.availableProjects();
-    const allProjects = this.projects();
-    const availableUids = new Set(available.map((p) => p.uid));
-    return allProjects.filter((p) => availableUids.has(p.projectUid));
-  });
-  protected readonly selectedProject: Signal<EnrichedPersonaProject | null> = this.initSelectedProject();
+  protected readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectContextService.activeContext());
+  // Narrow the active lens to the foundation/project subset accepted by the selector;
+  // returns null for me/org lenses so the selector is not rendered.
+  protected readonly navLens: Signal<NavLens | null> = this.initNavLens();
+  // True once the nav API has responded for the current lens. Drives skeleton visibility
+  // so the selector and lens-scoped menu items don't flash stale cookie-hydrated state.
+  protected readonly lensLoaded: Signal<boolean> = this.initLensLoaded();
 
   // Me selector signals
   protected readonly user = this.userService.user;
@@ -77,35 +77,30 @@ export class SidebarComponent {
     }))
   );
 
-  public constructor() {
-    toObservable(this.projects)
-      .pipe(
-        filter((projects) => projects.length > 0),
-        takeUntilDestroyed()
-      )
-      .subscribe((detectedProjects) => {
-        this.projectContextService.ensureDefaultSelection(detectedProjects);
-      });
-  }
-
-  protected onProjectChange(project: EnrichedPersonaProject): void {
-    const context = toProjectContext(project);
+  protected onItemSelected(item: LensItem): void {
+    const context = lensItemToProjectContext(item);
     const lens = this.lensService.activeLens();
 
     if (lens === 'foundation') {
       this.projectContextService.setFoundation(context);
-    } else {
+    } else if (lens === 'project') {
       this.projectContextService.setProject(context);
     }
   }
 
-  private initSelectedProject(): Signal<EnrichedPersonaProject | null> {
+  private initNavLens(): Signal<NavLens | null> {
     return computed(() => {
-      const ctx = this.projectContextService.activeContext();
-      if (!ctx) {
-        return null;
-      }
-      return this.projects().find((p) => p.projectUid === ctx.uid) || null;
+      const lens = this.activeLens();
+      return lens === 'foundation' || lens === 'project' ? lens : null;
+    });
+  }
+
+  private initLensLoaded(): Signal<boolean> {
+    return computed(() => {
+      const lens = this.navLens();
+      // Lenses that don't hit the nav endpoint (me/org) are always "loaded"
+      if (!lens) return true;
+      return this.navigationService.loaded(lens)();
     });
   }
 

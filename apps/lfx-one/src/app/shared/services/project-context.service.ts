@@ -3,10 +3,9 @@
 
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { BOARD_SCOPED_PERSONAS, EnrichedPersonaProject, isBoardScopedPersona, PROJECT_SCOPED_PERSONAS, ProjectContext } from '@lfx-one/shared/interfaces';
-import { isFoundationProject, toProjectContext } from '@lfx-one/shared/utils';
+import { isFoundationProject, isSameProjectContext, toProjectContext } from '@lfx-one/shared/utils';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
-import { CookieRegistryService } from './cookie-registry.service';
 import { LensService } from './lens.service';
 import { PersonaService } from './persona.service';
 
@@ -15,16 +14,16 @@ import { PersonaService } from './persona.service';
 })
 export class ProjectContextService {
   private readonly cookieService = inject(SsrCookieService);
-  private readonly cookieRegistry = inject(CookieRegistryService);
   private readonly lensService = inject(LensService);
   private readonly personaService = inject(PersonaService);
 
   private readonly foundationStorageKey = 'lfx-selected-foundation';
   private readonly projectStorageKey = 'lfx-selected-project';
 
-  // Per-lens storage — independent, never clear each other
-  private readonly foundationSelection: WritableSignal<ProjectContext | null>;
-  private readonly projectSelection: WritableSignal<ProjectContext | null>;
+  // Per-lens storage — independent, never clear each other.
+  // Initialized to null; NavigationService populates from the lens-items API response.
+  private readonly foundationSelection: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
+  private readonly projectSelection: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
 
   // PRIMARY API — resolves based on active lens + persona
   public readonly activeContext: Signal<ProjectContext | null> = this.initActiveContext();
@@ -39,37 +38,36 @@ export class ProjectContextService {
   public readonly availableProjects: Signal<ProjectContext[]> = this.initAvailableProjects();
 
   public constructor() {
-    this.foundationSelection = signal<ProjectContext | null>(this.loadFromStorage(this.foundationStorageKey));
-    this.projectSelection = signal<ProjectContext | null>(this.loadFromStorage(this.projectStorageKey));
+    // Clean up legacy cookies from the previous cookie-hydrated design. Safe to remove
+    // after all active sessions have rotated past this deploy.
+    this.cookieService.delete(this.foundationStorageKey, '/');
+    this.cookieService.delete(this.projectStorageKey, '/');
   }
 
   /**
    * Set the foundation-lens selection
    */
   public setFoundation(foundation: ProjectContext): void {
-    if (this.foundationSelection()?.uid === foundation.uid) {
+    if (isSameProjectContext(this.foundationSelection(), foundation)) {
       return;
     }
     this.foundationSelection.set(foundation);
-    this.persistToStorage(this.foundationStorageKey, foundation);
   }
 
   /**
    * Set the project-lens selection
    */
   public setProject(project: ProjectContext): void {
-    if (this.projectSelection()?.uid === project.uid) {
+    if (isSameProjectContext(this.projectSelection(), project)) {
       return;
     }
     this.projectSelection.set(project);
-    this.persistToStorage(this.projectStorageKey, project);
   }
 
   /**
    * Clear the foundation-lens selection
    */
   public clearFoundation(): void {
-    this.cookieService.delete(this.foundationStorageKey, '/');
     this.foundationSelection.set(null);
   }
 
@@ -77,7 +75,6 @@ export class ProjectContextService {
    * Clear the project-lens selection
    */
   public clearProject(): void {
-    this.cookieService.delete(this.projectStorageKey, '/');
     this.projectSelection.set(null);
   }
 
@@ -178,27 +175,5 @@ export class ProjectContextService {
       }
     }
     return uids;
-  }
-
-  private persistToStorage(key: string, project: ProjectContext): void {
-    this.cookieService.set(key, JSON.stringify(project), {
-      expires: 30,
-      path: '/',
-      sameSite: 'Lax',
-      secure: process.env['NODE_ENV'] === 'production',
-    });
-    this.cookieRegistry.registerCookie(key);
-  }
-
-  private loadFromStorage(key: string): ProjectContext | null {
-    try {
-      const stored = this.cookieService.get(key);
-      if (stored) {
-        return JSON.parse(stored) as ProjectContext;
-      }
-    } catch {
-      // Invalid data in cookie, ignore
-    }
-    return null;
   }
 }

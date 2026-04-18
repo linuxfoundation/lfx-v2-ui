@@ -37,10 +37,6 @@ export interface PersistedPersonaState {
   primary: PersonaType;
   /** All active persona types */
   all: PersonaType[];
-  /** Whether the user has access to multiple projects */
-  multiProject?: boolean;
-  /** Whether the user has access to multiple foundations */
-  multiFoundation?: boolean;
   /** User's organizations from board member detections */
   organizations?: Account[];
 }
@@ -58,10 +54,6 @@ export interface DevPersonaPreset {
   personas: PersonaType[];
   /** Primary persona type (determines lens behavior) */
   primary: PersonaType;
-  /** Whether this preset simulates multiple project access */
-  multiProject?: boolean;
-  /** Whether this preset simulates multiple foundation access */
-  multiFoundation?: boolean;
 }
 
 /**

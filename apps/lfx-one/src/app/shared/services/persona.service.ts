@@ -35,12 +35,6 @@ export class PersonaService {
   public readonly currentPersona: WritableSignal<PersonaType>;
   public readonly allPersonas: WritableSignal<PersonaType[]>;
 
-  /** Whether the user has access to multiple projects (affects project lens sidebar) */
-  public readonly multiProject: WritableSignal<boolean>;
-
-  /** Whether the user has access to multiple foundations (affects foundation lens sidebar) */
-  public readonly multiFoundation: WritableSignal<boolean>;
-
   /** Persona-to-project mapping from the persona detection service */
   public readonly personaProjects: WritableSignal<Partial<Record<PersonaType, PersonaProject[]>>>;
 
@@ -61,12 +55,13 @@ export class PersonaService {
   /** Whether persona data has been loaded from the API after hydration */
   public readonly personaLoaded: WritableSignal<boolean>;
 
+  /** Whether the user has writer access on the tenant root project (bypasses nav persona filtering) */
+  public readonly isRootWriter: WritableSignal<boolean> = signal<boolean>(false);
+
   public constructor() {
     const stored = this.loadFromCookie();
     this.currentPersona = signal<PersonaType>(stored?.primary ?? 'contributor');
     this.allPersonas = signal<PersonaType[]>(stored?.all ?? ['contributor']);
-    this.multiProject = signal<boolean>(stored?.multiProject ?? false);
-    this.multiFoundation = signal<boolean>(stored?.multiFoundation ?? false);
     const authState = this.transferState.get(makeStateKey<AuthContext>('auth'), { authenticated: false, user: null });
     this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>(authState.personaProjects ?? {});
     this.detectedProjects = signal<EnrichedPersonaProject[]>(authState.projects ?? []);
@@ -94,22 +89,20 @@ export class PersonaService {
    * Switch the primary persona while preserving current multi-persona state
    */
   public setPersona(persona: PersonaType): void {
-    this.setPersonas(persona, this.allPersonas(), this.multiProject(), this.multiFoundation());
+    this.setPersonas(persona, this.allPersonas());
   }
 
   /**
    * Set the active persona and update state
-   * Sets the primary persona, the full list of active personas, and access flags
+   * Sets the primary persona and the full list of active personas
    */
-  public setPersonas(primary: PersonaType, all: PersonaType[], multiProject = false, multiFoundation = false, organizations?: Account[]): void {
+  public setPersonas(primary: PersonaType, all: PersonaType[], organizations?: Account[]): void {
     this.currentPersona.set(primary);
     this.allPersonas.set(all);
-    this.multiProject.set(multiProject);
-    this.multiFoundation.set(multiFoundation);
     if (organizations !== undefined) {
       this.lastKnownOrganizations.set(organizations);
     }
-    this.persistToCookie({ primary, all, multiProject, multiFoundation, organizations: this.lastKnownOrganizations() });
+    this.persistToCookie({ primary, all, organizations: this.lastKnownOrganizations() });
   }
 
   /**
@@ -129,6 +122,7 @@ export class PersonaService {
             currentPersona: this.currentPersona(),
             allPersonas: this.allPersonas(),
           });
+          this.isRootWriter.set(false);
           this.personaLoaded.set(true);
           return;
         }
@@ -136,19 +130,18 @@ export class PersonaService {
         console.info('[PersonaService] Persona detection response:', response);
         this.personaProjects.set(response.personaProjects);
         this.detectedProjects.set(response.projects);
+        this.isRootWriter.set(response.isRootWriter ?? false);
 
         // Update persona state if API returned data — reuse setPersonas() for
         // consistent side effects (board-scoped project clearing, cookie persistence)
         if (response.personas.length > 0) {
-          this.setPersonas(response.personas[0], response.personas, response.multiProject, response.multiFoundation, response.organizations);
+          this.setPersonas(response.personas[0], response.personas, response.organizations);
         } else if (response.organizations) {
           // Persist organizations even when no personas changed (edge case: board member without persona roles)
           this.lastKnownOrganizations.set(response.organizations);
           this.persistToCookie({
             primary: this.currentPersona(),
             all: this.allPersonas(),
-            multiProject: this.multiProject(),
-            multiFoundation: this.multiFoundation(),
             organizations: response.organizations,
           });
         }

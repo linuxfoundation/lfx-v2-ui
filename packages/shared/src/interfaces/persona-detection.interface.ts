@@ -83,12 +83,10 @@ export interface PersonaApiResponse {
   personas: PersonaType[];
   /** Project-centric view with full detection details */
   projects: EnrichedPersonaProject[];
-  /** Whether the user has access to multiple distinct projects */
-  multiProject: boolean;
-  /** Whether the user has access to projects under multiple foundations */
-  multiFoundation: boolean;
   /** Unique organizations extracted from board member committee detections */
   organizations: Account[];
+  /** Whether the user has writer access on the tenant root project (bypasses nav persona filtering) */
+  isRootWriter: boolean;
   /** Error message if the persona detection failed */
   error: string | null;
 }
@@ -113,5 +111,15 @@ export interface SsrPersonaResult {
  */
 export interface AffiliatedProjectUidsCacheEntry {
   promise: Promise<string[]>;
+  expiresAt: number;
+}
+
+/**
+ * Cache entry for the full persona-API response in PersonaDetectionService.
+ * Stores an in-flight (or resolved) promise so concurrent callers (e.g. /api/user/personas
+ * and /api/nav/lens-items firing in parallel on page load) share a single NATS round-trip.
+ */
+export interface PersonaApiResponseCacheEntry {
+  promise: Promise<PersonaApiResponse>;
   expiresAt: number;
 }

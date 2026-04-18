@@ -114,6 +114,8 @@ export interface ProjectContext {
   slug: string;
   /** Parent project UID (present for sub-projects; absent for top-level foundations) */
   parent_uid?: string;
+  /** Project logo URL — shown in the sidebar trigger when available */
+  logoUrl?: string;
 }
 
 /**

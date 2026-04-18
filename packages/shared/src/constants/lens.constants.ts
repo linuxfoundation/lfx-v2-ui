@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { Lens, LensOption } from '../interfaces/lens.interface';
+import type { Lens, LensOption, NavLens } from '../interfaces';
+import type { PersonaType } from '../interfaces/persona.interface';
 
 /** Cookie key for persisting the active lens selection */
 export const LENS_COOKIE_KEY = 'lfx-active-lens';
@@ -65,3 +66,21 @@ export const PROJECT_SCOPED_LENSES: readonly Lens[] = ['me', 'project', 'org'] a
 
 /** Lenses visible to dual-role personas (users with both board and project roles) */
 export const DUAL_SCOPED_LENSES: readonly Lens[] = ['me', 'foundation', 'project', 'org'] as const;
+
+/** Lenses served by the nav-items endpoint (me/org are not backed by the nav API) */
+export const NAV_LENSES: readonly NavLens[] = ['foundation', 'project'] as const;
+
+/** Personas that unlock a project in each lens's nav dropdown */
+export const LENS_PERSONA_MAP: Readonly<Record<NavLens, readonly PersonaType[]>> = {
+  foundation: ['board-member', 'executive-director'],
+  project: ['contributor', 'maintainer'],
+} as const;
+
+/** Minimum filtered-item count the nav endpoint returns per HTTP response before it stops auto-paging. */
+export const NAV_MIN_ITEMS_PER_RESPONSE = 15;
+
+/** Safety cap on upstream query-service page fetches per single nav HTTP request. */
+export const NAV_MAX_UPSTREAM_ITERATIONS = 10;
+
+/** Debounce for typeahead search term changes before firing a reset-and-fetch. */
+export const NAV_SEARCH_DEBOUNCE_MS = 300;

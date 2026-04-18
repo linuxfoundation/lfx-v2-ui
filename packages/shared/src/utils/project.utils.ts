@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import type { EnrichedPersonaProject, Project, ProjectContext } from '../interfaces';
+import type { EnrichedPersonaProject, LensItem, Project, ProjectContext } from '../interfaces';
 
 /**
  * Convert an EnrichedPersonaProject to a ProjectContext
@@ -11,7 +11,30 @@ export function toProjectContext(project: EnrichedPersonaProject): ProjectContex
     uid: project.projectUid,
     name: project.projectName || project.projectSlug,
     slug: project.projectSlug,
+    logoUrl: project.logoUrl ?? undefined,
   };
+}
+
+/**
+ * Convert a LensItem (from the navigation lens-items API) to a ProjectContext
+ */
+export function lensItemToProjectContext(item: LensItem): ProjectContext {
+  return {
+    uid: item.uid,
+    name: item.name || item.slug,
+    slug: item.slug,
+    logoUrl: item.logoUrl ?? undefined,
+  };
+}
+
+/**
+ * Shallow equality for ProjectContext. Used to avoid spurious signal writes when a
+ * refreshed selection has the same uid/name/slug/logoUrl as the current one.
+ */
+export function isSameProjectContext(a: ProjectContext | null, b: ProjectContext | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.uid === b.uid && a.name === b.name && a.slug === b.slug && (a.logoUrl ?? null) === (b.logoUrl ?? null);
 }
 
 /**

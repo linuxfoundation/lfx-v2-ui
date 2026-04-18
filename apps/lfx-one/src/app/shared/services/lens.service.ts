@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { computed, inject, Injectable, signal, Signal, WritableSignal } from '@angular/core';
-import { ALL_LENSES, BOARD_SCOPED_LENSES, DEFAULT_LENS, DUAL_SCOPED_LENSES, LENS_COOKIE_KEY, PROJECT_SCOPED_LENSES } from '@lfx-one/shared/constants';
+import { ALL_LENSES, DEFAULT_LENS, LENS_COOKIE_KEY } from '@lfx-one/shared/constants';
 import { Lens, LensOption } from '@lfx-one/shared/interfaces';
 import { SsrCookieService } from 'ngx-cookie-service-ssr';
 
@@ -71,11 +71,22 @@ export class LensService {
   private getAllowedLensIds(): readonly Lens[] {
     const hasBoardRole = this.personaService.hasBoardRole();
     const hasProjectRole = this.personaService.hasProjectRole();
+    const isRootWriter = this.personaService.isRootWriter();
 
-    if (hasBoardRole && hasProjectRole) {
-      return DUAL_SCOPED_LENSES;
+    // Root writers bypass persona-based lens filtering and see foundation + project lenses
+    // in addition to whatever their persona role would grant.
+    const showFoundation = hasBoardRole || isRootWriter;
+    const showProject = hasProjectRole || isRootWriter;
+
+    const lenses: Lens[] = ['me'];
+    if (showFoundation) {
+      lenses.push('foundation');
     }
-    return hasBoardRole ? BOARD_SCOPED_LENSES : PROJECT_SCOPED_LENSES;
+    if (showProject) {
+      lenses.push('project');
+    }
+    lenses.push('org');
+    return lenses;
   }
 
   private persistToCookie(lens: Lens): void {

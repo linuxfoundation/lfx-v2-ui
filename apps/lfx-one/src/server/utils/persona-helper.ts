@@ -77,8 +77,6 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
       const cookieState: PersistedPersonaState = {
         primary: persona,
         all: personas,
-        multiProject: personaResult.multiProject,
-        multiFoundation: personaResult.multiFoundation,
         organizations,
       };
       res.cookie(PERSONA_COOKIE_KEY, JSON.stringify(cookieState), {
