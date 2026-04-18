@@ -8,18 +8,16 @@ import { NextFunction, Request, Response } from 'express';
 import { AuthenticationError } from '../errors';
 import { CredlyService } from '../services/credly.service';
 import { logger } from '../services/logger.service';
-import { SupabaseService } from '../services/supabase.service';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 
 export class BadgesController {
   private readonly credlyService = new CredlyService();
-  private readonly supabaseService = new SupabaseService();
 
   /**
    * GET /api/badges
    * Get badges for the authenticated user from Credly.
-   * Resolves all verified emails from Supabase so badges earned under secondary
-   * addresses are included. Falls back to the single OIDC email on failure.
+   * Currently resolves only the OIDC session email.
+   * TODO: Migrate to email-verification.service to include secondary verified emails.
    */
   public async getBadges(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_badges');
@@ -45,9 +43,9 @@ export class BadgesController {
   }
 
   /**
-   * Resolve all verified email addresses for the authenticated user.
-   * Queries Supabase for the full email list, filters to verified only.
-   * Falls back to the single OIDC session email if Supabase lookup fails.
+   * Resolve verified email addresses for the authenticated user.
+   * TODO: Currently returns OIDC email only; migrate to email-verification.service
+   * to retrieve all verified emails for a user.
    */
   private async resolveUserEmails(req: Request): Promise<string[]> {
     const oidcEmail = (req.oidc?.user?.['email'] as string)?.toLowerCase();
@@ -60,28 +58,13 @@ export class BadgesController {
         return oidcEmail ? [oidcEmail] : [];
       }
 
-      const user = await this.supabaseService.getUser(username);
-
-      if (!user) {
-        logger.debug(req, 'resolve_user_emails', 'User not found in Supabase, using OIDC email only', {
-          username,
-        });
-        return oidcEmail ? [oidcEmail] : [];
-      }
-
-      const userEmails = await this.supabaseService.getUserEmails(user.id);
-      const verifiedEmails = userEmails.filter((e) => e.is_verified && typeof e.email === 'string').map((e) => e.email.toLowerCase());
-
-      logger.debug(req, 'resolve_user_emails', 'Resolved verified emails from Supabase', {
-        total_emails: userEmails.length,
-        verified_count: verifiedEmails.length,
+      // TODO: Migrate to email-verification.service to resolve all verified emails
+      logger.debug(req, 'resolve_user_emails', 'Using OIDC email only (pending email-verification migration)', {
+        source: 'oidc',
       });
-
-      // If Supabase returned verified emails, use them; otherwise fall back to OIDC
-      if (verifiedEmails.length > 0) return verifiedEmails;
       return oidcEmail ? [oidcEmail] : [];
     } catch (error) {
-      logger.warning(req, 'resolve_user_emails', 'Failed to resolve emails from Supabase, falling back to OIDC email', {
+      logger.warning(req, 'resolve_user_emails', 'Failed to resolve emails, falling back to OIDC email', {
         err: error instanceof Error ? error : new Error(String(error)),
       });
       return oidcEmail ? [oidcEmail] : [];
