@@ -1,10 +1,10 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, Signal, signal, WritableSignal } from '@angular/core';
+import { Component, inject, Signal, signal, WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ButtonComponent } from '@components/button/button.component';
+import { MarkdownRendererComponent } from '@components/markdown-renderer/markdown-renderer.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
@@ -13,14 +13,13 @@ import { take } from 'rxjs';
 
 @Component({
   selector: 'lfx-summary-modal',
-  imports: [ButtonComponent, ReactiveFormsModule, TextareaComponent],
+  imports: [ButtonComponent, ReactiveFormsModule, TextareaComponent, MarkdownRendererComponent],
   templateUrl: './summary-modal.component.html',
 })
 export class SummaryModalComponent {
   // Injected services
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly dialogConfig = inject(DynamicDialogConfig);
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
 
@@ -42,11 +41,8 @@ export class SummaryModalComponent {
     content: new FormControl(this.dialogConfig.data.summaryContent as string),
   });
 
-  // Sanitized HTML content for display
-  public readonly summaryContent: Signal<SafeHtml> = computed(() => {
-    const content = this.isEditMode() ? this.editForm.get('content')?.value : this.originalContent();
-    return this.sanitizer.bypassSecurityTrustHtml(content || '');
-  });
+  // Raw content for display — rendered as markdown by MarkdownRendererComponent
+  public readonly summaryContent: Signal<string> = this.originalContent;
 
   // Public methods
   public enterEditMode(): void {
@@ -73,12 +69,10 @@ export class SummaryModalComponent {
             summary: 'Success',
             detail: 'Summary updated successfully',
           });
-          // Update the original content with the saved changes
           this.originalContent.set(editedContent);
           this.wasUpdated.set(true);
           this.isSaving.set(false);
           this.isEditMode.set(false);
-          // Keep modal open to show updated content
         },
         error: (error: unknown) => {
           this.messageService.add({
@@ -122,7 +116,6 @@ export class SummaryModalComponent {
   }
 
   public onClose(): void {
-    // Return updated content if changes were saved
     if (this.wasUpdated()) {
       this.dialogRef.close({ updated: true, content: this.originalContent(), approved: this.isApproved() });
     } else {

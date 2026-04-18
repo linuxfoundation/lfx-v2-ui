@@ -44,7 +44,6 @@ export class DocumentsTableComponent {
 
   protected previewSummary(doc: MyDocumentItem): void {
     this.dialogService.open(SummaryModalComponent, {
-      header: doc.name,
       width: '700px',
       modal: true,
       draggable: false,
