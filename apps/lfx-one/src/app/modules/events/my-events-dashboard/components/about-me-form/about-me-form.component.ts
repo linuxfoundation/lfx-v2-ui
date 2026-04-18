@@ -9,7 +9,7 @@ import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { COUNTRIES } from '@lfx-one/shared/constants';
+import { COUNTRIES, WHOLE_NUMBER_PATTERN } from '@lfx-one/shared/constants';
 import { TravelFundAboutMe } from '@lfx-one/shared/interfaces';
 import { YES_NO_OPTIONS } from '@lfx-one/shared/constants/events.constants';
 import { startWith } from 'rxjs';
@@ -38,7 +38,7 @@ export class AboutMeFormComponent {
     organizationID: ['', Validators.required],
     canReceiveFunds: ['', Validators.required],
     travelFromCountry: ['', Validators.required],
-    accommodationNumberOfNights: [0, [Validators.required, Validators.min(0), Validators.max(4), Validators.pattern(/^\d+$/)]],
+    accommodationNumberOfNights: ['', [Validators.required, Validators.min(0), Validators.max(4), Validators.pattern(WHOLE_NUMBER_PATTERN)]],
     openSourceInvolvement: ['', Validators.required],
     isLgbtqia: [false],
     isWoman: [false],
@@ -78,7 +78,7 @@ export class AboutMeFormComponent {
     const rawNights = String(raw.accommodationNumberOfNights).trim();
     return {
       ...raw,
-      accommodationNumberOfNights: /^\d+$/.test(rawNights) ? Number(rawNights) : 0,
+      accommodationNumberOfNights: WHOLE_NUMBER_PATTERN.test(rawNights) ? Number(rawNights) : 0,
     };
   }
 }

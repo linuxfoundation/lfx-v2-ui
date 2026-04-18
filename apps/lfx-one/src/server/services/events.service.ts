@@ -9,6 +9,7 @@ import {
   DEFAULT_VISA_REQUEST_SORT_FIELD,
   VALID_EVENT_SORT_FIELDS,
   VALID_VISA_REQUEST_SORT_FIELDS,
+  WHOLE_NUMBER_PATTERN,
 } from '@lfx-one/shared/constants';
 import {
   EventRow,
@@ -634,6 +635,7 @@ export class EventsService {
     logger.debug(req, 'submit_travel_fund_application', 'Submitting travel fund application', {
       event_id: payload.eventId,
       event_name: payload.eventName,
+      estimated_total: payload.expenses.estimatedTotal,
     });
 
     const apiGwAudience = process.env['API_GW_AUDIENCE'];
@@ -666,7 +668,7 @@ export class EventsService {
 
     // Parse numeric fields up-front so validation and body construction share the same values
     const rawNights = String(aboutMe.accommodationNumberOfNights).trim();
-    const accommodationNumberOfNights = /^\d+$/.test(rawNights) ? Number(rawNights) : Number.NaN;
+    const accommodationNumberOfNights = WHOLE_NUMBER_PATTERN.test(rawNights) ? Number(rawNights) : Number.NaN;
     const estimatedTotal = Number(expenses.estimatedTotal);
 
     const validationErrors: string[] = [];
@@ -720,19 +722,27 @@ export class EventsService {
     };
 
     logger.debug(req, 'submit_travel_fund_application', 'Calling API Gateway travel fund endpoint', {
-      target_url: '/user-service/v1/users/{userId}/travelfundrequests',
+      server_user_id: serverUserId,
       event_id: payload.eventId,
     });
 
-    const upstream = await fetch(targetUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${req.apiGatewayToken}`,
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30000),
-    });
+    let upstream: Response;
+    try {
+      upstream = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${req.apiGatewayToken}`,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (err) {
+      throw new MicroserviceError('Travel fund API request failed', 503, 'API_GATEWAY_UNAVAILABLE', {
+        operation: 'submit_travel_fund_application',
+        errorBody: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     if (!upstream.ok) {
       const errorText = await upstream.text().catch(() => '');
