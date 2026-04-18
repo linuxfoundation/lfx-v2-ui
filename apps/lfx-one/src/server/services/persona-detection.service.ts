@@ -1,7 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS, DETECTION_SOURCE_MAP, PERSONA_PRIORITY, PERSONAS_CACHE_TTL_MS } from '@lfx-one/shared/constants';
+import {
+  AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS,
+  DETECTION_SOURCE_MAP,
+  PERSONA_PRIORITY,
+  PERSONAS_CACHE_TTL_MS,
+  ROOT_PROJECT_SLUG,
+  ROOT_PROJECT_UID_CACHE_TTL_MS,
+} from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   Account,
@@ -21,45 +28,23 @@ import { logger } from './logger.service';
 import { NatsService } from './nats.service';
 
 /**
- * Service for detecting user personas via the persona detection NATS RPC.
- * Returns raw detection data without per-project REST enrichment — consumers
- * that need project metadata (name, logo, foundation flag) should look those
- * up via NavigationService or a targeted project-service call.
+ * Detects user personas via NATS RPC. Returns raw detection data — consumers needing
+ * project metadata (name, logo, foundation flag) must fetch those separately.
  */
 export class PersonaDetectionService {
   private readonly natsService: NatsService;
   private readonly accessCheckService: AccessCheckService;
 
-  /**
-   * Short-lived per-user cache for affiliated project UIDs.
-   * Keyed by username (nickname claim) with email as fallback.
-   * Stores the in-flight Promise so concurrent requests on the same page load
-   * (e.g. events list + foundation dropdown) share a single NATS round-trip.
-   */
+  // Per-user caches store in-flight Promises so concurrent callers share one NATS round-trip.
   private readonly affiliatedUidsCache = new Map<string, AffiliatedProjectUidsCacheEntry>();
-
-  /**
-   * Short-lived per-user cache for the full getPersonas response.
-   * Dedups concurrent callers within a page-load burst (/api/user/personas +
-   * /api/nav/lens-items firing together) into a single NATS round-trip.
-   */
   private readonly personasCache = new Map<string, PersonaApiResponseCacheEntry>();
-
-  /**
-   * Per-request memoization for checkRootWriter. A single HTTP request may call
-   * checkRootWriter multiple times (e.g. nav endpoint checks it first, then falls
-   * through to getPersonas which also needs it). WeakMap keyed by the Request
-   * object ensures one /access-check call per request, with automatic cleanup
-   * when the request object is GC'd.
-   */
   private readonly rootWriterRequestCache = new WeakMap<Request, Promise<boolean>>();
+  private rootProjectUidCache: { uid: string | null; expiresAt: number } | null = null;
 
   public constructor() {
     this.natsService = new NatsService();
     this.accessCheckService = new AccessCheckService();
 
-    // Sweep expired cache entries every 60 s — well above the 15 s TTL — so
-    // entries that are never re-requested don't accumulate indefinitely.
     setInterval(() => {
       const now = Date.now();
       for (const [key, entry] of this.affiliatedUidsCache) {
@@ -75,22 +60,7 @@ export class PersonaDetectionService {
     }, 60_000).unref();
   }
 
-  /**
-   * Return only the project slugs the authenticated user is affiliated with.
-   * Slugs are used (rather than persona-service UIDs) because PROJECT_SLUG is
-   * the shared cross-reference key between the persona service and the datalake.
-   *
-   * Cache strategy:
-   * - Keyed by username (nickname) with email as fallback; skips cache entirely
-   *   when no stable identifier is present (prevents cross-user data leaks).
-   * - Stores the in-flight Promise before awaiting so concurrent requests for
-   *   the same user share a single NATS round-trip rather than each triggering
-   *   their own (addresses the "events list + foundation dropdown" concurrency).
-   * - Evicts stale entries eagerly on cache miss and on rejection to prevent
-   *   memory growth and poisoned entries.
-   *
-   * Returns an empty array on error so callers degrade gracefully.
-   */
+  /** Returns project slugs the user is affiliated with. Empty on error — callers degrade gracefully. */
   public async getAffiliatedProjectSlugs(req: Request): Promise<string[]> {
     const username = getEffectiveUsername(req) || '';
     const email = getEffectiveEmail(req) || '';
@@ -98,46 +68,26 @@ export class PersonaDetectionService {
 
     // No stable identifier — bypass cache to prevent cross-user data leaks.
     if (!cacheKey) {
-      logger.debug(req, 'get_affiliated_project_slugs', 'No stable cache key, bypassing cache');
       return this.fetchAndResolveAffiliatedSlugs(req, username, email);
     }
 
     const cached = this.affiliatedUidsCache.get(cacheKey);
     if (cached) {
       if (Date.now() < cached.expiresAt) {
-        logger.debug(req, 'get_affiliated_project_slugs', 'Returning cached affiliated project slugs', {
-          cacheKey: '***',
-        });
         return cached.promise;
       }
-      // Stale — evict eagerly so the next caller fetches fresh data.
       this.affiliatedUidsCache.delete(cacheKey);
     }
 
-    // Store the Promise *before* awaiting so concurrent callers retrieve and
-    // await the same Promise instead of each triggering a separate NATS call.
+    // Stored before await so concurrent callers share the fetch.
     const promise = this.fetchAndResolveAffiliatedSlugs(req, username, email);
     this.affiliatedUidsCache.set(cacheKey, { promise, expiresAt: Date.now() + AFFILIATED_PROJECT_UIDS_CACHE_TTL_MS });
 
-    // Remove on rejection so a failed lookup doesn't poison the cache.
     promise.catch(() => this.affiliatedUidsCache.delete(cacheKey));
 
     return promise;
   }
 
-  /**
-   * Get persona data for the authenticated user from the detection service.
-   * Returns detection results with nullable project metadata fields — consumers
-   * needing name/logo/foundation flags should fetch those separately.
-   *
-   * Cache strategy (mirrors getAffiliatedProjectSlugs):
-   * - Keyed by username (nickname) with email as fallback; no stable key → bypass
-   *   cache entirely to prevent cross-user data leaks.
-   * - Stores the in-flight Promise before awaiting so concurrent callers within a
-   *   page-load burst share a single NATS round-trip.
-   * - Evicts on error-response so transient NATS timeouts don't pin empty results
-   *   for the full TTL window.
-   */
   public async getPersonas(req: Request): Promise<PersonaApiResponse> {
     const username = getEffectiveUsername(req) || '';
     const email = getEffectiveEmail(req) || '';
@@ -145,27 +95,22 @@ export class PersonaDetectionService {
 
     // No stable identifier — bypass cache to prevent cross-user data leaks.
     if (!cacheKey) {
-      logger.debug(req, 'get_personas', 'No stable cache key, bypassing cache');
       return this.computePersonas(req, username, email);
     }
 
     const cached = this.personasCache.get(cacheKey);
     if (cached) {
       if (Date.now() < cached.expiresAt) {
-        logger.debug(req, 'get_personas', 'Returning cached persona response', { cacheKey: '***' });
         return cached.promise;
       }
-      // Stale — evict eagerly so the next caller fetches fresh data.
       this.personasCache.delete(cacheKey);
     }
 
-    // Store the Promise *before* awaiting so concurrent callers retrieve and
-    // await the same Promise instead of each triggering a separate NATS call.
+    // Stored before await so concurrent callers share the fetch.
     const promise = this.computePersonas(req, username, email);
     this.personasCache.set(cacheKey, { promise, expiresAt: Date.now() + PERSONAS_CACHE_TTL_MS });
 
-    // Evict failed lookups so the next caller retries immediately instead of being
-    // stuck with an empty/error response for the TTL window.
+    // Evict failed lookups so the next caller retries instead of being pinned for the TTL.
     promise.then(
       (result) => {
         if (result.error) {
@@ -178,14 +123,45 @@ export class PersonaDetectionService {
     return promise;
   }
 
-  /** Fresh compute of the PersonaApiResponse — called through the cache in getPersonas. */
+  public async checkRootWriter(req: Request): Promise<boolean> {
+    const cached = this.rootWriterRequestCache.get(req);
+    if (cached) return cached;
+
+    const promise = this.resolveRootUid(req).then((rootUid) => {
+      if (!rootUid) return false;
+      return this.accessCheckService.checkSingleAccess(req, { resource: 'project', id: rootUid, access: 'writer' });
+    });
+    this.rootWriterRequestCache.set(req, promise);
+    return promise;
+  }
+
+  private async resolveRootUid(req: Request): Promise<string | null> {
+    if (this.rootProjectUidCache && Date.now() < this.rootProjectUidCache.expiresAt) {
+      return this.rootProjectUidCache.uid;
+    }
+
+    try {
+      const codec = this.natsService.getCodec();
+      const response = await this.natsService.request(NatsSubjects.PROJECT_SLUG_TO_UID, codec.encode(ROOT_PROJECT_SLUG), { timeout: 5000 });
+      const uid = codec.decode(response.data).trim();
+      const resolved = uid || null;
+      this.rootProjectUidCache = { uid: resolved, expiresAt: Date.now() + ROOT_PROJECT_UID_CACHE_TTL_MS };
+      if (!resolved) {
+        logger.warning(req, 'resolve_root_uid', 'ROOT slug resolved to empty UID', { slug: ROOT_PROJECT_SLUG });
+      }
+      return resolved;
+    } catch (error) {
+      logger.warning(req, 'resolve_root_uid', 'ROOT slug→UID NATS lookup failed', { err: error, slug: ROOT_PROJECT_SLUG });
+      return null;
+    }
+  }
+
   private async computePersonas(req: Request, username: string, email: string): Promise<PersonaApiResponse> {
     logger.debug(req, 'get_personas', 'Fetching personas from detection service', {
       username,
       email: email ? '***' : 'empty',
     });
 
-    // Fire persona detection + root-writer access check in parallel — independent calls.
     const [detectionResponse, isRootWriter] = await Promise.all([this.fetchPersonaDetections(req, username, email), this.checkRootWriter(req)]);
 
     if (detectionResponse.error) {
@@ -238,38 +214,6 @@ export class PersonaDetectionService {
     };
   }
 
-  /**
-   * Check whether the user has writer access on the tenant ROOT project.
-   * Uses the /access-check upstream with the user's bearer token — authoritative,
-   * no username-to-sub translation needed (unlike scanning the persona response
-   * for `source: "writer"` detections). Returns false when LFX_ROOT_PROJECT_UID
-   * is unset so local/dev environments without the config degrade gracefully.
-   *
-   * Memoized per-request via WeakMap so multiple callers within one HTTP request
-   * (nav endpoint pre-check + persona-detection internal check) share one upstream call.
-   */
-  public async checkRootWriter(req: Request): Promise<boolean> {
-    const cached = this.rootWriterRequestCache.get(req);
-    if (cached) return cached;
-
-    const rootUid = process.env['LFX_ROOT_PROJECT_UID'];
-    if (!rootUid) {
-      logger.warning(req, 'check_root_writer', 'LFX_ROOT_PROJECT_UID is not set — defaulting isRootWriter to false');
-      const falsePromise = Promise.resolve(false);
-      this.rootWriterRequestCache.set(req, falsePromise);
-      return falsePromise;
-    }
-
-    const promise = this.accessCheckService.checkSingleAccess(req, {
-      resource: 'project',
-      id: rootUid,
-      access: 'writer',
-    });
-    this.rootWriterRequestCache.set(req, promise);
-    return promise;
-  }
-
-  /** Fetch persona detections and resolve to a deduplicated list of project slugs. */
   private async fetchAndResolveAffiliatedSlugs(req: Request, username: string, email: string): Promise<string[]> {
     const detectionResponse = await this.fetchPersonaDetections(req, username, email);
 
@@ -291,9 +235,6 @@ export class PersonaDetectionService {
     return slugs;
   }
 
-  /**
-   * Call the persona detection service via NATS RPC
-   */
   private async fetchPersonaDetections(req: Request, username: string, email: string): Promise<PersonaDetectionResponse> {
     logger.debug(req, 'fetch_persona_detections', 'Sending NATS persona request', {
       subject: NatsSubjects.PERSONAS_GET,
@@ -315,7 +256,6 @@ export class PersonaDetectionService {
 
       const parsed = JSON.parse(decoded);
 
-      // Log raw NATS response for debugging detection extras (e.g. organization data)
       const projectCount = Array.isArray(parsed?.projects) ? parsed.projects.length : 0;
       const boardDetections = Array.isArray(parsed?.projects)
         ? parsed.projects.flatMap((p: Record<string, unknown>) =>
@@ -334,7 +274,7 @@ export class PersonaDetectionService {
         }),
       });
 
-      // Validate response shape — normalize malformed fields to prevent downstream crashes
+      // Normalize malformed fields to prevent downstream crashes.
       const normalized = {
         projects: Array.isArray(parsed?.projects)
           ? parsed.projects.map((p: Record<string, unknown>) => ({
@@ -364,11 +304,7 @@ export class PersonaDetectionService {
     }
   }
 
-  /**
-   * Map raw detection projects to the EnrichedPersonaProject shape without REST lookups.
-   * Project metadata fields (name, logo, foundation flag, parent, description) are left null /
-   * false / empty — consumers that need them should fetch via NavigationService or project-service.
-   */
+  // Metadata fields (name, logo, parent, description) are left null — consumers fetch separately.
   private toEnrichedPersonaProjects(response: PersonaDetectionResponse): EnrichedPersonaProject[] {
     return response.projects.map((project) => ({
       projectUid: project.project_uid,
@@ -383,13 +319,6 @@ export class PersonaDetectionService {
     }));
   }
 
-  /**
-   * Map detection sources to persona types
-   * - board_member → 'board-member'
-   * - executive_director → 'executive-director'
-   * - cdp_roles with Maintainer role → 'maintainer'
-   * - Everything else → 'contributor'
-   */
   private mapDetectionsToPersonas(detections: { source: string; extra?: Record<string, unknown> }[]): PersonaType[] {
     const personas = new Set<PersonaType>();
 
@@ -415,9 +344,7 @@ export class PersonaDetectionService {
       personas.add('contributor');
     }
 
-    // Contributor is implied by any specific role — if a project already has
-    // board-member, executive-director, or maintainer, drop contributor so the
-    // project only appears under the more specific persona(s).
+    // Drop contributor when a more specific role is present.
     if (personas.size > 1 && personas.has('contributor')) {
       personas.delete('contributor');
     }
@@ -425,9 +352,6 @@ export class PersonaDetectionService {
     return Array.from(personas);
   }
 
-  /**
-   * Build a mapping of persona → projects for lens navigation filtering
-   */
   private buildPersonaProjectsMap(projects: EnrichedPersonaProject[]): Partial<Record<PersonaType, PersonaProject[]>> {
     const map: Partial<Record<PersonaType, PersonaProject[]>> = {};
 
@@ -449,9 +373,6 @@ export class PersonaDetectionService {
     return map;
   }
 
-  /**
-   * Collect unique personas from all projects, sorted by priority (highest first)
-   */
   private collectUniquePersonas(projects: EnrichedPersonaProject[]): PersonaType[] {
     const allPersonas = new Set<PersonaType>();
 
@@ -464,11 +385,6 @@ export class PersonaDetectionService {
     return PERSONA_PRIORITY.filter((p) => allPersonas.has(p));
   }
 
-  /**
-   * Extract unique organizations from board_member detection extras
-   * The persona service includes organization data (Salesforce account ID, name, website)
-   * in board_member detection extras — map these to Account objects for UI consumption
-   */
   private extractOrganizations(req: Request, projects: EnrichedPersonaProject[]): Account[] {
     const seen = new Set<string>();
     const accounts: Account[] = [];

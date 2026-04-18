@@ -1,14 +1,12 @@
 <!-- Copyright The Linux Foundation and each contributor to LFX. -->
 <!-- SPDX-License-Identifier: MIT -->
 
-<!-- Interactive trigger — always rendered; popover shows an empty state when items are unavailable -->
 <button
   type="button"
   class="box-border content-stretch flex gap-3 items-center overflow-clip p-3 relative w-full cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
   (click)="togglePanel($event, popover)"
   [attr.aria-expanded]="popover.overlayVisible"
   data-testid="project-selector">
-  <!-- Logo -->
   <div class="bg-gray-100 overflow-clip relative rounded-full shrink-0 size-10">
     <div class="flex items-center justify-center size-full p-2.5">
       @if (displayLogo()) {
@@ -19,16 +17,13 @@
     </div>
   </div>
 
-  <!-- Text -->
   <div class="flex flex-col gap-1 grow items-start relative min-w-0">
     <p class="sidebar-project-name">{{ displayName() }}</p>
   </div>
 
-  <!-- Toggle Icon -->
   <i class="fa-light fa-angles-up-down shrink-0 text-gray-400" aria-hidden="true"></i>
 </button>
 
-<!-- Popover for Lens Items List -->
 <p-popover
   #popover
   appendTo="body"
@@ -38,7 +33,6 @@
   (onHide)="onPopoverHide()"
   data-testid="project-selector-panel">
   <div class="p-2">
-    <!-- Search Input -->
     <div class="relative mb-2">
       <i class="fa-light fa-search absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
       <input
@@ -51,12 +45,9 @@
         data-testid="project-search-input" />
     </div>
 
-    <!-- Items List (flat — hierarchy no longer supported server-side) -->
     <div class="max-h-[400px] overflow-y-auto">
       @for (item of items(); track item.uid; let i = $index) {
-        <!-- Auto-load sentinel — placed 8 items from the end. On each page load the items
-             array grows, the sentinel's $index shifts, Angular destroys + re-creates the
-             OnRenderDirective, and afterNextRender re-fires to request the next page. -->
+        <!-- Auto-load sentinel 8 items from the end — shifts each page so lfxOnRender re-fires. -->
         @if (i === autoLoadTriggerIndex() && hasMore()) {
           @defer (on viewport) {
             <div lfxOnRender (rendered)="loadMore()" class="h-0 w-full" aria-hidden="true"></div>
@@ -70,7 +61,6 @@
           class="flex items-center gap-3 p-2 w-full text-left hover:bg-gray-100 rounded-lg transition-colors"
           (click)="selectItem(item, popover)"
           [attr.data-testid]="'lens-item-' + item.slug">
-          <!-- Item Logo -->
           <div class="bg-gray-100 overflow-clip rounded-full shrink-0 size-8">
             <div class="flex items-center justify-center size-full p-2">
               @if (item.logoUrl) {
@@ -84,7 +74,6 @@
             </div>
           </div>
 
-          <!-- Item Info -->
           <div class="flex-1 min-w-0">
             <p class="font-medium text-sm text-gray-900 mb-0">{{ item.name || item.slug }}</p>
           </div>
@@ -95,7 +84,6 @@
         }
       }
 
-      <!-- Loading indicator -->
       @if (loading()) {
         <div class="flex items-center justify-center py-3 text-gray-500 text-sm gap-2">
           <i class="fa-light fa-spinner fa-spin"></i>

@@ -14,9 +14,6 @@ function isNavLens(value: string | undefined): value is NavLens {
   return !!value && NAV_LENSES.includes(value as NavLens);
 }
 
-/**
- * Controller for navigation lens endpoints
- */
 export class NavigationController {
   private readonly navigationService: NavigationService;
 
@@ -24,9 +21,6 @@ export class NavigationController {
     this.navigationService = new NavigationService();
   }
 
-  /**
-   * GET /api/nav/lens-items - Get lens-scoped, persona-filtered items for the sidebar dropdown
-   */
   public async getLensItems(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_lens_items');
 

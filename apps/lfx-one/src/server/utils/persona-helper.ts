@@ -11,15 +11,9 @@ import { PersonaDetectionService } from '../services/persona-detection.service';
 
 const DEFAULT_PERSONA: PersonaType = 'contributor';
 
-/** Shared singleton — reused by both SSR helper and persona controller */
 export const personaDetectionService = new PersonaDetectionService();
 
-/**
- * Resolve persona for SSR rendering using hybrid cookie-gated strategy:
- * - If persona cookie exists → parse and use it (non-blocking)
- * - If no cookie → fetch from NATS persona service (blocking, sets cookie on response)
- * - Fallback to 'contributor' on any failure
- */
+// Hybrid: use cookie if present (non-blocking), else fetch via NATS (blocking + sets cookie).
 export async function resolvePersonaForSsr(req: Request, res: Response): Promise<SsrPersonaResult> {
   const cookieHeader = req.headers.cookie || '';
   const hasPersonaCookie = cookieHeader.includes(PERSONA_COOKIE_KEY + '=');
@@ -31,9 +25,6 @@ export async function resolvePersonaForSsr(req: Request, res: Response): Promise
   return resolveFromNats(req, res);
 }
 
-/**
- * Parse persona from existing cookie (non-blocking path)
- */
 function resolveFromCookie(req: Request, cookieHeader: string): SsrPersonaResult {
   try {
     const cookieMatch = cookieHeader.match(new RegExp(`${PERSONA_COOKIE_KEY}=([^;]+)`));
@@ -60,10 +51,6 @@ function resolveFromCookie(req: Request, cookieHeader: string): SsrPersonaResult
   return { persona: DEFAULT_PERSONA, personas: [DEFAULT_PERSONA] };
 }
 
-/**
- * Fetch persona from NATS persona detection service (blocking path for first-time users)
- * Sets the persona cookie on the response so subsequent requests use the non-blocking path
- */
 async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaResult> {
   try {
     const personaResult = await personaDetectionService.getPersonas(req);
@@ -72,7 +59,7 @@ async function resolveFromNats(req: Request, res: Response): Promise<SsrPersonaR
     const personas = personaResult.personas.length > 0 ? personaResult.personas : [DEFAULT_PERSONA];
     const organizations = personaResult.organizations ?? [];
 
-    // Only cache when detection succeeded — don't pin user to contributor on transient NATS failure
+    // Don't cache on error so transient NATS failures don't pin user to contributor.
     if (!personaResult.error) {
       const cookieState: PersistedPersonaState = {
         primary: persona,

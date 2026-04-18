@@ -14,7 +14,6 @@ import { catchError, debounceTime, distinctUntilChanged, EMPTY, filter, map, mer
 import { LensService } from './lens.service';
 import { ProjectContextService } from './project-context.service';
 
-/** Per-lens internal state container — one entry per foundation/project lens */
 interface LensState {
   searchTerm: WritableSignal<string>;
   items: Signal<LensItem[]>;
@@ -26,8 +25,6 @@ interface LensState {
   personaFetchFailed: WritableSignal<boolean>;
   loadMore$: Subject<string>;
   reload$: Subject<void>;
-  // Flipped true when resetAndReload fires; consumed inside the fetch pipeline so the
-  // default selection is applied once per reload, regardless of subscription timing.
   pendingDefaultSelection: WritableSignal<boolean>;
 }
 
@@ -44,11 +41,8 @@ export class NavigationService {
   private readonly foundationState: LensState = this.createLensState('foundation');
   private readonly projectState: LensState = this.createLensState('project');
 
-  // Singleton-level preload: fire resetAndReload whenever the active lens becomes
-  // foundation/project. The default-selection is handled INSIDE the fetch pipeline
-  // (via pendingDefaultSelection flag) rather than by subscribing to items here —
-  // this avoids an SSR race where the items signal could populate synchronously
-  // from transfer-state before any external subscriber is ready to observe it.
+  // Default-selection handled inside the fetch pipeline (not via items subscription) to avoid
+  // an SSR race where items could populate synchronously before external subscribers are ready.
   private readonly activeLensPreloader = toSignal(
     toObservable(this.lensService.activeLens).pipe(
       map((lens): NavLens | null => (lens === 'foundation' || lens === 'project' ? lens : null)),
@@ -67,7 +61,6 @@ export class NavigationService {
     return this.getState(lens).loading;
   }
 
-  /** Flips true after the first API response for this lens lands (success, empty, or graceful failure). */
   public loaded(lens: NavLens): Signal<boolean> {
     return this.getState(lens).loaded;
   }
@@ -88,12 +81,10 @@ export class NavigationService {
     return this.getState(lens).personaFetchFailed;
   }
 
-  /** Updates the search term; the debounced pipeline will reset and refetch page 1 */
   public setSearchTerm(lens: NavLens, term: string): void {
     this.getState(lens).searchTerm.set(term);
   }
 
-  /** Appends one more page (used by the UI intersection observer) — does NOT auto-loop */
   public loadNextPage(lens: NavLens): void {
     const state = this.getState(lens);
     const token = state.nextPageToken();
@@ -103,7 +94,6 @@ export class NavigationService {
     state.loadMore$.next(token);
   }
 
-  /** Clears state and refetches page 1 with the current search term (used when lens becomes visible) */
   public resetAndReload(lens: NavLens): void {
     const state = this.getState(lens);
     state.pendingDefaultSelection.set(true);
@@ -114,11 +104,6 @@ export class NavigationService {
     return lens === 'foundation' ? this.foundationState : this.projectState;
   }
 
-  /**
-   * Reconcile the per-lens selection against the fresh API response.
-   * Empty items → clear selection. Otherwise always select the first item — the API
-   * response is the source of truth, not any previous in-session selection.
-   */
   private applyDefaultSelection(lens: NavLens, page: LensPage): void {
     if (page.items.length === 0) {
       if (lens === 'foundation') {
@@ -138,12 +123,6 @@ export class NavigationService {
     }
   }
 
-  /**
-   * When the nav API returns zero items for a lens the user just navigated to, we can't
-   * render anything meaningful — bounce them to the Me lens and surface the reason:
-   * - upstream failure (persona or query) → "we couldn't load your data"
-   * - otherwise (user genuinely has no persona access) → "you don't have access"
-   */
   private handleEmptyLensResponse(lens: NavLens, page: LensPage): void {
     const upstreamFailure = page.upstreamFailed || page.personaFetchFailed;
     const toast = upstreamFailure
@@ -199,12 +178,9 @@ export class NavigationService {
     loadMore$: Subject<string>,
     reload$: Subject<void>
   ): Signal<LensItem[]> {
-    // toObservable replays the current signal value on subscription. skip(1) prevents
-    // that initial replay from firing a fetch at service-instantiation time — fetches
-    // should only happen on genuine user-driven search input.
+    // skip(1) drops toObservable's initial replay so fetches only fire on user search input.
     const searchTriggered$ = toObservable(searchTerm).pipe(skip(1), debounceTime(NAV_SEARCH_DEBOUNCE_MS), distinctUntilChanged());
 
-    // Manual reload (e.g. popover open) triggers a reset-and-fetch using the current search term
     const reloadTriggered$ = reload$.pipe(map(() => searchTerm()));
 
     const firstPage$: Observable<LensPage> = merge(searchTriggered$, reloadTriggered$).pipe(
@@ -220,8 +196,6 @@ export class NavigationService {
           bypassActive.set(page.bypassActive);
           personaFetchFailed.set(page.personaFetchFailed);
           loaded.set(true);
-          // Apply default selection once per reload cycle, in the same tap where we
-          // see the fresh response — guarantees it fires regardless of subscription timing.
           if (page.reset && pendingDefaultSelection()) {
             pendingDefaultSelection.set(false);
             this.applyDefaultSelection(lens, page);
@@ -233,20 +207,13 @@ export class NavigationService {
     );
   }
 
-  /**
-   * Fetches one page from the backend. The server applies persona filtering and
-   * accumulates upstream pages until it has enough filtered items, so a single
-   * client request returns a populated page.
-   */
   private fetchSinglePage(lens: NavLens, term: string, pageToken: string | null, loading: WritableSignal<boolean>, reset: boolean): Observable<LensPage> {
     loading.set(true);
     return this.fetchPage(lens, term, pageToken).pipe(
       map((response) => this.toLensPage(response, reset)),
       tap(() => loading.set(false)),
       catchError(() => {
-        // On fetch failure, drop through to an empty reset page so the server-side
-        // degraded-state flow (toast + redirect to Me lens) can kick in via applyDefaultSelection.
-        // Non-reset (scroll-triggered) failures are silent — the existing items stay put.
+        // Reset failures emit an empty page so handleEmptyLensResponse can redirect; scroll-triggered failures stay silent.
         loading.set(false);
         if (reset) {
           return of<LensPage>({ items: [], nextPageToken: null, bypassActive: false, personaFetchFailed: false, upstreamFailed: true, reset: true });

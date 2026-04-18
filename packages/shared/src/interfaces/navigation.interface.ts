@@ -3,14 +3,8 @@
 
 import type { Lens } from './lens.interface';
 
-/**
- * Lenses that support the lens-items endpoint (me/org do not)
- */
 export type NavLens = Extract<Lens, 'foundation' | 'project'>;
 
-/**
- * Item shown in the foundation/project lens dropdown
- */
 export interface LensItem {
   uid: string;
   slug: string;
@@ -19,9 +13,6 @@ export interface LensItem {
   isFoundation: boolean;
 }
 
-/**
- * Response payload for GET /api/nav/lens-items
- */
 export interface LensItemsResponse {
   items: LensItem[];
   next_page_token: string | null;
@@ -31,10 +22,7 @@ export interface LensItemsResponse {
   lens: Lens;
 }
 
-/**
- * Internal marker used by the NavigationService fetch pipeline to distinguish
- * reset (fresh first page) from append (pagination continuation) emissions.
- */
+/** `reset=true` marks a fresh first page vs. an append emission. */
 export interface LensPage {
   items: LensItem[];
   nextPageToken: string | null;
@@ -44,7 +32,6 @@ export interface LensPage {
   reset: boolean;
 }
 
-/** Parameters accepted by the server-side NavigationService.getLensItems method. */
 export interface GetLensItemsParams {
   lens: NavLens;
   pageToken?: string;

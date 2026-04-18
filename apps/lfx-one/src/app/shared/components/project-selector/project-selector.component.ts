@@ -32,7 +32,7 @@ export class ProjectSelectorComponent {
 
   protected readonly searchControl = new FormControl<string>('', { nonNullable: true });
 
-  // Offset the fixed-positioned popover when the impersonation banner is visible so it doesn't slide under it.
+  // Offset the popover when the impersonation banner is visible.
   protected readonly panelStyleClass = computed(() =>
     this.userService.impersonating() ? 'project-selector-panel project-selector-panel--with-banner' : 'project-selector-panel'
   );
@@ -45,8 +45,7 @@ export class ProjectSelectorComponent {
   protected readonly autoLoadTriggerIndex: Signal<number> = this.initializeAutoLoadTriggerIndex();
 
   public constructor() {
-    // Forward the reactive form value to the NavigationService's search pipeline.
-    // The service applies its own debounce, so we push raw emissions here.
+    // Service applies its own debounce — push raw emissions here.
     this.searchControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((term) => this.navigationService.setSearchTerm(this.lens(), term));
   }
 
@@ -65,13 +64,11 @@ export class ProjectSelectorComponent {
 
   protected onPopoverHide(): void {
     this.isPanelOpen.set(false);
-    // Reset the form without re-emitting — we push the clear to the service directly
-    // so both the UI and the search pipeline reset in sync.
+    // Skip emit so UI + service reset in sync via the explicit setSearchTerm below.
     this.searchControl.setValue('', { emitEvent: false });
     this.navigationService.setSearchTerm(this.lens(), '');
   }
 
-  /** Called when the sentinel at the bottom of the list renders into the viewport (via @defer + lfxOnRender). */
   protected loadMore(): void {
     this.navigationService.loadNextPage(this.lens());
   }
@@ -102,12 +99,8 @@ export class ProjectSelectorComponent {
     return computed(() => this.navigationService.hasMore(this.lens())());
   }
 
-  /**
-   * Sentinel lives 8 items from the end of the list so scrolling into the last 8
-   * triggers the next-page fetch. Computing the index as a signal means each page
-   * load shifts the sentinel's position — Angular destroys and re-creates the
-   * OnRenderDirective instance, which re-fires afterNextRender for the new page.
-   */
+  // Sentinel at items.length - 8; signal-based index shifts on each page so Angular re-creates
+  // OnRenderDirective and re-fires the fetch.
   private initializeAutoLoadTriggerIndex(): Signal<number> {
     return computed(() => Math.max(0, this.items().length - 8));
   }

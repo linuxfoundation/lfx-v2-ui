@@ -19,17 +19,8 @@ export class LensService {
 
   private readonly selectedLens: WritableSignal<Lens>;
 
-  /**
-   * Active lens, clamped to the current persona's allowed set.
-   * If the stored/selected lens is not allowed, falls back to the default.
-   */
+  /** Active lens clamped to the current persona's allowed set; falls back to default if disallowed. */
   public readonly activeLens: Signal<Lens> = this.initActiveLens();
-
-  /**
-   * Available lenses based on current persona.
-   * Board-scoped personas see Me + Foundation + Org.
-   * Project-scoped personas see Me + Project + Org.
-   */
   public readonly availableLenses: Signal<LensOption[]> = this.initAvailableLenses();
 
   public constructor() {
@@ -37,10 +28,6 @@ export class LensService {
     this.selectedLens = signal<Lens>(stored ?? DEFAULT_LENS);
   }
 
-  /**
-   * Set the active lens and persist to cookie.
-   * Ignores the request if the lens is not in the current persona's allowed set.
-   */
   public setLens(lens: Lens): void {
     const allowed = this.getAllowedLensIds();
     if (!allowed.includes(lens)) {
@@ -73,8 +60,7 @@ export class LensService {
     const hasProjectRole = this.personaService.hasProjectRole();
     const isRootWriter = this.personaService.isRootWriter();
 
-    // Root writers bypass persona-based lens filtering and see foundation + project lenses
-    // in addition to whatever their persona role would grant.
+    // Root writers bypass persona filtering and see both foundation + project lenses.
     const showFoundation = hasBoardRole || isRootWriter;
     const showProject = hasProjectRole || isRootWriter;
 
@@ -106,7 +92,7 @@ export class LensService {
         return stored as Lens;
       }
     } catch {
-      // Invalid cookie data, ignore
+      /* invalid cookie data */
     }
     return null;
   }

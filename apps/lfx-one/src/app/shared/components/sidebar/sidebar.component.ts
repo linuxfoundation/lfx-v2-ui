@@ -31,7 +31,6 @@ export class SidebarComponent {
   private readonly navigationService = inject(NavigationService);
   private readonly userService = inject(UserService);
 
-  // Input properties
   public readonly items = input.required<SidebarMenuItem[]>();
   public readonly footerItems = input<SidebarMenuItem[]>([]);
   public readonly collapsed = input<boolean>(false);
@@ -43,19 +42,13 @@ export class SidebarComponent {
 
   protected readonly activeLens = this.lensService.activeLens;
   protected readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectContextService.activeContext());
-  // Narrow the active lens to the foundation/project subset accepted by the selector;
-  // returns null for me/org lenses so the selector is not rendered.
   protected readonly navLens: Signal<NavLens | null> = this.initNavLens();
-  // True once the nav API has responded for the current lens. Drives skeleton visibility
-  // so the selector and lens-scoped menu items don't flash stale cookie-hydrated state.
   protected readonly lensLoaded: Signal<boolean> = this.initLensLoaded();
 
-  // Me selector signals
   protected readonly user = this.userService.user;
   protected readonly userInitials = this.userService.userInitials;
   protected readonly personaLabel: Signal<string> = this.initPersonaLabel();
 
-  // Computed items with test IDs, external flag
   protected readonly itemsWithTestIds = computed(() =>
     this.items().map((item) => ({
       ...item,
@@ -98,7 +91,6 @@ export class SidebarComponent {
   private initLensLoaded(): Signal<boolean> {
     return computed(() => {
       const lens = this.navLens();
-      // Lenses that don't hit the nav endpoint (me/org) are always "loaded"
       if (!lens) return true;
       return this.navigationService.loaded(lens)();
     });

@@ -20,33 +20,24 @@ export class ProjectContextService {
   private readonly foundationStorageKey = 'lfx-selected-foundation';
   private readonly projectStorageKey = 'lfx-selected-project';
 
-  // Per-lens storage — independent, never clear each other.
-  // Initialized to null; NavigationService populates from the lens-items API response.
   private readonly foundationSelection: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
   private readonly projectSelection: WritableSignal<ProjectContext | null> = signal<ProjectContext | null>(null);
 
-  // PRIMARY API — resolves based on active lens + persona
   public readonly activeContext: Signal<ProjectContext | null> = this.initActiveContext();
   public readonly isFoundationContext: Signal<boolean> = this.initIsFoundationContext();
   public readonly activeContextUid: Signal<string> = computed(() => this.activeContext()?.uid || '');
 
-  // Lens-specific read access
   public readonly selectedFoundation: Signal<ProjectContext | null> = computed(() => this.foundationSelection());
   public readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectSelection());
 
-  // Available projects filtered for the active lens
   public readonly availableProjects: Signal<ProjectContext[]> = this.initAvailableProjects();
 
   public constructor() {
-    // Clean up legacy cookies from the previous cookie-hydrated design. Safe to remove
-    // after all active sessions have rotated past this deploy.
+    // Clean up legacy cookies from the previous cookie-hydrated design.
     this.cookieService.delete(this.foundationStorageKey, '/');
     this.cookieService.delete(this.projectStorageKey, '/');
   }
 
-  /**
-   * Set the foundation-lens selection
-   */
   public setFoundation(foundation: ProjectContext): void {
     if (isSameProjectContext(this.foundationSelection(), foundation)) {
       return;
@@ -54,9 +45,6 @@ export class ProjectContextService {
     this.foundationSelection.set(foundation);
   }
 
-  /**
-   * Set the project-lens selection
-   */
   public setProject(project: ProjectContext): void {
     if (isSameProjectContext(this.projectSelection(), project)) {
       return;
@@ -64,28 +52,17 @@ export class ProjectContextService {
     this.projectSelection.set(project);
   }
 
-  /**
-   * Clear the foundation-lens selection
-   */
   public clearFoundation(): void {
     this.foundationSelection.set(null);
   }
 
-  /**
-   * Clear the project-lens selection
-   */
   public clearProject(): void {
     this.projectSelection.set(null);
   }
 
-  /**
-   * Ensure both lens slots have a selection from the detected projects.
-   * Called by sidebar when persona detection first populates.
-   */
   public ensureDefaultSelection(detectedProjects: EnrichedPersonaProject[]): void {
     const personaProjects = this.personaService.personaProjects();
 
-    // Foundation slot — pick from board-scoped persona projects
     if (!this.foundationSelection() || !detectedProjects.some((p) => p.projectUid === this.foundationSelection()?.uid)) {
       const boardUids = this.getPersonaProjectUids(personaProjects, BOARD_SCOPED_PERSONAS);
       const defaultFoundation =
@@ -95,7 +72,7 @@ export class ProjectContextService {
       }
     }
 
-    // Project slot — pick from project-scoped persona projects, prefer child projects over foundations
+    // Prefer child projects over foundations for the project slot.
     if (!this.projectSelection() || !detectedProjects.some((p) => p.projectUid === this.projectSelection()?.uid)) {
       const projectUids = this.getPersonaProjectUids(personaProjects, PROJECT_SCOPED_PERSONAS);
       const defaultProject =

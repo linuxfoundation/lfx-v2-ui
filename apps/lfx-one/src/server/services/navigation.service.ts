@@ -20,12 +20,7 @@ import { personaDetectionService } from '../utils/persona-helper';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
-/**
- * Backend service powering the foundation/project lens dropdown in the sidebar.
- * Fetches a page of candidates from the query-service and filters it against
- * the user's persona data for the requested lens — unless the user is a tenant
- * root writer, in which case the filter is bypassed.
- */
+/** Powers the foundation/project lens dropdown. Root writers bypass the persona filter. */
 export class NavigationService {
   private readonly microserviceProxy: MicroserviceProxyService;
 
@@ -36,15 +31,10 @@ export class NavigationService {
   public async getLensItems(req: Request, params: GetLensItemsParams): Promise<LensItemsResponse> {
     const { lens, pageToken, name } = params;
 
-    // STEP 1: Parallel — writer-on-root check + first upstream page. Root writers bypass
-    // the persona filter entirely, so deferring the persona fetch until we confirm they're
-    // NOT a root writer saves the slow NATS roundtrip for the hot path (admins). Non-root
-    // users pay a small latency cost (persona fetch is serial after this step) in exchange.
+    // Parallel: root-writer check + first upstream page. Deferring persona fetch saves the
+    // NATS roundtrip for admins (the hot path).
     const [bypassActive, firstPage] = await Promise.all([personaDetectionService.checkRootWriter(req), this.fetchUpstreamPage(req, lens, pageToken, name)]);
 
-    // STEP 2: Fetch personas only when we need to filter. checkRootWriter is memoized per
-    // request, so the second call inside fetchPersona→getPersonas hits the cache (one
-    // /access-check per request, regardless of how many services ask).
     let persona: PersonaApiResponse | null = null;
     let personaFetchFailed = false;
     if (!bypassActive) {
@@ -56,10 +46,7 @@ export class NavigationService {
     const shouldFilter = !bypassActive && !personaFetchFailed && !!persona;
     const eligibleUids = shouldFilter && persona ? this.collectEligibleProjectUids(persona.projects, LENS_PERSONA_MAP[lens]) : null;
 
-    // When filtering, the universe of possible matches is bounded by eligibleUids. Once
-    // we've found them all, further paging is wasted work. When not filtering (bypass),
-    // aim for the min-per-response target and let the client paginate on scroll.
-    // NB: targetCount=0 (user has no eligible projects) makes the loop body skip entirely.
+    // targetCount=0 when filtering with no eligible projects skips the loop body entirely.
     const targetCount = eligibleUids ? eligibleUids.size : NAV_MIN_ITEMS_PER_RESPONSE;
 
     const accumulated: LensItem[] = [];
@@ -76,7 +63,6 @@ export class NavigationService {
 
       if (!lastToken || accumulated.length >= targetCount) break;
 
-      // Fetch the next upstream page to continue filling the response
       const next = await this.fetchUpstreamPage(req, lens, lastToken, name);
       if (next.failed) {
         upstreamFailed = true;
@@ -86,8 +72,7 @@ export class NavigationService {
       currentResponse = next.response;
     }
 
-    // When filtering, we've gathered the full persona-accessible set — no more client-side
-    // pagination is meaningful since the response contains everything the user can see.
+    // Filtered response already contains the full persona-accessible set — no more pages.
     if (eligibleUids) {
       lastToken = null;
     }
@@ -140,10 +125,7 @@ export class NavigationService {
 
   private filterPageResources(resources: QueryServiceResponse<Project>['resources'], lens: Lens, eligibleUids: Set<string> | null): Project[] {
     let projects = resources.map((r) => r.data);
-    // Foundation lens applies the full computeIsFoundation definition (stage, funding
-    // model, legal entity). The upstream filters cover stage+funding_model but the
-    // legal_entity_type negation isn't supported by the filter grammar, so we re-check
-    // the whole definition locally for correctness.
+    // legal_entity_type negation isn't supported by the filter grammar — re-check locally.
     if (lens === 'foundation') {
       projects = projects.filter((p) => computeIsFoundation(p));
     }
@@ -160,10 +142,7 @@ export class NavigationService {
       sort: 'name_asc',
     };
 
-    // Foundation lens narrows further to membership-funded projects — matches the
-    // query-service-supported halves of computeIsFoundation (the legal_entity_type
-    // != Internal Allocation negation is still post-filtered since the filter grammar
-    // doesn't support exclusions).
+    // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
     if (lens === 'foundation') {
       base['filters'] = ['stage:Active', 'funding_model:Membership'];
     }
