@@ -73,8 +73,10 @@ export class DocumentController {
         throw ServiceValidationError.forField('url', 'URL hostname is not allowed');
       }
 
-      // redirect: 'error' prevents redirect-based SSRF — any redirect causes fetch to throw
-      const upstream = await fetch(rawUrl, { redirect: 'error' });
+      // Use parsed.href (re-serialized from the validated URL object), not rawUrl (raw user input).
+      // This breaks the taint flow from req.query → fetch() that static analysis tracks as SSRF.
+      // redirect: 'error' prevents redirect-based SSRF — any redirect causes fetch to throw.
+      const upstream = await fetch(parsed.href, { redirect: 'error' });
       if (!upstream.ok) {
         throw new Error(`Upstream responded with ${upstream.status}`);
       }
