@@ -325,12 +325,12 @@ export class MultiPersonaDashboardComponent {
       if (detection.source === 'board_member') {
         const extra = detection.extra as BoardMemberDetectionExtra | undefined;
         if (extra?.role) {
-          roles.push(extra.role);
+          roles.push(this.normalizeRole(extra.role));
         }
       } else if (detection.source === 'committee_member') {
         const extra = detection.extra as CommitteeMemberDetectionExtra | undefined;
         if (extra?.role) {
-          roles.push(extra.role);
+          roles.push(this.normalizeRole(extra.role));
         }
       }
     }
@@ -339,6 +339,10 @@ export class MultiPersonaDashboardComponent {
     }
     if (roles.length === 0) return 'Group Member';
     return this.pickByPriority(roles, ROLE_PRIORITY) ?? roles[0];
+  }
+
+  private normalizeRole(role: string): string {
+    return role === 'Member' ? 'Group Member' : role;
   }
 
   private getHighestVotingStatus(project: EnrichedPersonaProject): string | null {
