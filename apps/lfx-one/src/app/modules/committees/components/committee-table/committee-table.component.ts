@@ -17,7 +17,6 @@ import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, COMMITTEE_LABEL } from '@lfx-one/shared';
 import { FilterPillOption } from '@lfx-one/shared/interfaces';
-import { CommitteeCategorySeverityPipe } from '@pipes/committee-category-severity.pipe';
 import { PlatformIconPipe } from '@app/shared/pipes/platform-icon.pipe';
 import { PlatformLabelPipe } from '@app/shared/pipes/platform-label.pipe';
 import { PersonaService } from '@services/persona.service';
@@ -39,7 +38,6 @@ import { TooltipModule } from 'primeng/tooltip';
     InputTextComponent,
     SelectComponent,
     TooltipModule,
-    CommitteeCategorySeverityPipe,
     PlatformIconPipe,
     PlatformLabelPipe,
     EmptyStateComponent,
