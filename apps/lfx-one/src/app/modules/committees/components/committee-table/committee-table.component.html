@@ -11,6 +11,7 @@
   </lfx-card-tabs-bar>
 
   <!-- Filter Bar -->
+  @if (hasItems()) {
   <div class="px-5 pt-4 pb-3">
     <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       <!-- Search Input -->
@@ -67,7 +68,9 @@
       </div>
     </div>
   </div>
+  }
 
+  @if (hasItems()) {
   <div class="px-5 pb-5">
   <lfx-table
     [value]="committees()"
@@ -236,4 +239,14 @@
     </ng-template>
   </lfx-table>
   </div>
+  } @else {
+    <div class="px-5 pb-5">
+      <lfx-empty-state
+        [withCard]="false"
+        icon="fa-light fa-users-rectangle"
+        [title]="'No ' + committeeLabel.plural.toLowerCase() + ' yet'"
+        subtitle="Groups you're a member of will appear here.">
+      </lfx-empty-state>
+    </div>
+  }
 </lfx-card>

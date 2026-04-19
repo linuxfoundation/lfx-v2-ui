@@ -144,16 +144,10 @@
             }
           </div>
         </lfx-card>
-      } @else if (myCommittees().length === 0) {
-        <lfx-empty-state
-          icon="fa-light fa-users-rectangle"
-          [title]="'No ' + committeeLabel.plural.toLowerCase() + ' yet'"
-          subtitle="Groups you're a member of will appear here."
-          data-testid="committees-empty-state">
-        </lfx-empty-state>
       } @else {
         <lfx-committee-table
           [committees]="filteredMyCommittees()"
+          [hasItems]="myCommittees().length > 0"
           [myCommitteeUids]="myCommitteeUids()"
           [searchForm]="searchForm"
           [categoryOptions]="categories()"

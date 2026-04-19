@@ -57,6 +57,7 @@ export class CommitteeTableComponent {
 
   // Inputs
   public committees = input.required<Committee[]>();
+  public hasItems = input<boolean>(true);
   public canManageCommittee = input<boolean>(false);
   public myCommitteeUids = input<Set<string>>(new Set());
   public readonly committeeLabel = COMMITTEE_LABEL;
