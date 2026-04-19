@@ -141,11 +141,11 @@
           data-testid="documents-table">
             <ng-template #header>
               <tr>
-                <th class="w-[35%]">Name</th>
-                <th class="w-[20%]">Foundation</th>
-                <th class="w-[20%]">Group / Meeting</th>
+                <th class="w-[33%]">Name</th>
+                <th class="w-[18%]">Foundation</th>
+                <th class="w-[18%]">Group / Meeting</th>
                 <th class="w-[10%]">Source</th>
-                <th class="w-[10%]">Date</th>
+                <th class="w-[13%] whitespace-nowrap">Date</th>
                 <th class="w-auto"></th>
               </tr>
             </ng-template>
@@ -182,7 +182,7 @@
                 </td>
 
                 <!-- Date column -->
-                <td>
+                <td class="whitespace-nowrap">
                   <span class="text-sm text-gray-700">{{ doc.date | date: 'MMM d, y' }}</span>
                 </td>
 
@@ -203,7 +203,7 @@
                     } @else if (doc.url) {
                       @if (doc.source === 'recording') {
                         <lfx-button
-                          label="Watch recording"
+                          label="Recording"
                           icon="fa-light fa-circle-play"
                           severity="secondary"
                           size="small"

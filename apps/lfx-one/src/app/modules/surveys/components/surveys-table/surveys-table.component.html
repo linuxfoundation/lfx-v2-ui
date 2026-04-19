@@ -105,8 +105,8 @@
         <th class="w-[16%]">Group</th>
         <th class="w-[11%]">Responses</th>
         <th class="w-[12%]">Due</th>
+        <th class="w-[11%]">Status</th>
         <th class="w-[12%]"></th>
-        <th class="w-[11%] text-right">Status</th>
       </tr>
     </ng-template>
 
@@ -162,6 +162,10 @@
         </td>
 
         <td>
+          <lfx-tag [value]="survey | surveyStatusLabel" [severity]="survey | surveyStatusSeverity"></lfx-tag>
+        </td>
+
+        <td>
           <div class="flex items-center justify-end gap-1">
             @if (hasPMOAccess() && survey.survey_status === SurveyStatus.DRAFT) {
               <lfx-button label="Edit" severity="primary" size="small" [text]="true" styleClass="" [attr.data-testid]="'surveys-edit-' + survey.uid"> </lfx-button>
@@ -197,10 +201,6 @@
               </lfx-button>
             }
           </div>
-        </td>
-
-        <td class="text-right">
-          <lfx-tag [value]="survey | surveyStatusLabel" [severity]="survey | surveyStatusSeverity"></lfx-tag>
         </td>
       </tr>
     </ng-template>
