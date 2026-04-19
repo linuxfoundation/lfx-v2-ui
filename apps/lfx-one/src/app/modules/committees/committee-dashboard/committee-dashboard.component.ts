@@ -250,7 +250,7 @@ export class CommitteeDashboardComponent {
         value: cat,
       }));
 
-      return [{ label: `All Types`, value: null }, ...categoryOptions];
+      return [{ label: 'All', value: null }, ...categoryOptions];
     });
   }
 

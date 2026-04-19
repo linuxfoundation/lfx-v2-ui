@@ -2,13 +2,15 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
-  <!-- Type Tabs -->
-  <lfx-card-tabs-bar
-    [options]="categoryTabOptions()"
-    [selectedFilter]="categoryTab()"
-    (filterChange)="onCategoryTabChange($event)"
-    data-testid="committee-type-tabs">
-  </lfx-card-tabs-bar>
+  <!-- Type Tabs (hidden when no categories are recognized) -->
+  @if (categoryTabOptions().length > 1) {
+    <lfx-card-tabs-bar
+      [options]="categoryTabOptions()"
+      [selectedFilter]="categoryTab()"
+      (filterChange)="onCategoryTabChange($event)"
+      data-testid="committee-type-tabs">
+    </lfx-card-tabs-bar>
+  }
 
   <!-- Filter Bar -->
   @if (hasItems()) {
