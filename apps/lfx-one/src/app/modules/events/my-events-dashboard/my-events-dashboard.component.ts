@@ -46,12 +46,15 @@ export class MyEventsDashboardComponent {
     return 'Search events...';
   });
 
-  protected readonly requestButtonLabel = computed(() =>
-    this.activeTab() === 'visa-letters' ? 'New Letter Application' : 'New Funding Application'
-  );
+  protected readonly requestButtonLabel = computed(() => (this.activeTab() === 'visa-letters' ? 'New Letter Application' : 'New Funding Application'));
 
   /** Delegates to EventsListComponent — lifted here to avoid template forward-reference issues. */
   protected readonly showFiltersBar = computed(() => this.eventsListRef()?.showFiltersBar() ?? true);
+  protected readonly eventsStatsLoading = computed(() => this.eventsListRef()?.eventsStatsLoading() ?? true);
+  protected readonly registeredCount = computed(() => this.eventsListRef()?.registeredCount() ?? 0);
+  protected readonly attendedCount = computed(() => this.eventsListRef()?.attendedCount() ?? 0);
+  protected readonly nextEventName = computed(() => this.eventsListRef()?.nextEventName() ?? '');
+  protected readonly upcomingCount = computed(() => this.eventsListRef()?.tabCounts().upcoming ?? 0);
 
   protected onFoundationChange(value: string | null): void {
     this.selectedFoundation.set(value);
@@ -76,6 +79,10 @@ export class MyEventsDashboardComponent {
     this.selectedRole.set(null);
     this.selectedStatus.set(null);
     this.selectedSearchQuery.set('');
+  }
+
+  protected openCurrentRequestDialog(): void {
+    this.eventsListRef()?.openCurrentRequestDialog();
   }
 
   protected resetFilters(): void {

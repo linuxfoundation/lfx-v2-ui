@@ -25,10 +25,6 @@ import { TableModule } from 'primeng/table';
   styleUrls: ['./table.component.scss'],
 })
 export class TableComponent implements AfterContentInit {
-  // Injected services
-  private readonly elementRef = inject(ElementRef);
-  private readonly platformId = inject(PLATFORM_ID);
-
   // Template references for content projection
   @ContentChild('header', { static: false, descendants: false }) public headerTemplate?: TemplateRef<any>;
   @ContentChild('body', { static: false, descendants: false }) public bodyTemplate?: TemplateRef<any>;
@@ -43,6 +39,10 @@ export class TableComponent implements AfterContentInit {
   @ContentChild('paginatorleft', { static: false, descendants: false }) public paginatorLeftTemplate?: TemplateRef<any>;
   @ContentChild('paginatorright', { static: false, descendants: false }) public paginatorRightTemplate?: TemplateRef<any>;
   @ContentChild('paginatordropdownitem', { static: false, descendants: false }) public paginatorDropdownItemTemplate?: TemplateRef<any>;
+
+  // Injected services
+  private readonly elementRef = inject(ElementRef);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // Core data properties
   public readonly value = input<any[]>([]);

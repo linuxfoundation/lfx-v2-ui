@@ -4,7 +4,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
-import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE, MAX_EVENTS_PAGE_SIZE } from '@lfx-one/shared/constants';
+import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
@@ -32,7 +32,8 @@ export class EventsListComponent {
 
   protected readonly upcomingEventsLoading = signal(true);
   protected readonly pastEventsLoading = signal(true);
-  private readonly statsUpcomingLoading = signal(true);
+  private readonly statsUpcomingAllLoading = signal(true);
+  private readonly statsUpcomingRegisteredLoading = signal(true);
   private readonly statsPastLoading = signal(true);
 
   protected readonly upcomingEventsPage = signal<PageChangeEvent>({ offset: 0, pageSize: DEFAULT_EVENTS_PAGE_SIZE });
@@ -46,18 +47,19 @@ export class EventsListComponent {
   protected readonly upcomingEvents: Signal<MyEventsResponse> = this.initializeUpcomingEvents();
   protected readonly pastEvents: Signal<MyEventsResponse> = this.initializePastEvents();
 
-  // Unfiltered stats signals — fetched once, independent of filter/search inputs
-  private readonly statsUpcoming: Signal<MyEventsResponse> = this.initializeStatsUpcoming();
+  // Unfiltered stats signals — fetched once with pageSize=1, used only for totals and next-event name
+  private readonly statsUpcomingAll: Signal<MyEventsResponse> = this.initializeStatsUpcomingAll();
+  private readonly statsUpcomingRegistered: Signal<MyEventsResponse> = this.initializeStatsUpcomingRegistered();
   private readonly statsPast: Signal<MyEventsResponse> = this.initializeStatsPast();
 
-  // Me lens stat cards — derived from unfiltered data so filters don't affect totals
-  public readonly eventsStatsLoading = computed(() => this.statsUpcomingLoading() || this.statsPastLoading());
-  public readonly registeredCount = computed(() => this.statsUpcoming().data.filter((e) => e.isRegistered).length);
+  // Me lens stat cards — derived from server-reported totals so counts stay accurate regardless of page size
+  public readonly eventsStatsLoading = computed(() => this.statsUpcomingAllLoading() || this.statsUpcomingRegisteredLoading() || this.statsPastLoading());
+  public readonly registeredCount = computed(() => this.statsUpcomingRegistered().total);
   public readonly attendedCount = computed(() => this.statsPast().total);
-  public readonly nextEventName = computed(() => this.statsUpcoming().data[0]?.name ?? '');
-  public readonly availableToJoinCount = computed(() => this.statsUpcoming().data.filter((e) => !e.isRegistered).length);
+  public readonly nextEventName = computed(() => this.statsUpcomingRegistered().data[0]?.name ?? '');
+  public readonly availableToJoinCount = computed(() => Math.max(0, this.statsUpcomingAll().total - this.statsUpcomingRegistered().total));
   public readonly tabCounts = computed(() => ({
-    upcoming: this.statsUpcoming().total,
+    upcoming: this.statsUpcomingAll().total,
     past: this.statsPast().total,
   }));
 
@@ -77,9 +79,7 @@ export class EventsListComponent {
 
   public readonly resetFilters = output<void>();
 
-  protected readonly isFiltered = computed(() =>
-    !!(this.foundation() || this.searchQuery() || this.role() || this.status())
-  );
+  protected readonly isFiltered = computed(() => !!(this.foundation() || this.searchQuery() || this.role() || this.status()));
 
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
@@ -134,11 +134,21 @@ export class EventsListComponent {
     return this.initializeEvents(true, this.pastEventsPage, this.pastEventsLoading, this.pastSortField, this.pastSortOrder);
   }
 
-  private initializeStatsUpcoming(): Signal<MyEventsResponse> {
+  private initializeStatsUpcomingAll(): Signal<MyEventsResponse> {
     return toSignal(
-      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: MAX_EVENTS_PAGE_SIZE }).pipe(
+      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: 1 }).pipe(
         catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
-        finalize(() => this.statsUpcomingLoading.set(false))
+        finalize(() => this.statsUpcomingAllLoading.set(false))
+      ),
+      { initialValue: EMPTY_MY_EVENTS_RESPONSE }
+    );
+  }
+
+  private initializeStatsUpcomingRegistered(): Signal<MyEventsResponse> {
+    return toSignal(
+      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: 1, registeredOnly: true, sortField: 'EVENT_START_DATE', sortOrder: 'ASC' }).pipe(
+        catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
+        finalize(() => this.statsUpcomingRegisteredLoading.set(false))
       ),
       { initialValue: EMPTY_MY_EVENTS_RESPONSE }
     );
