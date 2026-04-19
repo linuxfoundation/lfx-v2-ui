@@ -4,7 +4,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, Signal, signal, viewChild, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
-import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
+import { DEFAULT_EVENTS_PAGE_SIZE, EMPTY_MY_EVENTS_RESPONSE, MAX_EVENTS_PAGE_SIZE } from '@lfx-one/shared/constants';
 import { EventTabId, MyEventsResponse, PageChangeEvent, SortChangeEvent } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, finalize, of, skip, switchMap, tap } from 'rxjs';
@@ -136,7 +136,7 @@ export class EventsListComponent {
 
   private initializeStatsUpcoming(): Signal<MyEventsResponse> {
     return toSignal(
-      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: 1000 }).pipe(
+      this.eventsService.getMyEvents({ isPast: false, offset: 0, pageSize: MAX_EVENTS_PAGE_SIZE }).pipe(
         catchError(() => of(EMPTY_MY_EVENTS_RESPONSE)),
         finalize(() => this.statsUpcomingLoading.set(false))
       ),
