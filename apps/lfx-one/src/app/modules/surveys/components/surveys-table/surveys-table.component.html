@@ -72,7 +72,6 @@
         <ng-content select="[tableActions]"></ng-content>
       </div>
     </div>
-  }
 
   <div class="px-5 pb-5">
   <lfx-table
@@ -198,29 +197,30 @@
     <ng-template #emptymessage>
       <tr>
         <td colspan="7">
-          @if (isFiltered()) {
-            <lfx-empty-state
-              [withCard]="false"
-              icon="fa-light fa-eyes"
-              title="No results found"
-              subtitle="Try adjusting your filter criteria"
-              ctaLabel="Reset filters"
-              ctaIcon="fa-light fa-arrow-rotate-left"
-              (ctaClick)="resetFilters()">
-            </lfx-empty-state>
-          } @else {
-            <lfx-empty-state
-              [withCard]="false"
-              icon="fa-light fa-clipboard-list"
-              [title]="'No ' + surveyLabel.plural.toLowerCase() + ' yet'"
-              subtitle="Surveys you've been invited to complete will appear here.">
-            </lfx-empty-state>
-          }
+          <lfx-empty-state
+            [withCard]="false"
+            icon="fa-light fa-eyes"
+            title="No results found"
+            subtitle="Try adjusting your filter criteria"
+            ctaLabel="Reset filters"
+            ctaIcon="fa-light fa-arrow-rotate-left"
+            (ctaClick)="resetFilters()">
+          </lfx-empty-state>
         </td>
       </tr>
     </ng-template>
   </lfx-table>
   </div>
+  } @else {
+    <div class="px-5 pb-5">
+      <lfx-empty-state
+        [withCard]="false"
+        icon="fa-light fa-clipboard-list"
+        [title]="'No ' + surveyLabel.plural.toLowerCase() + ' yet'"
+        subtitle="Surveys you've been invited to complete will appear here.">
+      </lfx-empty-state>
+    </div>
+  }
 </lfx-card>
 
 <p-confirmDialog></p-confirmDialog>
