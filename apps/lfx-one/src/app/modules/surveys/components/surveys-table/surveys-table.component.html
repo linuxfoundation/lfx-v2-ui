@@ -164,13 +164,13 @@
         <td>
           <div class="flex items-center justify-end gap-1">
             @if (hasPMOAccess() && survey.survey_status === SurveyStatus.DRAFT) {
-              <lfx-button label="Edit" severity="primary" size="small" [text]="true" styleClass="min-w-[52px]" [attr.data-testid]="'surveys-edit-' + survey.uid"> </lfx-button>
+              <lfx-button label="Edit" severity="primary" size="small" [text]="true" styleClass="" [attr.data-testid]="'surveys-edit-' + survey.uid"> </lfx-button>
               <lfx-button
                 label="Delete"
                 severity="danger"
                 size="small"
                 [text]="true"
-                styleClass="min-w-[52px]"
+                styleClass=""
                 (onClick)="onDeleteSurvey(survey)"
                 [disabled]="isDeleting()"
                 [attr.data-testid]="'surveys-delete-' + survey.uid">
@@ -181,7 +181,7 @@
                 severity="primary"
                 size="small"
                 [text]="true"
-                styleClass="min-w-[60px]"
+                styleClass=""
                 (onClick)="onViewResults(survey.uid)"
                 [attr.data-testid]="'surveys-results-' + survey.uid">
               </lfx-button>
@@ -191,7 +191,7 @@
                 severity="primary"
                 size="small"
                 [text]="true"
-                styleClass="min-w-[60px]"
+                styleClass=""
                 (onClick)="onViewResults(survey.uid)"
                 [attr.data-testid]="'surveys-results-' + survey.uid">
               </lfx-button>
