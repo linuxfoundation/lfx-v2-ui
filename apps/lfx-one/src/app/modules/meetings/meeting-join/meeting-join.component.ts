@@ -316,7 +316,11 @@ export class MeetingJoinComponent implements OnInit {
   }
 
   public onMaterialsChanged(): void {
+    // Immediate refresh + delayed retry: upload writes to meeting-service via ITX,
+    // reads come from query-service indexed asynchronously via NATS, so a single
+    // immediate fetch can return stale data before the NATS event propagates.
     this.refreshTrigger$.next();
+    setTimeout(() => this.refreshTrigger$.next(), 1000);
   }
 
   public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {

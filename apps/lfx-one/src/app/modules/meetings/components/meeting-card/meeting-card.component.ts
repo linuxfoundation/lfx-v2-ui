@@ -262,7 +262,10 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public onMaterialsChanged(): void {
+    // Immediate refresh + delayed retry to bridge NATS propagation gap between
+    // upload (meeting-service write) and read (query-service indexed via NATS).
     this.loadAttachments();
+    setTimeout(() => this.loadAttachments(), 1000);
   }
 
   public copyMeetingLink(): void {
