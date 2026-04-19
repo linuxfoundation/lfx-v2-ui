@@ -238,13 +238,6 @@ export class MeetingCardComponent implements OnInit {
   }
 
   public onRegistrantsToggle(): void {
-    if (this.meetingRegistrantCount() === 0 && !this.pastMeeting()) {
-      this.router.navigate(['/meetings', this.meeting().id, 'edit'], {
-        queryParams: { step: '5' },
-      });
-      return;
-    }
-
     this.showRegistrants.set(!this.showRegistrants());
   }
 

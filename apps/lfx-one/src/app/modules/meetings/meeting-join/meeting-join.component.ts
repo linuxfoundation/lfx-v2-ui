@@ -322,7 +322,9 @@ export class MeetingJoinComponent implements OnInit {
     // reads come from query-service indexed asynchronously via NATS, so a single
     // immediate fetch can return stale data before the NATS event propagates.
     this.refreshTrigger$.next();
-    timer(1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshTrigger$.next());
+    timer(1000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshTrigger$.next());
   }
 
   public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {

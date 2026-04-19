@@ -355,10 +355,11 @@
                     [project]="project()"
                     [currentOccurrence]="currentOccurrence()"
                     [pastMeeting]="isPastMeeting()"
-                    [showAddButton]="false"
+                    [showAddButton]="!!meeting().organizer && !isPastMeeting()"
                     [additionalRegistrantsCount]="0"
                     backgroundColor="bg-gray-50"
-                    borderColor="border-gray-200">
+                    borderColor="border-gray-200"
+                    (addClicked)="onRegistrantsToggle()">
                   </lfx-meeting-rsvp-details>
                 }
                 @if (canToggleRsvpView()) {
@@ -509,7 +510,7 @@
             <lfx-meeting-registrants-display
               [meeting]="meeting()"
               [pastMeeting]="isPastMeeting()"
-              [showAddRegistrant]="false"
+              [showAddRegistrant]="!!meeting().organizer && !isPastMeeting()"
               [myMeetingRegistrants]="false"
               [visible]="showRegistrants()">
             </lfx-meeting-registrants-display>
@@ -749,10 +750,7 @@
 
     <!-- Meeting Materials Drawer -->
     @if (meeting().organizer && !isPastMeeting()) {
-      <lfx-meeting-materials-drawer
-        [(visible)]="materialsDrawerVisible"
-        [meetingId]="meeting().id"
-        (materialsChanged)="onMaterialsChanged()">
+      <lfx-meeting-materials-drawer [(visible)]="materialsDrawerVisible" [meetingId]="meeting().id" (materialsChanged)="onMaterialsChanged()">
       </lfx-meeting-materials-drawer>
     }
   </div>
