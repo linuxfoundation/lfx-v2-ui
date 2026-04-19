@@ -4,7 +4,7 @@
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal, Signal, WritableSignal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MeetingRegistrantsDisplayComponent } from '@app/modules/meetings/components/meeting-registrants-display/meeting-registrants-display.component';
@@ -50,7 +50,6 @@ import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogModule, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import {
   BehaviorSubject,
@@ -67,6 +66,7 @@ import {
   switchMap,
   take,
   tap,
+  timer,
 } from 'rxjs';
 
 import { GuestFormComponent } from '../components/guest-form/guest-form.component';
@@ -88,7 +88,6 @@ import { PublicRegistrationModalComponent } from '../components/public-registrat
     MeetingRsvpDetailsComponent,
     MeetingRegistrantsDisplayComponent,
     GuestFormComponent,
-    ToastModule,
     TooltipModule,
     DrawerModule,
     MeetingTimePipe,
@@ -323,7 +322,7 @@ export class MeetingJoinComponent implements OnInit {
     // reads come from query-service indexed asynchronously via NATS, so a single
     // immediate fetch can return stale data before the NATS event propagates.
     this.refreshTrigger$.next();
-    setTimeout(() => this.refreshTrigger$.next(), 1000);
+    timer(1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshTrigger$.next());
   }
 
   public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
