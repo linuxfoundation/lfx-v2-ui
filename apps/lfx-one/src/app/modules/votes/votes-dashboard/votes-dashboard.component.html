@@ -39,13 +39,6 @@
       [ctaRoute]="canWrite() ? ['/votes', 'create'] : undefined"
       data-testid="votes-empty-state-card">
     </lfx-empty-state>
-  } @else if (isMeLens() && !myVotesLoading() && filteredMyVotes().length === 0) {
-    <lfx-empty-state
-      icon="fa-light fa-check-to-slot"
-      [title]="'No ' + (voteLabelPlural | lowercase) + ' yet'"
-      subtitle="Votes you've been invited to participate in will appear here."
-      data-testid="votes-me-empty-state">
-    </lfx-empty-state>
   } @else {
     <lfx-votes-table
       [votes]="isMeLens() ? filteredMyVotes() : votes()"

@@ -43,13 +43,6 @@
       [ctaRoute]="canWrite() ? ['/surveys', 'create'] : undefined"
       data-testid="surveys-empty-state-card">
     </lfx-empty-state>
-  } @else if (isMeLens() && !mySurveysLoading() && filteredMySurveys().length === 0) {
-    <lfx-empty-state
-      icon="fa-light fa-clipboard-list"
-      [title]="'No ' + (surveyLabelPlural | lowercase) + ' yet'"
-      subtitle="Surveys you've been invited to complete will appear here."
-      data-testid="surveys-me-empty-state">
-    </lfx-empty-state>
   } @else {
     <lfx-surveys-table
       [surveys]="isMeLens() ? filteredMySurveys() : surveys()"
