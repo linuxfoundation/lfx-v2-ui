@@ -68,6 +68,12 @@ export class MailingListTableComponent {
   protected readonly maxVisibleGroups = MAILING_LIST_MAX_VISIBLE_GROUPS;
   protected readonly committeeLabel = COMMITTEE_LABEL;
 
+  // Outputs
+  public readonly refresh = output<void>();
+  public readonly rowClick = output<GroupsIOMailingList>();
+  public readonly foundationFilterChange = output<string | null>();
+  public readonly projectFilterChange = output<string | null>();
+
   // State
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
 
@@ -82,12 +88,6 @@ export class MailingListTableComponent {
   });
 
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.mailingLists().length > 10 ? [10, 25, 50] : undefined));
-
-  // Outputs
-  public readonly refresh = output<void>();
-  public readonly rowClick = output<GroupsIOMailingList>();
-  public readonly foundationFilterChange = output<string | null>();
-  public readonly projectFilterChange = output<string | null>();
 
   // Event Handlers
   protected onRowSelect(event: { data: GroupsIOMailingList }): void {

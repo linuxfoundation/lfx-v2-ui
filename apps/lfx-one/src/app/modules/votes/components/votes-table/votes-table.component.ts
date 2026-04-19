@@ -24,7 +24,7 @@ import { VoteService } from '@services/vote.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
-import { combineLatest, debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
+import { combineLatest, debounceTime, distinctUntilChanged, map, startWith, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-votes-table',
@@ -89,11 +89,6 @@ export class VotesTableComponent {
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
 
-  // === Writable Signals ===
-  protected readonly isDeleting = signal(false);
-  protected readonly statusTab = signal<string>('all');
-  private readonly filterState = signal<VoteFilterState>({ search: '', status: null, group: null });
-
   // === Forms ===
   public searchForm = new FormGroup({
     search: new FormControl<string>(''),
@@ -101,6 +96,11 @@ export class VotesTableComponent {
     foundationFilter: new FormControl<string | null>(null),
     projectFilter: new FormControl<string | null>(null),
   });
+
+  // === Writable Signals ===
+  protected readonly isDeleting = signal(false);
+  protected readonly statusTab = signal<string>('all');
+  private readonly filterState = signal<VoteFilterState>({ search: '', status: null, group: null });
 
   // === Computed Signals ===
   protected readonly displayedVotes: Signal<Vote[]> = this.initDisplayedVotes();
@@ -169,7 +169,7 @@ export class VotesTableComponent {
       rejectButtonStyleClass: 'p-button-outlined p-button-sm',
       accept: () => {
         this.isDeleting.set(true);
-        this.voteService.deleteVote(vote.uid).subscribe({
+        this.voteService.deleteVote(vote.uid).pipe(take(1)).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',

@@ -600,7 +600,8 @@ export class MeetingsDashboardComponent {
       const recurring = this.sortedUpcomingUserMeetings().filter((m) => m.recurrence !== null);
       const uniqueProjects = new Set(recurring.map((m) => m.project_name).filter(Boolean));
       const count = uniqueProjects.size;
-      return count > 0 ? `Across ${count} ${count === 1 ? 'project' : 'projects'}` : '';
+      const projectWord = count === 1 ? 'project' : 'projects';
+      return count > 0 ? `Across ${count} ${projectWord}` : '';
     });
   }
 

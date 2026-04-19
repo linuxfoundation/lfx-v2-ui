@@ -77,9 +77,6 @@ export class SurveysTableComponent {
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
 
-  // === Writable Signals ===
-  protected readonly isDeleting = signal(false);
-
   // === Forms ===
   public searchForm = new FormGroup({
     search: new FormControl<string>(''),
@@ -90,6 +87,7 @@ export class SurveysTableComponent {
   });
 
   // === Writable Signals ===
+  protected readonly isDeleting = signal(false);
   protected readonly statusTab = signal<string>('all');
   private readonly groupFilter = signal<string | null>(null);
   private readonly typeFilter = signal<string | null>(null);

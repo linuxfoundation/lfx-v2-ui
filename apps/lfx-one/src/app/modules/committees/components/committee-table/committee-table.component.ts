@@ -5,7 +5,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, output, Signal } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { switchMap, startWith } from 'rxjs';
+import { switchMap, startWith, take } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -65,6 +65,12 @@ export class CommitteeTableComponent {
   public foundationOptions = input<{ label: string; value: string | null }[]>([]);
   public projectOptions = input<{ label: string; value: string | null }[]>([]);
 
+  // Outputs
+  public readonly refresh = output<void>();
+  public readonly rowClick = output<Committee>();
+  public readonly foundationFilterChange = output<string | null>();
+  public readonly projectFilterChange = output<string | null>();
+
   // State
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
 
@@ -80,18 +86,12 @@ export class CommitteeTableComponent {
 
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.committees().length > 10 ? [10, 25, 50] : undefined));
 
-  // Outputs
-  public readonly refresh = output<void>();
-  public readonly rowClick = output<Committee>();
-  public readonly foundationFilterChange = output<string | null>();
-  public readonly projectFilterChange = output<string | null>();
-
   public joinGroup(committee: Committee): void {
     const joinMode = committee.join_mode || 'closed';
 
     switch (joinMode) {
       case 'open':
-        this.committeeService.joinCommittee(committee.uid).subscribe({
+        this.committeeService.joinCommittee(committee.uid).pipe(take(1)).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',
