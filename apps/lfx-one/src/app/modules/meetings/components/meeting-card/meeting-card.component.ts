@@ -3,7 +3,21 @@
 
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { NgClass } from '@angular/common';
-import { Component, computed, effect, inject, Injector, input, OnInit, output, runInInjectionContext, signal, Signal, WritableSignal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  Injector,
+  input,
+  OnInit,
+  output,
+  runInInjectionContext,
+  signal,
+  Signal,
+  untracked,
+  WritableSignal,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import {
@@ -50,10 +64,12 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, map, Observable, of, switchMap, take, tap } from 'rxjs';
+import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
 
 import { CancelOccurrenceConfirmationComponent } from '../../components/cancel-occurrence-confirmation/cancel-occurrence-confirmation.component';
+import { MeetingMaterialsDrawerComponent } from '../meeting-materials-drawer/meeting-materials-drawer.component';
 import { MeetingRsvpDetailsComponent } from '../../components/meeting-rsvp-details/meeting-rsvp-details.component';
 import { PublicRegistrationModalComponent } from '../../components/public-registration-modal/public-registration-modal.component';
 
@@ -75,6 +91,8 @@ import { PublicRegistrationModalComponent } from '../../components/public-regist
     RsvpButtonGroupComponent,
     MeetingRsvpDetailsComponent,
     MeetingRegistrantsDisplayComponent,
+    MeetingMaterialsDrawerComponent,
+    ToastModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-card.component.html',
@@ -102,7 +120,8 @@ export class MeetingCardComponent implements OnInit {
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
-  public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
+  public attachments = signal<(MeetingAttachment | PastMeetingAttachment)[]>([]);
+  public materialsDrawerVisible = signal(false);
 
   // Computed values for template
   public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
@@ -199,10 +218,22 @@ export class MeetingCardComponent implements OnInit {
     );
 
     this.joinUrl = toSignal(joinUrl$, { initialValue: null });
+
+    // Reload attachments when materials drawer closes
+    let drawerWasOpen = false;
+    effect(() => {
+      const open = this.materialsDrawerVisible();
+      if (open) {
+        drawerWasOpen = true;
+      } else if (drawerWasOpen) {
+        drawerWasOpen = false;
+        untracked(() => this.loadAttachments());
+      }
+    });
   }
 
   public ngOnInit(): void {
-    this.attachments = this.initAttachments();
+    this.loadAttachments();
     if (this.pastMeeting()) {
       this.initRecording();
       this.initSummary();
@@ -226,6 +257,14 @@ export class MeetingCardComponent implements OnInit {
 
   public onDrawerHide(): void {
     this.showRegistrants.set(false);
+  }
+
+  public openMaterialsDrawer(): void {
+    this.materialsDrawerVisible.set(true);
+  }
+
+  public onMaterialsChanged(): void {
+    this.loadAttachments();
   }
 
   public copyMeetingLink(): void {
@@ -483,17 +522,16 @@ export class MeetingCardComponent implements OnInit {
       .subscribe();
   }
 
-  private initAttachments(): Signal<(MeetingAttachment | PastMeetingAttachment)[]> {
-    return runInInjectionContext(this.injector, () => {
-      const id = this.meetingInput().id;
-      const attachments$: Observable<(MeetingAttachment | PastMeetingAttachment)[]> = this.pastMeeting()
-        ? this.meetingService.getPastMeetingAttachments(id)
-        : this.meetingService.getMeetingAttachments(id);
+  private loadAttachments(): void {
+    const id = this.meetingInput().id;
+    const attachments$ = this.pastMeeting() ? this.meetingService.getPastMeetingAttachments(id) : this.meetingService.getMeetingAttachments(id);
 
-      return toSignal(attachments$.pipe(catchError(() => of([] as (MeetingAttachment | PastMeetingAttachment)[]))), {
-        initialValue: [],
-      });
-    });
+    attachments$
+      .pipe(
+        take(1),
+        catchError(() => of([] as (MeetingAttachment | PastMeetingAttachment)[]))
+      )
+      .subscribe((data) => this.attachments.set(data));
   }
 
   private initRecording(): void {
