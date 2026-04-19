@@ -6,7 +6,7 @@
   [loading]="loading()"
   [lazy]="true"
   [paginator]="eventsResponse().total > 0"
-  [rows]="10"
+  [rows]="eventsResponse().pageSize"
   [first]="eventsResponse().offset"
   [totalRecords]="eventsResponse().total"
   [rowsPerPageOptions]="rppOptions()"
@@ -121,7 +121,7 @@
       @if (!isPastEvents()) {
         <td>
           <div class="flex justify-end">
-            @if (!event.isRegistered) {
+            @if (!event.isRegistered && event.registrationUrl) {
               <lfx-button
                 label="Register"
                 icon="fa-light fa-ticket"

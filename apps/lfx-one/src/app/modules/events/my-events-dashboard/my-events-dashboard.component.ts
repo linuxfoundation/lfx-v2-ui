@@ -42,7 +42,7 @@ export class MyEventsDashboardComponent {
 
   protected readonly searchPlaceholder = computed(() => {
     if (this.activeTab() === 'visa-letters') return 'Search visa letters...';
-    if (this.activeTab() === 'travel-funding') return 'Search travel fundings...';
+    if (this.activeTab() === 'travel-funding') return 'Search travel funding...';
     return 'Search events...';
   });
 

@@ -10,6 +10,7 @@ export class DueDateLabelPipe implements PipeTransform {
   public transform(dueDate: string): string {
     const now = new Date();
     const due = new Date(dueDate);
+    if (Number.isNaN(due.getTime())) return '';
     const diffTime = due.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
