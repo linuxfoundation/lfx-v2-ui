@@ -22,6 +22,7 @@
     </lfx-card-tabs-bar>
 
     <!-- Filters -->
+    @if (loading() || documents().length > 0) {
     <div class="px-5 pt-4 pb-3">
       <div class="flex flex-wrap items-center gap-2">
         <!-- Search -->
@@ -102,6 +103,7 @@
         </div>
       </div>
     </div>
+    }
 
     <div class="px-5 pb-5">
       <!-- Primary empty state: no documents at all -->

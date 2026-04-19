@@ -9,68 +9,70 @@
     data-testid="surveys-status-tabs">
   </lfx-card-tabs-bar>
 
-  <div class="px-5 pt-4 pb-3">
-    <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-      <div class="flex-1 min-w-0">
-        <lfx-input-text
-          [form]="searchForm"
-          control="search"
-          [placeholder]="'Search ' + surveyLabel.plural.toLowerCase() + '...'"
-          icon="fa-light fa-search"
-          styleClass="w-full"
-          size="small"
-          data-testid="surveys-search-input"></lfx-input-text>
-      </div>
+  @if (loading() || surveys().length > 0) {
+    <div class="px-5 pt-4 pb-3">
+      <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+        <div class="flex-1 min-w-0">
+          <lfx-input-text
+            [form]="searchForm"
+            control="search"
+            [placeholder]="'Search ' + surveyLabel.plural.toLowerCase() + '...'"
+            icon="fa-light fa-search"
+            styleClass="w-full"
+            size="small"
+            data-testid="surveys-search-input"></lfx-input-text>
+        </div>
 
-      @if (showFoundationFilter()) {
-        <div class="w-full sm:w-48">
+        @if (showFoundationFilter()) {
+          <div class="w-full sm:w-48">
+            <lfx-select
+              [form]="searchForm"
+              control="foundationFilter"
+              size="small"
+              [options]="foundationOptions()"
+              styleClass="w-full"
+              (onChange)="onFoundationFilterChange($event.value)"
+              data-testid="surveys-foundation-filter"></lfx-select>
+          </div>
+        }
+
+        @if (showProjectFilter()) {
+          <div class="w-full sm:w-48">
+            <lfx-select
+              [form]="searchForm"
+              control="projectFilter"
+              size="small"
+              [options]="projectOptions()"
+              styleClass="w-full"
+              (onChange)="projectFilterChange.emit($event.value)"
+              data-testid="surveys-project-filter"></lfx-select>
+          </div>
+        }
+
+        <div class="w-full sm:w-auto sm:shrink-0">
           <lfx-select
             [form]="searchForm"
-            control="foundationFilter"
+            control="group"
             size="small"
-            [options]="foundationOptions()"
-            styleClass="w-full"
-            (onChange)="onFoundationFilterChange($event.value)"
-            data-testid="surveys-foundation-filter"></lfx-select>
+            [options]="groupOptions()"
+            (valueChange)="onGroupChange($event)"
+            data-testid="surveys-group-filter"></lfx-select>
         </div>
-      }
 
-      @if (showProjectFilter()) {
-        <div class="w-full sm:w-48">
+        <div class="w-full sm:w-auto sm:shrink-0">
           <lfx-select
             [form]="searchForm"
-            control="projectFilter"
+            control="surveyType"
             size="small"
-            [options]="projectOptions()"
-            styleClass="w-full"
-            (onChange)="projectFilterChange.emit($event.value)"
-            data-testid="surveys-project-filter"></lfx-select>
+            [options]="typeOptions()"
+            (valueChange)="onTypeChange($event)"
+            data-testid="surveys-type-filter"></lfx-select>
         </div>
-      }
 
-      <div class="w-full sm:w-auto sm:shrink-0">
-        <lfx-select
-          [form]="searchForm"
-          control="group"
-          size="small"
-          [options]="groupOptions()"
-          (valueChange)="onGroupChange($event)"
-          data-testid="surveys-group-filter"></lfx-select>
+        <ng-content select="[tableActions]"></ng-content>
       </div>
-
-      <div class="w-full sm:w-auto sm:shrink-0">
-        <lfx-select
-          [form]="searchForm"
-          control="surveyType"
-          size="small"
-          [options]="typeOptions()"
-          (valueChange)="onTypeChange($event)"
-          data-testid="surveys-type-filter"></lfx-select>
-      </div>
-
-      <ng-content select="[tableActions]"></ng-content>
     </div>
-  </div>
+  }
 
   <div class="px-5 pb-5">
   <lfx-table
