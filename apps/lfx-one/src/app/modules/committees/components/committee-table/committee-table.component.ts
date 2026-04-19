@@ -5,7 +5,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { switchMap, startWith, take } from 'rxjs';
+import { switchMap, startWith } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -20,9 +20,7 @@ import { FilterPillOption } from '@lfx-one/shared/interfaces';
 import { CommitteeCategorySeverityPipe } from '@pipes/committee-category-severity.pipe';
 import { PlatformIconPipe } from '@app/shared/pipes/platform-icon.pipe';
 import { PlatformLabelPipe } from '@app/shared/pipes/platform-label.pipe';
-import { CommitteeService } from '@services/committee.service';
 import { PersonaService } from '@services/persona.service';
-import { MessageService } from 'primeng/api';
 
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -51,8 +49,6 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class CommitteeTableComponent {
   // Injected services
-  private readonly committeeService = inject(CommitteeService);
-  private readonly messageService = inject(MessageService);
   private readonly personaService = inject(PersonaService);
 
   // Inputs
@@ -99,57 +95,6 @@ export class CommitteeTableComponent {
       label: opt.label ?? 'All',
     }))
   );
-
-  public joinGroup(committee: Committee): void {
-    const joinMode = committee.join_mode || 'closed';
-
-    switch (joinMode) {
-      case 'open':
-        this.committeeService.joinCommittee(committee.uid).pipe(take(1)).subscribe({
-          next: () => {
-            this.messageService.add({
-              severity: 'success',
-              summary: 'Joined',
-              detail: `You have joined "${committee.name}"`,
-            });
-            this.refresh.emit();
-          },
-          error: () => {
-            this.messageService.add({
-              severity: 'error',
-              summary: 'Error',
-              detail: `Failed to join "${committee.name}"`,
-            });
-          },
-        });
-        break;
-
-      case 'application':
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Apply to Join',
-          detail: `"${committee.name}" requires an application. This feature is coming soon.`,
-        });
-        break;
-
-      case 'invite_only':
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Invite Only',
-          detail: `"${committee.name}" is invite-only. Ask an existing member to invite you.`,
-        });
-        break;
-
-      case 'closed':
-      default:
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Closed',
-          detail: `"${committee.name}" is not currently accepting new members.`,
-        });
-        break;
-    }
-  }
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);

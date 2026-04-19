@@ -81,11 +81,6 @@ export class EventsListComponent {
     !!(this.foundation() || this.searchQuery() || this.role() || this.status())
   );
 
-  /** Delegates to the currently rendered EventRequestListComponent (visa-letters / travel-funding tabs). */
-  public openCurrentRequestDialog(): void {
-    this.requestListRef()?.openApplicationDialog();
-  }
-
   public constructor() {
     // Reset both tabs to page 1 when shared filters change
     combineLatest([toObservable(this.foundation), toObservable(this.searchQuery), toObservable(this.role), toObservable(this.status)])
@@ -94,6 +89,11 @@ export class EventsListComponent {
         this.upcomingEventsPage.set({ offset: 0, pageSize: this.upcomingEventsPage().pageSize });
         this.pastEventsPage.set({ offset: 0, pageSize: this.pastEventsPage().pageSize });
       });
+  }
+
+  /** Delegates to the currently rendered EventRequestListComponent (visa-letters / travel-funding tabs). */
+  public openCurrentRequestDialog(): void {
+    this.requestListRef()?.openApplicationDialog();
   }
 
   protected onUpcomingPageChange(event: PageChangeEvent): void {

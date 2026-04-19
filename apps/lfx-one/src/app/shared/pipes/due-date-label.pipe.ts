@@ -11,7 +11,9 @@ export class DueDateLabelPipe implements PipeTransform {
     const now = new Date();
     const due = new Date(dueDate);
     if (Number.isNaN(due.getTime())) return '';
-    const diffTime = due.getTime() - now.getTime();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const diffTime = dueDay.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 0) return '';

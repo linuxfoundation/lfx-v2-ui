@@ -85,9 +85,10 @@ export class EventsTopBarComponent {
       });
 
     effect(() => {
-      const query = this.searchQuery();
+      const query = this.searchQuery() ?? '';
       if (this.searchForm.get('search')?.value !== query) {
         this.searchForm.get('search')?.setValue(query, { emitEvent: false });
+        this.searchValue.set(query);
       }
     });
   }
