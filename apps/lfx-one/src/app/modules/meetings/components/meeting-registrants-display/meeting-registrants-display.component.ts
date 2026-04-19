@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, effect, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
+import { Component, computed, DestroyRef, effect, inject, input, InputSignal, output, OutputEmitterRef, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { AvatarComponent } from '@components/avatar/avatar.component';
@@ -13,7 +13,7 @@ import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { BehaviorSubject, catchError, debounceTime, filter, finalize, map, of, startWith, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, debounceTime, filter, finalize, map, of, pairwise, startWith, switchMap, take, tap } from 'rxjs';
 
 import { RegistrantFormComponent } from '../registrant-form/registrant-form.component';
 
@@ -25,6 +25,7 @@ import { RegistrantFormComponent } from '../registrant-form/registrant-form.comp
 export class MeetingRegistrantsDisplayComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public readonly meeting: InputSignal<Meeting | PastMeeting> = input.required<Meeting | PastMeeting>();
   public readonly pastMeeting: InputSignal<boolean> = input<boolean>(false);
@@ -39,8 +40,8 @@ export class MeetingRegistrantsDisplayComponent {
   public readonly registrants: Signal<MeetingRegistrant[]> = this.initRegistrantsList();
   public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
   public readonly additionalRegistrantsCount: WritableSignal<number> = signal(0);
-  public showAddForm = signal(false);
-  public submitting = signal(false);
+  public readonly showAddForm = signal(false);
+  public readonly submitting = signal(false);
 
   // Add registrant form
   public addRegistrantForm: FormGroup;
@@ -88,12 +89,20 @@ export class MeetingRegistrantsDisplayComponent {
       if (this.visible()) {
         this.registrantsLoading.set(true);
         this.refresh$.next(true);
-      } else {
-        // Reset inline add form when drawer closes
-        this.showAddForm.set(false);
-        this.addRegistrantForm.reset();
       }
     });
+
+    // Reset inline add form when drawer closes (open → closed transition)
+    toObservable(this.visible)
+      .pipe(
+        pairwise(),
+        filter(([prev, curr]) => prev && !curr),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.showAddForm.set(false);
+        this.addRegistrantForm.reset();
+      });
   }
 
   // === Public Methods ===
