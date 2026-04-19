@@ -234,12 +234,11 @@ export class CommitteeDashboardComponent {
     return computed(() => {
       const committeesData = this.isMeLens() ? this.myCommittees() : this.committees();
 
-      // Count committees by category
+      // Count committees by category, falling back to 'Other' when category is absent
       const categoryCounts = new Map<string, number>();
       committeesData.forEach((committee) => {
-        if (committee.category) {
-          categoryCounts.set(committee.category, (categoryCounts.get(committee.category) || 0) + 1);
-        }
+        const cat = committee.category || 'Other';
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
       });
 
       // Get unique categories and sort them
@@ -321,7 +320,7 @@ export class CommitteeDashboardComponent {
       // Apply category filter
       const category = this.categoryFilter();
       if (category) {
-        filtered = filtered.filter((committee) => committee.category === category);
+        filtered = filtered.filter((committee) => (committee.category || 'Other') === category);
       }
 
       // Apply voting status filter
