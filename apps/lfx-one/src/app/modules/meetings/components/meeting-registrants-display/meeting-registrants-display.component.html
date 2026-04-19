@@ -75,22 +75,21 @@
 
           <!-- Inline Add Form -->
           @if (showAddForm()) {
-            <div class="border border-blue-200 rounded-lg p-4 bg-blue-50/30" data-testid="inline-add-registrant-form">
-              <form [formGroup]="addRegistrantForm" (ngSubmit)="onAddRegistrant()" class="flex flex-col gap-3">
-                <lfx-registrant-form [form]="addRegistrantForm" (onUserSelected)="onUserSelectedFromSearch()" data-testid="inline-registrant-form">
-                </lfx-registrant-form>
-                <div class="flex items-center justify-end gap-2 pt-2 border-t border-blue-100">
-                  <lfx-button
-                    label="Add Guest"
-                    size="small"
-                    icon="fa-light fa-user-plus"
-                    [loading]="submitting()"
-                    [disabled]="addRegistrantForm.invalid || submitting()"
-                    type="submit"
-                    data-testid="inline-add-registrant-submit">
-                  </lfx-button>
-                </div>
-              </form>
+            <div class="border border-blue-200 rounded-lg p-4 bg-blue-50/30 flex flex-col gap-3" data-testid="inline-add-registrant-form">
+              <lfx-registrant-form [form]="addRegistrantForm" (onUserSelected)="onUserSelectedFromSearch()" data-testid="inline-registrant-form">
+              </lfx-registrant-form>
+              <div class="flex items-center justify-end gap-2 pt-2 border-t border-blue-100">
+                <lfx-button
+                  label="Add Guest"
+                  size="small"
+                  icon="fa-light fa-user-plus"
+                  [loading]="submitting()"
+                  [disabled]="addRegistrantForm.invalid || submitting()"
+                  type="button"
+                  (onClick)="onAddRegistrant()"
+                  data-testid="inline-add-registrant-submit">
+                </lfx-button>
+              </div>
             </div>
           }
         }

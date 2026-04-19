@@ -88,6 +88,10 @@ export class MeetingRegistrantsDisplayComponent {
       if (this.visible()) {
         this.registrantsLoading.set(true);
         this.refresh$.next(true);
+      } else {
+        // Reset inline add form when drawer closes
+        this.showAddForm.set(false);
+        this.addRegistrantForm.reset();
       }
     });
   }
