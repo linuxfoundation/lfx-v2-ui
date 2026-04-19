@@ -38,7 +38,7 @@
         <lfx-file-upload
           [multiple]="true"
           [accept]="acceptString"
-          [maxFileSize]="10485760"
+          [maxFileSize]="MAX_FILE_SIZE_BYTES"
           (onSelect)="onFileSelect($event)"
           [customUpload]="true"
           dataTest="materials-drawer-upload"

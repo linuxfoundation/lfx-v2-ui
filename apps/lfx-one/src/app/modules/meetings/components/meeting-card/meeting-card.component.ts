@@ -64,7 +64,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DrawerModule } from 'primeng/drawer';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { catchError, combineLatest, map, of, switchMap, take, tap } from 'rxjs';
 
@@ -92,7 +91,6 @@ import { PublicRegistrationModalComponent } from '../../components/public-regist
     MeetingRsvpDetailsComponent,
     MeetingRegistrantsDisplayComponent,
     MeetingMaterialsDrawerComponent,
-    ToastModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './meeting-card.component.html',

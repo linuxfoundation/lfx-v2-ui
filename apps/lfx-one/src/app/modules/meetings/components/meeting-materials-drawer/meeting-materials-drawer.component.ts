@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, model, output, signal } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { Component, computed, DestroyRef, inject, input, model, output, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { FileUploadComponent } from '@components/file-upload/file-upload.component';
 import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@lfx-one/shared/constants';
@@ -23,6 +23,7 @@ export class MeetingMaterialsDrawerComponent {
   // 1. Private injections
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // 2. Public inputs
   public readonly meetingId = input.required<string>();
@@ -44,6 +45,7 @@ export class MeetingMaterialsDrawerComponent {
 
   // Constants
   public readonly acceptString = generateAcceptString();
+  public readonly MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
 
   // 6. Computed signals
   public readonly fileAttachments = computed(() => this.existingAttachments().filter((a) => a.type === 'file'));
@@ -78,7 +80,7 @@ export class MeetingMaterialsDrawerComponent {
   );
 
   public constructor() {
-    this.attachments$.subscribe();
+    this.attachments$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
   // 8. Public methods
@@ -175,7 +177,7 @@ export class MeetingMaterialsDrawerComponent {
     const deletions = Array.from(this.pendingDeletions());
     const uploads = this.pendingAttachments().filter((a) => !a.uploading && !a.uploadError && !a.uploaded && a.file);
 
-    // Sequential: delete → upload
+    // Delete first (parallel), then upload (parallel)
     const delete$ =
       deletions.length > 0
         ? from(deletions).pipe(
