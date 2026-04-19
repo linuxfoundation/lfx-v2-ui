@@ -210,8 +210,8 @@
             <lfx-empty-state
               [withCard]="false"
               icon="fa-light fa-clipboard-list"
-              title="No {{ surveyLabel.plural.toLowerCase() }} found"
-              subtitle="There are no {{ surveyLabel.plural.toLowerCase() }} to display.">
+              [title]="'No ' + surveyLabel.plural.toLowerCase() + ' yet'"
+              subtitle="Surveys you've been invited to complete will appear here.">
             </lfx-empty-state>
           }
         </td>

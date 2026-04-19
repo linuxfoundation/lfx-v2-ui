@@ -226,9 +226,9 @@
           } @else {
             <lfx-empty-state
               [withCard]="false"
-              icon="fa-light fa-ballot-check"
-              title="No {{ voteLabel.plural.toLowerCase() }} found"
-              subtitle="There are no {{ voteLabel.plural.toLowerCase() }} to display.">
+              icon="fa-light fa-check-to-slot"
+              [title]="'No ' + voteLabel.plural.toLowerCase() + ' yet'"
+              subtitle="Votes you've been invited to participate in will appear here.">
             </lfx-empty-state>
           }
         </td>
