@@ -20,21 +20,20 @@ import { catchError, from, mergeMap, of, skip, switchMap, take, tap, toArray } f
   styleUrl: './meeting-materials-drawer.component.scss',
 })
 export class MeetingMaterialsDrawerComponent {
-  // 1. Private injections
+  // === Services ===
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // 2. Public inputs
   public readonly meetingId = input.required<string>();
-
-  // 4. Model signals
   public visible = model<boolean>(false);
-
-  // Outputs
   public readonly materialsChanged = output<void>();
 
-  // 5. Simple WritableSignals
+  // === Constants ===
+  public readonly acceptString = generateAcceptString();
+  public readonly MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
+
+  // === Writable Signals ===
   public loading = signal(false);
   public saving = signal(false);
   public existingAttachments = signal<MeetingAttachment[]>([]);
@@ -43,11 +42,7 @@ export class MeetingMaterialsDrawerComponent {
   public newLinkTitle = signal('');
   public newLinkUrl = signal('');
 
-  // Constants
-  public readonly acceptString = generateAcceptString();
-  public readonly MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
-
-  // 6. Computed signals
+  // === Computed Signals ===
   public readonly fileAttachments = computed(() => this.existingAttachments().filter((a) => a.type === 'file'));
   public readonly linkAttachments = computed(() => this.existingAttachments().filter((a) => a.type === 'link'));
 
@@ -80,7 +75,7 @@ export class MeetingMaterialsDrawerComponent {
     this.attachments$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
-  // 8. Public methods
+  // === Public Methods ===
   public onFileSelect(event: any): void {
     let files: File[] = [];
     if (event.files && Array.isArray(event.files)) {
@@ -216,12 +211,12 @@ export class MeetingMaterialsDrawerComponent {
       });
   }
 
-  // 9. Protected methods
+  // === Protected Methods ===
   protected onClose(): void {
     this.visible.set(false);
   }
 
-  // 11. Private helper methods
+  // === Private Helpers ===
   private validateFile(file: File): string | null {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return `File "${file.name}" is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`;
