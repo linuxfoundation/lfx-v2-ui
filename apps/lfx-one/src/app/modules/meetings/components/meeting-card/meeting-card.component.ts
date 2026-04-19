@@ -261,13 +261,6 @@ export class MeetingCardComponent implements OnInit {
     this.materialsDrawerVisible.set(true);
   }
 
-  public onMaterialsChanged(): void {
-    // Immediate refresh + delayed retry to bridge NATS propagation gap between
-    // upload (meeting-service write) and read (query-service indexed via NATS).
-    this.loadAttachments();
-    setTimeout(() => this.loadAttachments(), 1000);
-  }
-
   public copyMeetingLink(): void {
     const meeting = this.meeting();
     const meetingUrl: URL = new URL(environment.urls.home + '/meetings/' + meeting.id);

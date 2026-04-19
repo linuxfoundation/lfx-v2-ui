@@ -50,9 +50,6 @@ export class MeetingMaterialsDrawerComponent {
   // 6. Computed signals
   public readonly fileAttachments = computed(() => this.existingAttachments().filter((a) => a.type === 'file'));
   public readonly linkAttachments = computed(() => this.existingAttachments().filter((a) => a.type === 'link'));
-  public readonly hasChanges = computed(
-    () => this.pendingAttachments().length > 0 || this.pendingDeletions().size > 0 || (this.newLinkTitle().trim() !== '' && this.newLinkUrl().trim() !== '')
-  );
 
   // Lazy load attachments when drawer opens
   private readonly attachments$ = toObservable(this.visible).pipe(
