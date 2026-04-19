@@ -96,7 +96,7 @@ export class CommitteeTableComponent {
   protected readonly categoryTabOptions = computed<FilterPillOption[]>(() =>
     this.categoryOptions().map((opt) => ({
       id: opt.value ?? 'all',
-      label: opt.value ?? 'All',
+      label: opt.label ?? 'All',
     }))
   );
 

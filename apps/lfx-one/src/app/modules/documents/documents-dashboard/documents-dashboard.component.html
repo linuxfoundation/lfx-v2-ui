@@ -156,7 +156,7 @@
                 <td>
                   <div class="flex items-center gap-2">
                     <div class="flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 bg-white shrink-0 shadow">
-                      <i [class]="doc.source | myDocumentSourceTag: 'icon'" class="text-gray-900 text-base"></i>
+                      <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' text-gray-900 text-base'"></i>
                     </div>
                     <span class="text-sm font-medium text-gray-900 truncate" [attr.data-testid]="'documents-name-' + doc.id">{{ doc.name }}</span>
                   </div>

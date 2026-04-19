@@ -150,10 +150,11 @@
           } @else if (survey.survey_status === SurveyStatus.DRAFT) {
             <span class="text-sm text-gray-700">&mdash;</span>
           } @else if (survey.survey_cutoff_date) {
+            @let dueDateLabelValue = survey.survey_cutoff_date | dueDateLabel;
             <div class="flex flex-col gap-0.5">
               <span class="text-sm text-gray-700">{{ survey.survey_cutoff_date | date: 'MMM d, y' }}</span>
-              @if (survey.survey_cutoff_date | dueDateLabel) {
-                <span class="text-xs text-gray-500">{{ survey.survey_cutoff_date | dueDateLabel }}</span>
+              @if (dueDateLabelValue) {
+                <span class="text-xs text-gray-500">{{ dueDateLabelValue }}</span>
               }
             </div>
           } @else {

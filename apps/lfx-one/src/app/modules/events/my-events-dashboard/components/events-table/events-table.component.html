@@ -111,7 +111,7 @@
               [outlined]="true"
               size="small"
               styleClass="whitespace-nowrap"
-              (click)="downloadCertificate(event.id)"
+              (onClick)="$event.stopPropagation(); downloadCertificate(event.id)"
               [attr.data-testid]="'event-download-certificate-button-' + event.id" />
           </div>
         </td>
