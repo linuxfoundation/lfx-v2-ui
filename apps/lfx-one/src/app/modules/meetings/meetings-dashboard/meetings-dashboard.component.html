@@ -170,6 +170,7 @@
           (meetingTypeChange)="onMeetingTypeChange($event)"
           (foundationFilterChange)="onFoundationFilterChange($event)"
           (projectFilterChange)="onProjectFilterChange($event)"
+          [searchQuery]="searchQuery()"
           (searchQueryChange)="searchQuery.set($event)"
           (timeFilterChange)="onTimeFilterChange($event)" />
       }

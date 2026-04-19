@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, input, output } from '@angular/core';
+import { Component, effect, input, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
@@ -24,6 +24,7 @@ export class MeetingsTopBarComponent {
   public readonly meetingTypeChange = output<string | null>();
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
+  public readonly searchQuery = input<string>('');
   public readonly searchQueryChange = output<string>();
   public readonly timeFilterChange = output<'upcoming' | 'past'>();
 
@@ -46,6 +47,13 @@ export class MeetingsTopBarComponent {
       .subscribe((value) => {
         this.searchQueryChange.emit(value || '');
       });
+
+    effect(() => {
+      const query = this.searchQuery();
+      if (this.searchForm.get('search')?.value !== query) {
+        this.searchForm.get('search')?.setValue(query, { emitEvent: false });
+      }
+    });
   }
 
   public onMeetingTypeChange(value: string | null): void {

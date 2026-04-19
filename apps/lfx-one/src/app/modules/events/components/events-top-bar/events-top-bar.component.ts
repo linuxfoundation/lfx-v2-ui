@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, inject, input, output, Signal, signal } from '@angular/core';
+import { Component, effect, inject, input, output, Signal, signal } from '@angular/core';
 import { outputFromObservable, takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -25,6 +25,7 @@ export class EventsTopBarComponent {
   /** When true, foundation options are scoped to the user's registered past events */
   public readonly isPast = input<boolean>(false);
   public readonly searchPlaceholder = input<string>('Search events...');
+  public readonly searchQuery = input<string>('');
   public readonly searchQueryChange = output<string>();
 
   public readonly searchForm: FormGroup = new FormGroup({
@@ -82,6 +83,13 @@ export class EventsTopBarComponent {
           this.searchForm.get('role')?.setValue(null);
         }
       });
+
+    effect(() => {
+      const query = this.searchQuery();
+      if (this.searchForm.get('search')?.value !== query) {
+        this.searchForm.get('search')?.setValue(query, { emitEvent: false });
+      }
+    });
   }
 
   public clearSearch(): void {
