@@ -84,6 +84,7 @@ export class EventRequestListComponent {
   }
 
   public openApplicationDialog(): void {
+    if (!this.isCreateEnabled()) return;
     this.dialogService.open(this.config().dialogComponent, {
       header: this.config().dialogHeader,
       width: '800px',

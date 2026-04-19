@@ -365,7 +365,7 @@ export class CommitteeDashboardComponent {
       // Apply category filter
       const category = this.categoryFilter();
       if (category) {
-        filtered = filtered.filter((c) => c.category === category);
+        filtered = filtered.filter((c) => (c.category || 'Other') === category);
       }
 
       // Apply voting status filter

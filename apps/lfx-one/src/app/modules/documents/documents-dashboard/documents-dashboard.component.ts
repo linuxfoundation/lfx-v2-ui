@@ -12,7 +12,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { DOCUMENT_LABEL } from '@lfx-one/shared/constants';
+import { DOCUMENT_LABEL, MEETING_GROUP_SOURCES } from '@lfx-one/shared/constants';
 import { FilterPillOption, MyDocumentItem, MyDocumentSource } from '@lfx-one/shared/interfaces';
 import { DocumentService } from '@services/document.service';
 import { ProjectContextService } from '@services/project-context.service';
@@ -171,8 +171,7 @@ export class DocumentsDashboardComponent {
         if (meeting && doc.meetingId !== meeting && doc.pastMeetingId !== meeting) return false;
         if (mailingList && doc.mailingListId !== mailingList) return false;
         if (sourceTab !== 'all') {
-          const meetingGroupSources: MyDocumentSource[] = ['file', 'recording', 'transcript', 'summary'];
-          if (doc.source !== sourceTab && !(sourceTab === 'meeting' && meetingGroupSources.includes(doc.source))) return false;
+          if (doc.source !== sourceTab && !(sourceTab === 'meeting' && MEETING_GROUP_SOURCES.includes(doc.source))) return false;
         }
         return true;
       });
