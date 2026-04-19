@@ -91,7 +91,7 @@ export class SidebarComponent {
 
   private initLensLoaded(): Signal<boolean> {
     return computed(() => {
-      if (this.activeLens() === 'org') return false;
+      if (this.isOrgLens()) return false;
       const lens = this.navLens();
       if (!lens) return true;
       return this.navigationService.loaded(lens)();
