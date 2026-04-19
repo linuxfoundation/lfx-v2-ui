@@ -2,19 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, output, Signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { switchMap, startWith, take } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { Committee, COMMITTEE_LABEL } from '@lfx-one/shared';
+import { FilterPillOption } from '@lfx-one/shared/interfaces';
 import { CommitteeCategorySeverityPipe } from '@pipes/committee-category-severity.pipe';
 import { PlatformIconPipe } from '@app/shared/pipes/platform-icon.pipe';
 import { PlatformLabelPipe } from '@app/shared/pipes/platform-label.pipe';
@@ -32,6 +34,7 @@ import { TooltipModule } from 'primeng/tooltip';
     ReactiveFormsModule,
     RouterLink,
     CardComponent,
+    CardTabsBarComponent,
     ButtonComponent,
     TableComponent,
     TagComponent,
@@ -71,6 +74,9 @@ export class CommitteeTableComponent {
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
 
+  // Writable signals
+  protected readonly categoryTab = signal<string>('all');
+
   // State
   public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
 
@@ -85,6 +91,13 @@ export class CommitteeTableComponent {
   });
 
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.committees().length > 10 ? [10, 25, 50] : undefined));
+
+  protected readonly categoryTabOptions = computed<FilterPillOption[]>(() =>
+    this.categoryOptions().map((opt) => ({
+      id: opt.value ?? 'all',
+      label: opt.value ?? 'All',
+    }))
+  );
 
   public joinGroup(committee: Committee): void {
     const joinMode = committee.join_mode || 'closed';
@@ -141,7 +154,13 @@ export class CommitteeTableComponent {
     this.rowClick.emit(event.data);
   }
 
+  protected onCategoryTabChange(tab: string): void {
+    this.categoryTab.set(tab);
+    this.searchForm().patchValue({ category: tab === 'all' ? null : tab });
+  }
+
   protected resetFilters(): void {
+    this.categoryTab.set('all');
     this.searchForm().patchValue({ search: '', category: null, votingStatus: null, foundationFilter: null, projectFilter: null });
     this.foundationFilterChange.emit(null);
     this.projectFilterChange.emit(null);
