@@ -356,7 +356,7 @@
                     [currentOccurrence]="currentOccurrence()"
                     [pastMeeting]="isPastMeeting()"
                     [showAddButton]="!!meeting().organizer && !isPastMeeting()"
-                    [additionalRegistrantsCount]="0"
+                    [additionalRegistrantsCount]="additionalRegistrantsCount()"
                     backgroundColor="bg-gray-50"
                     borderColor="border-gray-200"
                     (addClicked)="onRegistrantsToggle()">
@@ -512,7 +512,8 @@
               [pastMeeting]="isPastMeeting()"
               [showAddRegistrant]="!!meeting().organizer && !isPastMeeting()"
               [myMeetingRegistrants]="false"
-              [visible]="showRegistrants()">
+              [visible]="showRegistrants()"
+              (registrantsCountChange)="additionalRegistrantsCount.set($event)">
             </lfx-meeting-registrants-display>
           </p-drawer>
           @if (!(isPastMeeting() && !pastMeetingFullAccess())) {

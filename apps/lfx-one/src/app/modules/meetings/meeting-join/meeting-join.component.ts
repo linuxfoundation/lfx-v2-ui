@@ -146,6 +146,7 @@ export class MeetingJoinComponent implements OnInit {
   private hasAutoJoined: WritableSignal<boolean> = signal<boolean>(false);
   public showRegistrants: WritableSignal<boolean> = signal<boolean>(false);
   public showGuestForm: WritableSignal<boolean> = signal<boolean>(false);
+  public additionalRegistrantsCount = signal(0);
   public materialsDrawerVisible = signal(false);
   protected showAllFiles = signal(false);
   protected visibleFiles = computed(() => (this.showAllFiles() ? this.materialFiles() : this.materialFiles().slice(0, 5)));

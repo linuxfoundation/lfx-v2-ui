@@ -121,6 +121,9 @@ export class MeetingRegistrantsDisplayComponent {
             this.submitting.set(false);
             if (response.summary.successful > 0) {
               this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Guest added successfully' });
+              // Immediately increment the count for UI feedback (query service indexing is async)
+              this.additionalRegistrantsCount.update((c) => c + response.summary.successful);
+              this.registrantsCountChange.emit(this.additionalRegistrantsCount());
               this.refresh$.next(true);
 
               const shouldAddMore = this.addRegistrantForm.get('add_more_registrants')?.value;
