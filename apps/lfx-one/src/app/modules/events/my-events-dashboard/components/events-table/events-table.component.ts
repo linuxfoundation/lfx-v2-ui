@@ -74,7 +74,13 @@ export class EventsTableComponent {
   }
 
   protected openUrl(url: string): void {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
+      window.open(parsed.href, '_blank', 'noopener,noreferrer');
+    } catch {
+      // invalid URL — no-op
+    }
   }
 
   protected downloadCertificate(eventId: string): void {
