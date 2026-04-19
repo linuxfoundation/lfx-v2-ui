@@ -188,6 +188,8 @@ export class TableComponent implements AfterContentInit {
     return this.value();
   });
 
+  protected readonly isEmpty: Signal<boolean> = computed(() => !this.loading() && this.value().length === 0);
+
   // === Lifecycle ===
   public ngAfterContentInit(): void {
     if (!isPlatformBrowser(this.platformId)) {

@@ -56,6 +56,18 @@
       }
     }
 
+    // Empty-message row — no hover, no cursor change
+    .p-datatable-tbody {
+      tr.p-datatable-emptymessage {
+        background: transparent !important;
+        cursor: default !important;
+
+        &:hover {
+          background: transparent !important;
+        }
+      }
+    }
+
     // Hide PrimeNG's default gray loading overlay (we use skeleton rows instead)
     .p-datatable-mask {
       display: none;

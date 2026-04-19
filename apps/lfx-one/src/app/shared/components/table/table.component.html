@@ -94,8 +94,8 @@
     </ng-template>
   }
 
-  <!-- Header template -->
-  @if (headerTemplate) {
+  <!-- Header template — hidden when table is empty (emptymessage state) -->
+  @if (headerTemplate && !isEmpty()) {
     <ng-template #header>
       <ng-container *ngTemplateOutlet="headerTemplate || null"></ng-container>
     </ng-template>
