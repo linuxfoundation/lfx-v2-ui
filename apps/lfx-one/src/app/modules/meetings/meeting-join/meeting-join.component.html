@@ -567,7 +567,7 @@
                         <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Primary Materials</span>
                         <p class="text-xs text-gray-400">Materials intended for review before the meeting.</p>
                         @if (materialFiles().length > 0) {
-                          @for (attachment of materialFiles(); track attachment.uid; let i = $index) {
+                          @for (attachment of visibleFiles(); track attachment.uid; let i = $index) {
                             @let fileType = attachment | fileTypeDisplay;
                             <button
                               type="button"
@@ -587,6 +587,15 @@
                                 </div>
                               </div>
                               <i class="fa-light fa-arrow-up-right-from-square text-gray-400 text-xs flex-shrink-0"></i>
+                            </button>
+                          }
+                          @if (hasMoreFiles()) {
+                            <button
+                              type="button"
+                              (click)="showAllFiles.set(!showAllFiles())"
+                              class="text-xs text-blue-600 hover:text-blue-800 font-medium py-1 transition-colors"
+                              data-testid="toggle-more-files">
+                              {{ showAllFiles() ? 'Show less' : 'Show ' + (materialFiles().length - 5) + ' more' }}
                             </button>
                           }
                         } @else {

@@ -148,6 +148,9 @@ export class MeetingJoinComponent implements OnInit {
   public showRegistrants: WritableSignal<boolean> = signal<boolean>(false);
   public showGuestForm: WritableSignal<boolean> = signal<boolean>(false);
   public materialsDrawerVisible = signal(false);
+  protected showAllFiles = signal(false);
+  protected visibleFiles = computed(() => (this.showAllFiles() ? this.materialFiles() : this.materialFiles().slice(0, 5)));
+  protected hasMoreFiles = computed(() => this.materialFiles().length > 5);
   // Tracks whether the meeting was loaded via the past-meetings API (occurrence ID in URL).
   // Distinct from isPastMeeting (time-based): isPastMeeting drives UI state (banner, RSVP guards),
   // while loadedViaPastMeetingId gates which API endpoints to call for data (summary, recording, attachments).
