@@ -82,7 +82,7 @@ export class MeetingRegistrantsDisplayComponent {
   public readonly filteredPastParticipants = this.initFilteredPastParticipants();
 
   public constructor() {
-    this.addRegistrantForm = this.meetingService.createRegistrantFormGroup(true);
+    this.addRegistrantForm = this.meetingService.createRegistrantFormGroup(false);
 
     effect(() => {
       if (this.visible()) {
@@ -129,16 +129,7 @@ export class MeetingRegistrantsDisplayComponent {
               this.additionalRegistrantsCount.update((c) => c + response.summary.successful);
               this.registrantsCountChange.emit(this.additionalRegistrantsCount());
               this.refresh$.next(true);
-
-              const shouldAddMore = this.addRegistrantForm.get('add_more_registrants')?.value;
-              if (shouldAddMore) {
-                const addMoreState = this.addRegistrantForm.get('add_more_registrants')?.value;
-                this.addRegistrantForm.reset();
-                this.addRegistrantForm.get('add_more_registrants')?.setValue(addMoreState);
-              } else {
-                this.addRegistrantForm.reset();
-                this.showAddForm.set(false);
-              }
+              this.addRegistrantForm.reset();
             } else {
               this.messageService.add({
                 severity: 'error',
@@ -180,7 +171,9 @@ export class MeetingRegistrantsDisplayComponent {
                 map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
                 tap((registrants) => {
                   const baseCount = (this.meeting().individual_registrants_count || 0) + (this.meeting().committee_members_count || 0);
-                  const additionalCount = Math.max(0, (registrants?.length || 0) - baseCount);
+                  const fetchedAdditional = Math.max(0, (registrants?.length || 0) - baseCount);
+                  // Never decrease below the current optimistic count (async indexing may lag)
+                  const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
                   this.additionalRegistrantsCount.set(additionalCount);
                   this.registrantsCountChange.emit(additionalCount);
                 }),

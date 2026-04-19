@@ -359,7 +359,7 @@
                     [additionalRegistrantsCount]="additionalRegistrantsCount()"
                     backgroundColor="bg-gray-50"
                     borderColor="border-gray-200"
-                    (addClicked)="onRegistrantsToggle()">
+                    (addClicked)="showRegistrants.set(true)">
                   </lfx-meeting-rsvp-details>
                 }
                 @if (canToggleRsvpView()) {

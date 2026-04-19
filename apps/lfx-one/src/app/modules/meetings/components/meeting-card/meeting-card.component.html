@@ -279,7 +279,7 @@
                 [pastMeeting]="pastMeeting()"
                 [showAddButton]="!pastMeeting()"
                 [additionalRegistrantsCount]="additionalRegistrantsCount()"
-                (addClicked)="onRegistrantsToggle()">
+                (addClicked)="showRegistrants.set(true)">
               </lfx-meeting-rsvp-details>
             }
           } @placeholder {

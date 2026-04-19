@@ -19,7 +19,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+
 import {
   MeetingDeleteConfirmationComponent,
   MeetingDeleteResult,
@@ -103,7 +103,7 @@ export class MeetingCardComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly clipboard = inject(Clipboard);
   private readonly userService = inject(UserService);
-  private readonly router = inject(Router);
+
   private readonly destroyRef = inject(DestroyRef);
   private readonly refreshAttachments$ = new BehaviorSubject<void>(undefined);
 
