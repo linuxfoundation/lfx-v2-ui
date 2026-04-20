@@ -321,6 +321,8 @@ export interface DualSignalRow {
   trend?: 'up' | 'down' | 'neutral';
   /** Sparkline chart data for this signal */
   chartData?: ChartData<ChartType>;
+  /** Sparkline color — rendered as a legend dot beside the label */
+  color?: string;
 }
 
 /**
