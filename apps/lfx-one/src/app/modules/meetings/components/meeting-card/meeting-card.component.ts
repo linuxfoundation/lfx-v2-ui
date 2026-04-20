@@ -44,6 +44,7 @@ import {
   MeetingAttachment,
   MeetingCancelOccurrenceResult,
   MeetingOccurrence,
+  MeetingRsvp,
   MEETING_TYPE_CONFIGS,
   PastMeeting,
   PastMeetingAttachment,
@@ -167,6 +168,7 @@ export class MeetingCardComponent implements OnInit {
   public readonly joinQueryParams: Signal<Record<string, string>> = this.initJoinQueryParams();
 
   public readonly meetingDeleted = output<void>();
+  public readonly rsvpChanged = output<MeetingRsvp>();
   public readonly project = this.projectService.project;
   public readonly committeeLabel = COMMITTEE_LABEL;
 

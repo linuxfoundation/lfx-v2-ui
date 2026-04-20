@@ -145,7 +145,13 @@
       <span class="whitespace-nowrap">{{ item.label }}</span>
 
       @if (item.badge) {
-        <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small" styleClass="ml-auto"></lfx-badge>
+        <span
+          class="ml-auto flex items-center"
+          [pTooltip]="item.badgeTooltip || ''"
+          [tooltipDisabled]="!item.badgeTooltip"
+          tooltipPosition="right">
+          <span class="block w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+        </span>
       }
     </a>
   }
@@ -167,7 +173,7 @@
         </div>
         <span class="whitespace-nowrap">{{ item.label }}</span>
         @if (item.badge) {
-          <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small"></lfx-badge>
+          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
         }
       </div>
       @if (item.external !== false) {
@@ -193,7 +199,13 @@
       <span class="whitespace-nowrap">{{ item.label }}</span>
 
       @if (item.badge) {
-        <lfx-badge [value]="item.badge" [severity]="item.badgeSeverity || 'info'" size="small" styleClass="ml-auto"></lfx-badge>
+        <span
+          class="ml-auto flex items-center"
+          [pTooltip]="item.badgeTooltip || ''"
+          [tooltipDisabled]="!item.badgeTooltip"
+          tooltipPosition="right">
+          <span class="block w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+        </span>
       }
     </button>
   }

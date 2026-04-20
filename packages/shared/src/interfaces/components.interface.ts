@@ -403,6 +403,8 @@ export interface SidebarMenuItem {
   badge?: string | number;
   /** Badge severity for styling */
   badgeSeverity?: BadgeSeverityOptions['severity'];
+  /** Tooltip shown on badge hover */
+  badgeTooltip?: string;
   /** Whether item is disabled */
   disabled?: boolean;
   /** Command to execute on click */

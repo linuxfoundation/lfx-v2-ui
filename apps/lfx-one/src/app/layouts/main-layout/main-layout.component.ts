@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, model } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, computed, CUSTOM_ELEMENTS_SCHEMA, inject, model, Signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import { LensSwitcherComponent } from '@components/lens-switcher/lens-switcher.component';
 import { SidebarComponent } from '@components/sidebar/sidebar.component';
 import { ALL_LENSES, COMMITTEE_LABEL, DOCUMENT_LABEL, MAILING_LIST_LABEL, SURVEY_LABEL, VOTE_LABEL } from '@lfx-one/shared/constants';
-import { Lens, SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { Lens, Meeting, SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { hasMeetingEnded } from '@lfx-one/shared/utils';
 import { AppService } from '@services/app.service';
 import { ImpersonationService } from '@services/impersonation.service';
 import { LensService } from '@services/lens.service';
@@ -44,6 +45,12 @@ export class MainLayoutComponent {
   // Active lens from service
   protected readonly activeLens = this.lensService.activeLens;
 
+  // User meetings signal for pending invites badge (Me lens only)
+  private readonly userMeetings: Signal<Meeting[]> = toSignal(this.userService.getUserMeetings(), { initialValue: [] });
+  private readonly pendingInvitesCount = computed(() =>
+    this.userMeetings().filter((m) => m.user_rsvp === null && !hasMeetingEnded(m)).length
+  );
+
   // Lens-aware sidebar items
   protected readonly sidebarItems = computed((): SidebarMenuItem[] => {
     switch (this.activeLens()) {
@@ -54,12 +61,14 @@ export class MainLayoutComponent {
       case 'org':
         return this.orgLensItems;
       default:
-        return this.meLensItems;
+        return this.meLensItems();
     }
   });
 
   // --- Me Lens Items ---
-  private readonly meLensItems: SidebarMenuItem[] = [
+  private readonly meLensItems = computed((): SidebarMenuItem[] => {
+    const count = this.pendingInvitesCount();
+    return [
     {
       label: 'My Dashboard',
       icon: 'fa-light fa-grid-2',
@@ -74,6 +83,13 @@ export class MainLayoutComponent {
           label: 'My Meetings',
           icon: 'fa-light fa-calendar',
           routerLink: '/meetings',
+          ...(count > 0
+            ? {
+                badge: count,
+                badgeSeverity: 'info' as const,
+                badgeTooltip: `You have ${count} pending invite${count === 1 ? '' : 's'}`,
+              }
+            : {}),
         },
         {
           label: 'My Events',
@@ -151,7 +167,8 @@ export class MainLayoutComponent {
         },
       ],
     },
-  ];
+    ];
+  });
 
   // --- Foundation Lens Items ---
   private readonly foundationLensItems = computed((): SidebarMenuItem[] => {

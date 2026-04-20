@@ -244,6 +244,7 @@
               [meetingInput]="meeting"
               (meetingUpdated)="refreshMeetings()"
               (meetingDeleted)="refreshMeetings()"
+              (rsvpChanged)="onMeetingRsvpChanged($event, meeting)"
               [pastMeeting]="timeFilter() === 'past'"
               [showBorder]="true"></lfx-meeting-card>
           } @placeholder {

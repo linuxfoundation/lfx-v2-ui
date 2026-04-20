@@ -97,7 +97,6 @@ export class RsvpButtonGroupComponent {
       .createMeetingRsvp(this.meetingUid(), request)
       .pipe(
         tap((rsvp: MeetingRsvp) => {
-          // Success - emit the updated RSVP
           this.rsvpChanged.emit(rsvp);
           this.messageService.add({
             severity: 'success',
@@ -105,8 +104,9 @@ export class RsvpButtonGroupComponent {
             detail: `You have responded "${this.formatResponse(response)}" for this meeting.`,
             life: 3000,
           });
-          // Trigger refresh to fetch updated RSVP
           this.refreshTrigger.set(this.refreshTrigger() + 1);
+          // Refresh user meetings so pending counts update across the app (badge, dashboard)
+          this.userService.refreshUserMeetings();
         }),
         catchError((error: HttpErrorResponse) => {
           let errorMessage = 'Failed to update RSVP. Please try again.';

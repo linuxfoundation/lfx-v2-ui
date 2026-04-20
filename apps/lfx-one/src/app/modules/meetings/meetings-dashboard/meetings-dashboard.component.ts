@@ -8,7 +8,7 @@ import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-c
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
-import { Lens, Meeting, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
+import { Lens, Meeting, MeetingRsvp, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
 import { getCurrentOrNextOccurrence, hasMeetingEnded } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
 import { MeetingService } from '@services/meeting.service';
@@ -85,6 +85,8 @@ export class MeetingsDashboardComponent {
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
   public pendingMeetings: Signal<Meeting[]>;
+  // Tracks meeting IDs responded to in this session for instant pending-list removal
+  private readonly respondedMeetingIds = signal<Set<string>>(new Set());
   private rawUserPastMeetings: Signal<PastMeeting[]>;
   // Pre-filtered/sorted upcoming meetings (shared source for Me lens stat cards)
   private sortedUpcomingUserMeetings: Signal<Meeting[]>;
@@ -150,8 +152,11 @@ export class MeetingsDashboardComponent {
       return this.sortedUpcomingUserMeetings();
     });
 
-    // Pending invites: upcoming user meetings with no RSVP yet (user_rsvp === null)
-    this.pendingMeetings = computed(() => this.sortedUpcomingUserMeetings().filter((m) => m.user_rsvp === null));
+    // Pending invites: upcoming meetings with no RSVP yet, excluding ones responded to in this session
+    this.pendingMeetings = computed(() => {
+      const responded = this.respondedMeetingIds();
+      return this.sortedUpcomingUserMeetings().filter((m) => m.user_rsvp === null && !responded.has(m.id));
+    });
 
     // Filter options derived from time-filtered meetings (only show projects with meetings in current view)
     this.foundationOptions = this.initializeFoundationOptions();
@@ -195,6 +200,11 @@ export class MeetingsDashboardComponent {
     this.meetingsLoading.set(true);
     this.pastMeetingsLoading.set(true);
     this.refresh$.next();
+  }
+
+  public onMeetingRsvpChanged(rsvp: MeetingRsvp, meeting: Meeting | PastMeeting): void {
+    // Instantly remove from pending list; server refresh (via refreshUserMeetings) updates the cache
+    this.respondedMeetingIds.update((ids) => new Set([...ids, (meeting as Meeting).id]));
   }
 
   public onMeetingTypeChange(value: string | null): void {
