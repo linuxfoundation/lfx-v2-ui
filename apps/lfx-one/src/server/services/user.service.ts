@@ -542,14 +542,20 @@ export class UserService {
 
     // Single participant query matching data.email OR data.username in one round trip.
     // User bearer token works: ACL grants `viewer` on v1_past_meeting to `host`/`invitee`/`attendee`.
+    // failOnPartial: true — partial pagination would silently drop the user's past meetings from
+    // the set, which surfaces as a mysteriously short list. Better to fail loud and let the caller
+    // handle the error than to return a truncated membership set as if it were complete.
     const participantQuery =
       filtersOr.length > 0
-        ? fetchAllQueryResources<PastMeetingParticipant>(req, (pageToken) =>
-            this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-              type: 'v1_past_meeting_participant',
-              filters_or: filtersOr,
-              ...(pageToken && { page_token: pageToken }),
-            })
+        ? fetchAllQueryResources<PastMeetingParticipant>(
+            req,
+            (pageToken) =>
+              this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingParticipant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+                type: 'v1_past_meeting_participant',
+                filters_or: filtersOr,
+                ...(pageToken && { page_token: pageToken }),
+              }),
+            { failOnPartial: true }
           ).catch((error) => {
             logger.warning(req, 'get_user_past_meetings', 'Participant query failed, returning empty results', { err: error });
             return [] as PastMeetingParticipant[];
@@ -685,13 +691,17 @@ export class UserService {
 
     // Match on data.email OR data.username in a single round trip. Using `filters_or` (field-level)
     // rather than `tags` keeps this resilient to indexer tag-synthesis changes.
-    const registrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'v1_meeting_registrant',
-        parent: '',
-        filters_or: filtersOr,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    // failOnPartial: true — truncated membership sets would silently hide meetings from the Me lens.
+    const registrants = await fetchAllQueryResources<MeetingRegistrant>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting_registrant',
+          parent: '',
+          filters_or: filtersOr,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     );
 
     const meetingIds = new Set<string>();

@@ -29,13 +29,13 @@ export async function isUserInvitedToMeeting(req: Request, meetingUid: string, e
     return false;
   }
 
-  const token = m2mToken || (await generateM2MToken(req));
   const username = (await getUsernameFromAuth(req)) ?? undefined;
 
   if (!email && !username) {
     return false;
   }
 
+  const token = m2mToken || (await generateM2MToken(req));
   const registrants = await meetingService.getMeetingRegistrantsForUser(req, meetingUid, email || undefined, username, token);
   return registrants.length > 0;
 }

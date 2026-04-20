@@ -34,7 +34,7 @@ export function isFoundationProject(project: EnrichedPersonaProject): boolean {
 // PCC test-project override (lfx-pcc helper.ts) — kept in sync with hasHealthMetricDashboard.
 const FOUNDATION_NAME_OVERRIDES = new Set(['Test Project Group IT', 'Test Project IT']);
 
-/** Active, membership-funded top-level foundation (Funding === 'Funded'), not an Internal Allocation. PCC test projects also qualify. */
+/** Active, membership-funded foundation (Funding === 'Funded'), not an Internal Allocation. PCC test projects also qualify. */
 export function computeIsFoundation(project: Project | null): boolean {
   if (!project) {
     return false;

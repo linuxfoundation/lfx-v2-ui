@@ -441,13 +441,18 @@ export class MeetingService {
    */
   public async getMeetingRegistrantsByEmail(req: Request, meetingUid: string, email: string, m2mToken?: string): Promise<MeetingRegistrant[]> {
     // Registrant records carry email/meeting_id as data fields, not indexed tags — use `filters` (field-level AND).
+    const normalizedEmail = email.toLowerCase();
     const params: Record<string, any> = {
       type: 'v1_meeting_registrant',
       parent: '',
-      filters: [`email:${email}`, `meeting_id:${meetingUid}`],
+      filters: [`email:${normalizedEmail}`, `meeting_id:${meetingUid}`],
     };
 
-    logger.debug(req, 'get_meeting_registrants_by_email', 'Fetching meeting registrants by email params', { meeting_id: meetingUid, email, params });
+    logger.debug(req, 'get_meeting_registrants_by_email', 'Fetching meeting registrants by email params', {
+      meeting_id: meetingUid,
+      email: normalizedEmail,
+      params,
+    });
 
     const headers = m2mToken ? { Authorization: `Bearer ${m2mToken}` } : undefined;
 
@@ -665,7 +670,7 @@ export class MeetingService {
     });
 
     const filtersOr: string[] = [];
-    if (email) filtersOr.push(`email:${email}`);
+    if (email) filtersOr.push(`email:${email.toLowerCase()}`);
     if (username) filtersOr.push(`username:${stripAuthPrefix(username)}`);
 
     if (filtersOr.length === 0) {
@@ -880,10 +885,10 @@ export class MeetingService {
 
     try {
       // Match by email first (always populated on RSVP records); fall back to username for safety.
-      const email = getEffectiveEmail(req);
+      const normalizedEmail = getEffectiveEmail(req)?.toLowerCase() ?? null;
       const username = await getUsernameFromAuth(req);
 
-      if (!email && !username) {
+      if (!normalizedEmail && !username) {
         logger.warning(req, 'get_meeting_rsvp_by_username', 'No email or username in auth context, returning null', {
           meeting_id: meetingUid,
         });
@@ -895,7 +900,7 @@ export class MeetingService {
 
       // Filter RSVPs for current user — RSVP records carry email reliably; username is often absent.
       const userRsvps = allRsvps.filter((rsvp) => {
-        if (email && rsvp.email?.toLowerCase() === email) return true;
+        if (normalizedEmail && rsvp.email?.toLowerCase() === normalizedEmail) return true;
         if (username && rsvp.username && usernameMatches(username, rsvp.username)) return true;
         return false;
       });

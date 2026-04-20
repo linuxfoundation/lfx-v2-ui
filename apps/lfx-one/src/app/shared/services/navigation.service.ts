@@ -209,7 +209,14 @@ export class NavigationService {
       map((term) => ({ term, selectedUid: null as string | null }))
     );
 
-    const reloadTriggered$ = reload$.pipe(map(() => ({ term: searchTerm(), selectedUid: this.getSelectedUidForLens(lens) })));
+    // Only inject the selected uid when no search is active — during search the user's intent is
+    // "filter this list", not "keep my selection pinned", so injection would surface a non-matching row.
+    const reloadTriggered$ = reload$.pipe(
+      map(() => {
+        const term = searchTerm();
+        return { term, selectedUid: term.trim() ? null : this.getSelectedUidForLens(lens) };
+      })
+    );
 
     const firstPage$ = merge(searchTriggered$, reloadTriggered$).pipe(
       switchMap(({ term, selectedUid }) => {
@@ -235,7 +242,12 @@ export class NavigationService {
             this.applyDefaultSelection(lens, page);
           }
         }),
-        scan((acc: LensItem[], page: LensPage) => (page.reset ? page.items : [...acc, ...page.items]), [])
+        // Dedupe by uid when appending next pages — an injected selected item can also appear in a later page.
+        scan((acc: LensItem[], page: LensPage) => {
+          if (page.reset) return page.items;
+          const seen = new Set(acc.map((item) => item.uid));
+          return [...acc, ...page.items.filter((item) => !seen.has(item.uid))];
+        }, [])
       ),
       { initialValue: [] as LensItem[] }
     );
