@@ -46,6 +46,11 @@ import { MeetingsTopBarComponent } from './components/meetings-top-bar/meetings-
   styleUrl: './meetings-dashboard.component.scss',
 })
 export class MeetingsDashboardComponent {
+  // Max concurrent in-flight /rsvp/me fetches when Pending RSVP filter is active. Each call is
+  // 1-8s upstream; unbounded Promise.all for 100+ meetings overwhelms NATS/meeting-service and
+  // produces a 30-60s stall. Batching lets results stream into the signals progressively.
+  private static readonly rsvpFetchConcurrency = 8;
+
   private readonly meetingService = inject(MeetingService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly personaService = inject(PersonaService);
@@ -545,26 +550,33 @@ export class MeetingsDashboardComponent {
       // Mark in-flight BEFORE awaiting so concurrent effect re-runs don't re-request the same ids.
       toFetch.forEach((id) => this.rsvpInflightIds.add(id));
       this.rsvpLoading.set(true);
-      // MeetingService.getMeetingRsvpForCurrentUser already catches+logs and returns of(null), so no wrapper here.
-      Promise.all(toFetch.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id))))
-        .then((results) => {
-          if (cancelled) return;
-          const nextMap = new Map(this.rsvpMap());
-          const nextFetched = new Set(this.rsvpFetchedIds());
-          toFetch.forEach((id, i) => {
-            nextMap.set(id, results[i] ?? null);
-            nextFetched.add(id);
-          });
-          this.rsvpMap.set(nextMap);
-          this.rsvpFetchedIds.set(nextFetched);
-        })
-        .finally(() => {
+      // MeetingService.getMeetingRsvpForCurrentUser already catches+logs and returns of(null).
+      // Batch with bounded concurrency so 100+ meetings don't DoS the upstream; flush after each
+      // batch so the UI updates progressively instead of waiting for the entire set.
+      void (async () => {
+        try {
+          for (let i = 0; i < toFetch.length; i += MeetingsDashboardComponent.rsvpFetchConcurrency) {
+            if (cancelled) return;
+            const batchIds = toFetch.slice(i, i + MeetingsDashboardComponent.rsvpFetchConcurrency);
+            const batchResults = await Promise.all(batchIds.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id))));
+            if (cancelled) return;
+            const nextMap = new Map(this.rsvpMap());
+            const nextFetched = new Set(this.rsvpFetchedIds());
+            batchIds.forEach((id, j) => {
+              nextMap.set(id, batchResults[j] ?? null);
+              nextFetched.add(id);
+            });
+            this.rsvpMap.set(nextMap);
+            this.rsvpFetchedIds.set(nextFetched);
+          }
+        } finally {
           toFetch.forEach((id) => this.rsvpInflightIds.delete(id));
           // Only clear the loading flag once ALL overlapping batches are done and none were cancelled.
           if (!cancelled && this.rsvpInflightIds.size === 0) {
             this.rsvpLoading.set(false);
           }
-        });
+        }
+      })();
     });
   }
 
