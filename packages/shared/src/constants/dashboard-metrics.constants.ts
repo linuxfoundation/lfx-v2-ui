@@ -819,6 +819,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-flywheel-conversion',
+      description: 'Event attendees who engage via newsletter, community, working groups, training, code, or web within 90 days.',
       value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
       changePercentage: formatPpMomChange(flywheel.reengagement.reengagementMomChange),
       trend: flywheel.reengagement.reengagementMomChange >= 0 ? 'up' : 'down',
@@ -835,6 +836,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-member-growth',
+      description: 'Total paying corporate members with quarterly net new count and associated revenue.',
       value: formatNumber(memberAcquisition.totalMembers),
       changePercentage: formatMomChange(memberAcquisition.changePercentage),
       trend: memberAcquisition.trend,
@@ -850,6 +852,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-engaged-community',
+      description: 'Unique individuals active across 7 channels — Slack, Discord, GitHub, mailing lists, training, web, and code — in the last 90 days.',
       value: formatNumber(engagedCommunity.totalMembers),
       changePercentage: formatMomChange(engagedCommunity.changePercentage),
       trend: engagedCommunity.trend,
@@ -865,6 +868,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'memberships',
       testId: 'ed-evo-event-growth',
+      description: 'Year-to-date event count, attendees, and net revenue with YoY comparison.',
       value: formatNumber(eventGrowth.totalRegistrants),
       changePercentage: formatYoyChange(eventGrowth.registrantYoyChange),
       trend: eventGrowth.registrantYoyChange >= 0 ? 'up' : 'down',
@@ -882,6 +886,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'brand',
       testId: 'ed-evo-brand-reach',
+      description: 'Social followers across all platforms and monthly website sessions from GA4.',
       customContentType: 'dual-signal',
       dualSignals: [
         protoDualSignal(
@@ -911,6 +916,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'brand',
       testId: 'ed-evo-brand-health',
+      description: 'Total brand mentions from Octolens social listening with sentiment breakdown.',
       customContentType: 'dual-signal',
       dualSignals: [
         protoDualSignal(
@@ -940,6 +946,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'influence',
       testId: 'ed-evo-revenue-impact',
+      description: 'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend.',
       customContentType: 'dual-signal',
       caption: `Last-touch attribution · Last 6 months`,
       dualSignals: [
