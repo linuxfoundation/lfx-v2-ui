@@ -4,6 +4,7 @@
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { Component, computed, inject, input, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import {
@@ -27,7 +28,7 @@ import { catchError, combineLatest, map, of, switchMap, take } from 'rxjs';
 
 @Component({
   selector: 'lfx-dashboard-meeting-card',
-  imports: [ButtonComponent, TagComponent, TooltipModule, ClipboardModule, RecurrenceSummaryPipe],
+  imports: [ButtonComponent, TagComponent, TooltipModule, ClipboardModule, RecurrenceSummaryPipe, RouterLink],
   templateUrl: './dashboard-meeting-card.component.html',
 })
 export class DashboardMeetingCardComponent {
@@ -37,12 +38,22 @@ export class DashboardMeetingCardComponent {
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
-  /** Optional override for the "See Meeting Details" URL. If not provided, defaults to /meetings/{meeting.id}. */
+  /** Optional override for the detail URL. Defaults to /meetings/{meeting.id}. */
   public readonly detailUrl = input<string | null>(null);
-  /** Set to false to hide the "See Meeting Details" button (e.g. for past meetings where the detail page is inaccessible). */
+  /** Set to false to hide the "Meeting details" button. */
   public readonly showDetailsButton = input<boolean>(true);
-  /** Set to false to open the details link in the same tab instead of a new tab. */
+  /** Set to false to open the details link in the same tab. */
   public readonly openDetailsInNewTab = input<boolean>(true);
+
+  // Card variant inputs for the Figma-style header strip
+  /** Label shown in the card header strip (e.g. "LAST MEETING" / "NEXT MEETING"). When null, no header strip is rendered. */
+  public readonly cardLabel = input<string | null>(null);
+  /** Color theme for the card header strip and date badge. */
+  public readonly cardVariant = input<'neutral' | 'accent'>('neutral');
+  /** Router link for the "View all" button in the card header strip. */
+  public readonly viewAllRouterLink = input<string | null>(null);
+  /** Query params for the "View all" router link. */
+  public readonly viewAllQueryParams = input<Record<string, string>>({});
 
   public readonly attachments: Signal<MeetingAttachment[]> = this.initAttachments();
   public readonly joinUrl: Signal<string | null>;
@@ -51,6 +62,7 @@ export class DashboardMeetingCardComponent {
   public readonly meetingTypeInfo: Signal<MeetingTypeBadge> = this.initMeetingTypeInfo();
   public readonly meetingStartTime: Signal<string> = this.initMeetingStartTime();
   public readonly formattedTime: Signal<string> = this.initFormattedTime();
+  public readonly formattedTimeWithDuration: Signal<string> = this.initFormattedTimeWithDuration();
   public readonly isTodayMeeting: Signal<boolean> = this.initIsTodayMeeting();
   public readonly isPrivate: Signal<boolean> = this.initIsPrivate();
   public readonly hasYoutubeUploads: Signal<boolean> = this.initHasYoutubeUploads();
@@ -58,7 +70,6 @@ export class DashboardMeetingCardComponent {
   public readonly hasRecording: Signal<boolean> = this.initHasRecording();
   public readonly hasTranscripts: Signal<boolean> = this.initHasTranscripts();
   public readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
-
   public readonly hasAiSummary: Signal<boolean> = this.initHasAiSummary();
   public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
   public readonly isRecurring: Signal<boolean> = this.initIsRecurring();
@@ -66,6 +77,14 @@ export class DashboardMeetingCardComponent {
   public readonly meetingDetailQueryParams: Signal<Record<string, string>> = this.initMeetingDetailQueryParams();
   public readonly meetingDetailHref: Signal<string> = this.initMeetingDetailHref();
   public readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
+
+  // New signals for the Figma card design
+  public readonly meetingDay: Signal<string> = this.initMeetingDay();
+  public readonly meetingMonth: Signal<string> = this.initMeetingMonth();
+  public readonly meetingDuration: Signal<number> = this.initMeetingDuration();
+  public readonly meetingDescription: Signal<string> = this.initMeetingDescription();
+  public readonly projectChipLabel: Signal<string | null> = this.initProjectChipLabel();
+  public readonly dateBadgeDotInfo: Signal<{ bgColor: string; icon: string }> = this.initDateBadgeDotInfo();
 
   public constructor() {
     const meeting$ = toObservable(this.meeting);
@@ -78,12 +97,10 @@ export class DashboardMeetingCardComponent {
           return of(null);
         }
 
-        // Use public_link directly if available (e.g. for legacy meetings with link from query service)
         if (meeting.public_link) {
           return of(meeting.public_link);
         }
 
-        // Otherwise fetch join URL from API for authenticated users
         if (authenticated && user?.email) {
           return this.meetingService.getPublicMeetingJoinUrl(meeting.id, meeting.password, { email: user.email }).pipe(
             map((res) => buildJoinUrlWithParams(res.link, user)),
@@ -137,8 +154,6 @@ export class DashboardMeetingCardComponent {
     return computed(() => {
       const occurrence = this.occurrence();
       const meeting = this.meeting();
-
-      // Use occurrence start time if available, otherwise use meeting start time
       return occurrence?.start_time || meeting.start_time;
     });
   }
@@ -177,6 +192,22 @@ export class DashboardMeetingCardComponent {
           day: 'numeric',
         });
         return `${dateStr} at ${timeStr}`;
+      } catch {
+        return startTime;
+      }
+    });
+  }
+
+  private initFormattedTimeWithDuration(): Signal<string> {
+    return computed(() => {
+      const startTime = this.meetingStartTime();
+      try {
+        const date = new Date(startTime);
+        if (isNaN(date.getTime())) return startTime;
+        const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const duration = this.meetingDuration();
+        return duration > 0 ? `${weekday}, ${time}・${duration}m` : `${weekday}, ${time}`;
       } catch {
         return startTime;
       }
@@ -236,7 +267,6 @@ export class DashboardMeetingCardComponent {
     return computed(() => {
       const meeting = this.meeting();
 
-      // Restricted meetings require the user to be invited
       if (meeting.restricted && !meeting.invited) {
         return false;
       }
@@ -294,8 +324,6 @@ export class DashboardMeetingCardComponent {
           if (!meeting?.id || !meeting.recording_enabled) {
             return of(null);
           }
-          // Skip for upcoming meetings — no recording exists yet
-          // Use occurrence start time for recurring meetings, fall back to meeting start time
           const startTime = this.occurrence()?.start_time || meeting.start_time;
           if (new Date(startTime).getTime() > Date.now()) {
             return of(null);
@@ -324,5 +352,55 @@ export class DashboardMeetingCardComponent {
       ),
       { initialValue: [] }
     );
+  }
+
+  private initMeetingDay(): Signal<string> {
+    return computed(() => {
+      const date = new Date(this.meetingStartTime());
+      return isNaN(date.getTime()) ? '' : String(date.getDate());
+    });
+  }
+
+  private initMeetingMonth(): Signal<string> {
+    return computed(() => {
+      const date = new Date(this.meetingStartTime());
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    });
+  }
+
+  private initMeetingDuration(): Signal<number> {
+    return computed(() => {
+      const occurrence = this.occurrence();
+      return occurrence?.duration ?? this.meeting().duration ?? 0;
+    });
+  }
+
+  private initMeetingDescription(): Signal<string> {
+    return computed(() => {
+      const occurrence = this.occurrence();
+      return occurrence?.description || this.meeting().description || '';
+    });
+  }
+
+  private initProjectChipLabel(): Signal<string | null> {
+    return computed(() => {
+      const meeting = this.meeting();
+      return meeting.project_name || meeting.committees?.[0]?.name || null;
+    });
+  }
+
+  private initDateBadgeDotInfo(): Signal<{ bgColor: string; icon: string }> {
+    return computed(() => {
+      const type = this.meeting().meeting_type?.toLowerCase();
+      const dotMap: Record<string, { bgColor: string; icon: string }> = {
+        technical: { bgColor: '#7c3aed', icon: 'fa-light fa-code' },
+        maintainers: { bgColor: '#2563eb', icon: 'fa-light fa-gear' },
+        board: { bgColor: '#dc2626', icon: 'fa-light fa-user-check' },
+        marketing: { bgColor: '#059669', icon: 'fa-light fa-chart-line-up' },
+        legal: { bgColor: '#d97706', icon: 'fa-light fa-scale-balanced' },
+      };
+      return dotMap[type ?? ''] ?? { bgColor: '#00bc7d', icon: 'fa-light fa-globe' };
+    });
   }
 }
