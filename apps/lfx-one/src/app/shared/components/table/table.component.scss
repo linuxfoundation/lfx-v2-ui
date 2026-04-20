@@ -73,46 +73,6 @@
       display: none;
     }
 
-    // ─── Paginator layout ────────────────────────────────────────────────────
-    // nav arrows + pages flush left; "Showing…" + rpp-dropdown flush right
-    .p-paginator {
-      justify-content: flex-start !important;
-      padding-top: 1.5rem !important;
-
-      .p-paginator-first { order: 1; }
-      .p-paginator-prev  { order: 2; }
-      .p-paginator-pages { order: 3; }
-      .p-paginator-next  { order: 4; }
-      .p-paginator-last  { order: 5; }
-
-      .p-paginator-current {
-        order: 6;
-        margin-left: auto;
-        font-size: 0.875rem !important;
-        color: #6b7280;
-      }
-
-      .p-paginator-rpp-dropdown {
-        order: 7;
-        margin-left: 1.5rem;
-      }
-    }
-  }
-
-  // Hide rpp dropdown when ≤10 rows (no rowsPerPage options supplied)
-  .lfx-paginator-no-rpp .p-paginator-rpp-dropdown {
-    display: none !important;
-  }
-
-  // Hide nav arrows + page numbers when there's only 1 page
-  .lfx-paginator-single-page {
-    .p-paginator-first,
-    .p-paginator-prev,
-    .p-paginator-pages,
-    .p-paginator-next,
-    .p-paginator-last {
-      display: none !important;
-    }
   }
 }
 
