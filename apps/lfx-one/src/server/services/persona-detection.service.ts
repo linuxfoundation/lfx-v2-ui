@@ -104,8 +104,10 @@ export class PersonaDetectionService {
       personas = this.applyForcedPersona(personas, 'executive-director');
     }
 
+    // Only honor the impersonation override when the target user actually has the forced persona.
+    // Root-writer promotion above is the only path that may inject a persona the user doesn't natively hold.
     const forcedPersona = req.appSession?.['impersonationPersonaContext'];
-    if (typeof forcedPersona === 'string' && VALID_PERSONAS.has(forcedPersona)) {
+    if (typeof forcedPersona === 'string' && VALID_PERSONAS.has(forcedPersona) && personas.includes(forcedPersona as PersonaType)) {
       personas = this.applyForcedPersona(personas, forcedPersona as PersonaType);
     }
 
