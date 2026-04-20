@@ -109,7 +109,11 @@ export class EngagedCommunityDrawerComponent {
       tooltip: {
         ...DASHBOARD_TOOLTIP_CONFIG,
         callbacks: {
-          label: (ctx) => ` ${formatNumber(ctx.parsed.x ?? 0)} members`,
+          label: (ctx) => {
+            const raw = ctx.raw as number;
+            // Display original value (unclamped) in tooltip
+            return ` ${formatNumber(raw <= 1 ? 0 : raw)} members`;
+          },
         },
       },
     },
@@ -124,6 +128,7 @@ export class EngagedCommunityDrawerComponent {
           font: { size: 11 },
           callback: (value) => {
             const num = Number(value);
+            if (!Number.isFinite(num) || num <= 0) return '';
             // Only label powers of 10 to avoid overlap on log scale
             const log = Math.log10(num);
             if (Math.abs(log - Math.round(log)) > 0.01) return '';
@@ -338,6 +343,8 @@ export class EngagedCommunityDrawerComponent {
         labels: ['Community', 'Working Groups', 'Newsletter', 'Training', 'Code', 'Web', 'Certified'],
         datasets: [
           {
+            // Clamp to minimum 1 for log scale rendering; tooltip callback
+            // maps values ≤1 back to 0 for display.
             data: [
               breakdown.communityMembers,
               breakdown.workingGroupMembers,
@@ -346,7 +353,7 @@ export class EngagedCommunityDrawerComponent {
               breakdown.codeContributors,
               breakdown.webVisitors,
               breakdown.certifiedIndividuals,
-            ],
+            ].map((v) => Math.max(v, 1)),
             backgroundColor: [
               lfxColors.blue[700],
               lfxColors.blue[500],

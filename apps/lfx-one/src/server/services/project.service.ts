@@ -2442,8 +2442,9 @@ export class ProjectService {
 
       const latest = result.rows[0];
 
-      // Server-side recompute: exclude newsletter subscribers (unreliable data).
-      // Sum all engagement channels for totals and MoM change.
+      // Server-side recompute: newsletter subscribers are excluded from totals and MoM
+      // because the data is unreliable, but we still return the raw value in the breakdown
+      // for optional display. Sum the 6 reliable channels for totals and MoM change.
       const sumSegments = (row: (typeof result.rows)[0]) =>
         (row.COMMUNITY_MEMBERS ?? 0) +
         (row.WORKING_GROUP_MEMBERS ?? 0) +
@@ -2474,7 +2475,7 @@ export class ProjectService {
         changePercentage,
         trend: changePercentage >= 0 ? 'up' : 'down',
         breakdown: {
-          newsletterSubscribers: 0,
+          newsletterSubscribers: latest.NEWSLETTER_SUBSCRIBERS ?? 0,
           communityMembers: latest.COMMUNITY_MEMBERS ?? 0,
           workingGroupMembers: latest.WORKING_GROUP_MEMBERS ?? 0,
           certifiedIndividuals: latest.CERTIFIED_INDIVIDUALS ?? 0,
