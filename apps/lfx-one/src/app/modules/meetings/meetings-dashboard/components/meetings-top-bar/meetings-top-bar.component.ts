@@ -88,8 +88,4 @@ export class MeetingsTopBarComponent implements OnInit {
   public onProjectFilterChange(value: string | null): void {
     this.projectFilterChange.emit(value);
   }
-
-  public onTimeFilterChange(value: 'upcoming' | 'past' | 'pending-rsvp'): void {
-    this.timeFilterChange.emit(value);
-  }
 }

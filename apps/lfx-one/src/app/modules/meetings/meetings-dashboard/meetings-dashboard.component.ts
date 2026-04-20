@@ -521,7 +521,7 @@ export class MeetingsDashboardComponent {
   }
 
   private initRsvpFetcher(): void {
-    effect(() => {
+    effect((onCleanup) => {
       if (this.timeFilter() !== 'pending-rsvp') {
         return;
       }
@@ -536,12 +536,19 @@ export class MeetingsDashboardComponent {
       if (toFetch.length === 0) {
         return;
       }
+
+      let cancelled = false;
+      onCleanup(() => {
+        cancelled = true;
+      });
+
       // Mark in-flight BEFORE awaiting so concurrent effect re-runs don't re-request the same ids.
       toFetch.forEach((id) => this.rsvpInflightIds.add(id));
       this.rsvpLoading.set(true);
       // MeetingService.getMeetingRsvpForCurrentUser already catches+logs and returns of(null), so no wrapper here.
       Promise.all(toFetch.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id))))
         .then((results) => {
+          if (cancelled) return;
           const nextMap = new Map(this.rsvpMap());
           const nextFetched = new Set(this.rsvpFetchedIds());
           toFetch.forEach((id, i) => {
@@ -553,8 +560,8 @@ export class MeetingsDashboardComponent {
         })
         .finally(() => {
           toFetch.forEach((id) => this.rsvpInflightIds.delete(id));
-          // Only clear the loading flag once ALL overlapping batches are done.
-          if (this.rsvpInflightIds.size === 0) {
+          // Only clear the loading flag once ALL overlapping batches are done and none were cancelled.
+          if (!cancelled && this.rsvpInflightIds.size === 0) {
             this.rsvpLoading.set(false);
           }
         });

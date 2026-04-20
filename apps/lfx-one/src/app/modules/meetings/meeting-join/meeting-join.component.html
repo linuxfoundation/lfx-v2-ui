@@ -369,7 +369,7 @@
                       class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-xs"
                       data-testid="current-user-rsvp-status">
                       @if (currentUserRsvpIcon(); as iconClass) {
-                        <i [class]="iconClass"></i>
+                        <i [class]="iconClass" aria-hidden="true"></i>
                       }
                       <span class="text-gray-600">Your RSVP:</span>
                       <span class="font-medium text-gray-900">{{ rsvpLabel }}</span>
