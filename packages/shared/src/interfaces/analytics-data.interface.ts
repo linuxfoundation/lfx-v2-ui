@@ -2841,7 +2841,7 @@ export interface NorthStarMonthlyDataPoint {
 
 /**
  * API response for Engaged Community Size metric
- * Newsletter + community + WG + certified individuals (deduplicated)
+ * 7 channels: newsletter, community, WG, certified, web, code, training (deduplicated)
  */
 export interface EngagedCommunitySizeResponse {
   totalMembers: number;
