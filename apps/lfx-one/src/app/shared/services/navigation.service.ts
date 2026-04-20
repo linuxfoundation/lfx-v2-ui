@@ -221,11 +221,11 @@ export class NavigationService {
     const firstPage$ = merge(searchTriggered$, reloadTriggered$).pipe(
       switchMap(({ term, selectedUid }) => {
         generation.update((g) => g + 1);
-        return this.fetchSinglePage(lens, term, null, loading, true, generation(), selectedUid);
+        return this.fetchSinglePage(lens, term, null, loading, true, generation(), generation, selectedUid);
       })
     );
 
-    const nextPage$ = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false, generation(), null)));
+    const nextPage$ = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false, generation(), generation, null)));
 
     return toSignal(
       merge(firstPage$, nextPage$).pipe(
@@ -260,15 +260,21 @@ export class NavigationService {
     loading: WritableSignal<boolean>,
     reset: boolean,
     generation: number,
+    activeGeneration: Signal<number>,
     selectedUid: string | null
   ): Observable<TaggedLensPage> {
     loading.set(true);
+    // Only this request's generation may clear the loading flag — otherwise a superseded fetch
+    // landing after a new search could drop the spinner while the newer request is still in-flight.
+    const clearLoadingIfActive = (): void => {
+      if (activeGeneration() === generation) loading.set(false);
+    };
     return this.fetchPage(lens, term, pageToken, selectedUid).pipe(
       map((response) => ({ page: this.toLensPage(response, reset), generation })),
-      tap(() => loading.set(false)),
+      tap(clearLoadingIfActive),
       catchError(() => {
         // Reset failures emit an empty page so handleEmptyLensResponse can redirect; scroll-triggered failures stay silent.
-        loading.set(false);
+        clearLoadingIfActive();
         if (reset) {
           return of({
             page: { items: [], nextPageToken: null, bypassActive: false, personaFetchFailed: false, upstreamFailed: true, reset: true },

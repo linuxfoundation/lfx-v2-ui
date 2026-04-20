@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ProjectFunding } from '../enums/project-funding.enum';
+
 export interface Project {
   uid: string;
   slug: string;
@@ -13,7 +15,7 @@ export interface Project {
   stage: string;
   category: string;
   /** Upstream Goa enum — optional to tolerate records indexed before the attribute was rolled out. */
-  funding?: 'Funded' | 'Unfunded' | 'Supported by Parent Project';
+  funding?: ProjectFunding;
   funding_model: string[];
   charter_url: string;
   legal_entity_type: string;

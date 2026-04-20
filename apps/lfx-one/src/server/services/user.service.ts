@@ -542,9 +542,9 @@ export class UserService {
 
     // Single participant query matching data.email OR data.username in one round trip.
     // User bearer token works: ACL grants `viewer` on v1_past_meeting to `host`/`invitee`/`attendee`.
-    // failOnPartial: true — partial pagination would silently drop the user's past meetings from
-    // the set, which surfaces as a mysteriously short list. Better to fail loud and let the caller
-    // handle the error than to return a truncated membership set as if it were complete.
+    // failOnPartial: true surfaces truncated membership sets as errors; the outer .catch is
+    // kept as a defensive guard so upstream failures don't 500 the Me lens, but we log at
+    // error level so the gap stays visible in monitoring.
     const participantQuery =
       filtersOr.length > 0
         ? fetchAllQueryResources<PastMeetingParticipant>(
@@ -557,7 +557,7 @@ export class UserService {
               }),
             { failOnPartial: true }
           ).catch((error) => {
-            logger.warning(req, 'get_user_past_meetings', 'Participant query failed, returning empty results', { err: error });
+            logger.error(req, 'get_user_past_meetings', Date.now(), error, { stage: 'participant_query' });
             return [] as PastMeetingParticipant[];
           })
         : Promise.resolve([] as PastMeetingParticipant[]);
@@ -691,7 +691,9 @@ export class UserService {
 
     // Match on data.email OR data.username in a single round trip. Using `filters_or` (field-level)
     // rather than `tags` keeps this resilient to indexer tag-synthesis changes.
-    // failOnPartial: true — truncated membership sets would silently hide meetings from the Me lens.
+    // failOnPartial: true surfaces truncated membership sets as errors; the outer .catch is kept
+    // as a defensive guard so upstream failures don't 500 the Me lens dashboard, but we log at
+    // error level so the gap stays visible in monitoring.
     const registrants = await fetchAllQueryResources<MeetingRegistrant>(
       req,
       (pageToken) =>
@@ -702,7 +704,10 @@ export class UserService {
           ...(pageToken && { page_token: pageToken }),
         }),
       { failOnPartial: true }
-    );
+    ).catch((error) => {
+      logger.error(req, 'get_user_registered_meeting_ids', Date.now(), error, { stage: 'registrant_query' });
+      return [] as MeetingRegistrant[];
+    });
 
     const meetingIds = new Set<string>();
     for (const r of registrants) meetingIds.add(r.meeting_id);

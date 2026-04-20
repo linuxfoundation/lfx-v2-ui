@@ -877,8 +877,8 @@ export class MeetingService {
    * @param occurrenceId Optional occurrence ID to filter RSVP for specific occurrence
    * @returns Promise resolving to user's RSVP or null
    */
-  public async getMeetingRsvpByUsername(req: Request, meetingUid: string, occurrenceId?: string): Promise<MeetingRsvp | null> {
-    logger.debug(req, 'get_meeting_rsvp_by_username', 'Fetching user RSVP', {
+  public async getMeetingRsvpForCurrentUser(req: Request, meetingUid: string, occurrenceId?: string): Promise<MeetingRsvp | null> {
+    logger.debug(req, 'get_meeting_rsvp_for_current_user', 'Fetching user RSVP', {
       meeting_id: meetingUid,
       occurrence_id: occurrenceId,
     });
@@ -889,7 +889,7 @@ export class MeetingService {
       const username = await getUsernameFromAuth(req);
 
       if (!normalizedEmail && !username) {
-        logger.warning(req, 'get_meeting_rsvp_by_username', 'No email or username in auth context, returning null', {
+        logger.warning(req, 'get_meeting_rsvp_for_current_user', 'No email or username in auth context, returning null', {
           meeting_id: meetingUid,
         });
         return null;
@@ -920,7 +920,7 @@ export class MeetingService {
       // No occurrence specified - return any RSVP for this user
       return userRsvps[0] || null;
     } catch (error) {
-      logger.warning(req, 'get_meeting_rsvp_by_username', 'Failed to fetch user RSVP, returning null', {
+      logger.warning(req, 'get_meeting_rsvp_for_current_user', 'Failed to fetch user RSVP, returning null', {
         meeting_id: meetingUid,
         occurrence_id: occurrenceId,
         error: error instanceof Error ? error.message : 'Unknown error',

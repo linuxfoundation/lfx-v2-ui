@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { ProjectFunding } from '../enums/project-funding.enum';
 import type { EnrichedPersonaProject, LensItem, Project, ProjectContext } from '../interfaces';
 
 export function toProjectContext(project: EnrichedPersonaProject): ProjectContext {
@@ -47,7 +48,7 @@ export function computeIsFoundation(project: Project | null): boolean {
   return (
     project.stage === 'Active' &&
     project.legal_entity_type !== 'Internal Allocation' &&
-    project.funding === 'Funded' &&
+    project.funding === ProjectFunding.Funded &&
     Array.isArray(project.funding_model) &&
     project.funding_model.includes('Membership')
   );

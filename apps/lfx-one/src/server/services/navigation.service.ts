@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { LENS_PERSONA_MAP, NAV_MAX_UPSTREAM_ITERATIONS, NAV_MIN_ITEMS_PER_RESPONSE } from '@lfx-one/shared/constants';
+import { ProjectFunding } from '@lfx-one/shared/enums';
 import {
   EnrichedPersonaProject,
   GetLensItemsParams,
@@ -191,7 +192,7 @@ export class NavigationService {
 
   private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): LensItemsQuery {
     // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
-    const filters = lens === 'foundation' ? ['stage:Active', 'funding:Funded', 'funding_model:Membership'] : ['stage:Active'];
+    const filters = lens === 'foundation' ? ['stage:Active', `funding:${ProjectFunding.Funded}`, 'funding_model:Membership'] : ['stage:Active'];
     const base: LensItemsQuery = { type: 'project', filters, sort: 'name_asc' };
 
     if (pageToken) base.page_token = pageToken;
