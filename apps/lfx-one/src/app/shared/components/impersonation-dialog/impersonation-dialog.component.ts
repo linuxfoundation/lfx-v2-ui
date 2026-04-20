@@ -24,8 +24,6 @@ export class ImpersonationDialogComponent {
     targetUser: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     personaContext: new FormControl<PersonaType | null>(null),
   });
-  protected loading = signal(false);
-  protected error = signal('');
 
   protected readonly personaOptions = [
     { label: 'Use their context', value: null },
@@ -34,6 +32,9 @@ export class ImpersonationDialogComponent {
     { label: 'Maintainer', value: 'maintainer' as PersonaType },
     { label: 'Contributor', value: 'contributor' as PersonaType },
   ];
+
+  protected loading = signal(false);
+  protected error = signal('');
 
   public submit(): void {
     const target = this.targetUserForm.controls.targetUser.value.trim();

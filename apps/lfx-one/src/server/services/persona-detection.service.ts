@@ -20,6 +20,7 @@ import {
   PersonaDetections,
   PersonaProject,
   PersonaType,
+  VALID_PERSONAS,
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
@@ -103,9 +104,9 @@ export class PersonaDetectionService {
       personas = this.applyForcedPersona(personas, 'executive-director');
     }
 
-    const forcedPersona = req.appSession?.['impersonationPersonaContext'] as PersonaType | undefined;
-    if (forcedPersona) {
-      personas = this.applyForcedPersona(personas, forcedPersona);
+    const forcedPersona = req.appSession?.['impersonationPersonaContext'];
+    if (typeof forcedPersona === 'string' && VALID_PERSONAS.has(forcedPersona)) {
+      personas = this.applyForcedPersona(personas, forcedPersona as PersonaType);
     }
 
     return { ...detections, personas, isRootWriter };
