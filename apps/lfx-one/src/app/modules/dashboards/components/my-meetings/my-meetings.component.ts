@@ -13,12 +13,13 @@ import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, combineLatest, Observable, of, switchMap, tap } from 'rxjs';
+import { BadgeModule } from 'primeng/badge';
 
 import type { Meeting, MeetingWithOccurrence, PastMeeting } from '@lfx-one/shared/interfaces';
 
 @Component({
   selector: 'lfx-my-meetings',
-  imports: [DashboardMeetingCardComponent, CardComponent, SkeletonModule, RouterLink],
+  imports: [DashboardMeetingCardComponent, CardComponent, SkeletonModule, RouterLink, BadgeModule],
   templateUrl: './my-meetings.component.html',
   styleUrl: './my-meetings.component.scss',
 })
@@ -45,6 +46,12 @@ export class MyMeetingsComponent {
 
   // Computed: Last past meeting
   protected readonly lastMeeting: Signal<PastMeeting | null> = this.initLastMeeting();
+
+  // Pending invites: upcoming meetings where user has not yet RSVPed (user_rsvp === null)
+  protected readonly pendingInvitesCount = computed(() => {
+    if (this.activeLens() !== 'me') return 0;
+    return this.rawMeetings().filter((m) => m.user_rsvp === null).length;
+  });
 
   // Text based on lens
   protected readonly sectionTitle = computed(() => (this.activeLens() === 'me' ? 'My Meetings' : 'Meetings'));

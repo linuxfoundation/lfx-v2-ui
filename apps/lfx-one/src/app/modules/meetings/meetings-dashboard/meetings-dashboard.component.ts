@@ -63,13 +63,14 @@ export class MeetingsDashboardComponent {
   public refresh$: BehaviorSubject<void>;
   public searchQuery: WritableSignal<string>;
   public debouncedSearchQuery: Signal<string>;
-  public timeFilter: WritableSignal<'upcoming' | 'past'>;
+  public timeFilter: WritableSignal<'upcoming' | 'past' | 'pending'>;
   public meetingTypeFilter: WritableSignal<string | null>;
   public meetingTypeOptions: Signal<{ label: string; value: string | null }[]>;
   public foundationFilter: WritableSignal<string | null>;
   public projectFilter: WritableSignal<string | null>;
   public showFoundationFilter: Signal<boolean>;
   public showProjectFilter: Signal<boolean>;
+  public showPendingFilter: Signal<boolean>;
   public foundationOptions: Signal<{ label: string; value: string | null }[]>;
   public projectOptions: Signal<{ label: string; value: string | null }[]>;
   public project: Signal<ProjectContext | null>;
@@ -83,6 +84,7 @@ export class MeetingsDashboardComponent {
 
   // Raw user meetings cached for client-side filtering (Me lens only)
   private rawUserMeetings: Signal<Meeting[]>;
+  public pendingMeetings: Signal<Meeting[]>;
   private rawUserPastMeetings: Signal<PastMeeting[]>;
   // Pre-filtered/sorted upcoming meetings (shared source for Me lens stat cards)
   private sortedUpcomingUserMeetings: Signal<Meeting[]>;
@@ -125,12 +127,13 @@ export class MeetingsDashboardComponent {
     this.refresh$ = new BehaviorSubject<void>(undefined);
     this.searchQuery = signal<string>('');
     this.debouncedSearchQuery = toSignal(toObservable(this.searchQuery).pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });
-    const initialTimeFilter = this.route.snapshot.queryParamMap.get('time') === 'past' ? 'past' : 'upcoming';
-    this.timeFilter = signal<'upcoming' | 'past'>(initialTimeFilter);
+    const timeParam = this.route.snapshot.queryParamMap.get('time');
+    const initialTimeFilter: 'upcoming' | 'past' | 'pending' = timeParam === 'past' ? 'past' : timeParam === 'pending' ? 'pending' : 'upcoming';
+    this.timeFilter = signal<'upcoming' | 'past' | 'pending'>(initialTimeFilter);
     this.meetingTypeFilter = signal<string | null>(null);
     this.foundationFilter = signal<string | null>(null);
     this.projectFilter = signal<string | null>(null);
-    this.hasMore = computed(() => this.activeLens() !== 'me' && (this.timeFilter() === 'past' ? !!this.pastPageToken() : !!this.upcomingPageToken()));
+    this.hasMore = computed(() => this.activeLens() !== 'me' && (this.timeFilter() === 'past' ? !!this.pastPageToken() : this.timeFilter() === 'upcoming' && !!this.upcomingPageToken()));
 
     // Initialize meeting type options
     this.meetingTypeOptions = this.initializeMeetingTypeOptions();
@@ -147,12 +150,16 @@ export class MeetingsDashboardComponent {
       return this.sortedUpcomingUserMeetings();
     });
 
+    // Pending invites: upcoming user meetings with no RSVP yet (user_rsvp === null)
+    this.pendingMeetings = computed(() => this.sortedUpcomingUserMeetings().filter((m) => m.user_rsvp === null));
+
     // Filter options derived from time-filtered meetings (only show projects with meetings in current view)
     this.foundationOptions = this.initializeFoundationOptions();
     this.projectOptions = this.initializeProjectOptions();
     // Show filter when there's at least one real option (beyond the "All" entry) and user has the right persona role
     this.showFoundationFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
     this.showProjectFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
+    this.showPendingFilter = computed(() => this.activeLens() === 'me');
 
     // Me lens stat cards (computed from shared sorted upcoming signal)
     this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
@@ -203,20 +210,22 @@ export class MeetingsDashboardComponent {
     this.projectFilter.set(value);
   }
 
-  public onTimeFilterChange(value: 'upcoming' | 'past'): void {
+  public onTimeFilterChange(value: 'upcoming' | 'past' | 'pending'): void {
     this.timeFilter.set(value);
     this.foundationFilter.set(null);
     this.projectFilter.set(null);
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { time: value === 'past' ? 'past' : null },
+      queryParams: { time: value === 'upcoming' ? null : value },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
   }
 
   public loadMore(): void {
-    const isPast = this.timeFilter() === 'past';
+    const filter = this.timeFilter();
+    const isPast = filter === 'past';
+    if (filter === 'pending') return; // pending is client-side only, no pagination
     const pageToken = isPast ? this.pastPageToken() : this.upcomingPageToken();
 
     if (!pageToken || this.loadingMore()) {
@@ -467,7 +476,10 @@ export class MeetingsDashboardComponent {
 
   private initializeFilteredMeetings(): Signal<(Meeting | PastMeeting)[]> {
     return computed(() => {
-      return this.timeFilter() === 'past' ? this.pastMeetings() : this.upcomingMeetings();
+      const filter = this.timeFilter();
+      if (filter === 'past') return this.pastMeetings();
+      if (filter === 'pending') return this.pendingMeetings();
+      return this.upcomingMeetings();
     });
   }
 

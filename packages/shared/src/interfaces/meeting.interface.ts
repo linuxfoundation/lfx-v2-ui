@@ -238,6 +238,8 @@ export interface Meeting {
   is_foundation?: boolean;
   /** Parent project UID (for subprojects under a foundation) */
   parent_project_uid?: string;
+  /** Current user's RSVP for this meeting. null = invited but no response yet (pending). undefined = not yet fetched from server. */
+  user_rsvp?: MeetingRsvp | null;
 }
 
 /**

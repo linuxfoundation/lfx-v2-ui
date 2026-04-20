@@ -3,11 +3,22 @@
 
 <section class="flex flex-col gap-4" data-testid="dashboard-my-meetings-section">
   <!-- Header -->
-  <div class="flex items-center h-8">
-    <h2 class="flex items-center gap-2">
+  <div class="flex items-center gap-3 h-8">
+    <h2 class="flex items-center gap-2 shrink-0">
       <i class="fa-light fa-calendar text-lg"></i>
       <span>{{ sectionTitle() }}</span>
     </h2>
+    <hr class="flex-1 border-t border-gray-200" />
+    @if (pendingInvitesCount() > 0) {
+      <a
+        routerLink="/meetings"
+        [queryParams]="{ time: 'pending' }"
+        class="flex items-center gap-1.5 px-3 py-1 text-sm font-medium text-blue-600 border border-blue-400 rounded-md hover:bg-blue-50 transition-colors shrink-0"
+        data-testid="dashboard-pending-invites-button">
+        <i class="fa-light fa-calendar-exclamation text-sm"></i>
+        Pending invites ({{ pendingInvitesCount() }})
+      </a>
+    }
   </div>
 
   <!-- Meeting Cards: Last Meeting + Next Meeting -->
