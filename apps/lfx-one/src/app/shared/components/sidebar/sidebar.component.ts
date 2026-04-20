@@ -102,7 +102,7 @@ export class SidebarComponent {
     return computed(() => {
       const persona = this.personaService.currentPersona();
       const option = PERSONA_OPTIONS.find((o) => o.value === persona);
-      return option?.label ?? persona;
+      return option?.label ?? persona.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     });
   }
 
