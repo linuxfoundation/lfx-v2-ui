@@ -2991,7 +2991,7 @@ export class ProjectService {
       )
       SELECT
         REPLACE(membership_tier, ' Membership', '') AS TIER,
-        ROUND(IFNULL(SUM(churn_rate), 0) * 100, 1) AS CHURN_RATE_PCT,
+        ROUND(DIV0NULL(SUM(total_churned_accounts), SUM(membership_count)) * 100, 1) AS CHURN_RATE_PCT,
         IFNULL(SUM(membership_value_lost), 0) AS VALUE_LOST,
         IFNULL(SUM(total_churned_accounts), 0) AS MEMBERS_LOST
       FROM ANALYTICS.PLATINUM.MEMBERSHIP_CHURN

@@ -14,7 +14,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { initializeRangeDataFetching } from '@shared/utils/health-metrics-data.util';
 import { SkeletonModule } from 'primeng/skeleton';
 
-import { environment } from '../../../../../environments/environment';
+import { environment } from '@environments/environment';
 
 import type {
   BoardMeetingColumnHeader,
