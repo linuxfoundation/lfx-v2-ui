@@ -133,6 +133,8 @@ const EMPTY_ED_EVOLUTION_DATA: EdEvolutionData = {
     trend: 'up',
     monthlyMentions: [],
     topProjects: [],
+    topPositiveMentions: [],
+    topNegativeMentions: [],
   },
   revenueImpact: {
     pipelineInfluenced: 0,

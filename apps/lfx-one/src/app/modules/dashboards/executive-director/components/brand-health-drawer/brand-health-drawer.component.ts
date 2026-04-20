@@ -33,6 +33,8 @@ export class BrandHealthDrawerComponent {
     trend: 'up',
     monthlyMentions: [],
     topProjects: [],
+    topPositiveMentions: [],
+    topNegativeMentions: [],
   });
 
   // === Static Config ===

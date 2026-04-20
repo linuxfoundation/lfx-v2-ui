@@ -4,6 +4,7 @@
 import { NATS_CONFIG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
+  BrandHealthMention,
   BrandHealthResponse,
   BrandHealthTopProject,
   BrandReachPlatformType,
@@ -3710,6 +3711,8 @@ export class ProjectService {
       trend: 'up',
       monthlyMentions: [],
       topProjects: [],
+      topPositiveMentions: [],
+      topNegativeMentions: [],
     };
 
     try {
@@ -3770,7 +3773,38 @@ export class ProjectService {
         LIMIT 5
       `;
 
-      const [summaryResult, trendResult, projectsResult] = await Promise.all([
+      const mentionsFilter = isUmbrella ? '' : 'AND FOUNDATION_SLUG = ?';
+      const mentionsParams = isUmbrella ? [] : [foundationSlug];
+
+      const positiveMentionsQuery = `
+        SELECT TITLE, BODY, AUTHOR, AUTHOR_PROFILE_LINK, SOURCE_PLATFORM, SOCIAL_NETWORK, SENTIMENT, URL, MENTION_TS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.BRAND_HEALTH_MENTIONS
+        WHERE SENTIMENT = 'positive' ${mentionsFilter}
+        ORDER BY RELEVANCE_SCORE DESC, MENTION_TS DESC
+        LIMIT 10
+      `;
+
+      const negativeMentionsQuery = `
+        SELECT TITLE, BODY, AUTHOR, AUTHOR_PROFILE_LINK, SOURCE_PLATFORM, SOCIAL_NETWORK, SENTIMENT, URL, MENTION_TS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.BRAND_HEALTH_MENTIONS
+        WHERE SENTIMENT = 'negative' ${mentionsFilter}
+        ORDER BY RELEVANCE_SCORE DESC, MENTION_TS DESC
+        LIMIT 10
+      `;
+
+      interface MentionRow {
+        TITLE: string;
+        BODY: string;
+        AUTHOR: string;
+        AUTHOR_PROFILE_LINK: string;
+        SOURCE_PLATFORM: string;
+        SOCIAL_NETWORK: string;
+        SENTIMENT: string;
+        URL: string;
+        MENTION_TS: string;
+      }
+
+      const [summaryResult, trendResult, projectsResult, positiveMentionsResult, negativeMentionsResult] = await Promise.all([
         this.snowflakeService.execute<{
           TOTAL_MENTIONS: number;
           POSITIVE: number;
@@ -3788,6 +3822,8 @@ export class ProjectService {
           MENTION_COUNT_30D: number;
           PROJECT_RANK?: number;
         }>(topProjectsQuery, sovParams),
+        this.snowflakeService.execute<MentionRow>(positiveMentionsQuery, mentionsParams),
+        this.snowflakeService.execute<MentionRow>(negativeMentionsQuery, mentionsParams),
       ]);
 
       if (summaryResult.rows.length === 0) {
@@ -3818,6 +3854,18 @@ export class ProjectService {
         mentions: row.MENTION_COUNT_30D ?? 0,
       }));
 
+      const mapMention = (row: MentionRow): BrandHealthMention => ({
+        title: row.TITLE ?? '',
+        body: row.BODY ?? '',
+        author: row.AUTHOR ?? '',
+        authorProfileLink: row.AUTHOR_PROFILE_LINK ?? '',
+        sourcePlatform: row.SOURCE_PLATFORM ?? '',
+        socialNetwork: row.SOCIAL_NETWORK ?? '',
+        sentiment: (row.SENTIMENT as BrandHealthMention['sentiment']) ?? 'neutral',
+        url: row.URL ?? '',
+        mentionDate: row.MENTION_TS ? new Date(row.MENTION_TS).toISOString() : '',
+      });
+
       return {
         totalMentions,
         sentiment: { positive: positivePct, neutral: neutralPct, negative: negativePct },
@@ -3825,6 +3873,8 @@ export class ProjectService {
         trend: sentimentMomChangePp >= 0 ? 'up' : 'down',
         monthlyMentions,
         topProjects,
+        topPositiveMentions: positiveMentionsResult.rows.map(mapMention),
+        topNegativeMentions: negativeMentionsResult.rows.map(mapMention),
       };
     } catch (error) {
       logger.error(undefined, 'get_brand_health', startTime, error instanceof Error ? error : new Error(String(error)), {

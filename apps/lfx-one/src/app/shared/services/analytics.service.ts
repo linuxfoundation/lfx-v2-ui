@@ -1224,6 +1224,8 @@ export class AnalyticsService {
           trend: 'up' as const,
           monthlyMentions: [],
           topProjects: [],
+          topPositiveMentions: [],
+          topNegativeMentions: [],
         })
       )
     );
