@@ -408,7 +408,6 @@ export class EventsController {
         startDateFrom: req.query['startDateFrom'] ? String(req.query['startDateFrom']) : undefined,
         startDateTo: req.query['startDateTo'] ? String(req.query['startDateTo']) : undefined,
         country: req.query['country'] ? String(req.query['country']) : undefined,
-        affiliatedProjectSlugs: await this.personaDetectionService.getAffiliatedProjectSlugs(req),
       };
 
       const response: SearchEventsResponse = await this.eventsService.searchEventsForApplication(req, userEmail, options);

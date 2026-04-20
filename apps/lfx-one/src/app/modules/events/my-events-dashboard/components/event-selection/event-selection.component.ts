@@ -129,9 +129,7 @@ export class EventSelectionComponent {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load events. Please try again.' });
                 return of(emptyResponse);
               }
-              // Load more failed - revert offset so retry fetches the same page
               this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load more events. Please try again.' });
-              this.currentOffset.update((curr) => Math.max(0, curr - EVENT_SELECTION_PAGE_SIZE));
               return EMPTY; // Don't emit to scan, preserving existing data
             }),
             finalize(() => {

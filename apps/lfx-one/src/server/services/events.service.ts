@@ -875,17 +875,23 @@ export class EventsService {
         signal: AbortSignal.timeout(10000),
       });
     } catch (err) {
-      logger.warning(req, 'search_events', 'Upstream fetch failed, returning empty', { err });
-      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+      logger.warning(req, 'search_events', 'Upstream fetch failed', { err });
+      throw new MicroserviceError('Event service fetch failed', 503, 'API_GATEWAY_UNAVAILABLE', {
+        path: targetUrl,
+        originalError: err instanceof Error ? err : new Error(String(err)),
+      });
     }
 
     if (!upstream.ok) {
       const errorText = await upstream.text().catch(() => '');
-      logger.warning(req, 'search_events', 'Upstream returned non-OK status, returning empty', {
+      logger.warning(req, 'search_events', 'Upstream returned non-OK status', {
         status: upstream.status,
         errorBody: errorText.slice(0, 500),
       });
-      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+      throw new MicroserviceError(`Event service returned ${upstream.status}`, upstream.status, 'API_GATEWAY_ERROR', {
+        path: targetUrl,
+        errorBody: errorText.slice(0, 500),
+      });
     }
 
     let json: { Data?: Record<string, unknown>[]; Metadata?: { Offset?: number; PageSize?: number; TotalSize?: number } } = {};
@@ -893,8 +899,11 @@ export class EventsService {
       const rawBody = await upstream.text();
       json = rawBody ? (JSON.parse(rawBody) as typeof json) : {};
     } catch (err) {
-      logger.warning(req, 'search_events', 'Upstream returned invalid JSON, returning empty', { err });
-      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+      logger.warning(req, 'search_events', 'Upstream returned invalid JSON', { err });
+      throw new MicroserviceError('Event service returned invalid JSON', 502, 'API_GATEWAY_INVALID_RESPONSE', {
+        path: targetUrl,
+        originalError: err instanceof Error ? err : new Error(String(err)),
+      });
     }
 
     const items = json.Data ?? [];
@@ -903,7 +912,7 @@ export class EventsService {
     const data: SearchEvent[] = items.map((item) => ({
       id: String(item['ID'] ?? ''),
       name: String(item['Name'] ?? ''),
-      projectID: String(item['ProjectID'] ?? ''),
+      projectId: String(item['ProjectID'] ?? ''),
       projectName: String(item['ProjectName'] ?? ''),
       startDate: String(item['StartDate'] ?? ''),
       endDate: String(item['EndDate'] ?? ''),
@@ -916,13 +925,13 @@ export class EventsService {
       locationState: String(item['LocationState'] ?? ''),
       locationZip: String(item['LocationZip'] ?? ''),
       location: this.formatLocation(String(item['Location'] ?? ''), String(item['LocationCity'] ?? ''), String(item['LocationCountry'] ?? '')),
-      eventURL: String(item['EventURL'] ?? ''),
-      registrationURL: String(item['RegistrationURL'] ?? ''),
+      eventUrl: String(item['EventURL'] ?? ''),
+      registrationUrl: String(item['RegistrationURL'] ?? ''),
       description: String(item['Description'] ?? ''),
       acceptTravelFund: String(item['AcceptTravelFund'] ?? ''),
       acceptVisaRequest: String(item['AcceptVisaRequest'] ?? ''),
       embassy: String(item['Embassy'] ?? ''),
-      cventID: String(item['CventID'] ?? ''),
+      cventId: String(item['CventID'] ?? ''),
     }));
 
     const metadata: SearchEventsMetadata = {
@@ -949,8 +958,7 @@ export class EventsService {
    * paginating earlier would produce incorrect totals.
    */
   public async searchEventsForApplication(req: Request, userEmail: string, options: SearchEventsForApplicationOptions): Promise<SearchEventsResponse> {
-    const { applicationType, pageSize, offset, sortOrder, sortField, searchQuery, role, status, startDateFrom, startDateTo, country, affiliatedProjectSlugs } =
-      options;
+    const { applicationType, pageSize, offset, sortOrder, sortField, searchQuery, role, status, startDateFrom, startDateTo, country } = options;
 
     logger.debug(req, 'search_events_for_application', 'Fetching user registered events', {
       application_type: applicationType,
@@ -962,11 +970,15 @@ export class EventsService {
       has_country: !!country,
     });
 
+    // Fetch ALL registered upcoming events — pagination is applied after filtering by application type.
+    // Using a large fetch size because filtering by acceptVisaRequest/acceptTravelFund only happens
+    // in the API Gateway step; paginating here would silently drop eligible events on later pages.
+    const FETCH_ALL_PAGE_SIZE = 500;
     const myEventsResponse = await this.getMyEvents(req, userEmail, {
       isPast: false,
       registeredOnly: true,
-      pageSize,
-      offset,
+      pageSize: FETCH_ALL_PAGE_SIZE,
+      offset: 0,
       sortOrder,
       sortField,
       searchQuery,
@@ -975,7 +987,6 @@ export class EventsService {
       startDateFrom,
       startDateTo,
       country,
-      affiliatedProjectSlugs,
     });
 
     const eventIds = myEventsResponse.data.map((e) => e.id).filter(Boolean);
@@ -1017,14 +1028,16 @@ export class EventsService {
       application_type: applicationType,
     });
 
+    // Step 4: apply client pagination to the filtered list so totalSize and hasNextPage are accurate
+    const page = filtered.slice(offset, offset + pageSize);
+
     return {
-      data: filtered,
+      data: page,
       metadata: {
         offset,
         pageSize,
-        totalSize: myEventsResponse.total,
-        // because of discrepancy between myEventsResponse.total and filtered.length, we need to calculate hasNextPage manually
-        hasNextPage: myEventsResponse.total > offset + pageSize,
+        totalSize: filtered.length,
+        hasNextPage: offset + pageSize < filtered.length,
       },
     };
   }

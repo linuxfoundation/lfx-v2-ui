@@ -565,7 +565,7 @@ export interface SalesforceIdResponse {
 export interface SearchEvent {
   id: string;
   name: string;
-  projectID: string;
+  projectId: string;
   projectName: string;
   startDate: string;
   endDate: string;
@@ -578,13 +578,13 @@ export interface SearchEvent {
   locationState: string;
   locationZip: string;
   location: string;
-  eventURL: string;
-  registrationURL: string;
+  eventUrl: string;
+  registrationUrl: string;
   description: string;
   acceptTravelFund: string;
   acceptVisaRequest: string;
   embassy: string;
-  cventID: string;
+  cventId: string;
 }
 
 /**
@@ -598,7 +598,8 @@ export interface SearchEventsMetadata {
 }
 
 /**
- * Response from the /api/events/search endpoint.
+ * Response from the /api/events/search and /api/events/search-for-application endpoints,
+ * and from the upstream API Gateway event-service /v2/events/search endpoint.
  */
 export interface SearchEventsResponse {
   data: SearchEvent[];
@@ -624,7 +625,7 @@ export interface SearchEventsOptions {
  */
 export interface SearchEventsForApplicationParams extends GetMyEventsParams {
   /** Determines which events to return — 'visa' filters by AcceptVisaRequest, 'travel-fund' by AcceptTravelFund */
-  type: 'visa' | 'travel-fund';
+  type: RequestType;
 }
 
 /**
