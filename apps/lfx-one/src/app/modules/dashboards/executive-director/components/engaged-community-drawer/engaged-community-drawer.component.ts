@@ -31,7 +31,15 @@ export class EngagedCommunityDrawerComponent {
     totalMembers: 0,
     changePercentage: 0,
     trend: 'up',
-    breakdown: { newsletterSubscribers: 0, communityMembers: 0, workingGroupMembers: 0, certifiedIndividuals: 0 },
+    breakdown: {
+      newsletterSubscribers: 0,
+      communityMembers: 0,
+      workingGroupMembers: 0,
+      certifiedIndividuals: 0,
+      webVisitors: 0,
+      codeContributors: 0,
+      trainingEnrollees: 0,
+    },
     monthlyData: [],
   });
   public readonly brandReachData = input<BrandReachResponse>({
@@ -235,12 +243,16 @@ export class EngagedCommunityDrawerComponent {
         }
       }
 
-      // Segment composition — keep in sync with initBreakdownChartData (Community / Working Groups / Certified)
+      // Segment composition — keep in sync with initBreakdownChartData (all 7 engagement channels)
       if (totalMembers > 0) {
         const segments = [
           { name: 'Community members', value: breakdown.communityMembers },
           { name: 'Working group members', value: breakdown.workingGroupMembers },
           { name: 'Certified individuals', value: breakdown.certifiedIndividuals },
+          { name: 'Web visitors', value: breakdown.webVisitors },
+          { name: 'Code contributors', value: breakdown.codeContributors },
+          { name: 'Training enrollees', value: breakdown.trainingEnrollees },
+          { name: 'Newsletter subscribers', value: breakdown.newsletterSubscribers },
         ].sort((a, b) => b.value - a.value);
         const top = segments[0];
         const topShare = (top.value / totalMembers) * 100;
@@ -318,11 +330,27 @@ export class EngagedCommunityDrawerComponent {
     return computed(() => {
       const { breakdown } = this.data();
       return {
-        labels: ['Community', 'Working Groups', 'Certified'],
+        labels: ['Community', 'Working Groups', 'Newsletter', 'Training', 'Code', 'Web', 'Certified'],
         datasets: [
           {
-            data: [breakdown.communityMembers, breakdown.workingGroupMembers, breakdown.certifiedIndividuals],
-            backgroundColor: [lfxColors.blue[500], lfxColors.blue[300], lfxColors.blue[200]],
+            data: [
+              breakdown.communityMembers,
+              breakdown.workingGroupMembers,
+              breakdown.newsletterSubscribers,
+              breakdown.trainingEnrollees,
+              breakdown.codeContributors,
+              breakdown.webVisitors,
+              breakdown.certifiedIndividuals,
+            ],
+            backgroundColor: [
+              lfxColors.blue[700],
+              lfxColors.blue[500],
+              lfxColors.blue[400],
+              lfxColors.blue[300],
+              lfxColors.emerald[600],
+              lfxColors.emerald[500],
+              lfxColors.emerald[400],
+            ],
             borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 4, bottomRight: 4 },
             borderSkipped: 'start',
           },

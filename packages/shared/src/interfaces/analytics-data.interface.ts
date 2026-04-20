@@ -2852,6 +2852,9 @@ export interface EngagedCommunitySizeResponse {
     communityMembers: number;
     workingGroupMembers: number;
     certifiedIndividuals: number;
+    webVisitors: number;
+    codeContributors: number;
+    trainingEnrollees: number;
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
