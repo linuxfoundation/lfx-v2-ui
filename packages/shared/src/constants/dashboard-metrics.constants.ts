@@ -641,9 +641,10 @@ function protoSparkline(data: number[], color: string) {
 
 /** Build a flat sparkline that Chart.js can actually render visibly.
  *  A constant array makes min===max, collapsing the Y range to zero and hiding the line.
- *  Adding ±2% variation gives Chart.js a real range while looking nearly flat. */
+ *  Adding ±2% variation (floor 0.1) gives Chart.js a real range while looking nearly flat.
+ *  Lower bound is clamped to 0 so non-negative metrics never dip below zero. */
 function flatSparklineData(value: number): number[] {
-  const nudge = Math.max(value * 0.02, 1);
+  const nudge = Math.max(Math.abs(value) * 0.02, 0.1);
   return [Math.max(value - nudge, 0), value, value, value, value, value + nudge];
 }
 
