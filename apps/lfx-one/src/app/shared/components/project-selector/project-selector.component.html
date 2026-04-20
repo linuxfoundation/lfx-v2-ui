@@ -18,8 +18,8 @@
   </div>
 
   <div class="flex flex-col gap-0.5 grow items-start relative min-w-0 overflow-hidden">
-    <p class="sidebar-project-name">{{ displayName() }}</p>
-    <span class="text-[11px] font-normal text-gray-400 leading-none">{{ lens() === 'foundation' ? 'Foundation' : 'Project' }}</span>
+    <p class="sidebar-project-name" [attr.title]="displayName()">{{ displayName() }}</p>
+    <span class="text-xs font-normal text-gray-400 leading-none">{{ lensTypeLabel() }}</span>
   </div>
 
   <i class="fa-light fa-angles-up-down shrink-0 text-gray-400" aria-hidden="true"></i>
