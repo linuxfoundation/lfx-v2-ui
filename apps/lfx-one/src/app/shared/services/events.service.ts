@@ -16,6 +16,8 @@ import {
   MyEventOrganizationsResponse,
   MyEventsResponse,
   OrgSearchResponse,
+  SearchEventsForApplicationParams,
+  SearchEventsResponse,
   TravelFundApplication,
   TravelFundApplicationResponse,
   TravelFundRequestsResponse,
@@ -32,24 +34,7 @@ export class EventsService {
   private readonly http = inject(HttpClient);
 
   public getMyEvents(params: GetMyEventsParams = {}): Observable<MyEventsResponse> {
-    let httpParams = new HttpParams();
-
-    if (params.isPast !== undefined) httpParams = httpParams.set('isPast', String(params.isPast));
-    if (params.eventId) httpParams = httpParams.set('eventId', params.eventId);
-    if (params.projectName) httpParams = httpParams.set('projectName', params.projectName);
-    if (params.searchQuery) httpParams = httpParams.set('searchQuery', params.searchQuery);
-    if (params.role) httpParams = httpParams.set('role', params.role);
-    if (params.status) httpParams = httpParams.set('status', params.status);
-    if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
-    if (params.pageSize) httpParams = httpParams.set('pageSize', String(params.pageSize));
-    if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
-    if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
-    if (params.registeredOnly) httpParams = httpParams.set('registeredOnly', 'true');
-    if (params.startDateFrom) httpParams = httpParams.set('startDateFrom', params.startDateFrom);
-    if (params.startDateTo) httpParams = httpParams.set('startDateTo', params.startDateTo);
-    if (params.country) httpParams = httpParams.set('country', params.country);
-
-    return this.http.get<MyEventsResponse>('/api/events', { params: httpParams });
+    return this.http.get<MyEventsResponse>('/api/events', { params: this.buildMyEventsParams(params) });
   }
 
   public getEvents(params: GetEventsParams = {}): Observable<EventsResponse> {
@@ -125,11 +110,38 @@ export class EventsService {
     return this.http.get<OrgSearchResponse>('/api/events/search-organizations', { params });
   }
 
+  public searchEventsForApplication(params: SearchEventsForApplicationParams): Observable<SearchEventsResponse> {
+    const httpParams = this.buildMyEventsParams(params).set('type', params.type);
+
+    return this.http.get<SearchEventsResponse>('/api/events/search-for-application', { params: httpParams });
+  }
+
   public getCertificate(params: GetCertificateParams): Observable<Blob> {
     let httpParams = new HttpParams();
 
     if (params.eventId) httpParams = httpParams.set('eventId', params.eventId);
 
     return this.http.get('/api/events/certificate', { params: httpParams, responseType: 'blob' });
+  }
+
+  private buildMyEventsParams(params: GetMyEventsParams): HttpParams {
+    let httpParams = new HttpParams();
+
+    if (params.isPast !== undefined) httpParams = httpParams.set('isPast', String(params.isPast));
+    if (params.eventId) httpParams = httpParams.set('eventId', params.eventId);
+    if (params.projectName) httpParams = httpParams.set('projectName', params.projectName);
+    if (params.searchQuery) httpParams = httpParams.set('searchQuery', params.searchQuery);
+    if (params.role) httpParams = httpParams.set('role', params.role);
+    if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.sortField) httpParams = httpParams.set('sortField', params.sortField);
+    if (params.pageSize) httpParams = httpParams.set('pageSize', String(params.pageSize));
+    if (params.offset !== undefined) httpParams = httpParams.set('offset', String(params.offset));
+    if (params.sortOrder) httpParams = httpParams.set('sortOrder', params.sortOrder);
+    if (params.registeredOnly) httpParams = httpParams.set('registeredOnly', 'true');
+    if (params.startDateFrom) httpParams = httpParams.set('startDateFrom', params.startDateFrom);
+    if (params.startDateTo) httpParams = httpParams.set('startDateTo', params.startDateTo);
+    if (params.country) httpParams = httpParams.set('country', params.country);
+
+    return httpParams;
   }
 }

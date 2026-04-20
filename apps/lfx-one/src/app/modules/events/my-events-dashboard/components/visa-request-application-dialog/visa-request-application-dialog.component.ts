@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EventsService } from '@app/shared/services/events.service';
 import { UserService } from '@app/shared/services/user.service';
 import { ButtonComponent } from '@components/button/button.component';
-import { MyEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestStep } from '@lfx-one/shared/interfaces';
+import { SearchEvent, VisaRequestApplicantInfo, VisaRequestApplication, VisaRequestStep } from '@lfx-one/shared/interfaces';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ApplicationSuccessComponent } from '../application-success/application-success.component';
@@ -38,7 +38,7 @@ export class VisaRequestApplicationDialogComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected step = signal<VisaRequestStep>('select-event');
-  protected selectedEvent = signal<MyEvent | null>(null);
+  protected selectedEvent = signal<SearchEvent | null>(null);
   protected termsAccepted = signal(false);
   protected applyFormValid = signal(false);
   protected applicantData = signal<VisaRequestApplicantInfo | null>(null);

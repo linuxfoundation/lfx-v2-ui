@@ -23,6 +23,9 @@ import {
   GetEventsOptions,
   GetUpcomingCountriesResponse,
   OrgSearchResponse,
+  RequestType,
+  SearchEventsForApplicationOptions,
+  SearchEventsResponse,
   TravelFundApplication,
   TravelFundRequestsResponse,
   VisaRequestApplication,
@@ -344,6 +347,77 @@ export class EventsController {
       const response: OrgSearchResponse = await this.eventsService.searchOrganizations(req, name);
 
       logger.success(req, 'search_organizations', startTime, { result_count: response.data.length });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/events/search-for-application
+   * Returns events eligible for a visa or travel-fund application.
+   * Fetches the authenticated user's upcoming registered events (with optional filters),
+   * looks them up in the API Gateway event-service, and filters by AcceptVisaRequest or AcceptTravelFund.
+   * Query params: type ('visa' | 'travel-fund', required), plus all getMyEvents filter/pagination params
+   */
+  public async searchEventsForApplication(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const rawType = req.query['type'] ? String(req.query['type']) : undefined;
+
+    const startTime = logger.startOperation(req, 'search_events_for_application', {
+      type: rawType,
+      has_query: Object.keys(req.query).length > 0,
+    });
+
+    try {
+      const userEmail = getEffectiveEmail(req);
+
+      if (!userEmail) {
+        throw new AuthenticationError('User authentication required', {
+          operation: 'search_events_for_application',
+        });
+      }
+
+      if (!rawType || (rawType !== 'visa' && rawType !== 'travel-fund')) {
+        throw ServiceValidationError.forField('type', 'type must be "visa" or "travel-fund"', {
+          operation: 'search_events_for_application',
+        });
+      }
+
+      const applicationType = rawType as RequestType;
+
+      const rawPageSize = parseInt(String(req.query['pageSize'] ?? DEFAULT_EVENTS_PAGE_SIZE), 10);
+      const rawOffset = parseInt(String(req.query['offset'] ?? 0), 10);
+      const rawSortOrder = String(req.query['sortOrder'] ?? 'ASC').toUpperCase() as EventSortOrder;
+
+      const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 && rawPageSize <= MAX_EVENTS_PAGE_SIZE ? rawPageSize : DEFAULT_EVENTS_PAGE_SIZE;
+      const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
+      const sortOrder: EventSortOrder = VALID_EVENT_SORT_ORDERS.includes(rawSortOrder) ? rawSortOrder : 'ASC';
+
+      const rawMyEventStatus = req.query['status'] ? String(req.query['status']) : undefined;
+
+      const options: SearchEventsForApplicationOptions = {
+        applicationType,
+        pageSize,
+        offset,
+        sortOrder,
+        sortField: req.query['sortField'] ? String(req.query['sortField']) : undefined,
+        searchQuery: req.query['searchQuery'] ? String(req.query['searchQuery']).trim() : undefined,
+        role: req.query['role'] ? String(req.query['role']) : undefined,
+        status: rawMyEventStatus && VALID_MY_EVENT_STATUS_VALUES.has(rawMyEventStatus) ? rawMyEventStatus : undefined,
+        startDateFrom: req.query['startDateFrom'] ? String(req.query['startDateFrom']) : undefined,
+        startDateTo: req.query['startDateTo'] ? String(req.query['startDateTo']) : undefined,
+        country: req.query['country'] ? String(req.query['country']) : undefined,
+        affiliatedProjectSlugs: await this.personaDetectionService.getAffiliatedProjectSlugs(req),
+      };
+
+      const response: SearchEventsResponse = await this.eventsService.searchEventsForApplication(req, userEmail, options);
+
+      logger.success(req, 'search_events_for_application', startTime, {
+        result_count: response.data.length,
+        total_size: response.metadata.totalSize,
+        application_type: applicationType,
+      });
 
       res.json(response);
     } catch (error) {

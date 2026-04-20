@@ -29,6 +29,11 @@ import {
   TravelFundApplicationResponse,
   TravelFundRequestsResponse,
   OrgSearchResponse,
+  SearchEvent,
+  SearchEventsForApplicationOptions,
+  SearchEventsMetadata,
+  SearchEventsOptions,
+  SearchEventsResponse,
   VisaRequest,
   VisaRequestApplication,
   VisaRequestApplicationResponse,
@@ -565,14 +570,7 @@ export class EventsService {
       });
     }
 
-    let eventID = payload.eventId;
-    if (process.env['NODE_ENV'] !== 'production' && process.env['API_GW_DEV_EVENT_ID_OVERRIDE']) {
-      logger.warning(req, 'submit_visa_request_application', 'Using API_GW_DEV_EVENT_ID_OVERRIDE (dev-only)', {
-        override_event_id: process.env['API_GW_DEV_EVENT_ID_OVERRIDE'],
-        original_event_id: payload.eventId,
-      });
-      eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'];
-    }
+    const eventID = payload.eventId;
 
     const body = {
       onBehalfRequest: false, // We're not including this in the form so we just default it
@@ -687,14 +685,7 @@ export class EventsService {
       });
     }
 
-    let eventID = payload.eventId;
-    if (process.env['NODE_ENV'] !== 'production' && process.env['API_GW_DEV_EVENT_ID_OVERRIDE']) {
-      logger.warning(req, 'submit_travel_fund_application', 'Using API_GW_DEV_EVENT_ID_OVERRIDE (dev-only)', {
-        override_event_id: process.env['API_GW_DEV_EVENT_ID_OVERRIDE'],
-        original_event_id: payload.eventId,
-      });
-      eventID = process.env['API_GW_DEV_EVENT_ID_OVERRIDE'];
-    }
+    const eventID = payload.eventId;
 
     const body = {
       accommodationNumberOfNights,
@@ -833,6 +824,209 @@ export class EventsService {
     logger.debug(req, 'search_organizations', 'Organization search complete', { result_count: data.length });
 
     return { data };
+  }
+
+  /**
+   * Search events via the API Gateway event-service /v2/events/search endpoint.
+   */
+  public async searchEvents(req: Request, options: SearchEventsOptions): Promise<SearchEventsResponse> {
+    const { projectName, name, projectID, eventID, pageSize, offset } = options;
+
+    logger.debug(req, 'search_events', 'Searching events via API Gateway', {
+      project_name_count: projectName?.length ?? 0,
+      name_count: name?.length ?? 0,
+      project_id_count: projectID?.length ?? 0,
+      event_id_count: eventID?.length ?? 0,
+      page_size: pageSize,
+      offset,
+    });
+
+    const apiGwAudience = process.env['API_GW_AUDIENCE'];
+
+    if (!apiGwAudience) {
+      throw new MicroserviceError('API_GW_AUDIENCE environment variable is not configured', 503, 'API_GATEWAY_MISCONFIGURED', {
+        operation: 'search_events',
+      });
+    }
+
+    if (!req.apiGatewayToken) {
+      throw new MicroserviceError('API Gateway token not available', 503, 'API_GATEWAY_UNAVAILABLE', {
+        operation: 'search_events',
+      });
+    }
+
+    const params = new URLSearchParams();
+    projectName?.forEach((v) => params.append('projectName', v));
+    name?.forEach((v) => params.append('name', v));
+    projectID?.forEach((v) => params.append('projectID', v));
+    eventID?.forEach((v) => params.append('eventID', v));
+    params.append('pageSize', String(pageSize));
+    params.append('offset', String(offset));
+
+    const targetUrl = `${apiGwAudience.replace(/\/+$/, '')}/event-service/v2/events/search?${params.toString()}`;
+
+    let upstream: globalThis.Response;
+    try {
+      upstream = await fetch(targetUrl, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${req.apiGatewayToken}`,
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (err) {
+      logger.warning(req, 'search_events', 'Upstream fetch failed, returning empty', { err });
+      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+    }
+
+    if (!upstream.ok) {
+      const errorText = await upstream.text().catch(() => '');
+      logger.warning(req, 'search_events', 'Upstream returned non-OK status, returning empty', {
+        status: upstream.status,
+        errorBody: errorText.slice(0, 500),
+      });
+      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+    }
+
+    let json: { Data?: Record<string, unknown>[]; Metadata?: { Offset?: number; PageSize?: number; TotalSize?: number } } = {};
+    try {
+      const rawBody = await upstream.text();
+      json = rawBody ? (JSON.parse(rawBody) as typeof json) : {};
+    } catch (err) {
+      logger.warning(req, 'search_events', 'Upstream returned invalid JSON, returning empty', { err });
+      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+    }
+
+    const items = json.Data ?? [];
+    const upstreamMetadata = json.Metadata ?? {};
+
+    const data: SearchEvent[] = items.map((item) => ({
+      id: String(item['ID'] ?? ''),
+      name: String(item['Name'] ?? ''),
+      projectID: String(item['ProjectID'] ?? ''),
+      projectName: String(item['ProjectName'] ?? ''),
+      startDate: String(item['StartDate'] ?? ''),
+      endDate: String(item['EndDate'] ?? ''),
+      date: this.formatDateRange(String(item['StartDate'] ?? ''), String(item['EndDate'] ?? '')),
+      status: String(item['Status'] ?? ''),
+      locationCity: String(item['LocationCity'] ?? ''),
+      locationCountry: String(item['LocationCountry'] ?? ''),
+      locationName: String(item['LocationName'] ?? ''),
+      locationAddress: String(item['LocationAddress'] ?? ''),
+      locationState: String(item['LocationState'] ?? ''),
+      locationZip: String(item['LocationZip'] ?? ''),
+      location: this.formatLocation(String(item['Location'] ?? ''), String(item['LocationCity'] ?? ''), String(item['LocationCountry'] ?? '')),
+      eventURL: String(item['EventURL'] ?? ''),
+      registrationURL: String(item['RegistrationURL'] ?? ''),
+      description: String(item['Description'] ?? ''),
+      acceptTravelFund: String(item['AcceptTravelFund'] ?? ''),
+      acceptVisaRequest: String(item['AcceptVisaRequest'] ?? ''),
+      embassy: String(item['Embassy'] ?? ''),
+      cventID: String(item['CventID'] ?? ''),
+    }));
+
+    const metadata: SearchEventsMetadata = {
+      offset: upstreamMetadata.Offset ?? offset,
+      pageSize: upstreamMetadata.PageSize ?? pageSize,
+      totalSize: upstreamMetadata.TotalSize ?? 0,
+      hasNextPage: upstreamMetadata.TotalSize !== undefined && upstreamMetadata.TotalSize > offset + pageSize,
+    };
+
+    logger.debug(req, 'search_events', 'Event search complete', { result_count: data.length, total_size: metadata.totalSize });
+
+    return { data, metadata };
+  }
+
+  /**
+   * Orchestrates two upstream calls to build a filtered, paginated event list for applications:
+   *   1. Fetch ALL of the user's upcoming registered events that match the provided filters.
+   *   2. Look up those events in the API Gateway event-service via searchEvents.
+   *   3. Filter results by AcceptVisaRequest or AcceptTravelFund depending on applicationType.
+   *   4. Apply offset/pageSize pagination to the filtered result set in memory.
+   *
+   * Pagination is applied after filtering (not at the getMyEvents level) because the
+   * AcceptVisaRequest/AcceptTravelFund filter is only available from the API Gateway —
+   * paginating earlier would produce incorrect totals.
+   */
+  public async searchEventsForApplication(req: Request, userEmail: string, options: SearchEventsForApplicationOptions): Promise<SearchEventsResponse> {
+    const { applicationType, pageSize, offset, sortOrder, sortField, searchQuery, role, status, startDateFrom, startDateTo, country, affiliatedProjectSlugs } =
+      options;
+
+    logger.debug(req, 'search_events_for_application', 'Fetching user registered events', {
+      application_type: applicationType,
+      page_size: pageSize,
+      offset,
+      has_search_query: !!searchQuery,
+      has_role: !!role,
+      has_status: !!status,
+      has_country: !!country,
+    });
+
+    const myEventsResponse = await this.getMyEvents(req, userEmail, {
+      isPast: false,
+      registeredOnly: true,
+      pageSize,
+      offset,
+      sortOrder,
+      sortField,
+      searchQuery,
+      role,
+      status,
+      startDateFrom,
+      startDateTo,
+      country,
+      affiliatedProjectSlugs,
+    });
+
+    const eventIds = myEventsResponse.data.map((e) => e.id).filter(Boolean);
+
+    if (process.env['NODE_ENV'] !== 'production' && process.env['API_GW_DEV_EVENT_ID_OVERRIDE']) {
+      logger.warning(req, 'search_events_for_application', 'Using API_GW_DEV_EVENT_ID_OVERRIDE (dev-only)', {
+        insert_event_id: process.env['API_GW_DEV_EVENT_ID_OVERRIDE'],
+        original_event_id: eventIds,
+      });
+      eventIds.push(process.env['API_GW_DEV_EVENT_ID_OVERRIDE']);
+    }
+
+    if (eventIds.length === 0) {
+      logger.debug(req, 'search_events_for_application', 'No matching registered upcoming events found, returning empty', {
+        application_type: applicationType,
+      });
+      return { data: [], metadata: { offset, pageSize, totalSize: 0, hasNextPage: false } };
+    }
+
+    logger.debug(req, 'search_events_for_application', 'Searching event details via API Gateway', {
+      event_id_count: eventIds.length,
+      application_type: applicationType,
+    });
+
+    // Step 2: fetch full event details for those IDs from the API Gateway event-service
+    const searchResponse = await this.searchEvents(req, {
+      eventID: eventIds,
+      pageSize: eventIds.length,
+      offset: 0,
+    });
+
+    // Step 3: filter by whether the event accepts the requested application type
+    const filterKey = applicationType === 'visa' ? 'acceptVisaRequest' : 'acceptTravelFund';
+    const filtered = searchResponse.data.filter((e) => e[filterKey] === 'Yes');
+
+    logger.debug(req, 'search_events_for_application', 'Filtered events by application type', {
+      total_before_filter: searchResponse.data.length,
+      total_after_filter: filtered.length,
+      application_type: applicationType,
+    });
+
+    return {
+      data: filtered,
+      metadata: {
+        offset,
+        pageSize,
+        totalSize: myEventsResponse.total,
+        // because of discrepancy between myEventsResponse.total and filtered.length, we need to calculate hasNextPage manually
+        hasNextPage: myEventsResponse.total > offset + pageSize,
+      },
+    };
   }
 
   private async executeEventRequestsQuery(

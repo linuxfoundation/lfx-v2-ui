@@ -1,15 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { ChangeDetectionStrategy, Component, computed, inject, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, model, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { EventsService } from '@app/shared/services/events.service';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
-import { MyEvent, TimeFilterValue } from '@lfx-one/shared/interfaces';
+import { RequestType, SearchEvent, SearchEventsResponse, TimeFilterValue } from '@lfx-one/shared/interfaces';
+import { MessageService } from 'primeng/api';
 import { catchError, combineLatest, debounceTime, EMPTY, finalize, of, scan, skip, switchMap, tap } from 'rxjs';
 import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.constants';
 @Component({
@@ -22,8 +22,10 @@ import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.cons
 export class EventSelectionComponent {
   private readonly eventsService = inject(EventsService);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly messageService = inject(MessageService);
 
-  public selectedEvent = model<MyEvent | null>(null);
+  public readonly type = input.required<RequestType>();
+  public selectedEvent = model<SearchEvent | null>(null);
 
   // Search via its own form (required by lfx-input-text); debounced separately to avoid extra API calls on each keystroke
   public readonly searchForm = this.fb.group({ searchQuery: '' });
@@ -71,7 +73,7 @@ export class EventSelectionComponent {
 
   // Combine initial events with any "load more" results
   protected readonly allEvents = computed(() => this.initialEventsResponse().data);
-  protected readonly hasMore = computed(() => this.allEvents().length < this.initialEventsResponse().total);
+  protected readonly hasMore = computed(() => this.initialEventsResponse().metadata.hasNextPage);
 
   public constructor() {
     // Reset additional events when filters change (skip initial emission)
@@ -82,7 +84,7 @@ export class EventSelectionComponent {
       });
   }
 
-  public onSelectEvent(event: MyEvent): void {
+  public onSelectEvent(event: SearchEvent): void {
     this.selectedEvent.set(event);
   }
 
@@ -107,8 +109,9 @@ export class EventSelectionComponent {
 
     return {};
   }
-
   private initializeEvents() {
+    const emptyResponse: SearchEventsResponse = { data: [], metadata: { offset: 0, pageSize: 0, totalSize: 0, hasNextPage: false } };
+
     return toSignal(
       combineLatest([toObservable(this.activeFilters), toObservable(this.currentOffset)]).pipe(
         tap(() => {
@@ -119,13 +122,15 @@ export class EventSelectionComponent {
           }
         }),
         switchMap(([filters, offset]) =>
-          this.eventsService.getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset, registeredOnly: true, ...filters }).pipe(
+          this.eventsService.searchEventsForApplication({ type: this.type(), pageSize: EVENT_SELECTION_PAGE_SIZE, offset, ...filters }).pipe(
             catchError(() => {
               if (offset === 0) {
                 // Initial load failed - show empty state
-                return of(EMPTY_MY_EVENTS_RESPONSE);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load events. Please try again.' });
+                return of(emptyResponse);
               }
               // Load more failed - revert offset so retry fetches the same page
+              this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load more events. Please try again.' });
               this.currentOffset.update((curr) => Math.max(0, curr - EVENT_SELECTION_PAGE_SIZE));
               return EMPTY; // Don't emit to scan, preserving existing data
             }),
@@ -137,13 +142,13 @@ export class EventSelectionComponent {
         ),
         scan((acc, curr) => {
           // Reset when offset is 0 (filter changed), otherwise accumulate
-          if (curr.offset === 0) {
+          if (curr.metadata.offset === 0) {
             return curr;
           }
           return { ...curr, data: [...acc.data, ...curr.data] };
-        }, EMPTY_MY_EVENTS_RESPONSE)
+        }, emptyResponse)
       ),
-      { initialValue: EMPTY_MY_EVENTS_RESPONSE }
+      { initialValue: emptyResponse }
     );
   }
 

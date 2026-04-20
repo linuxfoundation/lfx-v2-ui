@@ -554,3 +554,84 @@ export interface OrgSearchResponse {
 export interface SalesforceIdResponse {
   id: string;
 }
+
+// ---------------------------------------------------------------------------
+// Event Search (API Gateway event-service)
+// ---------------------------------------------------------------------------
+
+/**
+ * A single event result from the API Gateway event-service /v2/events/search endpoint.
+ */
+export interface SearchEvent {
+  id: string;
+  name: string;
+  projectID: string;
+  projectName: string;
+  startDate: string;
+  endDate: string;
+  date: string;
+  status: string;
+  locationCity: string;
+  locationCountry: string;
+  locationName: string;
+  locationAddress: string;
+  locationState: string;
+  locationZip: string;
+  location: string;
+  eventURL: string;
+  registrationURL: string;
+  description: string;
+  acceptTravelFund: string;
+  acceptVisaRequest: string;
+  embassy: string;
+  cventID: string;
+}
+
+/**
+ * Pagination metadata from the API Gateway event-service search response.
+ */
+export interface SearchEventsMetadata {
+  offset: number;
+  pageSize: number;
+  totalSize: number;
+  hasNextPage: boolean;
+}
+
+/**
+ * Response from the /api/events/search endpoint.
+ */
+export interface SearchEventsResponse {
+  data: SearchEvent[];
+  metadata: SearchEventsMetadata;
+}
+
+/**
+ * Server-side options for searching events via the API Gateway.
+ */
+export interface SearchEventsOptions {
+  projectName?: string[];
+  name?: string[];
+  projectID?: string[];
+  eventID?: string[];
+  pageSize: number;
+  offset: number;
+}
+
+/**
+ * Frontend parameters for the /api/events/search-for-application endpoint.
+ * Extends GetMyEventsParams — all existing filters apply to the underlying getMyEvents call.
+ * isPast and registeredOnly are fixed server-side (always false/true) and are ignored if provided.
+ */
+export interface SearchEventsForApplicationParams extends GetMyEventsParams {
+  /** Determines which events to return — 'visa' filters by AcceptVisaRequest, 'travel-fund' by AcceptTravelFund */
+  type: 'visa' | 'travel-fund';
+}
+
+/**
+ * Server-side options for searchEventsForApplication.
+ * Extends GetMyEventsOptions — all filters are forwarded to the underlying getMyEvents call.
+ * isPast and registeredOnly are always overridden to false/true regardless of what is passed.
+ */
+export interface SearchEventsForApplicationOptions extends GetMyEventsOptions {
+  applicationType: RequestType;
+}

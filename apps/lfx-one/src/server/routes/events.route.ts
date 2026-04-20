@@ -17,5 +17,6 @@ router.get('/travel-fund-requests', (req, res, next) => eventsController.getTrav
 router.post('/visa-applications', (req, res, next) => eventsController.submitVisaRequestApplication(req, res, next));
 router.post('/travel-fund-applications', (req, res, next) => eventsController.submitTravelFundApplication(req, res, next));
 router.get('/search-organizations', (req, res, next) => eventsController.searchOrganizations(req, res, next));
+router.get('/search-for-application', (req, res, next) => eventsController.searchEventsForApplication(req, res, next));
 router.get('/certificate', (req, res, next) => eventsController.getCertificate(req, res, next));
 export default router;
