@@ -640,7 +640,7 @@ function protoSparkline(data: number[], color: string) {
 }
 
 /** Helper to build a dual-signal row with sparkline */
-function protoDualSignal(label: string, value: string, data: number[], color: string, change?: string, trend?: 'up' | 'down'): DualSignalRow {
+function protoDualSignal(label: string, value: string, data: number[], color: string, change?: string, trend?: 'up' | 'down' | 'neutral'): DualSignalRow {
   return {
     label,
     value,
@@ -688,11 +688,11 @@ function paidMediaMomChange(trend: { spend: number }[]): string | undefined {
 }
 
 /** Compute trend direction from a paid media monthly trend series */
-function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | undefined {
+function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | 'neutral' | undefined {
   if (trend.length < 2) return undefined;
   const prev = trend[trend.length - 2].spend;
   const curr = trend[trend.length - 1].spend;
-  return curr >= prev ? 'up' : 'down';
+  return curr === prev ? 'neutral' : curr > prev ? 'up' : 'down';
 }
 
 /** Extract values from NorthStarMonthlyDataPoint[] */
@@ -721,9 +721,11 @@ function eventAttrMomChange(series: number[]): string | undefined {
 }
 
 /** Compute trend direction from event-attribution monthly revenue series */
-function eventAttrTrendDirection(series: number[]): 'up' | 'down' | undefined {
+function eventAttrTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | undefined {
   if (series.length < 2) return undefined;
-  return series[series.length - 1] >= series[series.length - 2] ? 'up' : 'down';
+  const curr = series[series.length - 1];
+  const prev = series[series.length - 2];
+  return curr === prev ? 'neutral' : curr > prev ? 'up' : 'down';
 }
 
 /**
@@ -745,8 +747,8 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       description: 'Event attendees who engage via newsletter, community, working groups, training, code, or web within 90 days.',
       value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
       changePercentage: formatPpMomChange(flywheel.reengagement.reengagementMomChange),
-      trend: flywheel.reengagement.reengagementMomChange >= 0 ? 'up' : 'down',
-      subtitle: 'Re-engagement within 90 days · Sparkline: monthly re-engaged count',
+      trend: flywheel.reengagement.reengagementMomChange === 0 ? 'neutral' : flywheel.reengagement.reengagementMomChange > 0 ? 'up' : 'down',
+      subtitle: 'Re-engagement within 90 days',
       chartData: flywheel.monthlyData.length > 0 ? protoSparkline(monthlyValues(flywheel.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText:
@@ -779,7 +781,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: formatNumber(engagedCommunity.totalMembers),
       changePercentage: formatMomChange(engagedCommunity.changePercentage),
       trend: engagedCommunity.trend,
-      subtitle: `${Object.values(engagedCommunity.breakdown).filter((v) => v > 0).length} channels · Last 6 months`,
+      subtitle: 'Last 6 months',
       chartData: protoSparkline(engagedCommunity.monthlyData.length > 0 ? monthlyValues(engagedCommunity.monthlyData) : [0], lfxColors.blue[500]),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
@@ -794,8 +796,8 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       description: 'Year-to-date event count, attendees, and net revenue with YoY comparison.',
       value: formatNumber(eventGrowth.totalRegistrants),
       changePercentage: formatYoyChange(eventGrowth.registrantYoyChange),
-      trend: eventGrowth.registrantYoyChange >= 0 ? 'up' : 'down',
-      subtitle: `${formatNumber(eventGrowth.totalEvents)} events · YTD registrants`,
+      trend: eventGrowth.registrantYoyChange === 0 ? 'neutral' : eventGrowth.registrantYoyChange > 0 ? 'up' : 'down',
+      subtitle: `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD registrants`,
       chartData: eventGrowth.monthlyData.length > 0 ? protoSparkline(monthlyValues(eventGrowth.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Year-to-date event attendees and YoY change. Source: Event registrations.',
@@ -854,7 +856,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           [],
           lfxColors.emerald[500],
           formatPpMomChange(brandHealth.sentimentMomChangePp),
-          brandHealth.sentimentMomChangePp >= 0 ? 'up' : 'down'
+          brandHealth.sentimentMomChangePp === 0 ? 'neutral' : brandHealth.sentimentMomChangePp > 0 ? 'up' : 'down'
         ),
       ],
       caption: `${formatNumber(brandHealth.totalMentions)} mentions · Last 6 months`,

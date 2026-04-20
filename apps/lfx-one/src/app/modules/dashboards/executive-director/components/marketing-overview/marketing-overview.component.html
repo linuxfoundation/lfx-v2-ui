@@ -54,7 +54,11 @@
                       <div class="flex items-center justify-between">
                         <span class="text-xs text-gray-500">{{ row.label }}</span>
                         @if (row.changePercentage) {
-                          <span class="text-xs font-medium" [class.text-emerald-600]="row.trend === 'up'" [class.text-red-600]="row.trend === 'down'">
+                          <span
+                            class="text-xs font-medium"
+                            [class.text-emerald-600]="row.trend === 'up'"
+                            [class.text-red-600]="row.trend === 'down'"
+                            [class.text-gray-500]="row.trend === 'neutral'">
                             {{ row.changePercentage }}
                           </span>
                         }
@@ -99,7 +103,11 @@
                 <div class="flex items-center gap-2">
                   <span class="text-xl font-semibold text-gray-900">{{ card.value }}</span>
                   @if (card.changePercentage) {
-                    <span class="text-xs font-medium" [class.text-emerald-600]="card.trend === 'up'" [class.text-red-600]="card.trend === 'down'">
+                    <span
+                      class="text-xs font-medium"
+                      [class.text-emerald-600]="card.trend === 'up'"
+                      [class.text-red-600]="card.trend === 'down'"
+                      [class.text-gray-500]="card.trend === 'neutral'">
                       {{ card.changePercentage }}
                     </span>
                   }

@@ -32,7 +32,7 @@
 
       <!-- Description -->
       @if (description()) {
-        <p class="text-[11px] text-gray-400 leading-snug -mt-1 mb-0">{{ description() }}</p>
+        <p class="text-[11px] text-gray-500 leading-snug -mt-1 mb-0">{{ description() }}</p>
       }
 
       <!-- Body: Chart or Custom Content -->
@@ -63,6 +63,7 @@
                   class="text-xs font-medium"
                   [class.text-emerald-600]="trend() === 'up'"
                   [class.text-red-600]="trend() === 'down'"
+                  [class.text-gray-500]="trend() === 'neutral'"
                   data-testid="metric-card-change-percentage">
                   {{ changePercentage() }}
                 </span>
