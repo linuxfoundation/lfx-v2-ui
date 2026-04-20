@@ -37,6 +37,7 @@ export class PersonaService {
   public readonly personaProjects: WritableSignal<Partial<Record<PersonaType, PersonaProject[]>>>;
   public readonly detectedProjects: WritableSignal<EnrichedPersonaProject[]>;
   private readonly lastKnownOrganizations: WritableSignal<Account[]> = signal<Account[]>([]);
+  private readonly userSelected: WritableSignal<boolean>;
 
   public readonly isBoardScoped: Signal<boolean>;
   public readonly hasBoardRole: Signal<boolean>;
@@ -51,6 +52,7 @@ export class PersonaService {
     const stored = this.loadFromCookie();
     this.currentPersona = signal<PersonaType>(stored?.primary ?? 'contributor');
     this.allPersonas = signal<PersonaType[]>(stored?.all ?? ['contributor']);
+    this.userSelected = signal<boolean>(stored?.userSelected ?? false);
     const authState = this.transferState.get(makeStateKey<AuthContext>('auth'), { authenticated: false, user: null });
     this.personaProjects = signal<Partial<Record<PersonaType, PersonaProject[]>>>(authState.personaProjects ?? {});
     this.detectedProjects = signal<EnrichedPersonaProject[]>(authState.projects ?? []);
@@ -66,7 +68,14 @@ export class PersonaService {
   }
 
   public setPersona(persona: PersonaType): void {
-    this.setPersonas(persona, this.allPersonas());
+    this.currentPersona.set(persona);
+    this.userSelected.set(true);
+    this.persistToCookie({
+      primary: persona,
+      all: this.allPersonas(),
+      organizations: this.lastKnownOrganizations(),
+      userSelected: true,
+    });
   }
 
   public setPersonas(primary: PersonaType, all: PersonaType[], organizations?: Account[]): void {
@@ -75,7 +84,12 @@ export class PersonaService {
     if (organizations !== undefined) {
       this.lastKnownOrganizations.set(organizations);
     }
-    this.persistToCookie({ primary, all, organizations: this.lastKnownOrganizations() });
+    this.persistToCookie({
+      primary,
+      all,
+      organizations: this.lastKnownOrganizations(),
+      userSelected: this.userSelected(),
+    });
   }
 
   /**
@@ -139,13 +153,28 @@ export class PersonaService {
     this.isRootWriter.set(response.isRootWriter ?? false);
 
     if (response.personas.length > 0) {
-      this.setPersonas(response.personas[0], response.personas, response.organizations);
+      if (this.userSelected()) {
+        // User's explicit choice wins — only refresh the allowed list and organizations.
+        this.allPersonas.set(response.personas);
+        if (response.organizations !== undefined) {
+          this.lastKnownOrganizations.set(response.organizations);
+        }
+        this.persistToCookie({
+          primary: this.currentPersona(),
+          all: response.personas,
+          organizations: this.lastKnownOrganizations(),
+          userSelected: true,
+        });
+      } else {
+        this.setPersonas(response.personas[0], response.personas, response.organizations);
+      }
     } else if (response.organizations) {
       this.lastKnownOrganizations.set(response.organizations);
       this.persistToCookie({
         primary: this.currentPersona(),
         all: this.allPersonas(),
         organizations: response.organizations,
+        userSelected: this.userSelected(),
       });
     }
 

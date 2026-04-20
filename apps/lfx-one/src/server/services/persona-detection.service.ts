@@ -96,7 +96,19 @@ export class PersonaDetectionService {
 
     // isRootWriter is request-scoped (bearer-token dependent) — resolve per-request and merge.
     const [detections, isRootWriter] = await Promise.all([this.getPersonaDetections(req, username, email, cacheKey), this.checkRootWriter(req)]);
-    return { ...detections, isRootWriter };
+
+    // Compute the per-request persona list without mutating the cached detections object.
+    let personas = detections.personas;
+    if (isRootWriter) {
+      personas = this.applyForcedPersona(personas, 'executive-director');
+    }
+
+    const forcedPersona = req.appSession?.['impersonationPersonaContext'] as PersonaType | undefined;
+    if (forcedPersona) {
+      personas = this.applyForcedPersona(personas, forcedPersona);
+    }
+
+    return { ...detections, personas, isRootWriter };
   }
 
   public async checkRootWriter(req: Request): Promise<boolean> {
@@ -425,5 +437,10 @@ export class PersonaDetectionService {
     });
 
     return accounts;
+  }
+
+  private applyForcedPersona(personas: PersonaType[], forced: PersonaType): PersonaType[] {
+    const filtered = personas.filter((p) => p !== forced);
+    return [forced, ...filtered];
   }
 }
