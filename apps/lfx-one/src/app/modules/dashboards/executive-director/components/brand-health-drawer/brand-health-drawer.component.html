@@ -220,12 +220,17 @@
           <p class="text-sm text-red-700">Most relevant negative mentions by relevance score</p>
         </div>
         <div class="flex flex-col gap-3">
-          @for (mention of data().topNegativeMentions; track mention.url) {
+          @for (mention of data().topNegativeMentions; track $index) {
             <div class="flex flex-col gap-2 p-3 bg-white border border-red-200 rounded-lg" data-testid="brand-health-drawer-negative-mention">
               <div class="flex items-start justify-between gap-2">
                 <span class="text-sm font-medium text-gray-900 line-clamp-2">{{ mention.title || mention.body }}</span>
                 @if (mention.url) {
-                  <a [href]="mention.url" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 text-gray-400 hover:text-blue-500">
+                  <a
+                    [href]="mention.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-shrink-0 text-gray-400 hover:text-blue-500"
+                    aria-label="Open mention in new tab">
                     <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
                   </a>
                 }
@@ -264,12 +269,17 @@
           <p class="text-sm text-green-700">Most relevant positive mentions by relevance score</p>
         </div>
         <div class="flex flex-col gap-3">
-          @for (mention of data().topPositiveMentions; track mention.url) {
+          @for (mention of data().topPositiveMentions; track $index) {
             <div class="flex flex-col gap-2 p-3 bg-white border border-green-200 rounded-lg" data-testid="brand-health-drawer-positive-mention">
               <div class="flex items-start justify-between gap-2">
                 <span class="text-sm font-medium text-gray-900 line-clamp-2">{{ mention.title || mention.body }}</span>
                 @if (mention.url) {
-                  <a [href]="mention.url" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 text-gray-400 hover:text-blue-500">
+                  <a
+                    [href]="mention.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex-shrink-0 text-gray-400 hover:text-blue-500"
+                    aria-label="Open mention in new tab">
                     <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
                   </a>
                 }
