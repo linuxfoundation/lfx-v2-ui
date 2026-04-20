@@ -220,7 +220,7 @@ export class MarketingOverviewComponent {
   protected readonly nonNorthStarCards = computed<DashboardMetricCard[]>(() => this.filteredCards().filter((c) => c.category !== 'memberships'));
   protected readonly totalCardCount = computed<number>(() => this.filteredCards().length);
 
-  constructor() {
+  public constructor() {
     // Clear cached mentions when the foundation changes so stale data from a
     // previously selected foundation isn't shown.
     effect(() => {
