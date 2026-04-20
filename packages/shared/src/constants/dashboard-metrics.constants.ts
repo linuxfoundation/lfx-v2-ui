@@ -768,7 +768,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       subtitle: `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}% · Last 6 months`,
       chartData: protoSparkline(memberAcquisition.totalMembersMonthlyData.length > 0 ? memberAcquisition.totalMembersMonthlyData : [0], lfxColors.blue[500]),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-      tooltipText: 'Total paying corporate members with monthly net new over the last 6 months. Source: Salesforce B2B memberships.',
+      tooltipText: 'Total paying corporate members with monthly net new over the last 6 months.',
       drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
     } as DashboardMetricCard,
     {
@@ -800,7 +800,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       subtitle: `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD registrants`,
       chartData: eventGrowth.monthlyData.length > 0 ? protoSparkline(monthlyValues(eventGrowth.monthlyData), lfxColors.blue[500]) : EMPTY_CHART_DATA,
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-      tooltipText: 'Year-to-date event attendees and YoY change. Source: Event registrations.',
+      tooltipText: 'Year-to-date event attendees and YoY change.',
       drawerType: DashboardDrawerType.NorthStarEventGrowth,
     } as DashboardMetricCard,
 
@@ -811,7 +811,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'brand',
       testId: 'ed-evo-brand-reach',
-      description: 'Social followers across all platforms and monthly website sessions from GA4.',
+      description: 'Social followers across all platforms and monthly website sessions.',
       customContentType: 'dual-signal',
       dualSignals: [
         protoDualSignal(
@@ -841,7 +841,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'brand',
       testId: 'ed-evo-brand-health',
-      description: 'Total brand mentions from Octolens social listening with sentiment breakdown.',
+      description: 'Total brand mentions with sentiment breakdown.',
       customContentType: 'dual-signal',
       dualSignals: [
         protoDualSignal(
@@ -860,7 +860,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         ),
       ],
       caption: `${formatNumber(brandHealth.totalMentions)} mentions · Last 6 months`,
-      tooltipText: 'Total brand mentions across social and web (Octolens) with sentiment breakdown.',
+      tooltipText: 'Total brand mentions across social and web with sentiment breakdown.',
       drawerType: DashboardDrawerType.BrandHealth,
     } as DashboardMetricCard,
 
