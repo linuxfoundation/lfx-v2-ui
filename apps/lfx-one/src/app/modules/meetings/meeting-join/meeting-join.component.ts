@@ -29,6 +29,7 @@ import {
   MeetingAttachment,
   MeetingOccurrence,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -212,6 +213,15 @@ export class MeetingJoinComponent implements OnInit {
   public canToggleRsvpView: Signal<boolean>;
   public showMyRsvp: WritableSignal<boolean> = signal<boolean>(false);
 
+  // Current user's RSVP for this meeting (null when not responded). Fetched at this level so
+  // the detail page can show the RSVP status even in the default guest-count view, without
+  // waiting for the user to click "Set My RSVP" to mount the button-group child.
+  public currentUserRsvp: Signal<MeetingRsvp | null>;
+  public currentUserRsvpLabel: Signal<string | null>;
+  public currentUserRsvpIcon: Signal<string | null>;
+  public rsvpToggleLabel: Signal<string>;
+  private rsvpRefreshTrigger$ = new BehaviorSubject<void>(undefined);
+
   // Form value signals for reactivity
   public formValues: Signal<{ name: string; email: string; organization: string }>;
 
@@ -243,6 +253,10 @@ export class MeetingJoinComponent implements OnInit {
     this.isInvited = this.initializeIsInvited();
     this.canRegisterForMeeting = this.initializeCanRegisterForMeeting();
     this.canToggleRsvpView = this.initializeCanToggleRsvpView();
+    this.currentUserRsvp = this.initializeCurrentUserRsvp();
+    this.currentUserRsvpLabel = this.initializeCurrentUserRsvpLabel();
+    this.currentUserRsvpIcon = this.initializeCurrentUserRsvpIcon();
+    this.rsvpToggleLabel = this.initializeRsvpToggleLabel();
 
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
@@ -312,6 +326,12 @@ export class MeetingJoinComponent implements OnInit {
 
   public onRsvpViewToggle(): void {
     this.showMyRsvp.set(!this.showMyRsvp());
+  }
+
+  public onRsvpChanged(): void {
+    // rsvp-button-group emits after the POST completes; re-fetch so the chip and toggle label
+    // reflect the new response immediately (and on subsequent navigations).
+    this.rsvpRefreshTrigger$.next();
   }
 
   public openMaterialsDrawer(): void {
@@ -847,6 +867,69 @@ export class MeetingJoinComponent implements OnInit {
 
   private initializeCanToggleRsvpView(): Signal<boolean> {
     return computed(() => !!this.meeting()?.organizer && this.isInvited());
+  }
+
+  private initializeCurrentUserRsvp(): Signal<MeetingRsvp | null> {
+    const meeting$ = toObservable(this.meeting);
+    const occurrence$ = toObservable(this.currentOccurrence);
+    const authenticated$ = toObservable(this.authenticated);
+    const canToggle$ = toObservable(this.canToggleRsvpView);
+
+    return toSignal(
+      combineLatest([meeting$, occurrence$, authenticated$, canToggle$, this.rsvpRefreshTrigger$]).pipe(
+        switchMap(([meeting, occurrence, authenticated, canToggle]) => {
+          // Only fetch when the user can actually RSVP (organizer + invited). Non-organizer invited
+          // users are already handled by the rsvp-button-group component directly.
+          if (!authenticated || !canToggle || !meeting?.id) {
+            return of(null);
+          }
+          const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
+          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(catchError(() => of(null)));
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializeCurrentUserRsvpLabel(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'Yes';
+        case 'declined':
+          return 'No';
+        case 'maybe':
+          return 'Maybe';
+        default:
+          return rsvp.response_type;
+      }
+    });
+  }
+
+  private initializeCurrentUserRsvpIcon(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'fa-solid fa-circle-check text-emerald-500';
+        case 'declined':
+          return 'fa-solid fa-circle-xmark text-red-500';
+        case 'maybe':
+          return 'fa-solid fa-clock text-amber-500';
+        default:
+          return null;
+      }
+    });
+  }
+
+  private initializeRsvpToggleLabel(): Signal<string> {
+    return computed(() => {
+      if (this.showMyRsvp()) return 'Show Guests';
+      return this.currentUserRsvp() ? 'Update My RSVP' : 'Set My RSVP';
+    });
   }
 
   private initializeEmailError(): Signal<boolean> {
