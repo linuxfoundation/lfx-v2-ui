@@ -206,7 +206,7 @@
           </div>
         </div>
       </lfx-card>
-    } @else if (visibleMeetings().length === 0 && (project()?.uid || activeLens() === 'me')) {
+    } @else if (visibleMeetings().length === 0 && (project()?.uid || activeLens() === 'me') && !(timeFilter() === 'pending-rsvp' && hasMore())) {
       <lfx-card>
         <div class="flex items-center justify-center p-16">
           <div class="text-center max-w-md">
@@ -223,7 +223,7 @@
           </div>
         </div>
       </lfx-card>
-    } @else if (visibleMeetings().length > 0) {
+    } @else if (visibleMeetings().length > 0 || (timeFilter() === 'pending-rsvp' && hasMore())) {
       <div class="flex flex-col gap-4">
         @for (meeting of visibleMeetings(); track meeting.id; let i = $index) {
           <!-- Invisible sentinel at the midpoint triggers auto-load when scrolled into view -->

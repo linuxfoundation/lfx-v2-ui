@@ -67,9 +67,13 @@ export class MeetingsDashboardComponent {
   public debouncedSearchQuery: Signal<string>;
   public timeFilter: WritableSignal<'upcoming' | 'past' | 'pending-rsvp'>;
 
-  // RSVP map for the "Pending RSVP" time filter: meetingId -> user's RSVP (null = not yet responded).
-  // Populated lazily via initRsvpFetcher() when the filter is active.
+  // RSVP state for the "Pending RSVP" time filter. Populated lazily via initRsvpFetcher() when the filter is active.
+  // - rsvpMap: meetingId -> user's RSVP (null = fetched and user has not responded)
+  // - rsvpFetchedIds: ids for which the fetch has resolved (used to distinguish unfetched from explicit null)
+  // - rsvpInflightIds: ids currently being fetched (plain Set — prevents duplicate requests across overlapping batches)
   private readonly rsvpMap: WritableSignal<Map<string, MeetingRsvp | null>> = signal(new Map());
+  private readonly rsvpFetchedIds: WritableSignal<Set<string>> = signal(new Set());
+  private readonly rsvpInflightIds = new Set<string>();
   protected readonly rsvpLoading: WritableSignal<boolean> = signal(false);
   public meetingTypeFilter: WritableSignal<string | null>;
   public meetingTypeOptions: Signal<{ label: string; value: string | null }[]>;
@@ -496,9 +500,11 @@ export class MeetingsDashboardComponent {
         return base;
       }
       const map = this.rsvpMap();
-      // Keep meetings where the current user has no recorded RSVP (null) or the entry hasn't been fetched yet.
-      // Once fetched and non-null, drop them — the user has already responded.
-      return base.filter((m) => map.get(m.id) == null);
+      const fetched = this.rsvpFetchedIds();
+      // Only surface a meeting as "pending" once its RSVP has been fetched AND the response is explicitly null.
+      // An unfetched entry (map.get() === undefined) stays hidden until the lookup completes, so
+      // already-answered meetings don't flash in the list during the initial batch.
+      return base.filter((m) => fetched.has(m.id) && map.get(m.id) === null);
     });
   }
 
@@ -508,24 +514,38 @@ export class MeetingsDashboardComponent {
         return;
       }
       const current = this.filteredMeetings();
-      const map = this.rsvpMap();
+      const fetched = this.rsvpFetchedIds();
       const toFetch: string[] = [];
       for (const m of current) {
-        if (!map.has(m.id)) {
+        if (!fetched.has(m.id) && !this.rsvpInflightIds.has(m.id)) {
           toFetch.push(m.id);
         }
       }
       if (toFetch.length === 0) {
         return;
       }
+      // Mark in-flight BEFORE awaiting so concurrent effect re-runs don't re-request the same ids.
+      toFetch.forEach((id) => this.rsvpInflightIds.add(id));
       this.rsvpLoading.set(true);
-      Promise.all(toFetch.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id).pipe(catchError(() => of(null))))))
+      // MeetingService.getMeetingRsvpForCurrentUser already catches+logs and returns of(null), so no wrapper here.
+      Promise.all(toFetch.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id))))
         .then((results) => {
-          const next = new Map(this.rsvpMap());
-          toFetch.forEach((id, i) => next.set(id, results[i] ?? null));
-          this.rsvpMap.set(next);
+          const nextMap = new Map(this.rsvpMap());
+          const nextFetched = new Set(this.rsvpFetchedIds());
+          toFetch.forEach((id, i) => {
+            nextMap.set(id, results[i] ?? null);
+            nextFetched.add(id);
+          });
+          this.rsvpMap.set(nextMap);
+          this.rsvpFetchedIds.set(nextFetched);
         })
-        .finally(() => this.rsvpLoading.set(false));
+        .finally(() => {
+          toFetch.forEach((id) => this.rsvpInflightIds.delete(id));
+          // Only clear the loading flag once ALL overlapping batches are done.
+          if (this.rsvpInflightIds.size === 0) {
+            this.rsvpLoading.set(false);
+          }
+        });
     });
   }
 

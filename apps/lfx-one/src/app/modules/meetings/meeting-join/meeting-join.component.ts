@@ -884,7 +884,9 @@ export class MeetingJoinComponent implements OnInit {
             return of(null);
           }
           const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
-          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(catchError(() => of(null)));
+          // startWith(null) resets the signal on each refresh so a stale "Your RSVP" chip from the
+          // previous meeting doesn't linger during client-side navigation. Service already handles errors.
+          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(startWith(null));
         })
       ),
       { initialValue: null }
