@@ -20,7 +20,9 @@
         ariaLabel="Scroll left"
         (onClick)="scrollShadowDirective()?.scrollLeft()"
         data-testid="ed-evolution-carousel-prev" />
-      <span class="text-xs text-gray-500 tabular-nums" data-testid="ed-evolution-carousel-count">{{ totalCardCount() }} cards</span>
+      <span class="text-xs text-gray-500 tabular-nums" data-testid="ed-evolution-carousel-count"
+        >{{ totalCardCount() }} {{ totalCardCount() === 1 ? 'card' : 'cards' }}</span
+      >
       <lfx-button
         icon="fa-light fa-chevron-right"
         [outlined]="true"

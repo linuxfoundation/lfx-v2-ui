@@ -644,7 +644,7 @@ function protoSparkline(data: number[], color: string) {
  *  Adding ±2% variation gives Chart.js a real range while looking nearly flat. */
 function flatSparklineData(value: number): number[] {
   const nudge = Math.max(value * 0.02, 1);
-  return [value - nudge, value, value, value, value, value + nudge];
+  return [Math.max(value - nudge, 0), value, value, value, value, value + nudge];
 }
 
 /** Normalize a server-provided trend: treat zero change as neutral instead of up.
