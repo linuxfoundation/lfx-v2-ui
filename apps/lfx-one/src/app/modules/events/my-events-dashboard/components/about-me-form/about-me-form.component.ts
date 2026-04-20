@@ -78,7 +78,7 @@ export class AboutMeFormComponent {
     const rawNights = String(raw.accommodationNumberOfNights).trim();
     return {
       ...raw,
-      accommodationNumberOfNights: WHOLE_NUMBER_PATTERN.test(rawNights) ? Number(rawNights) : 0,
+      accommodationNumberOfNights: WHOLE_NUMBER_PATTERN.test(rawNights) ? Number(rawNights) : Number.NaN,
     };
   }
 }

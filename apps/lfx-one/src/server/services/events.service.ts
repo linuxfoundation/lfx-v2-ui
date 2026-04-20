@@ -559,7 +559,7 @@ export class EventsService {
     if (!applicantInfo.organizationID) missingFields.push('organizationID');
     if (!applicantInfo.embassyCity) missingFields.push('embassyCity');
     if (missingFields.length > 0) {
-      throw new MicroserviceError(`Missing required visa request fields: ${missingFields.join(', ')}`, 422, 'MISSING_REQUIRED_FIELDS', {
+      throw new MicroserviceError(`Missing required visa request fields: ${missingFields.join(', ')}`, 422, 'INVALID_REQUEST_FIELDS', {
         operation: 'submit_visa_request_application',
         errorBody: { missingFields },
       });
@@ -721,7 +721,7 @@ export class EventsService {
       willingToWriteBlogOnEvent: aboutMe.willingToBlog === 'yes',
     };
 
-    logger.debug(req, 'submit_travel_fund_application', 'Calling API Gateway travel fund endpoint', {
+    logger.info(req, 'submit_travel_fund_application', 'Calling API Gateway travel fund endpoint', {
       server_user_id: serverUserId,
       event_id: payload.eventId,
     });
