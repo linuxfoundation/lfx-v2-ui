@@ -225,6 +225,16 @@
       </lfx-card>
     } @else if (visibleMeetings().length > 0 || (timeFilter() === 'pending-rsvp' && hasMore())) {
       <div class="flex flex-col gap-4">
+        @if (timeFilter() === 'pending-rsvp' && visibleMeetings().length === 0 && hasMore()) {
+          <!-- Standalone sentinel: when the first page has no pending-RSVP items but more pages exist,
+               the @for loop below is empty and its embedded sentinel never renders. This separate
+               sentinel keeps infinite-scroll auto-loading alive in that case. -->
+          @defer (on viewport) {
+            <div lfxOnRender (rendered)="loadMore()" class="h-0 w-full"></div>
+          } @placeholder {
+            <div class="h-0 w-full" data-testid="meetings-load-more-sentinel"></div>
+          }
+        }
         @for (meeting of visibleMeetings(); track meeting.id; let i = $index) {
           <!-- Invisible sentinel at the midpoint triggers auto-load when scrolled into view -->
           @if (i === autoLoadTriggerIndex() && hasMore()) {

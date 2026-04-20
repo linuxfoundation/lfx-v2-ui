@@ -209,6 +209,9 @@ export class MeetingsDashboardComponent {
     this.meetingsLoading.set(true);
     this.pastMeetingsLoading.set(true);
     this.refresh$.next();
+    // Any dashboard-level refresh (meeting create/update/delete) may invalidate cached RSVPs;
+    // clear so the next pending-rsvp view re-reads from the server.
+    this.clearRsvpCache();
   }
 
   public onMeetingTypeChange(value: string | null): void {
@@ -228,6 +231,9 @@ export class MeetingsDashboardComponent {
     this.timeFilter.set(value);
     this.foundationFilter.set(null);
     this.projectFilter.set(null);
+    // Clear RSVP cache on every toggle. Users who leave pending-rsvp, respond to a meeting
+    // elsewhere, and toggle back should see a fresh fetch instead of the old null entries.
+    this.clearRsvpCache();
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { time: value === 'upcoming' ? null : value },
@@ -506,6 +512,12 @@ export class MeetingsDashboardComponent {
       // already-answered meetings don't flash in the list during the initial batch.
       return base.filter((m) => fetched.has(m.id) && map.get(m.id) === null);
     });
+  }
+
+  private clearRsvpCache(): void {
+    this.rsvpMap.set(new Map());
+    this.rsvpFetchedIds.set(new Set());
+    this.rsvpInflightIds.clear();
   }
 
   private initRsvpFetcher(): void {
