@@ -3700,7 +3700,7 @@ export class ProjectService {
    * Get brand health metrics from Snowflake (Share of Voice)
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
    */
-  public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+  public async getBrandHealth(foundationSlug: string, includeMentions = false): Promise<BrandHealthResponse> {
     const startTime = Date.now();
     logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
 
@@ -3804,6 +3804,7 @@ export class ProjectService {
         MENTION_TS: string;
       }
 
+      const emptyMentionRows = { rows: [] as MentionRow[] };
       const [summaryResult, trendResult, projectsResult, positiveMentionsResult, negativeMentionsResult] = await Promise.all([
         this.snowflakeService.execute<{
           TOTAL_MENTIONS: number;
@@ -3822,8 +3823,8 @@ export class ProjectService {
           MENTION_COUNT_30D: number;
           PROJECT_RANK?: number;
         }>(topProjectsQuery, sovParams),
-        this.snowflakeService.execute<MentionRow>(positiveMentionsQuery, mentionsParams),
-        this.snowflakeService.execute<MentionRow>(negativeMentionsQuery, mentionsParams),
+        includeMentions ? this.snowflakeService.execute<MentionRow>(positiveMentionsQuery, mentionsParams) : Promise.resolve(emptyMentionRows),
+        includeMentions ? this.snowflakeService.execute<MentionRow>(negativeMentionsQuery, mentionsParams) : Promise.resolve(emptyMentionRows),
       ]);
 
       if (summaryResult.rows.length === 0) {

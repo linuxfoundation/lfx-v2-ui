@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -29,7 +29,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, switchMap, take } from 'rxjs';
 
 import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
 import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
@@ -196,6 +196,7 @@ export class MarketingOverviewComponent {
   // === WritableSignals ===
   public readonly selectedFilter = signal<'all' | MetricCategory>('all');
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
+  private readonly brandHealthMentions = signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null>(null);
 
   // === Computed Signals ===
   protected readonly edEvolutionData: Signal<EdEvolutionData> = this.initEdEvolutionData();
@@ -206,7 +207,11 @@ export class MarketingOverviewComponent {
   protected readonly engagedCommunityData = computed<EngagedCommunitySizeResponse>(() => this.edEvolutionData().engagedCommunity);
   protected readonly eventGrowthData = computed<EventGrowthResponse>(() => this.edEvolutionData().eventGrowth);
   protected readonly brandReachData = computed<BrandReachResponse>(() => this.edEvolutionData().brandReach);
-  protected readonly brandHealthData = computed<BrandHealthResponse>(() => this.edEvolutionData().brandHealth);
+  protected readonly brandHealthData = computed<BrandHealthResponse>(() => {
+    const base = this.edEvolutionData().brandHealth;
+    const mentions = this.brandHealthMentions();
+    return mentions ? { ...base, ...mentions } : base;
+  });
   protected readonly revenueImpactData = computed<RevenueImpactResponse>(() => this.edEvolutionData().revenueImpact);
 
   protected readonly filteredCards: Signal<DashboardMetricCard[]> = this.initFilteredCards();
@@ -215,9 +220,33 @@ export class MarketingOverviewComponent {
   protected readonly nonNorthStarCards = computed<DashboardMetricCard[]>(() => this.filteredCards().filter((c) => c.category !== 'memberships'));
   protected readonly totalCardCount = computed<number>(() => this.filteredCards().length);
 
+  constructor() {
+    // Clear cached mentions when the foundation changes so stale data from a
+    // previously selected foundation isn't shown.
+    effect(() => {
+      this.projectContextService.selectedFoundation();
+      this.brandHealthMentions.set(null);
+    });
+  }
+
   // === Public Methods ===
   public handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
+
+    // Lazy-fetch mentions only when the Brand Health drawer is opened (avoids extra
+    // Snowflake round-trips on every dashboard load).
+    if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions()) {
+      const slug = this.projectContextService.selectedFoundation()?.slug || 'tlf';
+      this.analyticsService
+        .getBrandHealth(slug, true)
+        .pipe(take(1))
+        .subscribe((res) => {
+          this.brandHealthMentions.set({
+            topPositiveMentions: res.topPositiveMentions,
+            topNegativeMentions: res.topNegativeMentions,
+          });
+        });
+    }
   }
 
   public handleDrawerClose(): void {
