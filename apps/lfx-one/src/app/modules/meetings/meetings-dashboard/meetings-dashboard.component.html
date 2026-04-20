@@ -177,7 +177,11 @@
   </div>
 
   <div class="min-h-[400px]">
-    @if ((timeFilter() === 'upcoming' && meetingsLoading()) || (timeFilter() === 'past' && pastMeetingsLoading())) {
+    @if (
+      (timeFilter() === 'upcoming' && meetingsLoading()) ||
+      (timeFilter() === 'past' && pastMeetingsLoading()) ||
+      (timeFilter() === 'pending-rsvp' && (meetingsLoading() || (rsvpLoading() && visibleMeetings().length === 0)))
+    ) {
       <div class="flex flex-col gap-4">
         @for (item of [0, 1, 2]; track item) {
           <div class="bg-white border border-gray-200 rounded-lg p-6 animate-pulse">
@@ -202,21 +206,26 @@
           </div>
         </div>
       </lfx-card>
-    } @else if (filteredMeetings().length === 0 && (project()?.uid || activeLens() === 'me')) {
+    } @else if (visibleMeetings().length === 0 && (project()?.uid || activeLens() === 'me')) {
       <lfx-card>
         <div class="flex items-center justify-center p-16">
           <div class="text-center max-w-md">
             <div class="text-gray-400 mb-4">
               <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
             </div>
-            <h3 class="text-xl font-semibold text-gray-900 mt-4">No Meetings Found</h3>
-            <p class="text-gray-600 mt-2">Try adjusting your search or filter criteria</p>
+            @if (timeFilter() === 'pending-rsvp') {
+              <h3 class="text-xl font-semibold text-gray-900 mt-4">You're all caught up</h3>
+              <p class="text-gray-600 mt-2">No pending RSVPs — all your invites have a response.</p>
+            } @else {
+              <h3 class="text-xl font-semibold text-gray-900 mt-4">No Meetings Found</h3>
+              <p class="text-gray-600 mt-2">Try adjusting your search or filter criteria</p>
+            }
           </div>
         </div>
       </lfx-card>
-    } @else if (filteredMeetings().length > 0) {
+    } @else if (visibleMeetings().length > 0) {
       <div class="flex flex-col gap-4">
-        @for (meeting of filteredMeetings(); track meeting.id; let i = $index) {
+        @for (meeting of visibleMeetings(); track meeting.id; let i = $index) {
           <!-- Invisible sentinel at the midpoint triggers auto-load when scrolled into view -->
           @if (i === autoLoadTriggerIndex() && hasMore()) {
             @defer (on viewport) {

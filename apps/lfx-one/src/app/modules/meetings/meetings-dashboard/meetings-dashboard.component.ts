@@ -1,14 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
-import { Lens, Meeting, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
+import { Lens, Meeting, MeetingRsvp, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
 import { getCurrentOrNextOccurrence, hasMeetingEnded } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
 import { MeetingService } from '@services/meeting.service';
@@ -25,6 +25,7 @@ import {
   EMPTY,
   expand,
   finalize,
+  firstValueFrom,
   map,
   merge,
   of,
@@ -60,10 +61,16 @@ export class MeetingsDashboardComponent {
   public upcomingMeetings: Signal<Meeting[]>;
   public pastMeetings: Signal<PastMeeting[]>;
   public filteredMeetings: Signal<(Meeting | PastMeeting)[]>;
+  public visibleMeetings: Signal<(Meeting | PastMeeting)[]>;
   public refresh$: BehaviorSubject<void>;
   public searchQuery: WritableSignal<string>;
   public debouncedSearchQuery: Signal<string>;
-  public timeFilter: WritableSignal<'upcoming' | 'past'>;
+  public timeFilter: WritableSignal<'upcoming' | 'past' | 'pending-rsvp'>;
+
+  // RSVP map for the "Pending RSVP" time filter: meetingId -> user's RSVP (null = not yet responded).
+  // Populated lazily via initRsvpFetcher() when the filter is active.
+  private readonly rsvpMap: WritableSignal<Map<string, MeetingRsvp | null>> = signal(new Map());
+  protected readonly rsvpLoading: WritableSignal<boolean> = signal(false);
   public meetingTypeFilter: WritableSignal<string | null>;
   public meetingTypeOptions: Signal<{ label: string; value: string | null }[]>;
   public foundationFilter: WritableSignal<string | null>;
@@ -125,8 +132,14 @@ export class MeetingsDashboardComponent {
     this.refresh$ = new BehaviorSubject<void>(undefined);
     this.searchQuery = signal<string>('');
     this.debouncedSearchQuery = toSignal(toObservable(this.searchQuery).pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });
-    const initialTimeFilter = this.route.snapshot.queryParamMap.get('time') === 'past' ? 'past' : 'upcoming';
-    this.timeFilter = signal<'upcoming' | 'past'>(initialTimeFilter);
+    const timeParam = this.route.snapshot.queryParamMap.get('time');
+    let initialTimeFilter: 'upcoming' | 'past' | 'pending-rsvp' = 'upcoming';
+    if (timeParam === 'past') {
+      initialTimeFilter = 'past';
+    } else if (timeParam === 'pending-rsvp') {
+      initialTimeFilter = 'pending-rsvp';
+    }
+    this.timeFilter = signal<'upcoming' | 'past' | 'pending-rsvp'>(initialTimeFilter);
     this.meetingTypeFilter = signal<string | null>(null);
     this.foundationFilter = signal<string | null>(null);
     this.projectFilter = signal<string | null>(null);
@@ -168,6 +181,7 @@ export class MeetingsDashboardComponent {
     this.upcomingMeetings = this.initializeUpcomingMeetings();
     this.pastMeetings = this.initializePastMeetings();
     this.filteredMeetings = this.initializeFilteredMeetings();
+    this.visibleMeetings = this.initializeVisibleMeetings();
 
     // Raw FP meetings for stat cards — fetched once, independent of time-filter tab
     this.rawFpUpcomingMeetings = this.initializeRawFpUpcomingMeetings();
@@ -181,7 +195,10 @@ export class MeetingsDashboardComponent {
     this.fpRecordingsAvailableCount = this.initFpRecordingsAvailableCount();
 
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
-    this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
+    this.autoLoadTriggerIndex = computed(() => Math.floor(this.visibleMeetings().length / 2));
+
+    // Lazy-fetches per-meeting RSVP state when the "Pending RSVP" time filter is active.
+    this.initRsvpFetcher();
   }
 
   public refreshMeetings(): void {
@@ -203,13 +220,13 @@ export class MeetingsDashboardComponent {
     this.projectFilter.set(value);
   }
 
-  public onTimeFilterChange(value: 'upcoming' | 'past'): void {
+  public onTimeFilterChange(value: 'upcoming' | 'past' | 'pending-rsvp'): void {
     this.timeFilter.set(value);
     this.foundationFilter.set(null);
     this.projectFilter.set(null);
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { time: value === 'past' ? 'past' : null },
+      queryParams: { time: value === 'upcoming' ? null : value },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
@@ -243,7 +260,8 @@ export class MeetingsDashboardComponent {
     const projectFilter$ = toObservable(this.projectFilter);
     const meLens$ = combineLatest([lens$, timeFilter$, searchQuery$, meetingType$, rawUserMeetings$, foundationFilter$, projectFilter$]).pipe(
       switchMap(([lens, timeFilter, searchQuery, meetingType, rawMeetings, foundation, project]) => {
-        if (lens !== 'me' || timeFilter !== 'upcoming') {
+        // 'pending-rsvp' reuses the upcoming data source; visibleMeetings applies the RSVP filter on top.
+        if (lens !== 'me' || (timeFilter !== 'upcoming' && timeFilter !== 'pending-rsvp')) {
           return of<PageResult<Meeting>>({ data: [], page_token: undefined, reset: true });
         }
         const filtered = this.filterMeLensMeetings(rawMeetings, searchQuery, meetingType, foundation, project);
@@ -257,7 +275,7 @@ export class MeetingsDashboardComponent {
         if (lens === 'me') {
           return EMPTY;
         }
-        if (timeFilter !== 'upcoming') {
+        if (timeFilter !== 'upcoming' && timeFilter !== 'pending-rsvp') {
           this.meetingsLoading.set(false);
           return of<PageResult<Meeting>>({ data: [], page_token: undefined, reset: true });
         }
@@ -468,6 +486,46 @@ export class MeetingsDashboardComponent {
   private initializeFilteredMeetings(): Signal<(Meeting | PastMeeting)[]> {
     return computed(() => {
       return this.timeFilter() === 'past' ? this.pastMeetings() : this.upcomingMeetings();
+    });
+  }
+
+  private initializeVisibleMeetings(): Signal<(Meeting | PastMeeting)[]> {
+    return computed(() => {
+      const base = this.filteredMeetings();
+      if (this.timeFilter() !== 'pending-rsvp') {
+        return base;
+      }
+      const map = this.rsvpMap();
+      // Keep meetings where the current user has no recorded RSVP (null) or the entry hasn't been fetched yet.
+      // Once fetched and non-null, drop them — the user has already responded.
+      return base.filter((m) => map.get(m.id) == null);
+    });
+  }
+
+  private initRsvpFetcher(): void {
+    effect(() => {
+      if (this.timeFilter() !== 'pending-rsvp') {
+        return;
+      }
+      const current = this.filteredMeetings();
+      const map = this.rsvpMap();
+      const toFetch: string[] = [];
+      for (const m of current) {
+        if (!map.has(m.id)) {
+          toFetch.push(m.id);
+        }
+      }
+      if (toFetch.length === 0) {
+        return;
+      }
+      this.rsvpLoading.set(true);
+      Promise.all(toFetch.map((id) => firstValueFrom(this.meetingService.getMeetingRsvpForCurrentUser(id).pipe(catchError(() => of(null))))))
+        .then((results) => {
+          const next = new Map(this.rsvpMap());
+          toFetch.forEach((id, i) => next.set(id, results[i] ?? null));
+          this.rsvpMap.set(next);
+        })
+        .finally(() => this.rsvpLoading.set(false));
     });
   }
 

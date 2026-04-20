@@ -19,21 +19,22 @@ export class MeetingsTopBarComponent implements OnInit {
   public projectOptions = input<{ label: string; value: string | null }[]>([]);
   public showFoundationFilter = input<boolean>(false);
   public showProjectFilter = input<boolean>(false);
-  public readonly initialTimeFilter = input<'upcoming' | 'past'>('upcoming');
+  public readonly initialTimeFilter = input<'upcoming' | 'past' | 'pending-rsvp'>('upcoming');
   public readonly meetingTypeChange = output<string | null>();
   public readonly foundationFilterChange = output<string | null>();
   public readonly projectFilterChange = output<string | null>();
   public readonly searchQueryChange = output<string>();
-  public readonly timeFilterChange = output<'upcoming' | 'past'>();
+  public readonly timeFilterChange = output<'upcoming' | 'past' | 'pending-rsvp'>();
 
   public searchForm: FormGroup;
-  public timeFilterOptions: { label: string; value: 'upcoming' | 'past' }[];
+  public timeFilterOptions: { label: string; value: 'upcoming' | 'past' | 'pending-rsvp' }[];
 
   public constructor() {
     // Initialize time filter options
     this.timeFilterOptions = [
       { label: 'Upcoming', value: 'upcoming' },
       { label: 'Past', value: 'past' },
+      { label: 'Pending RSVP', value: 'pending-rsvp' },
     ];
 
     // Initialize form
@@ -42,7 +43,7 @@ export class MeetingsTopBarComponent implements OnInit {
       meetingType: new FormControl<string | null>(null),
       foundationFilter: new FormControl<string | null>(null),
       projectFilter: new FormControl<string | null>(null),
-      timeFilter: new FormControl<'upcoming' | 'past'>('upcoming'),
+      timeFilter: new FormControl<'upcoming' | 'past' | 'pending-rsvp'>('upcoming'),
     });
 
     // Subscribe to form changes and emit events
@@ -88,7 +89,7 @@ export class MeetingsTopBarComponent implements OnInit {
     this.projectFilterChange.emit(value);
   }
 
-  public onTimeFilterChange(value: 'upcoming' | 'past'): void {
+  public onTimeFilterChange(value: 'upcoming' | 'past' | 'pending-rsvp'): void {
     this.timeFilterChange.emit(value);
   }
 }
