@@ -111,8 +111,8 @@ export class EngagedCommunityDrawerComponent {
         callbacks: {
           label: (ctx) => {
             const raw = ctx.raw as number;
-            // Display original value (unclamped) in tooltip
-            return ` ${formatNumber(raw <= 1 ? 0 : raw)} members`;
+            // Sentinel 0.5 = original 0 (clamped for log scale); real 1s stay at 1
+            return ` ${formatNumber(raw < 1 ? 0 : raw)} members`;
           },
         },
       },
@@ -343,8 +343,9 @@ export class EngagedCommunityDrawerComponent {
         labels: ['Community', 'Working Groups', 'Newsletter', 'Training', 'Code', 'Web', 'Certified'],
         datasets: [
           {
-            // Clamp to minimum 1 for log scale rendering; tooltip callback
-            // maps values ≤1 back to 0 for display.
+            // Clamp to 0.5 (not 1) for log scale rendering so original 0s
+            // are distinguishable from real 1s. Tooltip uses raw < 1 to
+            // map the sentinel back to 0.
             data: [
               breakdown.communityMembers,
               breakdown.workingGroupMembers,
@@ -353,7 +354,7 @@ export class EngagedCommunityDrawerComponent {
               breakdown.codeContributors,
               breakdown.webVisitors,
               breakdown.certifiedIndividuals,
-            ].map((v) => Math.max(v, 1)),
+            ].map((v) => Math.max(v, 0.5)),
             backgroundColor: [
               lfxColors.blue[700],
               lfxColors.blue[500],
