@@ -4,7 +4,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { AuthenticationError, ServiceValidationError } from '../errors';
-import { getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
+import { assertHealthMetricsRange, getStringQueryParam, parseEntityType } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { OrganizationService } from '../services/organization.service';
 import { ProjectService } from '../services/project.service';
@@ -2198,12 +2198,7 @@ export class AnalyticsController {
         });
       }
 
-      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
-      if (!validRanges.includes(range)) {
-        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
-          operation: 'get_membership_churn_per_tier_summary',
-        });
-      }
+      assertHealthMetricsRange(range, 'get_membership_churn_per_tier_summary');
 
       const response = await this.projectService.getMembershipChurnPerTierSummary(foundationSlug, range);
 
@@ -2325,12 +2320,7 @@ export class AnalyticsController {
         });
       }
 
-      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
-      if (!validRanges.includes(range)) {
-        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
-          operation: 'get_training_certification_summary',
-        });
-      }
+      assertHealthMetricsRange(range, 'get_training_certification_summary');
 
       const response = await this.projectService.getTrainingCertificationSummary(foundationSlug, range);
 
@@ -2370,12 +2360,7 @@ export class AnalyticsController {
         });
       }
 
-      const validRanges = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
-      if (!validRanges.includes(range)) {
-        throw ServiceValidationError.forField('range', `Invalid range value. Allowed: ${validRanges.join(', ')}`, {
-          operation: 'get_code_contribution_summary',
-        });
-      }
+      assertHealthMetricsRange(range, 'get_code_contribution_summary');
 
       const response = await this.projectService.getCodeContributionSummary(foundationSlug, range);
 
@@ -2384,6 +2369,49 @@ export class AnalyticsController {
         project_id: response.projectId,
         range: response.range,
         data_available: response.dataAvailable,
+      });
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/analytics/board-meeting-participation-summary
+   * Get Board Meeting Participation summary for a foundation
+   * Query params: foundationSlug (required), range (optional, default 'YTD')
+   */
+  public async getBoardMeetingParticipationSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_board_meeting_participation_summary');
+
+    try {
+      const foundationSlug = req.query['foundationSlug'] as string | undefined;
+      const range = (req.query['range'] as string | undefined) || 'YTD';
+
+      if (!foundationSlug) {
+        throw ServiceValidationError.forField('foundationSlug', 'foundationSlug query parameter is required', {
+          operation: 'get_board_meeting_participation_summary',
+        });
+      }
+
+      if (!SLUG_PATTERN.test(foundationSlug)) {
+        throw ServiceValidationError.forField('foundationSlug', 'Invalid foundationSlug format', {
+          operation: 'get_board_meeting_participation_summary',
+        });
+      }
+
+      const validatedRange = assertHealthMetricsRange(range, 'get_board_meeting_participation_summary');
+
+      const response = await this.projectService.getBoardMeetingParticipationSummary(foundationSlug, validatedRange);
+
+      logger.success(req, 'get_board_meeting_participation_summary', startTime, {
+        foundation_slug: foundationSlug,
+        project_id: response.projectId,
+        range: response.range,
+        data_available: response.dataAvailable,
+        total_meetings: response.totalMeetings,
+        invitees_count: response.invitees.length,
       });
 
       res.json(response);
