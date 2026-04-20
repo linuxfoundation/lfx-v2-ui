@@ -115,6 +115,7 @@ export class EngagedCommunityDrawerComponent {
     },
     scales: {
       x: {
+        type: 'logarithmic',
         display: true,
         grid: { color: lfxColors.gray[200], lineWidth: 1 },
         border: { display: true, color: lfxColors.gray[300] },
@@ -123,6 +124,10 @@ export class EngagedCommunityDrawerComponent {
           font: { size: 11 },
           callback: (value) => {
             const num = Number(value);
+            // Only label powers of 10 to avoid overlap on log scale
+            const log = Math.log10(num);
+            if (Math.abs(log - Math.round(log)) > 0.01) return '';
+            if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(0)}M`;
             if (num >= 1_000) return `${(num / 1_000).toFixed(0)}K`;
             return String(num);
           },
