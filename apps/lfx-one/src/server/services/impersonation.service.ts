@@ -152,6 +152,8 @@ export class ImpersonationService {
 
     if (personaContext) {
       req.appSession['impersonationPersonaContext'] = personaContext;
+    } else {
+      delete req.appSession['impersonationPersonaContext'];
     }
 
     // Clear impersonator's persona/lens cookies so the impersonated session re-detects cleanly on reload.
@@ -168,6 +170,10 @@ export class ImpersonationService {
   }
 
   public stopImpersonation(req: Request, res: Response): void {
+    // Always clear persona/lens cookies even when session is missing — stale cookies on the client must be reset.
+    res.clearCookie(PERSONA_COOKIE_KEY, { path: '/' });
+    res.clearCookie(LENS_COOKIE_KEY, { path: '/' });
+
     if (!req.appSession) {
       return;
     }
@@ -176,9 +182,6 @@ export class ImpersonationService {
     const targetUser = req.appSession['impersonationUser'];
 
     clearImpersonationSession(req);
-
-    res.clearCookie(PERSONA_COOKIE_KEY, { path: '/' });
-    res.clearCookie(LENS_COOKIE_KEY, { path: '/' });
 
     logger.info(req, 'impersonation_stopped', 'Impersonation session ended', {
       impersonator_sub: impersonator?.sub,

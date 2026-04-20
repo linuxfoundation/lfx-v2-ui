@@ -143,7 +143,10 @@ export class PersonaService {
     this.isRootWriter.set(response.isRootWriter ?? false);
 
     if (response.personas.length > 0) {
-      if (this.userSelected()) {
+      const current = this.currentPersona();
+      const canPreserveCurrent = this.userSelected() && response.personas.includes(current);
+
+      if (canPreserveCurrent) {
         // User's explicit choice wins — only refresh the allowed list and organizations.
         this.allPersonas.set(response.personas);
         if (response.organizations !== undefined) {
@@ -151,6 +154,10 @@ export class PersonaService {
         }
         this.persistCurrentState();
       } else {
+        // User's choice is stale (role revoked) — drop the pin so detection takes over.
+        if (this.userSelected()) {
+          this.userSelected.set(false);
+        }
         this.setPersonas(response.personas[0], response.personas, response.organizations);
       }
     } else if (response.organizations) {
