@@ -29,6 +29,7 @@ import {
   MeetingAttachment,
   MeetingOccurrence,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -60,9 +61,11 @@ import {
   EMPTY,
   filter,
   map,
+  merge,
   Observable,
   of,
   startWith,
+  Subject,
   switchMap,
   take,
   tap,
@@ -212,6 +215,17 @@ export class MeetingJoinComponent implements OnInit {
   public canToggleRsvpView: Signal<boolean>;
   public showMyRsvp: WritableSignal<boolean> = signal<boolean>(false);
 
+  // Current user's RSVP for this meeting (null when not responded). Fetched at this level so
+  // the detail page can show the RSVP status even in the default guest-count view, without
+  // waiting for the user to click "Set My RSVP" to mount the button-group child.
+  public currentUserRsvp: Signal<MeetingRsvp | null>;
+  public currentUserRsvpLabel: Signal<string | null>;
+  public currentUserRsvpIcon: Signal<string | null>;
+  public rsvpToggleLabel: Signal<string>;
+  // Emits the freshly-submitted RSVP from the button-group so the chip updates immediately,
+  // bypassing any query-service indexing lag that would otherwise return stale data on refetch.
+  private rsvpUpdateTrigger$ = new Subject<MeetingRsvp>();
+
   // Form value signals for reactivity
   public formValues: Signal<{ name: string; email: string; organization: string }>;
 
@@ -243,6 +257,10 @@ export class MeetingJoinComponent implements OnInit {
     this.isInvited = this.initializeIsInvited();
     this.canRegisterForMeeting = this.initializeCanRegisterForMeeting();
     this.canToggleRsvpView = this.initializeCanToggleRsvpView();
+    this.currentUserRsvp = this.initializeCurrentUserRsvp();
+    this.currentUserRsvpLabel = this.initializeCurrentUserRsvpLabel();
+    this.currentUserRsvpIcon = this.initializeCurrentUserRsvpIcon();
+    this.rsvpToggleLabel = this.initializeRsvpToggleLabel();
 
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
@@ -312,6 +330,13 @@ export class MeetingJoinComponent implements OnInit {
 
   public onRsvpViewToggle(): void {
     this.showMyRsvp.set(!this.showMyRsvp());
+  }
+
+  public onRsvpChanged(rsvp: MeetingRsvp): void {
+    // rsvp-button-group emits the confirmed RSVP after the POST succeeds. Push it directly into the
+    // signal stream so the chip updates instantly, even when the backend polling window times out
+    // before the query service has indexed the new RSVP (server would still return stale on refetch).
+    this.rsvpUpdateTrigger$.next(rsvp);
   }
 
   public openMaterialsDrawer(): void {
@@ -847,6 +872,74 @@ export class MeetingJoinComponent implements OnInit {
 
   private initializeCanToggleRsvpView(): Signal<boolean> {
     return computed(() => !!this.meeting()?.organizer && this.isInvited());
+  }
+
+  private initializeCurrentUserRsvp(): Signal<MeetingRsvp | null> {
+    const meeting$ = toObservable(this.meeting);
+    const occurrence$ = toObservable(this.currentOccurrence);
+    const authenticated$ = toObservable(this.authenticated);
+    const canToggle$ = toObservable(this.canToggleRsvpView);
+
+    // Server-side fetch: runs once per meeting/occurrence change.
+    const serverFetch$ = combineLatest([meeting$, occurrence$, authenticated$, canToggle$]).pipe(
+      switchMap(([meeting, occurrence, authenticated, canToggle]) => {
+        // Only fetch when the user can actually RSVP (organizer + invited). Non-organizer invited
+        // users are already handled by the rsvp-button-group component directly.
+        if (!authenticated || !canToggle || !meeting?.id) {
+          return of(null);
+        }
+        const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
+        // startWith(null) resets the signal on each refresh so a stale "Your RSVP" chip from the
+        // previous meeting doesn't linger during client-side navigation. Service already handles errors.
+        return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(startWith(null));
+      })
+    );
+
+    // Merge server fetches with in-component updates pushed by onRsvpChanged. The button-group
+    // emits after its POST succeeds, so trusting that value avoids the query-service indexing
+    // window that otherwise makes a refetch return the pre-update state.
+    return toSignal(merge(serverFetch$, this.rsvpUpdateTrigger$.asObservable()), { initialValue: null });
+  }
+
+  private initializeCurrentUserRsvpLabel(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'Yes';
+        case 'declined':
+          return 'No';
+        case 'maybe':
+          return 'Maybe';
+        default:
+          return rsvp.response_type;
+      }
+    });
+  }
+
+  private initializeCurrentUserRsvpIcon(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'fa-solid fa-circle-check text-emerald-500';
+        case 'declined':
+          return 'fa-solid fa-circle-xmark text-red-500';
+        case 'maybe':
+          return 'fa-solid fa-clock text-amber-500';
+        default:
+          return null;
+      }
+    });
+  }
+
+  private initializeRsvpToggleLabel(): Signal<string> {
+    return computed(() => {
+      if (this.showMyRsvp()) return 'Show Guests';
+      return this.currentUserRsvp() ? 'Update My RSVP' : 'Set My RSVP';
+    });
   }
 
   private initializeEmailError(): Signal<boolean> {
