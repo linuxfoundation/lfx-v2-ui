@@ -8,7 +8,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Certification, FilterPillOption, TrainingEnrollment } from '@lfx-one/shared/interfaces';
 import { CERTIFICATION_PRODUCT_TYPE, TRAINING_PRODUCT_TYPE } from '@lfx-one/shared/constants';
 
-import { Skeleton } from 'primeng/skeleton';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
@@ -45,7 +45,7 @@ const USEFUL_LINKS = [
 
 @Component({
   selector: 'lfx-trainings-dashboard',
-  imports: [ButtonComponent, CardComponent, CertificationCardComponent, FilterPillsComponent, Skeleton, TrainingCardComponent],
+  imports: [ButtonComponent, CardComponent, CertificationCardComponent, FilterPillsComponent, SkeletonModule, TrainingCardComponent],
   templateUrl: './trainings-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
