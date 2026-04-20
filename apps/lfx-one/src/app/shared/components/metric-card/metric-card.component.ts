@@ -32,7 +32,7 @@ export class MetricCardComponent {
   public readonly value = input<string>();
   public readonly subtitle = input<string>();
   public readonly valueTooltip = input<string>();
-  public readonly trend = input<'up' | 'down'>();
+  public readonly trend = input<'up' | 'down' | 'neutral'>();
   public readonly changePercentage = input<string>();
 
   // Styling
