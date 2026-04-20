@@ -9,9 +9,8 @@ import { CheckboxComponent } from '@components/checkbox/checkbox.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
-import { COUNTRIES, WHOLE_NUMBER_PATTERN } from '@lfx-one/shared/constants';
+import { COUNTRIES, WHOLE_NUMBER_PATTERN, YES_NO_OPTIONS } from '@lfx-one/shared/constants';
 import { TravelFundAboutMe } from '@lfx-one/shared/interfaces';
-import { YES_NO_OPTIONS } from '@lfx-one/shared/constants/events.constants';
 import { startWith } from 'rxjs';
 import { OrgSearchFieldComponent } from '../org-search-field/org-search-field.component';
 

@@ -740,6 +740,7 @@ export class EventsService {
         signal: AbortSignal.timeout(30000),
       });
     } catch (err) {
+      logger.debug(req, 'submit_travel_fund_application', 'Upstream fetch failed', { err });
       throw new MicroserviceError('Travel fund API request failed', 503, 'API_GATEWAY_UNAVAILABLE', {
         operation: 'submit_travel_fund_application',
         errorBody: err instanceof Error ? err.message : String(err),

@@ -31,12 +31,8 @@ export class TravelExpensesFormComponent {
     groundTransportNotes: [''],
   });
 
-  private readonly formValues = toSignal(this.form.valueChanges, { initialValue: this.form.value });
-
-  public readonly estimatedTotal = computed(() => {
-    const v = this.formValues();
-    return (parseFloat(v.airfareCost ?? '0') || 0) + (parseFloat(v.hotelCost ?? '0') || 0) + (parseFloat(v.groundTransportCost ?? '0') || 0);
-  });
+  private readonly formValues = this.initFormValues();
+  public readonly estimatedTotal = this.initEstimatedTotal();
 
   public constructor() {
     this.form.valueChanges.pipe(startWith(null), takeUntilDestroyed()).subscribe(() => {
@@ -59,5 +55,16 @@ export class TravelExpensesFormComponent {
       groundTransportNotes: raw.groundTransportNotes,
       estimatedTotal: airfareCost + hotelCost + groundTransportCost,
     };
+  }
+
+  private initFormValues() {
+    return toSignal(this.form.valueChanges, { initialValue: this.form.value });
+  }
+
+  private initEstimatedTotal() {
+    return computed(() => {
+      const v = this.formValues();
+      return (parseFloat(v.airfareCost ?? '0') || 0) + (parseFloat(v.hotelCost ?? '0') || 0) + (parseFloat(v.groundTransportCost ?? '0') || 0);
+    });
   }
 }
