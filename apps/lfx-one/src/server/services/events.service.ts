@@ -599,7 +599,8 @@ export class EventsService {
     };
 
     logger.info(req, 'submit_visa_request_application', 'Calling API Gateway visa endpoint', {
-      target_url: '/user-service/v1/users/{userId}/visaletterrequests',
+      target_url: targetUrl,
+      server_user_id: serverUserId,
       event_id: payload.eventId,
     });
 
@@ -722,6 +723,7 @@ export class EventsService {
     };
 
     logger.info(req, 'submit_travel_fund_application', 'Calling API Gateway travel fund endpoint', {
+      target_url: targetUrl,
       server_user_id: serverUserId,
       event_id: payload.eventId,
     });
