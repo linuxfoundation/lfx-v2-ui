@@ -12,6 +12,8 @@ export interface Project {
   parent_uid: string;
   stage: string;
   category: string;
+  /** Upstream Goa enum — optional to tolerate records indexed before the attribute was rolled out. */
+  funding?: 'Funded' | 'Unfunded' | 'Supported by Parent Project';
   funding_model: string[];
   charter_url: string;
   legal_entity_type: string;
