@@ -677,22 +677,33 @@ export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'influence', label: 'Influence' },
 ];
 
+/** Round to 1 decimal place, normalizing JS negative zero to positive zero.
+ *  e.g. -0.03 → "0.0" not "-0.0", so the displayed text matches neutral trend styling. */
+function roundForDisplay(value: number): string {
+  const rounded = Number(value.toFixed(1));
+  // Object.is distinguishes -0 from 0 — normalise to positive zero
+  return (Object.is(rounded, -0) ? 0 : rounded).toFixed(1);
+}
+
 /** Format a MoM change as a display string */
 function formatMomChange(change: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${change.toFixed(1)}% MoM`;
+  const formatted = roundForDisplay(change);
+  const sign = !formatted.startsWith('-') ? '+' : '';
+  return `${sign}${formatted}% MoM`;
 }
 
 /** Format a YoY change as a display string */
 function formatYoyChange(change: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${change.toFixed(1)}% YoY`;
+  const formatted = roundForDisplay(change);
+  const sign = !formatted.startsWith('-') ? '+' : '';
+  return `${sign}${formatted}% YoY`;
 }
 
 /** Format a percentage-point MoM change as a display string */
 function formatPpMomChange(change: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${change.toFixed(1)}pp MoM`;
+  const formatted = roundForDisplay(change);
+  const sign = !formatted.startsWith('-') ? '+' : '';
+  return `${sign}${formatted}pp MoM`;
 }
 
 /** Compute MoM change display from a paid media monthly trend series (last two months of spend) */

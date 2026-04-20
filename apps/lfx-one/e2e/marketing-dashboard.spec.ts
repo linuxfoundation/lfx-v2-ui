@@ -39,8 +39,8 @@ async function switchToExecutiveDirector(page: Page): Promise<void> {
   const personaSelector = page.locator('[data-testid="dev-tools-bar-persona-selector"]');
   await personaSelector.locator('text=Executive Director').click();
 
-  // Wait for the dashboard to re-render with the marketing overview section
-  await page.waitForSelector('[data-testid="marketing-overview-section"]', { timeout: DATA_LOAD_TIMEOUT });
+  // Wait for the dashboard to re-render with the ED evolution section
+  await page.waitForSelector('[data-testid="ed-evolution-section"]', { timeout: DATA_LOAD_TIMEOUT });
 }
 
 /**
@@ -62,27 +62,27 @@ test.describe('Marketing Overview Section', () => {
   });
 
   test('renders the marketing overview section with title', async ({ page }) => {
-    const section = page.locator('[data-testid="marketing-overview-section"]');
+    const section = page.locator('[data-testid="ed-evolution-section"]');
     await expect(section).toBeVisible();
 
     const heading = section.locator('h2');
-    await expect(heading).toContainText('Executive Director Overview');
+    await expect(heading).toContainText('Marketing Metrics');
 
     const subtitle = section.locator('p');
     await expect(subtitle).toContainText('North Star KPIs');
   });
 
   test('renders carousel with navigation controls', async ({ page }) => {
-    const carousel = page.locator('[data-testid="marketing-overview-carousel"]');
+    const carousel = page.locator('[data-testid="ed-evolution-carousel"]');
     await expect(carousel).toBeVisible();
 
-    await expect(page.locator('[data-testid="marketing-overview-carousel-prev"]')).toBeVisible();
-    await expect(page.locator('[data-testid="marketing-overview-carousel-next"]')).toBeVisible();
+    await expect(page.locator('[data-testid="ed-evolution-carousel-prev"]')).toBeVisible();
+    await expect(page.locator('[data-testid="ed-evolution-carousel-next"]')).toBeVisible();
   });
 
   test('carousel scrolls when navigation buttons are clicked', async ({ page }) => {
-    const carousel = page.locator('[data-testid="marketing-overview-carousel"]');
-    const nextBtn = page.locator('[data-testid="marketing-overview-carousel-next"]');
+    const carousel = page.locator('[data-testid="ed-evolution-carousel"]');
+    const nextBtn = page.locator('[data-testid="ed-evolution-carousel-next"]');
 
     const initialScroll = await carousel.evaluate((el) => el.scrollLeft);
     await nextBtn.click();
@@ -155,12 +155,9 @@ test.describe('Marketing Metric Cards', () => {
     await expect(card).toContainText('Social Media');
   });
 
-  test('renders Key Insights card', async ({ page }) => {
-    const card = page.locator('[data-testid="marketing-overview-key-insights"]');
-    await card.scrollIntoViewIfNeeded();
-    await expect(card).toBeVisible();
-    await expect(card).toContainText('Marketing Metrics');
-    await expect(card).toContainText('Key Insights');
+  test('renders filter pills', async ({ page }) => {
+    const filters = page.locator('[data-testid="ed-evolution-filters"]');
+    await expect(filters).toBeVisible();
   });
 });
 
