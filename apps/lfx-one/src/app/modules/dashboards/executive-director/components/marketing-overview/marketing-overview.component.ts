@@ -197,6 +197,7 @@ export class MarketingOverviewComponent {
   public readonly selectedFilter = signal<'all' | MetricCategory>('all');
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
   private readonly brandHealthMentions = signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null>(null);
+  private mentionsLoading = false;
 
   // === Computed Signals ===
   protected readonly edEvolutionData: Signal<EdEvolutionData> = this.initEdEvolutionData();
@@ -226,6 +227,7 @@ export class MarketingOverviewComponent {
     effect(() => {
       this.projectContextService.selectedFoundation();
       this.brandHealthMentions.set(null);
+      this.mentionsLoading = false;
     });
   }
 
@@ -234,13 +236,21 @@ export class MarketingOverviewComponent {
     this.activeDrawer.set(drawerType);
 
     // Lazy-fetch mentions only when the Brand Health drawer is opened (avoids extra
-    // Snowflake round-trips on every dashboard load).
-    if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions()) {
+    // Snowflake round-trips on every dashboard load). The loading guard prevents
+    // duplicate requests from repeated clicks before the first resolves.
+    if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions() && !this.mentionsLoading) {
+      this.mentionsLoading = true;
       const slug = this.projectContextService.selectedFoundation()?.slug || 'tlf';
       this.analyticsService
         .getBrandHealth(slug, true)
         .pipe(take(1))
         .subscribe((res) => {
+          this.mentionsLoading = false;
+          // Verify the foundation hasn't changed while the request was in-flight.
+          // The effect() clears brandHealthMentions on foundation change, but the
+          // subscribe callback could fire after the effect — guard against stale data.
+          const currentSlug = this.projectContextService.selectedFoundation()?.slug || 'tlf';
+          if (currentSlug !== slug) return;
           this.brandHealthMentions.set({
             topPositiveMentions: res.topPositiveMentions,
             topNegativeMentions: res.topNegativeMentions,
