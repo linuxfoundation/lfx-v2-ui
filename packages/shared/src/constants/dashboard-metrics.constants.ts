@@ -30,6 +30,10 @@ import type {
 
 export const HEALTH_METRICS_RANGES: readonly HealthMetricsRange[] = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
 
+/**
+ * Runtime type guard that narrows an unknown value to `HealthMetricsRange`.
+ * Returns true when `value` is a string present in `HEALTH_METRICS_RANGES`.
+ */
 export function isHealthMetricsRange(value: unknown): value is HealthMetricsRange {
   return typeof value === 'string' && (HEALTH_METRICS_RANGES as readonly string[]).includes(value);
 }
@@ -50,17 +54,21 @@ export function getYearForRange(range: HealthMetricsRange): number {
 
 /**
  * Builds the year-filter options for the Health Metrics page.
- * Reuse this instead of inline array construction in components.
+ * Derived from `HEALTH_METRICS_RANGES` + `RANGE_YEAR_OFFSET` so ordering
+ * and offsets stay in sync with the canonical range list.
  */
 export function buildHealthMetricsYearOptions(): HealthMetricsYearOption[] {
   const currentYear = new Date().getFullYear();
-  return [
-    { label: `${currentYear - 4}`, range: 'COMPLETED_YEAR_4', year: currentYear - 4 },
-    { label: `${currentYear - 3}`, range: 'COMPLETED_YEAR_3', year: currentYear - 3 },
-    { label: `${currentYear - 2}`, range: 'COMPLETED_YEAR_2', year: currentYear - 2 },
-    { label: `${currentYear - 1}`, range: 'COMPLETED_YEAR', year: currentYear - 1 },
-    { label: 'YTD', range: 'YTD', year: currentYear },
-  ];
+  return [...HEALTH_METRICS_RANGES]
+    .reverse()
+    .map((range) => {
+      const year = currentYear - RANGE_YEAR_OFFSET[range];
+      return {
+        label: range === 'YTD' ? 'YTD' : `${year}`,
+        range,
+        year,
+      };
+    });
 }
 
 // ============================================

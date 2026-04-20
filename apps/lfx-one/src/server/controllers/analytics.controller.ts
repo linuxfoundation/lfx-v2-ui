@@ -2198,9 +2198,9 @@ export class AnalyticsController {
         });
       }
 
-      assertHealthMetricsRange(range, 'get_membership_churn_per_tier_summary');
+      const validatedRange = assertHealthMetricsRange(range, 'get_membership_churn_per_tier_summary');
 
-      const response = await this.projectService.getMembershipChurnPerTierSummary(foundationSlug, range);
+      const response = await this.projectService.getMembershipChurnPerTierSummary(foundationSlug, validatedRange);
 
       logger.success(req, 'get_membership_churn_per_tier_summary', startTime, {
         foundation_slug: foundationSlug,
@@ -2320,9 +2320,9 @@ export class AnalyticsController {
         });
       }
 
-      assertHealthMetricsRange(range, 'get_training_certification_summary');
+      const validatedRange = assertHealthMetricsRange(range, 'get_training_certification_summary');
 
-      const response = await this.projectService.getTrainingCertificationSummary(foundationSlug, range);
+      const response = await this.projectService.getTrainingCertificationSummary(foundationSlug, validatedRange);
 
       logger.success(req, 'get_training_certification_summary', startTime, {
         foundation_slug: foundationSlug,
@@ -2360,9 +2360,9 @@ export class AnalyticsController {
         });
       }
 
-      assertHealthMetricsRange(range, 'get_code_contribution_summary');
+      const validatedRange = assertHealthMetricsRange(range, 'get_code_contribution_summary');
 
-      const response = await this.projectService.getCodeContributionSummary(foundationSlug, range);
+      const response = await this.projectService.getCodeContributionSummary(foundationSlug, validatedRange);
 
       logger.success(req, 'get_code_contribution_summary', startTime, {
         foundation_slug: foundationSlug,

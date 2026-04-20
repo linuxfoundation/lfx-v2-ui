@@ -65,8 +65,8 @@ export function buildFlywheelCardSummary(data: FlywheelConversionResponse | null
 
 /**
  * Builds the Health Metrics card funnel stages in the fixed re-engagement order.
- * Width percentages are relative to `funnel.eventAttendees` and clamped to [0, 100]
- * so very small counts still render a visible bar while zero attendees render empty bars.
+ * Width percentages are relative to `funnel.eventAttendees` and clamped to [0, 100],
+ * while zero attendees render empty bars.
  */
 export function buildFlywheelFunnelStages(data: FlywheelConversionResponse | null | undefined): FlywheelHealthMetricsFunnelStage[] {
   if (!data) return [];

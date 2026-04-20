@@ -96,7 +96,7 @@
                   [attr.data-testid]="'board-meeting-th-' + col.field">
                   <button type="button" class="inline-flex w-full items-center gap-1 text-xs font-semibold tracking-wide text-gray-600 uppercase hover:text-gray-900" (click)="onSort(col.field)">
                     {{ col.label }}
-                    <i class="fa-solid text-xs text-gray-400" [class]="col.iconClass"></i>
+                    <i [class]="col.iconClass"></i>
                   </button>
                 </th>
               }

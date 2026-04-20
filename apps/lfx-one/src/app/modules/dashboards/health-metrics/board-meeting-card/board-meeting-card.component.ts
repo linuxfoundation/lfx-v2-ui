@@ -109,11 +109,11 @@ export class BoardMeetingCardComponent {
     return BoardMeetingCardComponent.columnDefs.map(({ field, label }) => {
       const isActive = activeField === field;
       let ariaSort: 'ascending' | 'descending' | 'none' = 'none';
-      let iconClass = 'fa-sort';
+      let iconClass = 'fa-solid text-xs text-gray-400 fa-sort';
 
       if (isActive) {
         ariaSort = activeOrder === 1 ? 'ascending' : 'descending';
-        iconClass = activeOrder === 1 ? 'fa-sort-up' : 'fa-sort-down';
+        iconClass = `fa-solid text-xs text-gray-400 ${activeOrder === 1 ? 'fa-sort-up' : 'fa-sort-down'}`;
       }
 
       return { field, label, ariaSort, iconClass };

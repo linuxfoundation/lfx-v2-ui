@@ -3568,7 +3568,7 @@ export class ProjectService {
     const summaryRow = summaryResult.rows?.[0];
     const inviteeRows = inviteesResult.rows ?? [];
     const resolvedProjectId = summaryRow?.PROJECT_ID ?? '';
-    const dataAvailable = !!resolvedProjectId && (summaryRow?.TOTAL_MEETINGS ?? 0) > 0;
+    const dataAvailable = !!resolvedProjectId;
 
     if (!dataAvailable) {
       logger.warning(undefined, 'get_board_meeting_participation_summary', 'No usable board meeting data for foundation', {
