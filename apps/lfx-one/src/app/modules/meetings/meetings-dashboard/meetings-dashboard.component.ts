@@ -50,6 +50,10 @@ export class MeetingsDashboardComponent {
   // 1-8s upstream; unbounded Promise.all for 100+ meetings overwhelms NATS/meeting-service and
   // produces a 30-60s stall. Batching lets results stream into the signals progressively.
   private static readonly rsvpFetchConcurrency = 8;
+  // Hard cap on how many meetings the effect batches per pass. Users with 100+ meetings would
+  // otherwise see a 45-75s stall even with batching. The cap keeps the first render predictable
+  // (~15s max); more meetings get resolved when the user paginates (refresh cycle triggers another pass).
+  private static readonly rsvpFetchLimit = 30;
 
   private readonly meetingService = inject(MeetingService);
   private readonly projectContextService = inject(ProjectContextService);
@@ -536,6 +540,9 @@ export class MeetingsDashboardComponent {
       for (const m of current) {
         if (!fetched.has(m.id) && !this.rsvpInflightIds.has(m.id)) {
           toFetch.push(m.id);
+          if (toFetch.length >= MeetingsDashboardComponent.rsvpFetchLimit) {
+            break;
+          }
         }
       }
       if (toFetch.length === 0) {
