@@ -103,6 +103,12 @@ export class NavigationService {
       return;
     }
 
+    // Preserve an explicit selection (e.g., Me lens → Open) — selected_uid ensures it's in the page.
+    const existing = lens === 'foundation' ? this.projectContextService.selectedFoundation() : this.projectContextService.selectedProject();
+    if (existing?.uid && page.items.some((item) => item.uid === existing.uid)) {
+      return;
+    }
+
     const defaultItem = lens === 'foundation' ? this.pickFoundationByPersonaPriority(page.items) : page.items[0];
     const context = lensItemToProjectContext(defaultItem);
     if (lens === 'foundation') {
@@ -196,18 +202,23 @@ export class NavigationService {
     reload$: Subject<void>
   ): Signal<LensItem[]> {
     // skip(1) drops toObservable's initial replay so fetches only fire on user search input.
-    const searchTriggered$ = toObservable(searchTerm).pipe(skip(1), debounceTime(NAV_SEARCH_DEBOUNCE_MS), distinctUntilChanged());
+    const searchTriggered$ = toObservable(searchTerm).pipe(
+      skip(1),
+      debounceTime(NAV_SEARCH_DEBOUNCE_MS),
+      distinctUntilChanged(),
+      map((term) => ({ term, selectedUid: null as string | null }))
+    );
 
-    const reloadTriggered$ = reload$.pipe(map(() => searchTerm()));
+    const reloadTriggered$ = reload$.pipe(map(() => ({ term: searchTerm(), selectedUid: this.getSelectedUidForLens(lens) })));
 
     const firstPage$ = merge(searchTriggered$, reloadTriggered$).pipe(
-      switchMap((term) => {
+      switchMap(({ term, selectedUid }) => {
         generation.update((g) => g + 1);
-        return this.fetchSinglePage(lens, term, null, loading, true, generation());
+        return this.fetchSinglePage(lens, term, null, loading, true, generation(), selectedUid);
       })
     );
 
-    const nextPage$ = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false, generation())));
+    const nextPage$ = loadMore$.pipe(switchMap((token) => this.fetchSinglePage(lens, searchTerm(), token, loading, false, generation(), null)));
 
     return toSignal(
       merge(firstPage$, nextPage$).pipe(
@@ -236,10 +247,11 @@ export class NavigationService {
     pageToken: string | null,
     loading: WritableSignal<boolean>,
     reset: boolean,
-    generation: number
+    generation: number,
+    selectedUid: string | null
   ): Observable<TaggedLensPage> {
     loading.set(true);
-    return this.fetchPage(lens, term, pageToken).pipe(
+    return this.fetchPage(lens, term, pageToken, selectedUid).pipe(
       map((response) => ({ page: this.toLensPage(response, reset), generation })),
       tap(() => loading.set(false)),
       catchError(() => {
@@ -256,7 +268,7 @@ export class NavigationService {
     );
   }
 
-  private fetchPage(lens: NavLens, term: string, pageToken: string | null): Observable<LensItemsResponse> {
+  private fetchPage(lens: NavLens, term: string, pageToken: string | null, selectedUid: string | null): Observable<LensItemsResponse> {
     let params = new HttpParams().set('lens', lens);
     if (pageToken) {
       params = params.set('page_token', pageToken);
@@ -264,7 +276,15 @@ export class NavigationService {
     if (term.trim()) {
       params = params.set('name', term.trim());
     }
+    if (selectedUid && !pageToken) {
+      params = params.set('selected_uid', selectedUid);
+    }
     return this.http.get<LensItemsResponse>('/api/nav/lens-items', { params });
+  }
+
+  private getSelectedUidForLens(lens: NavLens): string | null {
+    const context = lens === 'foundation' ? this.projectContextService.selectedFoundation() : this.projectContextService.selectedProject();
+    return context?.uid ?? null;
   }
 
   private toLensPage(response: LensItemsResponse, reset: boolean): LensPage {
