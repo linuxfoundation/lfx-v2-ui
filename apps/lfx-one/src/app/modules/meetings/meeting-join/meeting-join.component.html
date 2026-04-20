@@ -347,7 +347,7 @@
               <div class="w-full md:w-[296px] flex flex-col gap-2">
                 @if (canToggleRsvpView() && showMyRsvp()) {
                   <!-- Show RSVP Button Group when organizer toggles to set their own RSVP -->
-                  <lfx-rsvp-button-group [meeting]="meeting()" [occurrenceId]="currentOccurrence()?.occurrence_id" (rsvpChanged)="onRsvpChanged()">
+                  <lfx-rsvp-button-group [meeting]="meeting()" [occurrenceId]="currentOccurrence()?.occurrence_id" (rsvpChanged)="onRsvpChanged($event)">
                   </lfx-rsvp-button-group>
                 } @else {
                   <!-- Show RSVP Details for organizers (default view) -->
