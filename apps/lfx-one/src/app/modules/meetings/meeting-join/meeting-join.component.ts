@@ -1095,18 +1095,17 @@ export class MeetingJoinComponent implements OnInit {
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
     return toSignal(
       combineLatest([
-        toObservable(this.meeting).pipe(
-          filter((meeting) => !!meeting?.id && this.authenticated() && (meeting.organizer || meeting.invited)),
-          distinctUntilChanged((a, b) => a.id === b.id)
-        ),
+        toObservable(this.meeting).pipe(distinctUntilChanged((a, b) => a?.id === b?.id)),
+        toObservable(this.authenticated),
         this.registrantsRefresh$,
       ]).pipe(
-        switchMap(([meeting]) => {
-          if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
+        switchMap(([meeting, authenticated]) => {
+          if (!meeting?.id || !authenticated || !(meeting.organizer || meeting.invited) || this.isPastMeeting()) {
+            return of([] as MeetingRegistrant[]);
+          }
           this.registrantsLoading.set(true);
           const baseCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
           return this.meetingService.getMyMeetingRegistrants(meeting.id, true).pipe(
-            catchError(() => of([] as MeetingRegistrant[])),
             tap((list) => {
               // Once the refetch lands, drop the optimistic pad so it doesn't double-count.
               const fetchedAdditional = Math.max(0, list.length - baseCount);
