@@ -652,7 +652,16 @@ function flatSparklineData(value: number): number[] {
  *  Rounds to 1 decimal to match display precision — a server value of 0.03 displays
  *  as "+0.0%" and should be neutral, not green. */
 function normalizeTrend(change: number, serverTrend: 'up' | 'down'): 'up' | 'down' | 'neutral' {
-  return Math.round(change * 10) === 0 ? 'neutral' : serverTrend;
+  if (Math.round(change * 10) === 0) return 'neutral';
+  return serverTrend;
+}
+
+/** Derive trend direction from a numeric change value.
+ *  Uses the same rounding threshold as normalizeTrend so the direction
+ *  matches the formatted display string. */
+function trendFromChange(change: number): 'up' | 'down' | 'neutral' {
+  if (Math.round(change * 10) === 0) return 'neutral';
+  return change > 0 ? 'up' : 'down';
 }
 
 /** Helper to build a dual-signal row with sparkline */
@@ -722,8 +731,7 @@ function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | 'neutral' |
   const prev = trend[trend.length - 2].spend;
   const curr = trend[trend.length - 1].spend;
   if (prev === 0) return undefined;
-  const pct = ((curr - prev) / prev) * 100;
-  return Math.round(pct * 10) === 0 ? 'neutral' : pct > 0 ? 'up' : 'down';
+  return trendFromChange(((curr - prev) / prev) * 100);
 }
 
 /** Extract values from NorthStarMonthlyDataPoint[] */
@@ -758,8 +766,7 @@ function eventAttrTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | 
   const prev = series[series.length - 2];
   const curr = series[series.length - 1];
   if (prev === 0) return undefined;
-  const pct = ((curr - prev) / prev) * 100;
-  return Math.round(pct * 10) === 0 ? 'neutral' : pct > 0 ? 'up' : 'down';
+  return trendFromChange(((curr - prev) / prev) * 100);
 }
 
 /**
@@ -786,7 +793,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       description: 'Event attendees who engage via newsletter, community, working groups, training, code, or web within 90 days.',
       value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
       changePercentage: formatPpMomChange(flywheel.reengagement.reengagementMomChange),
-      trend: Math.round(flywheel.reengagement.reengagementMomChange * 10) === 0 ? 'neutral' : flywheel.reengagement.reengagementMomChange > 0 ? 'up' : 'down',
+      trend: trendFromChange(flywheel.reengagement.reengagementMomChange),
       subtitle: 'MoM · Last 6 months',
       chartData: protoSparkline(
         flywheel.monthlyData.length > 0 ? monthlyValues(flywheel.monthlyData) : flatSparklineData(flywheel.reengagement.reengagementRate),
@@ -838,7 +845,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       description: 'Year-to-date event count, attendees, and net revenue with YoY comparison.',
       value: formatNumber(eventGrowth.totalRegistrants),
       changePercentage: formatYoyChange(eventGrowth.registrantYoyChange),
-      trend: Math.round(eventGrowth.registrantYoyChange * 10) === 0 ? 'neutral' : eventGrowth.registrantYoyChange > 0 ? 'up' : 'down',
+      trend: trendFromChange(eventGrowth.registrantYoyChange),
       subtitle: `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD`,
       chartData: protoSparkline(
         eventGrowth.monthlyData.length > 0 ? monthlyValues(eventGrowth.monthlyData) : flatSparklineData(eventGrowth.totalRegistrants),
@@ -901,7 +908,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           [],
           lfxColors.violet[500],
           formatPpMomChange(brandHealth.sentimentMomChangePp),
-          Math.round(brandHealth.sentimentMomChangePp * 10) === 0 ? 'neutral' : brandHealth.sentimentMomChangePp > 0 ? 'up' : 'down'
+          trendFromChange(brandHealth.sentimentMomChangePp)
         ),
       ],
       caption: `${formatNumber(brandHealth.totalMentions)} mentions · Last 6 months`,
