@@ -186,7 +186,7 @@ export class MeetingJoinComponent implements OnInit {
   protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
   // Parent project (foundation) for context display
   protected parentProject: Signal<Project | null>;
-  // Registrant list (committee members are merged in server-side via enrichCommitteeRegistrants)
+  // Registrant list, fetched only when the user is the meeting organizer or invited
   protected registrants: Signal<MeetingRegistrant[]>;
   // Counts from actual data
   protected totalInvitees = computed(() => this.registrants().length);

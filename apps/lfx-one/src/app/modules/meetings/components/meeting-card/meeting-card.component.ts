@@ -245,10 +245,6 @@ export class MeetingCardComponent implements OnInit {
     this.showMyRsvp.set(!this.showMyRsvp());
   }
 
-  public onDrawerHide(): void {
-    this.showRegistrants.set(false);
-  }
-
   public openMaterialsDrawer(): void {
     this.materialsDrawerVisible.set(true);
   }
