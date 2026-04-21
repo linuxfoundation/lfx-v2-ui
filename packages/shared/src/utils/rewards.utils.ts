@@ -166,22 +166,29 @@ export function decorateCoupons(
   });
 
   return decorated.sort((a, b) => {
-    const rankDiff = getCouponSortRank(a) - getCouponSortRank(b);
+    const aRank = getCouponSortRank(a);
+    const bRank = getCouponSortRank(b);
+    const rankDiff = aRank - bRank;
     if (rankDiff !== 0) return rankDiff;
-    return compareByExpiryDate(a.resolvedExpiryDate, b.resolvedExpiryDate, a.isExpired);
+    // Sort direction must be derived from the bucket itself — not from
+    // `a.isExpired` — because the Redeemed bucket (rank 3) can contain a mix
+    // of expired and non-expired coupons. Using `a.isExpired` would make
+    // `cmp(a,b)` and `cmp(b,a)` non-antisymmetric and produce unstable order.
+    const sortDescending = aRank === 4;
+    return compareByExpiryDate(a.resolvedExpiryDate, b.resolvedExpiryDate, sortDescending);
   });
 }
 
 // ─── Shared sort helpers ─────────────────────────────────────────────────────
 
-function compareByExpiryDate(aDate: string | null, bDate: string | null, aIsExpired: boolean): number {
+function compareByExpiryDate(aDate: string | null, bDate: string | null, sortDescending: boolean): number {
   const aTime = aDate ? new Date(aDate).getTime() : Number.NaN;
   const bTime = bDate ? new Date(bDate).getTime() : Number.NaN;
   const aHasDate = !Number.isNaN(aTime);
   const bHasDate = !Number.isNaN(bTime);
 
   if (aHasDate && bHasDate) {
-    return aIsExpired ? bTime - aTime : aTime - bTime;
+    return sortDescending ? bTime - aTime : aTime - bTime;
   }
   if (aHasDate) return -1;
   if (bHasDate) return 1;
