@@ -649,18 +649,18 @@ function flatSparklineData(value: number): number[] {
 }
 
 /** Normalize a server-provided trend: treat zero change as neutral instead of up.
- *  Rounds to 1 decimal to match display precision — a server value of 0.03 displays
- *  as "+0.0%" and should be neutral, not green. */
+ *  Uses Number(toFixed(1)) to match roundForDisplay() — both helpers agree on the
+ *  same rounding path so the trend color never diverges from the displayed label. */
 function normalizeTrend(change: number, serverTrend: 'up' | 'down'): 'up' | 'down' | 'neutral' {
-  if (Math.round(change * 10) === 0) return 'neutral';
+  if (Number(change.toFixed(1)) === 0) return 'neutral';
   return serverTrend;
 }
 
 /** Derive trend direction from a numeric change value.
- *  Uses the same rounding threshold as normalizeTrend so the direction
- *  matches the formatted display string. */
+ *  Uses Number(toFixed(1)) — same rounding path as normalizeTrend and
+ *  roundForDisplay() so the direction matches the formatted display string. */
 function trendFromChange(change: number): 'up' | 'down' | 'neutral' {
-  if (Math.round(change * 10) === 0) return 'neutral';
+  if (Number(change.toFixed(1)) === 0) return 'neutral';
   return change > 0 ? 'up' : 'down';
 }
 
