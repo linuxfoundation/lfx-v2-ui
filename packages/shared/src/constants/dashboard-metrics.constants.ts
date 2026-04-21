@@ -815,7 +815,10 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       changePercentage: formatMomChange(memberAcquisition.changePercentage),
       trend: normalizeTrend(memberAcquisition.changePercentage, memberAcquisition.trend),
       subtitle: `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}% · Last 6 months`,
-      chartData: protoSparkline(memberAcquisition.totalMembersMonthlyData.length > 0 ? memberAcquisition.totalMembersMonthlyData : [0], lfxColors.blue[500]),
+      chartData: protoSparkline(
+        memberAcquisition.totalMembersMonthlyData.length > 0 ? memberAcquisition.totalMembersMonthlyData : flatSparklineData(memberAcquisition.totalMembers),
+        lfxColors.blue[500]
+      ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Total paying corporate members with monthly net new over the last 6 months.',
       drawerType: DashboardDrawerType.NorthStarMemberAcquisition,
@@ -831,7 +834,10 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       changePercentage: formatMomChange(engagedCommunity.changePercentage),
       trend: normalizeTrend(engagedCommunity.changePercentage, engagedCommunity.trend),
       subtitle: 'Last 6 months',
-      chartData: protoSparkline(engagedCommunity.monthlyData.length > 0 ? monthlyValues(engagedCommunity.monthlyData) : [0], lfxColors.blue[500]),
+      chartData: protoSparkline(
+        engagedCommunity.monthlyData.length > 0 ? monthlyValues(engagedCommunity.monthlyData) : flatSparklineData(engagedCommunity.totalMembers),
+        lfxColors.blue[500]
+      ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
       drawerType: DashboardDrawerType.NorthStarEngagedCommunity,

@@ -57,7 +57,7 @@
                       <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5">
                           @if (row.color) {
-                            <span class="w-2 h-2 rounded-full flex-shrink-0" [style.background-color]="row.color"></span>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0" [style.background-color]="row.color" aria-hidden="true" role="presentation"></span>
                           }
                           <span class="text-xs text-gray-500">{{ row.label }}</span>
                         </div>
