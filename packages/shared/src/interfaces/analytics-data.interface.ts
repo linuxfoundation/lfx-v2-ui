@@ -2841,9 +2841,9 @@ export interface NorthStarMonthlyDataPoint {
 
 /**
  * API response for Engaged Community Size metric.
- * Breakdown covers 7 channels: newsletter, community, WG, certified, web, code, training.
- * `totalMembers` and `changePercentage` exclude newsletterSubscribers (unreliable data);
- * newsletter is returned only in `breakdown` for display purposes.
+ * `totalMembers` and `changePercentage` include all 7 channels:
+ * newsletter, community, WG, certified, web, code, training.
+ * Newsletter subscribers sourced from GOLD_FACT.SUBSCRIPTION_SUBSCRIBERS.
  */
 export interface EngagedCommunitySizeResponse {
   totalMembers: number;
@@ -2894,8 +2894,10 @@ export interface MemberRetentionResponse {
 }
 
 /**
- * API response for Flywheel Conversion Rate metric
- * % of event attendees → newsletter/community/WG within 90 days
+ * API response for Flywheel Conversion Rate metric.
+ * % of event attendees → newsletter/community/WG within 90 days.
+ * Newsletter re-engagement is based on opens (not just subscriptions),
+ * sourced from NORTH_STAR_FLYWHEEL_CONVERSION view.
  */
 export interface FlywheelConversionResponse {
   conversionRate: number;

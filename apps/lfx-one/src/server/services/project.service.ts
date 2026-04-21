@@ -2443,10 +2443,11 @@ export class ProjectService {
 
       const latest = result.rows[0];
 
-      // Server-side recompute: newsletter subscribers are excluded from totals and MoM
-      // because the data is unreliable, but we still return the raw value in the breakdown
-      // for optional display. Sum the 6 reliable channels for totals and MoM change.
+      // Sum all 7 channels for totals and MoM change.
+      // Newsletter subscribers now sourced from GOLD_FACT.SUBSCRIPTION_SUBSCRIBERS
+      // (active subscriber counts per project, rolled up by foundation).
       const sumSegments = (row: (typeof result.rows)[0]) =>
+        (row.NEWSLETTER_SUBSCRIBERS ?? 0) +
         (row.COMMUNITY_MEMBERS ?? 0) +
         (row.WORKING_GROUP_MEMBERS ?? 0) +
         (row.CERTIFIED_INDIVIDUALS ?? 0) +
