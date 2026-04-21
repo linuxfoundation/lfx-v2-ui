@@ -9,7 +9,7 @@
   @if (cardLabel()) {
     <div
       class="flex items-center justify-between px-4 py-2.5"
-      [style.background]="cardVariant() === 'neutral' ? 'linear-gradient(to bottom, #f9fafb, #ffffff)' : 'linear-gradient(to bottom, #eff6ff, #ffffff)'">
+      [style.background]="cardVariant() === 'neutral' ? 'linear-gradient(to bottom, #f3f4f6, #ffffff)' : 'linear-gradient(to bottom, #eff6ff, #ffffff)'">
       <span
         class="text-[10px] font-semibold uppercase tracking-wide"
         [class.text-gray-700]="cardVariant() === 'neutral'"
@@ -29,17 +29,37 @@
   }
 
   <!-- Card body -->
-  <div class="flex gap-3 items-start px-4 py-3 flex-1">
+  <div class="flex gap-4 items-start px-4 py-3 flex-1">
     <!-- Date badge -->
     <div class="relative shrink-0">
       <div
-        class="w-16 h-16 rounded-xl flex flex-col items-center justify-center gap-0.5"
-        [class.bg-gray-100]="cardVariant() === 'neutral'"
-        [class.border]="cardVariant() === 'neutral'"
+        class="w-16 rounded-xl overflow-hidden flex flex-col border"
         [class.border-gray-200]="cardVariant() === 'neutral'"
-        [class.bg-blue-50]="cardVariant() === 'accent'">
-        <span class="font-display font-light text-3xl leading-8 text-gray-900">{{ meetingDay() }}</span>
-        <span class="text-[10px] font-medium text-gray-500">{{ meetingMonth() }}</span>
+        [class.border-blue-200]="cardVariant() === 'accent'">
+        <!-- Month strip -->
+        <div
+          class="flex items-center justify-center py-0.5"
+          [class.bg-gray-200]="cardVariant() === 'neutral'"
+          [class.bg-blue-500]="cardVariant() === 'accent'">
+          <span
+            class="text-[10px] font-semibold uppercase tracking-wider"
+            [class.text-gray-500]="cardVariant() === 'neutral'"
+            [class.text-white]="cardVariant() === 'accent'">
+            {{ meetingMonth() }}
+          </span>
+        </div>
+        <!-- Day number -->
+        <div
+          class="h-11 flex items-center justify-center"
+          [class.bg-gray-50]="cardVariant() === 'neutral'"
+          [class.bg-blue-50]="cardVariant() === 'accent'">
+          <span
+            class="font-display font-light text-3xl leading-none"
+            [class.text-gray-900]="cardVariant() === 'neutral'"
+            [class.text-blue-900]="cardVariant() === 'accent'">
+            {{ meetingDay() }}
+          </span>
+        </div>
       </div>
       <!-- Visibility dot badge -->
       <div
@@ -48,18 +68,47 @@
         [pTooltip]="isPrivate() ? 'Private meeting' : 'Public meeting'"
         tooltipPosition="top"
         data-testid="dashboard-meeting-card-type-dot">
-        <i class="text-white text-[11px]" [class]="dateBadgeDotInfo().icon"></i>
+        <i [class]="'text-white text-[10px] leading-none block ' + dateBadgeDotInfo().icon"></i>
       </div>
     </div>
 
     <!-- Meeting details -->
     <div class="flex-1 min-w-0 flex flex-col gap-1.5 py-1">
-      <p class="text-[10px] text-gray-500" data-testid="dashboard-meeting-card-time">
-        {{ formattedTimeWithDuration() }}
-      </p>
+      <div class="flex items-center gap-2 text-gray-400">
+        <p class="text-[10px] text-gray-500 shrink-0" data-testid="dashboard-meeting-card-time">
+          {{ formattedTimeWithDuration() }}
+        </p>
+        @if (hasRecording()) {
+          <span class="text-[10px]">·</span>
+          <i
+            class="fa-light fa-video text-[11px] text-gray-500"
+            pTooltip="Recording enabled"
+            tooltipPosition="top"
+            data-testid="dashboard-meeting-card-recording-chip"></i>
+        }
+        @if (hasTranscripts()) {
+          <span class="text-[10px]">·</span>
+          <i
+            class="fa-light fa-file-lines text-[11px] text-gray-500"
+            pTooltip="Transcripts enabled"
+            tooltipPosition="top"
+            data-testid="dashboard-meeting-card-transcripts-chip"></i>
+        }
+        @if (hasAiSummary()) {
+          <span class="text-[10px]">·</span>
+          <i
+            class="fa-light fa-sparkles text-[11px] text-gray-500"
+            pTooltip="AI summary enabled"
+            tooltipPosition="top"
+            data-testid="dashboard-meeting-card-ai-chip"></i>
+        }
+      </div>
       <h4
+        #titleEl
         class="text-sm font-semibold text-gray-900 truncate"
         [pTooltip]="meetingTitle()"
+        tooltipPosition="top"
+        [tooltipDisabled]="titleEl.scrollWidth <= titleEl.offsetWidth"
         data-testid="dashboard-meeting-card-title">
         {{ meetingTitle() }}
       </h4>
@@ -68,51 +117,26 @@
       <div class="flex flex-wrap gap-1.5">
         @if (projectChipLabel()) {
           <span
-            class="inline-flex items-center gap-1 h-4 px-1.5 border border-gray-200 bg-white rounded-full text-[10px] text-gray-900 whitespace-nowrap"
+            class="inline-flex items-center gap-1.5 text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4"
             data-testid="dashboard-meeting-card-project-chip">
-            <i class="fa-light fa-landmark text-[9px]"></i>
+            <i class="fa-light fa-landmark text-[10px]"></i>
             {{ projectChipLabel() }}
           </span>
         }
         <span
-          class="inline-flex items-center gap-1 h-4 px-1.5 border border-gray-200 bg-white rounded-full text-[10px] text-gray-900 whitespace-nowrap"
+          class="inline-flex items-center gap-1.5 text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4"
           data-testid="dashboard-meeting-card-type-chip">
-          <i class="fa-light fa-calendar text-[9px]"></i>
+          <i class="fa-light fa-calendar text-[10px]"></i>
           {{ meetingTypeInfo().label }}
         </span>
         @if (isRecurring()) {
           <span
-            class="inline-flex items-center gap-1 h-4 px-1.5 border border-gray-200 bg-white rounded-full text-[10px] text-gray-900 whitespace-nowrap"
+            class="inline-flex items-center gap-1.5 text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4"
+            [pTooltip]="meeting().recurrence | recurrenceSummary"
+            tooltipPosition="top"
             data-testid="dashboard-meeting-card-recurring-chip">
-            <i class="fa-light fa-arrows-rotate text-[9px]"></i>
+            <i class="fa-light fa-arrows-rotate text-[10px]"></i>
             Recurring
-          </span>
-        }
-        @if (hasRecording()) {
-          <span
-            class="inline-flex items-center justify-center h-4 w-5 border border-gray-200 bg-white rounded-full"
-            pTooltip="Recording enabled"
-            tooltipPosition="top"
-            data-testid="dashboard-meeting-card-recording-chip">
-            <i class="fa-light fa-video text-[9px] text-gray-700"></i>
-          </span>
-        }
-        @if (hasTranscripts()) {
-          <span
-            class="inline-flex items-center justify-center h-4 w-5 border border-gray-200 bg-white rounded-full"
-            pTooltip="Transcripts enabled"
-            tooltipPosition="top"
-            data-testid="dashboard-meeting-card-transcripts-chip">
-            <i class="fa-light fa-file-lines text-[9px] text-gray-700"></i>
-          </span>
-        }
-        @if (hasAiSummary()) {
-          <span
-            class="inline-flex items-center justify-center h-4 w-5 border border-gray-200 bg-white rounded-full"
-            pTooltip="AI summary enabled"
-            tooltipPosition="top"
-            data-testid="dashboard-meeting-card-ai-chip">
-            <i class="fa-light fa-sparkles text-[9px] text-gray-700"></i>
           </span>
         }
       </div>
@@ -143,7 +167,7 @@
   </div>
 
   <!-- Card footer buttons -->
-  <div class="flex gap-3 px-4 pb-4 pt-3">
+  <div class="flex gap-3 px-4 pb-4 pt-5">
     @if (showDetailsButton()) {
       @if (openDetailsInNewTab()) {
         <lfx-button

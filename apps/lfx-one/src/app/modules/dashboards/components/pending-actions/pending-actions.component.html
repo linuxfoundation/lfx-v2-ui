@@ -18,7 +18,7 @@
       data-testid="dashboard-pending-actions-list">
       @for (item of pendingActions(); track $index) {
         <div
-          class="flex items-center justify-between gap-4 px-4 py-3 bg-[rgba(255,251,235,0.5)]"
+          class="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-r from-white to-[rgba(255,251,235,0.8)]"
           [attr.data-testid]="'dashboard-pending-actions-item-' + item.type">
           <!-- Label + text -->
           <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -30,7 +30,6 @@
             </div>
             <p
               class="text-sm font-medium text-gray-900 truncate"
-              [pTooltip]="item.text"
               data-testid="dashboard-pending-actions-title">
               {{ item.text }}
             </p>
@@ -63,11 +62,13 @@
   } @else {
     <!-- Empty state -->
     <div
-      class="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center py-12"
+      class="bg-gray-50 rounded-2xl border border-gray-200 flex items-center justify-center gap-4 px-5 py-10"
       data-testid="dashboard-pending-actions-empty">
-      <i class="fa-light fa-eyes text-3xl text-gray-300 mb-3"></i>
-      <p class="text-sm font-medium text-gray-600">No pending actions</p>
-      <p class="text-xs text-gray-400 mt-1">You're all caught up!</p>
+      <i class="fa-light fa-box-check text-4xl text-gray-400 shrink-0"></i>
+      <div>
+        <p class="text-sm font-medium text-gray-700">Your desk is clear</p>
+        <p class="text-xs text-gray-400 mt-0.5">No pending actions assigned to you</p>
+      </div>
     </div>
   }
 </section>

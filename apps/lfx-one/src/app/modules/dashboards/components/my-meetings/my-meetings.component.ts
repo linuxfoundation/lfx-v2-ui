@@ -31,7 +31,7 @@ const DEV_MOCK_PAST_MEETING: PastMeeting = {
   transcript_enabled: true,
   youtube_upload_enabled: false,
   zoom_config: { ai_companion_enabled: true } as PastMeeting['zoom_config'],
-  recurrence: { type: RecurrenceType.MONTHLY, repeat_interval: 1, end_times: 12 },
+  recurrence: { type: RecurrenceType.WEEKLY, repeat_interval: 1, weekly_days: '3,5', end_times: 24 },
   visibility: MeetingVisibility.PUBLIC,
   restricted: false,
   invited: true,
@@ -118,8 +118,8 @@ export class MyMeetingsComponent {
   private readonly selectedProject = computed(() => this.projectContextService.activeContext());
 
   // Raw data from API — switches data source based on active lens
-  private readonly rawMeetings = isDevMode() ? signal<Meeting[]>([DEV_MOCK_UPCOMING_MEETING]) : this.initRawMeetings();
-  private readonly rawPastMeetings = isDevMode() ? signal<PastMeeting[]>([DEV_MOCK_PAST_MEETING]) : this.initRawPastMeetings();
+  private readonly rawMeetings = isDevMode() ? signal<Meeting[]>([]) : this.initRawMeetings();
+  private readonly rawPastMeetings = isDevMode() ? signal<PastMeeting[]>([]) : this.initRawPastMeetings();
 
   /** Dev-only recording URL passed to the last meeting card to bypass the recording API call. */
   protected readonly devRecordingUrl = isDevMode() ? 'https://zoom.us/rec/share/dev-mock-recording' : null;

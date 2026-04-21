@@ -38,22 +38,20 @@
           class="block flex-1"
           [meeting]="meeting"
           [detailUrl]="'/meetings/' + meeting.id"
-          [openDetailsInNewTab]="false"
           cardLabel="LAST MEETING"
           cardVariant="neutral"
           viewAllRouterLink="/meetings"
           [viewAllQueryParams]="{ time: 'past' }"
           [recordingUrl]="devRecordingUrl" />
       } @else {
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex-1">
-          <div class="flex items-center justify-between px-4 py-2.5" style="background: linear-gradient(to bottom, #f9fafb, #ffffff)">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-gray-700">Last Meeting</span>
-            <a routerLink="/meetings" [queryParams]="{ time: 'past' }" class="text-xs text-[#009aff] hover:underline" data-testid="dashboard-last-meeting-view-all">View all</a>
-          </div>
-          <div class="flex flex-col items-center py-8" data-testid="dashboard-last-meeting-empty">
-            <i class="fa-light fa-clock-rotate-left text-2xl text-gray-300 mb-2"></i>
-            <p class="text-sm font-medium text-gray-500">No past meetings</p>
-            <p class="text-xs text-gray-400 mt-1">{{ emptyPastText() }}</p>
+        <div
+          class="rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex-1 flex items-center justify-center gap-4 px-5 py-10"
+          style="background: linear-gradient(to bottom, #f3f4f6, #ffffff)"
+          data-testid="dashboard-last-meeting-empty">
+          <i class="fa-light fa-clock-rotate-left text-4xl text-gray-400 shrink-0"></i>
+          <div>
+            <p class="text-sm font-medium text-gray-700">You haven't joined a meeting yet</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ emptyPastText() }}</p>
           </div>
         </div>
       }
@@ -88,15 +86,14 @@
           cardVariant="accent"
           viewAllRouterLink="/meetings" />
       } @else {
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex-1">
-          <div class="flex items-center justify-between px-4 py-2.5" style="background: linear-gradient(to bottom, #eff6ff, #ffffff)">
-            <span class="text-[10px] font-semibold uppercase tracking-wide text-blue-800">Next Meeting</span>
-            <a routerLink="/meetings" class="text-xs text-[#009aff] hover:underline" data-testid="dashboard-next-meeting-view-all">View all</a>
-          </div>
-          <div class="flex flex-col items-center py-8" data-testid="dashboard-next-meeting-empty">
-            <i class="fa-light fa-calendar-check text-2xl text-gray-300 mb-2"></i>
-            <p class="text-sm font-medium text-gray-500">No upcoming meetings</p>
-            <p class="text-xs text-gray-400 mt-1">{{ emptyUpcomingText() }}</p>
+        <div
+          class="rounded-2xl border border-blue-100 shadow-sm overflow-hidden flex-1 flex items-center justify-center gap-4 px-5 py-10"
+          style="background: linear-gradient(to bottom, #eff6ff, #ffffff)"
+          data-testid="dashboard-next-meeting-empty">
+          <i class="fa-light fa-calendar-check text-4xl text-gray-400 shrink-0"></i>
+          <div>
+            <p class="text-sm font-medium text-gray-700">Your calendar is clear</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ emptyUpcomingText() }}</p>
           </div>
         </div>
       }

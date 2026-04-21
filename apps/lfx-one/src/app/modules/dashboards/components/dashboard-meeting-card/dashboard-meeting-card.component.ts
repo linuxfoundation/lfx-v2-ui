@@ -181,7 +181,7 @@ export class DashboardMeetingCardComponent {
       try {
         const date = new Date(startTime);
         if (isNaN(date.getTime())) return startTime;
-        const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
         const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         const duration = this.meetingDuration();
         return duration > 0 ? `${weekday}, ${time} · ${duration}m` : `${weekday}, ${time}`;
