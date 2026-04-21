@@ -12,7 +12,6 @@ import {
   canJoinMeeting,
   DEFAULT_MEETING_TYPE_CONFIG,
   Meeting,
-  MeetingAttachment,
   MEETING_TYPE_CONFIGS,
   MeetingOccurrence,
   MeetingTypeBadge,
@@ -22,9 +21,8 @@ import {
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
-import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, combineLatest, map, of, switchMap, take } from 'rxjs';
+import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-dashboard-meeting-card',
@@ -34,7 +32,6 @@ import { catchError, combineLatest, map, of, switchMap, take } from 'rxjs';
 export class DashboardMeetingCardComponent {
   private readonly meetingService = inject(MeetingService);
   private readonly userService = inject(UserService);
-  private readonly messageService = inject(MessageService);
 
   public readonly meeting = input.required<Meeting>();
   public readonly occurrence = input<MeetingOccurrence | null>(null);
@@ -55,7 +52,6 @@ export class DashboardMeetingCardComponent {
   /** Query params for the "View all" router link. */
   public readonly viewAllQueryParams = input<Record<string, string>>({});
 
-  public readonly attachments: Signal<MeetingAttachment[]> = this.initAttachments();
   public readonly joinUrl: Signal<string | null>;
 
   // Computed values
@@ -112,27 +108,6 @@ export class DashboardMeetingCardComponent {
     );
 
     this.joinUrl = toSignal(joinUrl$, { initialValue: null });
-  }
-
-  public downloadAttachment(attachment: MeetingAttachment): void {
-    const meetingId = this.meeting().id;
-    this.meetingService
-      .getMeetingAttachmentDownloadUrl(meetingId, attachment.uid)
-      .pipe(take(1))
-      .subscribe({
-        next: (res) => {
-          const newWindow = window.open(res.download_url, '_blank', 'noopener,noreferrer');
-          if (newWindow) {
-            newWindow.opener = null;
-          }
-        },
-        error: () =>
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Download Failed',
-            detail: 'Unable to download the attachment. Please try again.',
-          }),
-      });
   }
 
   private initMeetingTypeInfo(): Signal<MeetingTypeBadge> {
@@ -207,7 +182,7 @@ export class DashboardMeetingCardComponent {
         const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
         const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         const duration = this.meetingDuration();
-        return duration > 0 ? `${weekday}, ${time}・${duration}m` : `${weekday}, ${time}`;
+        return duration > 0 ? `${weekday}, ${time} · ${duration}m` : `${weekday}, ${time}`;
       } catch {
         return startTime;
       }
@@ -344,16 +319,6 @@ export class DashboardMeetingCardComponent {
     );
   }
 
-  private initAttachments(): Signal<MeetingAttachment[]> {
-    return toSignal(
-      toObservable(this.meeting).pipe(
-        switchMap((meeting) => (meeting?.id ? this.meetingService.getMeetingAttachments(meeting.id) : of([]))),
-        catchError(() => of([] as MeetingAttachment[]))
-      ),
-      { initialValue: [] }
-    );
-  }
-
   private initMeetingDay(): Signal<string> {
     return computed(() => {
       const date = new Date(this.meetingStartTime());
@@ -392,15 +357,20 @@ export class DashboardMeetingCardComponent {
 
   private initDateBadgeDotInfo(): Signal<{ bgColor: string; icon: string }> {
     return computed(() => {
-      const type = this.meeting().meeting_type?.toLowerCase();
-      const dotMap: Record<string, { bgColor: string; icon: string }> = {
-        technical: { bgColor: '#7c3aed', icon: 'fa-light fa-code' },
-        maintainers: { bgColor: '#2563eb', icon: 'fa-light fa-gear' },
-        board: { bgColor: '#dc2626', icon: 'fa-light fa-user-check' },
-        marketing: { bgColor: '#059669', icon: 'fa-light fa-chart-line-up' },
-        legal: { bgColor: '#d97706', icon: 'fa-light fa-scale-balanced' },
+      const type = this.meeting().meeting_type?.toLowerCase() ?? '';
+      const dotColorMap: Record<string, string> = {
+        technical: '#7c3aed',
+        maintainers: '#2563eb',
+        board: '#dc2626',
+        marketing: '#059669',
+        legal: '#d97706',
       };
-      return dotMap[type ?? ''] ?? { bgColor: '#00bc7d', icon: 'fa-light fa-globe' };
+      const config = (MEETING_TYPE_CONFIGS as Record<string, { icon: string }>)[type] ?? DEFAULT_MEETING_TYPE_CONFIG;
+
+      return {
+        bgColor: dotColorMap[type] ?? '#00bc7d',
+        icon: config.icon,
+      };
     });
   }
 }
