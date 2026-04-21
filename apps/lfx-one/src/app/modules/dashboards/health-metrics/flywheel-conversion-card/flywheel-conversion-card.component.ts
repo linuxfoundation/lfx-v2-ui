@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, input, PLATFORM_ID, signal, Signal } from '@angular/core';
-import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, PLATFORM_ID, signal, Signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
 import { createHorizontalBarChartOptions, DASHBOARD_TOOLTIP_CONFIG, HEALTH_METRICS_FLYWHEEL_CONVERSION_DECIMAL_PLACES, lfxColors } from '@lfx-one/shared/constants';
 import { buildFlywheelCardSummary, buildFlywheelFunnelStages, formatNumber, selectFlywheelBannerView } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { downloadCardAsImage } from '@shared/utils/download-card.util';
-import { filter, map, switchMap, tap } from 'rxjs';
+import { catchError, filter, finalize, map, of, switchMap, tap } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -36,7 +36,6 @@ export class FlywheelConversionCardComponent {
   private readonly elementRef = inject(ElementRef);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly projectContextService = inject(ProjectContextService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
 
   // === Inputs ===
@@ -45,7 +44,7 @@ export class FlywheelConversionCardComponent {
 
   // === Internal State ===
   protected readonly loading = signal(true);
-  private readonly data = signal<FlywheelConversionResponse | null>(null);
+  private readonly data: Signal<FlywheelConversionResponse | null> = this.initDataFromServer();
 
   // === Computed Signals ===
   protected readonly summary: Signal<FlywheelCardSummaryView | null> = computed(() => buildFlywheelCardSummary(this.data()));
@@ -144,38 +143,29 @@ export class FlywheelConversionCardComponent {
     },
   });
 
-  public constructor() {
-    if (isPlatformBrowser(this.platformId)) {
-      this.initializeDataFetching();
-    }
-  }
-
   // === Protected Methods ===
   protected downloadCard(): void {
     if (this.loading() || !this.hasFlywheelData()) return;
     downloadCardAsImage(this.elementRef.nativeElement, 'flywheel-conversion-rate');
   }
 
-  private initializeDataFetching(): void {
-    toObservable(this.projectContextService.selectedFoundation)
-      .pipe(
+  private initDataFromServer(): Signal<FlywheelConversionResponse | null> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return signal<FlywheelConversionResponse | null>(null);
+    }
+    return toSignal(
+      toObservable(this.projectContextService.selectedFoundation).pipe(
         map((foundation) => foundation?.slug || ''),
         filter((slug): slug is string => !!slug),
-        tap(() => {
-          this.loading.set(true);
-          this.data.set(null);
-        }),
-        switchMap((slug) => this.analyticsService.getFlywheelConversion(slug)),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe({
-        next: (result) => {
-          this.data.set(result);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.loading.set(false);
-        },
-      });
+        tap(() => this.loading.set(true)),
+        switchMap((slug) =>
+          this.analyticsService.getFlywheelConversion(slug).pipe(
+            catchError(() => of(null)),
+            finalize(() => this.loading.set(false))
+          )
+        )
+      ),
+      { initialValue: null }
+    );
   }
 }
