@@ -19,7 +19,6 @@ import { environment } from '@environments/environment';
 import {
   buildJoinUrlWithParams,
   canJoinMeeting,
-  CommitteeMember,
   DEFAULT_MEETING_TYPE_CONFIG,
   getActiveOccurrences,
   getCurrentOrNextOccurrence,
@@ -42,7 +41,6 @@ import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
-import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -110,7 +108,6 @@ export class MeetingJoinComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
-  private readonly committeeService = inject(CommitteeService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
@@ -183,11 +180,10 @@ export class MeetingJoinComponent implements OnInit {
   protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
   // Parent project (foundation) for context display
   protected parentProject: Signal<Project | null>;
-  // Registrant + committee member list
+  // Registrant list (committee members are merged in server-side via enrichCommitteeRegistrants)
   protected registrants: Signal<MeetingRegistrant[]>;
-  protected committeeMembers: Signal<CommitteeMember[]>;
   // Counts from actual data
-  protected totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
+  protected totalInvitees = computed(() => this.registrants().length);
   // Past meeting participants (fetched from API for attendance stats)
   protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
   // Past meeting attendance stats (derived from participants)
@@ -247,7 +243,6 @@ export class MeetingJoinComponent implements OnInit {
     this.alertMessage = this.initializeAlertMessage();
     this.emailError = this.initializeEmailError();
     this.registrants = this.initializeRegistrants();
-    this.committeeMembers = this.initializeCommitteeMembers();
     this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
   }
@@ -926,39 +921,11 @@ export class MeetingJoinComponent implements OnInit {
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id && this.authenticated()),
+        filter((meeting) => !!meeting?.id && this.authenticated() && (meeting.organizer || meeting.invited)),
         distinctUntilChanged((a, b) => a.id === b.id),
         switchMap((meeting) => {
           if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
-          return this.meetingService.getMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
-        })
-      ),
-      { initialValue: [] }
-    );
-  }
-
-  private initializeCommitteeMembers(): Signal<CommitteeMember[]> {
-    return toSignal(
-      toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id && this.authenticated()),
-        distinctUntilChanged((a, b) => a.id === b.id),
-        switchMap((meeting) => {
-          const committeeUids = (meeting.committees || []).map((c) => c.uid).filter(Boolean);
-          if (committeeUids.length === 0) return of([] as CommitteeMember[]);
-          return combineLatest(
-            committeeUids.map((uid) => this.committeeService.getCommitteeMembers(uid).pipe(catchError(() => of([] as CommitteeMember[]))))
-          ).pipe(
-            map((arrays) => {
-              const all = arrays.flat();
-              const seen = new Set<string>();
-              return all.filter((m) => {
-                const key = m.email?.toLowerCase();
-                if (!key || seen.has(key)) return false;
-                seen.add(key);
-                return true;
-              });
-            })
-          );
+          return this.meetingService.getMyMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
         })
       ),
       { initialValue: [] }
