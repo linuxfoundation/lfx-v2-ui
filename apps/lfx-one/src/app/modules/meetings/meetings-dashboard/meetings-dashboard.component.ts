@@ -75,10 +75,10 @@ export class MeetingsDashboardComponent {
   public projectOptions: Signal<{ label: string; value: string | null }[]>;
   public project: Signal<ProjectContext | null>;
   protected readonly canWrite = this.projectContextService.canWrite;
+  protected readonly isFiltered = this.initIsFiltered();
   public loadingMore = signal(false);
   public hasMore: Signal<boolean>;
   public autoLoadTriggerIndex: Signal<number>;
-  protected readonly isFiltered: Signal<boolean>;
 
   private fpUpcomingLoading = signal(false);
   private fpPastLoading = signal(false);
@@ -184,7 +184,6 @@ export class MeetingsDashboardComponent {
 
     // Sentinel is placed at 50% of the list to trigger auto-load as user scrolls
     this.autoLoadTriggerIndex = computed(() => Math.floor(this.filteredMeetings().length / 2));
-    this.isFiltered = computed(() => !!this.debouncedSearchQuery() || !!this.meetingTypeFilter() || !!this.foundationFilter() || !!this.projectFilter());
   }
 
   public refreshMeetings(): void {
@@ -670,5 +669,9 @@ export class MeetingsDashboardComponent {
       return undefined;
     }
     return [`meeting_type:${meetingType}`];
+  }
+
+  private initIsFiltered(): Signal<boolean> {
+    return computed(() => !!this.debouncedSearchQuery() || !!this.meetingTypeFilter() || !!this.foundationFilter() || !!this.projectFilter());
   }
 }

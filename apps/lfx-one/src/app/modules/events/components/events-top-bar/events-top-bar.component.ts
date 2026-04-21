@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, effect, inject, input, output, Signal, signal } from '@angular/core';
+import { Component, inject, input, output, Signal, signal } from '@angular/core';
 import { outputFromObservable, takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -84,13 +84,16 @@ export class EventsTopBarComponent {
         }
       });
 
-    effect(() => {
-      const query = this.searchQuery() ?? '';
-      if (this.searchForm.get('search')?.value !== query) {
-        this.searchForm.get('search')?.setValue(query, { emitEvent: false });
-        this.searchValue.set(query);
-      }
-    });
+    // Sync the searchQuery input into the form control without triggering valueChanges debounce.
+    toObservable(this.searchQuery)
+      .pipe(takeUntilDestroyed())
+      .subscribe((query) => {
+        const normalizedQuery = query ?? '';
+        if (searchControl?.value !== normalizedQuery) {
+          searchControl?.setValue(normalizedQuery, { emitEvent: false });
+          this.searchValue.set(normalizedQuery);
+        }
+      });
   }
 
   public clearSearch(): void {

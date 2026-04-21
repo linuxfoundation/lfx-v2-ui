@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { switchMap, startWith } from 'rxjs';
@@ -73,12 +73,11 @@ export class CommitteeTableComponent {
   protected readonly categoryTab = signal<string>('all');
 
   // State
-  public isBoardMember: Signal<boolean> = computed(() => this.personaService.currentPersona() === 'board-member');
+  protected readonly isBoardMember = computed(() => this.personaService.currentPersona() === 'board-member');
 
-  private readonly formValue = toSignal(
-    toObservable(this.searchForm).pipe(switchMap((form) => form.valueChanges.pipe(startWith(form.value)))),
-    { initialValue: {} as Record<string, unknown> }
-  );
+  private readonly formValue = toSignal(toObservable(this.searchForm).pipe(switchMap((form) => form.valueChanges.pipe(startWith(form.value)))), {
+    initialValue: {} as Record<string, unknown>,
+  });
 
   protected readonly isFiltered = computed(() => {
     const v = this.formValue();
