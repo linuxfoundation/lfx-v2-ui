@@ -4,9 +4,8 @@
 import { ClipboardModule } from '@angular/cdk/clipboard';
 import { Component, computed, inject, input, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Params, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { TagComponent } from '@components/tag/tag.component';
 import {
   buildJoinUrlWithParams,
   canJoinMeeting,
@@ -26,7 +25,7 @@ import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-dashboard-meeting-card',
-  imports: [ButtonComponent, TagComponent, TooltipModule, ClipboardModule, RecurrenceSummaryPipe, RouterLink],
+  imports: [ButtonComponent, TooltipModule, ClipboardModule, RecurrenceSummaryPipe, RouterLink],
   templateUrl: './dashboard-meeting-card.component.html',
 })
 export class DashboardMeetingCardComponent {
@@ -50,7 +49,7 @@ export class DashboardMeetingCardComponent {
   /** Router link for the "View all" button in the card header strip. */
   public readonly viewAllRouterLink = input<string | null>(null);
   /** Query params for the "View all" router link. */
-  public readonly viewAllQueryParams = input<Record<string, string>>({});
+  public readonly viewAllQueryParams = input<Params>({});
   /** Optional recording URL override — when set, skips the API call and renders the "Watch recording" button directly. */
   public readonly recordingUrl = input<string | null>(null);
 
@@ -59,12 +58,8 @@ export class DashboardMeetingCardComponent {
   // Computed values
   public readonly meetingTypeInfo: Signal<MeetingTypeBadge> = this.initMeetingTypeInfo();
   public readonly meetingStartTime: Signal<string> = this.initMeetingStartTime();
-  public readonly formattedTime: Signal<string> = this.initFormattedTime();
   public readonly formattedTimeWithDuration: Signal<string> = this.initFormattedTimeWithDuration();
-  public readonly isTodayMeeting: Signal<boolean> = this.initIsTodayMeeting();
   public readonly isPrivate: Signal<boolean> = this.initIsPrivate();
-  public readonly hasYoutubeUploads: Signal<boolean> = this.initHasYoutubeUploads();
-  public readonly hasShowAttendees: Signal<boolean> = this.initHasShowAttendees();
   public readonly hasRecording: Signal<boolean> = this.initHasRecording();
   public readonly hasTranscripts: Signal<boolean> = this.initHasTranscripts();
   public readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
@@ -135,46 +130,6 @@ export class DashboardMeetingCardComponent {
     });
   }
 
-  private initFormattedTime(): Signal<string> {
-    return computed(() => {
-      const startTime = this.meetingStartTime();
-
-      try {
-        const meetingDate = new Date(startTime);
-
-        if (isNaN(meetingDate.getTime())) {
-          return startTime;
-        }
-
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const isToday = meetingDate.toDateString() === today.toDateString();
-        const isTomorrow = meetingDate.toDateString() === tomorrow.toDateString();
-
-        const timeStr = meetingDate.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        });
-
-        if (isToday) {
-          return `Today, ${timeStr}`;
-        } else if (isTomorrow) {
-          return `Tomorrow, ${timeStr}`;
-        }
-        const dateStr = meetingDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        });
-        return `${dateStr} at ${timeStr}`;
-      } catch {
-        return startTime;
-      }
-    });
-  }
-
   private initFormattedTimeWithDuration(): Signal<string> {
     return computed(() => {
       const startTime = this.meetingStartTime();
@@ -191,34 +146,9 @@ export class DashboardMeetingCardComponent {
     });
   }
 
-  private initIsTodayMeeting(): Signal<boolean> {
-    return computed(() => {
-      const startTime = this.meetingStartTime();
-
-      try {
-        const meetingDate = new Date(startTime);
-
-        if (isNaN(meetingDate.getTime())) {
-          return false;
-        }
-
-        const today = new Date();
-        return meetingDate.toDateString() === today.toDateString();
-      } catch {
-        return false;
-      }
-    });
-  }
-
   private initIsPrivate(): Signal<boolean> {
     return computed(() => {
       return this.meeting().visibility === 'private';
-    });
-  }
-
-  private initHasYoutubeUploads(): Signal<boolean> {
-    return computed(() => {
-      return this.meeting().youtube_upload_enabled === true;
     });
   }
 
@@ -231,12 +161,6 @@ export class DashboardMeetingCardComponent {
   private initHasTranscripts(): Signal<boolean> {
     return computed(() => {
       return this.meeting().transcript_enabled === true;
-    });
-  }
-
-  private initHasShowAttendees(): Signal<boolean> {
-    return computed(() => {
-      return this.meeting().show_meeting_attendees === true;
     });
   }
 
@@ -296,15 +220,15 @@ export class DashboardMeetingCardComponent {
 
   private initRecordingShareUrl(): Signal<string | null> {
     return toSignal(
-      combineLatest([toObservable(this.meeting), toObservable(this.recordingUrl)]).pipe(
-        switchMap(([meeting, recordingUrlOverride]) => {
+      combineLatest([toObservable(this.meeting), toObservable(this.recordingUrl), toObservable(this.occurrence)]).pipe(
+        switchMap(([meeting, recordingUrlOverride, occurrence]) => {
           if (recordingUrlOverride) {
             return of(recordingUrlOverride);
           }
           if (!meeting?.id || !meeting.recording_enabled) {
             return of(null);
           }
-          const startTime = this.occurrence()?.start_time || meeting.start_time;
+          const startTime = occurrence?.start_time || meeting.start_time;
           if (new Date(startTime).getTime() > Date.now()) {
             return of(null);
           }

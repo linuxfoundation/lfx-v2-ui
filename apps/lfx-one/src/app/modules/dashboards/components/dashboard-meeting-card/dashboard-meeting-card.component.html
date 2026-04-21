@@ -66,9 +66,10 @@
         class="absolute -top-2 left-[47px] w-5 h-5 rounded-full flex items-center justify-center"
         [style.background-color]="dateBadgeDotInfo().bgColor"
         [pTooltip]="isPrivate() ? 'Private meeting' : 'Public meeting'"
+        [attr.aria-label]="isPrivate() ? 'Private meeting' : 'Public meeting'"
         tooltipPosition="top"
         data-testid="dashboard-meeting-card-type-dot">
-        <i [class]="'text-white text-[10px] leading-none block ' + dateBadgeDotInfo().icon"></i>
+        <i [class]="'text-white text-[10px] leading-none block ' + dateBadgeDotInfo().icon" aria-hidden="true"></i>
       </div>
     </div>
 
@@ -155,7 +156,7 @@
     @defer (on idle) {
       <button
         type="button"
-        [cdkCopyToClipboard]="meetingDetailHref()"
+        [cdkCopyToClipboard]="meetingDetailUrl()"
         class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500 mt-1"
         pTooltip="Copy meeting link"
         tooltipPosition="top"
