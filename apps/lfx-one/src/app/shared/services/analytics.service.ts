@@ -60,6 +60,7 @@ import {
   ParticipatingOrgsSummaryResponse,
   TrainingCertificationSummaryResponse,
   CodeContributionSummaryResponse,
+  BoardMeetingParticipationSummaryResponse,
   SocialMediaResponse,
   SocialReachResponse,
   WebActivitiesSummaryResponse,
@@ -954,6 +955,9 @@ export class AnalyticsService {
             communityMembers: 0,
             workingGroupMembers: 0,
             certifiedIndividuals: 0,
+            webVisitors: 0,
+            codeContributors: 0,
+            trainingEnrollees: 0,
           },
           monthlyData: [],
         });
@@ -962,38 +966,12 @@ export class AnalyticsService {
   }
 
   /**
-   * Get flywheel conversion rate metrics from Snowflake North Star views
+   * Get flywheel conversion rate metrics from Snowflake North Star views.
+   * Returns null on HTTP failure so consumers can distinguish "error" from "real zeros".
    */
-  public getFlywheelConversion(foundationSlug: string): Observable<FlywheelConversionResponse> {
+  public getFlywheelConversion(foundationSlug: string): Observable<FlywheelConversionResponse | null> {
     return this.http.get<FlywheelConversionResponse>('/api/analytics/flywheel-conversion', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({
-          conversionRate: 0,
-          changePercentage: 0,
-          trend: 'up' as const,
-          funnel: {
-            eventAttendees: 0,
-            convertedToNewsletter: 0,
-            convertedToCommunity: 0,
-            convertedToWorkingGroup: 0,
-            convertedToTraining: 0,
-            convertedToCode: 0,
-            convertedToWeb: 0,
-          },
-          reengagement: {
-            totalReengaged: 0,
-            reengagementRate: 0,
-            reengagementMomChange: 0,
-            reengagedToNewsletter: 0,
-            reengagedToCommunity: 0,
-            reengagedToWorkingGroup: 0,
-            reengagedToTraining: 0,
-            reengagedToCode: 0,
-            reengagedToWeb: 0,
-          },
-          monthlyData: [],
-        });
-      })
+      catchError(() => of(null))
     );
   }
 
@@ -1067,6 +1045,7 @@ export class AnalyticsService {
           currentPeriod: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
           previousYear: null,
           trend: null,
+          tiers: [],
         });
       })
     );
@@ -1135,6 +1114,28 @@ export class AnalyticsService {
           committers: 0,
           maintainers: 0,
           reviewers: 0,
+        });
+      })
+    );
+  }
+
+  public getBoardMeetingParticipationSummary(foundationSlug: string, range: string = 'YTD'): Observable<BoardMeetingParticipationSummaryResponse> {
+    const params: Record<string, string> = { foundationSlug };
+    if (range && range !== 'YTD') {
+      params['range'] = range;
+    }
+    return this.http.get<BoardMeetingParticipationSummaryResponse>('/api/analytics/board-meeting-participation-summary', { params }).pipe(
+      catchError(() => {
+        return of({
+          dataAvailable: false,
+          projectId: '',
+          projectSlug: '',
+          range: (range || 'YTD') as BoardMeetingParticipationSummaryResponse['range'],
+          totalMeetings: 0,
+          totalMeetingsChange: null,
+          avgMeetingAttendance: 0,
+          avgMeetingAttendanceChange: null,
+          invitees: [],
         });
       })
     );
@@ -1211,19 +1212,23 @@ export class AnalyticsService {
    * @param foundationSlug Foundation slug used to filter Snowflake queries
    * @returns Observable emitting mention totals, sentiment percentages, and monthly history (or zeroed defaults on error)
    */
-  public getBrandHealth(foundationSlug: string): Observable<BrandHealthResponse> {
-    return this.http.get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug } }).pipe(
-      catchError(() =>
-        of({
-          totalMentions: 0,
-          sentiment: { positive: 0, neutral: 0, negative: 0 },
-          sentimentMomChangePp: 0,
-          trend: 'up' as const,
-          monthlyMentions: [],
-          topProjects: [],
-        })
-      )
-    );
+  public getBrandHealth(foundationSlug: string, includeMentions = false): Observable<BrandHealthResponse> {
+    return this.http
+      .get<BrandHealthResponse>('/api/analytics/brand-health', { params: { foundationSlug, ...(includeMentions && { includeMentions: 'true' }) } })
+      .pipe(
+        catchError(() =>
+          of({
+            totalMentions: 0,
+            sentiment: { positive: 0, neutral: 0, negative: 0 },
+            sentimentMomChangePp: 0,
+            trend: 'up' as const,
+            monthlyMentions: [],
+            topProjects: [],
+            topPositiveMentions: [],
+            topNegativeMentions: [],
+          })
+        )
+      );
   }
 
   /**
