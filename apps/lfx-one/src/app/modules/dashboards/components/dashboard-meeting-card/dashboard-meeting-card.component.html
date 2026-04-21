@@ -2,7 +2,7 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <div
-  class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-blue-400 transition-colors"
+  class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col justify-between hover:border-blue-400 transition-colors h-full"
   data-testid="dashboard-meeting-card">
 
   <!-- Card header strip (shown when cardLabel is set) -->
@@ -41,12 +41,12 @@
         <span class="font-display font-light text-3xl leading-8 text-gray-900">{{ meetingDay() }}</span>
         <span class="text-[10px] font-medium text-gray-500">{{ meetingMonth() }}</span>
       </div>
-      <!-- Meeting type dot badge -->
+      <!-- Visibility dot badge -->
       <div
-        class="absolute -top-1.5 left-[51px] w-4 h-4 rounded-full flex items-center justify-center"
+        class="absolute -top-2 left-[47px] w-5 h-5 rounded-full flex items-center justify-center"
         [style.background-color]="dateBadgeDotInfo().bgColor"
         data-testid="dashboard-meeting-card-type-dot">
-        <i class="text-white text-[9px]" [class]="dateBadgeDotInfo().icon"></i>
+        <i class="text-white text-[11px]" [class]="dateBadgeDotInfo().icon"></i>
       </div>
     </div>
 
@@ -141,7 +141,7 @@
   </div>
 
   <!-- Card footer buttons -->
-  <div class="flex gap-3 px-4 pb-4 pt-1">
+  <div class="flex gap-3 px-4 pb-4 pt-3">
     @if (showDetailsButton()) {
       @if (openDetailsInNewTab()) {
         <lfx-button

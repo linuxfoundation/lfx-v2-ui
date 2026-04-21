@@ -22,11 +22,12 @@
           [attr.data-testid]="'dashboard-pending-actions-item-' + item.type">
           <!-- Label + text -->
           <div class="flex items-center gap-3 min-w-0 flex-1">
-            <lfx-tag
-              class="shrink-0"
-              [value]="item.type"
-              [severity]="item.severity"
-              [icon]="item.icon" />
+            <div class="w-24 shrink-0">
+              <lfx-tag
+                [value]="item.type"
+                [severity]="item.severity"
+                [icon]="item.icon" />
+            </div>
             <p
               class="text-sm font-medium text-gray-900 truncate"
               [pTooltip]="item.text"

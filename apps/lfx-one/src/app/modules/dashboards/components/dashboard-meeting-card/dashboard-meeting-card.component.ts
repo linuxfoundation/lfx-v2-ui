@@ -51,6 +51,8 @@ export class DashboardMeetingCardComponent {
   public readonly viewAllRouterLink = input<string | null>(null);
   /** Query params for the "View all" router link. */
   public readonly viewAllQueryParams = input<Record<string, string>>({});
+  /** Optional recording URL override — when set, skips the API call and renders the "Watch recording" button directly. */
+  public readonly recordingUrl = input<string | null>(null);
 
   public readonly joinUrl: Signal<string | null>;
 
@@ -294,8 +296,11 @@ export class DashboardMeetingCardComponent {
 
   private initRecordingShareUrl(): Signal<string | null> {
     return toSignal(
-      toObservable(this.meeting).pipe(
-        switchMap((meeting) => {
+      combineLatest([toObservable(this.meeting), toObservable(this.recordingUrl)]).pipe(
+        switchMap(([meeting, recordingUrlOverride]) => {
+          if (recordingUrlOverride) {
+            return of(recordingUrlOverride);
+          }
           if (!meeting?.id || !meeting.recording_enabled) {
             return of(null);
           }
@@ -356,21 +361,9 @@ export class DashboardMeetingCardComponent {
   }
 
   private initDateBadgeDotInfo(): Signal<{ bgColor: string; icon: string }> {
-    return computed(() => {
-      const type = this.meeting().meeting_type?.toLowerCase() ?? '';
-      const dotColorMap: Record<string, string> = {
-        technical: '#7c3aed',
-        maintainers: '#2563eb',
-        board: '#dc2626',
-        marketing: '#059669',
-        legal: '#d97706',
-      };
-      const config = (MEETING_TYPE_CONFIGS as Record<string, { icon: string }>)[type] ?? DEFAULT_MEETING_TYPE_CONFIG;
-
-      return {
-        bgColor: dotColorMap[type] ?? '#00bc7d',
-        icon: config.icon,
-      };
-    });
+    return computed(() => ({
+      bgColor: this.isPrivate() ? '#d4183d' : '#00bc7d',
+      icon: this.isPrivate() ? 'fa-solid fa-shield' : 'fa-solid fa-globe',
+    }));
   }
 }
