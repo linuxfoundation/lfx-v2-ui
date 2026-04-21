@@ -3,7 +3,7 @@
 
 <div class="container mx-auto px-4 sm:px-6 lg:px-8" data-testid="my-activity-dashboard">
   <!-- Page Header -->
-  <div class="mt-3 mb-6">
+  <div class="mb-6">
     <h1 class="font-display font-light text-2xl">{{ activityLabel.singular }}</h1>
     <p class="mt-1 text-sm text-gray-500" data-testid="my-activity-description">{{ activityLabel.description }}</p>
   </div>
@@ -14,9 +14,27 @@
   <!-- Content Area - Conditional Tables -->
   <div class="min-h-[400px]">
     @if (isVotesTab()) {
-      <lfx-votes-table [votes]="votes()"></lfx-votes-table>
+      @if (votes().length === 0) {
+        <lfx-empty-state
+          icon="fa-light fa-check-to-slot"
+          title="No vote activity yet"
+          subtitle="Your pending and completed votes will appear here."
+          data-testid="my-activity-votes-empty-state">
+        </lfx-empty-state>
+      } @else {
+        <lfx-votes-table [votes]="votes()"></lfx-votes-table>
+      }
     } @else if (isSurveysTab()) {
-      <lfx-surveys-table [surveys]="surveys()"></lfx-surveys-table>
+      @if (surveys().length === 0) {
+        <lfx-empty-state
+          icon="fa-light fa-clipboard-list"
+          title="No survey activity yet"
+          subtitle="Your pending and completed surveys will appear here."
+          data-testid="my-activity-surveys-empty-state">
+        </lfx-empty-state>
+      } @else {
+        <lfx-surveys-table [surveys]="surveys()"></lfx-surveys-table>
+      }
     }
   </div>
 </div>

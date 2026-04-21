@@ -10,7 +10,7 @@ import { ProjectSelectorComponent } from '@components/project-selector/project-s
 import { environment } from '@environments/environment';
 import { PERSONA_OPTIONS } from '@lfx-one/shared/constants';
 import { LensItem, NavLens, ProjectContext, SidebarMenuItem } from '@lfx-one/shared/interfaces';
-import { lensItemToProjectContext } from '@lfx-one/shared/utils';
+import { lensItemToProjectContext, toTitleCase } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
 import { NavigationService } from '@services/navigation.service';
 import { PersonaService } from '@services/persona.service';
@@ -41,6 +41,7 @@ export class SidebarComponent {
   public readonly selectorPanelOpen = model<boolean>(false);
 
   protected readonly activeLens = this.lensService.activeLens;
+  protected readonly isOrgLens = computed(() => this.activeLens() === 'org');
   protected readonly selectedProject: Signal<ProjectContext | null> = computed(() => this.projectContextService.activeContext());
   protected readonly navLens: Signal<NavLens | null> = this.initNavLens();
   protected readonly lensLoaded: Signal<boolean> = this.initLensLoaded();
@@ -90,6 +91,7 @@ export class SidebarComponent {
 
   private initLensLoaded(): Signal<boolean> {
     return computed(() => {
+      if (this.isOrgLens()) return false;
       const lens = this.navLens();
       if (!lens) return true;
       return this.navigationService.loaded(lens)();
@@ -100,7 +102,7 @@ export class SidebarComponent {
     return computed(() => {
       const persona = this.personaService.currentPersona();
       const option = PERSONA_OPTIONS.find((o) => o.value === persona);
-      return option?.label ?? persona;
+      return option?.label ?? toTitleCase(persona);
     });
   }
 
