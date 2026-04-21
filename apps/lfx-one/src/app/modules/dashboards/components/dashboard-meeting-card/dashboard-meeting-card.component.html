@@ -45,6 +45,8 @@
       <div
         class="absolute -top-2 left-[47px] w-5 h-5 rounded-full flex items-center justify-center"
         [style.background-color]="dateBadgeDotInfo().bgColor"
+        [pTooltip]="isPrivate() ? 'Private meeting' : 'Public meeting'"
+        tooltipPosition="top"
         data-testid="dashboard-meeting-card-type-dot">
         <i class="text-white text-[11px]" [class]="dateBadgeDotInfo().icon"></i>
       </div>

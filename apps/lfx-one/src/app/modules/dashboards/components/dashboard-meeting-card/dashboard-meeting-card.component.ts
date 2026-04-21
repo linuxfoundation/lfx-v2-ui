@@ -363,7 +363,7 @@ export class DashboardMeetingCardComponent {
   private initDateBadgeDotInfo(): Signal<{ bgColor: string; icon: string }> {
     return computed(() => ({
       bgColor: this.isPrivate() ? '#d4183d' : '#00bc7d',
-      icon: this.isPrivate() ? 'fa-solid fa-shield' : 'fa-solid fa-globe',
+      icon: this.isPrivate() ? 'fa-solid fa-shield-halved' : 'fa-solid fa-globe',
     }));
   }
 }
