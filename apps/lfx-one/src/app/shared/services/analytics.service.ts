@@ -970,9 +970,7 @@ export class AnalyticsService {
    * Returns null on HTTP failure so consumers can distinguish "error" from "real zeros".
    */
   public getFlywheelConversion(foundationSlug: string): Observable<FlywheelConversionResponse | null> {
-    return this.http.get<FlywheelConversionResponse>('/api/analytics/flywheel-conversion', { params: { foundationSlug } }).pipe(
-      catchError(() => of(null))
-    );
+    return this.http.get<FlywheelConversionResponse>('/api/analytics/flywheel-conversion', { params: { foundationSlug } }).pipe(catchError(() => of(null)));
   }
 
   /**
@@ -1198,6 +1196,7 @@ export class AnalyticsService {
           totalMonthlySessions: 0,
           activePlatforms: 0,
           changePercentage: 0,
+          sessionMomChangePct: 0,
           trend: 'up' as const,
           socialPlatforms: [],
           websiteDomains: [],
@@ -1221,6 +1220,7 @@ export class AnalyticsService {
             totalMentions: 0,
             sentiment: { positive: 0, neutral: 0, negative: 0 },
             sentimentMomChangePp: 0,
+            mentionMomChangePct: 0,
             trend: 'up' as const,
             monthlyMentions: [],
             topProjects: [],
