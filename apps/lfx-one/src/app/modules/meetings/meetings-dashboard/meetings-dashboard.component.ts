@@ -634,8 +634,13 @@ export class MeetingsDashboardComponent {
     return toSignal(
       combineLatest([project$, lens$, this.refresh$]).pipe(
         switchMap(([project, lens]) => {
-          // Skip during SSR — server renders shell with loading state; client fetches post-hydration.
-          if (lens === 'me' || !project?.uid || !isPlatformBrowser(this.platformId)) {
+          if (lens === 'me' || !project?.uid) {
+            return of([] as Meeting[]);
+          }
+          // SSR: pin loading=true so the stat cards render their skeleton instead of "0".
+          // The client refires this switchMap post-hydration to do the real fetch.
+          if (!isPlatformBrowser(this.platformId)) {
+            this.fpUpcomingLoading.set(true);
             return of([] as Meeting[]);
           }
           const projectUid = project.uid;
@@ -662,8 +667,12 @@ export class MeetingsDashboardComponent {
     return toSignal(
       combineLatest([project$, lens$, this.refresh$]).pipe(
         switchMap(([project, lens]) => {
-          // Skip during SSR — server renders shell with loading state; client fetches post-hydration.
-          if (lens === 'me' || !project?.uid || !isPlatformBrowser(this.platformId)) {
+          if (lens === 'me' || !project?.uid) {
+            return of([] as PastMeeting[]);
+          }
+          // SSR: pin loading=true so the stat cards render their skeleton instead of "0".
+          if (!isPlatformBrowser(this.platformId)) {
+            this.fpPastLoading.set(true);
             return of([] as PastMeeting[]);
           }
           const projectUid = project.uid;
