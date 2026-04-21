@@ -72,7 +72,7 @@
           </div>
         </lfx-card>
       </div>
-      @if (data().sentimentMomChangePp !== 0) {
+      @if (data().totalMentions > 0 && data().sentimentMomChangePp !== 0) {
         <div class="flex items-center gap-2 text-sm text-gray-500">
           <span>Positive Sentiment MoM:</span>
           <span class="font-semibold" [class.text-green-600]="data().sentimentMomChangePp > 0" [class.text-red-600]="data().sentimentMomChangePp < 0">
