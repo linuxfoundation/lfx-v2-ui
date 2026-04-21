@@ -880,25 +880,47 @@ export class MeetingJoinComponent implements OnInit {
     const authenticated$ = toObservable(this.authenticated);
     const canToggle$ = toObservable(this.canToggleRsvpView);
 
-    // Server-side fetch: runs once per meeting/occurrence change.
-    const serverFetch$ = combineLatest([meeting$, occurrence$, authenticated$, canToggle$]).pipe(
-      switchMap(([meeting, occurrence, authenticated, canToggle]) => {
-        // Only fetch when the user can actually RSVP (organizer + invited). Non-organizer invited
-        // users are already handled by the rsvp-button-group component directly.
-        if (!authenticated || !canToggle || !meeting?.id) {
-          return of(null);
-        }
-        const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
-        // startWith(null) resets the signal on each refresh so a stale "Your RSVP" chip from the
-        // previous meeting doesn't linger during client-side navigation. Service already handles errors.
-        return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(startWith(null));
+    // Fetch trigger: meeting/occurrence/auth/canToggle changes. Deduped on a stable key so that
+    // derived signals settling in the same microtask don't cause redundant emissions.
+    const fetchTrigger$ = combineLatest([meeting$, occurrence$, authenticated$, canToggle$]).pipe(
+      distinctUntilChanged(([m1, o1, a1, c1], [m2, o2, a2, c2]) => {
+        const occ1 = m1?.recurrence ? o1?.occurrence_id : undefined;
+        const occ2 = m2?.recurrence ? o2?.occurrence_id : undefined;
+        return m1?.id === m2?.id && occ1 === occ2 && a1 === a2 && c1 === c2;
       })
     );
 
-    // Merge server fetches with in-component updates pushed by onRsvpChanged. The button-group
-    // emits after its POST succeeds, so trusting that value avoids the query-service indexing
-    // window that otherwise makes a refetch return the pre-update state.
-    return toSignal(merge(serverFetch$, this.rsvpUpdateTrigger$.asObservable()), { initialValue: null });
+    // Single pipeline routing both fetch triggers and manual updates through switchMap:
+    // - fetch events cancel any in-flight fetch AND a previously-emitted manual update stays as
+    //   the last emission only if no subsequent event overrides it
+    // - manual update events (rsvpUpdateTrigger$) short-circuit with the confirmed RSVP, cancelling
+    //   any in-flight server fetch so a late server response can't revert the chip to stale data
+    const source$ = merge(
+      fetchTrigger$.pipe(map((v) => ({ type: 'fetch' as const, data: v }))),
+      this.rsvpUpdateTrigger$.pipe(map((rsvp) => ({ type: 'update' as const, data: rsvp })))
+    );
+
+    return toSignal(
+      source$.pipe(
+        switchMap((evt) => {
+          if (evt.type === 'update') {
+            // Button-group emits the confirmed RSVP after a successful POST — trust it, cancel
+            // any in-flight server fetch so query-service indexing lag can't overwrite.
+            return of(evt.data);
+          }
+          const [meeting, occurrence, authenticated, canToggle] = evt.data;
+          // Only fetch when the user can actually RSVP (organizer + invited).
+          if (!authenticated || !canToggle || !meeting?.id) {
+            return of(null);
+          }
+          const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
+          // startWith(null) resets the signal on navigation so a stale chip from the prior meeting
+          // doesn't linger. Service already catches errors.
+          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(startWith(null));
+        })
+      ),
+      { initialValue: null }
+    );
   }
 
   private initializeCurrentUserRsvpLabel(): Signal<string | null> {
