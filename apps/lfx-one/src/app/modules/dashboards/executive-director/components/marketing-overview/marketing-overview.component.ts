@@ -227,11 +227,15 @@ export class MarketingOverviewComponent {
 
   // === Public Methods ===
   public handleCardClick(drawerType: DashboardDrawerType): void {
+    if (this.activeDrawer() === drawerType) {
+      return;
+    }
+
     this.activeDrawer.set(drawerType);
 
-    // Lazy-fetch mentions only when the Brand Health drawer is opened.
-    // The Subject + switchMap in initBrandHealthMentions() handles deduplication
-    // and cancels in-flight requests automatically on foundation change.
+    // Lazy-fetch mentions only when the Brand Health drawer is opened for the first time.
+    // Guarding repeated clicks on the already active drawer prevents duplicate trigger
+    // emissions while the initial mentions request is still in flight.
     if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions()) {
       this.mentionsTrigger$.next(this.projectContextService.selectedFoundation()?.slug || 'tlf');
     }

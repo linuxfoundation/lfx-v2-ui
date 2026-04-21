@@ -209,6 +209,40 @@
       }
     </div>
 
+    <!-- Reusable mention card template — used by both positive and negative sections -->
+    <ng-template #mentionCardTpl let-mention>
+      <div class="flex items-start justify-between gap-2">
+        <span class="text-sm font-medium text-gray-900 line-clamp-2">{{ mention.title || mention.body }}</span>
+        @if (mention.url) {
+          <a
+            [href]="mention.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex-shrink-0 text-gray-400 hover:text-blue-500"
+            aria-label="Open mention in new tab">
+            <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
+          </a>
+        }
+      </div>
+      @if (mention.title && mention.body) {
+        <p class="text-xs text-gray-500 line-clamp-2">{{ mention.body }}</p>
+      }
+      <div class="flex items-center gap-3 text-xs text-gray-400">
+        @if (mention.author) {
+          <span class="flex items-center gap-1">
+            <i class="fa-light fa-user"></i>
+            {{ mention.author }}
+          </span>
+        }
+        @if (mention.sourcePlatform || mention.socialNetwork) {
+          <span class="flex items-center gap-1">
+            <i class="fa-light fa-globe"></i>
+            {{ mention.socialNetwork || mention.sourcePlatform }}
+          </span>
+        }
+      </div>
+    </ng-template>
+
     <!-- Top Negative Mentions -->
     @if (data().topNegativeMentions.length > 0) {
       <div class="flex flex-col gap-4 p-4 border border-red-200 bg-red-50 rounded-lg" data-testid="brand-health-drawer-negative-mentions">
@@ -222,36 +256,7 @@
         <div class="flex flex-col gap-3">
           @for (mention of data().topNegativeMentions; track $index) {
             <div class="flex flex-col gap-2 p-3 bg-white border border-red-200 rounded-lg" data-testid="brand-health-drawer-negative-mention">
-              <div class="flex items-start justify-between gap-2">
-                <span class="text-sm font-medium text-gray-900 line-clamp-2">{{ mention.title || mention.body }}</span>
-                @if (mention.url) {
-                  <a
-                    [href]="mention.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex-shrink-0 text-gray-400 hover:text-blue-500"
-                    aria-label="Open mention in new tab">
-                    <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
-                  </a>
-                }
-              </div>
-              @if (mention.title && mention.body) {
-                <p class="text-xs text-gray-500 line-clamp-2">{{ mention.body }}</p>
-              }
-              <div class="flex items-center gap-3 text-xs text-gray-400">
-                @if (mention.author) {
-                  <span class="flex items-center gap-1">
-                    <i class="fa-light fa-user"></i>
-                    {{ mention.author }}
-                  </span>
-                }
-                @if (mention.sourcePlatform || mention.socialNetwork) {
-                  <span class="flex items-center gap-1">
-                    <i class="fa-light fa-globe"></i>
-                    {{ mention.socialNetwork || mention.sourcePlatform }}
-                  </span>
-                }
-              </div>
+              <ng-container *ngTemplateOutlet="mentionCardTpl; context: { $implicit: mention }"></ng-container>
             </div>
           }
         </div>
@@ -271,36 +276,7 @@
         <div class="flex flex-col gap-3">
           @for (mention of data().topPositiveMentions; track $index) {
             <div class="flex flex-col gap-2 p-3 bg-white border border-green-200 rounded-lg" data-testid="brand-health-drawer-positive-mention">
-              <div class="flex items-start justify-between gap-2">
-                <span class="text-sm font-medium text-gray-900 line-clamp-2">{{ mention.title || mention.body }}</span>
-                @if (mention.url) {
-                  <a
-                    [href]="mention.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex-shrink-0 text-gray-400 hover:text-blue-500"
-                    aria-label="Open mention in new tab">
-                    <i class="fa-light fa-arrow-up-right-from-square text-xs"></i>
-                  </a>
-                }
-              </div>
-              @if (mention.title && mention.body) {
-                <p class="text-xs text-gray-500 line-clamp-2">{{ mention.body }}</p>
-              }
-              <div class="flex items-center gap-3 text-xs text-gray-400">
-                @if (mention.author) {
-                  <span class="flex items-center gap-1">
-                    <i class="fa-light fa-user"></i>
-                    {{ mention.author }}
-                  </span>
-                }
-                @if (mention.sourcePlatform || mention.socialNetwork) {
-                  <span class="flex items-center gap-1">
-                    <i class="fa-light fa-globe"></i>
-                    {{ mention.socialNetwork || mention.sourcePlatform }}
-                  </span>
-                }
-              </div>
+              <ng-container *ngTemplateOutlet="mentionCardTpl; context: { $implicit: mention }"></ng-container>
             </div>
           }
         </div>
