@@ -2840,8 +2840,10 @@ export interface NorthStarMonthlyDataPoint {
 }
 
 /**
- * API response for Engaged Community Size metric
- * Newsletter + community + WG + certified individuals (deduplicated)
+ * API response for Engaged Community Size metric.
+ * Breakdown covers 7 channels: newsletter, community, WG, certified, web, code, training.
+ * `totalMembers` and `changePercentage` exclude newsletterSubscribers (unreliable data);
+ * newsletter is returned only in `breakdown` for display purposes.
  */
 export interface EngagedCommunitySizeResponse {
   totalMembers: number;
@@ -2852,6 +2854,9 @@ export interface EngagedCommunitySizeResponse {
     communityMembers: number;
     workingGroupMembers: number;
     certifiedIndividuals: number;
+    webVisitors: number;
+    codeContributors: number;
+    trainingEnrollees: number;
   };
   monthlyData: NorthStarMonthlyDataPoint[];
 }
@@ -3030,8 +3035,23 @@ export interface BrandHealthSentimentBreakdown {
 }
 
 /**
+ * Individual brand mention from Octolens / social listening
+ */
+export interface BrandHealthMention {
+  title: string;
+  body: string;
+  author: string;
+  authorProfileLink: string;
+  sourcePlatform: string;
+  socialNetwork: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  url: string;
+  mentionDate: string;
+}
+
+/**
  * API response for Brand Health metric
- * Total mentions, sentiment breakdown, monthly mentions trend, top projects
+ * Total mentions, sentiment breakdown, monthly mentions trend, top projects, top mentions
  */
 export interface BrandHealthResponse {
   totalMentions: number;
@@ -3040,6 +3060,8 @@ export interface BrandHealthResponse {
   trend: 'up' | 'down';
   monthlyMentions: NorthStarMonthlyDataPoint[];
   topProjects: BrandHealthTopProject[];
+  topPositiveMentions: BrandHealthMention[];
+  topNegativeMentions: BrandHealthMention[];
 }
 
 /**

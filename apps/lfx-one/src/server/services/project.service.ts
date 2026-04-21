@@ -6,6 +6,7 @@ import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   BoardMeetingInviteeRow,
   BoardMeetingParticipationSummaryResponse,
+  BrandHealthMention,
   BrandHealthResponse,
   BrandHealthTopProject,
   BrandReachPlatformType,
@@ -2412,6 +2413,9 @@ export class ProjectService {
           COMMUNITY_MEMBERS,
           WORKING_GROUP_MEMBERS,
           CERTIFIED_INDIVIDUALS,
+          WEB_VISITORS,
+          CODE_CONTRIBUTORS,
+          TRAINING_ENROLLEES,
           TOTAL_ENGAGED_MEMBERS,
           MOM_CHANGE_PERCENTAGE
         FROM ANALYTICS.PLATINUM_LFX_ONE.NORTH_STAR_ENGAGED_COMMUNITY
@@ -2426,6 +2430,9 @@ export class ProjectService {
         COMMUNITY_MEMBERS: number;
         WORKING_GROUP_MEMBERS: number;
         CERTIFIED_INDIVIDUALS: number;
+        WEB_VISITORS: number;
+        CODE_CONTRIBUTORS: number;
+        TRAINING_ENROLLEES: number;
         TOTAL_ENGAGED_MEMBERS: number;
         MOM_CHANGE_PERCENTAGE: number;
       }>(query, [foundationSlug]);
@@ -2440,6 +2447,9 @@ export class ProjectService {
             communityMembers: 0,
             workingGroupMembers: 0,
             certifiedIndividuals: 0,
+            webVisitors: 0,
+            codeContributors: 0,
+            trainingEnrollees: 0,
           },
           monthlyData: [],
         };
@@ -2447,9 +2457,16 @@ export class ProjectService {
 
       const latest = result.rows[0];
 
-      // Server-side recompute: exclude newsletter subscribers (unreliable data).
-      // Sum only community + working group + certified for totals and MoM change.
-      const sumSegments = (row: (typeof result.rows)[0]) => (row.COMMUNITY_MEMBERS ?? 0) + (row.WORKING_GROUP_MEMBERS ?? 0) + (row.CERTIFIED_INDIVIDUALS ?? 0);
+      // Server-side recompute: newsletter subscribers are excluded from totals and MoM
+      // because the data is unreliable, but we still return the raw value in the breakdown
+      // for optional display. Sum the 6 reliable channels for totals and MoM change.
+      const sumSegments = (row: (typeof result.rows)[0]) =>
+        (row.COMMUNITY_MEMBERS ?? 0) +
+        (row.WORKING_GROUP_MEMBERS ?? 0) +
+        (row.CERTIFIED_INDIVIDUALS ?? 0) +
+        (row.WEB_VISITORS ?? 0) +
+        (row.CODE_CONTRIBUTORS ?? 0) +
+        (row.TRAINING_ENROLLEES ?? 0);
 
       const currentTotal = sumSegments(latest);
       let changePercentage = 0;
@@ -2473,10 +2490,13 @@ export class ProjectService {
         changePercentage,
         trend: changePercentage >= 0 ? 'up' : 'down',
         breakdown: {
-          newsletterSubscribers: 0,
+          newsletterSubscribers: latest.NEWSLETTER_SUBSCRIBERS ?? 0,
           communityMembers: latest.COMMUNITY_MEMBERS ?? 0,
           workingGroupMembers: latest.WORKING_GROUP_MEMBERS ?? 0,
           certifiedIndividuals: latest.CERTIFIED_INDIVIDUALS ?? 0,
+          webVisitors: latest.WEB_VISITORS ?? 0,
+          codeContributors: latest.CODE_CONTRIBUTORS ?? 0,
+          trainingEnrollees: latest.TRAINING_ENROLLEES ?? 0,
         },
         monthlyData,
       };
@@ -2494,6 +2514,9 @@ export class ProjectService {
           communityMembers: 0,
           workingGroupMembers: 0,
           certifiedIndividuals: 0,
+          webVisitors: 0,
+          codeContributors: 0,
+          trainingEnrollees: 0,
         },
         monthlyData: [],
       };
@@ -3886,7 +3909,7 @@ export class ProjectService {
    * Get brand health metrics from Snowflake (Share of Voice)
    * Queries ANALYTICS.PLATINUM_LFX_ONE.SHARE_OF_VOICE, SHARE_OF_VOICE_MONTHLY_TREND, SHARE_OF_VOICE_TOP_PROJECTS
    */
-  public async getBrandHealth(foundationSlug: string): Promise<BrandHealthResponse> {
+  public async getBrandHealth(foundationSlug: string, includeMentions = false): Promise<BrandHealthResponse> {
     const startTime = Date.now();
     logger.debug(undefined, 'get_brand_health', 'Fetching brand health (Share of Voice) from Snowflake', { foundation_slug: foundationSlug });
 
@@ -3897,6 +3920,8 @@ export class ProjectService {
       trend: 'up',
       monthlyMentions: [],
       topProjects: [],
+      topPositiveMentions: [],
+      topNegativeMentions: [],
     };
 
     try {
@@ -3957,7 +3982,39 @@ export class ProjectService {
         LIMIT 5
       `;
 
-      const [summaryResult, trendResult, projectsResult] = await Promise.all([
+      const mentionsFilter = isUmbrella ? '' : 'AND FOUNDATION_SLUG = ?';
+      const mentionsParams = isUmbrella ? [] : [foundationSlug];
+
+      const positiveMentionsQuery = `
+        SELECT TITLE, BODY, AUTHOR, AUTHOR_PROFILE_LINK, SOURCE_PLATFORM, SOCIAL_NETWORK, SENTIMENT, URL, MENTION_TS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.BRAND_HEALTH_MENTIONS
+        WHERE SENTIMENT = 'positive' ${mentionsFilter}
+        ORDER BY RELEVANCE_SCORE DESC, MENTION_TS DESC
+        LIMIT 10
+      `;
+
+      const negativeMentionsQuery = `
+        SELECT TITLE, BODY, AUTHOR, AUTHOR_PROFILE_LINK, SOURCE_PLATFORM, SOCIAL_NETWORK, SENTIMENT, URL, MENTION_TS
+        FROM ANALYTICS.PLATINUM_LFX_ONE.BRAND_HEALTH_MENTIONS
+        WHERE SENTIMENT = 'negative' ${mentionsFilter}
+        ORDER BY RELEVANCE_SCORE DESC, MENTION_TS DESC
+        LIMIT 10
+      `;
+
+      interface MentionRow {
+        TITLE: string;
+        BODY: string;
+        AUTHOR: string;
+        AUTHOR_PROFILE_LINK: string;
+        SOURCE_PLATFORM: string;
+        SOCIAL_NETWORK: string;
+        SENTIMENT: string;
+        URL: string;
+        MENTION_TS: string;
+      }
+
+      const emptyMentionRows = { rows: [] as MentionRow[] };
+      const [summaryResult, trendResult, projectsResult, positiveMentionsResult, negativeMentionsResult] = await Promise.all([
         this.snowflakeService.execute<{
           TOTAL_MENTIONS: number;
           POSITIVE: number;
@@ -3975,6 +4032,8 @@ export class ProjectService {
           MENTION_COUNT_30D: number;
           PROJECT_RANK?: number;
         }>(topProjectsQuery, sovParams),
+        includeMentions ? this.snowflakeService.execute<MentionRow>(positiveMentionsQuery, mentionsParams) : Promise.resolve(emptyMentionRows),
+        includeMentions ? this.snowflakeService.execute<MentionRow>(negativeMentionsQuery, mentionsParams) : Promise.resolve(emptyMentionRows),
       ]);
 
       if (summaryResult.rows.length === 0) {
@@ -4005,6 +4064,18 @@ export class ProjectService {
         mentions: row.MENTION_COUNT_30D ?? 0,
       }));
 
+      const mapMention = (row: MentionRow): BrandHealthMention => ({
+        title: row.TITLE ?? '',
+        body: row.BODY ?? '',
+        author: row.AUTHOR ?? '',
+        authorProfileLink: row.AUTHOR_PROFILE_LINK ?? '',
+        sourcePlatform: row.SOURCE_PLATFORM ?? '',
+        socialNetwork: row.SOCIAL_NETWORK ?? '',
+        sentiment: (row.SENTIMENT as BrandHealthMention['sentiment']) ?? 'neutral',
+        url: row.URL ?? '',
+        mentionDate: row.MENTION_TS ? new Date(row.MENTION_TS).toISOString() : '',
+      });
+
       return {
         totalMentions,
         sentiment: { positive: positivePct, neutral: neutralPct, negative: negativePct },
@@ -4012,6 +4083,8 @@ export class ProjectService {
         trend: sentimentMomChangePp >= 0 ? 'up' : 'down',
         monthlyMentions,
         topProjects,
+        topPositiveMentions: positiveMentionsResult.rows.map(mapMention),
+        topNegativeMentions: negativeMentionsResult.rows.map(mapMention),
       };
     } catch (error) {
       logger.error(undefined, 'get_brand_health', startTime, error instanceof Error ? error : new Error(String(error)), {
