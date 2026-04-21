@@ -112,7 +112,7 @@ export class VotesDashboardComponent {
     }
 
     this.currentFirst.set(event.first);
-    // this.fetch$.next();
+    this.fetch$.next();
   }
 
   protected onFoundationFilterChange(value: string | null): void {
