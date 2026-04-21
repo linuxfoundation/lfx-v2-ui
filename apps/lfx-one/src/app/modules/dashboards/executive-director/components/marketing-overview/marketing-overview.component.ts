@@ -197,13 +197,12 @@ export class MarketingOverviewComponent {
   public readonly selectedFilter = signal<'all' | MetricCategory>('all');
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
 
+  // === Computed Signals ===
   // Lazy-fetch mentions via Subject trigger + switchMap (no manual subscribe).
   // Foundation changes automatically cancel in-flight requests via switchMap.
   private readonly mentionsTrigger$ = new Subject<string>();
   private readonly brandHealthMentions: Signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null> =
     this.initBrandHealthMentions();
-
-  // === Computed Signals ===
   protected readonly edEvolutionData: Signal<EdEvolutionData> = this.initEdEvolutionData();
 
   protected readonly flywheelData = computed<FlywheelConversionResponse>(() => this.edEvolutionData().flywheel);
