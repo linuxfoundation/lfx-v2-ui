@@ -2930,6 +2930,7 @@ export interface FlywheelConversionResponse {
 export interface EventGrowthTopEvent {
   name: string;
   date: string;
+  registrants: number;
   attendees: number;
   revenue: number;
 }

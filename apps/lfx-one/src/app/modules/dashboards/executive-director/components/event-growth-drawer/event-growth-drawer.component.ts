@@ -1,8 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, model, signal, Signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, model, Signal } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { ChartComponent } from '@components/chart/chart.component';
@@ -19,7 +19,7 @@ import type { EventGrowthResponse, EventGrowthTopEventView, MarketingKeyInsight,
 @Component({
   selector: 'lfx-event-growth-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonComponent, CardComponent, ChartComponent, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
+  imports: [ButtonComponent, CardComponent, ChartComponent, DatePipe, DecimalPipe, DrawerModule, MarketingActionIconPipe, TagComponent],
   templateUrl: './event-growth-drawer.component.html',
 })
 export class EventGrowthDrawerComponent {
@@ -72,8 +72,8 @@ export class EventGrowthDrawerComponent {
     },
   };
 
-  // === WritableSignals ===
-  protected readonly topEventsSortBy = signal<'attendees' | 'revenue'>('attendees');
+  // === Computed year label ===
+  protected readonly currentYear = new Date().getFullYear();
 
   // === Computed Signals ===
   protected readonly sortedTopEvents: Signal<EventGrowthTopEventView[]> = this.initSortedTopEvents();
@@ -104,12 +104,11 @@ export class EventGrowthDrawerComponent {
   }
 
   private initSortedTopEvents(): Signal<EventGrowthTopEventView[]> {
-    return computed(() => {
-      const key = this.topEventsSortBy();
-      return [...this.data().topEvents]
-        .sort((a, b) => (key === 'revenue' ? b.revenue - a.revenue : b.attendees - a.attendees))
-        .map((event) => ({ ...event, formattedRevenue: EventGrowthDrawerComponent.formatMoney(event.revenue) }));
-    });
+    return computed(() =>
+      [...this.data().topEvents]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((event) => ({ ...event, formattedRevenue: EventGrowthDrawerComponent.formatMoney(event.revenue) }))
+    );
   }
 
   private initMonthlyChartData(): Signal<ChartData<'bar'>> {
