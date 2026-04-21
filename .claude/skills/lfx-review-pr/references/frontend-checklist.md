@@ -270,6 +270,9 @@ import { ProjectInterface } from '@lfx-one/shared/interfaces';
 | Use `inject()` for DI — never constructor-based injection        | SHOULD FIX |
 | Use `@if`/`@for` template syntax — not `*ngIf`/`*ngFor`          | SHOULD FIX |
 | Use `ReactiveFormsModule` always — never `[(ngModel)]` for forms | SHOULD FIX |
+| Use `yarn` — never `npm` or `npx` in scripts/docs/CI             | SHOULD FIX |
+| Signals cannot use RxJS pipes (no `.pipe()` on a signal)         | SHOULD FIX |
+| Always use `templateUrl`, never inline `template: '…'` strings   | SHOULD FIX |
 
 ---
 
