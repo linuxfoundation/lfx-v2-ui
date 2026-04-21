@@ -2925,7 +2925,7 @@ export interface FlywheelConversionResponse {
 }
 
 /**
- * Top event row for Event Growth drill-down
+ * Single event in the current-year events list for Event Growth drill-down
  */
 export interface EventGrowthTopEvent {
   id: string;
@@ -2937,7 +2937,7 @@ export interface EventGrowthTopEvent {
 }
 
 /**
- * Presentation-ready top event row with pre-formatted revenue string
+ * Presentation-ready event row with pre-formatted revenue string
  * Used by the drawer component to avoid calling formatters from templates
  */
 export interface EventGrowthTopEventView extends EventGrowthTopEvent {

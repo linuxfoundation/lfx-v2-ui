@@ -3824,14 +3824,14 @@ export class ProjectService {
       const topEvents: EventGrowthTopEvent[] = topEventsResult.rows.map((row) => ({
         id: String(row.EVENT_ID ?? ''),
         name: row.EVENT_NAME ?? '',
-        date: row.EVENT_START_DATE instanceof Date ? row.EVENT_START_DATE.toISOString().substring(0, 10) : String(row.EVENT_START_DATE ?? ''),
+        date: ProjectService.toIsoDate(row.EVENT_START_DATE) ?? '',
         registrants: row.REGISTRANT_COUNT ?? 0,
         attendees: row.ATTENDEE_COUNT ?? 0,
         revenue: row.EVENT_REVENUE ?? 0,
       }));
 
-      // Quarterly registration trend from all events (not just top 10)
-      const monthlyData = quarterlyResult.rows.map((row) => {
+      // Quarterly registration trend — stored as monthlyData for API compatibility
+      const quarterlyData = quarterlyResult.rows.map((row) => {
         const raw = row.QUARTER_START_DATE;
         const q = raw instanceof Date ? raw.toISOString().substring(0, 7) : String(raw ?? '').substring(0, 7);
         return { month: q, value: row.REGISTRANT_COUNT ?? 0 };
@@ -3847,7 +3847,7 @@ export class ProjectService {
         registrantYoyChange: yoyRegistrantChange,
         revenueYoyChange: yoyRevenueChange,
         trend: yoyAttendeeChange >= 0 ? 'up' : 'down',
-        monthlyData,
+        monthlyData: quarterlyData,
         topEvents,
       };
     } catch (error) {
