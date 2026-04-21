@@ -805,21 +805,21 @@ function formatPpMomChange(change: number): string | undefined {
   return `${sign}${formatted}pp MoM`;
 }
 
-/** Compute MoM change display from a paid media monthly trend series (last two months of spend) */
-function paidMediaMomChange(trend: { spend: number }[]): string | undefined {
+/** Compute MoM change display from a paid media monthly trend series (last two months of revenue) */
+function paidMediaMomChange(trend: { revenue: number }[]): string | undefined {
   if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].spend;
-  const curr = trend[trend.length - 1].spend;
+  const prev = trend[trend.length - 2].revenue;
+  const curr = trend[trend.length - 1].revenue;
   if (prev === 0) return undefined;
   return formatMomChange(((curr - prev) / prev) * 100);
 }
 
 /** Compute trend direction from a paid media monthly trend series.
  *  Uses the same MoM % formula as paidMediaMomChange so the color matches the displayed text. */
-function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | 'neutral' | undefined {
+function paidMediaTrend(trend: { revenue: number }[]): 'up' | 'down' | 'neutral' | undefined {
   if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].spend;
-  const curr = trend[trend.length - 1].spend;
+  const prev = trend[trend.length - 2].revenue;
+  const curr = trend[trend.length - 1].revenue;
   if (prev === 0) return undefined;
   return trendFromChange(((curr - prev) / prev) * 100);
 }
@@ -1034,8 +1034,8 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         })(),
         protoDualSignal(
           'Paid Media',
-          formatCurrency(revenueImpact.paidMedia.adSpend),
-          revenueImpact.paidMedia.monthlyTrend.map((r) => r.spend),
+          formatCurrency(revenueImpact.paidMedia.adRevenue),
+          revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue),
           lfxColors.violet[500],
           paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
           paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
