@@ -11,7 +11,7 @@ description: >
   on the PR. Use when reviewing PRs, checking PR quality, validating code
   changes, or when the user says "review", "check this PR", "audit code", or
   mentions /review.
-allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion
+allowed-tools: Bash, Read, Glob, Grep, Agent, AskUserQuestion, Skill
 ---
 
 # LFX PR Review
@@ -65,8 +65,8 @@ gh api repos/{owner}/{repo}/pulls/{N}/reviews --paginate
 # Commit messages on the PR (used in Phase 4 for JIRA/conventional-commit checks)
 gh api repos/{owner}/{repo}/pulls/{N}/commits --paginate --jq '.[].commit.message'
 
-# Fetch the PR branch so we can read files at their PR-branch state
-git fetch origin <headRefName>
+# Fetch both base and head branches so Phase 4's merge-base check uses fresh refs
+git fetch origin <baseRefName> <headRefName>
 ```
 
 If the diff is too large to hold in context, save it to `/tmp/pr-<N>.diff` and read only the changed `.ts`, `.html`, `.scss`, `.md`, `.sql` files with `Read`.
@@ -93,14 +93,14 @@ Inspect the changed-file list and load only the relevant architecture docs. Load
 
 - `CLAUDE.md`
 
-**If any `apps/lfx-one/src/app/**` file changed:\*\*
+**Frontend changes (files under `apps/lfx-one/src/app/`):**
 
 - `docs/architecture/frontend/angular-patterns.md`
 - `docs/architecture/frontend/component-architecture.md`
 - `docs/architecture/frontend/styling-system.md`
 - If a drawer component or `DialogService.open` usage changed → `docs/architecture/frontend/drawer-pattern.md`
 
-**If any `apps/lfx-one/src/server/**` file changed:\*\*
+**Backend changes (files under `apps/lfx-one/src/server/`):**
 
 - `docs/architecture/backend/README.md`
 - `docs/architecture/backend/error-handling-architecture.md`
@@ -120,7 +120,7 @@ Inspect the changed-file list and load only the relevant architecture docs. Load
 | `snowflake.service.ts`, direct SQL             | `backend/snowflake-integration.md` |
 | SSR / `server.ts` / render pipeline            | `backend/ssr-server.md`            |
 
-**If any `packages/shared/**` file changed:\*\*
+**Shared package changes (files under `packages/shared/`):**
 
 - `docs/architecture/shared/package-architecture.md`
 
@@ -144,7 +144,7 @@ Construct the Agent prompt with the full context below. The enforcer runs in par
 > **Branch:** `origin/<headRefName>`
 > **Changed files:** (include the full list from Phase 1)
 >
-> For each file, read it with `git show origin/<branch>:<path>` and check against every rule file under `.claude/rules/`. Do not hardcode which rules apply — glob `.claude/rules/*.md` and load them all. At time of writing, the rules to enforce include:
+> For each file, read it with `git show origin/<headRefName>:<path>` and check against every rule file under `.claude/rules/`. Do not hardcode which rules apply — glob `.claude/rules/*.md` and load them all. At time of writing, the rules to enforce include:
 >
 > - `component-organization.md` — 11-section component structure (1 injections → 2 inputs → 3 forms → 4 model signals → 5 simple WritableSignals → 6 computed/toSignal via private init → 7 constructor → 8 public → 9 protected → 10 private initializers → 11 other helpers); `model()` for two-way binding; interfaces in shared package
 > - `logging-patterns.md` — use `logger` service (never import `serverLogger` directly); controllers use `startOperation`/`success` and bare `next(error)` in catch blocks; services use DEBUG for tracing, INFO for significant operations, WARN for graceful errors; `err` field for errors; snake_case operation names

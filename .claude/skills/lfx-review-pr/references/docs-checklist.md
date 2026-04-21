@@ -80,9 +80,9 @@ Real-world examples are explanations, even if two examples look similar — they
 
 ---
 
-## 10. Relocate ops debugging commands (SHOULD FIX)
+## 10. Keep ops debugging commands only if architecture-relevant (SHOULD FIX)
 
-`kubectl` / `snowsql` / runtime debugging commands belong in runbooks, not architecture docs. If they appear in `docs/architecture/**`, flag for relocation to the appropriate runbook.
+`kubectl` / `snowsql` / runtime debugging commands may stay in `docs/architecture/**` when they help explain system behavior, topology, or component interactions. Otherwise — when they're purely runtime ops recipes — flag them for relocation to the appropriate runbook.
 
 ---
 
