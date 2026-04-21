@@ -57,6 +57,7 @@ import {
   distinctUntilChanged,
   EMPTY,
   filter,
+  finalize,
   map,
   Observable,
   of,
@@ -143,7 +144,10 @@ export class MeetingJoinComponent implements OnInit {
   private hasAutoJoined: WritableSignal<boolean> = signal<boolean>(false);
   public showRegistrants: WritableSignal<boolean> = signal<boolean>(false);
   public showGuestForm: WritableSignal<boolean> = signal<boolean>(false);
-  public additionalRegistrantsCount = signal(0);
+  // Bumped immediately when a guest is added so the count in the RSVP card doesn't lag the
+  // async query-service indexing. Floored back to 0 once the registrants refetch absorbs the
+  // newly-added rows (see additionalRegistrantsCount computed below).
+  private optimisticAdditional = signal(0);
   public materialsDrawerVisible = signal(false);
   protected showAllFiles = signal(false);
   protected visibleFiles = computed(() => (this.showAllFiles() ? this.materialFiles() : this.materialFiles().slice(0, 5)));
@@ -186,10 +190,22 @@ export class MeetingJoinComponent implements OnInit {
   protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
   // Parent project (foundation) for context display
   protected parentProject: Signal<Project | null>;
-  // Registrant list, fetched only when the user is the meeting organizer or invited
+  // Registrant list, fetched only when the user is the meeting organizer or invited.
+  // Pre-loaded with the meeting so the Show Members drawer renders instantly from cache.
   protected registrants: Signal<MeetingRegistrant[]>;
+  protected registrantsLoading: WritableSignal<boolean> = signal(false);
+  // Re-fires the registrants fetch (e.g. after a guest is added from the drawer).
+  private registrantsRefresh$ = new BehaviorSubject<void>(undefined);
   // Counts from actual data
   protected totalInvitees = computed(() => this.registrants().length);
+  // Optimistic + actual: post-add we bump optimisticAdditional immediately and let the refetch
+  // catch up; the max keeps the count stable while query indexing settles.
+  public additionalRegistrantsCount = computed(() => {
+    const meeting = this.meeting();
+    const baseCount = (meeting?.individual_registrants_count || 0) + (meeting?.committee_members_count || 0);
+    const fetched = Math.max(0, this.registrants().length - baseCount);
+    return Math.max(fetched, this.optimisticAdditional());
+  });
   // Past meeting participants (fetched from API for attendance stats)
   protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
   // Past meeting attendance stats (derived from participants)
@@ -294,6 +310,13 @@ export class MeetingJoinComponent implements OnInit {
 
   public onDrawerHide(): void {
     this.showRegistrants.set(false);
+  }
+
+  public onRegistrantsRefreshRequested(addedCount: number): void {
+    if (addedCount > 0) {
+      this.optimisticAdditional.update((c) => c + addedCount);
+    }
+    this.registrantsRefresh$.next();
   }
 
   public onEmailErrorClick(): void {
@@ -944,12 +967,28 @@ export class MeetingJoinComponent implements OnInit {
 
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
     return toSignal(
-      toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id && this.authenticated() && (meeting.organizer || meeting.invited)),
-        distinctUntilChanged((a, b) => a.id === b.id),
-        switchMap((meeting) => {
+      combineLatest([
+        toObservable(this.meeting).pipe(
+          filter((meeting) => !!meeting?.id && this.authenticated() && (meeting.organizer || meeting.invited)),
+          distinctUntilChanged((a, b) => a.id === b.id)
+        ),
+        this.registrantsRefresh$,
+      ]).pipe(
+        switchMap(([meeting]) => {
           if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
-          return this.meetingService.getMyMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
+          this.registrantsLoading.set(true);
+          const baseCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
+          return this.meetingService.getMyMeetingRegistrants(meeting.id, true).pipe(
+            catchError(() => of([] as MeetingRegistrant[])),
+            tap((list) => {
+              // Once the refetch lands, drop the optimistic pad so it doesn't double-count.
+              const fetchedAdditional = Math.max(0, list.length - baseCount);
+              if (fetchedAdditional >= this.optimisticAdditional()) {
+                this.optimisticAdditional.set(0);
+              }
+            }),
+            finalize(() => this.registrantsLoading.set(false))
+          );
         })
       ),
       { initialValue: [] }

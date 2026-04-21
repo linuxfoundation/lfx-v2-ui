@@ -516,8 +516,10 @@
               [pastMeeting]="isPastMeeting()"
               [showAddRegistrant]="!!meeting().organizer && !isPastMeeting()"
               [myMeetingRegistrants]="true"
+              [initialRegistrants]="registrants()"
+              [initialRegistrantsLoading]="registrantsLoading()"
               [visible]="showRegistrants()"
-              (registrantsCountChange)="additionalRegistrantsCount.set($event)">
+              (refreshRequested)="onRegistrantsRefreshRequested($event)">
             </lfx-meeting-registrants-display>
           </p-drawer>
           @if (!(isPastMeeting() && !pastMeetingFullAccess())) {
