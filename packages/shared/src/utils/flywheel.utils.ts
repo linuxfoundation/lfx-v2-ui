@@ -13,8 +13,8 @@ import { formatNumber } from './number.utils';
 import { splitByPriority } from './marketing.utils';
 
 /**
- * Seven re-engagement funnel stages reused by the Flywheel Conversion Rate
- * Health Metrics card and the existing flywheel drawer, in required display order.
+ * Seven re-engagement funnel stages in the required display order for the
+ * shared Flywheel Health Metrics funnel helpers defined in this module.
  */
 export const FLYWHEEL_FUNNEL_STAGE_LABELS = [
   'Event Attendees',
