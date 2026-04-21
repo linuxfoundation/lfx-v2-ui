@@ -198,7 +198,7 @@
     <div class="flex flex-col gap-4 p-4 border border-gray-200 rounded-lg" data-testid="event-growth-drawer-top-events">
       <div class="flex flex-col gap-1">
         <h3 class="text-sm font-semibold text-gray-900">{{ currentYear }} Events</h3>
-        <p class="text-sm text-gray-600">All events year-to-date, by date</p>
+        <p class="text-sm text-gray-600">All events this year (past and upcoming), by date</p>
       </div>
       @if (data().topEvents.length > 0) {
         <div class="flex flex-col gap-0">
@@ -209,10 +209,10 @@
             <span class="w-24 text-right">Attendees</span>
             <span class="w-24 text-right">Revenue</span>
           </div>
-          @for (event of sortedTopEvents(); track event.name) {
+          @for (event of sortedTopEvents(); track event.id) {
             <div class="flex items-center justify-between py-3 px-1 border-b border-gray-100" data-testid="event-growth-drawer-event-row">
               <span class="flex-1 text-sm font-medium text-gray-900">{{ event.name }}</span>
-              <span class="w-24 text-right text-sm text-gray-500">{{ event.date | date: 'MMM d' }}</span>
+              <span class="w-24 text-right text-sm text-gray-500">{{ event.date | date: 'MMM d' : 'UTC' }}</span>
               <span class="w-28 text-right text-sm font-semibold text-gray-900">{{ event.registrants | number }}</span>
               <span class="w-24 text-right text-sm font-semibold text-gray-900">{{ event.attendees | number }}</span>
               <span class="w-24 text-right text-sm font-semibold text-gray-900">{{ event.formattedRevenue }}</span>

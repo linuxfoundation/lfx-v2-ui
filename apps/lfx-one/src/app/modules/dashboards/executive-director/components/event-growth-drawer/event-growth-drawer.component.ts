@@ -174,11 +174,12 @@ export class EventGrowthDrawerComponent {
       }
 
       if (topEvents.length > 0 && totalAttendees > 0) {
-        const topShare = (topEvents[0].attendees / totalAttendees) * 100;
+        const leadEvent = topEvents.reduce((max, e) => (e.attendees > max.attendees ? e : max), topEvents[0]);
+        const topShare = (leadEvent.attendees / totalAttendees) * 100;
         if (topShare > 50) {
           actions.push({
             title: 'One event carries the portfolio',
-            description: `${topEvents[0].name} drives ${topShare.toFixed(0)}% of total attendance — a single weak year on this event would hit the whole portfolio`,
+            description: `${leadEvent.name} drives ${topShare.toFixed(0)}% of total attendance — a single weak year on this event would hit the whole portfolio`,
             priority: 'medium',
             dueLabel: 'Next planning cycle',
             actionType: 'engagement',
@@ -191,10 +192,10 @@ export class EventGrowthDrawerComponent {
         const falling = recent3[0].value > recent3[1].value && recent3[1].value > recent3[2].value;
         if (falling && !actions.some((a) => a.actionType === 'decline')) {
           actions.push({
-            title: 'Attendance falling 3 months straight',
-            description: `Monthly attendance fell from ${formatNumber(recent3[0].value)} to ${formatNumber(recent3[2].value)} — pattern, not a single bad event`,
+            title: 'Registrations falling 3 quarters straight',
+            description: `Quarterly registrations fell from ${formatNumber(recent3[0].value)} to ${formatNumber(recent3[2].value)} — sustained decline, not a single bad event`,
             priority: 'high',
-            dueLabel: 'This month',
+            dueLabel: 'This quarter',
             actionType: 'decline',
           });
         }
@@ -237,8 +238,9 @@ export class EventGrowthDrawerComponent {
       }
 
       if (topEvents.length > 0) {
+        const leadEvent = topEvents.reduce((max, e) => (e.attendees > max.attendees ? e : max), topEvents[0]);
         insights.push({
-          text: `${topEvents[0].name} leads with ${formatNumber(topEvents[0].attendees)} attendees (${EventGrowthDrawerComponent.formatMoney(topEvents[0].revenue)} revenue)`,
+          text: `${leadEvent.name} leads with ${formatNumber(leadEvent.attendees)} attendees (${EventGrowthDrawerComponent.formatMoney(leadEvent.revenue)} revenue)`,
           type: 'info',
         });
       }

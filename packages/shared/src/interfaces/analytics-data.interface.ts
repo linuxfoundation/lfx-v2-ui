@@ -2928,6 +2928,7 @@ export interface FlywheelConversionResponse {
  * Top event row for Event Growth drill-down
  */
 export interface EventGrowthTopEvent {
+  id: string;
   name: string;
   date: string;
   registrants: number;

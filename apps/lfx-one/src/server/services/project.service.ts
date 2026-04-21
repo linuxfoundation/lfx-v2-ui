@@ -3746,7 +3746,7 @@ export class ProjectService {
         GROUP BY YEAR(EVENT_START_DATE)
       `;
 
-      // Query 2: All events for the current year, sorted by date (YTD event list)
+      // Query 2: All events for the current year (past + upcoming), sorted by date
       const topEventsQuery = `
         SELECT
           EVENT_ID,
@@ -3762,13 +3762,14 @@ export class ProjectService {
         ORDER BY EVENT_START_DATE
       `;
 
-      // Query 3: Quarterly registration trend (all events, not just top 10)
+      // Query 3: Quarterly registration trend — bounded to the last 12 quarters (3 years)
       const quarterlyTrendQuery = `
         SELECT
           DATE_TRUNC('quarter', EVENT_START_DATE) AS QUARTER_START_DATE,
           COUNT(CASE WHEN REGISTRATION_STATUS = 'Accepted' THEN 1 END) AS REGISTRANT_COUNT
         FROM ANALYTICS.PLATINUM_LFX_ONE.EVENT_REGISTRATIONS
-        WHERE 1=1 ${slugFilter}
+        WHERE EVENT_START_DATE >= DATEADD(quarter, -12, DATE_TRUNC('quarter', CURRENT_DATE))
+          ${slugFilter}
         GROUP BY QUARTER_START_DATE
         ORDER BY QUARTER_START_DATE
       `;
@@ -3799,14 +3800,16 @@ export class ProjectService {
       const thisYearRow = summaryResult.rows.find((r) => r.EVENT_YEAR === currentYear);
       const lastYearRow = summaryResult.rows.find((r) => r.EVENT_YEAR === currentYear - 1);
 
-      if (!thisYearRow) {
+      // thisYearRow may be absent if no past events exist yet (all events are future).
+      // Still return the topEvents list so the drawer can show upcoming events with registrations.
+      const totalAttendees = thisYearRow?.ATTENDEE_COUNT ?? 0;
+      const totalRegistrants = thisYearRow?.REGISTRANT_COUNT ?? 0;
+      const totalEvents = thisYearRow?.EVENT_COUNT ?? 0;
+      const totalRevenue = thisYearRow?.TOTAL_NET_REVENUE ?? 0;
+
+      if (!thisYearRow && topEventsResult.rows.length === 0) {
         return defaultResponse;
       }
-
-      const totalAttendees = thisYearRow.ATTENDEE_COUNT ?? 0;
-      const totalRegistrants = thisYearRow.REGISTRANT_COUNT ?? 0;
-      const totalEvents = thisYearRow.EVENT_COUNT ?? 0;
-      const totalRevenue = thisYearRow.TOTAL_NET_REVENUE ?? 0;
 
       const attendeesLastYtd = lastYearRow?.ATTENDEE_COUNT ?? 0;
       const registrantsLastYtd = lastYearRow?.REGISTRANT_COUNT ?? 0;
@@ -3819,6 +3822,7 @@ export class ProjectService {
       const yoyRevenueChange = pctChange(totalRevenue, revenueLastYtd);
 
       const topEvents: EventGrowthTopEvent[] = topEventsResult.rows.map((row) => ({
+        id: String(row.EVENT_ID ?? ''),
         name: row.EVENT_NAME ?? '',
         date: row.EVENT_START_DATE instanceof Date ? row.EVENT_START_DATE.toISOString().substring(0, 10) : String(row.EVENT_START_DATE ?? ''),
         registrants: row.REGISTRANT_COUNT ?? 0,
