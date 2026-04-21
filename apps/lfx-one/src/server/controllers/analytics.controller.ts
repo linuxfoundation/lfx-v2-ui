@@ -2572,7 +2572,7 @@ export class AnalyticsController {
   /**
    * GET /api/analytics/multi-foundation-summary
    * Aggregate analytics across multiple foundations in a single request
-   * Query params: slugs (required, comma-separated foundation slugs, max 10)
+   * Query params: slugs (required, comma-separated foundation slugs, max 25)
    */
   public async getMultiFoundationSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_multi_foundation_summary');

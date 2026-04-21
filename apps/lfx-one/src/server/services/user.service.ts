@@ -470,8 +470,7 @@ export class UserService {
    * Fetches meetings for the current user, optionally filtered by project.
    * Uses a reverse-query approach: first gets all registrant records for the user,
    * then batch-fetches those meetings from the query service via `tags` OR-filter
-   * (100 IDs per request, paginated with the default page size) — replaces the
-   * previous N-parallel ITX fetches.
+   * (100 IDs per request, page_size=500) — replaces the previous N-parallel ITX fetches.
    * @param req - Express request object
    * @param email - User's email address for registrant lookup
    * @param projectUid - Optional project UID to filter meetings by
@@ -522,8 +521,8 @@ export class UserService {
    * Fetches past meetings for the current user, optionally filtered by project.
    * Queries v1_past_meeting_participant by email to find composite meeting IDs,
    * then batch-fetches those past meetings from the query service via
-   * `filters_or=meeting_and_occurrence_id:<id>` (100 IDs per request, paginated
-   * with the default page size) — replaces the previous N-parallel ITX fetches.
+   * `filters_or=meeting_and_occurrence_id:<id>` (100 IDs per request, page_size=500) —
+   * replaces the previous N-parallel ITX fetches.
    * @param req - Express request object
    * @param email - User's email address for participant lookup
    * @param projectUid - Optional project UID to filter meetings by
@@ -548,8 +547,8 @@ export class UserService {
     // Single participant query matching data.email OR data.username in one round trip.
     // User bearer token works: ACL grants `viewer` on v1_past_meeting to `host`/`invitee`/`attendee`.
     // failOnPartial: true surfaces truncated membership sets as errors; the outer .catch is
-    // kept as a defensive guard so upstream failures don't 500 the Me lens, but we log at
-    // error level so the gap stays visible in monitoring.
+    // kept as a defensive guard so upstream failures don't 500 the Me lens, and logs at
+    // warning level since returning an empty past-meeting list is graceful degradation.
     const participantQuery =
       filtersOr.length > 0
         ? fetchAllQueryResources<PastMeetingParticipant>(
@@ -602,11 +601,13 @@ export class UserService {
 
     // Attach the user's own attendance flag from the already-fetched participant records so
     // the attendance-rate stat can be computed client-side without re-fetching per meeting.
+    // OR-combine across records — a user with multiple participant rows for the same occurrence
+    // (re-joins, duplicate legacy data) is attended if ANY record has is_attended=true.
     const userAttendedByOccurrenceId = new Map<string, boolean>();
     for (const p of participants) {
-      if (p.meeting_and_occurrence_id) {
-        userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, !!p.is_attended);
-      }
+      if (!p.meeting_and_occurrence_id) continue;
+      const prior = userAttendedByOccurrenceId.get(p.meeting_and_occurrence_id) ?? false;
+      userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, prior || !!p.is_attended);
     }
     for (const meeting of pastMeetings) {
       meeting.user_attended = userAttendedByOccurrenceId.get(meeting.id) ?? false;
@@ -690,8 +691,8 @@ export class UserService {
     // Match on data.email OR data.username in a single round trip. Using `filters_or` (field-level)
     // rather than `tags` keeps this resilient to indexer tag-synthesis changes.
     // failOnPartial: true surfaces truncated membership sets as errors; the outer .catch is kept
-    // as a defensive guard so upstream failures don't 500 the Me lens dashboard, but we log at
-    // error level so the gap stays visible in monitoring.
+    // as a defensive guard so upstream failures don't 500 the Me lens dashboard, and logs at
+    // warning level since returning an empty meeting ID set is graceful degradation.
     const registrants = await fetchAllQueryResources<MeetingRegistrant>(
       req,
       (pageToken) =>

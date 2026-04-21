@@ -3,7 +3,7 @@
 
 import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, InputSignal, output, signal, Signal, WritableSignal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import {
   calculateRsvpCounts,
@@ -18,7 +18,7 @@ import {
 } from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
 import { UserService } from '@services/user.service';
-import { catchError, map, of, switchMap, tap } from 'rxjs';
+import { catchError, distinctUntilChanged, map, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-rsvp-details',
@@ -53,6 +53,13 @@ export class MeetingRsvpDetailsComponent {
   public readonly rsvps: Signal<MeetingRsvp[]> = computed(() => this.upcomingData().rsvps);
   public readonly pastParticipants: Signal<PastMeetingParticipant[]> = this.initializePastParticipants();
   public readonly registrants: Signal<MeetingRegistrant[]> = computed(() => this.upcomingData().registrants);
+  // Tracks across both rsvps data AND user identity; re-emits whenever either changes so the
+  // parent card's "Set My RSVP" / "Update My RSVP" label stays in sync with login/impersonation.
+  public readonly currentUserHasRsvp: Signal<boolean> = computed(() => {
+    const email = this.userService.user()?.email?.toLowerCase();
+    if (!email) return false;
+    return this.upcomingData().rsvps.some((r) => r.email?.toLowerCase() === email);
+  });
   public readonly rsvpCounts: Signal<RsvpCounts> = this.initializeRsvpCounts();
   public readonly acceptedCount: Signal<number> = computed(() => this.rsvpCounts().accepted);
   public readonly maybeCount: Signal<number> = computed(() => this.rsvpCounts().maybe);
@@ -65,6 +72,13 @@ export class MeetingRsvpDetailsComponent {
   public readonly borderClasses: Signal<string> = this.initializeBorderClasses();
   public readonly headerTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-600' : 'text-gray-600'));
   public readonly summaryTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-900' : 'text-gray-900'));
+
+  public constructor() {
+    // Forward currentUserHasRsvp to the output whenever either rsvps data or user identity changes.
+    toObservable(this.currentUserHasRsvp)
+      .pipe(distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((v) => this.currentUserHasRsvpChanged.emit(v));
+  }
 
   private initializeUpcomingData(): Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> {
     return toSignal(
@@ -98,11 +112,8 @@ export class MeetingRsvpDetailsComponent {
             })
           );
         }),
-        tap((data) => {
+        tap(() => {
           if (!this.pastMeeting()) this.loading.set(false);
-          const userEmail = this.userService.user()?.email?.toLowerCase();
-          const hasRsvp = !!userEmail && data.rsvps.some((r) => r.email?.toLowerCase() === userEmail);
-          this.currentUserHasRsvpChanged.emit(hasRsvp);
         })
       ),
       { initialValue: { rsvps: [] as MeetingRsvp[], registrants: [] as MeetingRegistrant[] } }
@@ -157,7 +168,9 @@ export class MeetingRsvpDetailsComponent {
       }
 
       const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-      const baseCount = splitCount > 0 ? splitCount : this.registrants().length;
+      // Me lens: splitCount is 0 (backend doesn't populate), fall back to the lazy-fetched registrants.
+      // Non-Me lens: registrant_count may be populated by legacy paths that don't split; respect it.
+      const baseCount = splitCount > 0 ? splitCount : (meeting.registrant_count ?? this.registrants().length);
       return baseCount + additionalCount;
     });
   }

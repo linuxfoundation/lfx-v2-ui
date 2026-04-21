@@ -4633,7 +4633,18 @@ export class ProjectService {
     totalValueBySlug: Map<string, number>;
     healthScoresBySlug: Map<string, FoundationHealthScoreDistributionResponse>;
   }> {
-    const placeholders = slugs.map(() => '?').join(', ');
+    // Filter ROOT defensively — it's an administrative pseudo-project and should never surface
+    // in a multi-foundation analytics view even if a caller passes it through.
+    const filteredSlugs = slugs.filter((s) => s !== ROOT_PROJECT_SLUG);
+    if (filteredSlugs.length === 0) {
+      return {
+        totalProjectsBySlug: new Map(),
+        totalMembersBySlug: new Map(),
+        totalValueBySlug: new Map(),
+        healthScoresBySlug: new Map(),
+      };
+    }
+    const placeholders = filteredSlugs.map(() => '?').join(', ');
 
     const totalProjectsQuery = `
       SELECT FOUNDATION_SLUG, PROJECT_COUNT
@@ -4689,10 +4700,10 @@ export class ProjectService {
     }
 
     const [totalProjectsResult, totalMembersResult, valueConcentrationResult, healthScoreResult] = await Promise.all([
-      this.snowflakeService.execute<TotalProjectsRow>(totalProjectsQuery, slugs),
-      this.snowflakeService.execute<TotalMembersRow>(totalMembersQuery, slugs),
-      this.snowflakeService.execute<ValueConcentrationRow>(valueConcentrationQuery, slugs),
-      this.snowflakeService.execute<HealthScoreRow>(healthScoreQuery, slugs),
+      this.snowflakeService.execute<TotalProjectsRow>(totalProjectsQuery, filteredSlugs),
+      this.snowflakeService.execute<TotalMembersRow>(totalMembersQuery, filteredSlugs),
+      this.snowflakeService.execute<ValueConcentrationRow>(valueConcentrationQuery, filteredSlugs),
+      this.snowflakeService.execute<HealthScoreRow>(healthScoreQuery, filteredSlugs),
     ]);
 
     logger.debug(req, 'get_multi_foundation_summary_batch', 'Batched Snowflake queries resolved', {
