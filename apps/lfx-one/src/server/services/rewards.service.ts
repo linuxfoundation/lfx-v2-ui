@@ -133,7 +133,7 @@ export class RewardsService {
     options: { operation: string; errorMessage: string; errorCode: string; method?: 'GET' | 'POST' }
   ): Promise<T> {
     const baseUrl = getUserServiceBaseUrl(options.operation, REWARDS_SERVICE_NAME);
-    this.assertApiGatewayToken(req);
+    this.assertApiGatewayToken(req, options.operation);
 
     let upstream: Response;
     try {
@@ -221,10 +221,11 @@ export class RewardsService {
     }
   }
 
-  private assertApiGatewayToken(req: Request): void {
+  private assertApiGatewayToken(req: Request, operation: string): void {
     if (!req.apiGatewayToken) {
       throw new MicroserviceError('API Gateway token not available — check API_GW_AUDIENCE env var and auth logs', 503, 'API_GATEWAY_UNAVAILABLE', {
         service: REWARDS_SERVICE_NAME,
+        operation,
       });
     }
   }
