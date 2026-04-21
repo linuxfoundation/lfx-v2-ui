@@ -760,26 +760,30 @@ export class CommitteeService {
       batches.push(unique.slice(i, i + BATCH_SIZE));
     }
 
+    // Rethrow batch failures — returning [] would make callers treat real memberships as
+    // "committee not found" and silently drop them (defeats failOnPartial: true).
     const batchResults = await Promise.all(
-      batches.map((batch) =>
-        fetchAllQueryResources<Committee>(
-          req,
-          (pageToken) =>
-            this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-              v: '1',
-              type: 'committee',
-              filters_or: batch.map((uid) => `uid:${uid}`),
-              ...(pageToken && { page_token: pageToken }),
-            }),
-          { failOnPartial: true }
-        ).catch((error) => {
-          logger.warning(req, 'get_committees_by_ids', 'Batched committee fetch failed for batch, skipping', {
+      batches.map(async (batch) => {
+        try {
+          return await fetchAllQueryResources<Committee>(
+            req,
+            (pageToken) =>
+              this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+                v: '1',
+                type: 'committee',
+                filters_or: batch.map((uid) => `uid:${uid}`),
+                ...(pageToken && { page_token: pageToken }),
+              }),
+            { failOnPartial: true }
+          );
+        } catch (error) {
+          logger.warning(req, 'get_committees_by_ids', 'Batched committee fetch failed', {
             batch_size: batch.length,
-            error: error instanceof Error ? error.message : String(error),
+            err: error,
           });
-          return [] as Committee[];
-        })
-      )
+          throw error;
+        }
+      })
     );
 
     const byUid = new Map<string, Committee>();
