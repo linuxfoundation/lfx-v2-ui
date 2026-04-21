@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, Signal, signal, viewChild } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { ChartComponent } from '@components/chart/chart.component';
 import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
@@ -29,7 +29,7 @@ import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ScrollShadowDirective } from '@shared/directives/scroll-shadow.directive';
 import { TooltipModule } from 'primeng/tooltip';
-import { catchError, forkJoin, map, Observable, of, switchMap, take } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, skip, Subject, switchMap, tap } from 'rxjs';
 
 import { BrandHealthDrawerComponent } from '../brand-health-drawer/brand-health-drawer.component';
 import { BrandReachDrawerComponent } from '../brand-reach-drawer/brand-reach-drawer.component';
@@ -196,8 +196,12 @@ export class MarketingOverviewComponent {
   // === WritableSignals ===
   public readonly selectedFilter = signal<'all' | MetricCategory>('all');
   public readonly activeDrawer = signal<DashboardDrawerType | null>(null);
-  private readonly brandHealthMentions = signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null>(null);
-  private mentionsLoading = false;
+
+  // Lazy-fetch mentions via Subject trigger + switchMap (no manual subscribe).
+  // Foundation changes automatically cancel in-flight requests via switchMap.
+  private readonly mentionsTrigger$ = new Subject<string>();
+  private readonly brandHealthMentions: Signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null> =
+    this.initBrandHealthMentions();
 
   // === Computed Signals ===
   protected readonly edEvolutionData: Signal<EdEvolutionData> = this.initEdEvolutionData();
@@ -221,41 +225,15 @@ export class MarketingOverviewComponent {
   protected readonly nonNorthStarCards = computed<DashboardMetricCard[]>(() => this.filteredCards().filter((c) => c.category !== 'memberships'));
   protected readonly totalCardCount = computed<number>(() => this.filteredCards().length);
 
-  public constructor() {
-    // Clear cached mentions when the foundation changes so stale data from a
-    // previously selected foundation isn't shown.
-    effect(() => {
-      this.projectContextService.selectedFoundation();
-      this.brandHealthMentions.set(null);
-      this.mentionsLoading = false;
-    });
-  }
-
   // === Public Methods ===
   public handleCardClick(drawerType: DashboardDrawerType): void {
     this.activeDrawer.set(drawerType);
 
-    // Lazy-fetch mentions only when the Brand Health drawer is opened (avoids extra
-    // Snowflake round-trips on every dashboard load). The loading guard prevents
-    // duplicate requests from repeated clicks before the first resolves.
-    if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions() && !this.mentionsLoading) {
-      this.mentionsLoading = true;
-      const slug = this.projectContextService.selectedFoundation()?.slug || 'tlf';
-      this.analyticsService
-        .getBrandHealth(slug, true)
-        .pipe(take(1))
-        .subscribe((res) => {
-          this.mentionsLoading = false;
-          // Verify the foundation hasn't changed while the request was in-flight.
-          // The effect() clears brandHealthMentions on foundation change, but the
-          // subscribe callback could fire after the effect — guard against stale data.
-          const currentSlug = this.projectContextService.selectedFoundation()?.slug || 'tlf';
-          if (currentSlug !== slug) return;
-          this.brandHealthMentions.set({
-            topPositiveMentions: res.topPositiveMentions,
-            topNegativeMentions: res.topNegativeMentions,
-          });
-        });
+    // Lazy-fetch mentions only when the Brand Health drawer is opened.
+    // The Subject + switchMap in initBrandHealthMentions() handles deduplication
+    // and cancels in-flight requests automatically on foundation change.
+    if (drawerType === DashboardDrawerType.BrandHealth && !this.brandHealthMentions()) {
+      this.mentionsTrigger$.next(this.projectContextService.selectedFoundation()?.slug || 'tlf');
     }
   }
 
@@ -275,6 +253,31 @@ export class MarketingOverviewComponent {
       if (filterKey === 'all') return cards;
       return cards.filter((card) => card.category === filterKey);
     });
+  }
+
+  private initBrandHealthMentions(): Signal<Pick<BrandHealthResponse, 'topPositiveMentions' | 'topNegativeMentions'> | null> {
+    // Reset mentions when foundation changes — toObservable + tap replaces
+    // the previous effect() to avoid writing signals inside effect().
+    toObservable(this.projectContextService.selectedFoundation)
+      .pipe(
+        skip(1),
+        tap(() => this.mentionsTrigger$.next('')),
+        takeUntilDestroyed()
+      )
+      .subscribe();
+
+    return toSignal(
+      this.mentionsTrigger$.pipe(
+        switchMap((slug) => {
+          if (!slug) return of(null);
+          return this.analyticsService.getBrandHealth(slug, true).pipe(
+            map((res) => ({ topPositiveMentions: res.topPositiveMentions, topNegativeMentions: res.topNegativeMentions })),
+            catchError(() => of(null))
+          );
+        })
+      ),
+      { initialValue: null }
+    );
   }
 
   private initEdEvolutionData(): Signal<EdEvolutionData> {
