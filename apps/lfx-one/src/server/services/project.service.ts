@@ -2999,7 +2999,6 @@ export class ProjectService {
         AND year_start IS NOT NULL
         AND ${currentYearPredicate}
         AND membership_tier IS NOT NULL
-        AND membership_value_lost IS NOT NULL
       GROUP BY membership_tier
       ORDER BY
         CASE REPLACE(membership_tier, ' Membership', '')

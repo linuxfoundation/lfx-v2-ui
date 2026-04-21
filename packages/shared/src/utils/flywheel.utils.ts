@@ -26,7 +26,7 @@ export const FLYWHEEL_FUNNEL_STAGE_LABELS = [
   'Re-engaged to Web',
 ] as const;
 
-/** Zero-filled fallback for the optional `reengagement` block on the reused response. */
+/** Zero-filled fallback used when `data` is null/undefined. */
 const DEFAULT_REENGAGEMENT: NonNullable<FlywheelConversionResponse['reengagement']> = {
   totalReengaged: 0,
   reengagementRate: 0,
@@ -40,8 +40,8 @@ const DEFAULT_REENGAGEMENT: NonNullable<FlywheelConversionResponse['reengagement
 };
 
 /**
- * Returns the reused `reengagement` block or a zero-filled fallback. Using a
- * single source for this default avoids drift between the drawer and the card.
+ * Returns the `reengagement` block from the response, or a zero-filled fallback
+ * when `data` itself is null/undefined. Single source to avoid drift between drawer and card.
  */
 export function getFlywheelReengagement(data: FlywheelConversionResponse | null | undefined): NonNullable<FlywheelConversionResponse['reengagement']> {
   return data?.reengagement ?? DEFAULT_REENGAGEMENT;
