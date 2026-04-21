@@ -1,8 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, isDevMode, signal, Signal } from '@angular/core';
+import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { CONTRIBUTOR_ACTION_ITEMS } from '@lfx-one/shared/constants';
 import { isBoardScopedPersona, PendingActionItem } from '@lfx-one/shared/interfaces';
 import { HiddenActionsService } from '@services/hidden-actions.service';
 import { PersonaService } from '@services/persona.service';
@@ -30,30 +31,7 @@ export class UserDashboardComponent {
 
   public readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  private readonly rawContributorActions = signal<PendingActionItem[]>(
-    isDevMode()
-      ? [
-          {
-            type: 'Vote',
-            badge: 'CNCF',
-            text: 'Cast your vote on the 2026 TOC election',
-            icon: 'fa-light fa-ballot-check',
-            severity: 'warn',
-            buttonText: 'Vote now',
-            buttonLink: 'https://example.com/vote',
-          },
-          {
-            type: 'Review',
-            badge: 'Kubernetes',
-            text: 'Review pending committee membership request from Alice Zhang',
-            icon: 'fa-light fa-user-check',
-            severity: 'info',
-            buttonText: 'Review',
-            buttonLink: 'https://example.com/review',
-          },
-        ]
-      : []
-  );
+  private readonly rawContributorActions = signal<PendingActionItem[]>(CONTRIBUTOR_ACTION_ITEMS);
 
   protected readonly isBoardScoped = computed(() => isBoardScopedPersona(this.personaService.currentPersona()));
   protected readonly activityRoleLabel = computed(() => {

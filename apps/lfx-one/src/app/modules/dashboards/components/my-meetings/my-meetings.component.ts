@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, isDevMode, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DashboardMeetingCardComponent } from '@app/modules/dashboards/components/dashboard-meeting-card/dashboard-meeting-card.component';
@@ -13,89 +13,7 @@ import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { catchError, combineLatest, Observable, of, switchMap, tap } from 'rxjs';
 
-import { MeetingVisibility, RecurrenceType } from '@lfx-one/shared/enums';
 import type { Meeting, MeetingWithOccurrence, PastMeeting } from '@lfx-one/shared/interfaces';
-
-const DEV_MOCK_PAST_MEETING: PastMeeting = {
-  id: 'dev-mock-meeting-001',
-  title: 'Technical Steering Committee Monthly Sync',
-  description: 'Monthly sync for the TSC to discuss roadmap, priorities, and community updates.',
-  meeting_type: 'technical',
-  start_time: '2026-04-15T15:00:00Z',
-  duration: 60,
-  timezone: 'America/New_York',
-  project_uid: 'dev-project-001',
-  project_name: 'CNCF',
-  project_slug: 'cncf',
-  recording_enabled: true,
-  transcript_enabled: true,
-  youtube_upload_enabled: false,
-  zoom_config: { ai_companion_enabled: true } as PastMeeting['zoom_config'],
-  recurrence: { type: RecurrenceType.WEEKLY, repeat_interval: 1, weekly_days: '3,5', end_times: 24 },
-  visibility: MeetingVisibility.PUBLIC,
-  restricted: false,
-  invited: true,
-  organizers: [],
-  committees: [],
-  password: null,
-  artifact_visibility: null,
-  individual_registrants_count: 0,
-  committee_members_count: 0,
-  registrants_accepted_count: 0,
-  registrants_declined_count: 0,
-  registrants_pending_count: 0,
-  created_at: '2026-01-01T00:00:00Z',
-  modified_at: '2026-04-15T16:00:00Z',
-  scheduled_start_time: '2026-04-15T15:00:00Z',
-  scheduled_end_time: '2026-04-15T16:00:00Z',
-  meeting_id: 'dev-mock-meeting-001',
-  occurrence_id: 'dev-occurrence-001',
-  platform_meeting_id: '99999999001',
-  occurrences: [],
-  sessions: [],
-};
-
-const DEV_MOCK_UPCOMING_MEETING: Meeting = {
-  id: 'dev-mock-upcoming-001',
-  title: 'Security Working Group — Closed Review',
-  description: 'Private session to review security findings and coordinate response.',
-  meeting_type: 'board',
-  start_time: '2026-05-05T14:00:00Z',
-  duration: 90,
-  timezone: 'America/New_York',
-  project_uid: 'dev-project-002',
-  project_name: 'OpenSSF',
-  project_slug: 'openssf',
-  recording_enabled: false,
-  transcript_enabled: false,
-  youtube_upload_enabled: false,
-  zoom_config: null,
-  recurrence: null,
-  visibility: MeetingVisibility.PRIVATE,
-  restricted: true,
-  invited: true,
-  organizers: [],
-  committees: [],
-  password: null,
-  artifact_visibility: null,
-  individual_registrants_count: 0,
-  committee_members_count: 0,
-  registrants_accepted_count: 0,
-  registrants_declined_count: 0,
-  registrants_pending_count: 0,
-  created_at: '2026-01-01T00:00:00Z',
-  modified_at: '2026-04-21T00:00:00Z',
-  occurrences: [
-    {
-      occurrence_id: 'dev-occurrence-upcoming-001',
-      title: 'Security Working Group — Closed Review',
-      description: 'Private session to review security findings and coordinate response.',
-      start_time: '2026-05-05T14:00:00Z',
-      duration: 90,
-      status: 'available',
-    },
-  ],
-};
 
 @Component({
   selector: 'lfx-my-meetings',
@@ -112,17 +30,14 @@ export class MyMeetingsComponent {
   private static readonly bufferMs = 40 * 60 * 1000; // 40 minutes
 
   protected readonly activeLens = this.lensService.activeLens;
-  protected readonly upcomingLoading = signal(!isDevMode());
-  protected readonly pastLoading = signal(!isDevMode());
+  protected readonly upcomingLoading = signal(true);
+  protected readonly pastLoading = signal(true);
 
   private readonly selectedProject = computed(() => this.projectContextService.activeContext());
 
   // Raw data from API — switches data source based on active lens
-  private readonly rawMeetings = isDevMode() ? signal<Meeting[]>([DEV_MOCK_UPCOMING_MEETING]) : this.initRawMeetings();
-  private readonly rawPastMeetings = isDevMode() ? signal<PastMeeting[]>([DEV_MOCK_PAST_MEETING]) : this.initRawPastMeetings();
-
-  /** Dev-only recording URL passed to the last meeting card to bypass the recording API call. */
-  protected readonly devRecordingUrl = isDevMode() ? 'https://zoom.us/rec/share/dev-mock-recording' : null;
+  private readonly rawMeetings = this.initRawMeetings();
+  private readonly rawPastMeetings = this.initRawPastMeetings();
 
   // Computed: Next upcoming meeting (with occurrence expansion)
   protected readonly nextMeeting: Signal<MeetingWithOccurrence | null> = this.initNextMeeting();
