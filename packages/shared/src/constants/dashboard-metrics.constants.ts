@@ -801,7 +801,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText:
-        'Percentage of event attendees who re-engage via newsletter, community, or working groups within 90 days post-event. Change shown in percentage points (pp) MoM.',
+        'Percentage of event attendees who re-engage via newsletter, community, working groups, training, code, or web within 90 days post-event. Change shown in percentage points (pp) MoM.',
       drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
     } as DashboardMetricCard,
     {
