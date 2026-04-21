@@ -73,7 +73,7 @@ export class EventGrowthDrawerComponent {
   };
 
   // === Computed year label ===
-  protected readonly currentYear = new Date().getFullYear();
+  protected readonly currentYear = new Date().getUTCFullYear();
 
   // === Computed Signals ===
   protected readonly sortedTopEvents: Signal<EventGrowthTopEventView[]> = this.initSortedTopEvents();
