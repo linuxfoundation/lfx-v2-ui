@@ -224,7 +224,11 @@ export class MeetingJoinComponent implements OnInit {
   public rsvpToggleLabel: Signal<string>;
   // Emits the freshly-submitted RSVP from the button-group so the chip updates immediately,
   // bypassing any query-service indexing lag that would otherwise return stale data on refetch.
-  private rsvpUpdateTrigger$ = new Subject<MeetingRsvp>();
+  private readonly rsvpUpdateTrigger$ = new Subject<MeetingRsvp>();
+  // Monotonic counter bumped on every manual RSVP update. Captured at fetch dispatch time and
+  // checked on response; if it has advanced, the server response is stale relative to a newer
+  // optimistic update and is dropped so the chip doesn't revert.
+  private rsvpUpdateCounter = 0;
 
   // Form value signals for reactivity
   public formValues: Signal<{ name: string; email: string; organization: string }>;
@@ -906,6 +910,7 @@ export class MeetingJoinComponent implements OnInit {
           if (evt.type === 'update') {
             // Button-group emits the confirmed RSVP after a successful POST — trust it, cancel
             // any in-flight server fetch so query-service indexing lag can't overwrite.
+            this.rsvpUpdateCounter++;
             return of(evt.data);
           }
           const [meeting, occurrence, authenticated, canToggle] = evt.data;
@@ -914,9 +919,16 @@ export class MeetingJoinComponent implements OnInit {
             return of(null);
           }
           const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
-          // startWith(null) resets the signal on navigation so a stale chip from the prior meeting
-          // doesn't linger. Service already catches errors.
-          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(startWith(null));
+          // Capture the current update revision at fetch dispatch time. If a manual update
+          // bumps the counter before the server response arrives (typically because the
+          // query-service hasn't indexed the new RSVP yet), the filter drops both the
+          // `startWith(null)` reset and the stale server value so the optimistic local
+          // update stays visible and the chip doesn't flash back.
+          const counterAtDispatch = this.rsvpUpdateCounter;
+          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(
+            startWith(null),
+            filter(() => this.rsvpUpdateCounter === counterAtDispatch)
+          );
         })
       ),
       { initialValue: null }
