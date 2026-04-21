@@ -118,8 +118,8 @@ export class MyMeetingsComponent {
   private readonly selectedProject = computed(() => this.projectContextService.activeContext());
 
   // Raw data from API — switches data source based on active lens
-  private readonly rawMeetings = isDevMode() ? signal<Meeting[]>([]) : this.initRawMeetings();
-  private readonly rawPastMeetings = isDevMode() ? signal<PastMeeting[]>([]) : this.initRawPastMeetings();
+  private readonly rawMeetings = isDevMode() ? signal<Meeting[]>([DEV_MOCK_UPCOMING_MEETING]) : this.initRawMeetings();
+  private readonly rawPastMeetings = isDevMode() ? signal<PastMeeting[]>([DEV_MOCK_PAST_MEETING]) : this.initRawPastMeetings();
 
   /** Dev-only recording URL passed to the last meeting card to bypass the recording API call. */
   protected readonly devRecordingUrl = isDevMode() ? 'https://zoom.us/rec/share/dev-mock-recording' : null;
