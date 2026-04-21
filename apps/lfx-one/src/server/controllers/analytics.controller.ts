@@ -2571,7 +2571,7 @@ export class AnalyticsController {
    * Parse and validate a comma-separated slugs query parameter.
    * @throws ServiceValidationError if the parameter is missing, empty, exceeds max count, or has invalid format
    */
-  private parseAndValidateSlugs(req: Request, maxCount: number = 10): string[] {
+  private parseAndValidateSlugs(req: Request, maxCount: number = 25): string[] {
     const slugsParam = getStringQueryParam(req, 'slugs');
 
     if (!slugsParam) {

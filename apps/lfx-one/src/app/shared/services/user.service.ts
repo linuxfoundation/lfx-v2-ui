@@ -150,7 +150,7 @@ export class UserService {
             })
           )
         ),
-        shareReplay({ bufferSize: 1, refCount: true })
+        shareReplay({ bufferSize: 1, refCount: false })
       );
     }
     return this.userMeetings$;
@@ -172,7 +172,7 @@ export class UserService {
             })
           )
         ),
-        shareReplay({ bufferSize: 1, refCount: true })
+        shareReplay({ bufferSize: 1, refCount: false })
       );
     }
     return this.userPastMeetings$;

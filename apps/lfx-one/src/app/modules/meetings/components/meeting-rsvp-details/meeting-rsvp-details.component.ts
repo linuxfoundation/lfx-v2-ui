@@ -5,9 +5,20 @@ import { NgClass } from '@angular/common';
 import { Component, computed, inject, input, InputSignal, output, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
-import { calculateRsvpCounts, Meeting, MeetingOccurrence, MeetingRsvp, PastMeeting, Project, RsvpCounts } from '@lfx-one/shared';
+import {
+  calculateRsvpCounts,
+  Meeting,
+  MeetingOccurrence,
+  MeetingRegistrant,
+  MeetingRsvp,
+  PastMeeting,
+  PastMeetingParticipant,
+  Project,
+  RsvpCounts,
+} from '@lfx-one/shared';
 import { MeetingService } from '@services/meeting.service';
-import { catchError, of, switchMap, tap } from 'rxjs';
+import { UserService } from '@services/user.service';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-meeting-rsvp-details',
@@ -16,6 +27,7 @@ import { catchError, of, switchMap, tap } from 'rxjs';
 })
 export class MeetingRsvpDetailsComponent {
   private readonly meetingService = inject(MeetingService);
+  private readonly userService = inject(UserService);
 
   public readonly meeting: InputSignal<Meeting | PastMeeting> = input.required<Meeting | PastMeeting>();
   public readonly project: InputSignal<Partial<Project> | null> = input<Partial<Project> | null>(null);
@@ -27,11 +39,20 @@ export class MeetingRsvpDetailsComponent {
   public readonly borderColor: InputSignal<string | undefined> = input<string | undefined>(undefined);
   public readonly additionalRegistrantsCount: InputSignal<number> = input<number>(0);
   public readonly addClicked = output<void>();
+  // Emits whether the current user has any RSVP on this meeting, derived from the already-fetched
+  // registrants/rsvps data. Parent card uses this to flip "Set My RSVP" → "Update My RSVP".
+  public readonly currentUserHasRsvpChanged = output<boolean>();
   public readonly disabled: InputSignal<boolean> = input<boolean>(false);
   public readonly disabledMessage: InputSignal<string> = input<string>('RSVP not available for this meeting');
 
   public readonly loading: WritableSignal<boolean> = signal(true);
-  public readonly rsvps: Signal<MeetingRsvp[]> = this.initializeRsvps();
+  // Private source: one observable, two derived signals. Consolidates registrants + RSVPs
+  // into a single HTTP call for the Me lens (where the backend doesn't populate counts),
+  // and falls back to a direct RSVP fetch for the non-Me lens where counts are already populated.
+  private readonly upcomingData: Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> = this.initializeUpcomingData();
+  public readonly rsvps: Signal<MeetingRsvp[]> = computed(() => this.upcomingData().rsvps);
+  public readonly pastParticipants: Signal<PastMeetingParticipant[]> = this.initializePastParticipants();
+  public readonly registrants: Signal<MeetingRegistrant[]> = computed(() => this.upcomingData().registrants);
   public readonly rsvpCounts: Signal<RsvpCounts> = this.initializeRsvpCounts();
   public readonly acceptedCount: Signal<number> = computed(() => this.rsvpCounts().accepted);
   public readonly maybeCount: Signal<number> = computed(() => this.rsvpCounts().maybe);
@@ -45,27 +66,76 @@ export class MeetingRsvpDetailsComponent {
   public readonly headerTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-600' : 'text-gray-600'));
   public readonly summaryTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-900' : 'text-gray-900'));
 
-  private initializeRsvps(): Signal<MeetingRsvp[]> {
+  private initializeUpcomingData(): Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> {
     return toSignal(
       toObservable(this.meeting).pipe(
-        tap(() => this.loading.set(true)),
+        tap(() => {
+          if (!this.pastMeeting()) this.loading.set(true);
+        }),
         switchMap((meeting) => {
-          // Past meetings use attended_count/participant_count from the meeting data
-          // RSVPs only apply to upcoming meetings
           if (this.pastMeeting()) {
-            return of([] as MeetingRsvp[]);
+            return of({ rsvps: [] as MeetingRsvp[], registrants: [] as MeetingRegistrant[] });
           }
+          // Me lens (backend counts not populated) — one call for both registrants + RSVPs inline.
+          if (!this.hasBackendRegistrantCounts(meeting)) {
+            return this.meetingService.getMeetingRegistrants(meeting.id, true).pipe(
+              map((registrants) => ({
+                registrants,
+                rsvps: registrants.map((r) => r.rsvp).filter((r): r is MeetingRsvp => r != null),
+              })),
+              catchError((error) => {
+                console.error('Failed to fetch meeting registrants:', error);
+                return of({ rsvps: [] as MeetingRsvp[], registrants: [] as MeetingRegistrant[] });
+              })
+            );
+          }
+          // Non-Me lens — counts are already on the meeting object, only need RSVPs.
           return this.meetingService.getMeetingRsvps(meeting.id).pipe(
+            map((rsvps) => ({ rsvps, registrants: [] as MeetingRegistrant[] })),
             catchError((error) => {
               console.error('Failed to fetch meeting RSVPs:', error);
-              return of([]);
+              return of({ rsvps: [] as MeetingRsvp[], registrants: [] as MeetingRegistrant[] });
             })
           );
         }),
-        tap(() => this.loading.set(false))
+        tap((data) => {
+          if (!this.pastMeeting()) this.loading.set(false);
+          const userEmail = this.userService.user()?.email?.toLowerCase();
+          const hasRsvp = !!userEmail && data.rsvps.some((r) => r.email?.toLowerCase() === userEmail);
+          this.currentUserHasRsvpChanged.emit(hasRsvp);
+        })
+      ),
+      { initialValue: { rsvps: [] as MeetingRsvp[], registrants: [] as MeetingRegistrant[] } }
+    );
+  }
+
+  private initializePastParticipants(): Signal<PastMeetingParticipant[]> {
+    return toSignal(
+      toObservable(this.meeting).pipe(
+        tap(() => {
+          if (this.pastMeeting()) this.loading.set(true);
+        }),
+        switchMap((meeting) => {
+          if (!this.pastMeeting()) {
+            return of([] as PastMeetingParticipant[]);
+          }
+          return this.meetingService.getPastMeetingParticipants(meeting.id).pipe(
+            catchError((error) => {
+              console.error('Failed to fetch past meeting participants:', error);
+              return of([] as PastMeetingParticipant[]);
+            })
+          );
+        }),
+        tap(() => {
+          if (this.pastMeeting()) this.loading.set(false);
+        })
       ),
       { initialValue: [] }
     );
+  }
+
+  private hasBackendRegistrantCounts(meeting: Meeting | PastMeeting): boolean {
+    return meeting.individual_registrants_count !== undefined || meeting.committee_members_count !== undefined;
   }
 
   private initializeRsvpCounts(): Signal<RsvpCounts> {
@@ -83,21 +153,19 @@ export class MeetingRsvpDetailsComponent {
       const additionalCount = this.additionalRegistrantsCount();
 
       if (this.pastMeeting()) {
-        return (meeting.participant_count || 0) + additionalCount;
+        return this.pastParticipants().length + additionalCount;
       }
 
       const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-      const baseCount = splitCount > 0 ? splitCount : meeting.registrant_count || 0;
+      const baseCount = splitCount > 0 ? splitCount : this.registrants().length;
       return baseCount + additionalCount;
     });
   }
 
   private initializeAttendedCount(): Signal<number> {
     return computed(() => {
-      if ('attended_count' in this.meeting()) {
-        return (this.meeting() as PastMeeting).attended_count || 0;
-      }
-      return 0;
+      if (!this.pastMeeting()) return 0;
+      return this.pastParticipants().filter((p) => p.is_attended).length;
     });
   }
 
