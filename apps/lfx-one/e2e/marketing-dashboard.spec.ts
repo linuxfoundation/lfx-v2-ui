@@ -72,12 +72,30 @@ test.describe('Marketing Overview Section', () => {
     await expect(subtitle).toContainText('North Star KPIs');
   });
 
-  test('renders carousel with navigation controls', async ({ page }) => {
+  test('renders Foundation Health before Marketing Metrics', async ({ page }) => {
+    const healthSection = page.locator('[data-testid="foundation-health-section"]');
+    const edSection = page.locator('[data-testid="ed-evolution-section"]');
+
+    // Both sections should be visible
+    await expect(healthSection).toBeVisible();
+    await expect(edSection).toBeVisible();
+
+    // Foundation Health should appear before Marketing Metrics in the DOM
+    const healthBox = await healthSection.boundingBox();
+    const edBox = await edSection.boundingBox();
+    expect(healthBox!.y).toBeLessThan(edBox!.y);
+  });
+
+  test('renders carousel with navigation controls and count', async ({ page }) => {
     const carousel = page.locator('[data-testid="ed-evolution-carousel"]');
     await expect(carousel).toBeVisible();
 
     await expect(page.locator('[data-testid="ed-evolution-carousel-prev"]')).toBeVisible();
     await expect(page.locator('[data-testid="ed-evolution-carousel-next"]')).toBeVisible();
+
+    const carouselCount = page.locator('[data-testid="ed-evolution-carousel-count"]');
+    await expect(carouselCount).toBeVisible();
+    await expect(carouselCount).toContainText(/\d+\s*\/\s*\d+/);
   });
 
   test('carousel scrolls when navigation buttons are clicked', async ({ page }) => {
