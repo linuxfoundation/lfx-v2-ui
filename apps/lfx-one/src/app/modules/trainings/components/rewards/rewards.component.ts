@@ -1,8 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-// Generated with [Claude Code](https://claude.ai/code)
-
 import { Clipboard } from '@angular/cdk/clipboard';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, Signal, signal } from '@angular/core';
@@ -42,7 +40,7 @@ export class RewardsComponent {
   private readonly lastSummary = signal<RewardsSummaryResponse | null>(null);
 
   // ─── Writable Signals ──────────────────────────────────────────────────────
-  public redeemingUids = signal<Record<string, boolean>>({});
+  public readonly redeemingUids = signal<Record<string, boolean>>({});
   private readonly pendingConfirmationUids = new Set<string>();
 
   // ─── Declarative State ─────────────────────────────────────────────────────
@@ -156,13 +154,6 @@ export class RewardsComponent {
     if (!promotion.id) return false;
 
     if (!promotion.eligible || promotion.redeemed || promotion.coupon || this.redeemingUids()[promotion.uid]) {
-      console.warn('[RewardsComponent] Ignoring redeem request for promotion in non-redeemable state', {
-        uid: promotion.uid,
-        eligible: promotion.eligible,
-        redeemed: promotion.redeemed,
-        hasCoupon: Boolean(promotion.coupon),
-        alreadyRedeeming: Boolean(this.redeemingUids()[promotion.uid]),
-      });
       return false;
     }
 
