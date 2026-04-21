@@ -130,8 +130,11 @@ function getCouponDescription(p: RewardPromotion, isExpired: boolean): string {
 }
 
 function getCouponSortRank(p: DecoratedCoupon): number {
-  if (p.isExpired) return 4;
+  // Precedence must match getCouponStatusLabel/getCouponStatusColorClass:
+  // a redeemed-but-expired coupon is labeled "Redeemed", so it must sort
+  // into the Redeemed bucket (not the Expired bucket).
   if (p.redeemed) return 3;
+  if (p.isExpired) return 4;
   if (p.coupon) return 1;
   if (p.eligible) return 0;
   return 2;
