@@ -829,6 +829,19 @@ function monthlyValues(data: { month: string; value: number }[]): number[] {
   return data.map((d) => d.value);
 }
 
+/** Element-wise sum of two monthly revenue series (e.g. event attribution + paid media).
+ *  If series differ in length, the shorter one is left-padded with zeros so both align to the most recent month. */
+function combineMonthlySeries(a: number[], b: number[]): number[] {
+  const len = Math.max(a.length, b.length);
+  const result: number[] = [];
+  for (let i = 0; i < len; i++) {
+    const aVal = a[i - (len - a.length)] ?? 0;
+    const bVal = b[i - (len - b.length)] ?? 0;
+    result.push(aVal + bVal);
+  }
+  return result;
+}
+
 /** Roll up per-channel-per-month event-registration rows into a single monthly lastTouchRevenue series (chronological). */
 function eventAttrMonthlyRevenueSeries(rows: { month: string; lastTouchRevenue: number }[]): number[] {
   const byMonth = new Map<string, number>();
@@ -1016,20 +1029,25 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'influence',
       testId: 'ed-evo-revenue-impact',
-      description: 'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend.',
+      description: 'Total revenue attributed to marketing touchpoints, with paid media revenue shown separately.',
       customContentType: 'dual-signal',
       caption: 'Last 6 months',
       dualSignals: [
         (() => {
           const eventAttrSeries = eventAttrMonthlyRevenueSeries(revenueImpact.eventRegistrationAttribution.monthlyTrend);
           const eventAttrTotal = revenueImpact.eventRegistrationAttribution.channelBreakdown.reduce((sum, c) => sum + (c.lastTouchRevenue ?? 0), 0);
+          const paidMediaRevenue = revenueImpact.paidMedia.adRevenue;
+          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
+          // Marketing Attribution = total across all channels (event registration + paid media)
+          const totalAttrRevenue = eventAttrTotal + paidMediaRevenue;
+          const totalAttrSeries = combineMonthlySeries(eventAttrSeries, paidMediaSeries);
           return protoDualSignal(
             'Marketing Attribution',
-            formatCurrency(eventAttrTotal),
-            eventAttrSeries,
+            formatCurrency(totalAttrRevenue),
+            totalAttrSeries,
             lfxColors.blue[500],
-            eventAttrMomChange(eventAttrSeries),
-            eventAttrTrendDirection(eventAttrSeries)
+            eventAttrMomChange(totalAttrSeries),
+            eventAttrTrendDirection(totalAttrSeries)
           );
         })(),
         protoDualSignal(
@@ -1042,7 +1060,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         ),
       ],
       tooltipText:
-        'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend. Sales pipeline is shown on the Member Growth card.',
+        'Total revenue attributed to marketing touchpoints (event registration + paid media). Paid Media row shows the paid ads portion. Sales pipeline is shown on the Member Growth card.',
       drawerType: DashboardDrawerType.RevenueImpact,
     } as DashboardMetricCard,
   ];
