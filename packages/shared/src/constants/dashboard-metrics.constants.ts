@@ -1036,10 +1036,11 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
         (() => {
           const eventAttrSeries = eventAttrMonthlyRevenueSeries(revenueImpact.eventRegistrationAttribution.monthlyTrend);
           const eventAttrTotal = revenueImpact.eventRegistrationAttribution.channelBreakdown.reduce((sum, c) => sum + (c.lastTouchRevenue ?? 0), 0);
-          const paidMediaRevenue = revenueImpact.paidMedia.adRevenue;
           const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
-          // Marketing Attribution = total across all channels (event registration + paid media)
-          const totalAttrRevenue = eventAttrTotal + paidMediaRevenue;
+          // Sum paid media revenue from the same last-6-months window (not YTD) to match eventAttrTotal
+          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
+          // Marketing Attribution = total across all channels (event registration + paid media), same time window
+          const totalAttrRevenue = eventAttrTotal + paidMediaRevenue6mo;
           const totalAttrSeries = combineMonthlySeries(eventAttrSeries, paidMediaSeries);
           return protoDualSignal(
             'Marketing Attribution',
@@ -1050,14 +1051,18 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
             eventAttrTrendDirection(totalAttrSeries)
           );
         })(),
-        protoDualSignal(
-          'Paid Media',
-          formatCurrency(revenueImpact.paidMedia.adRevenue),
-          revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue),
-          lfxColors.violet[500],
-          paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
-          paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
-        ),
+        (() => {
+          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
+          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
+          return protoDualSignal(
+            'Paid Media',
+            formatCurrency(paidMediaRevenue6mo),
+            paidMediaSeries,
+            lfxColors.violet[500],
+            paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
+            paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
+          );
+        })(),
       ],
       tooltipText:
         'Total revenue attributed to marketing touchpoints (event registration + paid media). Paid Media row shows the paid ads portion. Sales pipeline is shown on the Member Growth card.',

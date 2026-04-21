@@ -3891,7 +3891,9 @@ export class ProjectService {
         const [socialResult, socialPlatformResult] = await Promise.all([
           this.snowflakeService.execute<{ TOTAL_FOLLOWERS: number; FOLLOWER_GROWTH_PCT: number }>(
             `SELECT SUM(TOTAL_FOLLOWERS) AS TOTAL_FOLLOWERS,
-                    AVG(FOLLOWER_GROWTH_PCT) AS FOLLOWER_GROWTH_PCT
+                    CASE WHEN SUM(PRIOR_TOTAL_FOLLOWERS) > 0
+                         THEN ((SUM(TOTAL_FOLLOWERS) - SUM(PRIOR_TOTAL_FOLLOWERS)) / SUM(PRIOR_TOTAL_FOLLOWERS)) * 100
+                         ELSE 0 END AS FOLLOWER_GROWTH_PCT
              FROM ANALYTICS.PLATINUM_LFX_ONE.SOCIAL_MEDIA_OVERVIEW ${foundationFilter}`,
             foundationParams
           ),
