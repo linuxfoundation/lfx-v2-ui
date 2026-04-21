@@ -20,3 +20,4 @@ export * from './project.utils';
 export * from './badge.utils';
 export * from './marketing.utils';
 export * from './flywheel.utils';
+export * from './rewards.utils';
