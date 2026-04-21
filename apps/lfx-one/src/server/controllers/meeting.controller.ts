@@ -61,8 +61,12 @@ export class MeetingController {
 
     try {
       const userEmail = getEffectiveEmail(req) || '';
+      // Strip `skip_registrants` — legacy flag the client still sets for some committee views;
+      // forwarding it to /query/resources would send an unsupported param upstream.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { skip_registrants: _skipRegistrants, ...meetingQuery } = req.query as Record<string, any>;
       const [{ data: meetings, page_token }, registeredMeetingIds] = await Promise.all([
-        this.meetingService.getMeetings(req, req.query as Record<string, any>, 'v1_meeting', true),
+        this.meetingService.getMeetings(req, meetingQuery, 'v1_meeting', true),
         this.userService.getUserRegisteredMeetingIds(req, userEmail),
       ]);
 

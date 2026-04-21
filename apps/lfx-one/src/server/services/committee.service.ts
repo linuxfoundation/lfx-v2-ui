@@ -520,9 +520,10 @@ export class CommitteeService {
       });
     }
 
-    // Batch-fetch committee resources from the query service in a single request.
-    // Avoids the N-way upstream fan-out to GET /committees/:uid, which has been observed
-    // to 404 on memberships indexed by the query service.
+    // Batch-fetch committee resources from the query service in one or more batched requests
+    // (chunked at 100 UIDs per request by getCommitteesByIds). Avoids the N-way upstream
+    // fan-out to GET /committees/:uid, which has been observed to 404 on memberships
+    // indexed by the query service.
     const committeeUids = Array.from(membershipMap.keys());
     const committees = await this.getCommitteesByIds(req, committeeUids);
 
@@ -537,6 +538,18 @@ export class CommitteeService {
           return null;
         }
         const [memberCountRes, mlCountRes] = await Promise.allSettled([this.getCommitteeMembersCount(req, uid), this.getMailingListCountByCommittee(req, uid)]);
+        if (memberCountRes.status === 'rejected') {
+          logger.warning(req, 'get_my_committees', 'Failed to fetch committee members count, defaulting to 0', {
+            committee_uid: uid,
+            err: memberCountRes.reason,
+          });
+        }
+        if (mlCountRes.status === 'rejected') {
+          logger.warning(req, 'get_my_committees', 'Failed to fetch mailing list count, defaulting to false', {
+            committee_uid: uid,
+            err: mlCountRes.reason,
+          });
+        }
         const membership = membershipMap.get(uid)!;
         return {
           ...committee,

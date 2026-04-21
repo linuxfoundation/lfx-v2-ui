@@ -6,6 +6,7 @@ import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
 import { Committee, PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
@@ -15,7 +16,6 @@ import { ProjectContextService } from '@services/project-context.service';
 import { VoteService } from '@services/vote.service';
 import { BehaviorSubject, catchError, combineLatest, finalize, map, of, switchMap, tap } from 'rxjs';
 
-import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { VoteResultsDrawerComponent } from '../components/vote-results-drawer/vote-results-drawer.component';
 import { VotesTableComponent } from '../components/votes-table/votes-table.component';
 
@@ -78,6 +78,11 @@ export class VotesDashboardComponent {
   protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initializeFoundationOptions();
   protected readonly projectOptions: Signal<{ label: string; value: string | null }[]> = this.initializeProjectOptions();
   protected readonly filteredMyVotes: Signal<Vote[]> = this.initFilteredMyVotes();
+  // True when any server-side filter is active; drives dashboard empty-state vs. table empty-state routing.
+  protected readonly hasActiveFilters: Signal<boolean> = computed(() => {
+    const f = this.filters();
+    return !!(f.search || f.status || f.group);
+  });
 
   protected onViewVote(voteId: string): void {
     this.selectedVoteId.set(voteId);
@@ -107,7 +112,7 @@ export class VotesDashboardComponent {
     }
 
     this.currentFirst.set(event.first);
-    this.fetch$.next();
+    // this.fetch$.next();
   }
 
   protected onFoundationFilterChange(value: string | null): void {
