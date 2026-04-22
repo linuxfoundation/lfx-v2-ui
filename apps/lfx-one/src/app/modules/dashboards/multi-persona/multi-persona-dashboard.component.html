@@ -73,7 +73,8 @@
           <div
             class="grid w-full grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200"
             [class.sm:grid-cols-4]="hasFoundations() && hasProjects()"
-            [class.sm:grid-cols-3]="!(hasFoundations() && hasProjects())">
+            [class.sm:grid-cols-3]="hasFoundations() !== hasProjects()"
+            [class.sm:grid-cols-2]="!hasFoundations() && !hasProjects()">
             @if (hasFoundations()) {
               <div class="flex items-center gap-3 p-4">
                 <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
@@ -154,7 +155,14 @@
             </tr>
           </ng-template>
           <ng-template #body let-row let-rowIndex="rowIndex">
-            <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'persona-row-' + row.projectSlug">
+            <tr
+              [attr.data-row-index]="rowIndex"
+              [attr.data-testid]="'persona-row-' + row.projectSlug"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Open ' + row.projectName"
+              (keydown.enter)="openRow(row)"
+              (keydown.space)="openRow(row); $event.preventDefault()">
               <!-- Name -->
               <td>
                 <div class="flex items-center gap-3">
@@ -205,7 +213,9 @@
                         class="text-sm"
                         [class.text-emerald-700]="row.healthStatus === 'on-track'"
                         [class.text-amber-700]="row.healthStatus === 'watch'"
-                        [class.text-red-700]="row.healthStatus === 'needs-attention'">{{ row.healthDetail }}</span>
+                        [class.text-red-700]="row.healthStatus === 'needs-attention'"
+                        >{{ row.healthDetail }}</span
+                      >
                     </div>
                   } @else {
                     <span class="text-sm text-gray-400">&mdash;</span>
@@ -218,7 +228,9 @@
                   <span
                     class="voting-badge"
                     [class.voting-badge--voting-rep]="row.votingStatus === 'Voting Rep'"
-                    [class.voting-badge--alternate]="row.votingStatus === 'Alternate Voting Rep'">{{ row.votingStatus }}</span>
+                    [class.voting-badge--alternate]="row.votingStatus === 'Alternate Voting Rep'"
+                    >{{ row.votingStatus }}</span
+                  >
                 } @else {
                   <span class="text-sm text-gray-400">&mdash;</span>
                 }
@@ -227,7 +239,9 @@
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="5" class="py-8 text-center text-sm text-gray-400">No foundations or projects found.</td>
+              <td [attr.colspan]="3 + (showTypeColumn() ? 1 : 0) + (hasFoundations() ? 1 : 0)" class="py-8 text-center text-sm text-gray-400">
+                No foundations or projects found.
+              </td>
             </tr>
           </ng-template>
         </lfx-table>
