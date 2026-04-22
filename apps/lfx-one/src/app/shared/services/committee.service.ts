@@ -145,13 +145,13 @@ export class CommitteeService {
    * - `foundationUid` scopes to memberships under a foundation (and its sub-projects).
    *
    * Pass neither to fetch the full cross-project set (used by cross-project pages).
+   * If both are provided, `projectUid` takes precedence and `foundationUid` is ignored.
    */
   public getMyCommittees(projectUid?: string, foundationUid?: string): Observable<MyCommittee[]> {
     let params = new HttpParams();
     if (projectUid) {
       params = params.set('project_uid', projectUid);
-    }
-    if (foundationUid) {
+    } else if (foundationUid) {
       params = params.set('foundation_uid', foundationUid);
     }
     return this.http.get<MyCommittee[]>('/api/committees/my-committees', { params }).pipe(

@@ -15,7 +15,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
-import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, of, startWith, switchMap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, distinctUntilChanged, finalize, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { CommitteeTableComponent } from '../components/committee-table/committee-table.component';
@@ -159,22 +159,39 @@ export class CommitteeDashboardComponent {
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     const project$ = toObservable(this.project);
     const refresh$ = toObservable(this.refresh);
+    const isFoundationContext$ = toObservable(this.isFoundationContext);
+    const isMeLens$ = toObservable(this.isMeLens);
+
+    // Resolve the active scope for "my committees":
+    // - Me lens with no selected context → fetch across all foundations and projects.
+    // - Otherwise → scope to the active foundation or project context.
+    // Reset per-page filters only when the actual scope changes (mode flip or UID change),
+    // not on every refresh button click.
+    const scope$ = combineLatest([project$, isFoundationContext$, isMeLens$]).pipe(
+      map(([project, isFoundation, isMeLens]) => {
+        const uid = project?.uid ?? '';
+        if (isMeLens && !uid) {
+          return { mode: 'all' as const, uid: '', key: 'all' };
+        }
+        const mode = isFoundation ? ('foundation' as const) : ('project' as const);
+        return { mode, uid, key: `${mode}:${uid}` };
+      }),
+      distinctUntilChanged((a, b) => a.key === b.key),
+      tap(() => this.resetScopeFilters())
+    );
 
     return toSignal(
-      combineLatest([project$, refresh$]).pipe(
-        switchMap(([project]) => {
-          this.resetScopeFilters();
-
-          if (!project?.uid) {
+      combineLatest([scope$, refresh$]).pipe(
+        switchMap(([scope]) => {
+          if (scope.mode !== 'all' && !scope.uid) {
             this.myCommitteesLoading.set(false);
             return of([] as MyCommittee[]);
           }
 
           this.myCommitteesLoading.set(true);
-          const isFoundation = this.projectContextService.isFoundationContext();
-          return this.committeeService
-            .getMyCommittees(isFoundation ? undefined : project.uid, isFoundation ? project.uid : undefined)
-            .pipe(finalize(() => this.myCommitteesLoading.set(false)));
+          const projectUid = scope.mode === 'project' ? scope.uid : undefined;
+          const foundationUid = scope.mode === 'foundation' ? scope.uid : undefined;
+          return this.committeeService.getMyCommittees(projectUid, foundationUid).pipe(finalize(() => this.myCommitteesLoading.set(false)));
         })
       ),
       { initialValue: [] }
