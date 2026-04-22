@@ -26,6 +26,7 @@ export interface GroupsIOArtifactQueryResult {
   link_url?: string;
   download_url?: string;
   media_type?: string;
+  last_posted_at?: string;
   created_at: string;
 }
 
