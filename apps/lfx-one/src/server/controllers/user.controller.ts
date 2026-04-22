@@ -77,14 +77,21 @@ export class UserController {
         return;
       }
 
+      // Optional `?limit=` clamps the response size so mobile / summary cards can request a
+      // smaller payload. Backend work isn't reduced (the full list is computed and then sliced);
+      // the win is over-the-wire bytes. Unbounded by default for back-compat with existing clients.
+      const limitParam = parseInt(req.query['limit'] as string, 10);
+      const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : undefined;
+
       // Get pending actions from service
-      const pendingActions = await this.userService.getPendingActions(req, persona, projectUid, userEmail, projectSlug);
+      const pendingActions = await this.userService.getPendingActions(req, persona, projectUid, userEmail, projectSlug, limit);
 
       logger.success(req, 'get_pending_actions', startTime, {
         persona,
         project_uid: projectUid,
         project_slug: projectSlug,
         action_count: pendingActions.length,
+        ...(limit !== undefined && { limit }),
       });
 
       // Private, revalidate-every-time — server recomputes the response for the real

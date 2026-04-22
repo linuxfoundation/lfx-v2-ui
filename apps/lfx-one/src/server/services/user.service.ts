@@ -458,11 +458,21 @@ export class UserService {
    * @param projectSlug - Project slug for survey filtering
    * @returns Array of pending action items
    */
-  public async getPendingActions(req: Request, persona: PersonaType, projectUid: string, email: string, projectSlug: string): Promise<PendingActionItem[]> {
+  public async getPendingActions(
+    req: Request,
+    persona: PersonaType,
+    projectUid: string,
+    email: string,
+    projectSlug: string,
+    limit?: number
+  ): Promise<PendingActionItem[]> {
     // Persona is accepted for back-compat but no longer dispatches — a pending action is a
     // pending action regardless of which dashboard the user is viewing. The board-only
     // scoping was an MVP artifact, not a principled design choice.
-    return this.getUserPendingActions(req, email, projectSlug, projectUid);
+    const actions = await this.getUserPendingActions(req, email, projectSlug, projectUid);
+    // Optional cap. Backend work is unchanged (aggregator still runs in full); this just
+    // shrinks the response payload for callers that only need a top-N view.
+    return limit && limit > 0 && actions.length > limit ? actions.slice(0, limit) : actions;
   }
 
   /**
