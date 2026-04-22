@@ -20,6 +20,7 @@ import { CombinedSurveyStatusSeverityPipe } from '@pipes/combined-survey-status-
 import { IsDueWithinMonthPipe } from '@pipes/is-due-within-month.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { SurveyActionTextPipe } from '@pipes/survey-action-text.pipe';
+import { signalFromControl } from '@shared/utils/signal-from-control.util';
 import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
 
 @Component({
@@ -76,8 +77,8 @@ export class SurveysTableComponent {
   // === Private Initializers ===
   private initSearchTerm(): Signal<string> {
     return toSignal(
-      this.searchForm.get('search')!.valueChanges.pipe(
-        startWith(''),
+      this.searchForm.controls.search.valueChanges.pipe(
+        startWith(this.searchForm.controls.search.value),
         debounceTime(300),
         distinctUntilChanged(),
         map((value) => value ?? '')
@@ -87,13 +88,11 @@ export class SurveysTableComponent {
   }
 
   private initStatusFilter(): Signal<CombinedSurveyStatus | null> {
-    const control = this.searchForm.controls.status;
-    return toSignal(control.valueChanges.pipe(startWith(control.value), distinctUntilChanged()), { initialValue: control.value });
+    return signalFromControl(this.searchForm.controls.status);
   }
 
   private initCommitteeFilter(): Signal<string | null> {
-    const control = this.searchForm.controls.committee;
-    return toSignal(control.valueChanges.pipe(startWith(control.value), distinctUntilChanged()), { initialValue: control.value });
+    return signalFromControl(this.searchForm.controls.committee);
   }
 
   private initStatusOptions(): Signal<{ label: string; value: CombinedSurveyStatus | null }[]> {
