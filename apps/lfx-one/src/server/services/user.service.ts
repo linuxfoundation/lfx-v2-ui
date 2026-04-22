@@ -479,14 +479,31 @@ export class UserService {
    * @returns Array of Meeting objects the user has some direct FGA grant on
    */
   public async getUserMeetings(req: Request, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
+    // .catch — a foundation lookup failure degrades to an empty scope (caught by the empty-set
+    // guard below), preventing a NATS/upstream blip from 500'ing the Me lens.
     const foundationProjectUids = foundationUid
-      ? await this.projectService.getFoundationProjectUids(req, foundationUid).then((uids) => new Set(uids))
+      ? await this.projectService
+          .getFoundationProjectUids(req, foundationUid)
+          .then((uids) => new Set(uids))
+          .catch((error) => {
+            logger.warning(req, 'get_user_meetings', 'Foundation project lookup failed, treating as empty scope', { err: error });
+            return new Set<string>();
+          })
       : undefined;
 
     logger.debug(req, 'get_user_meetings', 'Fetching user meetings via filter_grants=direct', {
       has_project_filter: !!projectUid,
       has_foundation_filter: !!foundationUid,
     });
+
+    // Foundation filter requested but resolved to zero child projects: return empty rather than
+    // let buildProjectScopeFilters return `{}` and collapse to unfiltered (global) scope.
+    if (foundationUid && foundationProjectUids !== undefined && foundationProjectUids.size === 0) {
+      logger.debug(req, 'get_user_meetings', 'Foundation scope resolved to empty set, returning empty meeting list', {
+        foundation_uid: foundationUid,
+      });
+      return [];
+    }
 
     const projectFilterParams = this.buildProjectScopeFilters(projectUid, foundationProjectUids);
 
@@ -569,7 +586,9 @@ export class UserService {
     // carry attendance, so this lookup is independent of the meeting fetch. failOnPartial: true
     // surfaces truncated sets; outer .catch degrades gracefully so a failure here drops attendance
     // data without 500'ing the Me lens.
-    const participantQuery =
+    // `loaded` distinguishes "scan succeeded, user wasn't a participant" (loaded:true → attended:false is correct)
+    // from "couldn't determine attendance" (loaded:false → attended:undefined so UI can show 'unknown').
+    const participantQuery: Promise<{ participants: PastMeetingParticipant[]; loaded: boolean }> =
       filtersOr.length > 0
         ? fetchAllQueryResources<PastMeetingParticipant>(
             req,
@@ -581,22 +600,36 @@ export class UserService {
                 ...(pageToken && { page_token: pageToken }),
               }),
             { failOnPartial: true }
-          ).catch((error) => {
-            logger.warning(req, 'get_user_past_meetings', 'Participant query failed, continuing without attendance enrichment', {
-              stage: 'participant_query',
-              err: error,
-            });
-            return [] as PastMeetingParticipant[];
-          })
-        : Promise.resolve([] as PastMeetingParticipant[]);
+          )
+            .then((participants) => ({ participants, loaded: true }))
+            .catch((error) => {
+              logger.warning(req, 'get_user_past_meetings', 'Participant query failed, continuing without attendance enrichment', {
+                stage: 'participant_query',
+                err: error,
+              });
+              return { participants: [] as PastMeetingParticipant[], loaded: false };
+            })
+        : Promise.resolve({ participants: [] as PastMeetingParticipant[], loaded: false });
 
+    // .catch — same degrade-to-empty-scope pattern as getUserMeetings.
     const foundationQuery = foundationUid
-      ? this.projectService.getFoundationProjectUids(req, foundationUid).then((uids) => new Set(uids))
+      ? this.projectService
+          .getFoundationProjectUids(req, foundationUid)
+          .then((uids) => new Set(uids))
+          .catch((error) => {
+            logger.warning(req, 'get_user_past_meetings', 'Foundation project lookup failed, treating as empty scope', { err: error });
+            return new Set<string>();
+          })
       : Promise.resolve(undefined);
 
     // Past-meeting query depends on foundation UIDs to build `filters_or`, but it does NOT block
     // the participant scan — the scan runs concurrently with the foundation lookup + meeting fetch.
     const pastMeetingsQuery = foundationQuery.then((resolvedFoundationUids) => {
+      // Foundation filter requested but resolved to zero child projects: short-circuit before the
+      // helper collapses to unfiltered (global) scope.
+      if (foundationUid && resolvedFoundationUids !== undefined && resolvedFoundationUids.size === 0) {
+        return [] as PastMeeting[];
+      }
       const projectFilterParams = this.buildProjectScopeFilters(projectUid, resolvedFoundationUids);
 
       return fetchAllQueryResources<PastMeeting>(
@@ -618,7 +651,7 @@ export class UserService {
       });
     });
 
-    const [participants, pastMeetings] = await Promise.all([participantQuery, pastMeetingsQuery]);
+    const [{ participants, loaded: attendanceLoaded }, pastMeetings] = await Promise.all([participantQuery, pastMeetingsQuery]);
 
     // Normalize id to the composite meeting_and_occurrence_id so downstream callers
     // (e.g. getPastMeetingParticipants(req, meeting.id)) receive the expected key.
@@ -638,15 +671,19 @@ export class UserService {
 
     // Fold attendance from participant records. OR-combine across records — a user with multiple
     // participant rows for the same occurrence (re-joins, duplicate legacy data) is attended if
-    // ANY record has is_attended=true.
-    const userAttendedByOccurrenceId = new Map<string, boolean>();
-    for (const p of participants) {
-      if (!p.meeting_and_occurrence_id) continue;
-      const prior = userAttendedByOccurrenceId.get(p.meeting_and_occurrence_id) ?? false;
-      userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, prior || !!p.is_attended);
-    }
-    for (const meeting of normalizedMeetings) {
-      meeting.user_attended = userAttendedByOccurrenceId.get(meeting.id) ?? false;
+    // ANY record has is_attended=true. When the participant scan failed (or was skipped because
+    // we have no user identity), leave user_attended undefined so the UI can distinguish "didn't
+    // attend" from "attendance unknown".
+    if (attendanceLoaded) {
+      const userAttendedByOccurrenceId = new Map<string, boolean>();
+      for (const p of participants) {
+        if (!p.meeting_and_occurrence_id) continue;
+        const prior = userAttendedByOccurrenceId.get(p.meeting_and_occurrence_id) ?? false;
+        userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, prior || !!p.is_attended);
+      }
+      for (const meeting of normalizedMeetings) {
+        meeting.user_attended = userAttendedByOccurrenceId.get(meeting.id) ?? false;
+      }
     }
 
     // Sort by scheduled_start_time descending (most recent first)
