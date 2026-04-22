@@ -70,7 +70,10 @@
       <!-- Summary Stat Cards -->
       <div class="mb-4" data-testid="multi-persona-summary-stats">
         <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
-          <div class="grid w-full grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+          <div
+            class="grid w-full grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200"
+            [class.sm:grid-cols-4]="hasFoundations() && hasProjects()"
+            [class.sm:grid-cols-3]="!(hasFoundations() && hasProjects())">
             @if (hasFoundations()) {
               <div class="flex items-center gap-3 p-4">
                 <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
@@ -167,9 +170,9 @@
                     </div>
                   }
                   <div>
-                    <div class="font-medium text-gray-900">{{ row.projectName }}</div>
+                    <div class="!text-[12px] font-medium text-gray-900">{{ row.projectName }}</div>
                     @if (row.subtitle) {
-                      <div class="text-xs text-gray-500">{{ row.subtitle }}</div>
+                      <div class="!text-[12px] text-gray-500">{{ row.subtitle }}</div>
                     }
                   </div>
                 </div>
