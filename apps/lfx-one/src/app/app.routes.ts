@@ -46,10 +46,12 @@ export const routes: Routes = [
       },
       {
         path: 'meetings',
+        data: { preload: true },
         loadChildren: () => import('./modules/meetings/meetings.routes').then((m) => m.MEETING_ROUTES),
       },
       {
         path: 'groups',
+        data: { preload: true },
         loadChildren: () => import('./modules/committees/committees.routes').then((m) => m.COMMITTEE_ROUTES),
       },
       {
@@ -58,6 +60,7 @@ export const routes: Routes = [
       },
       {
         path: 'my-activity',
+        data: { preload: true },
         loadChildren: () => import('./modules/my-activity/my-activity.routes').then((m) => m.MY_ACTIVITY_ROUTES),
       },
       {
@@ -74,10 +77,12 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
+        data: { preload: true },
         loadChildren: () => import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
       },
       {
         path: 'profile',
+        data: { preload: true },
         loadChildren: () => import('./modules/profile/profile.routes').then((m) => m.PROFILE_ROUTES),
       },
       {

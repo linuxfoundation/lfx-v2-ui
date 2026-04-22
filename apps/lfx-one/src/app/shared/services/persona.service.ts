@@ -59,8 +59,15 @@ export class PersonaService {
     this.isBoardScoped = computed(() => isBoardScopedPersona(this.currentPersona()));
     this.hasBoardRole = this.initHasBoardRole();
     this.hasProjectRole = this.initHasProjectRole();
-    // Cookie can't carry personaProjects/detectedProjects, so always refresh from API after hydration.
-    this.personaLoaded = signal(false);
+
+    // When SSR hydrated persona data into TransferState, treat it as loaded so the dashboard
+    // paints immediately instead of flashing the "Detecting your roles…" skeleton. The
+    // afterNextRender refresh below still runs and applyPersonaResponse updates signals if
+    // the server's latest response differs.
+    const hasSsrPersonaData =
+      authState.authenticated &&
+      ((authState.personas?.length ?? 0) > 0 || Object.keys(authState.personaProjects ?? {}).length > 0 || (authState.projects?.length ?? 0) > 0);
+    this.personaLoaded = signal(hasSsrPersonaData);
 
     afterNextRender(() => {
       this.refreshFromApi();

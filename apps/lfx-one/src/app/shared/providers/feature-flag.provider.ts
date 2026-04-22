@@ -10,10 +10,12 @@ import { basicLogger } from 'launchdarkly-js-client-sdk';
 import { getRuntimeConfig } from './runtime-config.provider';
 
 /**
- * Initialize OpenFeature with LaunchDarkly provider
- * Only runs in browser environment - relies on runtime config being set up first
+ * Initialize OpenFeature with LaunchDarkly provider.
+ * Runs browser-only and kicks off the provider setup without blocking bootstrap —
+ * flag reads before the provider settles fall back to their defaultValue, matching
+ * the behavior when LaunchDarkly is misconfigured or unreachable.
  */
-async function initializeOpenFeature(): Promise<void> {
+function initializeOpenFeature(): void {
   // Skip on server - LaunchDarkly is browser-only
   if (typeof window === 'undefined') {
     return;
@@ -29,18 +31,16 @@ async function initializeOpenFeature(): Promise<void> {
     return;
   }
 
-  try {
-    const provider = new LaunchDarklyClientProvider(clientId, {
-      initializationTimeout: 5,
-      streaming: true,
-      logger: basicLogger({ level: environment.production ? 'none' : 'info' }),
-    });
+  const provider = new LaunchDarklyClientProvider(clientId, {
+    initializationTimeout: 5,
+    streaming: true,
+    logger: basicLogger({ level: environment.production ? 'none' : 'info' }),
+  });
 
-    await OpenFeature.setProviderAndWait(provider);
-  } catch (error) {
+  OpenFeature.setProviderAndWait(provider).catch((error) => {
     console.error('Failed to initialize OpenFeature with LaunchDarkly:', error);
     // App continues without feature flags
-  }
+  });
 }
 
 /**
