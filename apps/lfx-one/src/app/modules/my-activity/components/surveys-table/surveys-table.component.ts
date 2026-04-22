@@ -191,8 +191,9 @@ export class SurveysTableComponent {
         survey,
         priority: statusPriority[getCombinedSurveyStatus(survey)],
         // Sort is ascending (soonest cutoff first), so push invalid/missing
-        // cutoffs to the end with +Infinity to keep ordering deterministic.
-        cutoff: Number.isNaN(parsedCutoff) ? Number.POSITIVE_INFINITY : parsedCutoff,
+        // cutoffs to the end with a large finite value to keep ordering deterministic
+        // (Infinity sentinels would make `a - b` return NaN when both sides are invalid).
+        cutoff: Number.isNaN(parsedCutoff) ? Number.MAX_SAFE_INTEGER : parsedCutoff,
       };
     });
 

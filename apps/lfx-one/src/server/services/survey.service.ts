@@ -248,8 +248,9 @@ export class SurveyService {
           survey,
           openRank: getEffectiveSurveyStatus(survey) === SurveyStatus.OPEN ? 0 : 1,
           // Sort is descending (newest cutoff first), so push invalid/missing
-          // cutoffs to the end with -Infinity to keep ordering deterministic.
-          cutoff: Number.isNaN(parsedCutoff) ? Number.NEGATIVE_INFINITY : parsedCutoff,
+          // cutoffs to the end with a finite sentinel to keep ordering deterministic
+          // (Infinity sentinels would make `a - b` return NaN when both sides are invalid).
+          cutoff: Number.isNaN(parsedCutoff) ? Number.MIN_SAFE_INTEGER : parsedCutoff,
         };
       });
 
