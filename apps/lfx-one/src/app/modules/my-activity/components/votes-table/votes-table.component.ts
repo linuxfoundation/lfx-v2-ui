@@ -27,7 +27,6 @@ import { CombinedVoteStatusSeverityPipe } from '@pipes/combined-vote-status-seve
 import { IsDueWithinMonthPipe } from '@pipes/is-due-within-month.pipe';
 import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { VoteActionTextPipe } from '@pipes/vote-action-text.pipe';
-import { signalFromControl } from '@shared/utils/signal-from-control.util';
 import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
 
 import { VoteDetailsDrawerComponent } from '../vote-details-drawer/vote-details-drawer.component';
@@ -120,11 +119,13 @@ export class VotesTableComponent {
   }
 
   private initStatusFilter(): Signal<CombinedVoteStatus | null> {
-    return signalFromControl(this.searchForm.controls.status);
+    const control = this.searchForm.controls.status;
+    return toSignal(control.valueChanges.pipe(distinctUntilChanged()), { initialValue: control.value });
   }
 
   private initCommitteeFilter(): Signal<string | null> {
-    return signalFromControl(this.searchForm.controls.committee);
+    const control = this.searchForm.controls.committee;
+    return toSignal(control.valueChanges.pipe(distinctUntilChanged()), { initialValue: control.value });
   }
 
   private initStatusOptions(): Signal<{ label: string; value: CombinedVoteStatus | null }[]> {
