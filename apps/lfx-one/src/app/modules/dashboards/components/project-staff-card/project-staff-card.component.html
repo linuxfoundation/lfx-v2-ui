@@ -27,6 +27,12 @@
           </div>
         }
       </div>
+    } @else if (hasError()) {
+      <div class="flex flex-col items-center justify-center gap-2 py-6" data-testid="project-staff-card-error">
+        <i class="fa-light fa-circle-exclamation text-xl text-red-400"></i>
+        <span class="text-xs text-gray-600">Couldn&apos;t load staff</span>
+        <span class="text-[11px] text-gray-400">Refresh the page to try again</span>
+      </div>
     } @else if (hasAnyStaff()) {
       <div class="flex flex-col divide-y divide-gray-100 flex-1 justify-around">
         @for (row of staff(); track row.key) {
@@ -40,7 +46,7 @@
             @if (row.user; as u) {
               <div class="flex items-center gap-2 min-w-0">
                 <lfx-avatar [image]="u.avatar ?? ''" [label]="u.name || u.email" shape="circle" size="normal" styleClass="w-6 h-6 text-xs" />
-                <span class="text-xs font-medium text-gray-900 truncate" [attr.title]="u.name">{{ u.name }}</span>
+                <span class="text-xs font-medium text-gray-900 truncate" [attr.title]="u.name || u.email">{{ u.name || u.email }}</span>
                 @if (u.email) {
                   <a
                     [href]="'mailto:' + u.email"

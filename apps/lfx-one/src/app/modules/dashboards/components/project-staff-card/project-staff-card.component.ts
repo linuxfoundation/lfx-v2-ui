@@ -1,13 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, Signal } from '@angular/core';
+import { Component, computed, inject, input, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ProjectSettings, UserInfo } from '@lfx-one/shared/interfaces';
-import { ProjectService } from '@services/project.service';
+import { PermissionsService } from '@services/permissions.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { filter, switchMap } from 'rxjs';
+import { catchError, filter, of, switchMap, tap } from 'rxjs';
 
 interface StaffRow {
   key: 'executive_director' | 'program_manager' | 'opportunity_owner';
@@ -23,22 +23,38 @@ interface StaffRow {
   styleUrl: './project-staff-card.component.scss',
 })
 export class ProjectStaffCardComponent {
-  private readonly projectService = inject(ProjectService);
+  private readonly permissionsService = inject(PermissionsService);
 
   public readonly projectUid = input.required<string>();
 
-  // Fetch the project settings document when `projectUid` becomes available. `filter` drops the
-  // empty string that `selectedProject()?.uid` can briefly emit before the project is resolved.
-  // The service catches HTTP errors and yields `null`, so `undefined` here means "still loading".
-  protected readonly settings: Signal<ProjectSettings | null | undefined> = toSignal(
+  // `loading` and `hasError` are tracked separately from `settings` so the template can tell the
+  // three states apart: still fetching, fetch failed, fetch succeeded with no staff assigned.
+  // Bundling them into `null`-means-both (previous approach) hid genuine fetch failures behind the
+  // "No staff assigned" empty state.
+  protected readonly loading = signal(true);
+  protected readonly hasError = signal(false);
+
+  protected readonly settings: Signal<ProjectSettings | null> = toSignal(
     toObservable(this.projectUid).pipe(
       filter((uid): uid is string => !!uid),
-      switchMap((uid) => this.projectService.getProjectSettings(uid))
+      tap(() => {
+        this.loading.set(true);
+        this.hasError.set(false);
+      }),
+      switchMap((uid) =>
+        this.permissionsService.getProjectSettings(uid).pipe(
+          tap(() => this.loading.set(false)),
+          catchError((error) => {
+            console.error('Failed to fetch project settings:', error);
+            this.loading.set(false);
+            this.hasError.set(true);
+            return of(null);
+          })
+        )
+      )
     ),
-    { initialValue: undefined }
+    { initialValue: null }
   );
-
-  protected readonly loading = computed(() => this.settings() === undefined);
 
   protected readonly staff: Signal<StaffRow[]> = computed(() => {
     const s = this.settings();

@@ -172,6 +172,15 @@ export class FoundationHealthComponent {
   private initializeMetricCards() {
     return computed(() => {
       const filter = this.selectedFilter();
+
+      // Staff is a first-class filter with no backing metric-card — render the Project Staff card
+      // alone (handled by the template's `showStaffCard` branch). Returning [] explicitly avoids
+      // relying on the filter-by-category fallthrough below, which would silently re-break if a
+      // new card ever got the 'staff' category.
+      if (filter === 'staff') {
+        return [];
+      }
+
       const allCards = [
         { card: this.softwareValueCard(), category: 'projects' },
         { card: this.totalProjectsCard(), category: 'projects' },
