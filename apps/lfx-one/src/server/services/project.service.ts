@@ -975,6 +975,10 @@ export class ProjectService {
     // action regardless of which committee runs it. If the table grows to include noisy
     // categories in the future, reintroduce a committee-scoped filter here rather than a
     // hardcoded board gate.
+    // Normalize email (trim + lowercase) to match the sibling Snowflake methods in this file
+    // — the Snowflake column stores emails lowercased and an un-normalized input silently
+    // misses rows when the caller passed a mixed-case address.
+    const normalizedEmail = email.trim().toLowerCase();
     const query = `
       SELECT
         SURVEY_TITLE,
@@ -989,7 +993,7 @@ export class ProjectService {
       ORDER BY SURVEY_CUTOFF_DATE ASC
     `;
 
-    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, [email, projectSlug]);
+    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, [normalizedEmail, projectSlug]);
 
     // Transform database rows to PendingActionItem format
     return result.rows.map((row) => {
