@@ -653,11 +653,24 @@ export class UserService {
 
     const [{ participants, loaded: attendanceLoaded }, pastMeetings] = await Promise.all([participantQuery, pastMeetingsQuery]);
 
+    // Drop any row missing meeting_and_occurrence_id — the meeting-service indexer populates it
+    // for every v1_past_meeting, so a missing value signals a data-quality issue. Using the raw
+    // `id` (past-meeting UUID) as a fallback would silently misroute downstream lookups that
+    // expect the composite occurrence key.
+    const indexable = pastMeetings.filter((m): m is PastMeeting & { meeting_and_occurrence_id: string } => !!m.meeting_and_occurrence_id);
+    const droppedCount = pastMeetings.length - indexable.length;
+    if (droppedCount > 0) {
+      logger.warning(req, 'get_user_past_meetings', 'Dropped past meeting rows missing meeting_and_occurrence_id', {
+        dropped: droppedCount,
+        total: pastMeetings.length,
+      });
+    }
+
     // Normalize id to the composite meeting_and_occurrence_id so downstream callers
     // (e.g. getPastMeetingParticipants(req, meeting.id)) receive the expected key.
-    const normalizedMeetings = pastMeetings.map((m) => ({
+    const normalizedMeetings = indexable.map((m) => ({
       ...m,
-      id: m.meeting_and_occurrence_id || m.id,
+      id: m.meeting_and_occurrence_id,
     }));
 
     logger.debug(req, 'get_user_past_meetings', 'Fetched past meetings from query service', {

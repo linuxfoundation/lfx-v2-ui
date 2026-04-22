@@ -137,20 +137,8 @@ export class UserController {
       const projectUid = req.query['projectUid'] as string | undefined;
       const foundationUid = req.query['foundation_uid'] as string | undefined;
 
-      // Extract user email from auth context (impersonation-aware, already lowercased)
-      const userEmail = getEffectiveEmail(req);
-      if (!userEmail) {
-        const validationError = ServiceValidationError.forField('email', 'User email not found in authentication context', {
-          operation: 'get_user_meetings',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      // Get user's meetings from service
+      // No email extraction needed — the service uses req.bearerToken (via filter_grants=direct
+      // server-side FGA lookup). Auth middleware has already ensured the user is authenticated.
       const meetings = await this.userService.getUserMeetings(req, projectUid, foundationUid);
 
       logger.success(req, 'get_user_meetings', startTime, {
