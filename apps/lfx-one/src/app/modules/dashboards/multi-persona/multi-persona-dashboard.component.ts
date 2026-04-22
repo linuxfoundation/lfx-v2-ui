@@ -15,13 +15,13 @@ import {
   PendingActionItem,
   PerFoundationAnalytics,
   PersonaProjectRow,
+  PersonaType,
   ProjectContext,
   Meeting,
-  RoleGroup,
 } from '@lfx-one/shared/interfaces';
-import { ROLE_PRIORITY, VOTING_STATUS_PRIORITY } from '@lfx-one/shared/constants';
+import { PERSONA_PRIORITY, ROLE_PRIORITY, VOTING_STATUS_PRIORITY } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
-import { getActiveOccurrences } from '@lfx-one/shared/utils';
+import { getActiveOccurrences, getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 
 import { AnalyticsService } from '@services/analytics.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
@@ -34,12 +34,14 @@ import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, filter, forkJoin, map, of, switchMap, take, tap } from 'rxjs';
 
+import { CardComponent } from '@components/card/card.component';
+import { TableComponent } from '@components/table/table.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
 import { PendingActionsComponent } from '../components/pending-actions/pending-actions.component';
 
 @Component({
   selector: 'lfx-multi-persona-dashboard',
-  imports: [SkeletonModule, MyMeetingsComponent, PendingActionsComponent],
+  imports: [SkeletonModule, MyMeetingsComponent, PendingActionsComponent, CardComponent, TableComponent],
   templateUrl: './multi-persona-dashboard.component.html',
   styleUrl: './multi-persona-dashboard.component.scss',
 })
@@ -75,7 +77,6 @@ export class MultiPersonaDashboardComponent {
   });
 
   protected readonly subtitleText: Signal<string> = this.initSubtitleText();
-  protected readonly roleGroups: Signal<RoleGroup[]> = this.initRoleGroups();
   protected readonly analyticsSummary: Signal<MultiFoundationSummaryResponse | null> = this.initAnalyticsSummary();
   protected readonly projectRows: Signal<PersonaProjectRow[]> = this.initProjectRows();
   // Independent loading signals so each pill renders as its source lands (no combineLatest gate).
@@ -91,6 +92,8 @@ export class MultiPersonaDashboardComponent {
   }));
   protected readonly foundationCount: Signal<number> = computed(() => this.userFoundations().length);
   protected readonly projectCount: Signal<number> = computed(() => this.allProjects().length - this.userFoundations().length);
+  protected readonly foundationRoleSummary: Signal<string> = computed(() => this.buildRoleSummary(this.userFoundations()));
+  protected readonly projectRoleSummary: Signal<string> = computed(() => this.buildRoleSummary(this.allProjects().filter((p) => !p.isFoundation)));
   protected readonly totalMeetingsThisWeek: Signal<number> = computed(() => {
     const s = this.summaryPills();
     return s.meetingsCompletedThisWeek + s.meetingsUpcomingThisWeek;
@@ -153,30 +156,6 @@ export class MultiPersonaDashboardComponent {
     });
   }
 
-  private initRoleGroups(): Signal<RoleGroup[]> {
-    return computed(() => {
-      const projects = this.allProjects();
-      const groups: RoleGroup[] = [];
-
-      const edProjects = projects.filter((p) => p.personas.includes('executive-director'));
-      const boardProjects = projects.filter((p) => p.personas.includes('board-member'));
-      const maintainerProjects = projects.filter((p) => p.personas.includes('maintainer'));
-      const contributorProjects = projects.filter((p) => p.personas.includes('contributor') && !p.personas.includes('maintainer'));
-
-      const toGroup = (label: string, items: EnrichedPersonaProject[]): RoleGroup => {
-        const names = items.map((p) => p.projectName || p.projectSlug);
-        return { label, names, formattedNames: this.formatNameList(names) };
-      };
-
-      if (edProjects.length > 0) groups.push(toGroup('Executive Director', edProjects));
-      if (boardProjects.length > 0) groups.push(toGroup('Board Member', boardProjects));
-      if (maintainerProjects.length > 0) groups.push(toGroup('Maintainer', maintainerProjects));
-      if (contributorProjects.length > 0) groups.push(toGroup('Contributor', contributorProjects));
-
-      return groups;
-    });
-  }
-
   private initAnalyticsSummary(): Signal<MultiFoundationSummaryResponse | null> {
     return toSignal(
       toObservable(this.userFoundations).pipe(
@@ -230,7 +209,7 @@ export class MultiPersonaDashboardComponent {
   private initOpenSurveysCount(): Signal<number> {
     return toSignal(
       this.surveyService.getMySurveys().pipe(
-        map((surveys) => surveys.filter((s) => s.survey_status === SurveyStatus.OPEN || s.survey_status === SurveyStatus.SENT).length),
+        map((surveys) => surveys.filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN).length),
         catchError(() => of(0)),
         tap(() => this.openSurveysLoading.set(false))
       ),
@@ -410,8 +389,21 @@ export class MultiPersonaDashboardComponent {
     return count;
   }
 
-  private formatNameList(names: string[]): string {
-    if (names.length <= 1) return names[0] || '';
-    return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  private buildRoleSummary(projects: EnrichedPersonaProject[]): string {
+    const counts: Partial<Record<PersonaType, number>> = {};
+    for (const p of projects) {
+      for (const persona of p.personas) {
+        counts[persona] = (counts[persona] ?? 0) + 1;
+      }
+    }
+    const ROLE_LABELS: Record<PersonaType, string> = {
+      'executive-director': 'Executive Director',
+      'board-member': 'Board Member',
+      maintainer: 'Maintainer',
+      contributor: 'Contributor',
+    };
+    return PERSONA_PRIORITY.filter((r) => counts[r])
+      .map((r) => `${ROLE_LABELS[r]} (${counts[r]})`)
+      .join(', ');
   }
 }
