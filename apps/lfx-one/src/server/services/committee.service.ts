@@ -81,20 +81,23 @@ export class CommitteeService {
       type: 'committee',
     };
 
-    // For project-scoped requests (tags=project_uid:<uid> or parent=committee:<uid>),
-    // the upstream query service has already enforced listing visibility — applying a
+    // For scoped requests (tags=project_uid:<uid> or parent=committee:<uid>), the
+    // upstream query service has already enforced listing visibility — applying a
     // secondary access check here would silently drop listable committees from the
-    // project dashboard. Click-time access is still enforced by GET /committees/:id.
-    // Unscoped (cross-project) calls keep the access filter so personal "my-relevant"
-    // listings remain scoped to public/writer/member committees.
+    // project dashboard or child-committee views. Click-time access is still enforced
+    // by GET /committees/:id. Unscoped (cross-project) calls keep the access filter
+    // so personal "my-relevant" listings remain scoped to public/writer/member
+    // committees.
     const tags = query['tags'];
-    const isProjectScoped =
-      (typeof tags === 'string' && tags.includes('project_uid:')) ||
-      (Array.isArray(tags) && tags.some((t) => typeof t === 'string' && t.includes('project_uid:'))) ||
-      Boolean(query['parent']);
+    const parent = query['parent'];
+    const hasProjectUidTag =
+      (typeof tags === 'string' && tags.split(',').some((t) => t.trim().startsWith('project_uid:'))) ||
+      (Array.isArray(tags) && tags.some((t) => typeof t === 'string' && t.startsWith('project_uid:')));
+    const hasScopedParent = typeof parent === 'string' && parent.startsWith('committee:');
+    const isScopedListing = hasProjectUidTag || hasScopedParent;
 
     logger.debug(req, 'get_committees', 'Fetching committees', {
-      is_project_scoped: isProjectScoped,
+      is_scoped_listing: isScopedListing,
     });
 
     let committees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
@@ -119,23 +122,22 @@ export class CommitteeService {
       })
     );
 
-    // Add writer access field (used by the visibility filter below and consumed by the UI)
+    // Add writer access field (used by the access filter below and consumed by the UI)
     committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
 
-    if (!isProjectScoped) {
+    if (!isScopedListing) {
       // Unscoped (cross-project) listings: scope to committees the caller can act on
       // (public, writer, or explicit member). This is an access filter, not a visibility
       // filter — the query service already controls listing visibility upstream. We keep
       // it here so personal "my-relevant" cross-project results stay focused.
-      const myCommittees = await this.getMyCommittees(req);
-      const myUids = new Set(myCommittees.map((c) => c.uid));
+      const myUids = await this.getMyCommitteeUids(req);
       const totalBefore = committees.length;
 
       committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
 
       if (committees.length < totalBefore) {
-        logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
-          filtered_count: totalBefore - committees.length,
+        logger.debug(req, 'get_committees', 'Filtered committees outside caller access scope', {
+          filtered_out: totalBefore - committees.length,
           total: totalBefore,
         });
       }
@@ -496,6 +498,36 @@ export class CommitteeService {
   }
 
   // ── My Committees ─────────────────────────────────────────────────────────
+
+  /**
+   * Returns the set of committee UIDs the current user is a member of.
+   *
+   * Lightweight alternative to {@link getMyCommittees} for callers that only need
+   * membership UIDs (e.g. cross-project access filtering). Skips the per-committee
+   * count and project enrichment fan-out performed by the full method.
+   */
+  public async getMyCommitteeUids(req: Request, projectUid?: string): Promise<Set<string>> {
+    const username = await getUsernameFromAuth(req);
+    if (!username) {
+      return new Set();
+    }
+
+    const tagsAll = [`username:${username}`];
+    if (projectUid) {
+      tagsAll.push(`project_uid:${projectUid}`);
+    }
+
+    const memberships = await fetchAllQueryResources<CommitteeMember>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        v: '1',
+        type: 'committee_member',
+        tags_all: tagsAll,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    );
+
+    return new Set(memberships.map((m) => m.committee_uid).filter((uid): uid is string => Boolean(uid)));
+  }
 
   public async getMyCommittees(req: Request, projectUid?: string, foundationUid?: string): Promise<MyCommittee[]> {
     const username = await getUsernameFromAuth(req);
