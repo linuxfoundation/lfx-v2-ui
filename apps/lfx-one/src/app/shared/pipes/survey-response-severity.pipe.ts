@@ -6,7 +6,9 @@ import { SurveyResponseStatus, SURVEY_RESPONSE_STATUS_SEVERITY, TagSeverity } fr
 
 /**
  * Transforms survey response status to tag severity for consistent styling
- * @description Maps SurveyResponseStatus enum values to appropriate tag colors
+ * @description Maps response status values to tag colors. Accepts the raw API
+ * value (which may be null or uppercase like 'RESPONDED') and normalizes
+ * before lookup to mirror the survey utility helpers.
  * @example
  * <!-- In template -->
  * <lfx-tag [severity]="survey.response_status | surveyResponseSeverity">{{ survey.response_status }}</lfx-tag>
@@ -15,7 +17,8 @@ import { SurveyResponseStatus, SURVEY_RESPONSE_STATUS_SEVERITY, TagSeverity } fr
   name: 'surveyResponseSeverity',
 })
 export class SurveyResponseSeverityPipe implements PipeTransform {
-  public transform(status: SurveyResponseStatus): TagSeverity {
-    return SURVEY_RESPONSE_STATUS_SEVERITY[status] ?? 'secondary';
+  public transform(status: string | null | undefined): TagSeverity {
+    const normalized = status?.toLowerCase() as SurveyResponseStatus | undefined;
+    return (normalized && SURVEY_RESPONSE_STATUS_SEVERITY[normalized]) ?? 'secondary';
   }
 }

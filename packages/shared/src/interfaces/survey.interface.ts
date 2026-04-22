@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { SurveyResponseStatus, SurveyStatus } from '../enums/survey.enum';
 import { CommitteeReference } from './committee.interface';
 
 /**
@@ -13,14 +12,14 @@ export interface UserSurvey {
   survey_id: string;
   /** Display title of the survey */
   survey_title: string;
-  /** Current status of the survey */
-  survey_status: SurveyStatus;
+  /** Current status of the survey (raw API value, may be uppercase like 'OPEN'/'SENT'; use getEffectiveSurveyStatus to normalize) */
+  survey_status: string;
   /** Associated committees with allowed voting statuses */
   committees: CommitteeReference[];
   /** Survey deadline/cutoff date */
   survey_cutoff_date: string;
-  /** User's response status */
-  response_status: SurveyResponseStatus;
+  /** User's response status (raw API value, may be uppercase or null; use getCombinedSurveyStatus to normalize) */
+  response_status: string | null;
   /** Timestamp when user submitted their response (null if not responded) */
   response_datetime: string | null;
 }

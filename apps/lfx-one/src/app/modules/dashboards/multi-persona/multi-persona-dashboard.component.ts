@@ -21,7 +21,7 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { PERSONA_PRIORITY, ROLE_PRIORITY, VOTING_STATUS_PRIORITY } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
-import { getActiveOccurrences, getSurveyDisplayStatus } from '@lfx-one/shared/utils';
+import { getActiveOccurrences, getEffectiveSurveyStatus } from '@lfx-one/shared/utils';
 
 import { AnalyticsService } from '@services/analytics.service';
 import { HiddenActionsService } from '@services/hidden-actions.service';
@@ -209,7 +209,7 @@ export class MultiPersonaDashboardComponent {
   private initOpenSurveysCount(): Signal<number> {
     return toSignal(
       this.surveyService.getMySurveys().pipe(
-        map((surveys) => surveys.filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN).length),
+        map((surveys) => surveys.filter((s) => getEffectiveSurveyStatus(s) === SurveyStatus.OPEN).length),
         catchError(() => of(0)),
         tap(() => this.openSurveysLoading.set(false))
       ),

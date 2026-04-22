@@ -181,17 +181,21 @@ export class SurveysTableComponent {
   private sortSurveys(surveys: UserSurvey[]): UserSurvey[] {
     const statusPriority: Record<CombinedSurveyStatus, number> = { open: 1, submitted: 2, closed: 3 };
 
-    return [...surveys].sort((a, b) => {
-      const statusA = getCombinedSurveyStatus(a);
-      const statusB = getCombinedSurveyStatus(b);
+    // Precompute per-row sort keys so the comparator doesn't recompute the
+    // combined status (and `new Date()`) on every comparison.
+    const decorated = surveys.map((survey) => ({
+      survey,
+      priority: statusPriority[getCombinedSurveyStatus(survey)],
+      cutoff: new Date(survey.survey_cutoff_date).getTime(),
+    }));
 
-      if (statusA !== statusB) {
-        return statusPriority[statusA] - statusPriority[statusB];
-      }
-
-      const dateA = new Date(a.survey_cutoff_date).getTime();
-      const dateB = new Date(b.survey_cutoff_date).getTime();
-      return dateA - dateB;
-    });
+    return decorated
+      .sort((a, b) => {
+        if (a.priority !== b.priority) {
+          return a.priority - b.priority;
+        }
+        return a.cutoff - b.cutoff;
+      })
+      .map((entry) => entry.survey);
   }
 }

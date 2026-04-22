@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 import { SurveyResponseStatus, SurveyStatus } from '../enums/survey.enum';
-import { Survey, UserSurvey } from '../interfaces/survey.interface';
 
 /**
  * Combined survey status type
@@ -11,72 +10,119 @@ import { Survey, UserSurvey } from '../interfaces/survey.interface';
 export type CombinedSurveyStatus = 'open' | 'submitted' | 'closed';
 
 /**
+ * Combined survey status values
+ * @description Symbol-friendly map of {@link CombinedSurveyStatus} string values
+ * so call sites can avoid magic strings while staying type-narrow.
+ */
+export const COMBINED_SURVEY_STATUS = {
+  OPEN: 'open',
+  SUBMITTED: 'submitted',
+  CLOSED: 'closed',
+} as const satisfies Record<string, CombinedSurveyStatus>;
+
+/**
+ * Sentinel value the API uses on `response_status` to signal that responses
+ * are no longer accepted, regardless of `survey_status`/`survey_cutoff_date`.
+ * Named with the `_SENTINEL` suffix to disambiguate from `SurveyStatus.CLOSED`
+ * and `COMBINED_SURVEY_STATUS.CLOSED`, which share the same string literal but
+ * live in different namespaces.
+ */
+const RESPONSE_STATUS_CLOSED_SENTINEL = 'closed';
+
+/**
+ * Minimal shape required to evaluate the effective survey status.
+ * Decoupled from `Survey`/`UserSurvey` so both interfaces (and any future
+ * survey-shaped value) can be passed without forcing a `Pick<>` at every
+ * call site or coupling this helper to either interface's evolution.
+ */
+export interface SurveyStatusInput {
+  survey_status: string | null | undefined;
+  survey_cutoff_date: string | null | undefined;
+}
+
+/**
+ * Minimal shape required to evaluate the display status, which adds the
+ * `response_status` override on top of {@link SurveyStatusInput}.
+ */
+export interface SurveyDisplayStatusInput extends SurveyStatusInput {
+  response_status?: string | null;
+}
+
+// `SurveyStatus` is a string enum, so `Object.values` yields only its string
+// members. If it ever gains a non-string member, narrow the cast accordingly.
+const SURVEY_STATUS_VALUES = new Set<string>(Object.values(SurveyStatus));
+
+/**
+ * Resolve the effective survey status
+ * @description Normalizes the raw API status to lowercase and collapses 'sent'
+ * into 'open' or 'closed' based on the cutoff date so callers can compare
+ * against {@link SurveyStatus} enum values without worrying about API casing
+ * or the SENT/cutoff combination. Unknown raw statuses (typos, future enum
+ * values) are conservatively treated as CLOSED, and an invalid/unparseable
+ * cutoff date is treated as already past.
+ * @param survey - Survey-shaped value with status and cutoff date
+ * @returns The effective survey status
+ */
+export function getEffectiveSurveyStatus(survey: SurveyStatusInput): SurveyStatus {
+  const raw = survey.survey_status?.toLowerCase();
+  const status = raw && SURVEY_STATUS_VALUES.has(raw) ? (raw as SurveyStatus) : null;
+
+  if (status === null) {
+    return SurveyStatus.CLOSED;
+  }
+
+  if (status !== SurveyStatus.SENT) {
+    return status;
+  }
+
+  const cutoffDate = survey.survey_cutoff_date ? new Date(survey.survey_cutoff_date) : null;
+
+  // Treat invalid/missing cutoffs as already past so a SENT survey doesn't
+  // appear actionable indefinitely if data is malformed.
+  if (cutoffDate === null || Number.isNaN(cutoffDate.getTime())) {
+    return SurveyStatus.CLOSED;
+  }
+
+  return new Date() >= cutoffDate ? SurveyStatus.CLOSED : SurveyStatus.OPEN;
+}
+
+/**
  * Get the combined status for a survey
- * @description Derives a single status from survey_status and response_status
- * - 'open' = survey is OPEN and user has NOT_RESPONDED
- * - 'submitted' = survey is OPEN and user has RESPONDED
- * - 'closed' = survey is CLOSED (or any other status)
+ * @description Derives a single status from survey_status, survey_cutoff_date and response_status
+ * - 'open' = survey is effectively OPEN (incl. SENT with future cutoff) and the user has not yet responded
+ * - 'submitted' = survey is effectively OPEN and `response_status` is 'responded' (case-insensitive)
+ * - 'closed' = survey is CLOSED, SENT past its cutoff, or any other non-actionable status
+ * Anything other than the literal 'responded' (including null/undefined or other API casings)
+ * is treated as not-yet-responded so missing data still surfaces actionable surveys.
  * @param survey - The user survey to get status for
  * @returns The combined survey status
  */
-export function getCombinedSurveyStatus(survey: UserSurvey): CombinedSurveyStatus {
-  if (survey.survey_status === SurveyStatus.CLOSED) {
-    return 'closed';
+export function getCombinedSurveyStatus(survey: SurveyDisplayStatusInput): CombinedSurveyStatus {
+  const effectiveStatus = getEffectiveSurveyStatus(survey);
+
+  if (effectiveStatus !== SurveyStatus.OPEN) {
+    return COMBINED_SURVEY_STATUS.CLOSED;
   }
 
-  if (survey.survey_status === SurveyStatus.OPEN) {
-    return survey.response_status === SurveyResponseStatus.RESPONDED ? 'submitted' : 'open';
-  }
-
-  return 'closed';
+  // Normalize response_status casing to absorb any uppercase API values, mirroring
+  // how getEffectiveSurveyStatus normalizes survey_status.
+  const responseStatus = survey.response_status?.toLowerCase();
+  return responseStatus === SurveyResponseStatus.RESPONDED ? COMBINED_SURVEY_STATUS.SUBMITTED : COMBINED_SURVEY_STATUS.OPEN;
 }
 
 /**
  * Get the computed display status for a survey
- * @description Derives the display status from survey_status and survey_cutoff_date
- * - 'sent' + current date < cutoff date → 'open'
- * - 'scheduled' → 'scheduled'
- * - 'sent' + current date >= cutoff date → 'closed'
- * - 'draft' → 'draft'
- * - 'open' → 'open'
- * - 'closed' → 'closed'
+ * @description Builds on {@link getEffectiveSurveyStatus} with one extra rule:
+ * if the API explicitly sets `response_status` to the closed sentinel, the
+ * survey is treated as CLOSED regardless of its raw status or cutoff date.
+ * The check is case-insensitive to mirror {@link getEffectiveSurveyStatus}.
  * @param survey - The survey to compute status for
  * @returns The computed display status as SurveyStatus
  */
-export function getSurveyDisplayStatus(survey: Pick<Survey, 'survey_status' | 'survey_cutoff_date' | 'response_status'>): SurveyStatus {
-  // Normalize to lowercase so API values like 'OPEN', 'CLOSED' match enum values
-  const status = (survey.survey_status as string).toLowerCase() as SurveyStatus;
-
-  // Explicit response_status from the API takes precedence
-  if (survey.response_status === 'closed') {
+export function getSurveyDisplayStatus(survey: SurveyDisplayStatusInput): SurveyStatus {
+  if (survey.response_status?.toLowerCase() === RESPONSE_STATUS_CLOSED_SENTINEL) {
     return SurveyStatus.CLOSED;
   }
 
-  if (status === SurveyStatus.SENT) {
-    const cutoffDate = survey.survey_cutoff_date ? new Date(survey.survey_cutoff_date) : null;
-    const now = new Date();
-
-    if (cutoffDate && now >= cutoffDate) {
-      return SurveyStatus.CLOSED;
-    }
-    return SurveyStatus.OPEN;
-  }
-
-  if (status === SurveyStatus.SCHEDULED) {
-    return SurveyStatus.SCHEDULED;
-  }
-
-  if (status === SurveyStatus.DRAFT) {
-    return SurveyStatus.DRAFT;
-  }
-
-  if (status === SurveyStatus.OPEN) {
-    return SurveyStatus.OPEN;
-  }
-
-  if (status === SurveyStatus.CLOSED) {
-    return SurveyStatus.CLOSED;
-  }
-
-  return status as SurveyStatus;
+  return getEffectiveSurveyStatus(survey);
 }
