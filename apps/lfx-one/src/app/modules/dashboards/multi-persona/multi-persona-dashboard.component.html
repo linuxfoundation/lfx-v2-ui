@@ -101,7 +101,7 @@
           <div class="px-4 py-2.5">
             <p-skeleton width="6rem" height="1rem" />
           </div>
-        } @else {
+        } @else if (summaryPills().openSurveys > 0) {
           <div class="flex items-center gap-2 px-4 py-2.5">
             <i class="fa-solid fa-square-poll-horizontal text-blue-600"></i>
             <span class="text-gray-700">{{ summaryPills().openSurveys }} surveys open</span>
