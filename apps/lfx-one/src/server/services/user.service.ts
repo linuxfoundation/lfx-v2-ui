@@ -880,10 +880,8 @@ export class UserService {
     const rawUsername = await getUsernameFromAuth(req);
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
 
-    // RSVP-related fetches run alongside surveys/meetings/votes. Both are per-user, so they're
-    // cheap to issue in parallel and don't depend on the meeting list — we just filter to the
-    // in-window meetings after everything returns.
-    const [surveys, meetings, pendingVotes, userRsvps, activeRegistrantIds] = await Promise.all([
+    // Phase 1: surveys, meetings, and pending votes are independent — issue them in parallel.
+    const [surveys, meetings, pendingVotes] = await Promise.all([
       this.projectService.getPendingActionSurveys(email, projectSlug).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch surveys for pending actions', { err: error });
         return [];
@@ -898,22 +896,31 @@ export class UserService {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch pending votes', { err: error });
         return [] as Vote[];
       }),
-
-      this.fetchAllUserRsvps(req, email, username).catch((error) => {
-        logger.warning(req, 'get_user_pending_actions', 'Failed to fetch user RSVPs for pending actions', { err: error });
-        return [] as MeetingRsvp[];
-      }),
-
-      this.fetchUserActiveRegistrantIds(req, email, username).catch((error) => {
-        logger.warning(req, 'get_user_pending_actions', 'Failed to fetch user registrant IDs for pending actions', { err: error });
-        return new Set<string>();
-      }),
     ]);
 
     const inWindowMeetings = this.filterMeetingsInWindow(meetings);
     const meetingActions = this.transformMeetingsToActions(inWindowMeetings);
-    const rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrantIds);
     const voteActions = this.transformVotesToActions(pendingVotes);
+
+    // Phase 2: RSVP + registrant lookups are only meaningful when there are in-window meetings
+    // to evaluate. Skip them otherwise — avoids two full paginated per-user scans per request
+    // for users with no upcoming meetings in the window.
+    //
+    // Fail closed on the RSVP prerequisites: if either lookup errors, we can't distinguish
+    // "user hasn't RSVPed" from "we don't know", and a transient failure must not turn every
+    // in-window meeting into a bogus Set RSVP nag. Suppress the whole source on error.
+    let rsvpActions: PendingActionItem[] = [];
+    if (inWindowMeetings.length > 0) {
+      try {
+        const [userRsvps, activeRegistrantIds] = await Promise.all([
+          this.fetchAllUserRsvps(req, email, username),
+          this.fetchUserActiveRegistrantIds(req, email, username),
+        ]);
+        rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrantIds);
+      } catch (error) {
+        logger.warning(req, 'get_user_pending_actions', 'RSVP prerequisite lookup failed, suppressing Set RSVP actions', { err: error });
+      }
+    }
 
     // Order by actionability: someone is waiting on RSVPs and votes have closing windows, so
     // those go first. Surveys are time-bounded by their cutoff. Review Agenda is informational
@@ -938,20 +945,28 @@ export class UserService {
     if (username) orClauses.push(`username:${username}`);
     if (orClauses.length === 0) return [];
 
-    const invitations = await fetchAllQueryResources<IndividualVote>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<IndividualVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'individual_vote',
-        filters_or: orClauses,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    // failOnPartial: completeness matters — a truncated response can silently miss an
+    // awaiting-response vote, producing the wrong pending-action list. The caller already
+    // catches and degrades, so fail closed here instead of accepting partial state.
+    const invitations = await fetchAllQueryResources<IndividualVote>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<IndividualVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'individual_vote',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     );
 
     // Awaiting-response invitations scoped to this project. voter_removed entries are historical.
+    // NOTE: `poll_uid`/`poll_id` is the parent vote's id (what `/votes/{uid}` expects).
+    // `vote_uid`/`vote_id` is the individual-vote record id — using those would 404.
     const pendingVoteUids = Array.from(
       new Set(
         invitations
           .filter((iv) => iv.vote_status === IndividualVoteStatus.AWAITING_RESPONSE && iv.project_uid === projectUid && !iv.voter_removed)
-          .map((iv) => iv.vote_uid ?? iv.vote_id)
+          .map((iv) => iv.poll_uid ?? iv.poll_id)
           .filter((uid): uid is string => !!uid)
       )
     );
@@ -985,12 +1000,17 @@ export class UserService {
     if (username) orClauses.push(`username:${username}`);
     if (orClauses.length === 0) return [];
 
-    return fetchAllQueryResources<MeetingRsvp>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'v1_meeting_rsvp',
-        filters_or: orClauses,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    // failOnPartial: a truncated page set could silently miss an accepted RSVP and cause a
+    // bogus Set RSVP action. Caller fails closed on any throw and suppresses the whole source.
+    return fetchAllQueryResources<MeetingRsvp>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting_rsvp',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     );
   }
 
@@ -1007,12 +1027,17 @@ export class UserService {
     if (username) orClauses.push(`username:${username}`);
     if (orClauses.length === 0) return new Set();
 
-    const registrants = await fetchAllQueryResources<MeetingRegistrant>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        type: 'v1_meeting_registrant',
-        filters_or: orClauses,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    // failOnPartial: a missing registrant UID here means an RSVP-guard lookup would wrongly
+    // reject a still-active registrant's RSVP, which then fires a duplicate Set RSVP nag.
+    const registrants = await fetchAllQueryResources<MeetingRegistrant>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting_registrant',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
     );
 
     return new Set(registrants.map((r) => r.uid).filter((uid): uid is string => !!uid));
