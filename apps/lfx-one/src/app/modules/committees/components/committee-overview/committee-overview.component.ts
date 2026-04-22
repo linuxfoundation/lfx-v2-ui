@@ -11,7 +11,7 @@ import { MessageComponent } from '@components/message/message.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
-import { getEffectiveSurveyStatus } from '@lfx-one/shared/utils';
+import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { SurveyService } from '@services/survey.service';
@@ -95,7 +95,7 @@ export class CommitteeOverviewComponent {
   // Computed stats from fetched data
   public activeVotesCount: Signal<number> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE).length);
 
-  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => getEffectiveSurveyStatus(s) === SurveyStatus.OPEN).length);
+  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN).length);
 
   // Role-based computed signals
   public isVisitor: Signal<boolean> = computed(() => this.myRole() === null && !this.myRoleLoading());
@@ -164,7 +164,7 @@ export class CommitteeOverviewComponent {
   });
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
-  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getEffectiveSurveyStatus(s) === SurveyStatus.OPEN));
+  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
   public pendingActionItems: Signal<PendingActionItem[]> = this.initPendingActionItems();

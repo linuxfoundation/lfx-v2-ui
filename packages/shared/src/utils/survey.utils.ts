@@ -1,24 +1,9 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { COMBINED_SURVEY_STATUS, type CombinedSurveyStatus } from '../constants/survey.constants';
 import { SurveyResponseStatus, SurveyStatus } from '../enums/survey.enum';
-
-/**
- * Combined survey status type
- * @description Represents the combined state of survey status and response status
- */
-export type CombinedSurveyStatus = 'open' | 'submitted' | 'closed';
-
-/**
- * Combined survey status values
- * @description Symbol-friendly map of {@link CombinedSurveyStatus} string values
- * so call sites can avoid magic strings while staying type-narrow.
- */
-export const COMBINED_SURVEY_STATUS = {
-  OPEN: 'open',
-  SUBMITTED: 'submitted',
-  CLOSED: 'closed',
-} as const satisfies Record<string, CombinedSurveyStatus>;
+import type { SurveyDisplayStatusInput, SurveyStatusInput } from '../interfaces/survey.interface';
 
 /**
  * Sentinel value the API uses on `response_status` to signal that responses
@@ -28,25 +13,6 @@ export const COMBINED_SURVEY_STATUS = {
  * live in different namespaces.
  */
 const RESPONSE_STATUS_CLOSED_SENTINEL = 'closed';
-
-/**
- * Minimal shape required to evaluate the effective survey status.
- * Decoupled from `Survey`/`UserSurvey` so both interfaces (and any future
- * survey-shaped value) can be passed without forcing a `Pick<>` at every
- * call site or coupling this helper to either interface's evolution.
- */
-export interface SurveyStatusInput {
-  survey_status: string | null | undefined;
-  survey_cutoff_date: string | null | undefined;
-}
-
-/**
- * Minimal shape required to evaluate the display status, which adds the
- * `response_status` override on top of {@link SurveyStatusInput}.
- */
-export interface SurveyDisplayStatusInput extends SurveyStatusInput {
-  response_status?: string | null;
-}
 
 // `SurveyStatus` is a string enum, so `Object.values` yields only its string
 // members. If it ever gains a non-string member, narrow the cast accordingly.

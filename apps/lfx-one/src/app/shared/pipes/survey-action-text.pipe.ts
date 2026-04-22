@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
+import { COMBINED_SURVEY_STATUS } from '@lfx-one/shared/constants';
 import { UserSurvey } from '@lfx-one/shared/interfaces';
-import { COMBINED_SURVEY_STATUS, getCombinedSurveyStatus } from '@lfx-one/shared/utils';
+import { getCombinedSurveyStatus } from '@lfx-one/shared/utils';
 
 @Pipe({
   name: 'surveyActionText',

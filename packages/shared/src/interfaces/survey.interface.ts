@@ -4,6 +4,25 @@
 import { CommitteeReference } from './committee.interface';
 
 /**
+ * Minimal shape required to evaluate the effective survey status.
+ * @description Decoupled from `Survey`/`UserSurvey` so both interfaces (and any
+ * future survey-shaped value) can be passed without forcing a `Pick<>` at
+ * every call site or coupling status helpers to either interface's evolution.
+ */
+export interface SurveyStatusInput {
+  survey_status: string | null | undefined;
+  survey_cutoff_date: string | null | undefined;
+}
+
+/**
+ * Minimal shape required to evaluate the display status, which adds the
+ * `response_status` override on top of {@link SurveyStatusInput}.
+ */
+export interface SurveyDisplayStatusInput extends SurveyStatusInput {
+  response_status?: string | null;
+}
+
+/**
  * User's survey participation
  * @description Represents a user's participation in a survey - aligns with lfx-pcc IndividualSurveyResponse
  */
