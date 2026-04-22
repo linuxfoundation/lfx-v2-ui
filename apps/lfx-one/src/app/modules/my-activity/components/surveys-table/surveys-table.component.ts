@@ -183,11 +183,17 @@ export class SurveysTableComponent {
 
     // Precompute per-row sort keys so the comparator doesn't recompute the
     // combined status (and `new Date()`) on every comparison.
-    const decorated = surveys.map((survey) => ({
-      survey,
-      priority: statusPriority[getCombinedSurveyStatus(survey)],
-      cutoff: new Date(survey.survey_cutoff_date).getTime(),
-    }));
+    const decorated = surveys.map((survey) => {
+      const parsedCutoff = new Date(survey.survey_cutoff_date).getTime();
+
+      return {
+        survey,
+        priority: statusPriority[getCombinedSurveyStatus(survey)],
+        // Sort is ascending (soonest cutoff first), so push invalid/missing
+        // cutoffs to the end with +Infinity to keep ordering deterministic.
+        cutoff: Number.isNaN(parsedCutoff) ? Number.POSITIVE_INFINITY : parsedCutoff,
+      };
+    });
 
     return decorated
       .sort((a, b) => {

@@ -241,11 +241,17 @@ export class SurveyService {
     // every comparison.
     const decorated = surveys
       .filter((s): s is Survey => s !== null)
-      .map((survey) => ({
-        survey,
-        openRank: getEffectiveSurveyStatus(survey) === SurveyStatus.OPEN ? 0 : 1,
-        cutoff: new Date(survey.survey_cutoff_date).getTime(),
-      }));
+      .map((survey) => {
+        const parsedCutoff = new Date(survey.survey_cutoff_date).getTime();
+
+        return {
+          survey,
+          openRank: getEffectiveSurveyStatus(survey) === SurveyStatus.OPEN ? 0 : 1,
+          // Sort is descending (newest cutoff first), so push invalid/missing
+          // cutoffs to the end with -Infinity to keep ordering deterministic.
+          cutoff: Number.isNaN(parsedCutoff) ? Number.NEGATIVE_INFINITY : parsedCutoff,
+        };
+      });
 
     const sorted = decorated
       .sort((a, b) => {

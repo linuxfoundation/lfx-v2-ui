@@ -91,16 +91,19 @@ export function getEffectiveSurveyStatus(survey: SurveyStatusInput): SurveyStatu
  * @description Derives a single status from survey_status, survey_cutoff_date and response_status
  * - 'open' = survey is effectively OPEN (incl. SENT with future cutoff) and the user has not yet responded
  * - 'submitted' = survey is effectively OPEN and `response_status` is 'responded' (case-insensitive)
- * - 'closed' = survey is CLOSED, SENT past its cutoff, or any other non-actionable status
+ * - 'closed' = survey is CLOSED, SENT past its cutoff, the API's `response_status` closed sentinel,
+ *   or any other non-actionable status
  * Anything other than the literal 'responded' (including null/undefined or other API casings)
  * is treated as not-yet-responded so missing data still surfaces actionable surveys.
+ * Uses {@link getSurveyDisplayStatus} so the API's `response_status === 'closed'` sentinel is
+ * honored and an effectively-closed survey can never be classified as 'open' or 'submitted'.
  * @param survey - The user survey to get status for
  * @returns The combined survey status
  */
 export function getCombinedSurveyStatus(survey: SurveyDisplayStatusInput): CombinedSurveyStatus {
-  const effectiveStatus = getEffectiveSurveyStatus(survey);
+  const displayStatus = getSurveyDisplayStatus(survey);
 
-  if (effectiveStatus !== SurveyStatus.OPEN) {
+  if (displayStatus !== SurveyStatus.OPEN) {
     return COMBINED_SURVEY_STATUS.CLOSED;
   }
 

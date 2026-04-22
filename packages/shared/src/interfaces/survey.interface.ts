@@ -12,8 +12,8 @@ export interface UserSurvey {
   survey_id: string;
   /** Display title of the survey */
   survey_title: string;
-  /** Current status of the survey (raw API value, may be uppercase like 'OPEN'/'SENT'; use getEffectiveSurveyStatus to normalize) */
-  survey_status: string;
+  /** Current status of the survey (raw API value, may be uppercase like 'OPEN'/'SENT' or null; use getEffectiveSurveyStatus to normalize) */
+  survey_status: string | null;
   /** Associated committees with allowed voting statuses */
   committees: CommitteeReference[];
   /** Survey deadline/cutoff date */
