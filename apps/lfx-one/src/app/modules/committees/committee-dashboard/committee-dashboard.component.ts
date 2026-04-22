@@ -65,6 +65,7 @@ export class CommitteeDashboardComponent {
 
   // Lens & permissions
   public readonly isMeLens: Signal<boolean> = computed(() => this.lensService.activeLens() === 'me');
+  public readonly isFoundationContext: Signal<boolean> = this.projectContextService.isFoundationContext;
   protected readonly canWrite = this.projectContextService.canWrite;
   public showFoundationFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
   public showProjectFilter: Signal<boolean> = computed(() => this.isMeLens() && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
