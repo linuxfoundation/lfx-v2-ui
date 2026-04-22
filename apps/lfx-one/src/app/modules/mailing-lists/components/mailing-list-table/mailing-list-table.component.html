@@ -218,9 +218,9 @@
           <!-- stopPropagation prevents the row-selection handler from firing in parallel. -->
           <!-- aria-label gives screen readers an accessible name before tooltip triggers. -->
           <td>
-            @if (mailingList.committees?.length) {
+            @if (mailingList.committees?.[0]?.uid; as firstUid) {
               <a
-                [routerLink]="['/groups', mailingList.committees[0].uid]"
+                [routerLink]="['/groups', firstUid]"
                 (click)="$event.stopPropagation()"
                 [pTooltip]="mailingList.committees | remainingGroupsTooltip: 0"
                 tooltipPosition="top"
