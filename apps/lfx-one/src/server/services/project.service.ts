@@ -971,6 +971,10 @@ export class ProjectService {
    * @returns Array of pending action items with survey links
    */
   public async getPendingActionSurveys(email: string, projectSlug: string): Promise<PendingActionItem[]> {
+    // The COMMITTEE_CATEGORY='Board' filter was dropped — a pending survey is a pending
+    // action regardless of which committee runs it. If the table grows to include noisy
+    // categories in the future, reintroduce a committee-scoped filter here rather than a
+    // hardcoded board gate.
     const query = `
       SELECT
         SURVEY_TITLE,
@@ -982,7 +986,6 @@ export class ProjectService {
         AND PROJECT_SLUG = ?
         AND SURVEY_CUTOFF_DATE > CURRENT_DATE()
         AND RESPONSE_TYPE = 'non_response'
-        AND COMMITTEE_CATEGORY = 'Board'
       ORDER BY SURVEY_CUTOFF_DATE ASC
     `;
 

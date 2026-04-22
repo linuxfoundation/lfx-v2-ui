@@ -459,11 +459,10 @@ export class UserService {
    * @returns Array of pending action items
    */
   public async getPendingActions(req: Request, persona: PersonaType, projectUid: string, email: string, projectSlug: string): Promise<PendingActionItem[]> {
-    if (persona === 'board-member') {
-      return this.getBoardMemberActions(req, email, projectSlug, projectUid);
-    }
-    // Future personas: maintainer, contributor can be added here
-    return [];
+    // Persona is accepted for back-compat but no longer dispatches — a pending action is a
+    // pending action regardless of which dashboard the user is viewing. The board-only
+    // scoping was an MVP artifact, not a principled design choice.
+    return this.getUserPendingActions(req, email, projectSlug, projectUid);
   }
 
   /**
@@ -865,26 +864,27 @@ export class UserService {
   }
 
   /**
-   * Get pending actions for board member persona
-   * Fetches surveys from Snowflake and user-specific meetings from LFX microservice
+   * Aggregate pending actions for the current user within a project scope.
+   * Sources (all parallel): non-responded surveys (Snowflake) and upcoming meetings
+   * the user is registered on within the next two weeks. No meeting-type filter — a
+   * working-group meeting next week is as much a pending action as a board meeting.
    */
-  private async getBoardMemberActions(req: Request, email: string, projectSlug: string, projectUid: string): Promise<PendingActionItem[]> {
+  private async getUserPendingActions(req: Request, email: string, projectSlug: string, projectUid: string): Promise<PendingActionItem[]> {
     // Fetch surveys and user-specific meetings in parallel
     const [surveys, meetings] = await Promise.all([
       this.projectService.getPendingActionSurveys(email, projectSlug).catch((error) => {
-        logger.warning(req, 'get_board_member_actions', 'Failed to fetch surveys for pending actions', { err: error });
+        logger.warning(req, 'get_user_pending_actions', 'Failed to fetch surveys for pending actions', { err: error });
         return [];
       }),
 
       this.getUserMeetings(req, email, projectUid).catch((error) => {
-        logger.warning(req, 'get_board_member_actions', 'Failed to fetch user meetings for pending actions', { err: error });
+        logger.warning(req, 'get_user_pending_actions', 'Failed to fetch user meetings for pending actions', { err: error });
         return [];
       }),
     ]);
 
-    // Filter to board meetings only, then transform to actions (within 2 weeks)
-    const boardMeetings = meetings.filter((m) => m.meeting_type?.toLowerCase() === 'board');
-    const meetingActions = this.transformMeetingsToActions(boardMeetings);
+    // Transform all upcoming meetings within the next 2 weeks (not just board meetings).
+    const meetingActions = this.transformMeetingsToActions(meetings);
 
     return [...surveys, ...meetingActions];
   }
