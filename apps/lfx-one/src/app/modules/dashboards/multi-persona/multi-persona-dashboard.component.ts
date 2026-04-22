@@ -15,11 +15,12 @@ import {
   PendingActionItem,
   PerFoundationAnalytics,
   PersonaProjectRow,
+  PersonaType,
   ProjectContext,
   Meeting,
   RoleGroup,
 } from '@lfx-one/shared/interfaces';
-import { ROLE_PRIORITY, VOTING_STATUS_PRIORITY } from '@lfx-one/shared/constants';
+import { PERSONA_PRIORITY, ROLE_PRIORITY, VOTING_STATUS_PRIORITY } from '@lfx-one/shared/constants';
 import { SurveyStatus } from '@lfx-one/shared/enums';
 import { getActiveOccurrences } from '@lfx-one/shared/utils';
 
@@ -34,12 +35,14 @@ import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, filter, forkJoin, map, of, switchMap, take, tap } from 'rxjs';
 
+import { CardComponent } from '@components/card/card.component';
+import { TableComponent } from '@components/table/table.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
 import { PendingActionsComponent } from '../components/pending-actions/pending-actions.component';
 
 @Component({
   selector: 'lfx-multi-persona-dashboard',
-  imports: [SkeletonModule, MyMeetingsComponent, PendingActionsComponent],
+  imports: [SkeletonModule, MyMeetingsComponent, PendingActionsComponent, CardComponent, TableComponent],
   templateUrl: './multi-persona-dashboard.component.html',
   styleUrl: './multi-persona-dashboard.component.scss',
 })
@@ -91,6 +94,12 @@ export class MultiPersonaDashboardComponent {
   }));
   protected readonly foundationCount: Signal<number> = computed(() => this.userFoundations().length);
   protected readonly projectCount: Signal<number> = computed(() => this.allProjects().length - this.userFoundations().length);
+  protected readonly foundationRoleSummary: Signal<string> = computed(() =>
+    this.buildRoleSummary(this.userFoundations())
+  );
+  protected readonly projectRoleSummary: Signal<string> = computed(() =>
+    this.buildRoleSummary(this.allProjects().filter((p) => !p.isFoundation))
+  );
   protected readonly totalMeetingsThisWeek: Signal<number> = computed(() => {
     const s = this.summaryPills();
     return s.meetingsCompletedThisWeek + s.meetingsUpcomingThisWeek;
@@ -408,6 +417,24 @@ export class MultiPersonaDashboardComponent {
       }
     }
     return count;
+  }
+
+  private buildRoleSummary(projects: EnrichedPersonaProject[]): string {
+    const counts: Partial<Record<PersonaType, number>> = {};
+    for (const p of projects) {
+      for (const persona of p.personas) {
+        counts[persona] = (counts[persona] ?? 0) + 1;
+      }
+    }
+    const ROLE_LABELS: Record<PersonaType, string> = {
+      'executive-director': 'Executive Director',
+      'board-member': 'Board Member',
+      maintainer: 'Maintainer',
+      contributor: 'Contributor',
+    };
+    return PERSONA_PRIORITY.filter((r) => counts[r])
+      .map((r) => `${ROLE_LABELS[r]} (${counts[r]})`)
+      .join(', ');
   }
 
   private formatNameList(names: string[]): string {
