@@ -6,7 +6,7 @@ import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { VOTE_LABEL } from '@lfx-one/shared';
 import { Committee, PaginatedResponse, ProjectContext, Vote, VoteFilterState } from '@lfx-one/shared/interfaces';
 import { CommitteeService } from '@services/committee.service';
@@ -21,7 +21,7 @@ import { VotesTableComponent } from '../components/votes-table/votes-table.compo
 
 @Component({
   selector: 'lfx-votes-dashboard',
-  imports: [LowerCasePipe, CardComponent, ButtonComponent, VotesTableComponent, VoteResultsDrawerComponent, RouterLink],
+  imports: [LowerCasePipe, ButtonComponent, VotesTableComponent, VoteResultsDrawerComponent, RouterLink, EmptyStateComponent],
   templateUrl: './votes-dashboard.component.html',
   styleUrl: './votes-dashboard.component.scss',
 })
@@ -78,6 +78,12 @@ export class VotesDashboardComponent {
   protected readonly foundationOptions: Signal<{ label: string; value: string | null }[]> = this.initializeFoundationOptions();
   protected readonly projectOptions: Signal<{ label: string; value: string | null }[]> = this.initializeProjectOptions();
   protected readonly filteredMyVotes: Signal<Vote[]> = this.initFilteredMyVotes();
+  // True when any server-side filter is active; drives dashboard empty-state vs. table empty-state routing.
+  // Trims `search` so whitespace-only input doesn't count as an active filter.
+  protected readonly hasActiveFilters: Signal<boolean> = computed(() => {
+    const f = this.filters();
+    return !!(f.search?.trim() || f.status || f.group);
+  });
 
   protected onViewVote(voteId: string): void {
     this.selectedVoteId.set(voteId);

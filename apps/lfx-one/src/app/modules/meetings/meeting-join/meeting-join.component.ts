@@ -19,7 +19,6 @@ import { environment } from '@environments/environment';
 import {
   buildJoinUrlWithParams,
   canJoinMeeting,
-  CommitteeMember,
   DEFAULT_MEETING_TYPE_CONFIG,
   getActiveOccurrences,
   getCurrentOrNextOccurrence,
@@ -29,6 +28,7 @@ import {
   MeetingAttachment,
   MeetingOccurrence,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeetingAttachment,
   PastMeetingParticipant,
   PastMeetingRecording,
@@ -42,7 +42,6 @@ import { FileTypeDisplayPipe } from '@pipes/file-type-display.pipe';
 import { LinkifyPipe } from '@pipes/linkify.pipe';
 import { MeetingTimePipe } from '@pipes/meeting-time.pipe';
 import { RecurrenceSummaryPipe } from '@pipes/recurrence-summary.pipe';
-import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
@@ -59,10 +58,13 @@ import {
   distinctUntilChanged,
   EMPTY,
   filter,
+  finalize,
   map,
+  merge,
   Observable,
   of,
   startWith,
+  Subject,
   switchMap,
   take,
   tap,
@@ -111,7 +113,6 @@ export class MeetingJoinComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly userService = inject(UserService);
   private readonly clipboard = inject(Clipboard);
-  private readonly committeeService = inject(CommitteeService);
   private readonly projectContextService = inject(ProjectContextService);
   private readonly dialogService = inject(DialogService);
   private readonly destroyRef = inject(DestroyRef);
@@ -146,7 +147,10 @@ export class MeetingJoinComponent implements OnInit {
   private hasAutoJoined: WritableSignal<boolean> = signal<boolean>(false);
   public showRegistrants: WritableSignal<boolean> = signal<boolean>(false);
   public showGuestForm: WritableSignal<boolean> = signal<boolean>(false);
-  public additionalRegistrantsCount = signal(0);
+  // Bumped immediately when a guest is added so the count in the RSVP card doesn't lag the
+  // async query-service indexing. Floored back to 0 once the registrants refetch absorbs the
+  // newly-added rows (see additionalRegistrantsCount computed below).
+  private optimisticAdditional = signal(0);
   public materialsDrawerVisible = signal(false);
   protected showAllFiles = signal(false);
   protected visibleFiles = computed(() => (this.showAllFiles() ? this.materialFiles() : this.materialFiles().slice(0, 5)));
@@ -189,11 +193,22 @@ export class MeetingJoinComponent implements OnInit {
   protected drawerPosition = computed(() => (this.isMobileViewport() ? 'bottom' : 'right') as 'bottom' | 'right');
   // Parent project (foundation) for context display
   protected parentProject: Signal<Project | null>;
-  // Registrant + committee member list
+  // Registrant list, fetched only when the user is the meeting organizer or invited.
+  // Pre-loaded with the meeting so the Show Members drawer renders instantly from cache.
   protected registrants: Signal<MeetingRegistrant[]>;
-  protected committeeMembers: Signal<CommitteeMember[]>;
+  protected registrantsLoading: WritableSignal<boolean> = signal(false);
+  // Re-fires the registrants fetch (e.g. after a guest is added from the drawer).
+  private registrantsRefresh$ = new BehaviorSubject<void>(undefined);
   // Counts from actual data
-  protected totalInvitees = computed(() => this.registrants().length + this.committeeMembers().length);
+  protected totalInvitees = computed(() => this.registrants().length);
+  // Optimistic + actual: post-add we bump optimisticAdditional immediately and let the refetch
+  // catch up; the max keeps the count stable while query indexing settles.
+  public additionalRegistrantsCount = computed(() => {
+    const meeting = this.meeting();
+    const baseCount = (meeting?.individual_registrants_count || 0) + (meeting?.committee_members_count || 0);
+    const fetched = Math.max(0, this.registrants().length - baseCount);
+    return Math.max(fetched, this.optimisticAdditional());
+  });
   // Past meeting participants (fetched from API for attendance stats)
   protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
   // Past meeting attendance stats (derived from participants)
@@ -211,6 +226,21 @@ export class MeetingJoinComponent implements OnInit {
   public canRegisterForMeeting: Signal<boolean>;
   public canToggleRsvpView: Signal<boolean>;
   public showMyRsvp: WritableSignal<boolean> = signal<boolean>(false);
+
+  // Current user's RSVP for this meeting (null when not responded). Fetched at this level so
+  // the detail page can show the RSVP status even in the default guest-count view, without
+  // waiting for the user to click "Set My RSVP" to mount the button-group child.
+  public currentUserRsvp: Signal<MeetingRsvp | null>;
+  public currentUserRsvpLabel: Signal<string | null>;
+  public currentUserRsvpIcon: Signal<string | null>;
+  public rsvpToggleLabel: Signal<string>;
+  // Emits the freshly-submitted RSVP from the button-group so the chip updates immediately,
+  // bypassing any query-service indexing lag that would otherwise return stale data on refetch.
+  private readonly rsvpUpdateTrigger$ = new Subject<MeetingRsvp>();
+  // Monotonic counter bumped on every manual RSVP update. Captured at fetch dispatch time and
+  // checked on response; if it has advanced, the server response is stale relative to a newer
+  // optimistic update and is dropped so the chip doesn't revert.
+  private rsvpUpdateCounter = 0;
 
   // Form value signals for reactivity
   public formValues: Signal<{ name: string; email: string; organization: string }>;
@@ -243,6 +273,10 @@ export class MeetingJoinComponent implements OnInit {
     this.isInvited = this.initializeIsInvited();
     this.canRegisterForMeeting = this.initializeCanRegisterForMeeting();
     this.canToggleRsvpView = this.initializeCanToggleRsvpView();
+    this.currentUserRsvp = this.initializeCurrentUserRsvp();
+    this.currentUserRsvpLabel = this.initializeCurrentUserRsvpLabel();
+    this.currentUserRsvpIcon = this.initializeCurrentUserRsvpIcon();
+    this.rsvpToggleLabel = this.initializeRsvpToggleLabel();
 
     this.returnTo = this.initializeReturnTo();
     this.canJoinMeeting = this.initializeCanJoinMeeting();
@@ -253,7 +287,6 @@ export class MeetingJoinComponent implements OnInit {
     this.alertMessage = this.initializeAlertMessage();
     this.emailError = this.initializeEmailError();
     this.registrants = this.initializeRegistrants();
-    this.committeeMembers = this.initializeCommitteeMembers();
     this.parentProject = this.initializeParentProject();
     this.initializeAutoJoin();
   }
@@ -301,6 +334,13 @@ export class MeetingJoinComponent implements OnInit {
     this.showRegistrants.set(false);
   }
 
+  public onRegistrantsRefreshRequested(addedCount: number): void {
+    if (addedCount > 0) {
+      this.optimisticAdditional.update((c) => c + addedCount);
+    }
+    this.registrantsRefresh$.next();
+  }
+
   public onEmailErrorClick(): void {
     this.joinUrlError.set(null);
     this.showGuestForm.set(true);
@@ -312,6 +352,13 @@ export class MeetingJoinComponent implements OnInit {
 
   public onRsvpViewToggle(): void {
     this.showMyRsvp.set(!this.showMyRsvp());
+  }
+
+  public onRsvpChanged(rsvp: MeetingRsvp): void {
+    // rsvp-button-group emits the confirmed RSVP after the POST succeeds. Push it directly into the
+    // signal stream so the chip updates instantly, even when the backend polling window times out
+    // before the query service has indexed the new RSVP (server would still return stale on refetch).
+    this.rsvpUpdateTrigger$.next(rsvp);
   }
 
   public openMaterialsDrawer(): void {
@@ -849,6 +896,104 @@ export class MeetingJoinComponent implements OnInit {
     return computed(() => !!this.meeting()?.organizer && this.isInvited());
   }
 
+  private initializeCurrentUserRsvp(): Signal<MeetingRsvp | null> {
+    const meeting$ = toObservable(this.meeting);
+    const occurrence$ = toObservable(this.currentOccurrence);
+    const authenticated$ = toObservable(this.authenticated);
+    const canToggle$ = toObservable(this.canToggleRsvpView);
+
+    // Fetch trigger: meeting/occurrence/auth/canToggle changes. Deduped on a stable key so that
+    // derived signals settling in the same microtask don't cause redundant emissions.
+    const fetchTrigger$ = combineLatest([meeting$, occurrence$, authenticated$, canToggle$]).pipe(
+      distinctUntilChanged(([m1, o1, a1, c1], [m2, o2, a2, c2]) => {
+        const occ1 = m1?.recurrence ? o1?.occurrence_id : undefined;
+        const occ2 = m2?.recurrence ? o2?.occurrence_id : undefined;
+        return m1?.id === m2?.id && occ1 === occ2 && a1 === a2 && c1 === c2;
+      })
+    );
+
+    // Single pipeline routing both fetch triggers and manual updates through switchMap:
+    // - fetch events cancel any in-flight fetch AND a previously-emitted manual update stays as
+    //   the last emission only if no subsequent event overrides it
+    // - manual update events (rsvpUpdateTrigger$) short-circuit with the confirmed RSVP, cancelling
+    //   any in-flight server fetch so a late server response can't revert the chip to stale data
+    const source$ = merge(
+      fetchTrigger$.pipe(map((v) => ({ type: 'fetch' as const, data: v }))),
+      this.rsvpUpdateTrigger$.pipe(map((rsvp) => ({ type: 'update' as const, data: rsvp })))
+    );
+
+    return toSignal(
+      source$.pipe(
+        switchMap((evt) => {
+          if (evt.type === 'update') {
+            // Button-group emits the confirmed RSVP after a successful POST — trust it, cancel
+            // any in-flight server fetch so query-service indexing lag can't overwrite.
+            this.rsvpUpdateCounter++;
+            return of(evt.data);
+          }
+          const [meeting, occurrence, authenticated, canToggle] = evt.data;
+          // Only fetch when the user can actually RSVP (organizer + invited).
+          if (!authenticated || !canToggle || !meeting?.id) {
+            return of(null);
+          }
+          const occurrenceId = meeting.recurrence ? occurrence?.occurrence_id : undefined;
+          // Capture the current update revision at fetch dispatch time. If a manual update
+          // bumps the counter before the server response arrives (typically because the
+          // query-service hasn't indexed the new RSVP yet), the filter drops both the
+          // `startWith(null)` reset and the stale server value so the optimistic local
+          // update stays visible and the chip doesn't flash back.
+          const counterAtDispatch = this.rsvpUpdateCounter;
+          return this.meetingService.getMeetingRsvpForCurrentUser(meeting.id, occurrenceId).pipe(
+            startWith(null),
+            filter(() => this.rsvpUpdateCounter === counterAtDispatch)
+          );
+        })
+      ),
+      { initialValue: null }
+    );
+  }
+
+  private initializeCurrentUserRsvpLabel(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'Yes';
+        case 'declined':
+          return 'No';
+        case 'maybe':
+          return 'Maybe';
+        default:
+          return rsvp.response_type;
+      }
+    });
+  }
+
+  private initializeCurrentUserRsvpIcon(): Signal<string | null> {
+    return computed(() => {
+      const rsvp = this.currentUserRsvp();
+      if (!rsvp) return null;
+      switch (rsvp.response_type) {
+        case 'accepted':
+          return 'fa-solid fa-circle-check text-emerald-500';
+        case 'declined':
+          return 'fa-solid fa-circle-xmark text-red-500';
+        case 'maybe':
+          return 'fa-solid fa-clock text-amber-500';
+        default:
+          return null;
+      }
+    });
+  }
+
+  private initializeRsvpToggleLabel(): Signal<string> {
+    return computed(() => {
+      if (this.showMyRsvp()) return 'Show Guests';
+      return this.currentUserRsvp() ? 'Update My RSVP' : 'Set My RSVP';
+    });
+  }
+
   private initializeEmailError(): Signal<boolean> {
     return computed(() => {
       return this.joinUrlError()?.toLowerCase().includes('email address is not registered for this restricted meeting') ?? false;
@@ -949,39 +1094,26 @@ export class MeetingJoinComponent implements OnInit {
 
   private initializeRegistrants(): Signal<MeetingRegistrant[]> {
     return toSignal(
-      toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id && this.authenticated()),
-        distinctUntilChanged((a, b) => a.id === b.id),
-        switchMap((meeting) => {
-          if (this.isPastMeeting()) return of([] as MeetingRegistrant[]);
-          return this.meetingService.getMeetingRegistrants(meeting.id, true).pipe(catchError(() => of([] as MeetingRegistrant[])));
-        })
-      ),
-      { initialValue: [] }
-    );
-  }
-
-  private initializeCommitteeMembers(): Signal<CommitteeMember[]> {
-    return toSignal(
-      toObservable(this.meeting).pipe(
-        filter((meeting) => !!meeting?.id && this.authenticated()),
-        distinctUntilChanged((a, b) => a.id === b.id),
-        switchMap((meeting) => {
-          const committeeUids = (meeting.committees || []).map((c) => c.uid).filter(Boolean);
-          if (committeeUids.length === 0) return of([] as CommitteeMember[]);
-          return combineLatest(
-            committeeUids.map((uid) => this.committeeService.getCommitteeMembers(uid).pipe(catchError(() => of([] as CommitteeMember[]))))
-          ).pipe(
-            map((arrays) => {
-              const all = arrays.flat();
-              const seen = new Set<string>();
-              return all.filter((m) => {
-                const key = m.email?.toLowerCase();
-                if (!key || seen.has(key)) return false;
-                seen.add(key);
-                return true;
-              });
-            })
+      combineLatest([
+        toObservable(this.meeting).pipe(distinctUntilChanged((a, b) => a?.id === b?.id)),
+        toObservable(this.authenticated),
+        this.registrantsRefresh$,
+      ]).pipe(
+        switchMap(([meeting, authenticated]) => {
+          if (!meeting?.id || !authenticated || !(meeting.organizer || meeting.invited) || this.isPastMeeting()) {
+            return of([] as MeetingRegistrant[]);
+          }
+          this.registrantsLoading.set(true);
+          const baseCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
+          return this.meetingService.getMyMeetingRegistrants(meeting.id, true).pipe(
+            tap((list) => {
+              // Once the refetch lands, drop the optimistic pad so it doesn't double-count.
+              const fetchedAdditional = Math.max(0, list.length - baseCount);
+              if (fetchedAdditional >= this.optimisticAdditional()) {
+                this.optimisticAdditional.set(0);
+              }
+            }),
+            finalize(() => this.registrantsLoading.set(false))
           );
         })
       ),

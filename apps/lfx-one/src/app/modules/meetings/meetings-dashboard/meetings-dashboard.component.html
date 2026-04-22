@@ -23,71 +23,74 @@
     @if (activeLens() === 'me') {
       <div class="mb-6" data-testid="meetings-me-stats">
         <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
-          <div class="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-y-0 lg:divide-x divide-gray-200">
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
-                <i class="fa-light fa-calendar text-xl"></i>
+          <div class="grid w-full grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+            @if (timeFilter() === 'upcoming') {
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
+                  <i class="fa-light fa-calendar text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (meLensStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ upcomingCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Upcoming Meetings</p>
+                  @if (!meLensStatsLoading() && nextMeetingDate()) {
+                    <p class="text-xs text-gray-400">Next: {{ nextMeetingDate() }}</p>
+                  }
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
-                @if (meLensStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ upcomingCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Upcoming Meetings</p>
-                @if (!meLensStatsLoading() && nextMeetingDate()) {
-                  <p class="text-xs text-gray-400">Next: {{ nextMeetingDate() }}</p>
-                }
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
+                  <i class="fa-light fa-repeat text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (meLensStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ recurringCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Recurring Series</p>
+                  @if (!meLensStatsLoading() && recurringAcrossLabel()) {
+                    <p class="text-xs text-gray-400">{{ recurringAcrossLabel() }}</p>
+                  }
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-gray-200 text-gray-500 flex-shrink-0">
-                <i class="fa-light fa-clock-rotate-left text-xl"></i>
+            } @else {
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-gray-200 text-gray-500 flex-shrink-0">
+                  <i class="fa-light fa-clock-rotate-left text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (meLensStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ pastThisMonthCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Past This Month</p>
+                  @if (!meLensStatsLoading() && pastThisMonthCount() > 0) {
+                    <p class="text-xs text-gray-400">{{ attendanceRate() }}% attendance rate</p>
+                  }
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
-                @if (meLensStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ pastThisMonthCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Past This Month</p>
-                @if (!meLensStatsLoading() && pastThisMonthCount() > 0) {
-                  <p class="text-xs text-gray-400">{{ attendanceRate() }}% attendance rate</p>
-                }
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-red-100 text-red-600 flex-shrink-0">
+                  <i class="fa-light fa-video text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (meLensStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ recordingsAvailableCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Recordings Available</p>
+                  @if (!meLensStatsLoading()) {
+                    <p class="text-xs text-gray-400">From past 30 days</p>
+                  }
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
-                <i class="fa-light fa-repeat text-xl"></i>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                @if (meLensStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ recurringCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Recurring Series</p>
-                @if (!meLensStatsLoading() && recurringAcrossLabel()) {
-                  <p class="text-xs text-gray-400">{{ recurringAcrossLabel() }}</p>
-                }
-              </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-red-100 text-red-600 flex-shrink-0">
-                <i class="fa-light fa-video text-xl"></i>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                @if (meLensStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ recordingsAvailableCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Recordings Available</p>
-                @if (!meLensStatsLoading()) {
-                  <p class="text-xs text-gray-400">From past 30 days</p>
-                }
-              </div>
-            </div>
+            }
           </div>
         </lfx-card>
       </div>
@@ -96,68 +99,71 @@
     @if (activeLens() !== 'me') {
       <div class="mb-6" data-testid="meetings-foundation-stats">
         <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0">
-          <div class="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-y-0 lg:divide-x divide-gray-200">
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
-                <i class="fa-light fa-calendar text-xl"></i>
+          <div class="grid w-full grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+            @if (timeFilter() === 'upcoming') {
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
+                  <i class="fa-light fa-calendar text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (fpStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ fpUpcomingCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Upcoming Meetings</p>
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
-                @if (fpStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ fpUpcomingCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Upcoming Meetings</p>
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
+                  <i class="fa-light fa-repeat text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (fpStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ fpRecurringCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Recurring Series</p>
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-gray-200 text-gray-500 flex-shrink-0">
-                <i class="fa-light fa-clock-rotate-left text-xl"></i>
+            } @else {
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-gray-200 text-gray-500 flex-shrink-0">
+                  <i class="fa-light fa-clock-rotate-left text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (fpStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ fpPastCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Past Meetings</p>
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
-                @if (fpStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ fpPastCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Past Meetings</p>
+              <div class="flex items-center gap-3 p-4">
+                <div class="flex items-center justify-center w-11 h-11 rounded-full bg-red-100 text-red-600 flex-shrink-0">
+                  <i class="fa-light fa-video text-xl"></i>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  @if (fpStatsLoading()) {
+                    <p class="text-xl font-medium text-gray-400">&mdash;</p>
+                  } @else {
+                    <p class="text-xl font-medium text-gray-900">{{ fpRecordingsAvailableCount() }}</p>
+                  }
+                  <p class="text-sm font-normal text-gray-900">Recordings Available</p>
+                  @if (!fpStatsLoading()) {
+                    <p class="text-xs text-gray-400">From past 30 days</p>
+                  }
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-purple-100 text-purple-600 flex-shrink-0">
-                <i class="fa-light fa-repeat text-xl"></i>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                @if (fpStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ fpRecurringCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Recurring Series</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3 p-4">
-              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-red-100 text-red-600 flex-shrink-0">
-                <i class="fa-light fa-video text-xl"></i>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                @if (fpStatsLoading()) {
-                  <p class="text-xl font-medium text-gray-400">&mdash;</p>
-                } @else {
-                  <p class="text-xl font-medium text-gray-900">{{ fpRecordingsAvailableCount() }}</p>
-                }
-                <p class="text-sm font-normal text-gray-900">Recordings Available</p>
-                @if (!fpStatsLoading()) {
-                  <p class="text-xs text-gray-400">From past 30 days</p>
-                }
-              </div>
-            </div>
+            }
           </div>
         </lfx-card>
       </div>
     }
 
-    <!-- Top Bar with Search, Meeting Type Filter, and Time Filter -->
+    <!-- Top Bar with Tabs, Search, and Meeting Type Filter -->
     <div class="sticky top-0 md:top-6 z-10 bg-white rounded-lg border border-gray-200 p-4 -mx-0 mb-8">
       @if (upcomingMeetings() || pastMeetings()) {
         <lfx-meetings-top-bar
@@ -166,10 +172,11 @@
           [projectOptions]="projectOptions()"
           [showFoundationFilter]="showFoundationFilter()"
           [showProjectFilter]="showProjectFilter()"
-          [initialTimeFilter]="timeFilter()"
+          [timeFilter]="timeFilter()"
           (meetingTypeChange)="onMeetingTypeChange($event)"
           (foundationFilterChange)="onFoundationFilterChange($event)"
           (projectFilterChange)="onProjectFilterChange($event)"
+          [searchQuery]="searchQuery()"
           (searchQueryChange)="searchQuery.set($event)"
           (timeFilterChange)="onTimeFilterChange($event)" />
       }
@@ -191,29 +198,30 @@
           </div>
         }
       </div>
-    } @else if (upcomingMeetings().length === 0 && timeFilter() === 'upcoming') {
-      <lfx-card>
-        <div class="flex items-center justify-center p-16">
-          <div class="text-center max-w-md">
-            <div class="text-gray-400 mb-4">
-              <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
-              <h3 class="text-gray-600 mt-2">{{ activeLens() === 'me' ? 'You have no upcoming meetings.' : 'Your project has no meetings, yet.' }}</h3>
-            </div>
-          </div>
-        </div>
-      </lfx-card>
+    } @else if (upcomingMeetings().length === 0 && timeFilter() === 'upcoming' && !isFiltered()) {
+      <lfx-empty-state
+        icon="fa-light fa-calendar"
+        [title]="activeLens() === 'me' ? 'No upcoming meetings' : 'No meetings yet'"
+        [subtitle]="activeLens() === 'me' ? 'Meetings from your committees and projects will appear here.' : 'Schedule a meeting to get started.'"
+        data-testid="meetings-empty-state">
+      </lfx-empty-state>
+    } @else if (pastMeetings().length === 0 && timeFilter() === 'past' && !isFiltered()) {
+      <lfx-empty-state
+        icon="fa-light fa-clock-rotate-left"
+        title="No past meetings"
+        [subtitle]="activeLens() === 'me' ? 'Your past meetings will appear here.' : 'Past meetings will appear here once they have occurred.'"
+        data-testid="meetings-empty-state-past">
+      </lfx-empty-state>
     } @else if (filteredMeetings().length === 0 && (project()?.uid || activeLens() === 'me')) {
-      <lfx-card>
-        <div class="flex items-center justify-center p-16">
-          <div class="text-center max-w-md">
-            <div class="text-gray-400 mb-4">
-              <i class="fa-light fa-eyes text-[2rem] mb-4"></i>
-            </div>
-            <h3 class="text-xl font-semibold text-gray-900 mt-4">No Meetings Found</h3>
-            <p class="text-gray-600 mt-2">Try adjusting your search or filter criteria</p>
-          </div>
-        </div>
-      </lfx-card>
+      <lfx-empty-state
+        icon="fa-light fa-eyes"
+        title="No results found"
+        subtitle="Try adjusting your filter criteria"
+        ctaLabel="Reset filters"
+        ctaIcon="fa-light fa-arrow-rotate-left"
+        (ctaClick)="resetFilters()"
+        data-testid="meetings-empty-state-filtered">
+      </lfx-empty-state>
     } @else if (filteredMeetings().length > 0) {
       <div class="flex flex-col gap-4">
         @for (meeting of filteredMeetings(); track meeting.id; let i = $index) {
