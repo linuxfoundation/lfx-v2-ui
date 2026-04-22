@@ -151,24 +151,20 @@ export class CommitteeDashboardComponent {
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     const project$ = toObservable(this.project);
     const refresh$ = toObservable(this.refresh);
-    const lens$ = toObservable(this.lensService.activeLens);
 
     return toSignal(
-      combineLatest([project$, refresh$, lens$]).pipe(
-        switchMap(([project, , lens]) => {
-          if (lens !== 'me' && !project?.uid) {
+      combineLatest([project$, refresh$]).pipe(
+        switchMap(([project]) => {
+          if (!project?.uid) {
             this.myCommitteesLoading.set(false);
             return of([] as MyCommittee[]);
           }
+
           this.myCommitteesLoading.set(true);
-          return this.committeeService.getMyCommittees().pipe(
-            catchError((error) => {
-              console.error('Failed to load my committees:', error);
-              this.myCommitteesLoading.set(false);
-              return of([] as MyCommittee[]);
-            }),
-            finalize(() => this.myCommitteesLoading.set(false))
-          );
+          const isFoundation = this.projectContextService.isFoundationContext();
+          return this.committeeService
+            .getMyCommittees(isFoundation ? undefined : project.uid, isFoundation ? project.uid : undefined)
+            .pipe(finalize(() => this.myCommitteesLoading.set(false)));
         })
       ),
       { initialValue: [] }
