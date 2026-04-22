@@ -5,7 +5,6 @@ import { NextFunction, Request, Response } from 'express';
 
 import { logger } from '../services/logger.service';
 import { personaDetectionService, personaEnrichmentService } from '../utils/persona-helper';
-import { MOCK_PERSONA_RESPONSE } from './persona.mock';
 
 /**
  * Controller for handling persona detection HTTP requests
@@ -20,11 +19,6 @@ export class PersonaController {
     const startTime = logger.startOperation(req, 'get_user_personas', { enriched });
 
     try {
-      if (process.env['MOCK_PERSONA_DATA'] === 'true') {
-        res.json(MOCK_PERSONA_RESPONSE);
-        return;
-      }
-
       const result = enriched ? await personaEnrichmentService.getEnrichedPersonas(req) : await personaDetectionService.getPersonas(req);
 
       logger.success(req, 'get_user_personas', startTime, {
