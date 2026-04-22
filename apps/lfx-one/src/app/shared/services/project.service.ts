@@ -3,7 +3,7 @@
 
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal, WritableSignal } from '@angular/core';
-import { PendingActionItem, Project } from '@lfx-one/shared/interfaces';
+import { PendingActionItem, Project, ProjectSettings } from '@lfx-one/shared/interfaces';
 import { BehaviorSubject, catchError, Observable, of, shareReplay, tap } from 'rxjs';
 
 @Injectable({
@@ -88,6 +88,15 @@ export class ProjectService {
       catchError((error) => {
         console.error('Failed to fetch pending actions:', error);
         return of([]);
+      })
+    );
+  }
+
+  public getProjectSettings(uid: string): Observable<ProjectSettings | null> {
+    return this.http.get<ProjectSettings>(`/api/projects/${uid}/permissions`).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch project settings:', error);
+        return of(null);
       })
     );
   }

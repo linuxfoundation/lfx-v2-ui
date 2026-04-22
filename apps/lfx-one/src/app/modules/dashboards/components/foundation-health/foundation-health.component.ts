@@ -19,6 +19,7 @@ import { EventsDrawerComponent } from '../events-drawer/events-drawer.component'
 import { MaintainersDrawerComponent } from '../maintainers-drawer/maintainers-drawer.component';
 import { OrgDependencyDrawerComponent } from '../org-dependency-drawer/org-dependency-drawer.component';
 import { ProjectHealthScoresDrawerComponent } from '../project-health-scores-drawer/project-health-scores-drawer.component';
+import { ProjectStaffCardComponent } from '../project-staff-card/project-staff-card.component';
 import { TotalMembersDrawerComponent } from '../total-members-drawer/total-members-drawer.component';
 import { TotalProjectsDrawerComponent } from '../total-projects-drawer/total-projects-drawer.component';
 import { TotalValueDrawerComponent } from '../total-value-drawer/total-value-drawer.component';
@@ -39,6 +40,7 @@ import type {
     MetricCardComponent,
     DataCopilotComponent,
     ScrollShadowDirective,
+    ProjectStaffCardComponent,
     TotalValueDrawerComponent,
     TotalProjectsDrawerComponent,
     TotalMembersDrawerComponent,
@@ -92,7 +94,16 @@ export class FoundationHealthComponent {
     { id: 'contributors', label: 'Contribution' },
     { id: 'projects', label: 'Project' },
     { id: 'events', label: 'Event' },
+    { id: 'staff', label: 'Staff' },
   ];
+
+  // The Staff card sits in the same carousel as the metric cards. It renders on 'all' (alongside
+  // everything else) and on 'staff' (as the only card). Other filters hide it.
+  public readonly showStaffCard = computed(() => {
+    const filter = this.selectedFilter();
+    return filter === 'all' || filter === 'staff';
+  });
+  public readonly selectedFoundation = computed(() => this.projectContextService.selectedFoundation());
 
   public readonly sparklineOptions = BASE_LINE_CHART_OPTIONS;
   public readonly barChartOptions = BASE_BAR_CHART_OPTIONS;
