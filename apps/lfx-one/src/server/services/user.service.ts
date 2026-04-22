@@ -915,7 +915,11 @@ export class UserService {
     const rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrantIds);
     const voteActions = this.transformVotesToActions(pendingVotes);
 
-    return [...surveys, ...meetingActions, ...voteActions, ...rsvpActions];
+    // Order by actionability: someone is waiting on RSVPs and votes have closing windows, so
+    // those go first. Surveys are time-bounded by their cutoff. Review Agenda is informational
+    // (read-before-meeting) and goes last — with the 5-item display cap, plentiful meetings
+    // shouldn't crowd out the rows the user actually has to respond to.
+    return [...rsvpActions, ...voteActions, ...surveys, ...meetingActions];
   }
 
   /**
