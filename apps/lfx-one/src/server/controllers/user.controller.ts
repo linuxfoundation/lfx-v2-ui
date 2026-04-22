@@ -123,8 +123,9 @@ export class UserController {
 
   /**
    * GET /api/user/meetings - Get meetings for the authenticated user
-   * Returns meetings the user is registered for, optionally filtered by project
+   * Returns meetings the user has direct FGA access to (host, participant, organizer), optionally filtered by project
    * @query projectUid - Optional project UID to filter meetings
+   * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_meetings', {
@@ -172,8 +173,9 @@ export class UserController {
 
   /**
    * GET /api/user/past-meetings - Get past meetings for the authenticated user
-   * Returns past meetings the user was registered for, optionally filtered by project
+   * Returns past meetings the user has direct FGA access to (host, invitee, attendee, organizer), optionally filtered by project
    * @query projectUid - Optional project UID to filter meetings
+   * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_past_meetings', {

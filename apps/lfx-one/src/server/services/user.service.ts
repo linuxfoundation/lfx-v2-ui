@@ -533,7 +533,7 @@ export class UserService {
 
     const enriched = await this.meetingService.getMeetingProjectName(req, sortedMeetings);
 
-    // Every result has a direct FGA tuple — invite/host/organizer/participant relation — so mark as invited.
+    // Every result has a direct host or participant FGA tuple, so the user is invited by definition.
     const invited = enriched.map((m) => ({ ...m, invited: true }));
 
     return this.accessCheckService.addAccessToResources(req, invited, 'v1_meeting', 'organizer');
@@ -565,9 +565,10 @@ export class UserService {
     if (normalizedEmail) filtersOr.push(`email:${normalizedEmail}`);
     if (username) filtersOr.push(`username:${stripAuthPrefix(username)}`);
 
-    // Participant scan is retained solely to source `is_attended` for `user_attended` enrichment —
-    // it no longer drives the meeting fetch. failOnPartial: true surfaces truncated sets; the
-    // outer .catch degrades gracefully so a participant-query failure doesn't 500 the Me lens.
+    // Participant scan sources `is_attended` for `user_attended` enrichment — FGA tuples don't
+    // carry attendance, so this lookup is independent of the meeting fetch. failOnPartial: true
+    // surfaces truncated sets; outer .catch degrades gracefully so a failure here drops attendance
+    // data without 500'ing the Me lens.
     const participantQuery =
       filtersOr.length > 0
         ? fetchAllQueryResources<PastMeetingParticipant>(
