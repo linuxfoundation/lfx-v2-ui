@@ -8,7 +8,7 @@
       <div>
         <h1 class="font-display font-light text-2xl" data-testid="documents-dashboard-title">{{ pageTitle() }}</h1>
         <p class="mt-1 text-sm text-gray-500" data-testid="documents-dashboard-description">
-          Documents, links, and attachments across groups, meetings, and foundations.
+          {{ documentLabel.plural }}, links, and attachments across groups, meetings, and foundations.
         </p>
       </div>
     </div>
@@ -162,9 +162,11 @@
                       <i [class]="(doc.source | myDocumentSourceTag: 'icon') + ' text-gray-900 text-base'"></i>
                     </div>
                     <span
+                      #nameEl
                       class="text-sm font-medium text-gray-900 truncate min-w-0"
                       [pTooltip]="doc.name"
                       tooltipPosition="top"
+                      [tooltipDisabled]="nameEl.scrollWidth <= nameEl.offsetWidth"
                       [attr.data-testid]="'documents-name-' + doc.id"
                       >{{ doc.name }}</span
                     >

@@ -90,7 +90,7 @@ export class DocumentService {
     const [committeeLinkItems, groupsioItems, rawMeetingAttachments, rawPastAttachments, rawPastRecordings, rawTranscripts, rawSummaries] = await Promise.all([
       this.getCommitteeDocuments(req, scopedCommittees),
       this.getGroupsIOArtifacts(req, projectUid ?? scopedCommittees.find((c) => c.project_uid)?.project_uid, committeeUid, scopedCommittees),
-      this.fetchRawMeetingAttachments(req, projectUid, occurrenceIds, committeeUid),
+      this.fetchRawMeetingAttachments(req, projectUid, committeeUid),
       this.fetchRawPastMeetingAttachments(req, occurrenceIds, projectUid, committeeUid),
       this.fetchRawPastMeetingRecordings(req, occurrenceIds, projectUid, committeeUid),
       this.fetchRawPastMeetingTranscripts(req, occurrenceIds, projectUid, committeeUid),
@@ -324,7 +324,7 @@ export class DocumentService {
 
   // ─── Upcoming Meeting Attachments ───────────────────────────────────────────
 
-  private async fetchRawMeetingAttachments(req: Request, projectUid?: string, _unused?: string[], committeeUid?: string): Promise<MeetingAttachment[]> {
+  private async fetchRawMeetingAttachments(req: Request, projectUid?: string, committeeUid?: string): Promise<MeetingAttachment[]> {
     if (committeeUid) {
       // Committee Documents tab: query directly by committee parent ref.
       // v1_meeting_attachment carries committee:{uid} parent refs per the indexer contract.
