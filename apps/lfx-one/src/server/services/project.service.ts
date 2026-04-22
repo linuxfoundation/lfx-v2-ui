@@ -3796,7 +3796,8 @@ export class ProjectService {
         }>(quarterlyTrendQuery, binds),
       ]);
 
-      const currentYear = new Date().getFullYear();
+      // Derive year from Snowflake results to stay consistent with CURRENT_DATE in the query
+      const currentYear = summaryResult.rows.length > 0 ? Math.max(...summaryResult.rows.map((r) => r.EVENT_YEAR)) : new Date().getUTCFullYear();
       const thisYearRow = summaryResult.rows.find((r) => r.EVENT_YEAR === currentYear);
       const lastYearRow = summaryResult.rows.find((r) => r.EVENT_YEAR === currentYear - 1);
 
