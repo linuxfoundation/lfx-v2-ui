@@ -1,12 +1,14 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal, WritableSignal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, PLATFORM_ID, signal, Signal, WritableSignal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-card/meeting-card.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { MEETING_TYPE_CONFIGS } from '@lfx-one/shared/constants';
 import { Lens, Meeting, PageResult, PastMeeting, ProjectContext } from '@lfx-one/shared/interfaces';
 import { getCurrentOrNextOccurrence, hasMeetingEnded } from '@lfx-one/shared/utils';
@@ -36,7 +38,6 @@ import {
   toArray,
 } from 'rxjs';
 
-import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { MeetingsTopBarComponent } from './components/meetings-top-bar/meetings-top-bar.component';
 
 @Component({
@@ -53,6 +54,7 @@ export class MeetingsDashboardComponent {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly platformId = inject(PLATFORM_ID);
 
   public readonly activeLens: Signal<Lens> = this.lensService.activeLens;
 
@@ -156,8 +158,10 @@ export class MeetingsDashboardComponent {
     this.showFoundationFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasBoardRole() && this.foundationOptions().length > 1);
     this.showProjectFilter = computed(() => this.activeLens() === 'me' && this.personaService.hasProjectRole() && this.projectOptions().length > 1);
 
-    // Me lens stat cards (computed from shared sorted upcoming signal)
-    this.meLensStatsLoading = computed(() => this.meetingsLoading() || this.pastMeetingsLoading());
+    // Me lens stat cards (computed from shared sorted upcoming signal).
+    // Only look at the active tab's loading signal — the inactive tab's raw fetch is gated off,
+    // so its loading flag stays pinned at its initial `true` and would never resolve.
+    this.meLensStatsLoading = computed(() => (this.timeFilter() === 'past' ? this.pastMeetingsLoading() : this.meetingsLoading()));
     this.upcomingCount = computed(() => this.sortedUpcomingUserMeetings().length);
     this.nextMeetingDate = this.initNextMeetingDate();
     this.pastThisMonthCount = this.initPastThisMonthCount();
@@ -176,7 +180,8 @@ export class MeetingsDashboardComponent {
     this.rawFpPastMeetings = this.initializeRawFpPastMeetings();
 
     // Foundation/Project lens stat cards (computed from raw FP signals, not paginated)
-    this.fpStatsLoading = computed(() => this.fpUpcomingLoading() || this.fpPastLoading());
+    // Only look at the active tab's loading signal — inactive tab fetches are gated off.
+    this.fpStatsLoading = computed(() => (this.timeFilter() === 'past' ? this.fpPastLoading() : this.fpUpcomingLoading()));
     this.fpUpcomingCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().length : 0));
     this.fpPastCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpPastMeetings().length : 0));
     this.fpRecurringCount = computed(() => (this.activeLens() !== 'me' ? this.rawFpUpcomingMeetings().filter((m) => m.recurrence !== null).length : 0));
@@ -276,6 +281,10 @@ export class MeetingsDashboardComponent {
           return of<PageResult<Meeting>>({ data: [], page_token: undefined, reset: true });
         }
 
+        if (!isPlatformBrowser(this.platformId)) {
+          return of<PageResult<Meeting>>({ data: [], page_token: undefined, reset: true });
+        }
+
         this.meetingsLoading.set(true);
         const filters = this.buildMeetingTypeFilters(meetingType);
         return this.meetingService.getMeetingsByProjectPaginated(project.uid, undefined, undefined, searchQuery || undefined, filters).pipe(
@@ -353,6 +362,10 @@ export class MeetingsDashboardComponent {
           return of<PageResult<PastMeeting>>({ data: [], page_token: undefined, reset: true });
         }
 
+        if (!isPlatformBrowser(this.platformId)) {
+          return of<PageResult<PastMeeting>>({ data: [], page_token: undefined, reset: true });
+        }
+
         this.pastMeetingsLoading.set(true);
         const filters = this.buildMeetingTypeFilters(meetingType);
         return this.meetingService.getPastMeetingsByProjectPaginated(project.uid, undefined, searchQuery || undefined, filters).pipe(
@@ -400,11 +413,13 @@ export class MeetingsDashboardComponent {
 
   private initializeRawUserMeetings(): Signal<Meeting[]> {
     const lens$ = toObservable(this.activeLens);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([lens$, this.refresh$]).pipe(
-        switchMap(([lens]) => {
-          if (lens !== 'me') {
+      combineLatest([lens$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([lens, timeFilter]) => {
+          // Skip when not on Me lens, not viewing upcoming, or during SSR.
+          if (lens !== 'me' || timeFilter !== 'upcoming' || !isPlatformBrowser(this.platformId)) {
             return of([] as Meeting[]);
           }
           this.meetingsLoading.set(true);
@@ -423,11 +438,13 @@ export class MeetingsDashboardComponent {
 
   private initializeRawUserPastMeetings(): Signal<PastMeeting[]> {
     const lens$ = toObservable(this.activeLens);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([lens$, this.refresh$]).pipe(
-        switchMap(([lens]) => {
-          if (lens !== 'me') {
+      combineLatest([lens$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([lens, timeFilter]) => {
+          // Skip when not on Me lens, not viewing past, or during SSR.
+          if (lens !== 'me' || timeFilter !== 'past' || !isPlatformBrowser(this.platformId)) {
             return of([] as PastMeeting[]);
           }
           this.pastMeetingsLoading.set(true);
@@ -566,7 +583,7 @@ export class MeetingsDashboardComponent {
     return computed(() => {
       const now = new Date();
       return this.rawUserPastMeetings().filter((m) => {
-        const d = new Date(m.scheduled_start_time);
+        const d = new Date(m.scheduled_start_time ?? m.start_time);
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
       }).length;
     });
@@ -575,7 +592,8 @@ export class MeetingsDashboardComponent {
   private initRecordingsAvailableCount(): Signal<number> {
     return computed(() => {
       const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      return this.rawUserPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time).getTime() >= cutoff).length;
+      return this.rawUserPastMeetings().filter((m) => m.recording_enabled === true && new Date(m.scheduled_start_time ?? m.start_time).getTime() >= cutoff)
+        .length;
     });
   }
 
@@ -583,11 +601,11 @@ export class MeetingsDashboardComponent {
     return computed(() => {
       const now = new Date();
       const pastThisMonth = this.rawUserPastMeetings().filter((m) => {
-        const d = new Date(m.scheduled_start_time);
+        const d = new Date(m.scheduled_start_time ?? m.start_time);
         return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
       });
       if (pastThisMonth.length === 0) return 0;
-      const attended = pastThisMonth.filter((m) => (m.attended_count ?? 0) > 0).length;
+      const attended = pastThisMonth.filter((m) => m.user_attended === true).length;
       return Math.round((attended / pastThisMonth.length) * 100);
     });
   }
@@ -613,11 +631,18 @@ export class MeetingsDashboardComponent {
   private initializeRawFpUpcomingMeetings(): Signal<Meeting[]> {
     const project$ = toObservable(this.project);
     const lens$ = toObservable(this.activeLens);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([project$, lens$, this.refresh$]).pipe(
-        switchMap(([project, lens]) => {
-          if (lens === 'me' || !project?.uid) {
+      combineLatest([project$, lens$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([project, lens, timeFilter]) => {
+          if (lens === 'me' || !project?.uid || timeFilter !== 'upcoming') {
+            return of([] as Meeting[]);
+          }
+          // SSR: pin loading=true so the stat cards render their skeleton instead of "0".
+          // The client refires this switchMap post-hydration to do the real fetch.
+          if (!isPlatformBrowser(this.platformId)) {
+            this.fpUpcomingLoading.set(true);
             return of([] as Meeting[]);
           }
           const projectUid = project.uid;
@@ -640,11 +665,17 @@ export class MeetingsDashboardComponent {
   private initializeRawFpPastMeetings(): Signal<PastMeeting[]> {
     const project$ = toObservable(this.project);
     const lens$ = toObservable(this.activeLens);
+    const timeFilter$ = toObservable(this.timeFilter);
 
     return toSignal(
-      combineLatest([project$, lens$, this.refresh$]).pipe(
-        switchMap(([project, lens]) => {
-          if (lens === 'me' || !project?.uid) {
+      combineLatest([project$, lens$, timeFilter$, this.refresh$]).pipe(
+        switchMap(([project, lens, timeFilter]) => {
+          if (lens === 'me' || !project?.uid || timeFilter !== 'past') {
+            return of([] as PastMeeting[]);
+          }
+          // SSR: pin loading=true so the stat cards render their skeleton instead of "0".
+          if (!isPlatformBrowser(this.platformId)) {
+            this.fpPastLoading.set(true);
             return of([] as PastMeeting[]);
           }
           const projectUid = project.uid;

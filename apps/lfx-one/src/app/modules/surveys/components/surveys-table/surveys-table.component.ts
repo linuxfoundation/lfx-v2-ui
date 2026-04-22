@@ -6,8 +6,8 @@ import { Component, computed, inject, input, output, signal, Signal } from '@ang
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
+import { CardComponent } from '@components/card/card.component';
 import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
@@ -17,7 +17,6 @@ import { SURVEY_LABEL, SURVEY_TYPE_LABELS, SurveyStatus } from '@lfx-one/shared'
 import { FilterPillOption, Survey } from '@lfx-one/shared/interfaces';
 import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { DueDateLabelPipe } from '@pipes/due-date-label.pipe';
-import { RelativeDueDatePipe } from '@pipes/relative-due-date.pipe';
 import { SurveyStatusLabelPipe } from '@pipes/survey-status-label.pipe';
 import { SurveyStatusSeverityPipe } from '@pipes/survey-status-severity.pipe';
 import { ConfirmationService } from 'primeng/api';
@@ -39,7 +38,6 @@ import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs';
     SelectComponent,
     SurveyStatusLabelPipe,
     SurveyStatusSeverityPipe,
-    RelativeDueDatePipe,
     DueDateLabelPipe,
     TooltipModule,
     ConfirmDialogModule,
@@ -97,8 +95,8 @@ export class SurveysTableComponent {
   protected readonly groupOptions: Signal<{ label: string; value: string | null }[]> = this.initGroupOptions();
   protected readonly typeOptions: Signal<{ label: string; value: string | null }[]> = this.initTypeOptions();
   protected readonly filteredSurveys: Signal<(Survey & { displayStatus: SurveyStatus })[]> = this.initFilteredSurveys();
-  protected readonly isFiltered = computed(() =>
-    this.searchTerm() !== '' || this.statusTab() !== 'all' || this.groupFilter() !== null || this.typeFilter() !== null
+  protected readonly isFiltered = computed(
+    () => this.searchTerm() !== '' || this.statusTab() !== 'all' || this.groupFilter() !== null || this.typeFilter() !== null
   );
 
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.filteredSurveys().length > 10 ? [10, 25, 50] : undefined));

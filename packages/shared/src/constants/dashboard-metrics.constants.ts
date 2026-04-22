@@ -7,19 +7,68 @@ import { EMPTY_CHART_DATA, NO_TOOLTIP_CHART_OPTIONS } from './chart-options.cons
 import { lfxColors } from './colors.constants';
 
 import type {
+  BoardMeetingParticipationSummaryResponse,
   CodeContributionSummaryResponse,
   DashboardMetricCard,
   DualSignalRow,
   EdEvolutionData,
   EventsSummaryResponse,
   FilterPillOption,
+  HealthMetricsRange,
   HealthMetricsSummaryCard,
+  HealthMetricsYearOption,
   MembershipChurnPerTierSummaryResponse,
   NpsSummaryResponse,
   OutstandingBalanceSummaryResponse,
   ParticipatingOrgsSummaryResponse,
   TrainingCertificationSummaryResponse,
 } from '../interfaces';
+
+// ============================================
+// Health Metrics — Range Constants
+// ============================================
+
+export const HEALTH_METRICS_RANGES: readonly HealthMetricsRange[] = ['YTD', 'COMPLETED_YEAR', 'COMPLETED_YEAR_2', 'COMPLETED_YEAR_3', 'COMPLETED_YEAR_4'];
+
+/**
+ * Runtime type guard that narrows an unknown value to `HealthMetricsRange`.
+ * Returns true when `value` is a string present in `HEALTH_METRICS_RANGES`.
+ */
+export function isHealthMetricsRange(value: unknown): value is HealthMetricsRange {
+  return typeof value === 'string' && (HEALTH_METRICS_RANGES as readonly string[]).includes(value);
+}
+
+/** Maps each HealthMetricsRange to its calendar year offset from the current year. */
+const RANGE_YEAR_OFFSET: Record<HealthMetricsRange, number> = {
+  YTD: 0,
+  COMPLETED_YEAR: 1,
+  COMPLETED_YEAR_2: 2,
+  COMPLETED_YEAR_3: 3,
+  COMPLETED_YEAR_4: 4,
+};
+
+/** Returns the calendar year for a given range. */
+export function getYearForRange(range: HealthMetricsRange): number {
+  return new Date().getFullYear() - (RANGE_YEAR_OFFSET[range] ?? 0);
+}
+
+/**
+ * Builds the year-filter options for the Health Metrics page.
+ * Derived from `HEALTH_METRICS_RANGES` + `RANGE_YEAR_OFFSET` so ordering
+ * and offsets stay in sync with the canonical range list.
+ */
+export function buildHealthMetricsYearOptions(): HealthMetricsYearOption[] {
+  const currentYear = new Date().getFullYear();
+  return [...HEALTH_METRICS_RANGES].reverse().map((range) => {
+    const year = currentYear - RANGE_YEAR_OFFSET[range];
+    return {
+      label: range === 'YTD' ? 'YTD' : `${year}`,
+      range,
+      year,
+    };
+  });
+}
+
 // ============================================
 // Health Metrics Page (Summary Cards)
 // ============================================
@@ -63,7 +112,28 @@ export const HEALTH_METRICS_SUMMARY_CARDS: readonly HealthMetricsSummaryCard[] =
   },
 ];
 
-export const HEALTH_METRICS_STATUS_COUNT = 8;
+export const HEALTH_METRICS_BODY_BLOCK_KEYS = [
+  'participating-orgs',
+  'nps',
+  'membership-churn',
+  'outstanding-balance',
+  'events',
+  'training-certification',
+  'code-contribution',
+  'flywheel-conversion',
+  'board-meeting',
+] as const;
+
+export const HEALTH_METRICS_STATUS_COUNT = HEALTH_METRICS_BODY_BLOCK_KEYS.length;
+
+// ============================================
+// Board Meeting Card — Thresholds & Limits
+// ============================================
+
+export const HEALTH_METRICS_BOARD_MEETING_LOW_ATTENDANCE_THRESHOLD = 0.5;
+export const HEALTH_METRICS_BOARD_MEETING_JOB_TITLE_MAX_LENGTH = 50;
+
+export const HEALTH_METRICS_FLYWHEEL_CONVERSION_DECIMAL_PLACES = 2;
 
 // ============================================
 // Marketing Action Icon Map
@@ -557,6 +627,18 @@ export const HEALTH_METRICS_CODE_CONTRIBUTION_DEFAULT_SUMMARY: CodeContributionS
   reviewers: 0,
 };
 
+export const HEALTH_METRICS_BOARD_MEETING_DEFAULT_SUMMARY: BoardMeetingParticipationSummaryResponse = {
+  dataAvailable: false,
+  projectId: '',
+  projectSlug: '',
+  range: 'YTD',
+  totalMeetings: 0,
+  totalMeetingsChange: null,
+  avgMeetingAttendance: 0,
+  avgMeetingAttendanceChange: null,
+  invitees: [],
+};
+
 export const HEALTH_METRICS_EVENTS_DEFAULT_SUMMARY: EventsSummaryResponse = {
   projectId: '',
   totalEvents: 0,
@@ -576,6 +658,7 @@ export const HEALTH_METRICS_MEMBERSHIP_CHURN_DEFAULT_SUMMARY: MembershipChurnPer
   currentPeriod: { churnRatePct: 0, valueLost: 0, membersLost: 0 },
   previousYear: null,
   trend: null,
+  tiers: [],
 };
 
 export const HEALTH_METRICS_NPS_DEFAULT_SUMMARY: NpsSummaryResponse = {
@@ -648,6 +731,14 @@ function flatSparklineData(value: number): number[] {
   return [Math.max(value - nudge, 0), value, value, value, value, value + nudge];
 }
 
+/** Build a time-window label from the number of data points available.
+ *  Returns "Last N months" for any count, capped at 6. */
+function trendWindow(monthCount: number): string {
+  if (monthCount <= 0) return '';
+  if (monthCount >= 6) return 'Last 6 months';
+  return `Last ${monthCount} month${monthCount === 1 ? '' : 's'}`;
+}
+
 /** Normalize a server-provided trend: treat zero change as neutral instead of up.
  *  Uses Number(toFixed(1)) to match roundForDisplay() — both helpers agree on the
  *  same rounding path so the trend color never diverges from the displayed label. */
@@ -666,11 +757,13 @@ function trendFromChange(change: number): 'up' | 'down' | 'neutral' {
 
 /** Helper to build a dual-signal row with sparkline */
 function protoDualSignal(label: string, value: string, data: number[], color: string, change?: string, trend?: 'up' | 'down' | 'neutral'): DualSignalRow {
+  // Suppress the MoM pill when change rounds to 0 — showing "0.0%" is misleading.
+  const showChange = trend && trend !== 'neutral';
   return {
     label,
     value,
-    changePercentage: change,
-    trend,
+    changePercentage: showChange ? change : undefined,
+    trend: showChange ? trend : undefined,
     chartData: data.length > 0 ? protoSparkline(data, color) : EMPTY_CHART_DATA,
     color,
   };
@@ -694,42 +787,45 @@ function roundForDisplay(value: number): string {
   return (Object.is(rounded, -0) ? 0 : rounded).toFixed(1);
 }
 
-/** Format a MoM change as a display string */
-function formatMomChange(change: number): string {
+/** Format a MoM change as a display string. Returns undefined when change rounds to 0. */
+function formatMomChange(change: number): string | undefined {
+  if (Number(change.toFixed(1)) === 0) return undefined;
   const formatted = roundForDisplay(change);
   const sign = !formatted.startsWith('-') ? '+' : '';
   return `${sign}${formatted}% MoM`;
 }
 
-/** Format a YoY change as a display string */
-function formatYoyChange(change: number): string {
+/** Format a YoY change as a display string. Returns undefined when change rounds to 0. */
+function formatYoyChange(change: number): string | undefined {
+  if (Number(change.toFixed(1)) === 0) return undefined;
   const formatted = roundForDisplay(change);
   const sign = !formatted.startsWith('-') ? '+' : '';
   return `${sign}${formatted}% YoY`;
 }
 
-/** Format a percentage-point MoM change as a display string */
-function formatPpMomChange(change: number): string {
+/** Format a percentage-point MoM change as a display string. Returns undefined when change rounds to 0. */
+function formatPpMomChange(change: number): string | undefined {
+  if (Number(change.toFixed(1)) === 0) return undefined;
   const formatted = roundForDisplay(change);
   const sign = !formatted.startsWith('-') ? '+' : '';
   return `${sign}${formatted}pp MoM`;
 }
 
-/** Compute MoM change display from a paid media monthly trend series (last two months of spend) */
-function paidMediaMomChange(trend: { spend: number }[]): string | undefined {
+/** Compute MoM change display from a paid media monthly trend series (last two months of revenue) */
+function paidMediaMomChange(trend: { revenue: number }[]): string | undefined {
   if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].spend;
-  const curr = trend[trend.length - 1].spend;
+  const prev = trend[trend.length - 2].revenue;
+  const curr = trend[trend.length - 1].revenue;
   if (prev === 0) return undefined;
   return formatMomChange(((curr - prev) / prev) * 100);
 }
 
 /** Compute trend direction from a paid media monthly trend series.
  *  Uses the same MoM % formula as paidMediaMomChange so the color matches the displayed text. */
-function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | 'neutral' | undefined {
+function paidMediaTrend(trend: { revenue: number }[]): 'up' | 'down' | 'neutral' | undefined {
   if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].spend;
-  const curr = trend[trend.length - 1].spend;
+  const prev = trend[trend.length - 2].revenue;
+  const curr = trend[trend.length - 1].revenue;
   if (prev === 0) return undefined;
   return trendFromChange(((curr - prev) / prev) * 100);
 }
@@ -737,6 +833,19 @@ function paidMediaTrend(trend: { spend: number }[]): 'up' | 'down' | 'neutral' |
 /** Extract values from NorthStarMonthlyDataPoint[] */
 function monthlyValues(data: { month: string; value: number }[]): number[] {
   return data.map((d) => d.value);
+}
+
+/** Element-wise sum of two monthly revenue series (e.g. event attribution + paid media).
+ *  If series differ in length, the shorter one is left-padded with zeros so both align to the most recent month. */
+function combineMonthlySeries(a: number[], b: number[]): number[] {
+  const len = Math.max(a.length, b.length);
+  const result: number[] = [];
+  for (let i = 0; i < len; i++) {
+    const aVal = a[i - (len - a.length)] ?? 0;
+    const bVal = b[i - (len - b.length)] ?? 0;
+    result.push(aVal + bVal);
+  }
+  return result;
 }
 
 /** Roll up per-channel-per-month event-registration rows into a single monthly lastTouchRevenue series (chronological). */
@@ -794,14 +903,14 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: `${flywheel.reengagement.reengagementRate.toFixed(1)}%`,
       changePercentage: formatPpMomChange(flywheel.reengagement.reengagementMomChange),
       trend: trendFromChange(flywheel.reengagement.reengagementMomChange),
-      subtitle: 'MoM · Last 6 months',
+      subtitle: flywheel.monthlyData.length > 0 ? `MoM · ${trendWindow(flywheel.monthlyData.length)}` : 'MoM',
       chartData: protoSparkline(
         flywheel.monthlyData.length > 0 ? monthlyValues(flywheel.monthlyData) : flatSparklineData(flywheel.reengagement.reengagementRate),
         lfxColors.blue[500]
       ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
       tooltipText:
-        'Percentage of event attendees who re-engage via newsletter, community, or working groups within 90 days post-event. Change shown in percentage points (pp) MoM.',
+        'Percentage of event attendees who re-engage via newsletter, community, working groups, training, code, or web within 90 days post-event. Change shown in percentage points (pp) MoM.',
       drawerType: DashboardDrawerType.NorthStarFlywheelConversion,
     } as DashboardMetricCard,
     {
@@ -814,7 +923,10 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: formatNumber(memberAcquisition.totalMembers),
       changePercentage: formatMomChange(memberAcquisition.changePercentage),
       trend: normalizeTrend(memberAcquisition.changePercentage, memberAcquisition.trend),
-      subtitle: `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}% · Last 6 months`,
+      subtitle:
+        memberAcquisition.totalMembersMonthlyData.length > 0
+          ? `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}% · ${trendWindow(memberAcquisition.totalMembersMonthlyData.length)}`
+          : `${memberRetention.renewalRate.toFixed(1)}% retention · NRR ${memberRetention.netRevenueRetention.toFixed(1)}%`,
       chartData: protoSparkline(
         memberAcquisition.totalMembersMonthlyData.length > 0 ? memberAcquisition.totalMembersMonthlyData : flatSparklineData(memberAcquisition.totalMembers),
         lfxColors.blue[500]
@@ -833,13 +945,13 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: formatNumber(engagedCommunity.totalMembers),
       changePercentage: formatMomChange(engagedCommunity.changePercentage),
       trend: normalizeTrend(engagedCommunity.changePercentage, engagedCommunity.trend),
-      subtitle: 'Last 6 months',
+      subtitle: trendWindow(engagedCommunity.monthlyData.length),
       chartData: protoSparkline(
         engagedCommunity.monthlyData.length > 0 ? monthlyValues(engagedCommunity.monthlyData) : flatSparklineData(engagedCommunity.totalMembers),
         lfxColors.blue[500]
       ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-      tooltipText: 'Unique individuals active across Slack, Discord, GitHub, and mailing lists in the last 90 days.',
+      tooltipText: 'Unique individuals active across Slack, Discord, GitHub, mailing lists, training, web, and code in the last 90 days.',
       drawerType: DashboardDrawerType.NorthStarEngagedCommunity,
     } as DashboardMetricCard,
     {
@@ -852,13 +964,16 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       value: formatNumber(eventGrowth.totalRegistrants),
       changePercentage: formatYoyChange(eventGrowth.registrantYoyChange),
       trend: trendFromChange(eventGrowth.registrantYoyChange),
-      subtitle: `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD`,
+      subtitle:
+        eventGrowth.monthlyData.length > 0
+          ? `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD · Trend: ${trendWindow(eventGrowth.monthlyData.length)}`
+          : `${formatNumber(eventGrowth.totalEvents)} event${eventGrowth.totalEvents === 1 ? '' : 's'} · YTD`,
       chartData: protoSparkline(
         eventGrowth.monthlyData.length > 0 ? monthlyValues(eventGrowth.monthlyData) : flatSparklineData(eventGrowth.totalRegistrants),
         lfxColors.blue[500]
       ),
       chartOptions: NO_TOOLTIP_CHART_OPTIONS,
-      tooltipText: 'Year-to-date event attendees and YoY change.',
+      tooltipText: 'Year-to-date event registrants and YoY change.',
       drawerType: DashboardDrawerType.NorthStarEventGrowth,
     } as DashboardMetricCard,
 
@@ -886,10 +1001,15 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           'Monthly Sessions',
           formatNumber(brandReach.totalMonthlySessions),
           brandReach.weeklyTrend.length > 0 ? brandReach.weeklyTrend.map((d) => d.sessions) : [],
-          lfxColors.violet[500]
+          lfxColors.violet[500],
+          formatMomChange(brandReach.sessionMomChangePct),
+          normalizeTrend(brandReach.sessionMomChangePct, brandReach.sessionMomChangePct >= 0 ? 'up' : 'down')
         ),
       ],
-      caption: `${brandReach.activePlatforms} platforms · Last 6 months`,
+      caption:
+        brandReach.weeklyTrend.length > 0
+          ? `${brandReach.activePlatforms} platforms · ${trendWindow(Math.ceil(brandReach.weeklyTrend.length / 4))}`
+          : `${brandReach.activePlatforms} platforms`,
       tooltipText: 'Social followers across all platforms (stock) and monthly website sessions (flow). Shown separately — these are different metric types.',
       drawerType: DashboardDrawerType.BrandReach,
     } as DashboardMetricCard,
@@ -906,18 +1026,16 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
           'Mentions',
           formatNumber(brandHealth.totalMentions),
           brandHealth.monthlyMentions.length > 0 ? monthlyValues(brandHealth.monthlyMentions) : [],
-          lfxColors.blue[500]
+          lfxColors.blue[500],
+          formatMomChange(brandHealth.mentionMomChangePct),
+          normalizeTrend(brandHealth.mentionMomChangePct, brandHealth.trend)
         ),
-        protoDualSignal(
-          'Positive Sentiment',
-          `${brandHealth.sentiment.positive.toFixed(1)}%`,
-          [],
-          lfxColors.violet[500],
-          formatPpMomChange(brandHealth.sentimentMomChangePp),
-          trendFromChange(brandHealth.sentimentMomChangePp)
-        ),
+        protoDualSignal('Positive Sentiment', `${brandHealth.sentiment.positive.toFixed(1)}%`, [], lfxColors.violet[500]),
       ],
-      caption: `${formatNumber(brandHealth.totalMentions)} mentions · Last 6 months`,
+      caption:
+        brandHealth.monthlyMentions.length > 0
+          ? `${formatNumber(brandHealth.totalMentions)} mentions · ${trendWindow(brandHealth.monthlyMentions.length)}`
+          : `${formatNumber(brandHealth.totalMentions)} mentions`,
       tooltipText: 'Total brand mentions across social and web with sentiment breakdown.',
       drawerType: DashboardDrawerType.BrandHealth,
     } as DashboardMetricCard,
@@ -929,33 +1047,43 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       chartType: 'line',
       category: 'influence',
       testId: 'ed-evo-revenue-impact',
-      description: 'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend.',
+      description: 'Total revenue attributed to marketing touchpoints, with paid media revenue shown separately.',
       customContentType: 'dual-signal',
-      caption: 'Last 6 months',
+      caption: trendWindow(revenueImpact.paidMedia.monthlyTrend.length),
       dualSignals: [
         (() => {
           const eventAttrSeries = eventAttrMonthlyRevenueSeries(revenueImpact.eventRegistrationAttribution.monthlyTrend);
           const eventAttrTotal = revenueImpact.eventRegistrationAttribution.channelBreakdown.reduce((sum, c) => sum + (c.lastTouchRevenue ?? 0), 0);
+          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
+          // Sum paid media revenue from the same last-6-months window (not YTD) to match eventAttrTotal
+          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
+          // Marketing Attribution = total across all channels (event registration + paid media), same time window
+          const totalAttrRevenue = eventAttrTotal + paidMediaRevenue6mo;
+          const totalAttrSeries = combineMonthlySeries(eventAttrSeries, paidMediaSeries);
           return protoDualSignal(
             'Marketing Attribution',
-            formatCurrency(eventAttrTotal),
-            eventAttrSeries,
+            formatCurrency(totalAttrRevenue),
+            totalAttrSeries,
             lfxColors.blue[500],
-            eventAttrMomChange(eventAttrSeries),
-            eventAttrTrendDirection(eventAttrSeries)
+            eventAttrMomChange(totalAttrSeries),
+            eventAttrTrendDirection(totalAttrSeries)
           );
         })(),
-        protoDualSignal(
-          'Paid Media',
-          formatCurrency(revenueImpact.paidMedia.adSpend),
-          revenueImpact.paidMedia.monthlyTrend.map((r) => r.spend),
-          lfxColors.violet[500],
-          paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
-          paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
-        ),
+        (() => {
+          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
+          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
+          return protoDualSignal(
+            'Paid Media',
+            formatCurrency(paidMediaRevenue6mo),
+            paidMediaSeries,
+            lfxColors.violet[500],
+            paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
+            paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
+          );
+        })(),
       ],
       tooltipText:
-        'Revenue attributed to marketing touchpoints (last-touch model) alongside paid media spend. Sales pipeline is shown on the Member Growth card.',
+        'Total revenue attributed to marketing touchpoints (event registration + paid media). Paid Media row shows the paid ads portion. Sales pipeline is shown on the Member Growth card.',
       drawerType: DashboardDrawerType.RevenueImpact,
     } as DashboardMetricCard,
   ];
