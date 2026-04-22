@@ -159,7 +159,6 @@
               [attr.data-row-index]="rowIndex"
               [attr.data-testid]="'persona-row-' + row.projectSlug"
               tabindex="0"
-              role="button"
               [attr.aria-label]="'Open ' + row.projectName"
               (keydown.enter)="openRow(row)"
               (keydown.space)="openRow(row); $event.preventDefault()">
