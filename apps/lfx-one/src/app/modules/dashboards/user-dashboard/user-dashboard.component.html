@@ -9,7 +9,7 @@
   </div>
 
   <!-- Dashboard Sections -->
-  <div class="flex flex-col gap-6" data-testid="user-dashboard-sections">
+  <div class="flex flex-col gap-10" data-testid="user-dashboard-sections">
     <!-- My Meetings (always first) -->
     @defer (on idle) {
       <lfx-my-meetings />
@@ -30,7 +30,7 @@
 
     <!-- Pending Actions (always second) -->
     @defer (on idle) {
-      <lfx-pending-actions [pendingActions]="pendingActions()" (actionClick)="handleActionClick()" />
+      <lfx-pending-actions [pendingActions]="pendingActions()" [displayLimit]="2" (actionClick)="handleActionClick()" />
     } @placeholder {
       <section class="flex flex-col flex-1" data-testid="user-dashboard-pending-actions-placeholder">
         <div class="flex items-center justify-between mb-4 px-2 h-8">
