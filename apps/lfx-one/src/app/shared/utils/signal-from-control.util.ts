@@ -4,7 +4,7 @@
 import { Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
-import { distinctUntilChanged, startWith } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs';
 
 /**
  * Derive a signal from a typed `FormControl`.
@@ -15,5 +15,5 @@ import { distinctUntilChanged, startWith } from 'rxjs';
  * subscriptions or `(valueChange)` handlers.
  */
 export function signalFromControl<T>(control: FormControl<T>): Signal<T> {
-  return toSignal(control.valueChanges.pipe(startWith(control.value), distinctUntilChanged()), { initialValue: control.value });
+  return toSignal(control.valueChanges.pipe(distinctUntilChanged()), { initialValue: control.value });
 }
