@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
-import { IndividualVoteStatus, NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
+import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
   ApiGatewayUserProfile,
-  IndividualVote,
   Meeting,
   MeetingOccurrence,
   MeetingRegistrant,
@@ -930,43 +929,56 @@ export class UserService {
   }
 
   /**
-   * Queries the `individual_vote` index for this user's open invitations and fetches full Vote
-   * details for each. Returns only polls that are still `active` with an `end_time` in the future.
-   * `individual_vote` is per-user so the `filters_or` on email/username is the natural filter —
-   * `vote_status` is applied in-code because the query service doesn't expose a stable AND filter
-   * across both tags and fields for this index.
+   * Queries the `vote_response` index for this user's participation rows and returns the polls
+   * they've been invited to but haven't submitted yet. `vote_response` is the real upstream
+   * indexed type (`lfx.index.vote_response` from `lfx-v2-voting-service`) — the earlier
+   * `individual_vote` type was fabricated in the shared interface and the query returned zero
+   * rows in practice.
+   *
+   * ITX creates a `vote_response` record per invitee on poll initiation and stamps
+   * `vote_status='submitted'` once the user actually casts. "Pending" is therefore:
+   *   - `vote_status !== 'submitted'`  (not cast yet)
+   *   - `!voter_removed`               (active invitation)
+   *   - scoped to the current project
+   * Then fetch the Vote details and keep only those still `active` with an `end_time` in the
+   * future.
    */
   private async fetchPendingVotes(req: Request, email: string, username: string | null, projectUid: string): Promise<Vote[]> {
-    // Normalize email to match the sibling user-scoped lookups in this file — un-normalized
-    // input silently misses rows when the caller passed a mixed-case address.
     const normalizedEmail = email ? email.trim().toLowerCase() : '';
     const orClauses: string[] = [];
     if (normalizedEmail) orClauses.push(`user_email:${normalizedEmail}`);
     if (username) orClauses.push(`username:${username}`);
     if (orClauses.length === 0) return [];
 
-    // failOnPartial: completeness matters — a truncated response can silently miss an
-    // awaiting-response vote, producing the wrong pending-action list. The caller already
-    // catches and degrades, so fail closed here instead of accepting partial state.
-    const invitations = await fetchAllQueryResources<IndividualVote>(
+    interface VoteResponseRow {
+      vote_uid?: string;
+      vote_id?: string;
+      poll_id?: string;
+      project_uid?: string;
+      vote_status?: string;
+      voter_removed?: boolean;
+    }
+
+    // failOnPartial: completeness matters — a truncated response can silently miss a pending
+    // invitation. The caller already catches and degrades, so fail closed here.
+    const responses = await fetchAllQueryResources<VoteResponseRow>(
       req,
       (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<IndividualVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'individual_vote',
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<VoteResponseRow>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'vote_response',
           filters_or: orClauses,
           ...(pageToken && { page_token: pageToken }),
         }),
       { failOnPartial: true }
     );
 
-    // Awaiting-response invitations scoped to this project. voter_removed entries are historical.
-    // NOTE: `poll_uid`/`poll_id` is the parent vote's id (what `/votes/{uid}` expects).
-    // `vote_uid`/`vote_id` is the individual-vote record id — using those would 404.
+    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `poll_id` is the v1
+    // fallback per the upstream indexer contract. Neither is the individual-response id.
     const pendingVoteUids = Array.from(
       new Set(
-        invitations
-          .filter((iv) => iv.vote_status === IndividualVoteStatus.AWAITING_RESPONSE && iv.project_uid === projectUid && !iv.voter_removed)
-          .map((iv) => iv.poll_uid ?? iv.poll_id)
+        responses
+          .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed && r.project_uid === projectUid)
+          .map((r) => r.vote_uid ?? r.poll_id)
           .filter((uid): uid is string => !!uid)
       )
     );
