@@ -14,7 +14,7 @@
   @if (pendingActions().length > 0) {
     <!-- Unified card with divider rows -->
     <div
-      class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-200 max-h-[30rem] overflow-y-auto"
+      class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-200 max-h-[30rem] overflow-y-auto"
       data-testid="dashboard-pending-actions-list">
       @for (item of pendingActions(); track $index) {
         <div
