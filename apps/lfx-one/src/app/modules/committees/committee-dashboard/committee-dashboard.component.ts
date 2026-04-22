@@ -149,6 +149,13 @@ export class CommitteeDashboardComponent {
     this.projectFilter.set(value);
   }
 
+  private resetScopeFilters(): void {
+    this.foundationFilter.set(null);
+    this.projectFilter.set(null);
+    this.searchForm?.get('foundationFilter')?.setValue(null, { emitEvent: false });
+    this.searchForm?.get('projectFilter')?.setValue(null, { emitEvent: false });
+  }
+
   private initializeMyCommittees(): Signal<MyCommittee[]> {
     const project$ = toObservable(this.project);
     const refresh$ = toObservable(this.refresh);
@@ -156,6 +163,8 @@ export class CommitteeDashboardComponent {
     return toSignal(
       combineLatest([project$, refresh$]).pipe(
         switchMap(([project]) => {
+          this.resetScopeFilters();
+
           if (!project?.uid) {
             this.myCommitteesLoading.set(false);
             return of([] as MyCommittee[]);
