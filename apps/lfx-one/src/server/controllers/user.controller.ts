@@ -78,14 +78,14 @@ export class UserController {
       }
 
       // Optional `?limit=` clamps the response size so mobile / summary cards can request a
-      // smaller payload. Absent = unbounded; when present it must be a positive integer so
-      // malformed values can't silently defeat the cap. `Number.isInteger` rejects NaN,
-      // floats, and `"10abc"` — no separate array branch because Express typing already
-      // tells us it's `string | string[] | ParsedQs | …`, and non-strings fall out.
+      // smaller payload. Absent = unbounded; when present it must be a positive integer. Any
+      // present-but-non-string value (array from `?limit=1&limit=2`, object from `?limit[foo]=1`)
+      // fails the Number conversion to NaN and hits the same error branch, so malformed input
+      // can't silently defeat the cap.
       const limitQuery = req.query['limit'];
       let limit: number | undefined;
-      if (typeof limitQuery === 'string') {
-        const parsed = Number(limitQuery);
+      if (limitQuery !== undefined) {
+        const parsed = typeof limitQuery === 'string' ? Number(limitQuery) : NaN;
         if (!Number.isInteger(parsed) || parsed <= 0) {
           next(
             ServiceValidationError.forField('limit', 'limit query parameter must be a positive integer', {
