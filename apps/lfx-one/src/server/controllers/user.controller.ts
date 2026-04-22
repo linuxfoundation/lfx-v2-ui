@@ -79,9 +79,35 @@ export class UserController {
 
       // Optional `?limit=` clamps the response size so mobile / summary cards can request a
       // smaller payload. Backend work isn't reduced (the full list is computed and then sliced);
-      // the win is over-the-wire bytes. Unbounded by default for back-compat with existing clients.
-      const limitParam = parseInt(req.query['limit'] as string, 10);
-      const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : undefined;
+      // the win is over-the-wire bytes. Unbounded when the param is absent; when present it must
+      // be a positive integer — we reject malformed values explicitly instead of silently falling
+      // back to unbounded, so callers can't accidentally defeat the cap.
+      const limitQuery = req.query['limit'];
+      let limit: number | undefined;
+      if (limitQuery !== undefined) {
+        if (Array.isArray(limitQuery) || typeof limitQuery !== 'string') {
+          next(
+            ServiceValidationError.forField('limit', 'limit query parameter must be provided at most once as a positive integer', {
+              operation: 'get_pending_actions',
+              service: 'user_controller',
+              path: req.path,
+            })
+          );
+          return;
+        }
+        const parsed = parseInt(limitQuery, 10);
+        if (!Number.isFinite(parsed) || parsed <= 0 || String(parsed) !== limitQuery.trim()) {
+          next(
+            ServiceValidationError.forField('limit', 'limit query parameter must be a positive integer between 1 and 100', {
+              operation: 'get_pending_actions',
+              service: 'user_controller',
+              path: req.path,
+            })
+          );
+          return;
+        }
+        limit = Math.min(parsed, 100);
+      }
 
       // Get pending actions from service — persona is validated above for API-contract stability
       // but is no longer consumed by the aggregator (pending actions are persona-agnostic now).

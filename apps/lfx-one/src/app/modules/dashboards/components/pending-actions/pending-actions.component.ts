@@ -35,7 +35,11 @@ export class PendingActionsComponent {
   protected readonly visibleActions: Signal<PendingActionItem[]> = computed(() => {
     this.hiddenActionsVersion();
     const unhidden = this.pendingActions().filter((item) => !this.hiddenActionsService.isActionHidden(item));
-    return unhidden.slice(0, this.displayLimit());
+    // Guard against negative / non-finite inputs — `slice(0, -1)` would silently drop the last
+    // item instead of capping, which is surprising API behavior for a public input.
+    const limit = this.displayLimit();
+    const safeLimit = Number.isFinite(limit) ? Math.max(0, limit) : 5;
+    return unhidden.slice(0, safeLimit);
   });
 
   protected handleActionClick(item: PendingActionItem): void {
