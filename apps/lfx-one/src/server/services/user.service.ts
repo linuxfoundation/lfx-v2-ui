@@ -474,11 +474,11 @@ export class UserService {
    * `last_end_time` is indexed as an epoch integer, not an ISO date, so the query
    * service's `date_from` range filter compares strings lexically and drops valid rows.
    * @param req - Express request object
-   * @param email - Unused; retained for call-site compatibility (FGA lookup is token-based)
    * @param projectUid - Optional project UID to filter meetings by
+   * @param foundationUid - Optional foundation UID to filter meetings by (OR across child projects)
    * @returns Array of Meeting objects the user has some direct FGA grant on
    */
-  public async getUserMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
+  public async getUserMeetings(req: Request, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
     const foundationProjectUids = foundationUid
       ? await this.projectService.getFoundationProjectUids(req, foundationUid).then((uids) => new Set(uids))
       : undefined;
@@ -844,7 +844,7 @@ export class UserService {
         return [];
       }),
 
-      this.getUserMeetings(req, email, projectUid).catch((error) => {
+      this.getUserMeetings(req, projectUid).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch user meetings for pending actions', { err: error });
         return [];
       }),

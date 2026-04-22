@@ -151,7 +151,7 @@ export class UserController {
       }
 
       // Get user's meetings from service
-      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid, foundationUid);
+      const meetings = await this.userService.getUserMeetings(req, projectUid, foundationUid);
 
       logger.success(req, 'get_user_meetings', startTime, {
         project_uid: projectUid,
