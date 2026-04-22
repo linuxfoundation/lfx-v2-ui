@@ -13,7 +13,6 @@ import {
   PastMeeting,
   PastMeetingParticipant,
   PendingActionItem,
-  PersonaType,
   ProjectItem,
   QueryServiceResponse,
   UserCodeCommitsResponse,
@@ -450,28 +449,19 @@ export class UserService {
   }
 
   /**
-   * Get all pending actions for a user based on persona
+   * Get all pending actions for the authenticated user across every persona. A pending action
+   * is a pending action regardless of which dashboard the user is viewing — the board-only
+   * scoping in the earlier implementation was an MVP artifact, not a principled design choice.
    * @param req - Express request object
-   * @param persona - User persona type (board-member, maintainer, contributor)
    * @param projectUid - Project UID for filtering
    * @param email - User email
    * @param projectSlug - Project slug for survey filtering
+   * @param limit - Optional cap on the response size (aggregator still runs in full;
+   *   this just shrinks the payload for callers that only need a top-N view)
    * @returns Array of pending action items
    */
-  public async getPendingActions(
-    req: Request,
-    persona: PersonaType,
-    projectUid: string,
-    email: string,
-    projectSlug: string,
-    limit?: number
-  ): Promise<PendingActionItem[]> {
-    // Persona is accepted for back-compat but no longer dispatches — a pending action is a
-    // pending action regardless of which dashboard the user is viewing. The board-only
-    // scoping was an MVP artifact, not a principled design choice.
+  public async getPendingActions(req: Request, projectUid: string, email: string, projectSlug: string, limit?: number): Promise<PendingActionItem[]> {
     const actions = await this.getUserPendingActions(req, email, projectSlug, projectUid);
-    // Optional cap. Backend work is unchanged (aggregator still runs in full); this just
-    // shrinks the response payload for callers that only need a top-N view.
     return limit && limit > 0 && actions.length > limit ? actions.slice(0, limit) : actions;
   }
 

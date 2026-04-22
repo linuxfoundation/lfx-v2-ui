@@ -83,8 +83,9 @@ export class UserController {
       const limitParam = parseInt(req.query['limit'] as string, 10);
       const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : undefined;
 
-      // Get pending actions from service
-      const pendingActions = await this.userService.getPendingActions(req, persona, projectUid, userEmail, projectSlug, limit);
+      // Get pending actions from service — persona is validated above for API-contract stability
+      // but is no longer consumed by the aggregator (pending actions are persona-agnostic now).
+      const pendingActions = await this.userService.getPendingActions(req, projectUid, userEmail, projectSlug, limit);
 
       logger.success(req, 'get_pending_actions', startTime, {
         persona,
