@@ -78,27 +78,17 @@ export class UserController {
       }
 
       // Optional `?limit=` clamps the response size so mobile / summary cards can request a
-      // smaller payload. Backend work isn't reduced (the full list is computed and then sliced);
-      // the win is over-the-wire bytes. Unbounded when the param is absent; when present it must
-      // be a positive integer — we reject malformed values explicitly instead of silently falling
-      // back to unbounded, so callers can't accidentally defeat the cap.
+      // smaller payload. Absent = unbounded; when present it must be a positive integer so
+      // malformed values can't silently defeat the cap. `Number.isInteger` rejects NaN,
+      // floats, and `"10abc"` — no separate array branch because Express typing already
+      // tells us it's `string | string[] | ParsedQs | …`, and non-strings fall out.
       const limitQuery = req.query['limit'];
       let limit: number | undefined;
-      if (limitQuery !== undefined) {
-        if (Array.isArray(limitQuery) || typeof limitQuery !== 'string') {
+      if (typeof limitQuery === 'string') {
+        const parsed = Number(limitQuery);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
           next(
-            ServiceValidationError.forField('limit', 'limit query parameter must be provided at most once as a positive integer', {
-              operation: 'get_pending_actions',
-              service: 'user_controller',
-              path: req.path,
-            })
-          );
-          return;
-        }
-        const parsed = parseInt(limitQuery, 10);
-        if (!Number.isFinite(parsed) || parsed <= 0 || String(parsed) !== limitQuery.trim()) {
-          next(
-            ServiceValidationError.forField('limit', 'limit query parameter must be a positive integer between 1 and 100', {
+            ServiceValidationError.forField('limit', 'limit query parameter must be a positive integer', {
               operation: 'get_pending_actions',
               service: 'user_controller',
               path: req.path,
