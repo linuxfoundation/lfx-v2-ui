@@ -3,7 +3,7 @@
 
 import { SurveyStatus } from '@lfx-one/shared/enums';
 import { CreateSurveyRequest, QueryServiceResponse, Survey } from '@lfx-one/shared/interfaces';
-import { getEffectiveSurveyStatus } from '@lfx-one/shared/utils';
+import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -246,7 +246,7 @@ export class SurveyService {
 
         return {
           survey,
-          openRank: getEffectiveSurveyStatus(survey) === SurveyStatus.OPEN ? 0 : 1,
+          openRank: getSurveyDisplayStatus(survey) === SurveyStatus.OPEN ? 0 : 1,
           // Sort is descending (newest cutoff first), so push invalid/missing
           // cutoffs to the end with a finite sentinel to keep ordering deterministic
           // (Infinity sentinels would make `a - b` return NaN when both sides are invalid).
