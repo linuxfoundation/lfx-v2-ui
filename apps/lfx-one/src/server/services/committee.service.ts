@@ -81,6 +81,22 @@ export class CommitteeService {
       type: 'committee',
     };
 
+    // For project-scoped requests (tags=project_uid:<uid> or parent=committee:<uid>),
+    // the upstream query service has already enforced listing visibility — applying a
+    // secondary access check here would silently drop listable committees from the
+    // project dashboard. Click-time access is still enforced by GET /committees/:id.
+    // Unscoped (cross-project) calls keep the access filter so personal "my-relevant"
+    // listings remain scoped to public/writer/member committees.
+    const tags = query['tags'];
+    const isProjectScoped =
+      (typeof tags === 'string' && tags.includes('project_uid:')) ||
+      (Array.isArray(tags) && tags.some((t) => typeof t === 'string' && t.includes('project_uid:'))) ||
+      Boolean(query['parent']);
+
+    logger.debug(req, 'get_committees', 'Fetching committees', {
+      is_project_scoped: isProjectScoped,
+    });
+
     let committees = await fetchAllQueryResources<Committee>(req, (pageToken) =>
       this.microserviceProxy.proxyRequest<QueryServiceResponse<Committee>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
@@ -103,24 +119,26 @@ export class CommitteeService {
       })
     );
 
-    // Add writer access field so the filter below can use it
+    // Add writer access field (used by the visibility filter below and consumed by the UI)
     committees = await this.accessCheckService.addAccessToResources(req, committees, 'committee');
 
-    // Visibility filter: only show committees the current user can actually open.
-    // The query service may return committees the committee service will reject (403/404),
-    // so we filter to: public committees, committees the user has write access to,
-    // or committees the user is an explicit member of.
-    const myCommittees = await this.getMyCommittees(req);
-    const myUids = new Set(myCommittees.map((c) => c.uid));
-    const totalBefore = committees.length;
+    if (!isProjectScoped) {
+      // Unscoped (cross-project) listings: scope to committees the caller can act on
+      // (public, writer, or explicit member). This is an access filter, not a visibility
+      // filter — the query service already controls listing visibility upstream. We keep
+      // it here so personal "my-relevant" cross-project results stay focused.
+      const myCommittees = await this.getMyCommittees(req);
+      const myUids = new Set(myCommittees.map((c) => c.uid));
+      const totalBefore = committees.length;
 
-    committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
+      committees = committees.filter((c) => c.public || c.writer === true || myUids.has(c.uid));
 
-    if (committees.length < totalBefore) {
-      logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
-        filtered_count: totalBefore - committees.length,
-        total: totalBefore,
-      });
+      if (committees.length < totalBefore) {
+        logger.debug(req, 'get_committees', 'Filtered non-visible committees', {
+          filtered_count: totalBefore - committees.length,
+          total: totalBefore,
+        });
+      }
     }
 
     return committees;
