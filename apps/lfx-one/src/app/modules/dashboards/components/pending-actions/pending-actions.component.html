@@ -11,12 +11,12 @@
     <div class="flex-1 border-t border-gray-200 self-center"></div>
   </div>
 
-  @if (pendingActions().length > 0) {
+  @if (visibleActions().length > 0) {
     <!-- Unified card with divider rows -->
     <div
       class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-200 max-h-[30rem] overflow-y-auto"
       data-testid="dashboard-pending-actions-list">
-      @for (item of pendingActions(); track $index) {
+      @for (item of visibleActions(); track item.buttonLink ?? item.type + '-' + item.text) {
         <div
           class="flex items-center justify-between gap-4 px-4 py-3 bg-gradient-to-r from-white to-[rgba(255,251,235,0.8)]"
           [attr.data-testid]="'dashboard-pending-actions-item-' + item.type">
