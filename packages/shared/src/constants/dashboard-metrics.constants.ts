@@ -768,52 +768,9 @@ function formatPpMomChange(change: number): string | undefined {
   return `${sign}${formatted}pp MoM`;
 }
 
-/** Compute MoM change display from a paid media monthly trend series (last two months of revenue) */
-function paidMediaMomChange(trend: { revenue: number }[]): string | undefined {
-  if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].revenue;
-  const curr = trend[trend.length - 1].revenue;
-  if (prev === 0) return undefined;
-  return formatMomChange(((curr - prev) / prev) * 100);
-}
-
-/** Compute trend direction from a paid media monthly trend series.
- *  Uses the same MoM % formula as paidMediaMomChange so the color matches the displayed text. */
-function paidMediaTrend(trend: { revenue: number }[]): 'up' | 'down' | 'neutral' | undefined {
-  if (trend.length < 2) return undefined;
-  const prev = trend[trend.length - 2].revenue;
-  const curr = trend[trend.length - 1].revenue;
-  if (prev === 0) return undefined;
-  return trendFromChange(((curr - prev) / prev) * 100);
-}
-
 /** Extract values from NorthStarMonthlyDataPoint[] */
 function monthlyValues(data: { month: string; value: number }[]): number[] {
   return data.map((d) => d.value);
-}
-
-/** Element-wise sum of two monthly revenue series (e.g. event attribution + paid media).
- *  If series differ in length, the shorter one is left-padded with zeros so both align to the most recent month. */
-function combineMonthlySeries(a: number[], b: number[]): number[] {
-  const len = Math.max(a.length, b.length);
-  const result: number[] = [];
-  for (let i = 0; i < len; i++) {
-    const aVal = a[i - (len - a.length)] ?? 0;
-    const bVal = b[i - (len - b.length)] ?? 0;
-    result.push(aVal + bVal);
-  }
-  return result;
-}
-
-/** Roll up per-channel-per-month event-registration rows into a single monthly lastTouchRevenue series (chronological). */
-function eventAttrMonthlyRevenueSeries(rows: { month: string; lastTouchRevenue: number }[]): number[] {
-  const byMonth = new Map<string, number>();
-  for (const r of rows) {
-    byMonth.set(r.month, (byMonth.get(r.month) ?? 0) + (r.lastTouchRevenue ?? 0));
-  }
-  return Array.from(byMonth.keys())
-    .sort()
-    .map((m) => byMonth.get(m) ?? 0);
 }
 
 /** Compute MoM change display from a monthly numeric series (last vs second-to-last). */
