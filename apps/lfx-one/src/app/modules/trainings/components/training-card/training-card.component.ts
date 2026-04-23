@@ -36,6 +36,7 @@ export class TrainingCardComponent {
   protected readonly statusClasses: Signal<string> = this.initStatusClasses();
   protected readonly enrolledDate: Signal<string | null> = this.initEnrolledDate();
   protected readonly timeSpent: Signal<string | null> = this.initTimeSpent();
+  protected readonly completedIssuedDate: Signal<string | null> = this.initCompletedIssuedDate();
 
   // ─── Private Initializers ──────────────────────────────────────────────────
   private initLevelClasses(): Signal<string> {
@@ -104,6 +105,13 @@ export class TrainingCardComponent {
       if (this.variant() !== 'ongoing') return null;
       const seconds = (this.training() as TrainingEnrollment).totalTime;
       return seconds != null ? formatDuration(seconds) : null;
+    });
+  }
+
+  private initCompletedIssuedDate(): Signal<string | null> {
+    return computed(() => {
+      if (this.variant() !== 'completed') return null;
+      return (this.training() as Certification).issuedDate ?? null;
     });
   }
 
