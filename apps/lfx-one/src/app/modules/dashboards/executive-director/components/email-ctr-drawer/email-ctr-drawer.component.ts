@@ -219,7 +219,7 @@ export class EmailCtrDrawerComponent {
     };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(
@@ -508,7 +508,7 @@ export class EmailCtrDrawerComponent {
     };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(
@@ -524,7 +524,7 @@ export class EmailCtrDrawerComponent {
     const defaultValue: MarketingAttributionResponse = { channels: [], projects: [] };
 
     const visible$ = toObservable(this.visible);
-    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || ''));
+    const foundation$ = toObservable(this.projectContextService.selectedFoundation).pipe(map((f) => f?.slug || 'tlf'));
 
     return toSignal(
       combineLatest([visible$, foundation$]).pipe(

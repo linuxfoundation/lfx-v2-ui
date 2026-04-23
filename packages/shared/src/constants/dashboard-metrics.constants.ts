@@ -835,10 +835,6 @@ function seriesTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | und
   return trendFromChange(((curr - prev) / prev) * 100);
 }
 
-// Legacy aliases — kept so existing call sites compile without a rename pass.
-const eventAttrMomChange = seriesMomChange;
-const eventAttrTrendDirection = seriesTrendDirection;
-
 /**
  * Build ED Evolution dashboard cards from live API data.
  * 4 North Star + 2 Brand + 1 Influence.
