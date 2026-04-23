@@ -123,6 +123,7 @@ export class MeetingRegistrantsDisplayComponent {
         this.showAddForm.set(false);
         this.addRegistrantForm.reset();
         this.optimisticRegistrants.set([]);
+        this.additionalRegistrantsCount.set(0);
       });
   }
 
@@ -182,10 +183,14 @@ export class MeetingRegistrantsDisplayComponent {
                   invite_accepted: null,
                   attended: null,
                 };
+                const meeting = this.meeting();
+                const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
+                const baseCount = splitCount > 0 ? splitCount : (meeting.registrant_count ?? this.internalRegistrants().length);
+                const nextAdditionalCount = this.additionalRegistrantsCount() + response.summary.successful;
                 this.optimisticRegistrants.update((list) => [...list, optimistic]);
-                this.additionalRegistrantsCount.update((c) => c + response.summary.successful);
-                this.registrantsCountChange.emit(this.additionalRegistrantsCount());
-                this.totalCountChange.emit(this.registrants().length);
+                this.additionalRegistrantsCount.set(nextAdditionalCount);
+                this.registrantsCountChange.emit(nextAdditionalCount);
+                this.totalCountChange.emit(baseCount + nextAdditionalCount);
                 this.refresh$.next(true);
               }
               this.addRegistrantForm.reset();
