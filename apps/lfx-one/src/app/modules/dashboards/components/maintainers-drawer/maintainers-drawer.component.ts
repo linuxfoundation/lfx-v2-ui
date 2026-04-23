@@ -34,9 +34,12 @@ export class MaintainersDrawerComponent {
 
   // === Static Options ===
   protected readonly insightsUrl: Signal<string> = computed(() => {
-    const slug = this.projectContextService.selectedFoundation()?.slug;
-    if (!slug) return buildInsightsUrl();
-    return buildInsightsUrl(`/collection/details/${slug}`);
+    const ctx = this.projectContextService.activeContext();
+    if (!ctx?.slug) return buildInsightsUrl();
+    if (this.projectContextService.isFoundationContext()) {
+      return buildInsightsUrl(`/collection/details/${ctx.slug}`);
+    }
+    return buildInsightsUrl(`/project/${ctx.slug}/contributors`, { timeRange: 'alltime', widget: 'contributors-leaderboard' });
   });
 
   protected readonly timeRangeOptions = [{ label: 'Last 12 months', value: 'last-12-months' }];
