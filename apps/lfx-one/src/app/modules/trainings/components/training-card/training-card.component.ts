@@ -117,6 +117,7 @@ export class TrainingCardComponent {
 
   private initStatusClasses(): Signal<string> {
     return computed(() => {
+      if (this.variant() !== 'ongoing') return '';
       const status = (this.training() as TrainingEnrollment).status as EnrollmentStatus | null;
       const classes: Record<EnrollmentStatus, string> = {
         started: 'bg-blue-50 text-blue-700 border border-blue-200',
