@@ -2037,6 +2037,9 @@ export class ProjectService {
     `;
 
       // Block 6: Project + campaign level performance breakdown (last 6 months)
+      // Uses LINEAR_REVENUE (not FIRST_TOUCH) — the per-campaign drill-down uses linear
+      // attribution to distribute credit fairly across touchpoints, while the top-level
+      // KPI (Blocks 1–2) uses first-touch for the headline ROAS.
       const projectPerfQuery = `
       SELECT
         PROJECT_NAME, CAMPAIGN_NAME, FUNNEL_STAGE,
@@ -2371,33 +2374,34 @@ export class ProjectService {
         }
       };
 
-      // Aggregate channel rows that map to the same UI label
+      // Aggregate channel rows that map to the same UI label.
+      // Guard with ?? 0 — SUM() returns NULL when all values in the group are NULL.
       const channelMap = new Map<string, MarketingAttributionChannel>();
       for (const row of channelResult.rows) {
         const label = mapChannel(row.CHANNEL);
         const existing = channelMap.get(label);
         if (existing) {
-          existing.sessions += row.SESSIONS;
-          existing.pageViews += row.PAGE_VIEWS;
-          existing.uniqueVisitors += row.UNIQUE_VISITORS;
-          existing.newVisitors += row.NEW_VISITORS;
-          existing.returningVisitors += row.RETURNING_VISITORS;
-          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE;
-          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE;
-          existing.linearRevenue += row.LINEAR_REVENUE;
-          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE;
+          existing.sessions += row.SESSIONS ?? 0;
+          existing.pageViews += row.PAGE_VIEWS ?? 0;
+          existing.uniqueVisitors += row.UNIQUE_VISITORS ?? 0;
+          existing.newVisitors += row.NEW_VISITORS ?? 0;
+          existing.returningVisitors += row.RETURNING_VISITORS ?? 0;
+          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE ?? 0;
+          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE ?? 0;
+          existing.linearRevenue += row.LINEAR_REVENUE ?? 0;
+          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE ?? 0;
         } else {
           channelMap.set(label, {
             channel: label,
-            sessions: row.SESSIONS,
-            pageViews: row.PAGE_VIEWS,
-            uniqueVisitors: row.UNIQUE_VISITORS,
-            newVisitors: row.NEW_VISITORS,
-            returningVisitors: row.RETURNING_VISITORS,
-            firstTouchRevenue: row.FIRST_TOUCH_REVENUE,
-            lastTouchRevenue: row.LAST_TOUCH_REVENUE,
-            linearRevenue: row.LINEAR_REVENUE,
-            timeDecayRevenue: row.TIME_DECAY_REVENUE,
+            sessions: row.SESSIONS ?? 0,
+            pageViews: row.PAGE_VIEWS ?? 0,
+            uniqueVisitors: row.UNIQUE_VISITORS ?? 0,
+            newVisitors: row.NEW_VISITORS ?? 0,
+            returningVisitors: row.RETURNING_VISITORS ?? 0,
+            firstTouchRevenue: row.FIRST_TOUCH_REVENUE ?? 0,
+            lastTouchRevenue: row.LAST_TOUCH_REVENUE ?? 0,
+            linearRevenue: row.LINEAR_REVENUE ?? 0,
+            timeDecayRevenue: row.TIME_DECAY_REVENUE ?? 0,
           });
         }
       }
@@ -2410,28 +2414,28 @@ export class ProjectService {
         const key = `${row.PROJECT_NAME}::${label}`;
         const existing = attrProjectMap.get(key);
         if (existing) {
-          existing.sessions += row.SESSIONS;
-          existing.pageViews += row.PAGE_VIEWS;
-          existing.uniqueVisitors += row.UNIQUE_VISITORS;
-          existing.newVisitors += row.NEW_VISITORS;
-          existing.returningVisitors += row.RETURNING_VISITORS;
-          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE;
-          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE;
-          existing.linearRevenue += row.LINEAR_REVENUE;
-          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE;
+          existing.sessions += row.SESSIONS ?? 0;
+          existing.pageViews += row.PAGE_VIEWS ?? 0;
+          existing.uniqueVisitors += row.UNIQUE_VISITORS ?? 0;
+          existing.newVisitors += row.NEW_VISITORS ?? 0;
+          existing.returningVisitors += row.RETURNING_VISITORS ?? 0;
+          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE ?? 0;
+          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE ?? 0;
+          existing.linearRevenue += row.LINEAR_REVENUE ?? 0;
+          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE ?? 0;
         } else {
           attrProjectMap.set(key, {
             projectName: row.PROJECT_NAME,
             channel: label,
-            sessions: row.SESSIONS,
-            pageViews: row.PAGE_VIEWS,
-            uniqueVisitors: row.UNIQUE_VISITORS,
-            newVisitors: row.NEW_VISITORS,
-            returningVisitors: row.RETURNING_VISITORS,
-            firstTouchRevenue: row.FIRST_TOUCH_REVENUE,
-            lastTouchRevenue: row.LAST_TOUCH_REVENUE,
-            linearRevenue: row.LINEAR_REVENUE,
-            timeDecayRevenue: row.TIME_DECAY_REVENUE,
+            sessions: row.SESSIONS ?? 0,
+            pageViews: row.PAGE_VIEWS ?? 0,
+            uniqueVisitors: row.UNIQUE_VISITORS ?? 0,
+            newVisitors: row.NEW_VISITORS ?? 0,
+            returningVisitors: row.RETURNING_VISITORS ?? 0,
+            firstTouchRevenue: row.FIRST_TOUCH_REVENUE ?? 0,
+            lastTouchRevenue: row.LAST_TOUCH_REVENUE ?? 0,
+            linearRevenue: row.LINEAR_REVENUE ?? 0,
+            timeDecayRevenue: row.TIME_DECAY_REVENUE ?? 0,
           });
         }
       }
