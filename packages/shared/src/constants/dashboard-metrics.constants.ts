@@ -659,7 +659,7 @@ export const HEALTH_METRICS_TRAINING_CERTIFICATION_DEFAULT_SUMMARY: TrainingCert
 };
 
 // ============================================
-// ED Dashboard Evolution Prototype (8 Cards)
+// ED Dashboard Evolution Prototype (7 Cards)
 // ============================================
 
 /** Helper to build a prototype sparkline dataset */
@@ -837,7 +837,7 @@ function seriesTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | und
 
 /**
  * Build ED Evolution dashboard cards from live API data.
- * 4 North Star + 2 Brand + 1 Influence.
+ * 1 Campaign Performance + 4 North Star + 2 Brand.
  * Member Retention is merged into the Member Growth drawer.
  *
  * Sparkline color semantics:
