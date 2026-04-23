@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
+import { LATEST_PAST_MEETINGS_FETCH_SIZE, LATEST_PAST_MEETINGS_RETURN_LIMIT, NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
 import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
@@ -488,7 +488,12 @@ export class UserService {
    * @param req - Express request object
    * @param projectUid - Optional project UID to filter meetings by
    * @param foundationUid - Optional foundation UID to filter meetings by (OR across child projects)
-   * @param options - When `basic: true`, skips RSVP enrichment, project-name enrichment, and access decoration.
+   * @param options - When `basic: true`, skips RSVP enrichment, project-name enrichment, and
+   *   `addAccessToResources` — intended for internal callers that do not surface those fields
+   *   (today: the pending-actions aggregator). Do not use from route handlers that return the
+   *   meeting payload to the frontend, since the `invited: true` decoration in this mode is
+   *   derived from the FGA tuple's existence (`filter_grants=direct`) and is NOT an
+   *   authorization check — it is a data shape marker, not an access decision.
    * @returns Array of Meeting objects the user has some direct FGA grant on
    */
   public async getUserMeetings(req: Request, projectUid?: string, foundationUid?: string, options?: { basic?: boolean }): Promise<Meeting[]> {
@@ -623,12 +628,17 @@ export class UserService {
     });
 
     if (options?.basic) {
+      // `invited: true` reflects that every row has a direct host/participant FGA tuple
+      // (pre-filtered by `filter_grants=direct`) — it is a data-shape marker, not an access
+      // decision. Callers must not treat it as authorization metadata.
       return sortedMeetings.map((m) => ({ ...m, invited: true }));
     }
 
     const enriched = await this.meetingService.getMeetingProjectName(req, sortedMeetings);
 
-    // Every result has a direct host or participant FGA tuple, so the user is invited by definition.
+    // `invited: true` — every row has a direct host/participant FGA tuple by virtue of
+    // `filter_grants=direct`, so the user is invited by definition. Data-shape marker, not an
+    // access decision (the subsequent `addAccessToResources` is the actual access layer).
     const invited = enriched.map((m) => ({ ...m, invited: true }));
 
     return this.accessCheckService.addAccessToResources(req, invited, 'v1_meeting', 'organizer');
@@ -834,18 +844,14 @@ export class UserService {
 
     const projectFilterParams = this.buildProjectScopeFilters(projectUid, foundationProjectUids);
 
-    // Over-fetch so the post-filter step (drop ongoing meetings whose scheduled end is still
-    // in the future) can still yield up to 5 truly-past rows when the top of the sort happens
-    // to include a few in-progress meetings. 10 is a small, bounded buffer.
-    const FETCH_SIZE = 10;
-    const RETURN_LIMIT = 5;
-
+    // See module-level LATEST_PAST_MEETINGS_FETCH_SIZE / RETURN_LIMIT JSDoc for why we
+    // over-fetch here.
     const response = await this.microserviceProxy
       .proxyRequest<QueryServiceResponse<PastMeeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'v1_past_meeting',
         filter_grants: 'direct',
         sort: 'name_desc',
-        page_size: FETCH_SIZE,
+        page_size: LATEST_PAST_MEETINGS_FETCH_SIZE,
         ...projectFilterParams,
       })
       .catch((error) => {
@@ -881,7 +887,7 @@ export class UserService {
         const effectiveEnd = this.computeEffectivePastMeetingEnd(meeting);
         return effectiveEnd !== null && effectiveEnd < now;
       })
-      .slice(0, RETURN_LIMIT);
+      .slice(0, LATEST_PAST_MEETINGS_RETURN_LIMIT);
 
     if (filtered.length === 0) {
       return [];

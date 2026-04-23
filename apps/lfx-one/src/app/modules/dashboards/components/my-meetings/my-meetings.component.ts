@@ -183,6 +183,27 @@ export class MyMeetingsComponent {
   }
 
   private initLastMeeting(): Signal<PastMeeting | null> {
-    return computed(() => this.rawPastMeetings()[0] ?? null);
+    return computed(() => {
+      // The backend `v1_past_meeting` index includes meetings as soon as they START (not end),
+      // so both the Me-lens fast-path and the project-lens `getPastMeetingsByProject` stream can
+      // contain in-progress meetings at the top. The Me-lens service already filters those out
+      // upstream, but the project-lens path doesn't — so we re-apply the filter client-side here
+      // to keep both lenses consistent. rawPastMeetings is already sorted newest-first.
+      const now = Date.now();
+      return (
+        this.rawPastMeetings().find((meeting) => {
+          if (meeting.scheduled_end_time) {
+            const scheduledEnd = new Date(meeting.scheduled_end_time).getTime();
+            if (!Number.isNaN(scheduledEnd)) return scheduledEnd < now;
+          }
+          const startIso = meeting.scheduled_start_time ?? meeting.start_time;
+          if (!startIso) return false;
+          const startMs = new Date(startIso).getTime();
+          const duration = Number(meeting.duration);
+          if (Number.isNaN(startMs) || Number.isNaN(duration)) return false;
+          return startMs + duration * 60 * 1000 < now;
+        }) ?? null
+      );
+    });
   }
 }

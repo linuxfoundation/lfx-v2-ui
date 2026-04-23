@@ -193,6 +193,9 @@ export class UserService {
   public getUserLatestPastMeetings(): Observable<PastMeeting[]> {
     if (!this.userLatestPastMeetings$) {
       const destroy$ = this.userLatestPastMeetingsDestroy$;
+      // Shares `userPastMeetingsRefresh$` with `getUserPastMeetings()` on purpose — the two
+      // caches represent different slices of the same underlying data, so `refreshUserPastMeetings()`
+      // invalidates both together and they re-fetch in lockstep.
       this.userLatestPastMeetings$ = this.userPastMeetingsRefresh$.pipe(
         startWith(undefined),
         switchMap(() => this.http.get<PastMeeting[]>('/api/user/latest-past-meetings')),

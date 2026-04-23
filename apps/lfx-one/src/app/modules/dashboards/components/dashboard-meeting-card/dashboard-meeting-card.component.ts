@@ -226,6 +226,10 @@ export class DashboardMeetingCardComponent {
   private initMeetingDetailClipboardUrl(): Signal<string> {
     return computed(() => {
       const href = this.meetingDetailHref();
+      // SSR fallback: `window` is undefined during server rendering, so we return the relative
+      // path. The copy-link button sits behind a `@defer` block, so in practice the clipboard
+      // write only runs in the browser where `window.location.origin` resolves — but if that
+      // `@defer` is ever removed, preserve this guard so SSR snapshots don't copy a relative URL.
       if (!isPlatformBrowser(this.platformId)) return href;
       const override = this.detailUrl();
       if (override && /^https?:\/\//i.test(override)) return href;

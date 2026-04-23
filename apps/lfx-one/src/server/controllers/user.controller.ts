@@ -46,6 +46,25 @@ export class UserController {
         return;
       }
 
+      // projectUid and projectSlug must be supplied together (project/foundation lens) or
+      // omitted together (Me lens). Surveys scope on projectSlug while meetings/votes scope on
+      // projectUid — a half-supplied call would silently produce inconsistent aggregation across
+      // the three sources. Reject early so the contract stays explicit.
+      if (!!projectUid !== !!projectSlug) {
+        next(
+          ServiceValidationError.forField(
+            projectUid ? 'projectSlug' : 'projectUid',
+            'projectUid and projectSlug must be supplied together or omitted together',
+            {
+              operation: 'get_pending_actions',
+              service: 'user_controller',
+              path: req.path,
+            }
+          )
+        );
+        return;
+      }
+
       // Optional `?limit=` clamps the response size so mobile / summary cards can request a
       // smaller payload. Absent = unbounded; when present it must be a positive integer. Any
       // present-but-non-string value (array from `?limit=1&limit=2`, object from `?limit[foo]=1`)
