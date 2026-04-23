@@ -714,8 +714,9 @@ export class MeetingCardComponent implements OnInit {
     return computed(() => {
       const m = this.meeting();
       const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
-      const baseCount = splitCount || m.registrant_count || this.drawerGuestCount() || 0;
-      return baseCount + this.additionalRegistrantsCount();
+      const meetingBaseCount = splitCount || m.registrant_count || 0;
+      const meetingTotalCount = meetingBaseCount + this.additionalRegistrantsCount();
+      return Math.max(meetingTotalCount, this.drawerGuestCount() || 0);
     });
   }
 

@@ -124,6 +124,10 @@ export class MeetingRegistrantsDisplayComponent {
         this.addRegistrantForm.reset();
         this.optimisticRegistrants.set([]);
         this.additionalRegistrantsCount.set(0);
+        this.registrantsCountChange.emit(0);
+        const m = this.meeting();
+        const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
+        this.totalCountChange.emit(splitCount || m.registrant_count || 0);
       });
   }
 
@@ -185,7 +189,7 @@ export class MeetingRegistrantsDisplayComponent {
                 };
                 const meeting = this.meeting();
                 const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-                const baseCount = splitCount > 0 ? splitCount : (meeting.registrant_count ?? this.internalRegistrants().length);
+                const baseCount = splitCount > 0 ? splitCount : meeting.registrant_count || this.internalRegistrants().length;
                 const nextAdditionalCount = this.additionalRegistrantsCount() + response.summary.successful;
                 this.optimisticRegistrants.update((list) => [...list, optimistic]);
                 this.additionalRegistrantsCount.set(nextAdditionalCount);
@@ -238,7 +242,7 @@ export class MeetingRegistrantsDisplayComponent {
                 tap((registrants) => {
                   const meeting = this.meeting();
                   const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-                  const baseCount = splitCount > 0 ? splitCount : (meeting.registrant_count ?? (registrants?.length || 0));
+                  const baseCount = splitCount > 0 ? splitCount : meeting.registrant_count || registrants?.length || 0;
                   const fetchedAdditional = Math.max(0, (registrants?.length || 0) - baseCount);
                   // Never decrease below the current optimistic count (async indexing may lag)
                   const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
