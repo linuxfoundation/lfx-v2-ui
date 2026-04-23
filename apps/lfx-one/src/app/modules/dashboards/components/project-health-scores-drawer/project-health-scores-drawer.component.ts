@@ -25,7 +25,7 @@ export class ProjectHealthScoresDrawerComponent {
   protected readonly insightsUrl: Signal<string> = computed(() => {
     const slug = this.projectContextService.selectedFoundation()?.slug;
     if (!slug) return buildInsightsUrl();
-    return buildInsightsUrl(`/project/${slug}`);
+    return buildInsightsUrl(`/collection/details/${slug}`);
   });
 
   protected readonly legendColors = {

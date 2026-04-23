@@ -25,7 +25,7 @@ export class OrgDependencyDrawerComponent {
   protected readonly insightsUrl: Signal<string> = computed(() => {
     const slug = this.projectContextService.selectedFoundation()?.slug;
     if (!slug) return buildInsightsUrl();
-    return buildInsightsUrl(`/project/${slug}/contributors`, { timeRange: 'alltime', widget: 'organization-dependency' });
+    return buildInsightsUrl(`/collection/details/${slug}`);
   });
 
   // === Model Signals (two-way binding) ===
