@@ -7,9 +7,18 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { StatCardGridComponent } from '@components/stat-card-grid/stat-card-grid.component';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL } from '@lfx-one/shared/constants';
 import { MailingListMemberDeliveryMode } from '@lfx-one/shared/enums';
-import { CommitteeReference, FilterOption, GroupsIOMailingList, GroupsIOService, MyMailingList, ProjectContext } from '@lfx-one/shared/interfaces';
+import {
+  CommitteeReference,
+  FilterOption,
+  GroupsIOMailingList,
+  GroupsIOService,
+  MyMailingList,
+  ProjectContext,
+  StatCardItem,
+} from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { PersonaService } from '@services/persona.service';
@@ -23,7 +32,7 @@ import { MailingListTableComponent } from '../components/mailing-list-table/mail
 
 @Component({
   selector: 'lfx-mailing-list-dashboard',
-  imports: [ButtonComponent, CardComponent, MailingListTableComponent, ReactiveFormsModule, EmptyStateComponent],
+  imports: [ButtonComponent, CardComponent, MailingListTableComponent, ReactiveFormsModule, EmptyStateComponent, StatCardGridComponent],
   templateUrl: './mailing-list-dashboard.component.html',
   styleUrl: './mailing-list-dashboard.component.scss',
 })
@@ -83,6 +92,9 @@ export class MailingListDashboardComponent {
   public readonly myTotalMailingLists: Signal<number> = this.initMyTotalMailingLists();
   public readonly myPublicMailingLists: Signal<number> = this.initMyPublicMailingLists();
   public readonly myOnDigest: Signal<number> = this.initMyOnDigest();
+  // Stat card arrays consumed by <lfx-stat-card-grid>
+  public readonly foundationStatCards: Signal<StatCardItem[]> = this.initFoundationStatCards();
+  public readonly myStatCards: Signal<StatCardItem[]> = this.initMyStatCards();
   public readonly availableServices: Signal<GroupsIOService[]> = this.initServices();
   public readonly hasNoServices: Signal<boolean> = this.initHasNoServices();
 
@@ -297,6 +309,22 @@ export class MailingListDashboardComponent {
 
   private initMyOnDigest(): Signal<number> {
     return computed(() => this.myMailingLists().filter((ml) => ml.my_delivery_mode === MailingListMemberDeliveryMode.DIGEST).length);
+  }
+
+  private initFoundationStatCards(): Signal<StatCardItem[]> {
+    return computed<StatCardItem[]>(() => [
+      { value: this.totalMailingLists(), label: 'Total Mailing Lists', icon: 'fa-light fa-envelope', iconContainerClass: 'bg-gray-200 text-gray-500' },
+      { value: this.totalSubscribers(), label: 'Total Subscribers', icon: 'fa-light fa-users', iconContainerClass: 'bg-blue-100 text-blue-600' },
+      { value: this.publicMailingLists(), label: 'Public Lists', icon: 'fa-light fa-globe', iconContainerClass: 'bg-emerald-100 text-emerald-600' },
+    ]);
+  }
+
+  private initMyStatCards(): Signal<StatCardItem[]> {
+    return computed<StatCardItem[]>(() => [
+      { value: this.myTotalMailingLists(), label: 'Total Mailing Lists', icon: 'fa-light fa-envelope', iconContainerClass: 'bg-gray-200 text-gray-500' },
+      { value: this.myOnDigest(), label: 'On Digest', icon: 'fa-light fa-newspaper', iconContainerClass: 'bg-blue-100 text-blue-600' },
+      { value: this.myPublicMailingLists(), label: 'Public Lists', icon: 'fa-light fa-globe', iconContainerClass: 'bg-emerald-100 text-emerald-600' },
+    ]);
   }
 
   private initServices(): Signal<GroupsIOService[]> {
