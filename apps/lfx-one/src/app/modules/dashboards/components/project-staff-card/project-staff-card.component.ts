@@ -44,8 +44,7 @@ export class ProjectStaffCardComponent {
       switchMap((uid) =>
         this.permissionsService.getProjectSettings(uid).pipe(
           tap(() => this.loading.set(false)),
-          catchError((error) => {
-            console.error('Failed to fetch project settings:', error);
+          catchError(() => {
             this.loading.set(false);
             this.hasError.set(true);
             return of(null);
