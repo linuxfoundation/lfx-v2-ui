@@ -33,7 +33,12 @@ export class MaintainersDrawerComponent {
   private readonly fb = inject(FormBuilder);
 
   // === Static Options ===
-  protected readonly insightsUrl = buildInsightsUrl();
+  protected readonly insightsUrl: Signal<string> = computed(() => {
+    const slug = this.projectContextService.selectedFoundation()?.slug;
+    if (!slug) return buildInsightsUrl();
+    return buildInsightsUrl(`/project/${slug}/contributors`, { timeRange: 'alltime', widget: 'contributors-leaderboard' });
+  });
+
   protected readonly timeRangeOptions = [{ label: 'Last 12 months', value: 'last-12-months' }];
 
   protected readonly trendChartOptions: ChartOptions<'line'> = {
