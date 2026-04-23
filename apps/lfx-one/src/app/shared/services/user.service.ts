@@ -186,9 +186,10 @@ export class UserService {
 
   /**
    * Gets up to 5 of the user's most recent past meetings via the fast-path endpoint.
-   * Uses query service sort=name_desc + page_size=5, and filters out meetings whose
-   * scheduled end time has not yet passed. Returns an empty array when the user has no
-   * truly past meetings.
+   * The backend uses `sort=name_desc` and over-fetches (page_size=10) so it can drop ongoing
+   * meetings from the top of the sort and still return up to 5 truly-past rows in a single
+   * request. Returns an empty array when the user has no truly past meetings, or fewer than 5
+   * rows when many concurrently-ongoing meetings sit at the head of the sort.
    */
   public getUserLatestPastMeetings(): Observable<PastMeeting[]> {
     if (!this.userLatestPastMeetings$) {

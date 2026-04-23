@@ -4,6 +4,7 @@
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
+import { getStringQueryParam } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { UserService } from '../services/user.service';
 import { getEffectiveEmail } from '../utils/auth-helper';
@@ -22,9 +23,11 @@ export class UserController {
     // user-scoped across the user's FGA grants instead of project-scoped.
     // TODO: `persona` is accepted for telemetry only — the aggregator no longer consumes it.
     // Drop from the query contract once all frontend callers stop sending it.
-    const persona = req.query['persona'] as string | undefined;
-    const projectUid = req.query['projectUid'] as string | undefined;
-    const projectSlug = req.query['projectSlug'] as string | undefined;
+    // `getStringQueryParam` drops non-string values (arrays from `?k=a&k=b`, objects from
+    // `?k[x]=y`) that Express would otherwise leak through a bare `as string | undefined` cast.
+    const persona = getStringQueryParam(req, 'persona');
+    const projectUid = getStringQueryParam(req, 'projectUid');
+    const projectSlug = getStringQueryParam(req, 'projectSlug');
 
     const startTime = logger.startOperation(req, 'get_pending_actions', {
       ...(persona !== undefined && { persona }),
@@ -116,15 +119,15 @@ export class UserController {
    * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const projectUid = getStringQueryParam(req, 'projectUid');
+    const foundationUid = getStringQueryParam(req, 'foundation_uid');
+
     const startTime = logger.startOperation(req, 'get_user_meetings', {
-      project_uid: req.query['projectUid'],
-      foundation_uid: req.query['foundation_uid'],
+      project_uid: projectUid,
+      foundation_uid: foundationUid,
     });
 
     try {
-      const projectUid = req.query['projectUid'] as string | undefined;
-      const foundationUid = req.query['foundation_uid'] as string | undefined;
-
       // No email extraction needed — the service uses req.bearerToken (via filter_grants=direct
       // server-side FGA lookup). Auth middleware has already ensured the user is authenticated.
       const meetings = await this.userService.getUserMeetings(req, projectUid, foundationUid);
@@ -154,15 +157,15 @@ export class UserController {
    * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const projectUid = getStringQueryParam(req, 'projectUid');
+    const foundationUid = getStringQueryParam(req, 'foundation_uid');
+
     const startTime = logger.startOperation(req, 'get_user_past_meetings', {
-      project_uid: req.query['projectUid'],
-      foundation_uid: req.query['foundation_uid'],
+      project_uid: projectUid,
+      foundation_uid: foundationUid,
     });
 
     try {
-      const projectUid = req.query['projectUid'] as string | undefined;
-      const foundationUid = req.query['foundation_uid'] as string | undefined;
-
       // Extract user email from auth context (impersonation-aware, already lowercased)
       const userEmail = getEffectiveEmail(req);
       if (!userEmail) {
@@ -195,22 +198,26 @@ export class UserController {
 
   /**
    * GET /api/user/latest-past-meetings - Get up to 5 most-recent past meetings for the authenticated user
-   * Returns an array of up to 5 past meetings the user has direct FGA access to with
-   * `scheduled_end_time` in the past. Uses query service sort=name_desc + page_size=5 instead of
-   * paginating the full history.
+   * Returns an array of up to 5 past meetings the user has direct FGA access to with an
+   * `effective end` (scheduled_end_time, or start + duration when end is absent) in the past.
+   * Uses `sort=name_desc` and over-fetches via `page_size=LATEST_PAST_MEETINGS_FETCH_SIZE`
+   * (10 today) instead of paginating the full history; the service drops ongoing meetings from
+   * the top of the sort and slices down to LATEST_PAST_MEETINGS_RETURN_LIMIT (5). The response
+   * may therefore be fewer than 5 rows if many concurrently-ongoing meetings sit at the head
+   * of the sort for this user.
    * @query projectUid - Optional project UID to filter meetings
    * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserLatestPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const projectUid = getStringQueryParam(req, 'projectUid');
+    const foundationUid = getStringQueryParam(req, 'foundation_uid');
+
     const startTime = logger.startOperation(req, 'get_user_latest_past_meetings', {
-      project_uid: req.query['projectUid'],
-      foundation_uid: req.query['foundation_uid'],
+      project_uid: projectUid,
+      foundation_uid: foundationUid,
     });
 
     try {
-      const projectUid = req.query['projectUid'] as string | undefined;
-      const foundationUid = req.query['foundation_uid'] as string | undefined;
-
       // No email extraction needed — the service uses req.bearerToken (via filter_grants=direct
       // server-side FGA lookup). Auth middleware has already ensured the user is authenticated.
       const pastMeetings = await this.userService.getUserLatestPastMeetings(req, projectUid, foundationUid);

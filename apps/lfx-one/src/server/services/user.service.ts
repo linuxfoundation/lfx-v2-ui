@@ -1,7 +1,13 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { LATEST_PAST_MEETINGS_FETCH_SIZE, LATEST_PAST_MEETINGS_RETURN_LIMIT, NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
+import {
+  LATEST_PAST_MEETINGS_FETCH_SIZE,
+  LATEST_PAST_MEETINGS_RETURN_LIMIT,
+  NATS_CONFIG,
+  QUERY_SERVICE_FILTERS_OR_BATCH_SIZE,
+  ROOT_PROJECT_SLUG,
+} from '@lfx-one/shared/constants';
 import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
@@ -1207,22 +1213,40 @@ export class UserService {
 
     // No `filter_grants` on the `vote` query — users have no direct FGA grant on the parent vote
     // doc; access is implied by their `vote_response` rows fetched above.
-    const votes = await fetchAllQueryResources<Vote>(
-      req,
-      (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'vote',
-          filters_or: pendingVoteUids.map((uid) => `vote_uid:${uid}`),
-          ...(pageToken && { page_token: pageToken }),
-        }),
-      { failOnPartial: true }
-    ).catch((error) => {
-      logger.warning(req, 'fetch_pending_votes', 'Failed to fetch vote details, returning empty list', {
-        vote_uid_count: pendingVoteUids.length,
-        err: error,
+    //
+    // Chunk `filters_or` at QUERY_SERVICE_FILTERS_OR_BATCH_SIZE to stay under query-service /
+    // OpenSearch URL-length limits when the user has a large number of pending invitations.
+    // Matches the repo pattern in `committee.service.ts getCommitteesByIds`.
+    const voteBatches: string[][] = [];
+    for (let i = 0; i < pendingVoteUids.length; i += QUERY_SERVICE_FILTERS_OR_BATCH_SIZE) {
+      voteBatches.push(pendingVoteUids.slice(i, i + QUERY_SERVICE_FILTERS_OR_BATCH_SIZE));
+    }
+
+    // Batches are non-overlapping slices of `pendingVoteUids`, so any given vote row can match
+    // at most one batch — no dedupe step needed after the flatten.
+    const votes = await Promise.all(
+      voteBatches.map((batch) =>
+        fetchAllQueryResources<Vote>(
+          req,
+          (pageToken) =>
+            this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+              type: 'vote',
+              filters_or: batch.map((uid) => `vote_uid:${uid}`),
+              ...(pageToken && { page_token: pageToken }),
+            }),
+          { failOnPartial: true }
+        )
+      )
+    )
+      .then((batchResults) => batchResults.flat())
+      .catch((error) => {
+        logger.warning(req, 'fetch_pending_votes', 'Failed to fetch vote details, returning empty list', {
+          vote_uid_count: pendingVoteUids.length,
+          batch_count: voteBatches.length,
+          err: error,
+        });
+        return [] as Vote[];
       });
-      return [] as Vote[];
-    });
 
     const now = Date.now();
     return votes.filter((v) => v.status === PollStatus.ACTIVE && !!v.end_time && new Date(v.end_time).getTime() > now);
