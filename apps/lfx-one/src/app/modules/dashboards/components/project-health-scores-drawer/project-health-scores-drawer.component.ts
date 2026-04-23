@@ -22,15 +22,6 @@ export class ProjectHealthScoresDrawerComponent {
   private readonly projectContextService = inject(ProjectContextService);
 
   // === Static Options ===
-  protected readonly insightsUrl: Signal<string> = computed(() => {
-    const ctx = this.projectContextService.activeContext();
-    if (!ctx?.slug) return buildInsightsUrl();
-    if (this.projectContextService.isFoundationContext()) {
-      return buildInsightsUrl(`/collection/details/${ctx.slug}`);
-    }
-    return buildInsightsUrl(`/project/${ctx.slug}`);
-  });
-
   protected readonly legendColors = {
     critical: lfxColors.red[500],
     unsteady: lfxColors.amber[400],
@@ -89,6 +80,15 @@ export class ProjectHealthScoresDrawerComponent {
   public readonly visible = model<boolean>(false);
 
   // === Computed Signals ===
+  protected readonly insightsUrl: Signal<string> = computed(() => {
+    const ctx = this.projectContextService.activeContext();
+    if (!ctx?.slug) return buildInsightsUrl();
+    if (this.projectContextService.isFoundationContext()) {
+      return buildInsightsUrl(`/collection/details/${ctx.slug}`);
+    }
+    return buildInsightsUrl(`/project/${ctx.slug}`);
+  });
+
   protected readonly totalProjects: Signal<number> = computed(() => {
     const d = this.data();
     return d.excellent + d.healthy + d.stable + d.unsteady + d.critical;
