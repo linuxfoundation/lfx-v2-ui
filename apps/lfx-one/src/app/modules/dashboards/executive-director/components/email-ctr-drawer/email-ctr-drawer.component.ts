@@ -551,6 +551,7 @@ export class EmailCtrDrawerComponent {
       combineLatest([visible$, foundation$]).pipe(
         filter(([isVisible, slug]) => isVisible && !!slug),
         map(([, slug]) => slug),
+        tap(() => this.paidDataResolved.set(false)),
         switchMap((foundationSlug) =>
           this.analyticsService.getSocialReach(foundationSlug).pipe(
             tap(() => this.paidDataResolved.set(true)),
@@ -575,6 +576,7 @@ export class EmailCtrDrawerComponent {
       combineLatest([visible$, foundation$]).pipe(
         filter(([isVisible, slug]) => isVisible && !!slug),
         map(([, slug]) => slug),
+        tap(() => this.attributionDataResolved.set(false)),
         switchMap((foundationSlug) =>
           this.analyticsService.getMarketingAttribution(foundationSlug).pipe(
             tap(() => this.attributionDataResolved.set(true)),
