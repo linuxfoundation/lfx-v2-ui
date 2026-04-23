@@ -3369,6 +3369,30 @@ export interface MarketingAttributionResponse {
 }
 
 /**
+ * Aggregated metrics for a single marketing funnel tier (ToFU / MoFU / BoFU).
+ * Used by the email-CTR drawer to roll up attribution data by funnel stage.
+ */
+export interface FunnelTierMetrics {
+  count: number;
+  spend: number;
+  revenue: number;
+  impressions: number;
+  clicks: number;
+  sessions: number;
+  conversions: number;
+}
+
+/**
+ * Funnel-stage breakdown of paid campaign metrics.
+ * Built from PaidCampaignRow[] in the email-CTR drawer.
+ */
+export interface FunnelAggregates {
+  tofu: FunnelTierMetrics;
+  mofu: FunnelTierMetrics;
+  bofu: FunnelTierMetrics;
+}
+
+/**
  * Aggregated response for all ED Evolution dashboard API calls.
  * Used by buildEdEvolutionMetrics() to convert API data into card UI models.
  */

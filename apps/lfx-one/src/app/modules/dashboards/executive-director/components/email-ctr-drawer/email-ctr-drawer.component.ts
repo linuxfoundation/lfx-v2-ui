@@ -18,6 +18,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 
 import type {
   EmailCtrResponse,
+  FunnelAggregates,
+  FunnelTierMetrics,
   MarketingAttributionChannel,
   MarketingAttributionProject,
   MarketingAttributionResponse,
@@ -597,20 +599,4 @@ export class EmailCtrDrawerComponent {
     if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
     return `$${value.toLocaleString()}`;
   }
-}
-
-interface FunnelTierMetrics {
-  count: number;
-  spend: number;
-  revenue: number;
-  impressions: number;
-  clicks: number;
-  sessions: number;
-  conversions: number;
-}
-
-interface FunnelAggregates {
-  tofu: FunnelTierMetrics;
-  mofu: FunnelTierMetrics;
-  bofu: FunnelTierMetrics;
 }
