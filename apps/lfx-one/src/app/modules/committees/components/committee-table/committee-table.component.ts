@@ -89,9 +89,18 @@ export class CommitteeTableComponent {
   protected readonly categoryTabOptions = computed<FilterPillOption[]>(() =>
     this.categoryOptions().map((opt) => ({
       id: opt.value ?? 'all',
-      label: opt.label ?? 'All',
+      label: this.truncateTabLabel(opt.label ?? 'All'),
+      fullLabel: opt.label ?? 'All',
     }))
   );
+
+  private truncateTabLabel(label: string): string {
+    const match = label.match(/^(.+) \((\d+)\)$/);
+    if (!match) return label;
+    const [, name, count] = match;
+    if (name.length <= 20) return label;
+    return `${name.slice(0, 20)}...(${count})`;
+  }
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);
