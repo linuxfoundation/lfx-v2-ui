@@ -158,6 +158,7 @@ export class MeetingCardComponent implements OnInit {
   // Computed signal to check if user can toggle between RSVP Details and RSVP Button Group
   // True when user is both an organizer AND invited to the meeting (for non-past meetings)
   public readonly canToggleRsvpView: Signal<boolean> = computed(() => !!this.meeting().organizer && this.isInvited() && !this.pastMeeting());
+  public readonly guestCount: Signal<number> = this.initGuestCount();
 
   public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
   public readonly meetingDescription: Signal<string> = this.initMeetingDescription();
@@ -705,6 +706,14 @@ export class MeetingCardComponent implements OnInit {
   private initHasAiCompanion(): Signal<boolean> {
     return computed(() => {
       return this.meeting().zoom_config?.ai_companion_enabled || false;
+    });
+  }
+
+  private initGuestCount(): Signal<number> {
+    return computed(() => {
+      const m = this.meeting();
+      const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
+      return splitCount || m.registrant_count || 0;
     });
   }
 

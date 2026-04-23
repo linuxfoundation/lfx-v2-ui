@@ -47,14 +47,11 @@ export class MeetingRegistrantsDisplayComponent {
   private readonly refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private readonly externallyManaged: Signal<boolean> = computed(() => this.initialRegistrants() !== null);
   private readonly internalRegistrants: Signal<MeetingRegistrant[]> = this.initRegistrantsList();
+  // Optimistically-added registrants not yet returned by the backend index (query-service indexing is async).
+  // Cleared when the drawer closes; naturally hidden once the refetch includes the registrant (deduped by email).
+  private readonly optimisticRegistrants: WritableSignal<MeetingRegistrant[]> = signal<MeetingRegistrant[]>([]);
   public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
-  public readonly registrants: Signal<MeetingRegistrant[]> = computed(() => {
-    if (this.externallyManaged()) {
-      const seed = this.initialRegistrants() ?? [];
-      return [...seed].sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[];
-    }
-    return this.internalRegistrants();
-  });
+  public readonly registrants: Signal<MeetingRegistrant[]> = this.initRegistrants();
   public readonly registrantsLoading: Signal<boolean> = computed(() => {
     // Past-meeting participants are always fetched internally (parent does not prefetch them),
     // so fall back to the internal loader regardless of externally-managed mode.
@@ -133,6 +130,7 @@ export class MeetingRegistrantsDisplayComponent {
       .subscribe(() => {
         this.showAddForm.set(false);
         this.addRegistrantForm.reset();
+        this.optimisticRegistrants.set([]);
       });
   }
 
@@ -169,7 +167,30 @@ export class MeetingRegistrantsDisplayComponent {
                 // Parent owns the data — request a refetch and let it bump its own optimistic count.
                 this.refreshRequested.emit(response.summary.successful);
               } else {
-                // Self-managed mode: optimistically increment locally (query indexing is async).
+                // Self-managed mode: optimistically add to the displayed list immediately
+                // (query-service indexing is async; the refetch may not include them yet).
+                const optimistic: MeetingRegistrant = {
+                  uid: `optimistic-${Date.now()}`,
+                  meeting_id: this.meeting().id,
+                  email: formValue.email ?? '',
+                  first_name: formValue.first_name ?? '',
+                  last_name: formValue.last_name ?? '',
+                  host: formValue.host ?? false,
+                  job_title: formValue.job_title || null,
+                  org_name: formValue.org_name || null,
+                  linkedin_profile: formValue.linkedin_profile || null,
+                  occurrence_id: null,
+                  org_is_member: false,
+                  org_is_project_member: false,
+                  avatar_url: null,
+                  username: null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  type: 'direct',
+                  invite_accepted: null,
+                  attended: null,
+                };
+                this.optimisticRegistrants.update((list) => [...list, optimistic]);
                 this.additionalRegistrantsCount.update((c) => c + response.summary.successful);
                 this.registrantsCountChange.emit(this.additionalRegistrantsCount());
                 this.refresh$.next(true);
@@ -217,7 +238,9 @@ export class MeetingRegistrantsDisplayComponent {
                 catchError(() => of([])),
                 map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
                 tap((registrants) => {
-                  const baseCount = (this.meeting().individual_registrants_count || 0) + (this.meeting().committee_members_count || 0);
+                  const meeting = this.meeting();
+                  const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
+                  const baseCount = splitCount > 0 ? splitCount : (meeting.registrant_count ?? (registrants?.length || 0));
                   const fetchedAdditional = Math.max(0, (registrants?.length || 0) - baseCount);
                   // Never decrease below the current optimistic count (async indexing may lag)
                   const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
@@ -252,6 +275,21 @@ export class MeetingRegistrantsDisplayComponent {
       ),
       { initialValue: [] }
     );
+  }
+
+  private initRegistrants(): Signal<MeetingRegistrant[]> {
+    return computed(() => {
+      let list: MeetingRegistrant[];
+      if (this.externallyManaged()) {
+        const seed = this.initialRegistrants() ?? [];
+        list = [...seed].sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[];
+      } else {
+        list = this.internalRegistrants();
+      }
+      const fetchedEmails = new Set(list.map((r) => r.email?.toLowerCase()));
+      const pending = this.optimisticRegistrants().filter((r) => !fetchedEmails.has(r.email?.toLowerCase()));
+      return pending.length ? [...pending, ...list] : list;
+    });
   }
 
   private initGroupFilterOptions() {
