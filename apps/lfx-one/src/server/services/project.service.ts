@@ -967,13 +967,14 @@ export class ProjectService {
   }
 
   /**
-   * Get pending survey actions for a user
-   * Queries for non-responded surveys and transforms them into PendingActionItem format
+   * Get pending survey actions for a user.
+   * Queries for non-responded surveys and transforms them into PendingActionItem format.
+   * When `projectSlug` is omitted, returns surveys across all of the user's projects (Me-lens).
    * @param email - User's email from OIDC authentication
-   * @param projectSlug - Project slug to filter surveys
+   * @param projectSlug - Optional project slug; omit for unscoped (all-projects) results
    * @returns Array of pending action items with survey links
    */
-  public async getPendingActionSurveys(email: string, projectSlug: string): Promise<PendingActionItem[]> {
+  public async getPendingActionSurveys(email: string, projectSlug?: string): Promise<PendingActionItem[]> {
     // The COMMITTEE_CATEGORY='Board' filter was dropped — a pending survey is a pending
     // action regardless of which committee runs it. If the table grows to include noisy
     // categories in the future, reintroduce a committee-scoped filter here rather than a
@@ -982,6 +983,14 @@ export class ProjectService {
     // — the Snowflake column stores emails lowercased and an un-normalized input silently
     // misses rows when the caller passed a mixed-case address.
     const normalizedEmail = email.trim().toLowerCase();
+
+    const conditions = ['EMAIL = ?', 'SURVEY_CUTOFF_DATE > CURRENT_DATE()', "RESPONSE_TYPE = 'non_response'"];
+    const binds: string[] = [normalizedEmail];
+    if (projectSlug) {
+      conditions.push('PROJECT_SLUG = ?');
+      binds.push(projectSlug);
+    }
+
     const query = `
       SELECT
         SURVEY_TITLE,
@@ -989,14 +998,11 @@ export class ProjectService {
         PROJECT_NAME,
         SURVEY_LINK
       FROM ANALYTICS.PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PENDING_ACTION_SURVEYS
-      WHERE EMAIL = ?
-        AND PROJECT_SLUG = ?
-        AND SURVEY_CUTOFF_DATE > CURRENT_DATE()
-        AND RESPONSE_TYPE = 'non_response'
+      WHERE ${conditions.join(' AND ')}
       ORDER BY SURVEY_CUTOFF_DATE ASC
     `;
 
-    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, [normalizedEmail, projectSlug]);
+    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, binds);
 
     // Transform database rows to PendingActionItem format
     return result.rows.map((row) => {
@@ -1016,7 +1022,7 @@ export class ProjectService {
       });
 
       return {
-        type: 'Submit Feedback',
+        type: 'Survey',
         badge: row.PROJECT_NAME,
         text: `${row.SURVEY_TITLE} is due ${formattedDate}`,
         icon: 'fa-regular fa-clipboard-list',

@@ -1,7 +1,6 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { PersonaType } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
 import { ServiceValidationError } from '../errors';
@@ -19,9 +18,16 @@ export class UserController {
    * GET /api/user/pending-actions - Get all pending actions for the authenticated user
    */
   public async getPendingActions(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // projectUid/projectSlug/persona are optional. When omitted, the aggregator runs
+    // user-scoped across the user's FGA grants instead of project-scoped.
+    const persona = req.query['persona'] as string | undefined;
+    const projectUid = req.query['projectUid'] as string | undefined;
+    const projectSlug = req.query['projectSlug'] as string | undefined;
+
     const startTime = logger.startOperation(req, 'get_pending_actions', {
-      persona: req.query['persona'],
-      project_uid: req.query['projectUid'],
+      ...(persona !== undefined && { persona }),
+      ...(projectUid !== undefined && { project_uid: projectUid }),
+      ...(projectSlug !== undefined && { project_slug: projectSlug }),
     });
 
     try {
@@ -29,45 +35,6 @@ export class UserController {
       const userEmail = getEffectiveEmail(req);
       if (!userEmail) {
         const validationError = ServiceValidationError.forField('email', 'User email not found in authentication context', {
-          operation: 'get_pending_actions',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      // Extract and validate persona
-      const persona = req.query['persona'] as PersonaType | undefined;
-      if (!persona) {
-        const validationError = ServiceValidationError.forField('persona', 'persona query parameter is required', {
-          operation: 'get_pending_actions',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      // Extract and validate projectUid
-      const projectUid = req.query['projectUid'] as string | undefined;
-      if (!projectUid) {
-        const validationError = ServiceValidationError.forField('projectUid', 'projectUid query parameter is required', {
-          operation: 'get_pending_actions',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      // Extract and validate projectSlug (needed for Snowflake surveys query)
-      const projectSlug = req.query['projectSlug'] as string | undefined;
-      if (!projectSlug) {
-        const validationError = ServiceValidationError.forField('projectSlug', 'projectSlug query parameter is required', {
           operation: 'get_pending_actions',
           service: 'user_controller',
           path: req.path,
@@ -99,14 +66,14 @@ export class UserController {
         limit = Math.min(parsed, 100);
       }
 
-      // Get pending actions from service — persona is validated above for API-contract stability
-      // but is no longer consumed by the aggregator (pending actions are persona-agnostic now).
+      // persona is accepted for telemetry but no longer consumed by the aggregator
+      // (pending actions are persona-agnostic).
       const pendingActions = await this.userService.getPendingActions(req, projectUid, userEmail, projectSlug, limit);
 
       logger.success(req, 'get_pending_actions', startTime, {
-        persona,
-        project_uid: projectUid,
-        project_slug: projectSlug,
+        ...(persona !== undefined && { persona }),
+        ...(projectUid !== undefined && { project_uid: projectUid }),
+        ...(projectSlug !== undefined && { project_slug: projectSlug }),
         action_count: pendingActions.length,
         ...(limit !== undefined && { limit }),
       });
@@ -195,6 +162,53 @@ export class UserController {
         project_uid: projectUid,
         foundation_uid: foundationUid,
         past_meeting_count: pastMeetings.length,
+      });
+
+      // Private, revalidate-every-time — see getUserMeetings for full rationale.
+      res.set('Cache-Control', 'private, no-cache');
+      res.json(pastMeetings);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/user/latest-past-meetings - Get up to 5 most-recent past meetings for the authenticated user
+   * Returns an array of up to 5 past meetings the user has direct FGA access to with
+   * `scheduled_end_time` in the past. Uses query service sort=name_desc + page_size=5 instead of
+   * paginating the full history.
+   * @query projectUid - Optional project UID to filter meetings
+   * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
+   */
+  public async getUserLatestPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const startTime = logger.startOperation(req, 'get_user_latest_past_meetings', {
+      project_uid: req.query['projectUid'],
+      foundation_uid: req.query['foundation_uid'],
+    });
+
+    try {
+      const projectUid = req.query['projectUid'] as string | undefined;
+      const foundationUid = req.query['foundation_uid'] as string | undefined;
+
+      // Extract user email from auth context (impersonation-aware, already lowercased)
+      const userEmail = getEffectiveEmail(req);
+      if (!userEmail) {
+        const validationError = ServiceValidationError.forField('email', 'User email not found in authentication context', {
+          operation: 'get_user_latest_past_meetings',
+          service: 'user_controller',
+          path: req.path,
+        });
+
+        next(validationError);
+        return;
+      }
+
+      const pastMeetings = await this.userService.getUserLatestPastMeetings(req, userEmail, projectUid, foundationUid);
+
+      logger.success(req, 'get_user_latest_past_meetings', startTime, {
+        count: pastMeetings.length,
+        project_uid: projectUid,
+        foundation_uid: foundationUid,
       });
 
       // Private, revalidate-every-time — see getUserMeetings for full rationale.

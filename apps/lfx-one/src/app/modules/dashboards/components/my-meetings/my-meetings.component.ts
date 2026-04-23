@@ -26,8 +26,6 @@ export class MyMeetingsComponent {
   private readonly projectContextService = inject(ProjectContextService);
   private readonly lensService = inject(LensService);
 
-  private static readonly bufferMs = 40 * 60 * 1000; // 40 minutes
-
   protected readonly activeLens = this.lensService.activeLens;
   protected readonly upcomingLoading = signal(true);
   protected readonly pastLoading = signal(true);
@@ -38,11 +36,17 @@ export class MyMeetingsComponent {
   private readonly rawMeetings = this.initRawMeetings();
   private readonly rawPastMeetings = this.initRawPastMeetings();
 
+  // Computed: Active (not-ended) meeting entries sorted by start time
+  private readonly activeEntries: Signal<MeetingWithOccurrence[]> = this.initActiveEntries();
+
   // Computed: Next upcoming meeting (with occurrence expansion)
   protected readonly nextMeeting: Signal<MeetingWithOccurrence | null> = this.initNextMeeting();
 
   // Computed: Last past meeting
   protected readonly lastMeeting: Signal<PastMeeting | null> = this.initLastMeeting();
+
+  // Count of other meetings whose time range overlaps the displayed Next Meeting
+  protected readonly overlappingNextCount: Signal<number> = this.initOverlappingNextCount();
 
   // Text based on lens
   protected readonly sectionTitle = computed(() => (this.activeLens() === 'me' ? 'My Meetings' : 'Meetings'));
@@ -62,7 +66,7 @@ export class MyMeetingsComponent {
   private initRawPastMeetings() {
     return this.initLensSwitchedData<PastMeeting>(
       this.pastLoading,
-      () => this.userService.getUserPastMeetings(),
+      () => this.userService.getUserLatestPastMeetings(),
       (uid) => this.meetingService.getPastMeetingsByProject(uid)
     );
   }
@@ -107,7 +111,7 @@ export class MyMeetingsComponent {
     );
   }
 
-  private initNextMeeting(): Signal<MeetingWithOccurrence | null> {
+  private initActiveEntries(): Signal<MeetingWithOccurrence[]> {
     return computed(() => {
       const meetings = this.rawMeetings();
       const now = Date.now();
@@ -117,14 +121,14 @@ export class MyMeetingsComponent {
         if (meeting.occurrences && meeting.occurrences.length > 0) {
           for (const occurrence of getActiveOccurrences(meeting.occurrences)) {
             const startMs = new Date(occurrence.start_time).getTime();
-            const endMs = startMs + occurrence.duration * 60 * 1000 + MyMeetingsComponent.bufferMs;
+            const endMs = startMs + occurrence.duration * 60 * 1000;
             if (endMs >= now) {
               entries.push({ meeting, occurrence, sortTime: startMs, trackId: `${meeting.id}-${occurrence.occurrence_id}` });
             }
           }
         } else {
           const startMs = new Date(meeting.start_time).getTime();
-          const endMs = startMs + meeting.duration * 60 * 1000 + MyMeetingsComponent.bufferMs;
+          const endMs = startMs + meeting.duration * 60 * 1000;
           if (endMs >= now) {
             entries.push({
               meeting,
@@ -143,22 +147,42 @@ export class MyMeetingsComponent {
       }
 
       entries.sort((a, b) => a.sortTime - b.sortTime);
+      return entries;
+    });
+  }
+
+  private initNextMeeting(): Signal<MeetingWithOccurrence | null> {
+    return computed(() => {
+      const entries = this.activeEntries();
+      const now = Date.now();
+      const imminentWindowMs = 10 * 60 * 1000;
+
+      const imminent = entries.find((entry) => entry.sortTime > now && entry.sortTime - now <= imminentWindowMs);
+      if (imminent) return imminent;
+
+      const inProgress = entries.find((entry) => entry.sortTime <= now);
+      if (inProgress) return inProgress;
+
       return entries[0] ?? null;
     });
   }
 
-  private initLastMeeting(): Signal<PastMeeting | null> {
+  private initOverlappingNextCount(): Signal<number> {
     return computed(() => {
-      const pastMeetings = this.rawPastMeetings();
-      if (pastMeetings.length === 0) {
-        return null;
-      }
-
-      // Sort by scheduled_start_time descending (most recent first)
-      const sorted = [...pastMeetings].sort((a, b) =>
-        (b.scheduled_start_time ?? b.start_time ?? '').localeCompare(a.scheduled_start_time ?? a.start_time ?? '')
-      );
-      return sorted[0] ?? null;
+      const next = this.nextMeeting();
+      if (!next) return 0;
+      const nextStart = next.sortTime;
+      const nextEnd = nextStart + next.occurrence.duration * 60 * 1000;
+      return this.activeEntries().filter((entry) => {
+        if (entry === next) return false;
+        const entryStart = entry.sortTime;
+        const entryEnd = entryStart + entry.occurrence.duration * 60 * 1000;
+        return entryStart < nextEnd && entryEnd > nextStart;
+      }).length;
     });
+  }
+
+  private initLastMeeting(): Signal<PastMeeting | null> {
+    return computed(() => this.rawPastMeetings()[0] ?? null);
   }
 }

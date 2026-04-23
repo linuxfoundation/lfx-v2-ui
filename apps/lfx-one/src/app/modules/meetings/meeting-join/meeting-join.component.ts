@@ -35,6 +35,7 @@ import {
   PastMeetingSummary,
   Project,
   PublicPastMeetingResponse,
+  ROOT_PROJECT_SLUG,
   TagSeverity,
   User,
 } from '@lfx-one/shared';
@@ -1090,7 +1091,12 @@ export class MeetingJoinComponent implements OnInit {
       toObservable(this.project).pipe(
         filter((p) => !!p?.parent_uid),
         distinctUntilChanged((a, b) => a?.parent_uid === b?.parent_uid),
-        switchMap((p) => this.projectService.getProject(p!.parent_uid!, false).pipe(catchError(() => of(null))))
+        switchMap((p) =>
+          this.projectService.getProject(p!.parent_uid!, false).pipe(
+            map((parent) => (parent?.slug === ROOT_PROJECT_SLUG ? null : parent)),
+            catchError(() => of(null))
+          )
+        )
       ),
       { initialValue: null }
     );

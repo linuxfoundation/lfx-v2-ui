@@ -190,7 +190,7 @@ export class CommitteeOverviewComponent {
   }
 
   public handlePendingActionClick(item: PendingActionItem): void {
-    if (item.type === 'Cast Vote') {
+    if (item.type === 'Vote') {
       const vote = this.pendingVotes().find((v) => v.uid === item.buttonLink);
       if (vote) {
         this.selectedVoteId.set(vote.uid);
@@ -355,7 +355,7 @@ export class CommitteeOverviewComponent {
   private initPendingActionItems(): Signal<PendingActionItem[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
-        type: 'Cast Vote',
+        type: 'Vote',
         badge: this.committee().name,
         text: vote.name,
         icon: 'fa-light fa-check-to-slot',
@@ -367,7 +367,7 @@ export class CommitteeOverviewComponent {
           : undefined,
       }));
       const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
-        type: 'Submit Feedback',
+        type: 'Survey',
         badge: this.committee().name,
         text: survey.survey_title,
         icon: 'fa-light fa-chart-simple',
@@ -384,7 +384,7 @@ export class CommitteeOverviewComponent {
   private initPendingActionsViewAllTab(): Signal<'votes' | 'surveys'> {
     return computed(() => {
       const overflow = this.pendingActionItems().slice(2);
-      const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
+      const hasVotes = overflow.some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
   }
