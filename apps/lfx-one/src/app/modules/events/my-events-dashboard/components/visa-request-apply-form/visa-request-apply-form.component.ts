@@ -3,7 +3,7 @@
 
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserService } from '@app/shared/services/user.service';
 import { CalendarComponent } from '@components/calendar/calendar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -11,6 +11,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { TextareaComponent } from '@components/textarea/textarea.component';
 import { ACCOMMODATION_PAID_BY_OPTIONS, ATTENDEE_TYPE_OPTIONS, COUNTRIES } from '@lfx-one/shared/constants';
 import { AttendeeAccommodationPaidBy, AttendeeType, VisaRequestApplicantInfo } from '@lfx-one/shared/interfaces';
+import { notFutureDateValidator, notPastDateValidator } from '@lfx-one/shared/validators';
 import { startWith } from 'rxjs';
 import { OrgSearchFieldComponent } from '../org-search-field/org-search-field.component';
 
@@ -27,14 +28,16 @@ export class VisaRequestApplyFormComponent {
   public readonly formValidityChange = output<boolean>();
   public readonly formChange = output<VisaRequestApplicantInfo>();
 
+  public readonly today = startOfDay(new Date());
+
   public readonly form = this.fb.group({
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
     email: [''],
     passportNumber: ['', Validators.required],
     citizenshipCountry: ['', Validators.required],
-    passportExpiryDate: [null as Date | null, [Validators.required, notPastDateValidator]],
-    birthDate: [null as Date | null, [Validators.required, notFutureDateValidator]],
+    passportExpiryDate: [null as Date | null, [Validators.required, notPastDateValidator(this.today)]],
+    birthDate: [null as Date | null, [Validators.required, notFutureDateValidator(this.today)]],
     embassyCity: ['', Validators.required],
     company: ['', Validators.required],
     organizationID: ['', Validators.required],
@@ -46,7 +49,6 @@ export class VisaRequestApplyFormComponent {
   public readonly countryOptions = [...COUNTRIES];
   public readonly attendeeTypeOptions = ATTENDEE_TYPE_OPTIONS;
   public readonly accommodationOptions = ACCOMMODATION_PAID_BY_OPTIONS;
-  public readonly today = startOfToday();
 
   public constructor() {
     this.form.get('email')?.disable();
@@ -74,32 +76,7 @@ export class VisaRequestApplyFormComponent {
   }
 }
 
-function startOfToday(): Date {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
-}
-
-function notFutureDateValidator(control: AbstractControl): ValidationErrors | null {
-  const value = control.value as Date | null;
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
+function startOfDay(date: Date): Date {
   date.setHours(0, 0, 0, 0);
-
-  return date.getTime() > startOfToday().getTime() ? { futureDate: true } : null;
-}
-
-function notPastDateValidator(control: AbstractControl): ValidationErrors | null {
-  const value = control.value as Date | null;
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
-
-  return date.getTime() < startOfToday().getTime() ? { pastDate: true } : null;
+  return date;
 }
