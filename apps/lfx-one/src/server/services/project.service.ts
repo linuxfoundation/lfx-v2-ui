@@ -974,14 +974,6 @@ export class ProjectService {
    * @returns Array of pending action items with survey links
    */
   public async getPendingActionSurveys(email: string, projectSlug: string): Promise<PendingActionItem[]> {
-    // The COMMITTEE_CATEGORY='Board' filter was dropped — a pending survey is a pending
-    // action regardless of which committee runs it. If the table grows to include noisy
-    // categories in the future, reintroduce a committee-scoped filter here rather than a
-    // hardcoded board gate.
-    // Normalize email (trim + lowercase) to match the sibling Snowflake methods in this file
-    // — the Snowflake column stores emails lowercased and an un-normalized input silently
-    // misses rows when the caller passed a mixed-case address.
-    const normalizedEmail = email.trim().toLowerCase();
     const query = `
       SELECT
         SURVEY_TITLE,
@@ -993,10 +985,11 @@ export class ProjectService {
         AND PROJECT_SLUG = ?
         AND SURVEY_CUTOFF_DATE > CURRENT_DATE()
         AND RESPONSE_TYPE = 'non_response'
+        AND COMMITTEE_CATEGORY = 'Board'
       ORDER BY SURVEY_CUTOFF_DATE ASC
     `;
 
-    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, [normalizedEmail, projectSlug]);
+    const result = await this.snowflakeService.execute<PendingSurveyRow>(query, [email, projectSlug]);
 
     // Transform database rows to PendingActionItem format
     return result.rows.map((row) => {
@@ -1921,13 +1914,39 @@ export class ProjectService {
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
 
-      const [summaryResult, monthlyResult, campaignResult] = await Promise.all([
+      // Query 4: Per-campaign performance from email_campaign_performance (last 6 months)
+      const campaignPerfQuery = `
+        SELECT
+          MARKETING_EMAIL_NAME,
+          EMAIL_TYPE,
+          SUM(SENDS) AS TOTAL_SENDS,
+          SUM(OPENS) AS TOTAL_OPENS,
+          SUM(CLICKS) AS TOTAL_CLICKS,
+          ROUND(SUM(OPENS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS OPEN_RATE,
+          ROUND(SUM(CLICKS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS CTR
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CAMPAIGN_PERFORMANCE
+        WHERE FOUNDATION_SLUG = ?
+          AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        GROUP BY MARKETING_EMAIL_NAME, EMAIL_TYPE
+        ORDER BY TOTAL_SENDS DESC
+      `;
+
+      const [summaryResult, monthlyResult, campaignResult, campaignPerfResult] = await Promise.all([
         this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationSlug]),
         this.snowflakeService.execute<{ PUBLISHED_MONTH: string; PUBLISHED_MONTH_DATE: string; MONTHLY_CTR: number; TOTAL_SENDS: number; TOTAL_OPENS: number }>(
           monthlyQuery,
           [foundationSlug]
         ),
         this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationSlug]),
+        this.snowflakeService.execute<{
+          MARKETING_EMAIL_NAME: string;
+          EMAIL_TYPE: string;
+          TOTAL_SENDS: number;
+          TOTAL_OPENS: number;
+          TOTAL_CLICKS: number;
+          OPEN_RATE: number;
+          CTR: number;
+        }>(campaignPerfQuery, [foundationSlug]),
       ]);
 
       if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -1962,6 +1981,91 @@ export class ProjectService {
         avgCtr: Math.round((row.AVG_CTR ?? 0) * 10) / 10,
       }));
 
+      // Group campaigns by email type and compute per-type aggregates
+      const typeMap = new Map<
+        string,
+        {
+          sends: number;
+          opens: number;
+          clicks: number;
+          campaigns: { name: string; sends: number; opens: number; clicks: number; openRate: number; ctr: number }[];
+        }
+      >();
+      for (const row of campaignPerfResult.rows) {
+        const existing = typeMap.get(row.EMAIL_TYPE) ?? { sends: 0, opens: 0, clicks: 0, campaigns: [] };
+        const sends = row.TOTAL_SENDS ?? 0;
+        const opens = row.TOTAL_OPENS ?? 0;
+        const clicks = row.TOTAL_CLICKS ?? 0;
+        existing.sends += sends;
+        existing.opens += opens;
+        existing.clicks += clicks;
+        existing.campaigns.push({
+          name: row.MARKETING_EMAIL_NAME,
+          sends,
+          opens,
+          clicks,
+          openRate: row.OPEN_RATE ?? 0,
+          ctr: row.CTR ?? 0,
+        });
+        typeMap.set(row.EMAIL_TYPE, existing);
+      }
+
+      const getPerformanceLabel = (openRate: number, ctr: number): string => {
+        if (ctr >= 3) return 'EXCELLENT';
+        if (ctr >= 1.5 && openRate >= 15) return 'STRONG';
+        if (openRate < 10) return 'LOW OPENS';
+        if (ctr < 0.5) return 'LOW CLICKS';
+        return 'GOOD';
+      };
+
+      const getCtrStatus = (ctr: number): string => {
+        if (ctr >= 3) return 'EXCELLENT';
+        if (ctr >= 1.5) return 'GOOD';
+        return 'BELOW BENCHMARK';
+      };
+
+      const emailTypeBreakdown = Array.from(typeMap.entries())
+        .filter(([, data]) => data.sends > 0)
+        .map(([emailType, data]) => {
+          const openRate = Math.round(((data.opens * 100.0) / data.sends) * 10) / 10;
+          const ctr = Math.round(((data.clicks * 100.0) / data.sends) * 10) / 10;
+          return {
+            emailType,
+            campaignCount: data.campaigns.length,
+            totalSends: data.sends,
+            totalOpens: data.opens,
+            totalClicks: data.clicks,
+            openRate,
+            ctr,
+            performance: getPerformanceLabel(openRate, ctr),
+            campaigns: data.campaigns
+              .sort((a, b) => b.sends - a.sends)
+              .slice(0, 10)
+              .map((c) => ({
+                campaignName: c.name,
+                emailType,
+                sends: c.sends,
+                opens: c.opens,
+                clicks: c.clicks,
+                openRate: c.openRate,
+                ctr: c.ctr,
+                ctrStatus: getCtrStatus(c.ctr),
+              })),
+          };
+        })
+        .sort((a, b) => b.totalSends - a.totalSends);
+
+      // Build campaign insight text
+      let campaignInsightText: string | undefined;
+      if (emailTypeBreakdown.length >= 2) {
+        const bestCtr = [...emailTypeBreakdown].sort((a, b) => b.ctr - a.ctr)[0];
+        const worstCtr = [...emailTypeBreakdown].sort((a, b) => a.ctr - b.ctr)[0];
+        const diff = Math.round((bestCtr.ctr - worstCtr.ctr) * 10) / 10;
+        if (diff > 0) {
+          campaignInsightText = `${bestCtr.emailType} emails drive ${bestCtr.ctr.toFixed(1)}% CTR, outperforming ${worstCtr.emailType} by ${diff} pp`;
+        }
+      }
+
       return {
         currentCtr,
         changePercentage,
@@ -1971,6 +2075,8 @@ export class ProjectService {
         campaignGroups,
         monthlySends,
         monthlyOpens,
+        emailTypeBreakdown,
+        campaignInsightText,
       };
     } catch (error) {
       logger.warning(undefined, 'get_email_ctr', 'Failed to fetch email CTR from Snowflake', {

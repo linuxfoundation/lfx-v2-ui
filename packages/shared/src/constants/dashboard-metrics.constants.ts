@@ -734,7 +734,6 @@ export const ED_EVOLUTION_FILTER_OPTIONS: FilterPillOption[] = [
   { id: 'all', label: 'All' },
   { id: 'memberships', label: 'North Star' },
   { id: 'brand', label: 'Brand' },
-  { id: 'influence', label: 'Influence' },
 ];
 
 /** Round to 1 decimal place, normalizing JS negative zero to positive zero.
@@ -817,8 +816,8 @@ function eventAttrMonthlyRevenueSeries(rows: { month: string; lastTouchRevenue: 
     .map((m) => byMonth.get(m) ?? 0);
 }
 
-/** Compute MoM change display from event-attribution monthly revenue series */
-function eventAttrMomChange(series: number[]): string | undefined {
+/** Compute MoM change display from a monthly numeric series (last vs second-to-last). */
+function seriesMomChange(series: number[]): string | undefined {
   if (series.length < 2) return undefined;
   const prev = series[series.length - 2];
   const curr = series[series.length - 1];
@@ -826,15 +825,19 @@ function eventAttrMomChange(series: number[]): string | undefined {
   return formatMomChange(((curr - prev) / prev) * 100);
 }
 
-/** Compute trend direction from event-attribution monthly revenue series.
- *  Uses the same MoM % formula as eventAttrMomChange so the color matches the displayed text. */
-function eventAttrTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | undefined {
+/** Compute trend direction from a monthly numeric series.
+ *  Uses the same MoM % formula as seriesMomChange so the color matches the displayed text. */
+function seriesTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | undefined {
   if (series.length < 2) return undefined;
   const prev = series[series.length - 2];
   const curr = series[series.length - 1];
   if (prev === 0) return undefined;
   return trendFromChange(((curr - prev) / prev) * 100);
 }
+
+// Legacy aliases — kept so existing call sites compile without a rename pass.
+const eventAttrMomChange = seriesMomChange;
+const eventAttrTrendDirection = seriesTrendDirection;
 
 /**
  * Build ED Evolution dashboard cards from live API data.
@@ -847,9 +850,46 @@ function eventAttrTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | 
  * Emerald/red are reserved for delta indicators (up/down), never sparkline stroke.
  */
 export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricCard[] {
-  const { flywheel, memberAcquisition, memberRetention, engagedCommunity, eventGrowth, brandReach, brandHealth, revenueImpact } = data;
+  const { flywheel, memberAcquisition, memberRetention, engagedCommunity, eventGrowth, brandReach, brandHealth, revenueImpact, emailCtr, paidCampaign } = data;
+
+  // Pre-compute email open rate for the Campaign Performance card
+  const emailTotalSends = emailCtr.monthlySends.reduce((sum, v) => sum + v, 0);
+  const emailTotalOpens = emailCtr.monthlyOpens.reduce((sum, v) => sum + v, 0);
+  const emailOpenRate = emailTotalSends > 0 ? (emailTotalOpens / emailTotalSends) * 100 : 0;
 
   return [
+    // === Campaign Performance (dual-signal: Email Opens + Paid Impressions) ===
+    {
+      title: 'Campaign Performance',
+      icon: 'fa-light fa-chart-mixed',
+      chartType: 'line',
+      category: 'memberships',
+      testId: 'ed-evo-campaign-performance',
+      description: 'Email opens and paid impressions with MoM trends.',
+      customContentType: 'dual-signal',
+      dualSignals: [
+        protoDualSignal(
+          `Email · ${emailCtr.currentCtr.toFixed(1)}% CTR · ${emailOpenRate.toFixed(0)}% Open`,
+          formatNumber(emailTotalOpens) + ' opens',
+          emailCtr.monthlyOpens,
+          lfxColors.blue[500],
+          seriesMomChange(emailCtr.monthlyOpens),
+          seriesTrendDirection(emailCtr.monthlyOpens)
+        ),
+        protoDualSignal(
+          `Paid · ${formatCurrency(paidCampaign.totalSpend)} spend`,
+          formatNumber(paidCampaign.totalReach) + ' impressions',
+          paidCampaign.monthlyData,
+          lfxColors.violet[500],
+          seriesMomChange(paidCampaign.monthlyData),
+          seriesTrendDirection(paidCampaign.monthlyData)
+        ),
+      ],
+      caption: trendWindow(Math.max(emailCtr.monthlyOpens.length, paidCampaign.monthlyData.length)),
+      tooltipText: 'Email opens with CTR and open rate. Paid campaign impressions with total spend.',
+      drawerType: DashboardDrawerType.MarketingEmailCtr,
+    } as DashboardMetricCard,
+
     // === North Star (4 cards — retention merged into Member Growth drawer) ===
     {
       title: 'Flywheel Re-engagement',
@@ -998,51 +1038,6 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       drawerType: DashboardDrawerType.BrandHealth,
     } as DashboardMetricCard,
 
-    // === Influence (1 dual-signal card) ===
-    {
-      title: 'Attribution',
-      icon: 'fa-light fa-money-bill-trend-up',
-      chartType: 'line',
-      category: 'influence',
-      testId: 'ed-evo-revenue-impact',
-      description: 'Total revenue attributed to marketing touchpoints, with paid media revenue shown separately.',
-      customContentType: 'dual-signal',
-      caption: trendWindow(revenueImpact.paidMedia.monthlyTrend.length),
-      dualSignals: [
-        (() => {
-          const eventAttrSeries = eventAttrMonthlyRevenueSeries(revenueImpact.eventRegistrationAttribution.monthlyTrend);
-          const eventAttrTotal = revenueImpact.eventRegistrationAttribution.channelBreakdown.reduce((sum, c) => sum + (c.lastTouchRevenue ?? 0), 0);
-          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
-          // Sum paid media revenue from the same last-6-months window (not YTD) to match eventAttrTotal
-          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
-          // Marketing Attribution = total across all channels (event registration + paid media), same time window
-          const totalAttrRevenue = eventAttrTotal + paidMediaRevenue6mo;
-          const totalAttrSeries = combineMonthlySeries(eventAttrSeries, paidMediaSeries);
-          return protoDualSignal(
-            'Marketing Attribution',
-            formatCurrency(totalAttrRevenue),
-            totalAttrSeries,
-            lfxColors.blue[500],
-            eventAttrMomChange(totalAttrSeries),
-            eventAttrTrendDirection(totalAttrSeries)
-          );
-        })(),
-        (() => {
-          const paidMediaSeries = revenueImpact.paidMedia.monthlyTrend.map((r) => r.revenue);
-          const paidMediaRevenue6mo = paidMediaSeries.reduce((sum, v) => sum + v, 0);
-          return protoDualSignal(
-            'Paid Media',
-            formatCurrency(paidMediaRevenue6mo),
-            paidMediaSeries,
-            lfxColors.violet[500],
-            paidMediaMomChange(revenueImpact.paidMedia.monthlyTrend),
-            paidMediaTrend(revenueImpact.paidMedia.monthlyTrend)
-          );
-        })(),
-      ],
-      tooltipText:
-        'Total revenue attributed to marketing touchpoints (event registration + paid media). Paid Media row shows the paid ads portion. Sales pipeline is shown on the Member Growth card.',
-      drawerType: DashboardDrawerType.RevenueImpact,
-    } as DashboardMetricCard,
+    // Attribution rows merged into Campaign Performance card above.
   ];
 }
