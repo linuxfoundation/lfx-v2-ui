@@ -533,6 +533,8 @@
               [myMeetingRegistrants]="true"
               [initialRegistrants]="registrants()"
               [initialRegistrantsLoading]="registrantsLoading()"
+              [initialPastParticipants]="isPastMeeting() ? pastMeetingParticipants() : null"
+              [initialPastParticipantsLoading]="pastMeetingParticipantsLoading()"
               [visible]="showRegistrants()"
               (refreshRequested)="onRegistrantsRefreshRequested($event)">
             </lfx-meeting-registrants-display>

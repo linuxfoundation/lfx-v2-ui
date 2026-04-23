@@ -211,6 +211,9 @@ export class MeetingJoinComponent implements OnInit {
   });
   // Past meeting participants (fetched from API for attendance stats)
   protected pastMeetingParticipants: Signal<PastMeetingParticipant[]>;
+  // Tracks the in-flight state of the past-participants fetch so the registrants drawer can
+  // show a loading indicator while reusing the parent-owned list (avoids a duplicate fetch).
+  protected readonly pastMeetingParticipantsLoading: WritableSignal<boolean> = signal(false);
   // Past meeting attendance stats (derived from participants)
   protected participantCount = computed(() => this.pastMeetingParticipants().length);
   protected attendedCount = computed(() => this.pastMeetingParticipants().filter((p) => p.is_attended).length);
@@ -1053,8 +1056,15 @@ export class MeetingJoinComponent implements OnInit {
     return toSignal(
       combineLatest([toObservable(this.pastMeetingFullAccess), toObservable(this.meeting)]).pipe(
         switchMap(([hasAccess, meeting]) => {
-          if (!hasAccess || !meeting?.id || !this.authenticated()) return of([] as PastMeetingParticipant[]);
-          return this.meetingService.getPastMeetingParticipants(meeting.id).pipe(catchError(() => of([] as PastMeetingParticipant[])));
+          if (!hasAccess || !meeting?.id || !this.authenticated()) {
+            this.pastMeetingParticipantsLoading.set(false);
+            return of([] as PastMeetingParticipant[]);
+          }
+          this.pastMeetingParticipantsLoading.set(true);
+          return this.meetingService.getPastMeetingParticipants(meeting.id).pipe(
+            catchError(() => of([] as PastMeetingParticipant[])),
+            finalize(() => this.pastMeetingParticipantsLoading.set(false))
+          );
         })
       ),
       { initialValue: [] }
