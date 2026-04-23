@@ -77,14 +77,38 @@ export class UserController {
         return;
       }
 
-      // Get pending actions from service
-      const pendingActions = await this.userService.getPendingActions(req, persona, projectUid, userEmail, projectSlug);
+      // Optional `?limit=` clamps the response size so mobile / summary cards can request a
+      // smaller payload. Absent = unbounded; when present it must be a positive integer. Any
+      // present-but-non-string value (array from `?limit=1&limit=2`, object from `?limit[foo]=1`)
+      // fails the Number conversion to NaN and hits the same error branch, so malformed input
+      // can't silently defeat the cap.
+      const limitQuery = req.query['limit'];
+      let limit: number | undefined;
+      if (limitQuery !== undefined) {
+        const parsed = typeof limitQuery === 'string' ? Number(limitQuery) : NaN;
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          next(
+            ServiceValidationError.forField('limit', 'limit query parameter must be a positive integer', {
+              operation: 'get_pending_actions',
+              service: 'user_controller',
+              path: req.path,
+            })
+          );
+          return;
+        }
+        limit = Math.min(parsed, 100);
+      }
+
+      // Get pending actions from service — persona is validated above for API-contract stability
+      // but is no longer consumed by the aggregator (pending actions are persona-agnostic now).
+      const pendingActions = await this.userService.getPendingActions(req, projectUid, userEmail, projectSlug, limit);
 
       logger.success(req, 'get_pending_actions', startTime, {
         persona,
         project_uid: projectUid,
         project_slug: projectSlug,
         action_count: pendingActions.length,
+        ...(limit !== undefined && { limit }),
       });
 
       // Private, revalidate-every-time — server recomputes the response for the real
@@ -99,8 +123,9 @@ export class UserController {
 
   /**
    * GET /api/user/meetings - Get meetings for the authenticated user
-   * Returns meetings the user is registered for, optionally filtered by project
+   * Returns meetings the user has direct FGA access to (host, participant, organizer), optionally filtered by project
    * @query projectUid - Optional project UID to filter meetings
+   * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_meetings', {
@@ -112,21 +137,9 @@ export class UserController {
       const projectUid = req.query['projectUid'] as string | undefined;
       const foundationUid = req.query['foundation_uid'] as string | undefined;
 
-      // Extract user email from auth context (impersonation-aware, already lowercased)
-      const userEmail = getEffectiveEmail(req);
-      if (!userEmail) {
-        const validationError = ServiceValidationError.forField('email', 'User email not found in authentication context', {
-          operation: 'get_user_meetings',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      // Get user's meetings from service
-      const meetings = await this.userService.getUserMeetings(req, userEmail, projectUid, foundationUid);
+      // No email extraction needed — the service uses req.bearerToken (via filter_grants=direct
+      // server-side FGA lookup). Auth middleware has already ensured the user is authenticated.
+      const meetings = await this.userService.getUserMeetings(req, projectUid, foundationUid);
 
       logger.success(req, 'get_user_meetings', startTime, {
         project_uid: projectUid,
@@ -148,8 +161,9 @@ export class UserController {
 
   /**
    * GET /api/user/past-meetings - Get past meetings for the authenticated user
-   * Returns past meetings the user was registered for, optionally filtered by project
+   * Returns past meetings the user has direct FGA access to (host, invitee, attendee, organizer), optionally filtered by project
    * @query projectUid - Optional project UID to filter meetings
+   * @query foundation_uid - Optional foundation UID to filter meetings (OR across child projects)
    */
   public async getUserPastMeetings(req: Request, res: Response, next: NextFunction): Promise<void> {
     const startTime = logger.startOperation(req, 'get_user_past_meetings', {
