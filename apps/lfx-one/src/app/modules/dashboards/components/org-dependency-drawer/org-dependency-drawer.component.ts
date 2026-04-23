@@ -1,11 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, input, model, Signal } from '@angular/core';
 import { ChartComponent } from '@components/chart/chart.component';
 import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { buildInsightsUrl } from '@lfx-one/shared/utils';
+import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -17,8 +18,15 @@ import type { FoundationCompanyBusFactorResponse } from '@lfx-one/shared/interfa
   templateUrl: './org-dependency-drawer.component.html',
 })
 export class OrgDependencyDrawerComponent {
-  // === Static Data ===
-  protected readonly insightsUrl = buildInsightsUrl();
+  // === Services ===
+  private readonly projectContextService = inject(ProjectContextService);
+
+  // === Insights Deep Link ===
+  protected readonly insightsUrl: Signal<string> = computed(() => {
+    const slug = this.projectContextService.selectedFoundation()?.slug;
+    if (!slug) return buildInsightsUrl();
+    return buildInsightsUrl(`/project/${slug}/contributors`, { timeRange: 'alltime', widget: 'organization-dependency' });
+  });
 
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
