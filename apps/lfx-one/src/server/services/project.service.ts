@@ -2175,8 +2175,8 @@ export class ProjectService {
           return {
             projectName,
             funnelStage: formatFunnel(data.funnelStages),
-            spend: Math.round(data.spend),
-            revenue: Math.round(data.revenue),
+            spend: Math.round(data.spend * 100) / 100,
+            revenue: Math.round(data.revenue * 100) / 100,
             roas: projectRoas,
             conversions: data.conversions,
             convRate,
@@ -2191,8 +2191,8 @@ export class ProjectService {
               .map((c) => ({
                 campaignName: c.CAMPAIGN_NAME,
                 funnelStage: c.FUNNEL_STAGE ?? 'Unknown',
-                spend: Math.round(c.SPEND ?? 0),
-                revenue: Math.round(c.REVENUE ?? 0),
+                spend: Math.round((c.SPEND ?? 0) * 100) / 100,
+                revenue: Math.round((c.REVENUE ?? 0) * 100) / 100,
                 roas: c.ROAS ?? 0,
                 conversions: c.CONVERSIONS ?? 0,
                 convRate: c.CONV_RATE ?? 0,
@@ -2264,7 +2264,6 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
         WHERE SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY CHANNEL
-        ORDER BY SESSIONS DESC
       `
         : `
         SELECT CHANNEL,
@@ -2279,7 +2278,6 @@ export class ProjectService {
         WHERE FOUNDATION_SLUG = ?
           AND SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY CHANNEL
-        ORDER BY SESSIONS DESC
       `;
 
       const projectQuery = isUmbrella
@@ -2295,7 +2293,6 @@ export class ProjectService {
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
         WHERE SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY PROJECT_NAME, CHANNEL
-        ORDER BY CHANNEL, SESSIONS DESC
       `
         : `
         SELECT PROJECT_NAME, CHANNEL,
@@ -2310,7 +2307,6 @@ export class ProjectService {
         WHERE FOUNDATION_SLUG = ?
           AND SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY PROJECT_NAME, CHANNEL
-        ORDER BY CHANNEL, SESSIONS DESC
       `;
 
       const params = isUmbrella ? [] : [foundationSlug];
