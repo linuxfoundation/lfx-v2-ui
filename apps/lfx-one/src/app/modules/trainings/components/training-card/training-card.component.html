@@ -94,7 +94,7 @@
       @if (!isOngoing() && completedIssuedDate()) {
         <div class="border-t border-gray-100 pt-3" data-testid="training-card-meta-row">
           <div class="flex items-center flex-wrap gap-2 text-xs text-gray-500" data-testid="training-card-meta">
-            <span data-testid="training-card-issued-date"> <i class="fa-light fa-calendar mr-1"></i>{{ completedIssuedDate() | date: 'MMM d, y' }} </span>
+            <span data-testid="training-card-issued-date"> <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ completedIssuedDate() | date: 'MMM d, y' }} </span>
           </div>
         </div>
       }
@@ -113,15 +113,15 @@
             }
             @if (timeSpent()) {
               @if (showStatus() && statusLabel()) {
-                <span class="text-gray-300">·</span>
+                <span class="text-gray-300" aria-hidden="true">·</span>
               }
-              <span data-testid="training-card-time-spent"><i class="fa-light fa-clock mr-1"></i>{{ timeSpent() }}</span>
+              <span data-testid="training-card-time-spent"><i class="fa-light fa-clock mr-1" aria-hidden="true"></i>{{ timeSpent() }}</span>
             }
             @if (enrolledDate()) {
               @if (timeSpent() || (showStatus() && statusLabel())) {
-                <span class="text-gray-300">·</span>
+                <span class="text-gray-300" aria-hidden="true">·</span>
               }
-              <span data-testid="training-card-date"> <i class="fa-light fa-calendar mr-1"></i>{{ enrolledDate() | date: 'MMM d, y' }} </span>
+              <span data-testid="training-card-date"> <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ enrolledDate() | date: 'MMM d, y' }} </span>
             }
           </div>
         </div>
