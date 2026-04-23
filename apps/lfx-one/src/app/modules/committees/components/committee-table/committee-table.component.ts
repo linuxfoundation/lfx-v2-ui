@@ -87,20 +87,16 @@ export class CommitteeTableComponent {
   protected readonly rppOptions = computed<number[] | undefined>(() => (this.committees().length > 10 ? [10, 25, 50] : undefined));
 
   protected readonly categoryTabOptions = computed<FilterPillOption[]>(() =>
-    this.categoryOptions().map((opt) => ({
-      id: opt.value ?? 'all',
-      label: this.truncateTabLabel(opt.label ?? 'All'),
-      fullLabel: opt.label ?? 'All',
-    }))
+    this.categoryOptions().map((opt) => {
+      const fullLabel = opt.label ?? 'All';
+      const truncatedLabel = this.truncateTabLabel(fullLabel);
+      return {
+        id: opt.value ?? 'all',
+        label: truncatedLabel,
+        fullLabel: truncatedLabel !== fullLabel ? fullLabel : undefined,
+      };
+    })
   );
-
-  private truncateTabLabel(label: string): string {
-    const match = label.match(/^(.+) \((\d+)\)$/);
-    if (!match) return label;
-    const [, name, count] = match;
-    if (name.length <= 20) return label;
-    return `${name.slice(0, 20)}...(${count})`;
-  }
 
   protected onRowSelect(event: { data: Committee }): void {
     this.rowClick.emit(event.data);
@@ -116,5 +112,13 @@ export class CommitteeTableComponent {
     this.searchForm().patchValue({ search: '', category: null, votingStatus: null, foundationFilter: null, projectFilter: null });
     this.foundationFilterChange.emit(null);
     this.projectFilterChange.emit(null);
+  }
+
+  private truncateTabLabel(label: string): string {
+    const match = label.match(/^(.+) \((\d+)\)$/);
+    if (!match) return label;
+    const [, name, count] = match;
+    if (name.length <= 20) return label;
+    return `${name.slice(0, 20)}...(${count})`;
   }
 }
