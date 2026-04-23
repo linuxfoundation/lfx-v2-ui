@@ -32,29 +32,21 @@ export class MeetingRegistrantsDisplayComponent {
   public readonly visible: InputSignal<boolean> = input<boolean>(false);
   public readonly showAddRegistrant: InputSignal<boolean> = input<boolean>(false);
   public readonly myMeetingRegistrants: InputSignal<boolean> = input<boolean>(false);
-  // Externally-managed mode: when the parent already owns the registrants list (e.g. on the
-  // meeting join page) it can pass it in here to avoid a duplicate fetch on drawer open. The
-  // child uses the seed as its source and emits refreshRequested when the data needs to be
-  // re-pulled (e.g. after adding a guest). Pass `null` (default) to keep the legacy self-fetch
-  // behavior used by meeting-card.
   public readonly initialRegistrants: InputSignal<MeetingRegistrant[] | null> = input<MeetingRegistrant[] | null>(null);
   public readonly initialRegistrantsLoading: InputSignal<boolean> = input<boolean>(false);
 
   public readonly registrantsCountChange: OutputEmitterRef<number> = output<number>();
   public readonly refreshRequested: OutputEmitterRef<number> = output<number>();
+  public readonly totalCountChange: OutputEmitterRef<number> = output<number>();
 
   private readonly internalLoading: WritableSignal<boolean> = signal(true);
   private readonly refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private readonly externallyManaged: Signal<boolean> = computed(() => this.initialRegistrants() !== null);
   private readonly internalRegistrants: Signal<MeetingRegistrant[]> = this.initRegistrantsList();
-  // Optimistically-added registrants not yet returned by the backend index (query-service indexing is async).
-  // Cleared when the drawer closes; naturally hidden once the refetch includes the registrant (deduped by email).
   private readonly optimisticRegistrants: WritableSignal<MeetingRegistrant[]> = signal<MeetingRegistrant[]>([]);
   public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
   public readonly registrants: Signal<MeetingRegistrant[]> = this.initRegistrants();
   public readonly registrantsLoading: Signal<boolean> = computed(() => {
-    // Past-meeting participants are always fetched internally (parent does not prefetch them),
-    // so fall back to the internal loader regardless of externally-managed mode.
     if (this.externallyManaged() && !this.pastMeeting()) {
       return this.initialRegistrantsLoading();
     }
@@ -193,6 +185,7 @@ export class MeetingRegistrantsDisplayComponent {
                 this.optimisticRegistrants.update((list) => [...list, optimistic]);
                 this.additionalRegistrantsCount.update((c) => c + response.summary.successful);
                 this.registrantsCountChange.emit(this.additionalRegistrantsCount());
+                this.totalCountChange.emit(this.registrants().length);
                 this.refresh$.next(true);
               }
               this.addRegistrantForm.reset();
@@ -246,6 +239,7 @@ export class MeetingRegistrantsDisplayComponent {
                   const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
                   this.additionalRegistrantsCount.set(additionalCount);
                   this.registrantsCountChange.emit(additionalCount);
+                  this.totalCountChange.emit(baseCount + additionalCount);
                 }),
                 finalize(() => this.internalLoading.set(false))
               );

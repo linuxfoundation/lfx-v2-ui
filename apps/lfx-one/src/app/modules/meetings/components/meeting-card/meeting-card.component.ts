@@ -123,6 +123,7 @@ export class MeetingCardComponent implements OnInit {
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
+  public drawerGuestCount: WritableSignal<number> = signal(0);
   public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
   public materialsDrawerVisible = signal(false);
 
@@ -713,7 +714,7 @@ export class MeetingCardComponent implements OnInit {
     return computed(() => {
       const m = this.meeting();
       const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
-      return splitCount || m.registrant_count || 0;
+      return splitCount || m.registrant_count || this.drawerGuestCount() || 0;
     });
   }
 
