@@ -36,7 +36,7 @@ export class MaintainersDrawerComponent {
   protected readonly insightsUrl: Signal<string> = computed(() => {
     const slug = this.projectContextService.selectedFoundation()?.slug;
     if (!slug) return buildInsightsUrl();
-    return buildInsightsUrl(`/project/${slug}/contributors`, { timeRange: 'alltime', widget: 'contributors-leaderboard' });
+    return buildInsightsUrl(`/collection/details/${slug}`);
   });
 
   protected readonly timeRangeOptions = [{ label: 'Last 12 months', value: 'last-12-months' }];
