@@ -166,13 +166,29 @@ Additional wrappers follow the same pattern: `BadgeComponent`, `ButtonComponent`
 
 ## 🏗 Layout Components
 
+Two layout components ship today under `apps/lfx-one/src/app/layouts/`:
+
 ### MainLayoutComponent
 
-The primary layout component that wraps all authenticated routes. Routes are flat under this layout — there is no nested `/project/:slug` routing pattern.
+The primary layout that wraps every authenticated route (header + sidebar + content outlet). Routes are **flat** under this layout — there is no nested `/project/:slug` routing pattern. Lens context (Me / Foundation / Project / Org) is supplied via `LensService` and the route's `data.lens` value rather than through nested routing.
 
-### DevToolbarComponent
+```typescript
+// apps/lfx-one/src/app/app.routes.ts (excerpt)
+{
+  path: '',
+  canActivate: [authGuard],
+  loadComponent: () => import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
+  children: [
+    { path: '', pathMatch: 'full', data: { lens: 'me' }, loadComponent: () => import('./modules/dashboards/dashboard.component').then((m) => m.DashboardComponent) },
+    { path: 'meetings', loadChildren: () => import('./modules/meetings/meetings.routes').then((m) => m.MEETING_ROUTES) },
+    // ... every feature route registers as a flat child of MainLayoutComponent
+  ],
+}
+```
 
-Development-only toolbar for persona selection and project switching. Includes board member project override functionality.
+### ProfileLayoutComponent
+
+Wraps the `/profile` sub-tree to render tabbed profile pages (overview, edit, affiliations, developer, email, password). Used only by profile-feature routes.
 
 ## 🎨 Component Development Pattern
 

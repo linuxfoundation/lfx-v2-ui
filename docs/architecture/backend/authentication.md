@@ -53,6 +53,14 @@ export interface User {
 export interface AuthContext {
   authenticated: boolean;
   user: User | null;
+  // Persona + project enrichment (populated server-side via persona-detection, hydrated to the
+  // browser through Angular TransferState — see apps/lfx-one/src/server/services/persona-detection.service.ts)
+  persona?: PersonaType | null;
+  personas?: PersonaType[];
+  organizations?: Account[];
+  projects?: EnrichedPersonaProject[];
+  personaProjects?: Partial<Record<PersonaType, PersonaProject[]>>;
+  canImpersonate?: boolean;
 }
 
 /**

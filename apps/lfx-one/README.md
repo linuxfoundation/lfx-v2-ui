@@ -144,8 +144,8 @@ For server-side rendering builds:
 # Build for SSR
 ng build --configuration=production
 
-# Serve SSR locally
-yarn serve:ssr
+# Run the SSR server locally (PM2 runtime)
+yarn start:server
 ```
 
 ## Testing

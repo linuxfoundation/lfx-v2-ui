@@ -43,18 +43,6 @@ Test spec files (`.spec.ts`) should be added to the `e2e/` directory following t
 - **Naming**: `[feature]-robust.spec.ts`
 - **Examples**: `homepage-robust.spec.ts`, `project-dashboard-robust.spec.ts`
 
-## Planned Test Coverage
-
-```text
-Target E2E Tests: 85+
-├── Homepage Tests: 33 tests
-│   ├── homepage.spec.ts: 11 content-based tests
-│   └── homepage-robust.spec.ts: 22 structural tests
-└── Project Dashboard Tests: 52 tests
-    ├── project-dashboard.spec.ts: 29 content-based tests
-    └── project-dashboard-robust.spec.ts: 23 structural tests
-```
-
 ## 🛠 Technical Stack
 
 ### Primary Framework: Playwright

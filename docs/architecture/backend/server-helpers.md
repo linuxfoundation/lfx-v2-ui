@@ -15,8 +15,10 @@ The helpers directory contains files organized by responsibility:
 
 | File                      | Purpose                                                 |
 | ------------------------- | ------------------------------------------------------- |
+| `api-gateway.helper.ts`   | Secondary API Gateway token fetch + header injection    |
 | `error-serializer.ts`     | Pino error serializer configuration                     |
 | `http-status.helper.ts`   | HTTP status code to message/code mappings               |
+| `ics.helper.ts`           | iCalendar (`.ics`) generation for meeting invites       |
 | `meeting.helper.ts`       | Meeting invitation checks with M2M tokens               |
 | `poll-endpoint.helper.ts` | Generic retry/polling with callback injection           |
 | `query-service.helper.ts` | Cursor-based pagination with automatic page following   |
