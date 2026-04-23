@@ -27,7 +27,7 @@ const CERTIFICATES_UNFILTERED_QUERY = `${CERTIFICATES_BASE_QUERY}
 `;
 
 const ENROLLMENTS_QUERY = `
-  SELECT COURSE_NAME, COURSE_GROUP_DESCRIPTION,
+  SELECT USER_COURSE_ID, COURSE_NAME, COURSE_GROUP_DESCRIPTION,
          LOGO_URL, PROJECT_NAME, LEVEL, COURSE_SLUG, COURSE_ID,
          STATUS, IS_ACTIVE_ENROLLMENT, ENROLLMENT_TS, TOTAL_TIME
   FROM ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
@@ -131,7 +131,7 @@ export class TrainingService {
 
   private mapRowToEnrollment(row: EnrollmentRow): TrainingEnrollment {
     return {
-      id: row.COURSE_SLUG ?? row.COURSE_NAME,
+      id: row.USER_COURSE_ID,
       name: row.COURSE_NAME,
       description: row.COURSE_GROUP_DESCRIPTION ?? '',
       imageUrl: row.LOGO_URL ?? '',

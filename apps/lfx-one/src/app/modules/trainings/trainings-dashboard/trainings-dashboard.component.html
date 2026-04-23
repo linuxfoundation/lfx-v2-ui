@@ -154,7 +154,7 @@
               <div data-testid="trainings-ongoing-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Ongoing Trainings</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-ongoing-list">
-                  @for (enrollment of activeEnrollments(); track enrollment.name) {
+                  @for (enrollment of activeEnrollments(); track enrollment.id) {
                     <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-card-item" />
                   }
                 </div>
@@ -165,7 +165,7 @@
               <div data-testid="trainings-expired-section">
                 <h2 class="text-base font-semibold text-gray-800 pb-3 mb-4 border-b border-gray-200">Expired Enrollments</h2>
                 <div class="flex flex-col gap-4" data-testid="trainings-expired-list">
-                  @for (enrollment of expiredEnrollments(); track enrollment.name) {
+                  @for (enrollment of expiredEnrollments(); track enrollment.id) {
                     <lfx-training-card [training]="enrollment" variant="ongoing" data-testid="training-expired-item" />
                   }
                 </div>

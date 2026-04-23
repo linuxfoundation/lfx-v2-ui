@@ -95,10 +95,7 @@
         <div class="border-t border-gray-100 pt-3" data-testid="training-card-meta-row">
           <div class="flex items-center flex-wrap gap-2 text-xs text-gray-500" data-testid="training-card-meta">
             @if (showStatus() && statusLabel()) {
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full font-medium"
-                [ngClass]="statusClasses()"
-                data-testid="training-card-status-badge">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full font-medium" [ngClass]="statusClasses()" data-testid="training-card-status-badge">
                 {{ statusLabel() }}
               </span>
             }
@@ -112,9 +109,7 @@
               @if (timeSpent() || (showStatus() && statusLabel())) {
                 <span class="text-gray-300">·</span>
               }
-              <span data-testid="training-card-date">
-                <i class="fa-light fa-calendar mr-1"></i>{{ enrolledDate() | date: 'MMM d, y' }}
-              </span>
+              <span data-testid="training-card-date"> <i class="fa-light fa-calendar mr-1"></i>{{ enrolledDate() | date: 'MMM d, y' }} </span>
             }
           </div>
         </div>

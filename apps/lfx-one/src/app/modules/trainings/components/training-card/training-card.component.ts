@@ -6,14 +6,11 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, Signal } from '@angular/core';
 import { Certification, EnrollmentStatus, TrainingEnrollment } from '@lfx-one/shared/interfaces';
-import { CONTINUE_LEARNING_URL, COURSE_URL_PREFIX } from '@lfx-one/shared/constants';
+import { CONTINUE_LEARNING_URL, COURSE_URL_PREFIX, ENROLL_AGAIN_URL, ENROLL_AGAIN_URL_PREFIX } from '@lfx-one/shared/constants';
 import { formatDuration } from '@lfx-one/shared/utils';
 
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-
-const ENROLL_AGAIN_URL = 'https://trainingportal.linuxfoundation.org/courses';
-const ENROLL_AGAIN_URL_PREFIX = 'https://trainingportal.linuxfoundation.org/courses/';
 
 @Component({
   selector: 'lfx-training-card',
