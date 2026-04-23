@@ -57,6 +57,9 @@ import {
   HealthMetricsDailyResponse,
   HealthMetricsRange,
   LifecycleStage,
+  MarketingAttributionChannel,
+  MarketingAttributionProject,
+  MarketingAttributionResponse,
   MemberAcquisitionResponse,
   MemberRetentionResponse,
   MembershipChurnPerTierSummaryResponse,
@@ -1918,13 +1921,57 @@ export class ProjectService {
         ORDER BY CTR_LAST_6_MONTHS DESC
       `;
 
-      const [summaryResult, monthlyResult, campaignResult] = await Promise.all([
+      // Query 4: Per-campaign performance from email_campaign_performance (last 6 months)
+      const campaignPerfQuery = `
+        SELECT
+          MARKETING_EMAIL_NAME,
+          EMAIL_TYPE,
+          SUM(SENDS) AS TOTAL_SENDS,
+          SUM(OPENS) AS TOTAL_OPENS,
+          SUM(CLICKS) AS TOTAL_CLICKS,
+          ROUND(SUM(OPENS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS OPEN_RATE,
+          ROUND(SUM(CLICKS) * 100.0 / NULLIF(SUM(SENDS), 0), 1) AS CTR
+        FROM ANALYTICS.PLATINUM_LFX_ONE.EMAIL_CAMPAIGN_PERFORMANCE
+        WHERE FOUNDATION_SLUG = ?
+          AND PUBLISHED_MONTH_DATE >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+        GROUP BY MARKETING_EMAIL_NAME, EMAIL_TYPE
+        ORDER BY TOTAL_SENDS DESC
+      `;
+
+      const [summaryResult, monthlyResult, campaignResult, campaignPerfResult] = await Promise.all([
         this.snowflakeService.execute<{ PROJECT_NAME: string; CTR_LAST_COMPLETED_MONTH: number; CTR_MOM_CHANGE: number }>(summaryQuery, [foundationSlug]),
         this.snowflakeService.execute<{ PUBLISHED_MONTH: string; PUBLISHED_MONTH_DATE: string; MONTHLY_CTR: number; TOTAL_SENDS: number; TOTAL_OPENS: number }>(
           monthlyQuery,
           [foundationSlug]
         ),
         this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationSlug]),
+        this.snowflakeService
+          .execute<{
+            MARKETING_EMAIL_NAME: string;
+            EMAIL_TYPE: string;
+            TOTAL_SENDS: number;
+            TOTAL_OPENS: number;
+            TOTAL_CLICKS: number;
+            OPEN_RATE: number;
+            CTR: number;
+          }>(campaignPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_email_ctr', 'Optional campaign breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                MARKETING_EMAIL_NAME: string;
+                EMAIL_TYPE: string;
+                TOTAL_SENDS: number;
+                TOTAL_OPENS: number;
+                TOTAL_CLICKS: number;
+                OPEN_RATE: number;
+                CTR: number;
+              }[],
+            };
+          }),
       ]);
 
       if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -1959,6 +2006,91 @@ export class ProjectService {
         avgCtr: Math.round((row.AVG_CTR ?? 0) * 10) / 10,
       }));
 
+      // Group campaigns by email type and compute per-type aggregates
+      const typeMap = new Map<
+        string,
+        {
+          sends: number;
+          opens: number;
+          clicks: number;
+          campaigns: { name: string; sends: number; opens: number; clicks: number; openRate: number; ctr: number }[];
+        }
+      >();
+      for (const row of campaignPerfResult.rows) {
+        const existing = typeMap.get(row.EMAIL_TYPE) ?? { sends: 0, opens: 0, clicks: 0, campaigns: [] };
+        const sends = row.TOTAL_SENDS ?? 0;
+        const opens = row.TOTAL_OPENS ?? 0;
+        const clicks = row.TOTAL_CLICKS ?? 0;
+        existing.sends += sends;
+        existing.opens += opens;
+        existing.clicks += clicks;
+        existing.campaigns.push({
+          name: row.MARKETING_EMAIL_NAME,
+          sends,
+          opens,
+          clicks,
+          openRate: row.OPEN_RATE ?? 0,
+          ctr: row.CTR ?? 0,
+        });
+        typeMap.set(row.EMAIL_TYPE, existing);
+      }
+
+      const getPerformanceLabel = (openRate: number, ctr: number): string => {
+        if (ctr >= 3) return 'EXCELLENT';
+        if (ctr >= 1.5 && openRate >= 15) return 'STRONG';
+        if (openRate < 10) return 'LOW OPENS';
+        if (ctr < 0.5) return 'LOW CLICKS';
+        return 'GOOD';
+      };
+
+      const getCtrStatus = (ctr: number): string => {
+        if (ctr >= 3) return 'EXCELLENT';
+        if (ctr >= 1.5) return 'GOOD';
+        return 'BELOW BENCHMARK';
+      };
+
+      const emailTypeBreakdown = Array.from(typeMap.entries())
+        .filter(([, data]) => data.sends > 0)
+        .map(([emailType, data]) => {
+          const openRate = Math.round(((data.opens * 100.0) / data.sends) * 10) / 10;
+          const ctr = Math.round(((data.clicks * 100.0) / data.sends) * 10) / 10;
+          return {
+            emailType,
+            campaignCount: data.campaigns.length,
+            totalSends: data.sends,
+            totalOpens: data.opens,
+            totalClicks: data.clicks,
+            openRate,
+            ctr,
+            performance: getPerformanceLabel(openRate, ctr),
+            campaigns: data.campaigns
+              .sort((a, b) => b.sends - a.sends)
+              .slice(0, 10)
+              .map((c) => ({
+                campaignName: c.name,
+                emailType,
+                sends: c.sends,
+                opens: c.opens,
+                clicks: c.clicks,
+                openRate: c.openRate,
+                ctr: c.ctr,
+                ctrStatus: getCtrStatus(c.ctr),
+              })),
+          };
+        })
+        .sort((a, b) => b.totalSends - a.totalSends);
+
+      // Build campaign insight text
+      let campaignInsightText: string | undefined;
+      if (emailTypeBreakdown.length >= 2) {
+        const bestCtr = [...emailTypeBreakdown].sort((a, b) => b.ctr - a.ctr)[0];
+        const worstCtr = [...emailTypeBreakdown].sort((a, b) => a.ctr - b.ctr)[0];
+        const diff = Math.round((bestCtr.ctr - worstCtr.ctr) * 10) / 10;
+        if (diff > 0) {
+          campaignInsightText = `${bestCtr.emailType} emails drive ${bestCtr.ctr.toFixed(1)}% CTR, outperforming ${worstCtr.emailType} by ${diff} pp`;
+        }
+      }
+
       return {
         currentCtr,
         changePercentage,
@@ -1968,6 +2100,8 @@ export class ProjectService {
         campaignGroups,
         monthlySends,
         monthlyOpens,
+        emailTypeBreakdown,
+        campaignInsightText,
       };
     } catch (error) {
       logger.warning(undefined, 'get_email_ctr', 'Failed to fetch email CTR from Snowflake', {
@@ -2033,12 +2167,71 @@ export class ProjectService {
       ORDER BY IMPRESSIONS DESC
     `;
 
-      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult] = await Promise.all([
+      // Block 6: Project + campaign level performance breakdown (last 6 months)
+      // Uses LINEAR_REVENUE (not FIRST_TOUCH) — the per-campaign drill-down uses linear
+      // attribution to distribute credit fairly across touchpoints, while the top-level
+      // KPI (Blocks 1–2) uses first-touch for the headline ROAS.
+      const projectPerfQuery = `
+      SELECT
+        PROJECT_NAME, CAMPAIGN_NAME, FUNNEL_STAGE,
+        SUM(SPEND) AS SPEND, SUM(LINEAR_REVENUE) AS REVENUE,
+        ROUND(DIV0(SUM(LINEAR_REVENUE), SUM(SPEND)), 2) AS ROAS,
+        SUM(CONV) AS CONVERSIONS,
+        ROUND(DIV0(SUM(CONV), NULLIF(SUM(CLICKS), 0)) * 100, 2) AS CONV_RATE,
+        ROUND(DIV0(SUM(SPEND), NULLIF(SUM(CLICKS), 0)), 2) AS CPC,
+        SUM(SESSIONS) AS SESSIONS,
+        SUM(IMPRESSIONS) AS IMPRESSIONS,
+        SUM(CLICKS) AS CLICKS
+      FROM ANALYTICS.PLATINUM_LFX_ONE.PAID_SOCIAL_REACH_BY_PROJECT_CHANNEL_MONTH
+      WHERE FOUNDATION_SLUG = ?
+        AND CAMPAIGN_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
+      GROUP BY PROJECT_NAME, CAMPAIGN_NAME, FUNNEL_STAGE
+      ORDER BY SPEND DESC
+    `;
+
+      const [impressionsResult, roasKpiResult, monthlyRoasResult, monthlyImpressionsResult, channelResult, projectPerfResult] = await Promise.all([
         this.snowflakeService.execute<{ TOTAL_IMPRESSIONS: number; TOTAL_SPEND: number; TOTAL_REVENUE: number }>(impressionsQuery, [foundationSlug]),
         this.snowflakeService.execute<{ ROAS: number; ROAS_MOM_PCT: number }>(roasKpiQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
+        this.snowflakeService
+          .execute<{
+            PROJECT_NAME: string;
+            CAMPAIGN_NAME: string;
+            FUNNEL_STAGE: string;
+            SPEND: number;
+            REVENUE: number;
+            ROAS: number;
+            CONVERSIONS: number;
+            CONV_RATE: number;
+            CPC: number;
+            SESSIONS: number;
+            IMPRESSIONS: number;
+            CLICKS: number;
+          }>(projectPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_social_reach', 'Optional project breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                PROJECT_NAME: string;
+                CAMPAIGN_NAME: string;
+                FUNNEL_STAGE: string;
+                SPEND: number;
+                REVENUE: number;
+                ROAS: number;
+                CONVERSIONS: number;
+                CONV_RATE: number;
+                CPC: number;
+                SESSIONS: number;
+                IMPRESSIONS: number;
+                CLICKS: number;
+              }[],
+            };
+          }),
       ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
@@ -2074,6 +2267,98 @@ export class ProjectService {
         totalImpressions: row.IMPRESSIONS,
       }));
 
+      // Shape project breakdown with nested campaigns
+      const projectMap = new Map<
+        string,
+        {
+          spend: number;
+          revenue: number;
+          conversions: number;
+          impressions: number;
+          clicks: number;
+          sessions: number;
+          funnelStages: Set<string>;
+          campaigns: typeof projectPerfResult.rows;
+        }
+      >();
+      for (const row of projectPerfResult.rows) {
+        const existing = projectMap.get(row.PROJECT_NAME) ?? {
+          spend: 0,
+          revenue: 0,
+          conversions: 0,
+          impressions: 0,
+          clicks: 0,
+          sessions: 0,
+          funnelStages: new Set<string>(),
+          campaigns: [] as typeof projectPerfResult.rows,
+        };
+        existing.spend += row.SPEND ?? 0;
+        existing.revenue += row.REVENUE ?? 0;
+        existing.conversions += row.CONVERSIONS ?? 0;
+        existing.impressions += row.IMPRESSIONS ?? 0;
+        existing.clicks += row.CLICKS ?? 0;
+        existing.sessions += row.SESSIONS ?? 0;
+        if (row.FUNNEL_STAGE) {
+          existing.funnelStages.add(row.FUNNEL_STAGE);
+        }
+        existing.campaigns.push(row);
+        projectMap.set(row.PROJECT_NAME, existing);
+      }
+
+      const getPaidPerformance = (projectRoas: number): string => {
+        if (projectRoas >= 2) return 'EXCELLENT';
+        if (projectRoas >= 1) return 'GOOD';
+        if (projectRoas > 0) return 'POOR';
+        return 'NO REVENUE';
+      };
+
+      const formatFunnel = (stages: Set<string>): string => {
+        const priority = ['BoFU', 'MoFU', 'ToFU', 'ToFU2', 'Unknown'];
+        for (const p of priority) {
+          if (stages.has(p)) return p;
+        }
+        return [...stages][0] ?? 'Unknown';
+      };
+
+      const projectBreakdown = Array.from(projectMap.entries())
+        .filter(([, data]) => data.spend > 0)
+        .map(([projectName, data]) => {
+          const projectRoas = data.spend > 0 ? Math.round((data.revenue / data.spend) * 100) / 100 : 0;
+          const convRate = data.clicks > 0 ? Math.round((data.conversions / data.clicks) * 10000) / 100 : 0;
+          const cpc = data.clicks > 0 ? Math.round((data.spend / data.clicks) * 100) / 100 : 0;
+          return {
+            projectName,
+            funnelStage: formatFunnel(data.funnelStages),
+            spend: Math.round(data.spend * 100) / 100,
+            revenue: Math.round(data.revenue * 100) / 100,
+            roas: projectRoas,
+            conversions: data.conversions,
+            convRate,
+            cpc,
+            sessions: data.sessions,
+            impressions: data.impressions,
+            clicks: data.clicks,
+            performance: getPaidPerformance(projectRoas),
+            campaigns: data.campaigns
+              .sort((a, b) => (b.SPEND ?? 0) - (a.SPEND ?? 0))
+              .slice(0, 10)
+              .map((c) => ({
+                campaignName: c.CAMPAIGN_NAME,
+                funnelStage: c.FUNNEL_STAGE ?? 'Unknown',
+                spend: Math.round((c.SPEND ?? 0) * 100) / 100,
+                revenue: Math.round((c.REVENUE ?? 0) * 100) / 100,
+                roas: c.ROAS ?? 0,
+                conversions: c.CONVERSIONS ?? 0,
+                convRate: c.CONV_RATE ?? 0,
+                cpc: c.CPC ?? 0,
+                sessions: c.SESSIONS ?? 0,
+                impressions: c.IMPRESSIONS ?? 0,
+                clicks: c.CLICKS ?? 0,
+              })),
+          };
+        })
+        .sort((a, b) => b.spend - a.spend);
+
       return {
         totalReach,
         roas: Math.round(roas * 100) / 100,
@@ -2085,6 +2370,7 @@ export class ProjectService {
         monthlyLabels,
         monthlyRoas,
         channelGroups,
+        projectBreakdown,
       };
     } catch (error) {
       logger.warning(undefined, 'get_social_reach', 'Failed to fetch social reach data, returning defaults', {
@@ -2103,6 +2389,240 @@ export class ProjectService {
         monthlyRoas: [],
         channelGroups: [],
       };
+    }
+  }
+
+  /**
+   * Get marketing attribution data from ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION.
+   * Returns channel-level summary and project × channel drill-down for the last 6 months.
+   * @param foundationSlug - Foundation slug or 'tlf' for umbrella aggregation
+   * @returns Channel summary + project drill-down
+   */
+  public async getMarketingAttribution(foundationSlug: string): Promise<MarketingAttributionResponse> {
+    const startTime = Date.now();
+    logger.debug(undefined, 'get_marketing_attribution', 'Fetching marketing attribution from Snowflake', { foundation_slug: foundationSlug });
+
+    try {
+      const isUmbrella = foundationSlug === 'tlf';
+
+      const channelQuery = isUmbrella
+        ? `
+        SELECT CHANNEL,
+               SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
+               SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
+        WHERE SESSION_MONTH >= DATE_TRUNC('MONTH', DATEADD('MONTH', -6, CURRENT_DATE()))
+        GROUP BY CHANNEL
+      `
+        : `
+        SELECT CHANNEL,
+               SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
+               SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+          AND SESSION_MONTH >= DATE_TRUNC('MONTH', DATEADD('MONTH', -6, CURRENT_DATE()))
+        GROUP BY CHANNEL
+      `;
+
+      const projectQuery = isUmbrella
+        ? `
+        SELECT PROJECT_NAME, CHANNEL,
+               SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
+               SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
+        WHERE SESSION_MONTH >= DATE_TRUNC('MONTH', DATEADD('MONTH', -6, CURRENT_DATE()))
+        GROUP BY PROJECT_NAME, CHANNEL
+      `
+        : `
+        SELECT PROJECT_NAME, CHANNEL,
+               SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
+               SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
+               SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
+        FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
+        WHERE FOUNDATION_SLUG = ?
+          AND SESSION_MONTH >= DATE_TRUNC('MONTH', DATEADD('MONTH', -6, CURRENT_DATE()))
+        GROUP BY PROJECT_NAME, CHANNEL
+      `;
+
+      const params = isUmbrella ? [] : [foundationSlug];
+
+      interface ChannelRow {
+        CHANNEL: string;
+        SESSIONS: number;
+        PAGE_VIEWS: number;
+        UNIQUE_VISITORS: number;
+        NEW_VISITORS: number;
+        RETURNING_VISITORS: number;
+        FIRST_TOUCH_REVENUE: number;
+        LAST_TOUCH_REVENUE: number;
+        LINEAR_REVENUE: number;
+        TIME_DECAY_REVENUE: number;
+      }
+
+      interface ProjectRow {
+        PROJECT_NAME: string;
+        CHANNEL: string;
+        SESSIONS: number;
+        PAGE_VIEWS: number;
+        UNIQUE_VISITORS: number;
+        NEW_VISITORS: number;
+        RETURNING_VISITORS: number;
+        FIRST_TOUCH_REVENUE: number;
+        LAST_TOUCH_REVENUE: number;
+        LINEAR_REVENUE: number;
+        TIME_DECAY_REVENUE: number;
+      }
+
+      const [channelResult, projectResult] = await Promise.all([
+        this.snowflakeService.execute<ChannelRow>(channelQuery, params),
+        this.snowflakeService.execute<ProjectRow>(projectQuery, params),
+      ]);
+
+      // Map Snowflake channels to consolidated UI labels:
+      //   Paid Search + Social → "Paid Performance"
+      //   Email / HubSpot → "Email"
+      //   Internal / Banner → "Internal & Banner"
+      //   Organic Search → "Organic"
+      //   Other Tracked → "Other"
+      //   Direct / Unknown → "Direct & Unknown"
+      const mapChannel = (raw: string): string => {
+        switch (raw) {
+          case 'Paid Search':
+          case 'Social':
+            return 'Paid Performance';
+          case 'Email / HubSpot':
+            return 'Email';
+          case 'Internal / Banner':
+            return 'Internal & Banner';
+          case 'Organic Search':
+            return 'Organic';
+          case 'Other Tracked':
+            return 'Other';
+          case 'Direct / Unknown':
+            return 'Direct & Unknown';
+          default:
+            return raw;
+        }
+      };
+
+      // Aggregate channel rows that map to the same UI label.
+      // Guard with ?? 0 — SUM() returns NULL when all values in the group are NULL.
+      const channelMap = new Map<string, MarketingAttributionChannel>();
+      for (const row of channelResult.rows) {
+        const label = mapChannel(row.CHANNEL ?? 'Direct / Unknown');
+        const existing = channelMap.get(label);
+        if (existing) {
+          existing.sessions += row.SESSIONS ?? 0;
+          existing.pageViews += row.PAGE_VIEWS ?? 0;
+          existing.uniqueVisitors += row.UNIQUE_VISITORS ?? 0;
+          existing.newVisitors += row.NEW_VISITORS ?? 0;
+          existing.returningVisitors += row.RETURNING_VISITORS ?? 0;
+          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE ?? 0;
+          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE ?? 0;
+          existing.linearRevenue += row.LINEAR_REVENUE ?? 0;
+          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE ?? 0;
+        } else {
+          channelMap.set(label, {
+            channel: label,
+            sessions: row.SESSIONS ?? 0,
+            pageViews: row.PAGE_VIEWS ?? 0,
+            uniqueVisitors: row.UNIQUE_VISITORS ?? 0,
+            newVisitors: row.NEW_VISITORS ?? 0,
+            returningVisitors: row.RETURNING_VISITORS ?? 0,
+            firstTouchRevenue: row.FIRST_TOUCH_REVENUE ?? 0,
+            lastTouchRevenue: row.LAST_TOUCH_REVENUE ?? 0,
+            linearRevenue: row.LINEAR_REVENUE ?? 0,
+            timeDecayRevenue: row.TIME_DECAY_REVENUE ?? 0,
+          });
+        }
+      }
+      // Round revenue after consolidation to avoid penny-level drift from summing pre-rounded subtotals
+      const channels = [...channelMap.values()]
+        .map((ch) => ({
+          ...ch,
+          firstTouchRevenue: Math.round(ch.firstTouchRevenue * 100) / 100,
+          lastTouchRevenue: Math.round(ch.lastTouchRevenue * 100) / 100,
+          linearRevenue: Math.round(ch.linearRevenue * 100) / 100,
+          timeDecayRevenue: Math.round(ch.timeDecayRevenue * 100) / 100,
+        }))
+        .sort((a, b) => b.sessions - a.sessions);
+
+      // Map project rows with the same channel consolidation
+      const attrProjectMap = new Map<string, MarketingAttributionProject>();
+      for (const row of projectResult.rows) {
+        const label = mapChannel(row.CHANNEL ?? 'Direct / Unknown');
+        const projectName = row.PROJECT_NAME ?? 'Unknown Project';
+        const key = `${projectName}::${label}`;
+        const existing = attrProjectMap.get(key);
+        if (existing) {
+          existing.sessions += row.SESSIONS ?? 0;
+          existing.pageViews += row.PAGE_VIEWS ?? 0;
+          existing.uniqueVisitors += row.UNIQUE_VISITORS ?? 0;
+          existing.newVisitors += row.NEW_VISITORS ?? 0;
+          existing.returningVisitors += row.RETURNING_VISITORS ?? 0;
+          existing.firstTouchRevenue += row.FIRST_TOUCH_REVENUE ?? 0;
+          existing.lastTouchRevenue += row.LAST_TOUCH_REVENUE ?? 0;
+          existing.linearRevenue += row.LINEAR_REVENUE ?? 0;
+          existing.timeDecayRevenue += row.TIME_DECAY_REVENUE ?? 0;
+        } else {
+          attrProjectMap.set(key, {
+            projectName,
+            channel: label,
+            sessions: row.SESSIONS ?? 0,
+            pageViews: row.PAGE_VIEWS ?? 0,
+            uniqueVisitors: row.UNIQUE_VISITORS ?? 0,
+            newVisitors: row.NEW_VISITORS ?? 0,
+            returningVisitors: row.RETURNING_VISITORS ?? 0,
+            firstTouchRevenue: row.FIRST_TOUCH_REVENUE ?? 0,
+            lastTouchRevenue: row.LAST_TOUCH_REVENUE ?? 0,
+            linearRevenue: row.LINEAR_REVENUE ?? 0,
+            timeDecayRevenue: row.TIME_DECAY_REVENUE ?? 0,
+          });
+        }
+      }
+      // Round revenue after consolidation (same rationale as channels above)
+      const projects = [...attrProjectMap.values()]
+        .map((p) => ({
+          ...p,
+          firstTouchRevenue: Math.round(p.firstTouchRevenue * 100) / 100,
+          lastTouchRevenue: Math.round(p.lastTouchRevenue * 100) / 100,
+          linearRevenue: Math.round(p.linearRevenue * 100) / 100,
+          timeDecayRevenue: Math.round(p.timeDecayRevenue * 100) / 100,
+        }))
+        .sort((a, b) => b.sessions - a.sessions);
+
+      logger.debug(undefined, 'get_marketing_attribution', 'Marketing attribution data fetched', {
+        foundation_slug: foundationSlug,
+        channel_count: channels.length,
+        project_count: projects.length,
+        duration_ms: Date.now() - startTime,
+      });
+
+      return { channels, projects };
+    } catch (error) {
+      logger.error(undefined, 'get_marketing_attribution', startTime, error instanceof Error ? error : new Error(String(error)), {
+        foundation_slug: foundationSlug,
+      });
+      throw error;
     }
   }
 

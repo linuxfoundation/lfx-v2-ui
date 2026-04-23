@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
-import { NatsSubjects } from '@lfx-one/shared/enums';
+import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
   ActiveWeeksStreakResponse,
   ActiveWeeksStreakRow,
@@ -10,6 +10,7 @@ import {
   Meeting,
   MeetingOccurrence,
   MeetingRegistrant,
+  MeetingRsvp,
   PastMeeting,
   PastMeetingParticipant,
   PendingActionItem,
@@ -24,6 +25,7 @@ import {
   UserProjectsResponse,
   UserPullRequestsResponse,
   UserPullRequestsRow,
+  Vote,
 } from '@lfx-one/shared/interfaces';
 import { getCurrentOrNextOccurrence, hasMeetingEnded, parseToInt } from '@lfx-one/shared/utils';
 import { Request } from 'express';
@@ -467,30 +469,111 @@ export class UserService {
 
   /**
    * Fetches meetings for the current user, optionally filtered by project.
-   * Uses a reverse-query approach: first gets all registrant records for the user,
-   * then batch-fetches those meetings from the query service via `tags` OR-filter
-   * (100 IDs per request, page_size=500) — replaces the previous N-parallel ITX fetches.
+   * Uses the query service's `filter_grants=direct` parameter: the query service performs
+   * an FGA `lfx.access_check.read_tuples` lookup server-side using the user's bearer token,
+   * extracts the user's direct tuple `object_ref` values, and injects a `terms` filter on
+   * `object_ref` into OpenSearch. Past meetings are dropped client-side because
+   * `last_end_time` is indexed as an epoch integer, not an ISO date, so the query
+   * service's `date_from` range filter compares strings lexically and drops valid rows.
    * @param req - Express request object
-   * @param email - User's email address for registrant lookup
    * @param projectUid - Optional project UID to filter meetings by
-   * @returns Array of Meeting objects the user is registered for
+   * @param foundationUid - Optional foundation UID to filter meetings by (OR across child projects)
+   * @returns Array of Meeting objects the user has some direct FGA grant on
    */
-  public async getUserMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
-    // Registered meeting IDs and foundation project UIDs are independent; run concurrently.
-    const [meetingIds, foundationProjectUids] = await Promise.all([
-      this.getUserRegisteredMeetingIds(req, email),
-      foundationUid ? this.projectService.getFoundationProjectUids(req, foundationUid).then((uids) => new Set(uids)) : Promise.resolve(undefined),
-    ]);
+  public async getUserMeetings(req: Request, projectUid?: string, foundationUid?: string): Promise<Meeting[]> {
+    // .catch — a foundation lookup failure degrades to an empty scope (caught by the empty-set
+    // guard below), preventing a NATS/upstream blip from 500'ing the Me lens.
+    const foundationProjectUids = foundationUid
+      ? await this.projectService
+          .getFoundationProjectUids(req, foundationUid)
+          .then((uids) => new Set(uids))
+          .catch((error) => {
+            logger.warning(req, 'get_user_meetings', 'Foundation project lookup failed, treating as empty scope', { err: error });
+            return new Set<string>();
+          })
+      : undefined;
 
-    logger.debug(req, 'get_user_meetings', 'Found registered meeting IDs for user', { meeting_count: meetingIds.size });
+    logger.debug(req, 'get_user_meetings', 'Fetching user meetings via filter_grants=direct', {
+      has_project_filter: !!projectUid,
+      has_foundation_filter: !!foundationUid,
+    });
 
-    if (meetingIds.size === 0) {
+    // Foundation filter requested but resolved to zero child projects: return empty rather than
+    // let buildProjectScopeFilters return `{}` and collapse to unfiltered (global) scope.
+    if (foundationUid && foundationProjectUids !== undefined && foundationProjectUids.size === 0) {
+      logger.debug(req, 'get_user_meetings', 'Foundation scope resolved to empty set, returning empty meeting list', {
+        foundation_uid: foundationUid,
+      });
       return [];
     }
 
-    const meetings = await this.fetchMeetingsByIdsBatched<Meeting>(req, meetingIds, 'v1_meeting', 'get_user_meetings', projectUid, foundationProjectUids);
+    const projectFilterParams = this.buildProjectScopeFilters(projectUid, foundationProjectUids);
 
-    // Drop past meetings before enrichment; recurring meetings survive if any occurrence is active.
+    // failOnPartial: true — completeness matters for membership correctness. Outer .catch is a
+    // defensive guard so upstream failures don't 500 the Me lens; returning [] is graceful.
+    const meetings = await fetchAllQueryResources<Meeting>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<Meeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting',
+          filter_grants: 'direct',
+          page_size: 500,
+          ...projectFilterParams,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
+    ).catch((error) => {
+      logger.warning(req, 'get_user_meetings', 'Query service fetch failed, returning empty meeting list', {
+        err: error,
+      });
+      return [] as Meeting[];
+    });
+
+    logger.debug(req, 'get_user_meetings', 'Fetched meetings from query service', { count: meetings.length });
+
+    // Enrich each meeting with the current user's RSVP (null when no response). Reuses the same
+    // query-service pattern that powers `getUserPendingActions` → `transformMissingRsvpsToActions`.
+    // Wrapped in try/catch so an RSVP-lookup failure degrades gracefully: meetings still return,
+    // `my_rsvp` stays undefined per row, the dashboard doesn't 500, and the Pending RSVP filter
+    // chip just shows the unfiltered list.
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req) ?? '';
+
+    if ((email || username) && meetings.length > 0) {
+      try {
+        const [userRsvps, activeRegistrantIds] = await Promise.all([
+          this.fetchAllUserRsvps(req, email, username),
+          this.fetchUserActiveRegistrantIds(req, email, username),
+        ]);
+
+        // Strongest-response-wins (accepted/declined beats maybe beats nothing) — same logic as
+        // `transformMissingRsvpsToActions`. Drop RSVPs whose `registrant_id` isn't in the active
+        // set; otherwise stale RSVPs from removed registrations would falsely mark meetings as
+        // "responded".
+        const rsvpByMeeting = new Map<string, MeetingRsvp>();
+        for (const rsvp of userRsvps) {
+          if (!rsvp.meeting_id) continue;
+          if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
+          const existing = rsvpByMeeting.get(rsvp.meeting_id);
+          if (!existing || (existing.response_type === 'maybe' && rsvp.response_type !== 'maybe')) {
+            rsvpByMeeting.set(rsvp.meeting_id, rsvp);
+          }
+        }
+
+        for (const meeting of meetings) {
+          if (meeting.id) {
+            meeting.my_rsvp = rsvpByMeeting.get(meeting.id) ?? null;
+          }
+        }
+      } catch (error) {
+        logger.warning(req, 'get_user_meetings', 'RSVP enrichment failed, continuing without my_rsvp', {
+          err: error,
+        });
+      }
+    }
+
+    // Drop past meetings; recurring meetings survive if any occurrence is still active.
     const upcomingMeetings = meetings.filter((meeting) => {
       if (meeting.occurrences && meeting.occurrences.length > 0) {
         return meeting.occurrences.some((occurrence) => occurrence.status !== 'cancel' && !hasMeetingEnded(meeting, occurrence));
@@ -500,7 +583,8 @@ export class UserService {
 
     // Sort by the next active occurrence so recurring meetings — whose meeting.start_time is the
     // series start (often in the past) — are ordered by when the user will actually attend next.
-    upcomingMeetings.sort((a, b) => {
+    // Query service sort enum doesn't cover occurrence semantics, so sort client-side.
+    const sortedMeetings = [...upcomingMeetings].sort((a, b) => {
       const occurrenceA = getCurrentOrNextOccurrence(a);
       const occurrenceB = getCurrentOrNextOccurrence(b);
       const timeA = occurrenceA ? new Date(occurrenceA.start_time).getTime() : new Date(a.start_time).getTime();
@@ -508,9 +592,9 @@ export class UserService {
       return timeA - timeB;
     });
 
-    const enriched = await this.meetingService.getMeetingProjectName(req, upcomingMeetings);
+    const enriched = await this.meetingService.getMeetingProjectName(req, sortedMeetings);
 
-    // Every meeting here was found via the user's registrant records, so the user is invited by definition.
+    // Every result has a direct host or participant FGA tuple, so the user is invited by definition.
     const invited = enriched.map((m) => ({ ...m, invited: true }));
 
     return this.accessCheckService.addAccessToResources(req, invited, 'v1_meeting', 'organizer');
@@ -518,20 +602,19 @@ export class UserService {
 
   /**
    * Fetches past meetings for the current user, optionally filtered by project.
-   * Queries v1_past_meeting_participant by email to find composite meeting IDs,
-   * then batch-fetches those past meetings from the query service via
-   * `filters_or=meeting_and_occurrence_id:<id>` (100 IDs per request, page_size=500) —
-   * replaces the previous N-parallel ITX fetches.
+   * Uses the query service's `filter_grants=direct` parameter to let the query service perform
+   * an FGA `lfx.access_check.read_tuples` lookup server-side using the user's bearer token and
+   * inject a `terms` filter on `object_ref` into OpenSearch. Runs the participant scan in
+   * parallel with the meeting fetch — participant data is used only for `user_attended`
+   * enrichment (FGA tuples don't carry attendance).
    * @param req - Express request object
-   * @param email - User's email address for participant lookup
+   * @param email - User's email address for participant lookup (attendance enrichment)
    * @param projectUid - Optional project UID to filter meetings by
-   * @returns Array of PastMeeting objects the user participated in
+   * @param foundationUid - Optional foundation UID to filter meetings by (OR across child projects)
+   * @returns Array of PastMeeting objects the user has some direct FGA grant on
    */
   public async getUserPastMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<PastMeeting[]> {
-    // Step 1: Get all past meeting participant records for this user via query service
-    // Uses fetchAllQueryResources to auto-paginate through all pages and dual email+username
-    // lookup for complete coverage (same pattern as getPastMeetingOccurrenceIds)
-    logger.debug(req, 'get_user_past_meetings', 'Starting past meeting lookup for user', {
+    logger.debug(req, 'get_user_past_meetings', 'Fetching user past meetings via filter_grants=direct', {
       has_project_filter: !!projectUid,
       has_foundation_filter: !!foundationUid,
     });
@@ -543,12 +626,13 @@ export class UserService {
     if (normalizedEmail) filtersOr.push(`email:${normalizedEmail}`);
     if (username) filtersOr.push(`username:${stripAuthPrefix(username)}`);
 
-    // Single participant query matching data.email OR data.username in one round trip.
-    // User bearer token works: ACL grants `viewer` on v1_past_meeting to `host`/`invitee`/`attendee`.
-    // failOnPartial: true surfaces truncated membership sets as errors; the outer .catch is
-    // kept as a defensive guard so upstream failures don't 500 the Me lens, and logs at
-    // warning level since returning an empty past-meeting list is graceful degradation.
-    const participantQuery =
+    // Participant scan sources `is_attended` for `user_attended` enrichment — FGA tuples don't
+    // carry attendance, so this lookup is independent of the meeting fetch. failOnPartial: true
+    // surfaces truncated sets; outer .catch degrades gracefully so a failure here drops attendance
+    // data without 500'ing the Me lens.
+    // `loaded` distinguishes "scan succeeded, user wasn't a participant" (loaded:true → attended:false is correct)
+    // from "couldn't determine attendance" (loaded:false → attended:undefined so UI can show 'unknown').
+    const participantQuery: Promise<{ participants: PastMeetingParticipant[]; loaded: boolean }> =
       filtersOr.length > 0
         ? fetchAllQueryResources<PastMeetingParticipant>(
             req,
@@ -560,62 +644,109 @@ export class UserService {
                 ...(pageToken && { page_token: pageToken }),
               }),
             { failOnPartial: true }
-          ).catch((error) => {
-            logger.warning(req, 'get_user_past_meetings', 'Participant query failed, returning empty past meeting list', {
-              stage: 'participant_query',
-              err: error,
-            });
-            return [] as PastMeetingParticipant[];
-          })
-        : Promise.resolve([] as PastMeetingParticipant[]);
+          )
+            .then((participants) => ({ participants, loaded: true }))
+            .catch((error) => {
+              logger.warning(req, 'get_user_past_meetings', 'Participant query failed, continuing without attendance enrichment', {
+                stage: 'participant_query',
+                err: error,
+              });
+              return { participants: [] as PastMeetingParticipant[], loaded: false };
+            })
+        : Promise.resolve({ participants: [] as PastMeetingParticipant[], loaded: false });
 
-    // Participant and foundation project UID queries are independent; run concurrently.
+    // .catch — same degrade-to-empty-scope pattern as getUserMeetings.
     const foundationQuery = foundationUid
-      ? this.projectService.getFoundationProjectUids(req, foundationUid).then((uids) => new Set(uids))
+      ? this.projectService
+          .getFoundationProjectUids(req, foundationUid)
+          .then((uids) => new Set(uids))
+          .catch((error) => {
+            logger.warning(req, 'get_user_past_meetings', 'Foundation project lookup failed, treating as empty scope', { err: error });
+            return new Set<string>();
+          })
       : Promise.resolve(undefined);
 
-    const [participants, foundationProjectUids] = await Promise.all([participantQuery, foundationQuery]);
+    // Past-meeting query depends on foundation UIDs to build `filters_or`, but it does NOT block
+    // the participant scan — the scan runs concurrently with the foundation lookup + meeting fetch.
+    const pastMeetingsQuery = foundationQuery.then((resolvedFoundationUids) => {
+      // Foundation filter requested but resolved to zero child projects: short-circuit before the
+      // helper collapses to unfiltered (global) scope.
+      if (foundationUid && resolvedFoundationUids !== undefined && resolvedFoundationUids.size === 0) {
+        return [] as PastMeeting[];
+      }
+      const projectFilterParams = this.buildProjectScopeFilters(projectUid, resolvedFoundationUids);
 
-    const pastMeetingIds = new Set<string>();
-    for (const p of participants) if (p.meeting_and_occurrence_id) pastMeetingIds.add(p.meeting_and_occurrence_id);
+      return fetchAllQueryResources<PastMeeting>(
+        req,
+        (pageToken) =>
+          this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+            type: 'v1_past_meeting',
+            filter_grants: 'direct',
+            page_size: 500,
+            ...projectFilterParams,
+            ...(pageToken && { page_token: pageToken }),
+          }),
+        { failOnPartial: true }
+      ).catch((error) => {
+        logger.warning(req, 'get_user_past_meetings', 'Past meeting query failed, returning empty list', {
+          err: error,
+        });
+        return [] as PastMeeting[];
+      });
+    });
 
-    logger.debug(req, 'get_user_past_meetings', 'Found past meeting participant IDs', {
-      total_ids: pastMeetingIds.size,
+    const [{ participants, loaded: attendanceLoaded }, pastMeetings] = await Promise.all([participantQuery, pastMeetingsQuery]);
+
+    // Drop any row missing meeting_and_occurrence_id — the meeting-service indexer populates it
+    // for every v1_past_meeting, so a missing value signals a data-quality issue. Using the raw
+    // `id` (past-meeting UUID) as a fallback would silently misroute downstream lookups that
+    // expect the composite occurrence key.
+    const indexable = pastMeetings.filter((m): m is PastMeeting & { meeting_and_occurrence_id: string } => !!m.meeting_and_occurrence_id);
+    const droppedCount = pastMeetings.length - indexable.length;
+    if (droppedCount > 0) {
+      logger.warning(req, 'get_user_past_meetings', 'Dropped past meeting rows missing meeting_and_occurrence_id', {
+        dropped: droppedCount,
+        total: pastMeetings.length,
+      });
+    }
+
+    // Normalize id to the composite meeting_and_occurrence_id so downstream callers
+    // (e.g. getPastMeetingParticipants(req, meeting.id)) receive the expected key.
+    const normalizedMeetings = indexable.map((m) => ({
+      ...m,
+      id: m.meeting_and_occurrence_id,
+    }));
+
+    logger.debug(req, 'get_user_past_meetings', 'Fetched past meetings from query service', {
+      count: normalizedMeetings.length,
       participant_matches: participants.length,
     });
 
-    if (pastMeetingIds.size === 0) {
+    if (normalizedMeetings.length === 0) {
       return [];
     }
 
-    // Step 2: Fetch each past meeting and filter (limit applied after sorting)
-    const pastMeetings = await this.fetchMeetingsByIdsBatched<PastMeeting>(
-      req,
-      pastMeetingIds,
-      'v1_past_meeting',
-      'get_user_past_meetings',
-      projectUid,
-      foundationProjectUids
-    );
-
-    // Attach the user's own attendance flag from the already-fetched participant records so
-    // the attendance-rate stat can be computed client-side without re-fetching per meeting.
-    // OR-combine across records — a user with multiple participant rows for the same occurrence
-    // (re-joins, duplicate legacy data) is attended if ANY record has is_attended=true.
-    const userAttendedByOccurrenceId = new Map<string, boolean>();
-    for (const p of participants) {
-      if (!p.meeting_and_occurrence_id) continue;
-      const prior = userAttendedByOccurrenceId.get(p.meeting_and_occurrence_id) ?? false;
-      userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, prior || !!p.is_attended);
-    }
-    for (const meeting of pastMeetings) {
-      meeting.user_attended = userAttendedByOccurrenceId.get(meeting.id) ?? false;
+    // Fold attendance from participant records. OR-combine across records — a user with multiple
+    // participant rows for the same occurrence (re-joins, duplicate legacy data) is attended if
+    // ANY record has is_attended=true. When the participant scan failed (or was skipped because
+    // we have no user identity), leave user_attended undefined so the UI can distinguish "didn't
+    // attend" from "attendance unknown".
+    if (attendanceLoaded) {
+      const userAttendedByOccurrenceId = new Map<string, boolean>();
+      for (const p of participants) {
+        if (!p.meeting_and_occurrence_id) continue;
+        const prior = userAttendedByOccurrenceId.get(p.meeting_and_occurrence_id) ?? false;
+        userAttendedByOccurrenceId.set(p.meeting_and_occurrence_id, prior || !!p.is_attended);
+      }
+      for (const meeting of normalizedMeetings) {
+        meeting.user_attended = userAttendedByOccurrenceId.get(meeting.id) ?? false;
+      }
     }
 
     // Sort by scheduled_start_time descending (most recent first)
-    pastMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
+    normalizedMeetings.sort((a, b) => new Date(b.scheduled_start_time ?? b.start_time).getTime() - new Date(a.scheduled_start_time ?? a.start_time).getTime());
 
-    const enriched = await this.meetingService.getMeetingProjectName(req, pastMeetings);
+    const enriched = await this.meetingService.getMeetingProjectName(req, normalizedMeetings);
 
     return this.accessCheckService.addAccessToResources(req, enriched, 'v1_past_meeting', 'organizer');
   }
@@ -779,114 +910,328 @@ export class UserService {
   }
 
   /**
-   * Batch-fetches meetings or past meetings from the query service by ID.
-   * Uses one paginated query per batch of 100 IDs (URL-length safe) instead of
-   * one HTTP call per ID. Applies project/foundation filtering after fetch.
-   *
-   * For v1_meeting: uses `tags` (the meeting `uid` is indexed as a plain tag).
-   * For v1_past_meeting: uses `filters_or=meeting_and_occurrence_id:<id>` — past
-   * meetings don't index this composite ID as a tag.
+   * Builds query-service scoping params for a project or foundation. Exact `project_uid` match
+   * when a single project is targeted, OR'd list across child project UIDs for a foundation.
+   * Returns an empty object when neither is provided (global scope).
    */
-  private async fetchMeetingsByIdsBatched<T extends { id: string; uid?: string; project_uid?: string; meeting_and_occurrence_id?: string }>(
-    req: Request,
-    ids: Set<string>,
-    resourceType: 'v1_meeting' | 'v1_past_meeting',
-    operation: string,
-    projectUid?: string,
-    projectUids?: Set<string>
-  ): Promise<T[]> {
-    const idArray = Array.from(ids);
-    if (idArray.length === 0) return [];
-
-    // URL-length guard: ~36-char UUIDs × 100 keeps query strings under ~5KB.
-    const BATCH_SIZE = 100;
-    const batches: string[][] = [];
-    for (let i = 0; i < idArray.length; i += BATCH_SIZE) {
-      batches.push(idArray.slice(i, i + BATCH_SIZE));
-    }
-
-    const batchResults = await Promise.all(
-      batches.map((batch) =>
-        fetchAllQueryResources<T>(
-          req,
-          (pageToken) => {
-            const params: Record<string, any> = {
-              type: resourceType,
-              page_size: 500,
-              ...(pageToken && { page_token: pageToken }),
-            };
-            if (resourceType === 'v1_meeting') {
-              // Meeting uid is indexed as a plain tag; array + OR semantics do batch union.
-              params['tags'] = batch;
-            } else {
-              // v1_past_meeting: composite id lives on data.meeting_and_occurrence_id only.
-              params['filters_or'] = batch.map((id) => `meeting_and_occurrence_id:${id}`);
-            }
-            return this.microserviceProxy.proxyRequest<QueryServiceResponse<T>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', params);
-          },
-          { failOnPartial: true }
-        ).catch((error) => {
-          logger.warning(req, operation, 'Batched query-service fetch failed for batch, skipping', {
-            resource_type: resourceType,
-            batch_size: batch.length,
-            error: error instanceof Error ? error.message : String(error),
-          });
-          return [] as T[];
-        })
-      )
-    );
-
-    // Normalize the `id` field so downstream code that keys off meeting.id continues to work.
-    // For past meetings, downstream `getPastMeetingParticipants(req, meeting.id)` expects the
-    // composite meeting_and_occurrence_id, so prefer that field when present.
-    const normalized: T[] = batchResults.flat().map((item) => ({
-      ...item,
-      id: item.meeting_and_occurrence_id || item.id || item.uid || '',
-    }));
-
-    let filtered = normalized;
+  private buildProjectScopeFilters(projectUid?: string, foundationProjectUids?: Set<string>): Record<string, unknown> {
     if (projectUid) {
-      filtered = filtered.filter((r) => r.project_uid === projectUid);
-    } else if (projectUids && projectUids.size > 0) {
-      filtered = filtered.filter((r) => r.project_uid !== undefined && projectUids.has(r.project_uid));
+      return { filters: [`project_uid:${projectUid}`] };
     }
-
-    logger.debug(req, operation, 'Completed batched meeting fetch', {
-      total_ids: idArray.length,
-      batches: batches.length,
-      total_fetched: normalized.length,
-      filtered: filtered.length,
-      project_uid: projectUid ?? 'all',
-      foundation_filter: projectUids ? projectUids.size : 0,
-    });
-
-    return filtered;
+    if (foundationProjectUids && foundationProjectUids.size > 0) {
+      return { filters_or: [...foundationProjectUids].map((uid) => `project_uid:${uid}`) };
+    }
+    return {};
   }
 
   /**
-   * Aggregate pending actions for the current user within a project scope.
-   * Sources (all parallel): non-responded surveys (Snowflake) and upcoming meetings
-   * the user is registered on within the next two weeks. No meeting-type filter — a
-   * working-group meeting next week is as much a pending action as a board meeting.
+   * Aggregate pending actions for the current user within a project scope. Sources run in parallel
+   * with per-source `.catch(() => [])` so one flaky source can't wipe the list:
+   *   - Non-responded surveys (Snowflake)
+   *   - Upcoming meetings within the next two weeks (Review Agenda action)
+   *   - Active votes the user hasn't cast (Cast Vote action)
+   *   - Missing RSVPs for meetings in the 2-week window (Set RSVP action)
+   * No meeting-type filter — a working-group meeting next week is as much a pending action as
+   * a board meeting.
    */
   private async getUserPendingActions(req: Request, email: string, projectSlug: string, projectUid: string): Promise<PendingActionItem[]> {
-    // Fetch surveys and user-specific meetings in parallel
-    const [surveys, meetings] = await Promise.all([
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+
+    // Phase 1: surveys, meetings, and pending votes are independent — issue them in parallel.
+    const [surveys, meetings, pendingVotes] = await Promise.all([
       this.projectService.getPendingActionSurveys(email, projectSlug).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch surveys for pending actions', { err: error });
         return [];
       }),
 
-      this.getUserMeetings(req, email, projectUid).catch((error) => {
+      this.getUserMeetings(req, projectUid).catch((error) => {
         logger.warning(req, 'get_user_pending_actions', 'Failed to fetch user meetings for pending actions', { err: error });
-        return [];
+        return [] as Meeting[];
+      }),
+
+      this.fetchPendingVotes(req, email, username, projectUid).catch((error) => {
+        logger.warning(req, 'get_user_pending_actions', 'Failed to fetch pending votes', { err: error });
+        return [] as Vote[];
       }),
     ]);
 
-    // Transform all upcoming meetings within the next 2 weeks (not just board meetings).
-    const meetingActions = this.transformMeetingsToActions(meetings);
+    const inWindowMeetings = this.filterMeetingsInWindow(meetings);
+    const meetingActions = this.transformMeetingsToActions(inWindowMeetings);
+    const voteActions = this.transformVotesToActions(pendingVotes);
 
-    return [...surveys, ...meetingActions];
+    // Phase 2: RSVP + registrant lookups are only meaningful when there are in-window meetings
+    // to evaluate. Skip them otherwise — avoids two full paginated per-user scans per request
+    // for users with no upcoming meetings in the window.
+    //
+    // Fail closed on the RSVP prerequisites: if either lookup errors, we can't distinguish
+    // "user hasn't RSVPed" from "we don't know", and a transient failure must not turn every
+    // in-window meeting into a bogus Set RSVP nag. Suppress the whole source on error.
+    let rsvpActions: PendingActionItem[] = [];
+    if (inWindowMeetings.length > 0) {
+      try {
+        const [userRsvps, activeRegistrantIds] = await Promise.all([
+          this.fetchAllUserRsvps(req, email, username),
+          this.fetchUserActiveRegistrantIds(req, email, username),
+        ]);
+        rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrantIds);
+      } catch (error) {
+        logger.warning(req, 'get_user_pending_actions', 'RSVP prerequisite lookup failed, suppressing Set RSVP actions', { err: error });
+      }
+    }
+
+    // Order by actionability: someone is waiting on RSVPs and votes have closing windows, so
+    // those go first. Surveys are time-bounded by their cutoff. Review Agenda is informational
+    // (read-before-meeting) and goes last — with the 5-item display cap, plentiful meetings
+    // shouldn't crowd out the rows the user actually has to respond to.
+    return [...rsvpActions, ...voteActions, ...surveys, ...meetingActions];
+  }
+
+  /**
+   * Queries the `vote_response` index for this user's participation rows and returns the polls
+   * they've been invited to but haven't submitted yet. `vote_response` is the real upstream
+   * indexed type (`lfx.index.vote_response` from `lfx-v2-voting-service`) — the earlier
+   * `individual_vote` type was fabricated in the shared interface and the query returned zero
+   * rows in practice.
+   *
+   * ITX creates a `vote_response` record per invitee on poll initiation and stamps
+   * `vote_status='submitted'` once the user actually casts. "Pending" is therefore:
+   *   - `vote_status !== 'submitted'`  (not cast yet)
+   *   - `!voter_removed`               (active invitation)
+   *   - scoped to the current project
+   * Then fetch the Vote details and keep only those still `active` with an `end_time` in the
+   * future.
+   */
+  private async fetchPendingVotes(req: Request, email: string, username: string | null, projectUid: string): Promise<Vote[]> {
+    const normalizedEmail = email ? email.trim().toLowerCase() : '';
+    const orClauses: string[] = [];
+    if (normalizedEmail) orClauses.push(`user_email:${normalizedEmail}`);
+    if (username) orClauses.push(`username:${username}`);
+    if (orClauses.length === 0) return [];
+
+    interface VoteResponseRow {
+      vote_uid?: string;
+      vote_id?: string;
+      poll_id?: string;
+      project_uid?: string;
+      vote_status?: string;
+      voter_removed?: boolean;
+    }
+
+    // failOnPartial: completeness matters — a truncated response can silently miss a pending
+    // invitation. The caller already catches and degrades, so fail closed here.
+    const responses = await fetchAllQueryResources<VoteResponseRow>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<VoteResponseRow>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'vote_response',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
+    );
+
+    // `vote_uid` is the v2 parent poll UID (what `/votes/{uid}` expects); `poll_id` is the v1
+    // fallback per the upstream indexer contract. Neither is the individual-response id.
+    const pendingVoteUids = Array.from(
+      new Set(
+        responses
+          .filter((r) => r.vote_status !== 'submitted' && !r.voter_removed && r.project_uid === projectUid)
+          .map((r) => r.vote_uid ?? r.poll_id)
+          .filter((uid): uid is string => !!uid)
+      )
+    );
+    if (pendingVoteUids.length === 0) return [];
+
+    const now = Date.now();
+    const votes = await Promise.all(
+      pendingVoteUids.map((uid) =>
+        this.microserviceProxy.proxyRequest<Vote>(req, 'LFX_V2_SERVICE', `/votes/${uid}`, 'GET').catch((error) => {
+          logger.warning(req, 'fetch_pending_votes', 'Failed to fetch vote details, skipping', {
+            vote_uid: uid,
+            err: error,
+          });
+          return null;
+        })
+      )
+    );
+
+    return votes.filter((v): v is Vote => v !== null && v.status === PollStatus.ACTIVE && !!v.end_time && new Date(v.end_time).getTime() > now);
+  }
+
+  /**
+   * Fetch every `v1_meeting_rsvp` row for the current user. We don't try to narrow by
+   * meeting_id on the server because `tags_or` isn't used elsewhere in this repo and the
+   * query service may silently ignore it — filtering meeting-side in code is both reliable
+   * and cheap at the typical per-user RSVP cardinality (dozens to low hundreds, paginated).
+   */
+  private async fetchAllUserRsvps(req: Request, email: string, username: string | null): Promise<MeetingRsvp[]> {
+    const orClauses: string[] = [];
+    if (email) orClauses.push(`email:${email.toLowerCase()}`);
+    if (username) orClauses.push(`username:${username}`);
+    if (orClauses.length === 0) return [];
+
+    // failOnPartial: a truncated page set could silently miss an accepted RSVP and cause a
+    // bogus Set RSVP action. Caller fails closed on any throw and suppresses the whole source.
+    return fetchAllQueryResources<MeetingRsvp>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRsvp>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting_rsvp',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
+    );
+  }
+
+  /**
+   * Fetch the UIDs of every currently-active registrant record for the current user. RSVP rows
+   * persist from removed registrations, so we use the same guard as
+   * `MeetingService.getMeetingRsvps`: keep only those RSVPs whose `registrant_id` matches an
+   * active registrant. Otherwise an old accepted/declined RSVP from a removed registration
+   * would incorrectly suppress a Set RSVP action for the user's current registration.
+   */
+  private async fetchUserActiveRegistrantIds(req: Request, email: string, username: string | null): Promise<Set<string>> {
+    const orClauses: string[] = [];
+    if (email) orClauses.push(`email:${email.toLowerCase()}`);
+    if (username) orClauses.push(`username:${username}`);
+    if (orClauses.length === 0) return new Set();
+
+    // failOnPartial: a missing registrant UID here means an RSVP-guard lookup would wrongly
+    // reject a still-active registrant's RSVP, which then fires a duplicate Set RSVP nag.
+    const registrants = await fetchAllQueryResources<MeetingRegistrant>(
+      req,
+      (pageToken) =>
+        this.microserviceProxy.proxyRequest<QueryServiceResponse<MeetingRegistrant>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+          type: 'v1_meeting_registrant',
+          filters_or: orClauses,
+          ...(pageToken && { page_token: pageToken }),
+        }),
+      { failOnPartial: true }
+    );
+
+    return new Set(registrants.map((r) => r.uid).filter((uid): uid is string => !!uid));
+  }
+
+  /**
+   * Narrow the meeting list to those with at least one active occurrence (or a single-occurrence
+   * meeting) whose start falls inside the 2-week window and hasn't ended yet (with buffer).
+   * Mirrors the filter inside `transformMeetingsToActions` so both derived sources (Review Agenda
+   * actions and Set RSVP actions) operate on the exact same set of meetings.
+   */
+  private filterMeetingsInWindow(meetings: Meeting[]): Meeting[] {
+    const now = new Date();
+    const twoWeeksFromNow = new Date(now.getTime() + this.twoWeeksMs);
+    return meetings.filter((meeting) => {
+      if (meeting.occurrences && meeting.occurrences.length > 0) {
+        return meeting.occurrences.some((occ) => {
+          if (occ.status === 'cancel') return false;
+          const startTime = new Date(occ.start_time);
+          const durationMinutes = parseToInt(occ.duration) ?? parseToInt(meeting.duration) ?? 0;
+          const endWithBuffer = new Date(startTime.getTime() + (durationMinutes + this.bufferMinutes) * 60 * 1000);
+          return now < endWithBuffer && startTime <= twoWeeksFromNow;
+        });
+      }
+      const startTime = new Date(meeting.start_time);
+      const durationMinutes = parseToInt(meeting.duration) ?? 0;
+      const endWithBuffer = new Date(startTime.getTime() + (durationMinutes + this.bufferMinutes) * 60 * 1000);
+      return now < endWithBuffer && startTime <= twoWeeksFromNow;
+    });
+  }
+
+  /**
+   * For each in-window meeting, emit a "Set RSVP" action when the user has no RSVP recorded.
+   * `accepted`, `declined`, and `maybe` are all valid responses — only missing RSVPs are pending.
+   * Per-occurrence RSVPs count as a response for the series — a user who has RSVPed any
+   * occurrence won't be nagged for a fresh top-level response.
+   *
+   * Before trusting an RSVP, require its `registrant_id` to be in the user's active registrant
+   * set so historical RSVPs from removed registrations can't suppress a needed Set RSVP action
+   * for the user's current registration.
+   */
+  private transformMissingRsvpsToActions(meetings: Meeting[], rsvps: MeetingRsvp[], activeRegistrantIds: Set<string>): PendingActionItem[] {
+    if (meetings.length === 0) return [];
+
+    const inWindowMeetingIds = new Set(meetings.map((m) => m.id).filter((id): id is string => !!id));
+
+    const respondedMeetingIds = new Set<string>();
+    for (const rsvp of rsvps) {
+      if (!rsvp.meeting_id || !inWindowMeetingIds.has(rsvp.meeting_id)) continue;
+      if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
+      respondedMeetingIds.add(rsvp.meeting_id);
+    }
+
+    const actions: PendingActionItem[] = [];
+    for (const meeting of meetings) {
+      if (!meeting.id) continue;
+      if (respondedMeetingIds.has(meeting.id)) continue;
+      actions.push(this.createRsvpAction(meeting));
+    }
+    return actions;
+  }
+
+  /**
+   * Build a "Cast Vote" pending action per active vote. Links to the votes drawer on the
+   * My Activity page where casting actually happens — there's no standalone vote-detail route.
+   */
+  private transformVotesToActions(votes: Vote[]): PendingActionItem[] {
+    return votes.map((vote) => {
+      const endDate = new Date(vote.end_time);
+      const badge = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const formattedEnd = endDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      return {
+        type: 'Cast Vote',
+        badge,
+        text: `Cast your vote on ${vote.name}`,
+        icon: 'fa-regular fa-check-to-slot',
+        severity: 'warn',
+        buttonText: 'Cast Vote',
+        buttonLink: '/my-activity',
+        date: `Closes ${formattedEnd}`,
+      };
+    });
+  }
+
+  /**
+   * Build a "Set RSVP" pending action for a single meeting. Links to the meeting detail page
+   * where the RSVP UI lives; reuses the meeting password query param like `createMeetingAction`.
+   *
+   * For recurring series, `meeting.start_time` is the series start (often long past), so use
+   * the current-or-next occurrence's start time for the badge and formatted date. Falls back
+   * to `meeting.start_time` for single-occurrence meetings.
+   */
+  private createRsvpAction(meeting: Meeting): PendingActionItem {
+    const nextOccurrence = getCurrentOrNextOccurrence(meeting);
+    const startTime = new Date(nextOccurrence?.start_time ?? meeting.start_time);
+    const badge = startTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const formattedDate = startTime.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    const params = new URLSearchParams();
+    if (meeting.password) params.set('password', meeting.password);
+    const queryString = params.toString();
+    const buttonLink = queryString ? `/meetings/${meeting.id}?${queryString}` : `/meetings/${meeting.id}`;
+
+    return {
+      type: 'Set RSVP',
+      badge,
+      text: `RSVP to ${meeting.title}`,
+      icon: 'fa-regular fa-calendar-check',
+      severity: 'warn',
+      buttonText: 'Set RSVP',
+      buttonLink,
+      date: formattedDate,
+    };
   }
 
   /**
