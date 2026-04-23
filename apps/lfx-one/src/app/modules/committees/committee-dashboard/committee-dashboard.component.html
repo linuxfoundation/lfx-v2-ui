@@ -22,7 +22,7 @@
         {{
           isMeLens()
             ? project()?.uid
-              ? committeeLabel.plural + ' you are a member of in this ' + (isFoundationContext() ? 'foundation' : 'project') + '.'
+              ? committeeLabel.plural + ' you are a member of in ' + project()?.name + '.'
               : committeeLabel.plural + ' you are a member of across all foundations and projects.'
             : 'Manage ' + committeeLabel.plural.toLowerCase() + ' and governance for your project.'
         }}
