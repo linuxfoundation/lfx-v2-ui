@@ -3407,4 +3407,5 @@ export interface EdEvolutionData {
   revenueImpact: RevenueImpactResponse;
   emailCtr: EmailCtrResponse;
   paidCampaign: SocialReachResponse;
+  attribution?: MarketingAttributionResponse;
 }

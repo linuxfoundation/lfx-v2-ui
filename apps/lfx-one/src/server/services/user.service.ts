@@ -531,6 +531,48 @@ export class UserService {
 
     logger.debug(req, 'get_user_meetings', 'Fetched meetings from query service', { count: meetings.length });
 
+    // Enrich each meeting with the current user's RSVP (null when no response). Reuses the same
+    // query-service pattern that powers `getUserPendingActions` → `transformMissingRsvpsToActions`.
+    // Wrapped in try/catch so an RSVP-lookup failure degrades gracefully: meetings still return,
+    // `my_rsvp` stays undefined per row, the dashboard doesn't 500, and the Pending RSVP filter
+    // chip just shows the unfiltered list.
+    const rawUsername = await getUsernameFromAuth(req);
+    const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
+    const email = getEffectiveEmail(req) ?? '';
+
+    if ((email || username) && meetings.length > 0) {
+      try {
+        const [userRsvps, activeRegistrantIds] = await Promise.all([
+          this.fetchAllUserRsvps(req, email, username),
+          this.fetchUserActiveRegistrantIds(req, email, username),
+        ]);
+
+        // Strongest-response-wins (accepted/declined beats maybe beats nothing) — same logic as
+        // `transformMissingRsvpsToActions`. Drop RSVPs whose `registrant_id` isn't in the active
+        // set; otherwise stale RSVPs from removed registrations would falsely mark meetings as
+        // "responded".
+        const rsvpByMeeting = new Map<string, MeetingRsvp>();
+        for (const rsvp of userRsvps) {
+          if (!rsvp.meeting_id) continue;
+          if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
+          const existing = rsvpByMeeting.get(rsvp.meeting_id);
+          if (!existing || (existing.response_type === 'maybe' && rsvp.response_type !== 'maybe')) {
+            rsvpByMeeting.set(rsvp.meeting_id, rsvp);
+          }
+        }
+
+        for (const meeting of meetings) {
+          if (meeting.id) {
+            meeting.my_rsvp = rsvpByMeeting.get(meeting.id) ?? null;
+          }
+        }
+      } catch (error) {
+        logger.warning(req, 'get_user_meetings', 'RSVP enrichment failed, continuing without my_rsvp', {
+          err: error,
+        });
+      }
+    }
+
     // Drop past meetings; recurring meetings survive if any occurrence is still active.
     const upcomingMeetings = meetings.filter((meeting) => {
       if (meeting.occurrences && meeting.occurrences.length > 0) {
@@ -888,7 +930,7 @@ export class UserService {
    *   - Non-responded surveys (Snowflake)
    *   - Upcoming meetings within the next two weeks (Review Agenda action)
    *   - Active votes the user hasn't cast (Cast Vote action)
-   *   - Missing or "maybe" RSVPs for meetings in the 2-week window (Set RSVP action)
+   *   - Missing RSVPs for meetings in the 2-week window (Set RSVP action)
    * No meeting-type filter — a working-group meeting next week is as much a pending action as
    * a board meeting.
    */
@@ -1099,9 +1141,10 @@ export class UserService {
   }
 
   /**
-   * For each in-window meeting, emit a "Set RSVP" action when the user has no RSVP recorded or
-   * the recorded RSVP is "maybe". Per-occurrence RSVPs count as a response for the series — a
-   * user who has RSVPed any occurrence won't be nagged for a fresh top-level response.
+   * For each in-window meeting, emit a "Set RSVP" action when the user has no RSVP recorded.
+   * `accepted`, `declined`, and `maybe` are all valid responses — only missing RSVPs are pending.
+   * Per-occurrence RSVPs count as a response for the series — a user who has RSVPed any
+   * occurrence won't be nagged for a fresh top-level response.
    *
    * Before trusting an RSVP, require its `registrant_id` to be in the user's active registrant
    * set so historical RSVPs from removed registrations can't suppress a needed Set RSVP action
@@ -1112,22 +1155,17 @@ export class UserService {
 
     const inWindowMeetingIds = new Set(meetings.map((m) => m.id).filter((id): id is string => !!id));
 
-    // Keep the strongest signal per meeting: accepted/declined beats maybe beats nothing.
-    const responseByMeeting = new Map<string, MeetingRsvp>();
+    const respondedMeetingIds = new Set<string>();
     for (const rsvp of rsvps) {
       if (!rsvp.meeting_id || !inWindowMeetingIds.has(rsvp.meeting_id)) continue;
       if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
-      const existing = responseByMeeting.get(rsvp.meeting_id);
-      if (!existing || (existing.response_type === 'maybe' && rsvp.response_type !== 'maybe')) {
-        responseByMeeting.set(rsvp.meeting_id, rsvp);
-      }
+      respondedMeetingIds.add(rsvp.meeting_id);
     }
 
     const actions: PendingActionItem[] = [];
     for (const meeting of meetings) {
       if (!meeting.id) continue;
-      const rsvp = responseByMeeting.get(meeting.id);
-      if (rsvp && rsvp.response_type !== 'maybe') continue;
+      if (respondedMeetingIds.has(meeting.id)) continue;
       actions.push(this.createRsvpAction(meeting));
     }
     return actions;
