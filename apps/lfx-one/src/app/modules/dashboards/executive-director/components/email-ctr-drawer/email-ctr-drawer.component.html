@@ -174,7 +174,12 @@
             @for (channel of attributionData().channels; track channel.channel) {
               <div
                 class="flex items-center py-2.5 px-1 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                role="button"
+                tabindex="0"
+                [attr.aria-expanded]="expandedChannels().has(channel.channel)"
                 (click)="toggleChannel(channel.channel)"
+                (keydown.enter)="toggleChannel(channel.channel)"
+                (keydown.space)="$event.preventDefault(); toggleChannel(channel.channel)"
                 data-testid="email-ctr-drawer-attribution-channel-row">
                 <span class="flex-[2] min-w-[120px] text-sm font-semibold text-gray-900 truncate pr-2">{{ channel.channel }}</span>
                 <span class="flex-1 text-right text-sm font-semibold text-gray-900">{{ formatCompact(channel.sessions) }}</span>
@@ -284,7 +289,12 @@
               <!-- Project Summary Row -->
               <div
                 class="flex items-center py-2.5 px-1 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                role="button"
+                tabindex="0"
+                [attr.aria-expanded]="expandedProjects().has(project.projectName)"
                 (click)="toggleProject(project.projectName)"
+                (keydown.enter)="toggleProject(project.projectName)"
+                (keydown.space)="$event.preventDefault(); toggleProject(project.projectName)"
                 data-testid="email-ctr-drawer-project-row">
                 <span class="flex-[2] min-w-[120px] text-sm font-semibold text-gray-900 truncate pr-2">{{ project.projectName }}</span>
                 <span class="w-16 flex justify-center">
@@ -403,7 +413,12 @@
               <!-- Type Summary Row -->
               <div
                 class="flex items-center py-2.5 px-1 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+                role="button"
+                tabindex="0"
+                [attr.aria-expanded]="expandedTypes().has(type.emailType)"
                 (click)="toggleType(type.emailType)"
+                (keydown.enter)="toggleType(type.emailType)"
+                (keydown.space)="$event.preventDefault(); toggleType(type.emailType)"
                 data-testid="email-ctr-drawer-type-row">
                 <span class="flex-[2] min-w-[120px]">
                   <lfx-tag [value]="type.emailType | titlecase" severity="warn" [rounded]="true" />

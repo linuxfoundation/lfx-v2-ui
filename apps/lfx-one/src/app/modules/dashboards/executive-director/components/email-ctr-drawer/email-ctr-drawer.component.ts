@@ -400,10 +400,15 @@ export class EmailCtrDrawerComponent {
         const totalSessions = attribution.channels.reduce((s, c) => s + c.sessions, 0);
         const totalLinearRevenue = attribution.channels.reduce((s, c) => s + c.linearRevenue, 0);
 
-        if (totalLinearRevenue > 0) {
+        if (totalLinearRevenue > 0 && totalSessions > 0) {
           const revPerSession = totalLinearRevenue / totalSessions;
           attrInsights.push({
             text: `${formatNumber(totalSessions)} total sessions driving ${EmailCtrDrawerComponent.formatRevenue(totalLinearRevenue)} attributed revenue ($${revPerSession.toFixed(2)}/session)`,
+            type: 'driver',
+          });
+        } else if (totalLinearRevenue > 0) {
+          attrInsights.push({
+            text: `${EmailCtrDrawerComponent.formatRevenue(totalLinearRevenue)} attributed revenue across channels`,
             type: 'driver',
           });
         } else if (totalSessions > 0) {
