@@ -1,6 +1,6 @@
 # Observability (Tracing & Metrics)
 
-The LFX One backend ships with OpenTelemetry-based distributed tracing that activates only when an OTLP endpoint is configured. Tracing is **off by default** in dev and activates automatically in environments where the OTel collector is reachable. Traces correlate with structured Pino logs via request IDs and W3C trace context headers.
+The LFX One backend ships with OpenTelemetry-based distributed tracing that activates only when an OTLP endpoint is configured. Tracing is **off by default** in dev and activates only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (no reachability probe — the bootstrap only checks the env var). Traces correlate with structured Pino logs via request IDs and W3C trace context headers.
 
 ## Components
 
@@ -26,15 +26,15 @@ The `SERVICE_NAME` constant is also consumed by `server-logger.ts` so log entrie
 
 ## Configuration
 
-| Env var                       | Default                 | Purpose                                                                      |
-| ----------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset → tracing off)_ | Required to turn tracing on. Points at the OTLP collector (HTTP or gRPC).    |
-| `OTEL_SERVICE_NAME`           | `lfx-v2-ui`             | Identifier that appears on every span and in log metadata.                   |
-| `APP_VERSION`                 | `unknown`               | Tagged onto the `service.version` resource attribute.                        |
-| `NODE_ENV`                    | `development`           | Drives `deployment.environment` resource attribute (`dev`, `stage`, `prod`). |
-| `OTEL_LOG_LEVEL`              | `info`                  | Passed through to the OTel SDK diagnostics logger.                           |
-| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on` | One of `always_on`, `always_off`, `traceidratio`, `parentbased_*`.           |
-| `OTEL_TRACES_SAMPLER_ARG`     | —                       | Ratio argument for the `*_traceidratio` samplers.                            |
+| Env var                       | Default                                          | Purpose                                                                                                         |
+| ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset → tracing off)_                          | Required to turn tracing on. Points at the OTLP collector (HTTP or gRPC).                                       |
+| `OTEL_SERVICE_NAME`           | `lfx-v2-ui`                                      | Identifier that appears on every span and in log metadata.                                                      |
+| `APP_VERSION`                 | `development` (otel.mjs) / `1.0.0` (pino logger) | Tagged onto the `service.version` resource attribute (otel.mjs) and the log `version` field (server-logger.ts). |
+| `NODE_ENV`                    | `development`                                    | Drives `deployment.environment` resource attribute (`dev`, `stage`, `prod`).                                    |
+| `OTEL_LOG_LEVEL`              | `info`                                           | Passed through to the OTel SDK diagnostics logger.                                                              |
+| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on`                          | One of `always_on`, `always_off`, `traceidratio`, `parentbased_*`.                                              |
+| `OTEL_TRACES_SAMPLER_ARG`     | —                                                | Ratio argument for the `*_traceidratio` samplers.                                                               |
 
 Tracing activates only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — leaving it unset keeps the SDK out of the process entirely (no overhead in dev).
 

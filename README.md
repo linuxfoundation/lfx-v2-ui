@@ -307,7 +307,7 @@ The [Architecture Overview](docs/architecture.md) is the jumping-off point. Each
 
 ### Before Committing
 
-Pre-commit hooks (via husky + lint-staged) automatically run **prettier**, **lint**, and **check-types** on staged files — you don't need to run `yarn format` manually. Before opening a PR, sanity-check the full build and any broader linting:
+Pre-commit hooks (via husky + lint-staged) auto-format and lint staged files, then run `yarn format:check`, `yarn lint:check`, and `yarn check-types` across the whole repo — you don't need to run `yarn format` manually. Before opening a PR, sanity-check the full build and any broader linting:
 
 ```bash
 yarn lint           # Auto-fix linting across the monorepo

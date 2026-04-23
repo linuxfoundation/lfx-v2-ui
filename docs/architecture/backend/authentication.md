@@ -35,7 +35,7 @@ The authentication configuration uses selective authentication (`authRequired: f
 ### User Data Structure
 
 ```typescript
-// packages/shared/src/interfaces/auth.ts
+// packages/shared/src/interfaces/auth.interface.ts
 export interface User {
   sid: string;
   'https://sso.linuxfoundation.org/claims/username': string;
@@ -60,7 +60,10 @@ export interface AuthContext {
   organizations?: Account[];
   projects?: EnrichedPersonaProject[];
   personaProjects?: Partial<Record<PersonaType, PersonaProject[]>>;
+  // Impersonation capability + active state — see docs/architecture/backend/impersonation.md
   canImpersonate?: boolean;
+  impersonating?: boolean;
+  impersonator?: Impersonator;
 }
 
 /**

@@ -267,7 +267,7 @@ Several analytics drawers expose an "Open in LFX Insights" CTA that links out to
 
 ```typescript
 buildLensAwareInsightsUrl(
-  slug: string | undefined,
+  slug: string | null | undefined,
   isFoundationContext: boolean,
   opts?: { projectSubPath?: string; projectParams?: Record<string, string | undefined> }
 ): string

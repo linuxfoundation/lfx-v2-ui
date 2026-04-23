@@ -32,7 +32,7 @@ Key behaviors:
 
 - `activeLens` is a **computed signal** — it reads the user's selected lens from a 30-day cookie and clamps it to the set allowed by their persona. If the persisted lens is disallowed, it falls back to `DEFAULT_LENS`.
 - `setLens()` rejects disallowed lenses silently (no throw), so unprivileged callers can't escalate scope.
-- `availableLenses` is driven by persona: root writers see all four lenses, board-scoped personas hide `project`, project-scoped personas hide `foundation`.
+- `availableLenses` is driven by role-based access rules: root writers see all four lenses; `foundation` is available when `hasBoardRole || isRootWriter`; `project` is available when `hasProjectRole || isRootWriter`. A user can carry both roles and see both lenses.
 
 ### Route wiring
 

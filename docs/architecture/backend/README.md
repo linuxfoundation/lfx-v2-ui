@@ -152,7 +152,7 @@ Per-file inventories rot quickly — run `ls apps/lfx-one/src/server/<dir>/` for
 
 ### Controllers & Services
 
-Each HTTP boundary has a `{domain}.controller.ts` + `{domain}.route.ts` pair (e.g. `meeting.controller.ts` ↔ `meetings.route.ts`) and a backing `{domain}.service.ts`. The three-file pattern is enforced — see [LFX backend conventions](../../../.claude/rules/development-rules.md) for rationale. Domains currently include analytics, badges, committees, copilot, documents, events, impersonation, mailing-lists, meetings (+ past-meetings, public-meetings), navigation, organizations, persona, profile, projects, rewards, search, surveys, training, transactions, user, and votes.
+Each HTTP boundary typically has a `{domain}.controller.ts` + `{domain}.route.ts` pair (e.g. `meeting.controller.ts` ↔ `meetings.route.ts`) and a backing `{domain}.service.ts`. This three-file pattern is the standard backend convention used throughout the codebase. Domains currently include analytics, badges, committees, copilot, documents, events, impersonation, mailing-lists, meetings (+ past-meetings, public-meetings), navigation, organizations, persona, profile, projects, rewards, search, surveys, training, transactions, user, and votes.
 
 Infrastructure services that don't map to a single HTTP boundary:
 
@@ -170,7 +170,7 @@ Custom error hierarchy under `errors/`: `BaseApiError` is the root; `Authenticat
 
 ### Routes
 
-All feature routes are mounted under `/api/<domain>` from `server.ts` — e.g. `/api/meetings`, `/api/committees`, `/api/votes`. Public, unauthenticated surfaces are under `/api/public/*` (currently public meetings and public committees). Health and telemetry endpoints are wired directly in `server.ts`.
+All feature routes are mounted under `/api/<domain>` from `server.ts` — e.g. `/api/meetings`, `/api/committees`, `/api/votes`. Public, unauthenticated surfaces are under `/public/api/*` (currently public meetings and public committees). Health and telemetry endpoints are wired directly in `server.ts`.
 
 ## Key Patterns
 
