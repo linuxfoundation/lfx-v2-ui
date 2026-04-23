@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
@@ -11,6 +11,7 @@ import { Tooltip } from 'primeng/tooltip';
 import { DiscoverEventsButtonComponent } from '../components/discover-events-button/discover-events-button.component';
 import { EventsTopBarComponent } from '../components/events-top-bar/events-top-bar.component';
 import { EventsListComponent } from './components/events-list/events-list.component';
+import { UserService } from '@app/shared/services/user.service';
 
 @Component({
   selector: 'lfx-my-events-dashboard',
@@ -18,6 +19,7 @@ import { EventsListComponent } from './components/events-list/events-list.compon
   templateUrl: './my-events-dashboard.component.html',
 })
 export class MyEventsDashboardComponent {
+  private readonly userService = inject(UserService);
   private readonly eventsListRef = viewChild(EventsListComponent);
 
   protected readonly activeTab = signal<EventTabId>('upcoming');
@@ -55,6 +57,8 @@ export class MyEventsDashboardComponent {
   protected readonly attendedCount = computed(() => this.eventsListRef()?.attendedCount() ?? 0);
   protected readonly nextEventName = computed(() => this.eventsListRef()?.nextEventName() ?? '');
   protected readonly upcomingCount = computed(() => this.eventsListRef()?.tabCounts().upcoming ?? 0);
+
+  protected readonly isCreateEnabled = computed(() => !!this.userService.apiGatewayUserId());
 
   protected onFoundationChange(value: string | null): void {
     this.selectedFoundation.set(value);

@@ -3,7 +3,7 @@
 
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { UserService } from '@app/shared/services/user.service';
 import { CalendarComponent } from '@components/calendar/calendar.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
@@ -33,8 +33,8 @@ export class VisaRequestApplyFormComponent {
     email: [''],
     passportNumber: ['', Validators.required],
     citizenshipCountry: ['', Validators.required],
-    passportExpiryDate: [null as Date | null, Validators.required],
-    birthDate: [null as Date | null, Validators.required],
+    passportExpiryDate: [null as Date | null, [Validators.required, notPastDateValidator]],
+    birthDate: [null as Date | null, [Validators.required, notFutureDateValidator]],
     embassyCity: ['', Validators.required],
     company: ['', Validators.required],
     organizationID: ['', Validators.required],
@@ -46,6 +46,7 @@ export class VisaRequestApplyFormComponent {
   public readonly countryOptions = [...COUNTRIES];
   public readonly attendeeTypeOptions = ATTENDEE_TYPE_OPTIONS;
   public readonly accommodationOptions = ACCOMMODATION_PAID_BY_OPTIONS;
+  public readonly today = startOfToday();
 
   public constructor() {
     this.form.get('email')?.disable();
@@ -71,4 +72,34 @@ export class VisaRequestApplyFormComponent {
   private buildFormValue(): VisaRequestApplicantInfo {
     return this.form.getRawValue() as VisaRequestApplicantInfo;
   }
+}
+
+function startOfToday(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function notFutureDateValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as Date | null;
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+
+  return date.getTime() > startOfToday().getTime() ? { futureDate: true } : null;
+}
+
+function notPastDateValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as Date | null;
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+
+  return date.getTime() < startOfToday().getTime() ? { pastDate: true } : null;
 }

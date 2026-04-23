@@ -81,9 +81,10 @@
         @if (isRequestTab()) {
           <lfx-button
             [label]="requestButtonLabel()"
-            icon="fa-light fa-plus"
+            [icon]="isCreateEnabled() ? 'fa-light fa-plus' : 'fa-light fa-spinner-third fa-spin'"
             severity="primary"
             size="small"
+            [disabled]="!isCreateEnabled()"
             (onClick)="openCurrentRequestDialog()"
             data-testid="events-new-request-button" />
         }
