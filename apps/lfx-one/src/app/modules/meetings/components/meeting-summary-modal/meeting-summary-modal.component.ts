@@ -17,7 +17,7 @@ export class MeetingSummaryModalComponent {
 
   public readonly summary: PastMeetingSummary = this.dialogConfig.data.summary;
   public readonly title: string = this.summary.summary_data?.title || '';
-  public readonly content: string = this.summary.summary_data?.edited_content || this.summary.summary_data?.content || '';
+  public readonly content: string = this.summary.summary_data?.edited_content ?? this.summary.summary_data?.content ?? '';
   public readonly approved: boolean = this.summary.approved || false;
   public readonly sections: SummarySection[] = this.parseSections(this.content);
   public readonly isStructured: boolean = this.sections.length > 0;

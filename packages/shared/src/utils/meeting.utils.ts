@@ -295,7 +295,7 @@ export function buildJoinUrlWithParams(joinUrl: string, user?: User | null, opti
 function buildV2SummaryDataFromV1(v1Summary: V1PastMeetingSummary & { content?: string; edited_content?: string }): SummaryData {
   // Indexer contract shape: flat content/edited_content fields — use directly.
   // Use property presence ('in') not truthiness to correctly handle empty strings.
-  if ('content' in (v1Summary as object) || 'edited_content' in (v1Summary as object)) {
+  if ('content' in v1Summary || 'edited_content' in v1Summary) {
     return {
       title: v1Summary.summary_title || '',
       content: v1Summary.content || '',
@@ -360,7 +360,7 @@ export function transformV1SummaryToV2(summary: PastMeetingSummary): PastMeeting
   }
 
   // Cast to raw shape to access both V1 fields and indexer-contract flat fields
-  // (content, edited_content, summary_title are indexer fields not in PastMeetingSummary or V1PastMeetingSummary)
+  // (content and edited_content are indexer-flat fields not present in PastMeetingSummary or V1PastMeetingSummary)
   const raw = summary as unknown as V1PastMeetingSummary & { content?: string; edited_content?: string };
 
   return {
@@ -373,7 +373,7 @@ export function transformV1SummaryToV2(summary: PastMeetingSummary): PastMeeting
     email_sent: summary.email_sent ?? raw.email_sent ?? false,
     password: summary.password || raw.password || '',
 
-    summary_data: buildV2SummaryDataFromV1(raw),
+    summary_data: summary.summary_data ?? buildV2SummaryDataFromV1(raw),
 
     zoom_config: summary.zoom_config || {
       meeting_id: raw.meeting_id || '',
