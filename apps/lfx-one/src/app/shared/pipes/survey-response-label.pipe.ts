@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { SURVEY_RESPONSE_STATUS_LABELS, SurveyResponseStatus } from '@lfx-one/shared';
+import { SURVEY_RESPONSE_STATUS_LABELS } from '@lfx-one/shared/constants';
+import { SurveyResponseStatus } from '@lfx-one/shared/enums';
 
 /**
  * Transforms a survey response status into a human-readable label.

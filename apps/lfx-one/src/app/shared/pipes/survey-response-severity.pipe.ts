@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { SurveyResponseStatus, SURVEY_RESPONSE_STATUS_SEVERITY, TagSeverity } from '@lfx-one/shared';
+import { SURVEY_RESPONSE_STATUS_SEVERITY } from '@lfx-one/shared/constants';
+import { SurveyResponseStatus } from '@lfx-one/shared/enums';
+import { TagSeverity } from '@lfx-one/shared/interfaces';
 
 /**
  * Transforms survey response status to tag severity for consistent styling
