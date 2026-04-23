@@ -47,6 +47,7 @@ import {
   MEETING_TYPE_CONFIGS,
   PastMeeting,
   PastMeetingAttachment,
+  PastMeetingParticipant,
   PastMeetingRecording,
   PastMeetingSummary,
   TagSeverity,
@@ -123,6 +124,14 @@ export class MeetingCardComponent implements OnInit {
   public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
   public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
   public additionalRegistrantsCount: WritableSignal<number> = signal(0);
+  // Past-meeting attendance counts forwarded by <lfx-meeting-rsvp-details> from its lazy-loaded
+  // participants list. The project/foundation list endpoint does not enrich the meeting object
+  // with `attended_count` / `participant_count`, so the drawer header reads from these signals
+  // instead of `meeting().*_count` (which would always render 0/0 in the dashboard).
+  public pastAttendedCount: WritableSignal<number> = signal(0);
+  public pastParticipantCount: WritableSignal<number> = signal(0);
+  public pastParticipants: WritableSignal<PastMeetingParticipant[]> = signal([]);
+  public pastParticipantsLoading: WritableSignal<boolean> = signal(false);
   public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
   public materialsDrawerVisible = signal(false);
 
@@ -230,6 +239,8 @@ export class MeetingCardComponent implements OnInit {
   public ngOnInit(): void {
     this.attachments = this.initAttachments();
     if (this.pastMeeting()) {
+      this.pastParticipantsLoading.set(true);
+      this.initPastParticipantCountFallback();
       this.initRecording();
       this.initSummary();
     }
@@ -241,6 +252,16 @@ export class MeetingCardComponent implements OnInit {
 
   public onRsvpViewToggle(): void {
     this.showMyRsvp.set(!this.showMyRsvp());
+  }
+
+  public onPastParticipantCountsChange(event: { total: number; attended: number }): void {
+    this.pastAttendedCount.set(event.attended);
+    this.pastParticipantCount.set(event.total);
+  }
+
+  public onPastParticipantsLoaded(participants: PastMeetingParticipant[]): void {
+    this.pastParticipants.set(participants);
+    this.pastParticipantsLoading.set(false);
   }
 
   public openMaterialsDrawer(): void {
@@ -524,6 +545,18 @@ export class MeetingCardComponent implements OnInit {
         { initialValue: null }
       );
     });
+  }
+
+  private initPastParticipantCountFallback(): void {
+    const meeting = this.meetingInput();
+
+    if ('attended_count' in meeting && typeof meeting.attended_count === 'number') {
+      this.pastAttendedCount.set(meeting.attended_count);
+    }
+
+    if ('participant_count' in meeting && typeof meeting.participant_count === 'number') {
+      this.pastParticipantCount.set(meeting.participant_count);
+    }
   }
 
   private initTotalResourcesCount(): Signal<number> {

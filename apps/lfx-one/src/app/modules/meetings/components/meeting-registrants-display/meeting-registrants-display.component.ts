@@ -32,12 +32,21 @@ export class MeetingRegistrantsDisplayComponent {
   public readonly visible: InputSignal<boolean> = input<boolean>(false);
   public readonly showAddRegistrant: InputSignal<boolean> = input<boolean>(false);
   public readonly myMeetingRegistrants: InputSignal<boolean> = input<boolean>(false);
+  // Gates the past-meeting participants self-fetch. When the parent (e.g. the public meeting-join
+  // page) knows the viewer does not have full access, it can pass `false` so the child skips the
+  // network call entirely and the drawer header / body stay consistent. Defaults to `true` so
+  // existing callers (meeting-card on the dashboard) keep their previous behavior.
+  public readonly pastMeetingFullAccess: InputSignal<boolean> = input<boolean>(true);
   // Externally-managed mode: when the parent already owns the registrants list (e.g. on the
   // meeting join page) it can pass it in here to avoid a duplicate fetch on drawer open. The
   // child uses the seed as its source and emits refreshRequested when the data needs to be
   // re-pulled (e.g. after adding a guest). Pass `null` (default) to keep the legacy self-fetch
   // behavior used by meeting-card.
   public readonly initialRegistrants: InputSignal<MeetingRegistrant[] | null> = input<MeetingRegistrant[] | null>(null);
+  // Same externally-managed pattern for past-meeting participants; allows parent components
+  // to reuse already-fetched participant data and avoid a duplicate fetch when opening drawers.
+  public readonly initialPastParticipants: InputSignal<PastMeetingParticipant[] | null> = input<PastMeetingParticipant[] | null>(null);
+  public readonly initialPastParticipantsLoading: InputSignal<boolean> = input<boolean>(false);
   public readonly initialRegistrantsLoading: InputSignal<boolean> = input<boolean>(false);
 
   public readonly registrantsCountChange: OutputEmitterRef<number> = output<number>();
@@ -46,8 +55,16 @@ export class MeetingRegistrantsDisplayComponent {
   private readonly internalLoading: WritableSignal<boolean> = signal(true);
   private readonly refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private readonly externallyManaged: Signal<boolean> = computed(() => this.initialRegistrants() !== null);
+  private readonly externallyManagedPast: Signal<boolean> = computed(() => this.pastMeeting() && this.initialPastParticipants() !== null);
   private readonly internalRegistrants: Signal<MeetingRegistrant[]> = this.initRegistrantsList();
-  public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
+  private readonly internalPastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
+  public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = computed(() => {
+    if (this.externallyManagedPast()) {
+      const seed = this.initialPastParticipants() ?? [];
+      return [...seed].sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as PastMeetingParticipant[];
+    }
+    return this.internalPastMeetingParticipants();
+  });
   public readonly registrants: Signal<MeetingRegistrant[]> = computed(() => {
     if (this.externallyManaged()) {
       const seed = this.initialRegistrants() ?? [];
@@ -56,8 +73,11 @@ export class MeetingRegistrantsDisplayComponent {
     return this.internalRegistrants();
   });
   public readonly registrantsLoading: Signal<boolean> = computed(() => {
-    // Past-meeting participants are always fetched internally (parent does not prefetch them),
-    // so fall back to the internal loader regardless of externally-managed mode.
+    if (this.externallyManagedPast()) {
+      return this.initialPastParticipantsLoading();
+    }
+    // Upcoming meetings can be externally managed by the parent. Past meetings can now also be
+    // externally managed via initialPastParticipants.
     if (this.externallyManaged() && !this.pastMeeting()) {
       return this.initialRegistrantsLoading();
     }
@@ -111,8 +131,18 @@ export class MeetingRegistrantsDisplayComponent {
 
     effect(() => {
       if (!this.visible()) return;
-      // Past-meeting participants always self-fetch.
+      // Past-meeting participants always self-fetch — but skip when the parent has signalled the
+      // viewer lacks full access, so the body matches the header instead of leaking a 401-shaped
+      // empty list with a spinner.
       if (this.pastMeeting()) {
+        if (this.externallyManagedPast()) {
+          this.internalLoading.set(false);
+          return;
+        }
+        if (!this.pastMeetingFullAccess()) {
+          this.internalLoading.set(false);
+          return;
+        }
         this.internalLoading.set(true);
         this.refresh$.next(true);
         return;
@@ -238,7 +268,9 @@ export class MeetingRegistrantsDisplayComponent {
     return toSignal(
       this.refresh$.pipe(
         takeUntilDestroyed(),
-        filter((refresh) => refresh && this.pastMeeting()),
+        // Skip when the viewer lacks full access — the server would reject the call and we'd just
+        // catch into an empty array, so don't even try.
+        filter((refresh) => refresh && this.pastMeeting() && this.pastMeetingFullAccess() && !this.externallyManagedPast()),
         switchMap(() => {
           this.internalLoading.set(true);
           return this.meetingService

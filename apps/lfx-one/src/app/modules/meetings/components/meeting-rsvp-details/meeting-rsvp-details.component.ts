@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { NgClass } from '@angular/common';
-import { Component, computed, inject, input, InputSignal, output, signal, Signal, WritableSignal } from '@angular/core';
+import { Component, computed, effect, inject, input, InputSignal, output, signal, Signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import {
@@ -42,6 +42,13 @@ export class MeetingRsvpDetailsComponent {
   // Emits whether the current user has any RSVP on this meeting, derived from the already-fetched
   // registrants/rsvps data. Parent card uses this to flip "Set My RSVP" → "Update My RSVP".
   public readonly currentUserHasRsvpChanged = output<boolean>();
+  // Emits past-meeting attendance counts as soon as the lazy-loaded participants resolve.
+  // Parent (meeting-card) uses this to populate the registrants drawer header without re-fetching,
+  // since the project/foundation list endpoint does not enrich `participant_count` / `attended_count`.
+  public readonly pastParticipantCountsChange = output<{ total: number; attended: number }>();
+  // Emits the resolved past-meeting participants list so parents can reuse it (e.g. drawer list)
+  // and avoid a second fetch for the same endpoint.
+  public readonly pastParticipantsLoaded = output<PastMeetingParticipant[]>();
   public readonly disabled: InputSignal<boolean> = input<boolean>(false);
   public readonly disabledMessage: InputSignal<string> = input<string>('RSVP not available for this meeting');
 
@@ -49,9 +56,9 @@ export class MeetingRsvpDetailsComponent {
   // Private source: one observable, two derived signals. Consolidates registrants + RSVPs
   // into a single HTTP call for the Me lens (where the backend doesn't populate counts),
   // and falls back to a direct RSVP fetch for the non-Me lens where counts are already populated.
-  private readonly upcomingData: Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> = this.initializeUpcomingData();
+  private readonly upcomingData: Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> = this.initUpcomingData();
   public readonly rsvps: Signal<MeetingRsvp[]> = computed(() => this.upcomingData().rsvps);
-  public readonly pastParticipants: Signal<PastMeetingParticipant[]> = this.initializePastParticipants();
+  public readonly pastParticipants: Signal<PastMeetingParticipant[]> = this.initPastParticipants();
   public readonly registrants: Signal<MeetingRegistrant[]> = computed(() => this.upcomingData().registrants);
   // Tracks across both rsvps data AND user identity; re-emits whenever either changes so the
   // parent card's "Set My RSVP" / "Update My RSVP" label stays in sync with login/impersonation.
@@ -60,16 +67,16 @@ export class MeetingRsvpDetailsComponent {
     if (!email) return false;
     return this.upcomingData().rsvps.some((r) => r.email?.toLowerCase() === email);
   });
-  public readonly rsvpCounts: Signal<RsvpCounts> = this.initializeRsvpCounts();
+  public readonly rsvpCounts: Signal<RsvpCounts> = this.initRsvpCounts();
   public readonly acceptedCount: Signal<number> = computed(() => this.rsvpCounts().accepted);
   public readonly maybeCount: Signal<number> = computed(() => this.rsvpCounts().maybe);
   public readonly declinedCount: Signal<number> = computed(() => this.rsvpCounts().declined);
-  public readonly meetingRegistrantCount: Signal<number> = this.initializeMeetingRegistrantCount();
-  public readonly attendedCount: Signal<number> = this.initializeAttendedCount();
-  public readonly attendancePercentage: Signal<number> = this.initializeAttendancePercentage();
+  public readonly meetingRegistrantCount: Signal<number> = this.initMeetingRegistrantCount();
+  public readonly attendedCount: Signal<number> = this.initAttendedCount();
+  public readonly attendancePercentage: Signal<number> = this.initAttendancePercentage();
   public readonly showPoorAttendanceWarning: Signal<boolean> = computed(() => this.pastMeeting() && this.attendancePercentage() < 50);
-  public readonly backgroundClasses: Signal<string> = this.initializeBackgroundClasses();
-  public readonly borderClasses: Signal<string> = this.initializeBorderClasses();
+  public readonly backgroundClasses: Signal<string> = this.initBackgroundClasses();
+  public readonly borderClasses: Signal<string> = this.initBorderClasses();
   public readonly headerTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-600' : 'text-gray-600'));
   public readonly summaryTextClasses: Signal<string> = computed(() => (this.showPoorAttendanceWarning() ? 'text-amber-900' : 'text-gray-900'));
 
@@ -78,9 +85,20 @@ export class MeetingRsvpDetailsComponent {
     toObservable(this.currentUserHasRsvp)
       .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe((v) => this.currentUserHasRsvpChanged.emit(v));
+
+    // Forward past-meeting attendance counts to the parent whenever the lazy-loaded participants
+    // resolve. Only emits in past-meeting mode so the upcoming-meeting path stays untouched.
+    effect(() => {
+      if (!this.pastMeeting() || this.loading()) return;
+      const participants = this.pastParticipants();
+      const total = participants.length;
+      const attended = this.attendedCount();
+      this.pastParticipantsLoaded.emit(participants);
+      this.pastParticipantCountsChange.emit({ total, attended });
+    });
   }
 
-  private initializeUpcomingData(): Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> {
+  private initUpcomingData(): Signal<{ rsvps: MeetingRsvp[]; registrants: MeetingRegistrant[] }> {
     return toSignal(
       toObservable(this.meeting).pipe(
         tap(() => {
@@ -120,7 +138,7 @@ export class MeetingRsvpDetailsComponent {
     );
   }
 
-  private initializePastParticipants(): Signal<PastMeetingParticipant[]> {
+  private initPastParticipants(): Signal<PastMeetingParticipant[]> {
     return toSignal(
       toObservable(this.meeting).pipe(
         tap(() => {
@@ -149,7 +167,7 @@ export class MeetingRsvpDetailsComponent {
     return meeting.individual_registrants_count !== undefined || meeting.committee_members_count !== undefined;
   }
 
-  private initializeRsvpCounts(): Signal<RsvpCounts> {
+  private initRsvpCounts(): Signal<RsvpCounts> {
     return computed(() => {
       const rsvps = this.rsvps();
       const occurrence = this.currentOccurrence();
@@ -158,7 +176,7 @@ export class MeetingRsvpDetailsComponent {
     });
   }
 
-  private initializeMeetingRegistrantCount(): Signal<number> {
+  private initMeetingRegistrantCount(): Signal<number> {
     return computed(() => {
       const meeting = this.meeting();
       const additionalCount = this.additionalRegistrantsCount();
@@ -175,14 +193,14 @@ export class MeetingRsvpDetailsComponent {
     });
   }
 
-  private initializeAttendedCount(): Signal<number> {
+  private initAttendedCount(): Signal<number> {
     return computed(() => {
       if (!this.pastMeeting()) return 0;
       return this.pastParticipants().filter((p) => p.is_attended).length;
     });
   }
 
-  private initializeAttendancePercentage(): Signal<number> {
+  private initAttendancePercentage(): Signal<number> {
     return computed(() => {
       const total = this.meetingRegistrantCount();
       if (total === 0) {
@@ -197,7 +215,7 @@ export class MeetingRsvpDetailsComponent {
     });
   }
 
-  private initializeBackgroundClasses(): Signal<string> {
+  private initBackgroundClasses(): Signal<string> {
     return computed(() => {
       if (this.showPoorAttendanceWarning()) {
         return 'bg-amber-50';
@@ -206,7 +224,7 @@ export class MeetingRsvpDetailsComponent {
     });
   }
 
-  private initializeBorderClasses(): Signal<string> {
+  private initBorderClasses(): Signal<string> {
     return computed(() => {
       if (this.showPoorAttendanceWarning()) {
         return 'border border-amber-200';

@@ -280,7 +280,9 @@
                 [showAddButton]="!pastMeeting()"
                 [additionalRegistrantsCount]="additionalRegistrantsCount()"
                 (addClicked)="showRegistrants.set(true)"
-                (currentUserHasRsvpChanged)="userHasRsvp.set($event)">
+                (currentUserHasRsvpChanged)="userHasRsvp.set($event)"
+                (pastParticipantCountsChange)="onPastParticipantCountsChange($event)"
+                (pastParticipantsLoaded)="onPastParticipantsLoaded($event)">
               </lfx-meeting-rsvp-details>
             }
           } @placeholder {
@@ -425,7 +427,7 @@
             @if (pastMeeting()) {
               <div class="flex flex-col">
                 <h1>Meeting Participants</h1>
-                <span class="text-base text-gray-500">{{ meeting().participant_count || 0 }} participants</span>
+                <span class="text-base text-gray-500">{{ pastAttendedCount() }} attended / {{ pastParticipantCount() }} invited</span>
               </div>
             } @else if (meeting().committees && meeting().committees!.length > 0) {
               <div class="flex flex-col">
@@ -446,6 +448,8 @@
           [meeting]="meeting()"
           [pastMeeting]="pastMeeting()"
           [visible]="showRegistrants()"
+          [initialPastParticipants]="pastParticipants()"
+          [initialPastParticipantsLoading]="pastParticipantsLoading()"
           [showAddRegistrant]="!pastMeeting()"
           (registrantsCountChange)="additionalRegistrantsCount.set($event)">
         </lfx-meeting-registrants-display>
