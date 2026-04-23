@@ -2378,7 +2378,7 @@ export class ProjectService {
       // Guard with ?? 0 — SUM() returns NULL when all values in the group are NULL.
       const channelMap = new Map<string, MarketingAttributionChannel>();
       for (const row of channelResult.rows) {
-        const label = mapChannel(row.CHANNEL);
+        const label = mapChannel(row.CHANNEL ?? 'Direct / Unknown');
         const existing = channelMap.get(label);
         if (existing) {
           existing.sessions += row.SESSIONS ?? 0;
@@ -2421,8 +2421,9 @@ export class ProjectService {
       // Map project rows with the same channel consolidation
       const attrProjectMap = new Map<string, MarketingAttributionProject>();
       for (const row of projectResult.rows) {
-        const label = mapChannel(row.CHANNEL);
-        const key = `${row.PROJECT_NAME}::${label}`;
+        const label = mapChannel(row.CHANNEL ?? 'Direct / Unknown');
+        const projectName = row.PROJECT_NAME ?? 'Unknown Project';
+        const key = `${projectName}::${label}`;
         const existing = attrProjectMap.get(key);
         if (existing) {
           existing.sessions += row.SESSIONS ?? 0;
@@ -2436,7 +2437,7 @@ export class ProjectService {
           existing.timeDecayRevenue += row.TIME_DECAY_REVENUE ?? 0;
         } else {
           attrProjectMap.set(key, {
-            projectName: row.PROJECT_NAME,
+            projectName,
             channel: label,
             sessions: row.SESSIONS ?? 0,
             pageViews: row.PAGE_VIEWS ?? 0,
