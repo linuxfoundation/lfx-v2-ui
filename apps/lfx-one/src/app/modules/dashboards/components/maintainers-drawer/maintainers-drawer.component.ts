@@ -8,7 +8,7 @@ import { ChartComponent } from '@components/chart/chart.component';
 import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DEFAULT_FOUNDATION_MAINTAINERS_DISTRIBUTION, DEFAULT_FOUNDATION_MAINTAINERS_MONTHLY, lfxColors } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { buildLensAwareInsightsUrl, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
@@ -127,6 +127,13 @@ export class MaintainersDrawerComponent {
   protected readonly drawerLoading = signal(false);
 
   // === Computed Signals ===
+  protected readonly insightsUrl: Signal<string> = computed(() =>
+    buildLensAwareInsightsUrl(this.projectContextService.activeContext()?.slug, this.projectContextService.isFoundationContext(), {
+      projectSubPath: 'contributors',
+      projectParams: { timeRange: 'alltime', widget: 'contributors-leaderboard' },
+    })
+  );
+
   protected readonly metricValue: Signal<string> = computed(() => this.data().avgMaintainers.toLocaleString());
   protected readonly hasData: Signal<boolean> = computed(() => this.data().avgMaintainers > 0);
 

@@ -4,7 +4,6 @@
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { hexToRgba, wrapLabel } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
@@ -21,7 +20,7 @@ const DEFAULT_DISTRIBUTION: OrgContributorsProjectDistributionResponse = { proje
 
 @Component({
   selector: 'lfx-org-active-contributors-drawer',
-  imports: [DrawerModule, ChartComponent, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent],
   templateUrl: './org-active-contributors-drawer.component.html',
 })
 export class OrgActiveContributorsDrawerComponent {

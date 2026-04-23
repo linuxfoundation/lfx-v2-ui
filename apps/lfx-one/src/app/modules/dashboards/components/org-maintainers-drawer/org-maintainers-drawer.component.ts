@@ -4,7 +4,6 @@
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { hexToRgba, wrapLabel } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
@@ -22,7 +21,7 @@ const DEFAULT_KEY_MEMBERS: OrgMaintainersKeyMembersResponse = { members: [] };
 
 @Component({
   selector: 'lfx-org-maintainers-drawer',
-  imports: [DrawerModule, ChartComponent, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent],
   templateUrl: './org-maintainers-drawer.component.html',
 })
 export class OrgMaintainersDrawerComponent {
