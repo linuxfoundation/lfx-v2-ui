@@ -73,6 +73,7 @@ export class EmailCtrDrawerComponent {
     const opens = types.reduce((sum, t) => sum + t.totalOpens, 0);
     return sends > 0 ? Math.round(((opens * 100.0) / sends) * 10) / 10 : 0;
   });
+  /** Clicks÷sends — follows HubSpot's CTR convention (not clicks÷opens). */
   protected readonly emailAvgCtr: Signal<number> = computed(() => {
     const types = this.drawerData().emailTypeBreakdown ?? [];
     const sends = types.reduce((sum, t) => sum + t.totalSends, 0);
@@ -81,6 +82,7 @@ export class EmailCtrDrawerComponent {
   });
 
   protected readonly paidData: Signal<SocialReachResponse> = this.initPaidData();
+  private readonly paidDataResolved = signal(false);
   protected readonly formattedTotalSpend: Signal<string> = computed(() => formatCurrency(this.paidData().totalSpend));
   protected readonly formattedTotalRevenue: Signal<string> = computed(() => formatCurrency(this.paidData().totalRevenue));
   protected readonly paidTotalConversions: Signal<string> = computed(() => {
@@ -110,7 +112,9 @@ export class EmailCtrDrawerComponent {
       };
     };
 
-    const tofu = aggregate(['ToFU', 'ToFU2']);
+    // Fold 'Unknown' into ToFU — unmapped campaigns are typically awareness-level,
+    // and excluding them would cause funnel totals to disagree with paidData().totalReach.
+    const tofu = aggregate(['ToFU', 'ToFU2', 'Unknown']);
     const mofu = aggregate(['MoFU']);
     const bofu = aggregate(['BoFU']);
 
@@ -118,6 +122,7 @@ export class EmailCtrDrawerComponent {
   });
 
   protected readonly attributionData: Signal<MarketingAttributionResponse> = this.initAttributionData();
+  private readonly attributionDataResolved = signal(false);
   protected readonly expandedChannels = signal<Set<string>>(new Set());
   protected readonly attributionProjectsByChannel: Signal<Map<string, MarketingAttributionProject[]>> = computed(() => {
     const grouped = new Map<string, MarketingAttributionProject[]>();
@@ -247,6 +252,12 @@ export class EmailCtrDrawerComponent {
 
   private initRecommendedActions(): Signal<MarketingRecommendedAction[]> {
     return computed(() => {
+      // Gate on all three data sources having resolved — avoid misleading
+      // "Maintain current momentum" while paid/attribution are still in-flight.
+      if (this.drawerLoading() || !this.paidDataResolved() || !this.attributionDataResolved()) {
+        return [];
+      }
+
       const email = this.drawerData();
       const paid = this.paidData();
       const attribution = this.attributionData();
@@ -395,6 +406,11 @@ export class EmailCtrDrawerComponent {
 
   private initKeyInsights(): Signal<MarketingKeyInsight[]> {
     return computed(() => {
+      // Gate on all three data sources — same rationale as initRecommendedActions.
+      if (this.drawerLoading() || !this.paidDataResolved() || !this.attributionDataResolved()) {
+        return [];
+      }
+
       const email = this.drawerData();
       const paid = this.paidData();
       const attribution = this.attributionData();
@@ -535,7 +551,15 @@ export class EmailCtrDrawerComponent {
       combineLatest([visible$, foundation$]).pipe(
         filter(([isVisible, slug]) => isVisible && !!slug),
         map(([, slug]) => slug),
-        switchMap((foundationSlug) => this.analyticsService.getSocialReach(foundationSlug).pipe(catchError(() => of(defaultValue))))
+        switchMap((foundationSlug) =>
+          this.analyticsService.getSocialReach(foundationSlug).pipe(
+            tap(() => this.paidDataResolved.set(true)),
+            catchError(() => {
+              this.paidDataResolved.set(true);
+              return of(defaultValue);
+            })
+          )
+        )
       ),
       { initialValue: defaultValue }
     );
@@ -551,7 +575,15 @@ export class EmailCtrDrawerComponent {
       combineLatest([visible$, foundation$]).pipe(
         filter(([isVisible, slug]) => isVisible && !!slug),
         map(([, slug]) => slug),
-        switchMap((foundationSlug) => this.analyticsService.getMarketingAttribution(foundationSlug).pipe(catchError(() => of(defaultValue))))
+        switchMap((foundationSlug) =>
+          this.analyticsService.getMarketingAttribution(foundationSlug).pipe(
+            tap(() => this.attributionDataResolved.set(true)),
+            catchError(() => {
+              this.attributionDataResolved.set(true);
+              return of(defaultValue);
+            })
+          )
+        )
       ),
       { initialValue: defaultValue }
     );

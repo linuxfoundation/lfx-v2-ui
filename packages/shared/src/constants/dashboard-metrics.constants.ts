@@ -855,6 +855,9 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
 
   return [
     // === Campaign Performance (dual-signal: Email Opens + Paid Impressions) ===
+    // Categorised as 'memberships' (North Star) intentionally — campaigns directly
+    // drive member acquisition and retention, making this a dual-signal North Star
+    // metric alongside Member Growth, not a Brand card.
     {
       title: 'Campaign Performance',
       icon: 'fa-light fa-chart-mixed',

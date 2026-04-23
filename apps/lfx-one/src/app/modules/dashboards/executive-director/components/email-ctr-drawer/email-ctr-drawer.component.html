@@ -239,7 +239,7 @@
           </lfx-card>
           <lfx-card styleClass="flex-1 min-w-[100px]">
             <div class="flex flex-col gap-1">
-              <span class="text-sm text-gray-500">Revenue</span>
+              <span class="text-sm text-gray-500">Revenue (first-touch)</span>
               <span class="text-2xl font-semibold text-gray-900">{{ formattedTotalRevenue() }}</span>
             </div>
           </lfx-card>
@@ -276,7 +276,7 @@
               <span class="flex-[2] min-w-[120px]">Project / Campaign</span>
               <span class="w-16 text-center">Funnel</span>
               <span class="flex-1 text-right">Spend</span>
-              <span class="flex-1 text-right">Revenue</span>
+              <span class="flex-1 text-right">Rev (linear)</span>
               <span class="w-14 text-right">ROAS</span>
               <span class="flex-1 text-right">Conv.</span>
               <span class="w-14 text-right">Conv %</span>
@@ -435,7 +435,7 @@
 
               <!-- Expanded Campaign Rows -->
               @if (expandedTypes().has(type.emailType)) {
-                @for (campaign of type.campaigns; track campaign.campaignName) {
+                @for (campaign of type.campaigns; track campaign.campaignName + '|' + campaign.sends) {
                   <div class="flex items-center py-2 px-1 pl-6 border-b border-gray-50 bg-gray-50" data-testid="email-ctr-drawer-campaign-row">
                     <span class="flex-[2] min-w-[120px] text-xs text-gray-500 truncate pr-2" [title]="campaign.campaignName">{{ campaign.campaignName }}</span>
                     <span class="flex-1 text-right text-xs text-gray-600">{{ formatCompact(campaign.sends) }}</span>
