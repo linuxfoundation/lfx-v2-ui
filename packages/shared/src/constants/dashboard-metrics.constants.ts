@@ -865,7 +865,7 @@ export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricC
       customContentType: 'dual-signal',
       dualSignals: [
         protoDualSignal(
-          `Email · ${emailCtr.currentCtr.toFixed(1)}% CTR · ${emailOpenRate.toFixed(0)}% Open`,
+          `Email · ${emailCtr.currentCtr.toFixed(1)}% CTR · ${emailOpenRate.toFixed(0)}% 6mo Open`,
           formatNumber(emailTotalOpens) + ' opens',
           emailCtr.monthlyOpens,
           lfxColors.blue[500],
