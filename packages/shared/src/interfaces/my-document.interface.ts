@@ -26,7 +26,8 @@ export interface GroupsIOArtifactQueryResult {
   link_url?: string;
   download_url?: string;
   media_type?: string;
-  created_at: string;
+  last_posted_at?: string;
+  created_at?: string;
 }
 
 /** Raw shape returned by query service for `v1_meeting_registrant` resource type */
