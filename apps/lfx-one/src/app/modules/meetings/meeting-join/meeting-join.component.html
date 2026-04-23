@@ -493,6 +493,8 @@
             [position]="drawerPosition()"
             styleClass="xl:w-1/4 lg:w-1/3 md:w-5/12 sm:w-1/2 w-full"
             [modal]="true"
+            [dismissible]="false"
+            appendTo="body"
             [showCloseIcon]="false"
             data-testid="meeting-registrants-drawer">
             <ng-template #header>

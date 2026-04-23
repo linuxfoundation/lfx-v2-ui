@@ -11,6 +11,7 @@ import {
   inject,
   Injector,
   input,
+  model,
   OnInit,
   output,
   runInInjectionContext,
@@ -97,6 +98,7 @@ import { PublicRegistrationModalComponent } from '../../components/public-regist
   templateUrl: './meeting-card.component.html',
 })
 export class MeetingCardComponent implements OnInit {
+  // === Services ===
   private readonly projectService = inject(ProjectService);
   private readonly meetingService = inject(MeetingService);
   private readonly dialogService = inject(DialogService);
@@ -104,79 +106,83 @@ export class MeetingCardComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly clipboard = inject(Clipboard);
   private readonly userService = inject(UserService);
-
   private readonly destroyRef = inject(DestroyRef);
+
+  // === Internal Streams ===
   private readonly refreshAttachments$ = new BehaviorSubject<void>(undefined);
 
+  // === Inputs ===
   public readonly meetingInput = input.required<Meeting | PastMeeting>();
   public readonly occurrenceInput = input<MeetingOccurrence | null>(null);
   public readonly pastMeeting = input<boolean>(false);
   public readonly loading = input<boolean>(false);
   public readonly showBorder = input<boolean>(false);
 
-  public showRegistrants: WritableSignal<boolean> = signal(false);
-  public showMyRsvp: WritableSignal<boolean> = signal(false);
+  // === Outputs ===
+  public readonly meetingDeleted = output<void>();
+
+  // === Static / Injected Refs ===
+  public readonly project = this.projectService.project;
+  public readonly committeeLabel = COMMITTEE_LABEL;
+  public readonly authenticated: Signal<boolean> = this.userService.authenticated;
+
+  // === Model Signals (two-way binding) ===
+  protected readonly showRegistrants = model<boolean>(false);
+  protected readonly materialsDrawerVisible = model<boolean>(false);
+
+  // === WritableSignals ===
+  protected readonly showMyRsvp = signal(false);
   // Set by <lfx-meeting-rsvp-details> after it resolves its registrants/rsvps data.
   // Drives the "Set My RSVP" / "Update My RSVP" label on the toggle button.
-  public userHasRsvp: WritableSignal<boolean> = signal(false);
-  public meeting: WritableSignal<Meeting | PastMeeting> = signal({} as Meeting | PastMeeting);
-  public occurrence: WritableSignal<MeetingOccurrence | null> = signal(null);
-  public recording: WritableSignal<PastMeetingRecording | null> = signal(null);
-  public summary: WritableSignal<PastMeetingSummary | null> = signal(null);
-  public additionalRegistrantsCount: WritableSignal<number> = signal(0);
+  protected readonly userHasRsvp = signal(false);
+  protected readonly meeting: WritableSignal<Meeting | PastMeeting> = signal({} as Meeting | PastMeeting);
+  protected readonly occurrence: WritableSignal<MeetingOccurrence | null> = signal(null);
+  protected readonly recording: WritableSignal<PastMeetingRecording | null> = signal(null);
+  protected readonly summary: WritableSignal<PastMeetingSummary | null> = signal(null);
+  protected readonly additionalRegistrantsCount = signal(0);
   // Past-meeting attendance counts forwarded by <lfx-meeting-rsvp-details> from its lazy-loaded
   // participants list. The project/foundation list endpoint does not enrich the meeting object
   // with `attended_count` / `participant_count`, so the drawer header reads from these signals
   // instead of `meeting().*_count` (which would always render 0/0 in the dashboard).
-  public pastAttendedCount: WritableSignal<number> = signal(0);
-  public pastParticipantCount: WritableSignal<number> = signal(0);
-  public pastParticipants: WritableSignal<PastMeetingParticipant[]> = signal([]);
-  public pastParticipantsLoading: WritableSignal<boolean> = signal(false);
-  public attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
-  public materialsDrawerVisible = signal(false);
+  protected readonly pastAttendedCount = signal(0);
+  protected readonly pastParticipantCount = signal(0);
+  protected readonly pastParticipants: WritableSignal<PastMeetingParticipant[]> = signal([]);
+  protected readonly pastParticipantsLoading = signal(false);
+  protected attachments: Signal<(MeetingAttachment | PastMeetingAttachment)[]> = signal([]);
 
-  // Computed values for template
-  public readonly summaryContent: Signal<string | null> = this.initSummaryContent();
-  public readonly summaryApproved: Signal<boolean> = this.initSummaryApproved();
-  public readonly hasSummary: Signal<boolean> = this.initHasSummary();
-  public readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
-  public readonly hasRecording: Signal<boolean> = this.initHasRecording();
-  public readonly totalResourcesCount: Signal<number> = this.initTotalResourcesCount();
-  public readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
-  public readonly meetingTypeBadge: Signal<{
+  // === Computed Signals ===
+  protected readonly summaryContent: Signal<string | null> = this.initSummaryContent();
+  protected readonly summaryApproved: Signal<boolean> = this.initSummaryApproved();
+  protected readonly hasSummary: Signal<boolean> = this.initHasSummary();
+  protected readonly recordingShareUrl: Signal<string | null> = this.initRecordingShareUrl();
+  protected readonly hasRecording: Signal<boolean> = this.initHasRecording();
+  protected readonly totalResourcesCount: Signal<number> = this.initTotalResourcesCount();
+  protected readonly enabledFeaturesCount: Signal<number> = this.initEnabledFeaturesCount();
+  protected readonly meetingTypeBadge: Signal<{
     severity: TagSeverity;
     styleClass: string;
     icon?: string;
     text: string;
   } | null> = this.initMeetingTypeBadge();
-  public readonly containerClass: Signal<string> = this.initContainerClass();
-  public readonly rsvpToggleLabel: Signal<string> = this.initRsvpToggleLabel();
-  public readonly currentOccurrence: Signal<MeetingOccurrence | null> = this.initCurrentOccurrence();
-  public readonly meetingStartTime: Signal<string | null> = this.initMeetingStartTime();
-  public readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
-  public readonly joinUrl: Signal<string | null>;
-  public readonly authenticated: Signal<boolean> = this.userService.authenticated;
-
-  public readonly meetingDetailUrl: Signal<string> = this.initMeetingDetailUrl();
-
-  // Computed signals for invited/registration status to ensure reactivity after registration
-  public readonly isInvited: Signal<boolean> = computed(() => this.meeting().invited ?? false);
-  public readonly canRegisterForMeeting: Signal<boolean> = computed(
+  protected readonly containerClass: Signal<string> = this.initContainerClass();
+  protected readonly rsvpToggleLabel: Signal<string> = this.initRsvpToggleLabel();
+  protected readonly currentOccurrence: Signal<MeetingOccurrence | null> = this.initCurrentOccurrence();
+  protected readonly meetingStartTime: Signal<string | null> = this.initMeetingStartTime();
+  protected readonly canJoinMeeting: Signal<boolean> = this.initCanJoinMeeting();
+  protected readonly joinUrl: Signal<string | null>;
+  protected readonly meetingDetailUrl: Signal<string> = this.initMeetingDetailUrl();
+  protected readonly isInvited: Signal<boolean> = computed(() => this.meeting().invited ?? false);
+  protected readonly canRegisterForMeeting: Signal<boolean> = computed(
     () => !this.isInvited() && !this.meeting().restricted && this.meeting().visibility === 'public'
   );
-  // Computed signal to check if user can toggle between RSVP Details and RSVP Button Group
   // True when user is both an organizer AND invited to the meeting (for non-past meetings)
-  public readonly canToggleRsvpView: Signal<boolean> = computed(() => !!this.meeting().organizer && this.isInvited() && !this.pastMeeting());
+  protected readonly canToggleRsvpView: Signal<boolean> = computed(() => !!this.meeting().organizer && this.isInvited() && !this.pastMeeting());
+  protected readonly meetingTitle: Signal<string> = this.initMeetingTitle();
+  protected readonly meetingDescription: Signal<string> = this.initMeetingDescription();
+  protected readonly hasAiCompanion: Signal<boolean> = this.initHasAiCompanion();
+  protected readonly joinQueryParams: Signal<Record<string, string>> = this.initJoinQueryParams();
 
-  public readonly meetingTitle: Signal<string> = this.initMeetingTitle();
-  public readonly meetingDescription: Signal<string> = this.initMeetingDescription();
-  public readonly hasAiCompanion: Signal<boolean> = this.initHasAiCompanion();
-  public readonly joinQueryParams: Signal<Record<string, string>> = this.initJoinQueryParams();
-
-  public readonly meetingDeleted = output<void>();
-  public readonly project = this.projectService.project;
-  public readonly committeeLabel = COMMITTEE_LABEL;
-
+  // === Constructor ===
   public constructor() {
     effect(() => {
       if (!this.meeting()?.id) {
@@ -246,29 +252,26 @@ export class MeetingCardComponent implements OnInit {
     }
   }
 
-  public onRegistrantsToggle(): void {
-    this.showRegistrants.set(!this.showRegistrants());
+  // === Protected Methods (template handlers) ===
+  protected onRsvpViewToggle(): void {
+    this.showMyRsvp.update((v) => !v);
   }
 
-  public onRsvpViewToggle(): void {
-    this.showMyRsvp.set(!this.showMyRsvp());
-  }
-
-  public onPastParticipantCountsChange(event: { total: number; attended: number }): void {
+  protected onPastParticipantCountsChange(event: { total: number; attended: number }): void {
     this.pastAttendedCount.set(event.attended);
     this.pastParticipantCount.set(event.total);
   }
 
-  public onPastParticipantsLoaded(participants: PastMeetingParticipant[]): void {
+  protected onPastParticipantsLoaded(participants: PastMeetingParticipant[]): void {
     this.pastParticipants.set(participants);
     this.pastParticipantsLoading.set(false);
   }
 
-  public openMaterialsDrawer(): void {
+  protected openMaterialsDrawer(): void {
     this.materialsDrawerVisible.set(true);
   }
 
-  public copyMeetingLink(): void {
+  protected copyMeetingLink(): void {
     const meeting = this.meeting();
     const meetingUrl: URL = new URL(environment.urls.home + '/meetings/' + meeting.id);
 
@@ -284,7 +287,7 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  public registerForMeeting(): void {
+  protected registerForMeeting(): void {
     const meeting = this.meeting();
     const user = this.userService.user();
 
@@ -309,7 +312,7 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  public downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
+  protected downloadAttachment(attachment: MeetingAttachment | PastMeetingAttachment): void {
     const meetingId = this.meeting().id;
     const download$ = this.pastMeeting()
       ? this.meetingService.getPastMeetingAttachmentDownloadUrl(meetingId, attachment.uid)
@@ -331,7 +334,7 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  public openRecordingModal(): void {
+  protected openRecordingModal(): void {
     if (!this.recordingShareUrl()) {
       return;
     }
@@ -349,7 +352,7 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  public openSummaryModal(): void {
+  protected openSummaryModal(): void {
     if (!this.summaryContent() || !this.summary()?.uid) {
       return;
     }
@@ -387,7 +390,7 @@ export class MeetingCardComponent implements OnInit {
     });
   }
 
-  public deleteMeeting(): void {
+  protected deleteMeeting(): void {
     const meeting = this.meeting();
     if (!meeting) return;
 
@@ -424,6 +427,7 @@ export class MeetingCardComponent implements OnInit {
     }
   }
 
+  // === Private Helpers ===
   private getLargestSessionShareUrl(recording: PastMeetingRecording): string | null {
     if (!recording.sessions || recording.sessions.length === 0) {
       return null;
@@ -511,6 +515,7 @@ export class MeetingCardComponent implements OnInit {
       .subscribe();
   }
 
+  // === Private Initializers ===
   private initAttachments(): Signal<(MeetingAttachment | PastMeetingAttachment)[]> {
     return runInInjectionContext(this.injector, () => {
       const id = this.meetingInput().id;

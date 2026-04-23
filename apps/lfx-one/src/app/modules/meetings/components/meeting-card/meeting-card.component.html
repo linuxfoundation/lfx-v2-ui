@@ -373,7 +373,7 @@
               severity="secondary"
               styleClass="w-full"
               data-testid="view-guests-button"
-              (click)="onRegistrantsToggle()">
+              (click)="showRegistrants.set(!showRegistrants())">
             </lfx-button>
             @if (canToggleRsvpView()) {
               <lfx-button
