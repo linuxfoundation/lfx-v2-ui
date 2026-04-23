@@ -37,7 +37,7 @@ export interface UserSurvey {
   committees: CommitteeReference[];
   /** Survey deadline/cutoff date */
   survey_cutoff_date: string;
-  /** User's response status (raw API value, may be uppercase or null; use getCombinedSurveyStatus to normalize) */
+  /** User's response status (raw API value, may be uppercase or null; lowercase and compare to `SurveyResponseStatus` when normalizing this field) */
   response_status: string | null;
   /** Timestamp when user submitted their response (null if not responded) */
   response_datetime: string | null;
