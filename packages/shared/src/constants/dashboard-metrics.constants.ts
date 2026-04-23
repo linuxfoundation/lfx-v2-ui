@@ -846,7 +846,7 @@ function seriesTrendDirection(series: number[]): 'up' | 'down' | 'neutral' | und
  * Emerald/red are reserved for delta indicators (up/down), never sparkline stroke.
  */
 export function buildEdEvolutionMetrics(data: EdEvolutionData): DashboardMetricCard[] {
-  const { flywheel, memberAcquisition, memberRetention, engagedCommunity, eventGrowth, brandReach, brandHealth, revenueImpact, emailCtr, paidCampaign } = data;
+  const { flywheel, memberAcquisition, memberRetention, engagedCommunity, eventGrowth, brandReach, brandHealth, emailCtr, paidCampaign } = data;
 
   // Pre-compute email open rate for the Campaign Performance card
   const emailTotalSends = emailCtr.monthlySends.reduce((sum, v) => sum + v, 0);

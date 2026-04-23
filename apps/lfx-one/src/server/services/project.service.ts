@@ -1945,15 +1945,33 @@ export class ProjectService {
           [foundationSlug]
         ),
         this.snowflakeService.execute<{ PROJECT_NAME: string; LF_SUB_DOMAIN_CLASSIFICATION: string; AVG_CTR: number }>(campaignQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          MARKETING_EMAIL_NAME: string;
-          EMAIL_TYPE: string;
-          TOTAL_SENDS: number;
-          TOTAL_OPENS: number;
-          TOTAL_CLICKS: number;
-          OPEN_RATE: number;
-          CTR: number;
-        }>(campaignPerfQuery, [foundationSlug]),
+        this.snowflakeService
+          .execute<{
+            MARKETING_EMAIL_NAME: string;
+            EMAIL_TYPE: string;
+            TOTAL_SENDS: number;
+            TOTAL_OPENS: number;
+            TOTAL_CLICKS: number;
+            OPEN_RATE: number;
+            CTR: number;
+          }>(campaignPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_email_ctr', 'Optional campaign breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                MARKETING_EMAIL_NAME: string;
+                EMAIL_TYPE: string;
+                TOTAL_SENDS: number;
+                TOTAL_OPENS: number;
+                TOTAL_CLICKS: number;
+                OPEN_RATE: number;
+                CTR: number;
+              }[],
+            };
+          }),
       ]);
 
       if (summaryResult.rows.length === 0 && monthlyResult.rows.length === 0) {
@@ -2177,20 +2195,43 @@ export class ProjectService {
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; ROAS: number }>(monthlyRoasQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CAMPAIGN_MONTH: string; IMPRESSIONS: number }>(monthlyImpressionsQuery, [foundationSlug]),
         this.snowflakeService.execute<{ CHANNEL: string; IMPRESSIONS: number }>(channelQuery, [foundationSlug]),
-        this.snowflakeService.execute<{
-          PROJECT_NAME: string;
-          CAMPAIGN_NAME: string;
-          FUNNEL_STAGE: string;
-          SPEND: number;
-          REVENUE: number;
-          ROAS: number;
-          CONVERSIONS: number;
-          CONV_RATE: number;
-          CPC: number;
-          SESSIONS: number;
-          IMPRESSIONS: number;
-          CLICKS: number;
-        }>(projectPerfQuery, [foundationSlug]),
+        this.snowflakeService
+          .execute<{
+            PROJECT_NAME: string;
+            CAMPAIGN_NAME: string;
+            FUNNEL_STAGE: string;
+            SPEND: number;
+            REVENUE: number;
+            ROAS: number;
+            CONVERSIONS: number;
+            CONV_RATE: number;
+            CPC: number;
+            SESSIONS: number;
+            IMPRESSIONS: number;
+            CLICKS: number;
+          }>(projectPerfQuery, [foundationSlug])
+          .catch((error) => {
+            logger.warning(undefined, 'get_social_reach', 'Optional project breakdown query failed, degrading gracefully', {
+              foundation_slug: foundationSlug,
+              err: error,
+            });
+            return {
+              rows: [] as {
+                PROJECT_NAME: string;
+                CAMPAIGN_NAME: string;
+                FUNNEL_STAGE: string;
+                SPEND: number;
+                REVENUE: number;
+                ROAS: number;
+                CONVERSIONS: number;
+                CONV_RATE: number;
+                CPC: number;
+                SESSIONS: number;
+                IMPRESSIONS: number;
+                CLICKS: number;
+              }[],
+            };
+          }),
       ]);
 
       const totalReach = impressionsResult.rows[0]?.TOTAL_IMPRESSIONS ?? 0;
