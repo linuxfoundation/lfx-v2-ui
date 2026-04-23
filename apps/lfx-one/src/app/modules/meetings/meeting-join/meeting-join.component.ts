@@ -35,6 +35,7 @@ import {
   PastMeetingSummary,
   Project,
   PublicPastMeetingResponse,
+  ROOT_PROJECT_SLUG,
   TagSeverity,
   User,
 } from '@lfx-one/shared';
@@ -215,6 +216,7 @@ export class MeetingJoinComponent implements OnInit {
   protected participantCount = computed(() => this.pastMeetingParticipants().length);
   protected attendedCount = computed(() => this.pastMeetingParticipants().filter((p) => p.is_attended).length);
   protected absentCount = computed(() => this.participantCount() - this.attendedCount());
+  protected invitedCount = computed(() => this.pastMeetingParticipants().filter((p) => p.is_invited).length);
   protected attendancePercentage = computed(() => {
     const total = this.participantCount();
     const attended = this.attendedCount();
@@ -1088,9 +1090,19 @@ export class MeetingJoinComponent implements OnInit {
   private initializeParentProject(): Signal<Project | null> {
     return toSignal(
       toObservable(this.project).pipe(
-        filter((p) => !!p?.parent_uid),
-        distinctUntilChanged((a, b) => a?.parent_uid === b?.parent_uid),
-        switchMap((p) => this.projectService.getProject(p!.parent_uid!, false).pipe(catchError(() => of(null))))
+        map((p) => p?.parent_uid ?? null),
+        distinctUntilChanged(),
+        switchMap((parentUid) => {
+          if (!parentUid) {
+            // Top-level (or unknown) project — explicitly clear any stale foundation context
+            // instead of suppressing the emission, which would leave the previous parent cached.
+            return of(null);
+          }
+          return this.projectService.getProject(parentUid, false).pipe(
+            map((parent) => (parent?.slug === ROOT_PROJECT_SLUG ? null : parent)),
+            catchError(() => of(null))
+          );
+        })
       ),
       { initialValue: null }
     );

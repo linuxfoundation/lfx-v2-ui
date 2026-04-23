@@ -9,8 +9,9 @@ import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { MessageComponent } from '@components/message/message.component';
 import { TagComponent } from '@components/tag/tag.component';
-import { CommitteeMemberRole, PollStatus } from '@lfx-one/shared/enums';
+import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
+import { getSurveyDisplayStatus } from '@lfx-one/shared/utils';
 import { CommitteeService } from '@services/committee.service';
 import { MeetingService } from '@services/meeting.service';
 import { SurveyService } from '@services/survey.service';
@@ -94,7 +95,7 @@ export class CommitteeOverviewComponent {
   // Computed stats from fetched data
   public activeVotesCount: Signal<number> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE).length);
 
-  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent').length);
+  public openSurveysCount: Signal<number> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN).length);
 
   // Role-based computed signals
   public isVisitor: Signal<boolean> = computed(() => this.myRole() === null && !this.myRoleLoading());
@@ -163,7 +164,7 @@ export class CommitteeOverviewComponent {
   });
 
   public pendingVotes: Signal<Vote[]> = computed(() => this.votes().filter((v) => v.status === PollStatus.ACTIVE));
-  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => s.survey_status === 'open' || s.survey_status === 'sent'));
+  public pendingSurveys: Signal<Survey[]> = computed(() => this.surveys().filter((s) => getSurveyDisplayStatus(s) === SurveyStatus.OPEN));
   public hasPendingActions: Signal<boolean> = computed(() => this.pendingVotes().length > 0 || this.pendingSurveys().length > 0);
 
   public pendingActionItems: Signal<PendingActionItem[]> = this.initPendingActionItems();
@@ -190,7 +191,7 @@ export class CommitteeOverviewComponent {
   }
 
   public handlePendingActionClick(item: PendingActionItem): void {
-    if (item.type === 'Cast Vote') {
+    if (item.type === 'Vote') {
       const vote = this.pendingVotes().find((v) => v.uid === item.buttonLink);
       if (vote) {
         this.selectedVoteId.set(vote.uid);
@@ -355,7 +356,7 @@ export class CommitteeOverviewComponent {
   private initPendingActionItems(): Signal<PendingActionItem[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
-        type: 'Cast Vote',
+        type: 'Vote',
         badge: this.committee().name,
         text: vote.name,
         icon: 'fa-light fa-check-to-slot',
@@ -367,7 +368,7 @@ export class CommitteeOverviewComponent {
           : undefined,
       }));
       const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
-        type: 'Submit Feedback',
+        type: 'Survey',
         badge: this.committee().name,
         text: survey.survey_title,
         icon: 'fa-light fa-chart-simple',
@@ -384,7 +385,7 @@ export class CommitteeOverviewComponent {
   private initPendingActionsViewAllTab(): Signal<'votes' | 'surveys'> {
     return computed(() => {
       const overflow = this.pendingActionItems().slice(2);
-      const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
+      const hasVotes = overflow.some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
   }
