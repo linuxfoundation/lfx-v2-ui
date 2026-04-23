@@ -49,7 +49,6 @@ export class DocumentsDashboardComponent {
 
   // === Constants ===
   protected readonly documentLabel = DOCUMENT_LABEL;
-  protected readonly pageTitle = computed(() => (this.lensService.activeLens() === 'me' ? 'My Documents' : 'Documents'));
   protected readonly sourceTabOptions: FilterPillOption[] = [
     { id: 'all', label: 'All Sources' },
     { id: 'link', label: 'Links' },
@@ -72,6 +71,7 @@ export class DocumentsDashboardComponent {
 
   // === Computed Signals ===
   protected readonly project = this.projectContextService.activeContext;
+  protected readonly pageTitle = computed(() => (this.lensService.activeLens() === 'me' ? 'My Documents' : 'Documents'));
   protected readonly searchQuery: Signal<string> = this.initSearchQuery();
   protected readonly foundationFilter: Signal<string | null> = this.initFoundationFilter();
   protected readonly groupFilter: Signal<string | null> = this.initGroupFilter();

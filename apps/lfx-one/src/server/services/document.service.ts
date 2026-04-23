@@ -55,7 +55,9 @@ export class DocumentService {
 
     logger.info(req, 'get_my_documents', 'Starting 4-stage document aggregation', { project_uid: projectUid, committee_uid: committeeUid });
 
-    // Stage 1 — Fetch committee memberships and past occurrence IDs in parallel
+    // Stage 1 — Fetch committee memberships and (when not committee-scoped) past occurrence IDs.
+    // occurrenceIds are skipped when committeeUid is set because all fetchers query via
+    // committee parent refs directly and never read occurrenceIds in that path.
     const [myCommittees, occurrenceIds] = await Promise.all([
       this.committeeService.getMyCommittees(req, projectUid).catch((err) => {
         logger.warning(req, 'get_my_documents', 'Failed to fetch committee memberships, returning empty', {
@@ -63,12 +65,14 @@ export class DocumentService {
         });
         return [] as MyCommittee[];
       }),
-      this.userService.getPastMeetingOccurrenceIds(req).catch((err) => {
-        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting occurrence IDs, returning empty', {
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        return [] as string[];
-      }),
+      committeeUid
+        ? Promise.resolve([] as string[])
+        : this.userService.getPastMeetingOccurrenceIds(req).catch((err) => {
+            logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting occurrence IDs, returning empty', {
+              error: err instanceof Error ? err.message : 'Unknown error',
+            });
+            return [] as string[];
+          }),
     ]);
 
     // When scoped to a specific committee, filter memberships to that committee only.
@@ -347,7 +351,12 @@ export class DocumentService {
     // Me lens: gate on meetings the user is registered for
     logger.debug(req, 'get_my_documents', 'Fetching user meeting registrations for attachments');
     const email = getEffectiveEmail(req) ?? undefined;
-    const meetingIds = await this.userService.getUserRegisteredMeetingIds(req, email).catch(() => new Set<string>());
+    const meetingIds = await this.userService.getUserRegisteredMeetingIds(req, email).catch((err) => {
+      logger.warning(req, 'get_my_documents', 'Failed to fetch user meeting registrations, returning empty', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
+      return new Set<string>();
+    });
 
     if (meetingIds.size === 0) return [];
 
@@ -390,6 +399,25 @@ export class DocumentService {
     });
   }
 
+  // ─── Committee Parent Ref Helper ─────────────────────────────────────────────
+
+  private async fetchByCommitteeParentRef<T>(req: Request, type: string, committeeUid: string, resourceLabel: string): Promise<T[]> {
+    logger.debug(req, 'get_my_documents', `Fetching ${resourceLabel} via committee parent ref`, { committee_uid: committeeUid });
+    return fetchAllQueryResources<T>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<T>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        type,
+        parent: `committee:${committeeUid}`,
+        ...(pageToken && { page_token: pageToken }),
+      })
+    ).catch((err) => {
+      logger.warning(req, 'get_my_documents', `Failed to fetch ${resourceLabel} by committee parent ref`, {
+        committee_uid: committeeUid,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
+      return [];
+    });
+  }
+
   // ─── Past Meeting Items (Attachments + Recordings) ──────────────────────────
 
   private async fetchRawPastMeetingAttachments(
@@ -399,20 +427,7 @@ export class DocumentService {
     committeeUid?: string
   ): Promise<PastMeetingAttachment[]> {
     if (committeeUid) {
-      logger.debug(req, 'get_my_documents', 'Fetching past meeting attachments via committee parent ref', { committee_uid: committeeUid });
-      return fetchAllQueryResources<PastMeetingAttachment>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingAttachment>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'v1_past_meeting_attachment',
-          parent: `committee:${committeeUid}`,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      ).catch((err) => {
-        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting attachments by committee parent ref', {
-          committee_uid: committeeUid,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        return [];
-      });
+      return this.fetchByCommitteeParentRef<PastMeetingAttachment>(req, 'v1_past_meeting_attachment', committeeUid, 'past meeting attachments');
     }
 
     if (occurrenceIds.length === 0) return [];
@@ -463,20 +478,7 @@ export class DocumentService {
     committeeUid?: string
   ): Promise<PastMeetingRecordingQueryResult[]> {
     if (committeeUid) {
-      logger.debug(req, 'get_my_documents', 'Fetching past meeting recordings via committee parent ref', { committee_uid: committeeUid });
-      return fetchAllQueryResources<PastMeetingRecordingQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingRecordingQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'v1_past_meeting_recording',
-          parent: `committee:${committeeUid}`,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      ).catch((err) => {
-        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting recordings by committee parent ref', {
-          committee_uid: committeeUid,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        return [];
-      });
+      return this.fetchByCommitteeParentRef<PastMeetingRecordingQueryResult>(req, 'v1_past_meeting_recording', committeeUid, 'past meeting recordings');
     }
 
     if (occurrenceIds.length === 0) return [];
@@ -529,20 +531,7 @@ export class DocumentService {
     committeeUid?: string
   ): Promise<PastMeetingTranscriptQueryResult[]> {
     if (committeeUid) {
-      logger.debug(req, 'get_my_documents', 'Fetching past meeting transcripts via committee parent ref', { committee_uid: committeeUid });
-      return fetchAllQueryResources<PastMeetingTranscriptQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingTranscriptQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'v1_past_meeting_transcript',
-          parent: `committee:${committeeUid}`,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      ).catch((err) => {
-        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting transcripts by committee parent ref', {
-          committee_uid: committeeUid,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        return [];
-      });
+      return this.fetchByCommitteeParentRef<PastMeetingTranscriptQueryResult>(req, 'v1_past_meeting_transcript', committeeUid, 'past meeting transcripts');
     }
 
     if (occurrenceIds.length === 0) return [];
@@ -594,20 +583,7 @@ export class DocumentService {
     committeeUid?: string
   ): Promise<PastMeetingSummaryQueryResult[]> {
     if (committeeUid) {
-      logger.debug(req, 'get_my_documents', 'Fetching past meeting summaries via committee parent ref', { committee_uid: committeeUid });
-      return fetchAllQueryResources<PastMeetingSummaryQueryResult>(req, (pageToken) =>
-        this.microserviceProxy.proxyRequest<QueryServiceResponse<PastMeetingSummaryQueryResult>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-          type: 'v1_past_meeting_summary',
-          parent: `committee:${committeeUid}`,
-          ...(pageToken && { page_token: pageToken }),
-        })
-      ).catch((err) => {
-        logger.warning(req, 'get_my_documents', 'Failed to fetch past meeting summaries by committee parent ref', {
-          committee_uid: committeeUid,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-        return [];
-      });
+      return this.fetchByCommitteeParentRef<PastMeetingSummaryQueryResult>(req, 'v1_past_meeting_summary', committeeUid, 'past meeting summaries');
     }
 
     if (occurrenceIds.length === 0) return [];
