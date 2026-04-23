@@ -10,6 +10,7 @@ import { MeetingCardComponent } from '@app/modules/meetings/components/meeting-c
 import { FullCalendarComponent } from '@app/shared/components/fullcalendar/fullcalendar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
 import { environment } from '@environments/environment';
@@ -38,6 +39,7 @@ import { catchError, debounceTime, distinctUntilChanged, filter, finalize, forkJ
     SkeletonModule,
     MeetingCardComponent,
     FullCalendarComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './committee-meetings.component.html',
   styleUrl: './committee-meetings.component.scss',

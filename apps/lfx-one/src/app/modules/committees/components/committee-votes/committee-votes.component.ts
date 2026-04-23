@@ -4,7 +4,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { Committee, Vote } from '@lfx-one/shared/interfaces';
 import { VotesTableComponent } from '@app/modules/votes/components/votes-table/votes-table.component';
 import { VoteResultsDrawerComponent } from '@app/modules/votes/components/vote-results-drawer/vote-results-drawer.component';
@@ -14,7 +14,7 @@ import { catchError, filter, finalize, of, switchMap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-votes',
-  imports: [ButtonComponent, CardComponent, VotesTableComponent, VoteResultsDrawerComponent],
+  imports: [ButtonComponent, EmptyStateComponent, VotesTableComponent, VoteResultsDrawerComponent],
   templateUrl: './committee-votes.component.html',
   styleUrl: './committee-votes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

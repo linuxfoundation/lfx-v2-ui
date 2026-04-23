@@ -3,10 +3,10 @@
 
 <lfx-card data-testid="committee-documents-card">
   <!-- Filters -->
-  <div class="pb-3 mb-3 border-b border-gray-100">
-    <div class="flex flex-wrap items-center gap-2">
+  <div class="pb-2 mb-2">
+    <div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
       <!-- Search -->
-      <div class="flex-1 min-w-48">
+      <div class="flex-1 min-w-0">
         <lfx-input-text
           [form]="filterForm"
           control="search"
@@ -19,7 +19,7 @@
       </div>
 
       <!-- Source filter -->
-      <div class="w-36 shrink-0 overflow-hidden">
+      <div class="w-full sm:w-auto sm:shrink-0">
         <lfx-select
           [form]="filterForm"
           control="source"

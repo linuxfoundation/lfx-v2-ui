@@ -17,7 +17,7 @@ import {
 import { FilterPillOption, Transaction } from '@lfx-one/shared/interfaces';
 
 import { CardComponent } from '@components/card/card.component';
-import { FilterPillsComponent } from '@components/filter-pills/filter-pills.component';
+import { CardTabsBarComponent } from '@components/card-tabs-bar/card-tabs-bar.component';
 import { TableComponent } from '@components/table/table.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { TransactionTypeStylePipe } from '@pipes/transaction-type-style.pipe';
@@ -46,7 +46,7 @@ const TAB_TYPE_MAP: Record<string, string> = {
 
 @Component({
   selector: 'lfx-transactions-dashboard',
-  imports: [CardComponent, FilterPillsComponent, TableComponent, TagComponent, CurrencyPipe, DatePipe, TransactionTypeStylePipe],
+  imports: [CardComponent, CardTabsBarComponent, TableComponent, TagComponent, CurrencyPipe, DatePipe, TransactionTypeStylePipe],
   templateUrl: './transactions-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,6 +65,7 @@ export class TransactionsDashboardComponent {
   // ─── Computed Signals ──────────────────────────────────────────────────────
   protected readonly transactions: Signal<Transaction[] | undefined> = this.initTransactions();
   protected readonly filteredTransactions: Signal<Transaction[]> = this.initFilteredTransactions();
+  protected readonly activeTabLabel = computed(() => this.tabOptions.find((t) => t.id === this.activeTab())?.label ?? 'Transactions');
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {

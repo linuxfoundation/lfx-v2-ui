@@ -4,7 +4,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
-import { CardComponent } from '@components/card/card.component';
+import { EmptyStateComponent } from '@components/empty-state/empty-state.component';
 import { Committee, Survey } from '@lfx-one/shared/interfaces';
 import { SurveysTableComponent } from '@app/modules/surveys/components/surveys-table/surveys-table.component';
 import { SurveyResultsDrawerComponent } from '@app/modules/surveys/components/survey-results-drawer/survey-results-drawer.component';
@@ -14,7 +14,7 @@ import { catchError, filter, finalize, of, switchMap, tap } from 'rxjs';
 
 @Component({
   selector: 'lfx-committee-surveys',
-  imports: [ButtonComponent, CardComponent, SurveysTableComponent, SurveyResultsDrawerComponent],
+  imports: [ButtonComponent, EmptyStateComponent, SurveysTableComponent, SurveyResultsDrawerComponent],
   templateUrl: './committee-surveys.component.html',
   styleUrl: './committee-surveys.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

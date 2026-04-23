@@ -8,73 +8,82 @@
     <p class="mt-1 text-sm text-gray-500" data-testid="transactions-subtitle">{{ subtitle }}</p>
   </div>
 
-  <!-- Tab switcher -->
-  <div class="mb-6" data-testid="transactions-tabs">
-    <lfx-filter-pills [options]="tabOptions" [selectedFilter]="activeTab()" (filterChange)="onTabChange($event)" />
-  </div>
+  <!-- Card with tabs + table -->
+  <lfx-card styleClass="[&_.p-card-body]:p-0 [&_.p-card-content]:p-0" data-testid="transactions-card">
+    <!-- Tab switcher -->
+    <lfx-card-tabs-bar
+      [options]="tabOptions"
+      [selectedFilter]="activeTab()"
+      (filterChange)="onTabChange($event)"
+      data-testid="transactions-tabs">
+    </lfx-card-tabs-bar>
 
-  <!-- Transactions table -->
-  <lfx-card>
-    <lfx-table
-      [value]="filteredTransactions()"
-      [loading]="transactions() === undefined"
-      [paginator]="filteredTransactions().length > 10"
-      [rows]="10"
-      [rowsPerPageOptions]="[10, 25, 50]"
-      [first]="tableFirst()"
-      (onPage)="tableFirst.set($event.first)"
-      data-testid="transactions-table">
-      <ng-template #header>
-        <tr>
-          <th class="w-[35%]">Name</th>
-          <th class="w-[20%]">Order ID</th>
-          <th class="w-[15%]">Date</th>
-          <th class="w-[15%]">Type</th>
-          <th class="w-[15%] text-right">Transaction Value</th>
-        </tr>
-      </ng-template>
+    <!-- Transactions table -->
+    <div class="px-5 pb-5">
+      <lfx-table
+        [value]="filteredTransactions()"
+        [loading]="transactions() === undefined"
+        [paginator]="filteredTransactions().length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [first]="tableFirst()"
+        (onPage)="tableFirst.set($event.first)"
+        data-testid="transactions-table">
+        <ng-template #header>
+          <tr>
+            <th class="w-[35%]">Name</th>
+            <th class="w-[20%]">Order ID</th>
+            <th class="w-[15%]">Date</th>
+            <th class="w-[15%]">Type</th>
+            <th class="w-[15%] text-right">Transaction Value</th>
+          </tr>
+        </ng-template>
 
-      <ng-template #body let-transaction let-rowIndex="rowIndex">
-        <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'transactions-row-' + transaction.id">
-          <!-- Name column -->
-          <td>
-            <span class="text-gray-900">{{ transaction.name }}</span>
-          </td>
+        <ng-template #body let-transaction let-rowIndex="rowIndex">
+          <tr [attr.data-row-index]="rowIndex" [attr.data-testid]="'transactions-row-' + transaction.id">
+            <!-- Name column -->
+            <td>
+              <span class="text-sm text-gray-900">{{ transaction.name }}</span>
+            </td>
 
-          <!-- Order ID column -->
-          <td>
-            <span class="text-gray-500 font-mono">{{ transaction.orderId }}</span>
-          </td>
+            <!-- Order ID column -->
+            <td>
+              <span class="text-sm text-gray-500 font-mono">{{ transaction.orderId }}</span>
+            </td>
 
-          <!-- Date column -->
-          <td>
-            <span class="text-gray-700">{{ transaction.createdDate | date: 'mediumDate' }}</span>
-          </td>
+            <!-- Date column -->
+            <td>
+              <span class="text-sm text-gray-700">{{ transaction.createdDate | date: 'mediumDate' }}</span>
+            </td>
 
-          <!-- Type column -->
-          <td>
-            @if (transaction.transactionType) {
-              <lfx-tag [value]="transaction.transactionType" severity="secondary" [styleClass]="transaction.transactionType | transactionTypeStyle" />
-            } @else {
-              <span class="text-gray-400">&mdash;</span>
-            }
-          </td>
+            <!-- Type column -->
+            <td>
+              @if (transaction.transactionType) {
+                <lfx-tag [value]="transaction.transactionType" severity="secondary" [styleClass]="transaction.transactionType | transactionTypeStyle" />
+              } @else {
+                <span class="text-sm text-gray-400">&mdash;</span>
+              }
+            </td>
 
-          <!-- Transaction Value column -->
-          <td class="text-right">
-            <span class="font-medium text-gray-900">{{ transaction.netRevenue | currency: 'USD' }}</span>
-          </td>
-        </tr>
-      </ng-template>
+            <!-- Transaction Value column -->
+            <td class="text-right">
+              <span class="text-sm font-medium text-gray-900">{{ transaction.netRevenue | currency: 'USD' }}</span>
+            </td>
+          </tr>
+        </ng-template>
 
-      <ng-template #emptymessage>
-        <tr>
-          <td colspan="5" class="text-center py-8">
-            <i class="fa-light fa-receipt text-3xl text-gray-400 mb-2 block"></i>
-            <p class="text-sm text-gray-500">No transactions found. Recent purchases may take up to 48 hours to appear.</p>
-          </td>
-        </tr>
-      </ng-template>
-    </lfx-table>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="5" class="text-center py-8">
+              <i class="fa-light fa-receipt text-3xl text-gray-400 mb-2 block"></i>
+              <p class="text-sm text-gray-500">
+                {{ activeTab() === 'all' ? 'No transactions found.' : 'No ' + activeTabLabel().toLowerCase() + ' found.' }}
+                Recent purchases may take up to 48 hours to appear.
+              </p>
+            </td>
+          </tr>
+        </ng-template>
+      </lfx-table>
+    </div>
   </lfx-card>
 </div>
