@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 import { COMMITTEE_LABEL, MAILING_LIST_LABEL } from '@lfx-one/shared/constants';
+import { MailingListMemberDeliveryMode } from '@lfx-one/shared/enums';
 import { CommitteeReference, FilterOption, GroupsIOMailingList, GroupsIOService, MyMailingList, ProjectContext } from '@lfx-one/shared/interfaces';
 import { LensService } from '@services/lens.service';
 import { MailingListService } from '@services/mailing-list.service';
@@ -78,6 +79,10 @@ export class MailingListDashboardComponent {
   );
   public readonly totalMailingLists: Signal<number> = this.initTotalMailingLists();
   public readonly publicMailingLists: Signal<number> = this.initPublicMailingLists();
+  public readonly totalSubscribers: Signal<number> = this.initTotalSubscribers();
+  public readonly myTotalMailingLists: Signal<number> = this.initMyTotalMailingLists();
+  public readonly myPublicMailingLists: Signal<number> = this.initMyPublicMailingLists();
+  public readonly myOnDigest: Signal<number> = this.initMyOnDigest();
   public readonly availableServices: Signal<GroupsIOService[]> = this.initServices();
   public readonly hasNoServices: Signal<boolean> = this.initHasNoServices();
 
@@ -276,6 +281,22 @@ export class MailingListDashboardComponent {
 
   private initPublicMailingLists(): Signal<number> {
     return computed(() => this.mailingLists().filter((ml) => ml.public).length);
+  }
+
+  private initTotalSubscribers(): Signal<number> {
+    return computed(() => this.mailingLists().reduce((sum, ml) => sum + (ml.subscriber_count ?? 0), 0));
+  }
+
+  private initMyTotalMailingLists(): Signal<number> {
+    return computed(() => this.myMailingLists().length);
+  }
+
+  private initMyPublicMailingLists(): Signal<number> {
+    return computed(() => this.myMailingLists().filter((ml) => ml.public).length);
+  }
+
+  private initMyOnDigest(): Signal<number> {
+    return computed(() => this.myMailingLists().filter((ml) => ml.my_delivery_mode === MailingListMemberDeliveryMode.DIGEST).length);
   }
 
   private initServices(): Signal<GroupsIOService[]> {
