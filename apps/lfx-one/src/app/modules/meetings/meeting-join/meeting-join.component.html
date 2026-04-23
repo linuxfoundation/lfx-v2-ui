@@ -720,8 +720,8 @@
     </div>
 
     <!-- Meeting Registrants Drawer (rendered outside the card so PrimeNG's overlay/mask isn't
-         re-parented under p-card's body, which causes the drawer to close itself when the
-         opening click bubbles back through the card's content tree). -->
+         re-parented under lfx-card's content tree, which causes the drawer to close itself
+         when the opening click bubbles back through that subtree). -->
     <p-drawer
       [(visible)]="showRegistrants"
       [position]="drawerPosition()"
@@ -738,7 +738,7 @@
             @if (isPastMeeting()) {
               <div class="flex flex-col">
                 <h1>Meeting Participants</h1>
-                <span class="text-base text-gray-500">{{ attendedCount() }} attended / {{ pastMeetingInvitedCount() }} invited</span>
+                <span class="text-base text-gray-500">{{ attendedCount() }} attended / {{ invitedCount() }} invited</span>
               </div>
             } @else if (meeting().committees?.length) {
               <div class="flex flex-col">
