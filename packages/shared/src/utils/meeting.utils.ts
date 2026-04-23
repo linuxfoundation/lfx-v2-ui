@@ -293,8 +293,9 @@ export function buildJoinUrlWithParams(joinUrl: string, user?: User | null, opti
  * @returns V2 SummaryData object
  */
 function buildV2SummaryDataFromV1(v1Summary: V1PastMeetingSummary & { content?: string; edited_content?: string }): SummaryData {
-  // Indexer contract shape: flat content/edited_content fields — use directly
-  if (v1Summary.content || v1Summary.edited_content) {
+  // Indexer contract shape: flat content/edited_content fields — use directly.
+  // Use property presence ('in') not truthiness to correctly handle empty strings.
+  if ('content' in (v1Summary as object) || 'edited_content' in (v1Summary as object)) {
     return {
       title: v1Summary.summary_title || '',
       content: v1Summary.content || '',
@@ -352,8 +353,9 @@ function buildV2SummaryDataFromV1(v1Summary: V1PastMeetingSummary & { content?: 
  * - summary_end_time → summary_data.end_time
  */
 export function transformV1SummaryToV2(summary: PastMeetingSummary): PastMeetingSummary {
-  // If already has v2 format (uid and summary_data.content), return as-is
-  if (summary.uid && summary.summary_data?.content) {
+  // If already has v2 format (uid and summary_data present), return as-is.
+  // Check presence of summary_data, not value of content (which can be an empty string).
+  if (summary.uid && summary.summary_data) {
     return summary;
   }
 
