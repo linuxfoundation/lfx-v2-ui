@@ -57,7 +57,7 @@ export interface CertificateRow {
  * Snowflake row shape for ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
  */
 export interface EnrollmentRow {
-  USER_COURSE_ID: string;
+  ENROLLMENT_ID: string;
   LOGO_URL: string | null;
   COURSE_NAME: string;
   COURSE_GROUP_DESCRIPTION: string | null;
