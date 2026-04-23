@@ -32,7 +32,15 @@ const ENROLLMENTS_QUERY = `
          STATUS, IS_ACTIVE_ENROLLMENT, ENROLLMENT_TS, TOTAL_TIME
   FROM ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
   WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
-  ORDER BY COURSE_NAME ASC
+  ORDER BY
+    CASE STATUS
+      WHEN 'started' THEN 1
+      WHEN 'not-started' THEN 2
+      WHEN 'not-completed' THEN 3
+      WHEN 'completed' THEN 4
+      ELSE 5
+    END,
+    COURSE_NAME ASC
 `;
 
 export class TrainingService {
