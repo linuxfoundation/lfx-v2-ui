@@ -297,9 +297,9 @@ function buildV2SummaryDataFromV1(v1Summary: V1PastMeetingSummary & { content?: 
   // Use property presence ('in') not truthiness to correctly handle empty strings.
   if ('content' in v1Summary || 'edited_content' in v1Summary) {
     return {
-      title: v1Summary.summary_title || '',
-      content: v1Summary.content || '',
-      edited_content: v1Summary.edited_content || '',
+      title: v1Summary.summary_title ?? '',
+      content: v1Summary.content ?? '',
+      edited_content: v1Summary.edited_content ?? '',
       doc_url: '',
       start_time: v1Summary.summary_start_time || '',
       end_time: v1Summary.summary_end_time || '',
