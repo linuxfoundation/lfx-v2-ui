@@ -20,6 +20,8 @@ export class UserController {
   public async getPendingActions(req: Request, res: Response, next: NextFunction): Promise<void> {
     // projectUid/projectSlug/persona are optional. When omitted, the aggregator runs
     // user-scoped across the user's FGA grants instead of project-scoped.
+    // TODO: `persona` is accepted for telemetry only — the aggregator no longer consumes it.
+    // Drop from the query contract once all frontend callers stop sending it.
     const persona = req.query['persona'] as string | undefined;
     const projectUid = req.query['projectUid'] as string | undefined;
     const projectSlug = req.query['projectSlug'] as string | undefined;
@@ -190,20 +192,9 @@ export class UserController {
       const projectUid = req.query['projectUid'] as string | undefined;
       const foundationUid = req.query['foundation_uid'] as string | undefined;
 
-      // Extract user email from auth context (impersonation-aware, already lowercased)
-      const userEmail = getEffectiveEmail(req);
-      if (!userEmail) {
-        const validationError = ServiceValidationError.forField('email', 'User email not found in authentication context', {
-          operation: 'get_user_latest_past_meetings',
-          service: 'user_controller',
-          path: req.path,
-        });
-
-        next(validationError);
-        return;
-      }
-
-      const pastMeetings = await this.userService.getUserLatestPastMeetings(req, userEmail, projectUid, foundationUid);
+      // No email extraction needed — the service uses req.bearerToken (via filter_grants=direct
+      // server-side FGA lookup). Auth middleware has already ensured the user is authenticated.
+      const pastMeetings = await this.userService.getUserLatestPastMeetings(req, projectUid, foundationUid);
 
       logger.success(req, 'get_user_latest_past_meetings', startTime, {
         count: pastMeetings.length,

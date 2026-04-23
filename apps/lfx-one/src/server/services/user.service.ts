@@ -799,12 +799,13 @@ export class UserService {
   /**
    * Returns up to 5 most-recent past meetings the user has an FGA grant on.
    * Filters out meetings whose scheduled end has not yet passed. Issues a single query-service
-   * call with `sort=name_desc` + `page_size=5` — the meeting-service indexer populates
-   * `sort_name` with the RFC3339 UTC `start_time`, so the top rows are the most recent. Skips
-   * the participant/attendance scan since the card does not surface `user_attended`. `email`
-   * is accepted for signature parity with `getUserPastMeetings`.
+   * call with `sort=name_desc` + a small over-fetch — the meeting-service indexer populates
+   * `sort_name` with the RFC3339 UTC `start_time`, so the top rows are the most recent. We
+   * request more than 5 so that when the first rows are ongoing (scheduled end still in the
+   * future), we can drop them and still return up to 5 truly-past meetings in one request.
+   * Skips the participant/attendance scan since the card does not surface `user_attended`.
    */
-  public async getUserLatestPastMeetings(req: Request, email: string, projectUid?: string, foundationUid?: string): Promise<PastMeeting[]> {
+  public async getUserLatestPastMeetings(req: Request, projectUid?: string, foundationUid?: string): Promise<PastMeeting[]> {
     logger.debug(req, 'get_user_latest_past_meetings', 'Fetching user latest past meetings via filter_grants=direct + sort=name_desc', {
       has_project_filter: !!projectUid,
       has_foundation_filter: !!foundationUid,
@@ -833,12 +834,18 @@ export class UserService {
 
     const projectFilterParams = this.buildProjectScopeFilters(projectUid, foundationProjectUids);
 
+    // Over-fetch so the post-filter step (drop ongoing meetings whose scheduled end is still
+    // in the future) can still yield up to 5 truly-past rows when the top of the sort happens
+    // to include a few in-progress meetings. 10 is a small, bounded buffer.
+    const FETCH_SIZE = 10;
+    const RETURN_LIMIT = 5;
+
     const response = await this.microserviceProxy
       .proxyRequest<QueryServiceResponse<PastMeeting>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         type: 'v1_past_meeting',
         filter_grants: 'direct',
         sort: 'name_desc',
-        page_size: 5,
+        page_size: FETCH_SIZE,
         ...projectFilterParams,
       })
       .catch((error) => {
@@ -869,10 +876,12 @@ export class UserService {
     }));
 
     const now = Date.now();
-    const filtered = normalized.filter((meeting) => {
-      const effectiveEnd = this.computeEffectivePastMeetingEnd(meeting);
-      return effectiveEnd !== null && effectiveEnd < now;
-    });
+    const filtered = normalized
+      .filter((meeting) => {
+        const effectiveEnd = this.computeEffectivePastMeetingEnd(meeting);
+        return effectiveEnd !== null && effectiveEnd < now;
+      })
+      .slice(0, RETURN_LIMIT);
 
     if (filtered.length === 0) {
       return [];
@@ -1074,6 +1083,12 @@ export class UserService {
     projectSlug: string | undefined,
     projectUid: string | undefined
   ): Promise<PendingActionItem[]> {
+    // INFO-level breadcrumb for the unscoped Me-lens path — reads log at DEBUG by default, so
+    // without this the unscoped aggregation path has no prod footprint for capacity planning.
+    if (!projectUid && !projectSlug) {
+      logger.info(req, 'get_user_pending_actions', 'Running unscoped (Me-lens) aggregation', { me_lens: true });
+    }
+
     const rawUsername = await getUsernameFromAuth(req);
     const username = rawUsername ? stripAuthPrefix(rawUsername) : null;
 
@@ -1471,7 +1486,9 @@ export class UserService {
     }
     const start = meeting.scheduled_start_time || meeting.start_time;
     const duration = parseToInt(meeting.duration);
-    if (start && duration) {
+    // Explicit nullish / NaN check so a parsed duration of 0 is not treated as "unknown end"
+    // (a zero-minute meeting has effectiveEnd === start, which is still a usable cutoff).
+    if (start && duration !== undefined && duration !== null && !Number.isNaN(duration)) {
       const startMs = new Date(start).getTime();
       if (!Number.isNaN(startMs)) return startMs + duration * 60 * 1000;
     }
