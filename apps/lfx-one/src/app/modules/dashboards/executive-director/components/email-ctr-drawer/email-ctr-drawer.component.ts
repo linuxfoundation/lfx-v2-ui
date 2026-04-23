@@ -320,7 +320,7 @@ export class EmailCtrDrawerComponent {
             title: 'Investigate declining paid impressions',
             description: 'Impressions dropped for 3 consecutive months — review budget pacing and bid strategy',
             priority: 'medium',
-            actionType: 'content',
+            actionType: 'investigate',
           });
         }
       }
