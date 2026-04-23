@@ -204,6 +204,15 @@ export interface Committee {
   writers?: CommitteeUser[];
   /** Users with audit (review) access to this committee */
   auditors?: CommitteeUser[];
+
+  /**
+   * Caller's role in this committee, when they are a member. Absent for non-members.
+   * Falls back to the literal 'Member' when the upstream membership row exists but
+   * carries no role.
+   */
+  my_role?: string;
+  /** Caller's member UID in this committee. Absent for non-members. */
+  my_member_uid?: string;
 }
 
 /**

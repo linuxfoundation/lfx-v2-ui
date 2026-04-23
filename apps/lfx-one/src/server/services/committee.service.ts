@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { CommitteeMemberRole } from '@lfx-one/shared/enums';
 import {
   Committee,
   CommitteeCreateData,
@@ -161,9 +162,15 @@ export class CommitteeService {
   }
 
   /**
-   * Fetches a single committee by ID
+   * Fetches a single committee by ID.
+   *
+   * @param options.includeMembership When true, enriches the response with the caller's
+   *   `my_role` / `my_member_uid` resolved via a username-tagged membership query. Costs
+   *   one extra `/query/resources` call, so default is `false`. Enable only on user-facing
+   *   reads (e.g. the GET /committees/:id controller), not on internal validation reads
+   *   (member CRUD, meeting fan-out) where the caller-membership fields are unused.
    */
-  public async getCommitteeById(req: Request, committeeId: string): Promise<Committee> {
+  public async getCommitteeById(req: Request, committeeId: string, options: { includeMembership?: boolean } = {}): Promise<Committee> {
     const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
 
     if (!committee) {
@@ -174,18 +181,18 @@ export class CommitteeService {
       });
     }
 
-    // Fetch committee settings for enrichment.
-    // Settings (GET /committees/:uid/settings) is the authoritative source for writers/auditors —
-    // CommitteeFull (GET /committees/:uid) does not consistently return them in practice.
-    const settings = await this.getCommitteeSettings(req, committeeId);
+    // Fetch settings, optional caller membership, and access in parallel
+    const [settings, membership, withAccess] = await Promise.all([
+      this.getCommitteeSettings(req, committeeId),
+      options.includeMembership ? this.getCallerMembership(req, committeeId) : Promise.resolve(null),
+      this.accessCheckService.addAccessToResource(req, committee, 'committee'),
+    ]);
 
-    const committeeWithEnrichment = {
-      ...committee,
+    return {
+      ...withAccess,
       ...settings,
+      ...(membership && { my_role: membership.role, my_member_uid: membership.member_uid }),
     };
-
-    // Add writer access field to the committee
-    return await this.accessCheckService.addAccessToResource(req, committeeWithEnrichment, 'committee');
   }
 
   /**
@@ -793,6 +800,84 @@ export class CommitteeService {
       document_uid: documentId,
       document_type: documentType,
     });
+  }
+
+  /**
+   * Fetches the caller's membership row for a single committee, or null if none.
+   * Uses the username-tagged query so visibility is independent of which email
+   * the caller authenticated with — matching the pattern used by
+   * {@link getMyCommittees} / {@link getMyCommitteeUids} for the same `committee_member`
+   * resource type.
+   */
+  private async getCallerMembership(req: Request, committeeId: string): Promise<{ role: string; member_uid: string } | null> {
+    const username = await getUsernameFromAuth(req);
+    if (!username) {
+      return null;
+    }
+
+    // A (username, committee_uid) pair should yield at most one membership row. We
+    // request a small page rather than paginating; if upstream ever returns more than
+    // this page's worth we log and continue with the best-of-page below.
+    const PAGE_SIZE = 10;
+
+    try {
+      const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        v: '1',
+        type: 'committee_member',
+        tags_all: [`username:${username}`, `committee_uid:${committeeId}`],
+        page_size: PAGE_SIZE,
+      });
+
+      const memberships = (response?.resources ?? []).map((r) => r.data);
+      if (memberships.length === 0) {
+        return null;
+      }
+
+      // Defensive: if upstream ever returns multiples (duplicate index entry, multi-account
+      // edge case), prefer the highest-privilege role so the UI doesn't randomly downgrade.
+      if (memberships.length > 1) {
+        logger.warning(req, 'get_caller_membership', 'Multiple membership rows for (username, committee_uid); picking highest-privilege role', {
+          committee_uid: committeeId,
+          row_count: memberships.length,
+        });
+      }
+      // Belt-and-suspenders: if upstream signals more pages we still return the best
+      // of what we got, but the inconsistency deserves a trace. Rely on `page_token`
+      // alone — `length >= PAGE_SIZE` would false-positive on a saturated final page.
+      if (response?.page_token) {
+        logger.warning(req, 'get_caller_membership', 'Membership query truncated; selecting best row from first page', {
+          committee_uid: committeeId,
+          page_size: PAGE_SIZE,
+          row_count: memberships.length,
+        });
+      }
+      const best = memberships.reduce((acc, m) => (this.rolePriority(m.role?.name) > this.rolePriority(acc.role?.name) ? m : acc), memberships[0]);
+
+      return {
+        role: best.role?.name || 'Member',
+        member_uid: best.uid,
+      };
+    } catch (error) {
+      logger.warning(req, 'get_caller_membership', 'Failed to resolve caller membership, treating as non-member', {
+        committee_uid: committeeId,
+        err: error,
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Numeric priority for committee roles, used to deterministically pick the "best"
+   * row when multiple membership rows exist for the same caller. Higher = more privileged.
+   *
+   * Any named role outranks `None`/missing so a real membership row is never tied with
+   * a placeholder row. Chair / Vice Chair are explicitly elevated above the rest.
+   */
+  private rolePriority(role: CommitteeMemberRole | string | undefined): number {
+    if (role === CommitteeMemberRole.CHAIR) return 3;
+    if (role === CommitteeMemberRole.VICE_CHAIR) return 2;
+    if (!role || role === CommitteeMemberRole.NONE) return 0;
+    return 1;
   }
 
   /**
