@@ -325,6 +325,15 @@ export class EmailCtrDrawerComponent {
         }
       }
 
+      if (paidActions.length === 0 && funnel.bofu.count > 0 && funnel.bofu.spend > 0 && funnel.bofu.conversions === 0) {
+        paidActions.push({
+          title: 'Conversion campaigns spending without converting',
+          description: `${funnel.bofu.count} conversion campaign${funnel.bofu.count > 1 ? 's are' : ' is'} active with no recorded conversions — review landing page and conversion tracking`,
+          priority: 'high',
+          actionType: 'optimize',
+        });
+      }
+
       // --- Email — pick highest-priority ---
       if (email.changePercentage < 0) {
         emailActions.push({
@@ -449,6 +458,13 @@ export class EmailCtrDrawerComponent {
             type: ctr >= 2 ? 'driver' : 'info',
           });
         }
+      }
+
+      if (paidInsights.length === 0 && funnel.bofu.count > 0) {
+        paidInsights.push({
+          text: `Conversion: ${formatNumber(funnel.bofu.conversions)} conversion${funnel.bofu.conversions !== 1 ? 's' : ''} across ${funnel.bofu.count} campaign${funnel.bofu.count > 1 ? 's' : ''} (${formatCurrency(funnel.bofu.spend)} spend)`,
+          type: funnel.bofu.conversions > 0 ? 'driver' : 'warning',
+        });
       }
 
       if (paidInsights.length === 0 && paid.totalReach > 0 && paid.monthlyData.length >= 2) {

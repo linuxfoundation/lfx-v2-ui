@@ -315,7 +315,7 @@
 
               <!-- Expanded Campaign Rows -->
               @if (expandedProjects().has(project.projectName)) {
-                @for (campaign of project.campaigns; track campaign.campaignName) {
+                @for (campaign of project.campaigns; track campaign.campaignName + '|' + campaign.funnelStage) {
                   <div class="flex items-center py-2 px-1 pl-6 border-b border-gray-50 bg-gray-50" data-testid="email-ctr-drawer-paid-campaign-row">
                     <span class="flex-[2] min-w-[120px] text-xs text-gray-500 truncate pr-2" [title]="campaign.campaignName">{{ campaign.campaignName }}</span>
                     <span class="w-16 flex justify-center">
