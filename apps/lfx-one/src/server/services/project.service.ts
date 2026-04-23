@@ -2257,12 +2257,12 @@ export class ProjectService {
                SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
                SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
                SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
-               ROUND(SUM(FIRST_TOUCH_REVENUE), 2) AS FIRST_TOUCH_REVENUE,
-               ROUND(SUM(LAST_TOUCH_REVENUE), 2) AS LAST_TOUCH_REVENUE,
-               ROUND(SUM(LINEAR_REVENUE), 2) AS LINEAR_REVENUE,
-               ROUND(SUM(TIME_DECAY_REVENUE), 2) AS TIME_DECAY_REVENUE
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
-        WHERE SESSION_MONTH >= DATEADD(MONTH, -6, CURRENT_DATE())
+        WHERE SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY CHANNEL
         ORDER BY SESSIONS DESC
       `
@@ -2271,13 +2271,13 @@ export class ProjectService {
                SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
                SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
                SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
-               ROUND(SUM(FIRST_TOUCH_REVENUE), 2) AS FIRST_TOUCH_REVENUE,
-               ROUND(SUM(LAST_TOUCH_REVENUE), 2) AS LAST_TOUCH_REVENUE,
-               ROUND(SUM(LINEAR_REVENUE), 2) AS LINEAR_REVENUE,
-               ROUND(SUM(TIME_DECAY_REVENUE), 2) AS TIME_DECAY_REVENUE
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
         WHERE FOUNDATION_SLUG = ?
-          AND SESSION_MONTH >= DATEADD(MONTH, -6, CURRENT_DATE())
+          AND SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY CHANNEL
         ORDER BY SESSIONS DESC
       `;
@@ -2288,12 +2288,12 @@ export class ProjectService {
                SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
                SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
                SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
-               ROUND(SUM(FIRST_TOUCH_REVENUE), 2) AS FIRST_TOUCH_REVENUE,
-               ROUND(SUM(LAST_TOUCH_REVENUE), 2) AS LAST_TOUCH_REVENUE,
-               ROUND(SUM(LINEAR_REVENUE), 2) AS LINEAR_REVENUE,
-               ROUND(SUM(TIME_DECAY_REVENUE), 2) AS TIME_DECAY_REVENUE
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
-        WHERE SESSION_MONTH >= DATEADD(MONTH, -6, CURRENT_DATE())
+        WHERE SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY PROJECT_NAME, CHANNEL
         ORDER BY CHANNEL, SESSIONS DESC
       `
@@ -2302,13 +2302,13 @@ export class ProjectService {
                SUM(SESSIONS) AS SESSIONS, SUM(PAGE_VIEWS) AS PAGE_VIEWS,
                SUM(UNIQUE_VISITORS) AS UNIQUE_VISITORS, SUM(NEW_VISITORS) AS NEW_VISITORS,
                SUM(RETURNING_VISITORS) AS RETURNING_VISITORS,
-               ROUND(SUM(FIRST_TOUCH_REVENUE), 2) AS FIRST_TOUCH_REVENUE,
-               ROUND(SUM(LAST_TOUCH_REVENUE), 2) AS LAST_TOUCH_REVENUE,
-               ROUND(SUM(LINEAR_REVENUE), 2) AS LINEAR_REVENUE,
-               ROUND(SUM(TIME_DECAY_REVENUE), 2) AS TIME_DECAY_REVENUE
+               SUM(FIRST_TOUCH_REVENUE) AS FIRST_TOUCH_REVENUE,
+               SUM(LAST_TOUCH_REVENUE) AS LAST_TOUCH_REVENUE,
+               SUM(LINEAR_REVENUE) AS LINEAR_REVENUE,
+               SUM(TIME_DECAY_REVENUE) AS TIME_DECAY_REVENUE
         FROM ANALYTICS.PLATINUM_LFX_ONE.MARKETING_ATTRIBUTION
         WHERE FOUNDATION_SLUG = ?
-          AND SESSION_MONTH >= DATEADD(MONTH, -6, CURRENT_DATE())
+          AND SESSION_MONTH >= DATEADD('MONTH', -6, DATE_TRUNC('MONTH', CURRENT_DATE()))
         GROUP BY PROJECT_NAME, CHANNEL
         ORDER BY CHANNEL, SESSIONS DESC
       `;
@@ -2405,7 +2405,18 @@ export class ProjectService {
           });
         }
       }
-      const channels = [...channelMap.values()].sort((a, b) => b.sessions - a.sessions);
+      // Round revenue after consolidation — rounding pre-aggregation causes penny drift
+      // when mapChannel() merges multiple raw channels into one UI label.
+      const roundRevenue = (item: MarketingAttributionChannel | MarketingAttributionProject): void => {
+        item.firstTouchRevenue = Math.round(item.firstTouchRevenue * 100) / 100;
+        item.lastTouchRevenue = Math.round(item.lastTouchRevenue * 100) / 100;
+        item.linearRevenue = Math.round(item.linearRevenue * 100) / 100;
+        item.timeDecayRevenue = Math.round(item.timeDecayRevenue * 100) / 100;
+      };
+
+      const channels = [...channelMap.values()];
+      channels.forEach(roundRevenue);
+      channels.sort((a, b) => b.sessions - a.sessions);
 
       // Map project rows with the same channel consolidation
       const attrProjectMap = new Map<string, MarketingAttributionProject>();
@@ -2439,7 +2450,9 @@ export class ProjectService {
           });
         }
       }
-      const projects = [...attrProjectMap.values()].sort((a, b) => b.sessions - a.sessions);
+      const projects = [...attrProjectMap.values()];
+      projects.forEach(roundRevenue);
+      projects.sort((a, b) => b.sessions - a.sessions);
 
       logger.debug(undefined, 'get_marketing_attribution', 'Marketing attribution data fetched', {
         foundation_slug: foundationSlug,
