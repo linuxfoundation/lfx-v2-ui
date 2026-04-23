@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NATS_CONFIG, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
+import { NATS_CONFIG, PENDING_ACTION_SURVEYS_ROW_LIMIT, ROOT_PROJECT_SLUG } from '@lfx-one/shared/constants';
 import { NatsSubjects } from '@lfx-one/shared/enums';
 import {
   BoardMeetingInviteeRow,
@@ -991,6 +991,10 @@ export class ProjectService {
       binds.push(projectSlug);
     }
 
+    // LIMIT bounds the micro-partition scan on the Me-lens unscoped path (no PROJECT_SLUG
+    // predicate), where Snowflake would otherwise filter only by EMAIL. Paired with the
+    // ORDER BY, the result set is the N most-urgent pending surveys — the dashboard surfaces
+    // far fewer than this cap, and the scoped path is naturally small too.
     const query = `
       SELECT
         SURVEY_TITLE,
@@ -1000,6 +1004,7 @@ export class ProjectService {
       FROM ANALYTICS.PLATINUM_LFX_ONE.MEMBER_DASHBOARD_PENDING_ACTION_SURVEYS
       WHERE ${conditions.join(' AND ')}
       ORDER BY SURVEY_CUTOFF_DATE ASC
+      LIMIT ${PENDING_ACTION_SURVEYS_ROW_LIMIT}
     `;
 
     const result = await this.snowflakeService.execute<PendingSurveyRow>(query, binds);

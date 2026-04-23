@@ -820,6 +820,12 @@ export class UserService {
    * request more than 5 so that when the first rows are ongoing (scheduled end still in the
    * future), we can drop them and still return up to 5 truly-past meetings in one request.
    * Skips the participant/attendance scan since the card does not surface `user_attended`.
+   *
+   * Cross-service dependency: the `sort_name = start_time` contract is owned by the
+   * `lfx-v2-meeting-service` indexer. If that field is ever repurposed (e.g. to alphabetical
+   * meeting name), this endpoint would silently return lexicographically-ordered results
+   * instead of the most-recent-first. Pin the contract via the indexer doc in that repo:
+   * https://github.com/linuxfoundation/lfx-v2-meeting-service/blob/main/docs/indexer-contract.md
    */
   public async getUserLatestPastMeetings(req: Request, projectUid?: string, foundationUid?: string): Promise<PastMeeting[]> {
     logger.debug(req, 'get_user_latest_past_meetings', 'Fetching user latest past meetings via filter_grants=direct + sort=name_desc', {
