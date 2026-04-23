@@ -567,13 +567,31 @@ export class CommitteeService {
       membership_count: memberships.length,
     });
 
-    // Build a map of committee_uid → membership metadata for quick lookup
-    const membershipMap = new Map<string, { role: string; member_uid: string; committee_category?: string }>();
+    const membershipsByCommittee = new Map<string, CommitteeMember[]>();
     for (const m of memberships) {
-      membershipMap.set(m.committee_uid, {
-        role: m.role?.name || 'Member',
-        member_uid: m.uid,
-        committee_category: m.committee_category,
+      if (!m.committee_uid) continue;
+      const bucket = membershipsByCommittee.get(m.committee_uid);
+      if (bucket) {
+        bucket.push(m);
+      } else {
+        membershipsByCommittee.set(m.committee_uid, [m]);
+      }
+    }
+
+    const membershipMap = new Map<string, { role: string; member_uid: string; committee_category?: string }>();
+    for (const [committeeUid, rows] of membershipsByCommittee) {
+      if (rows.length > 1) {
+        logger.warning(req, 'get_my_committees', 'Multiple membership rows for (username, committee_uid); picking highest-privilege role', {
+          committee_uid: committeeUid,
+          row_count: rows.length,
+        });
+      }
+      const best = this.pickBestMembership(rows);
+      if (!best) continue;
+      membershipMap.set(committeeUid, {
+        role: best.role?.name || 'Member',
+        member_uid: best.uid,
+        committee_category: best.committee_category,
       });
     }
 
@@ -851,7 +869,10 @@ export class CommitteeService {
           row_count: memberships.length,
         });
       }
-      const best = memberships.reduce((acc, m) => (this.rolePriority(m.role?.name) > this.rolePriority(acc.role?.name) ? m : acc), memberships[0]);
+      const best = this.pickBestMembership(memberships);
+      if (!best) {
+        return null;
+      }
 
       return {
         role: best.role?.name || 'Member',
@@ -878,6 +899,20 @@ export class CommitteeService {
     if (role === CommitteeMemberRole.VICE_CHAIR) return 2;
     if (!role || role === CommitteeMemberRole.NONE) return 0;
     return 1;
+  }
+
+  /**
+   * Selects the highest-privilege membership row from a set of duplicates for the
+   * same `(username, committee_uid)` pair. Shared between {@link getCallerMembership}
+   * and {@link getMyCommittees} so the detail and dashboard endpoints surface the
+   * same `my_role` / `my_member_uid` for a given group when upstream returns
+   * multiple rows (duplicate index entry, multi-account edge case).
+   */
+  private pickBestMembership(memberships: CommitteeMember[]): CommitteeMember | null {
+    if (memberships.length === 0) {
+      return null;
+    }
+    return memberships.reduce((best, current) => (this.rolePriority(current.role?.name) > this.rolePriority(best.role?.name) ? current : best));
   }
 
   /**
