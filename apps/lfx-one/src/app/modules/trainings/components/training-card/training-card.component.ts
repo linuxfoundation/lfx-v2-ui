@@ -75,7 +75,7 @@ export class TrainingCardComponent {
     return computed(() => {
       if (this.variant() !== 'ongoing') return true;
       const t = this.training() as TrainingEnrollment;
-      return t.isActiveEnrollment ?? true;
+      return t.isActiveEnrollment;
     });
   }
 

@@ -141,7 +141,7 @@ export class TrainingService {
       enrolledDate: row.ENROLLMENT_TS ?? null,
       totalTime: row.TOTAL_TIME ?? null,
       status: row.STATUS ?? null,
-      isActiveEnrollment: row.IS_ACTIVE_ENROLLMENT ?? false,
+      isActiveEnrollment: row.IS_ACTIVE_ENROLLMENT,
     };
   }
 
