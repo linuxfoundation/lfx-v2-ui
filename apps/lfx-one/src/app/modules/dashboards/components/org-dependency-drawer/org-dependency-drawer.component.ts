@@ -21,16 +21,6 @@ export class OrgDependencyDrawerComponent {
   // === Services ===
   private readonly projectContextService = inject(ProjectContextService);
 
-  // === Insights Deep Link ===
-  protected readonly insightsUrl: Signal<string> = computed(() => {
-    const ctx = this.projectContextService.activeContext();
-    if (!ctx?.slug) return buildInsightsUrl();
-    if (this.projectContextService.isFoundationContext()) {
-      return buildInsightsUrl(`/collection/details/${ctx.slug}`);
-    }
-    return buildInsightsUrl(`/project/${ctx.slug}/contributors`, { timeRange: 'alltime', widget: 'organization-dependency' });
-  });
-
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
@@ -43,6 +33,15 @@ export class OrgDependencyDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly insightsUrl: Signal<string> = computed(() => {
+    const ctx = this.projectContextService.activeContext();
+    if (!ctx?.slug) return buildInsightsUrl();
+    if (this.projectContextService.isFoundationContext()) {
+      return buildInsightsUrl(`/collection/details/${ctx.slug}`);
+    }
+    return buildInsightsUrl(`/project/${ctx.slug}/contributors`, { timeRange: 'alltime', widget: 'organization-dependency' });
+  });
+
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
 
   protected readonly chartOptions: ChartOptions<'bar'> = {
