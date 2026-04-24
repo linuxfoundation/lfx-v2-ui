@@ -21,6 +21,11 @@
     <lfx-stat-card-grid [cards]="summaryCards()" [loading]="loading()" />
 
     <div class="flex flex-col gap-3" data-testid="foundation-projects-filters">
+      <lfx-filter-pills
+        [options]="pillOptions()"
+        [selectedFilter]="activePill()"
+        (filterChange)="onPillChange($event)"
+        data-testid="foundation-projects-pills" />
       <lfx-input-text
         control="query"
         [form]="searchForm"
@@ -44,6 +49,8 @@
       <ng-template #header>
         <tr>
           <th scope="col">Project Name</th>
+          <th scope="col" class="text-center">Groups</th>
+          <th scope="col" class="text-center">Channels</th>
           <th scope="col" class="text-right">Maintainers</th>
           <th scope="col" class="text-right">Stars</th>
           <th scope="col" class="text-right">Contributors</th>
@@ -53,6 +60,7 @@
       </ng-template>
 
       <ng-template #body let-project>
+        @let counts = getCountFor(project);
         <tr [attr.data-testid]="'foundation-projects-row-' + project.projectSlug">
           <td>
             <button
@@ -67,6 +75,36 @@
                 <span class="text-xs text-slate-500">Updated {{ project.lastUpdated }}</span>
               }
             </button>
+          </td>
+          <td class="text-center">
+            <i
+              class="fa-light fa-users-rectangle"
+              [class.text-blue-600]="counts.committees > 0"
+              [class.text-gray-300]="counts.committees === 0"
+              aria-hidden="true"
+              [title]="counts.committees + ' groups'"
+              [attr.data-testid]="'foundation-projects-groups-' + project.projectSlug"></i>
+            <span class="sr-only">{{ counts.committees }} groups</span>
+          </td>
+          <td class="text-center">
+            <span class="inline-flex items-center justify-center gap-2">
+              <i
+                class="fa-light fa-envelope"
+                [class.text-blue-600]="counts.mailingLists > 0"
+                [class.text-gray-300]="counts.mailingLists === 0"
+                aria-hidden="true"
+                [title]="counts.mailingLists + ' mailing lists'"
+                [attr.data-testid]="'foundation-projects-mailing-lists-' + project.projectSlug"></i>
+              <span class="sr-only">{{ counts.mailingLists }} mailing lists</span>
+              <i
+                class="fa-light fa-message"
+                [class.text-blue-600]="counts.hasChat"
+                [class.text-gray-300]="!counts.hasChat"
+                aria-hidden="true"
+                [title]="counts.hasChat ? 'Chat configured' : 'No chat configured'"
+                [attr.data-testid]="'foundation-projects-chat-' + project.projectSlug"></i>
+              <span class="sr-only">{{ counts.hasChat ? 'Chat configured' : 'No chat configured' }}</span>
+            </span>
           </td>
           <td class="text-right text-sm text-gray-700">{{ project.maintainers | number }}</td>
           <td class="text-right text-sm text-gray-700">{{ project.stars | number }}</td>
@@ -87,7 +125,7 @@
 
       <ng-template #emptymessage>
         <tr>
-          <td colspan="6" class="p-10 text-center">
+          <td colspan="8" class="p-10 text-center">
             @if (searchQuery().trim()) {
               <div class="flex flex-col items-center gap-2" data-testid="foundation-projects-search-empty">
                 <i class="fa-light fa-magnifying-glass text-3xl text-gray-400"></i>
