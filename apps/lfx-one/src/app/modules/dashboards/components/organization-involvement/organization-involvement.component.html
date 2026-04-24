@@ -2,20 +2,12 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <section data-testid="dashboard-organization-involvement-section">
-  <div class="flex flex-wrap gap-3 items-end justify-between mb-4">
-    <div class="flex flex-col gap-3">
-      <div class="flex justify-between gap-3 flex-wrap">
-        <h2 class="mb-0">{{ accountName() }}'s Involvement</h2>
-        <!-- Data Copilot Button -->
-        <lfx-data-copilot></lfx-data-copilot>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Filter Pills -->
-        <lfx-filter-pills [options]="filterOptions" [selectedFilter]="selectedFilter()" (filterChange)="handleFilterChange($event)"></lfx-filter-pills>
-      </div>
-    </div>
-
+  <!-- Title row -->
+  <div class="flex items-center gap-3 mb-3">
+    <h2 class="flex items-center gap-2 shrink-0 text-base font-medium text-gray-900">{{ accountName() }}'s Involvement</h2>
+    <div class="flex-1 border-t border-gray-200 self-center"></div>
+    <!-- Data Copilot Button -->
+    <lfx-data-copilot></lfx-data-copilot>
     <!-- Carousel Controls -->
     <div class="flex items-center gap-2">
       <button
@@ -35,6 +27,10 @@
         <i class="fa-light fa-chevron-right"></i>
       </button>
     </div>
+  </div>
+  <!-- Filter Pills row -->
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <lfx-filter-pills [options]="filterOptions" [selectedFilter]="selectedFilter()" (filterChange)="handleFilterChange($event)"></lfx-filter-pills>
   </div>
 
   @if (!hasFoundationSelected()) {
