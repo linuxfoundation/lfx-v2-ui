@@ -166,32 +166,6 @@ export class FoundationProjectsComponent {
     });
   }
 
-  private navigateToProject(project: ProjectTableRow, destination: string): void {
-    // Resolve the canonical project-service UID from the foundation's sub-project
-    // listing — this is the same identifier that committee/mailing-list tagging
-    // uses. Only fall back to Snowflake's PROJECT_ID when it's already a UUID;
-    // some foundations' PROJECT_ID is a Salesforce ID, which would lens-switch
-    // to the wrong (or invalid) project. If neither is available, no-op — the
-    // template's [disabled] binding should have blocked this click anyway.
-    const mappedUid = this.subProjectUidBySlug().get(project.projectSlug);
-    let resolvedUid: string | undefined;
-    if (mappedUid) {
-      resolvedUid = mappedUid;
-    } else if (project.projectId && UUID_REGEX.test(project.projectId)) {
-      resolvedUid = project.projectId;
-    }
-    if (!resolvedUid) {
-      return;
-    }
-    this.projectContextService.setProject({
-      uid: resolvedUid,
-      name: project.projectName,
-      slug: project.projectSlug,
-    });
-    this.lensService.setLens('project');
-    this.router.navigate([destination]);
-  }
-
   private initFilteredProjects(): Signal<ProjectTableRow[]> {
     return computed(() => {
       const query = this.searchQuery().toLowerCase().trim();
@@ -336,5 +310,32 @@ export class FoundationProjectsComponent {
         { id: 'without-channels', label: `Without Channels (${withoutChannels})` },
       ];
     });
+  }
+
+  // === Private Helper Methods ===
+  private navigateToProject(project: ProjectTableRow, destination: string): void {
+    // Resolve the canonical project-service UID from the foundation's sub-project
+    // listing — this is the same identifier that committee/mailing-list tagging
+    // uses. Only fall back to Snowflake's PROJECT_ID when it's already a UUID;
+    // some foundations' PROJECT_ID is a Salesforce ID, which would lens-switch
+    // to the wrong (or invalid) project. If neither is available, no-op — the
+    // template's [disabled] binding should have blocked this click anyway.
+    const mappedUid = this.subProjectUidBySlug().get(project.projectSlug);
+    let resolvedUid: string | undefined;
+    if (mappedUid) {
+      resolvedUid = mappedUid;
+    } else if (project.projectId && UUID_REGEX.test(project.projectId)) {
+      resolvedUid = project.projectId;
+    }
+    if (!resolvedUid) {
+      return;
+    }
+    this.projectContextService.setProject({
+      uid: resolvedUid,
+      name: project.projectName,
+      slug: project.projectSlug,
+    });
+    this.lensService.setLens('project');
+    this.router.navigate([destination]);
   }
 }
