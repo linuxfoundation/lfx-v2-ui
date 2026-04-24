@@ -318,7 +318,12 @@ export class FoundationHealthComponent {
     const data = this.softwareValueData();
 
     const bucketLabels = ['Top 1', 'Top 2-3', 'Top 4-5', 'All Others'];
-    const bucketValues = [data.top1Value, data.top3Value - data.top1Value, data.top5Value - data.top3Value, data.allOtherValue];
+    const bucketValues = [
+      Math.max(0, data.top1Value),
+      Math.max(0, data.top3Value - data.top1Value),
+      Math.max(0, data.top5Value - data.top3Value),
+      Math.max(0, data.allOtherValue),
+    ];
     const bucketColors = [lfxColors.emerald[600], lfxColors.emerald[400], lfxColors.emerald[300], lfxColors.emerald[200]];
 
     return {
@@ -348,10 +353,15 @@ export class FoundationHealthComponent {
             borderSkipped: false,
           },
         },
+        interaction: { mode: 'nearest' as const, intersect: true },
+        hover: { mode: 'nearest' as const, intersect: true },
         plugins: {
+          ...this.barChartOptions.plugins,
           legend: { display: false },
           tooltip: {
             ...(this.barChartOptions.plugins?.tooltip ?? {}),
+            mode: 'nearest' as const,
+            intersect: true,
             callbacks: {
               title: (context) => context[0]?.dataset?.label ?? '',
               label: (context) => `Value: $${this.formatSoftwareValue(context.parsed.y ?? 0)}`,
