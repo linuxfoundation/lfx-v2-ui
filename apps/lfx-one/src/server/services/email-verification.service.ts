@@ -15,6 +15,7 @@ import {
 } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
+import { MicroserviceError } from '../errors';
 import { logger } from './logger.service';
 import { NatsService } from './nats.service';
 
@@ -549,7 +550,10 @@ export class EmailVerificationService {
           error: parsed.error,
           message: parsed.message,
         });
-        return [];
+        throw new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
+          operation: 'list_identities',
+          service: 'email_verification_service',
+        });
       }
 
       logger.debug(req, 'list_identities', 'Fetched identities via NATS', {
@@ -558,10 +562,16 @@ export class EmailVerificationService {
 
       return parsed.data;
     } catch (error) {
-      logger.warning(req, 'list_identities', 'Failed to list identities via NATS, returning empty array', {
+      if (error instanceof MicroserviceError) {
+        throw error;
+      }
+      logger.warning(req, 'list_identities', 'Failed to list identities via NATS', {
         err: error,
       });
-      return [];
+      throw new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
+        operation: 'list_identities',
+        service: 'email_verification_service',
+      });
     }
   }
 }

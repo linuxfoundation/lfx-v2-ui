@@ -573,6 +573,43 @@ export class ProfileController {
       const result = await this.emailVerificationService.changePassword(req, mgmtToken, current_password, new_password);
 
       if (!result.success) {
+        const msg = result.message || result.error || '';
+        const isWrongPassword =
+          msg.toLowerCase().includes('wrong password') || msg.toLowerCase().includes('invalid password') || msg.toLowerCase().includes('incorrect password');
+        const isPolicyViolation =
+          msg.toLowerCase().includes('password is too weak') || msg.toLowerCase().includes('password policy') || msg.toLowerCase().includes('does not meet');
+        const isRateLimit = msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('blocked');
+
+        if (isWrongPassword) {
+          return next(
+            new MicroserviceError('Your current password is incorrect.', 400, 'INVALID_CURRENT_PASSWORD', {
+              operation: 'change_password',
+              service: 'profile_controller',
+              path: req.path,
+            })
+          );
+        }
+
+        if (isPolicyViolation) {
+          return next(
+            new MicroserviceError(result.message || 'Your new password does not meet the password policy requirements.', 400, 'PASSWORD_POLICY_VIOLATION', {
+              operation: 'change_password',
+              service: 'profile_controller',
+              path: req.path,
+            })
+          );
+        }
+
+        if (isRateLimit) {
+          return next(
+            new MicroserviceError('Too many password change attempts. Please wait a few minutes and try again.', 429, 'TOO_MANY_ATTEMPTS', {
+              operation: 'change_password',
+              service: 'profile_controller',
+              path: req.path,
+            })
+          );
+        }
+
         return next(
           new MicroserviceError(result.message || 'Failed to change password', 502, 'AUTH_SERVICE_ERROR', {
             operation: 'change_password',
@@ -618,14 +655,7 @@ export class ProfileController {
       // Fetch CDP identities and auth-service identities in parallel
       const [cdpIdentities, auth0Identities] = await Promise.all([
         this.cdpService.getIdentitiesForUser(req, lfid),
-        auth0Sub
-          ? this.auth0Service.getUserIdentities(req, auth0Sub).catch((err: unknown) => {
-              logger.warning(req, 'get_identities', 'Auth0 identity fetch failed, continuing without cross-reference', {
-                err,
-              });
-              return [] as Auth0Identity[];
-            })
-          : Promise.resolve([]),
+        auth0Sub ? this.auth0Service.getUserIdentities(req, auth0Sub) : Promise.resolve([]),
       ]);
 
       logger.debug(req, 'get_identities', 'Raw identity data before reconciliation', {
@@ -1379,8 +1409,13 @@ export class ProfileController {
           social_sub: socialSub,
           is_already_linked: isAlreadyLinked,
         });
-        const errorParam = isAlreadyLinked ? 'already_linked' : 'link_failed';
-        res.redirect(`${returnTo}?error=${errorParam}`);
+        if (isAlreadyLinked) {
+          const linkedTo = encodeURIComponent(linkResponse.message?.match(/account:\s*(\S+)/)?.[1] || '');
+          const linkedToParam = linkedTo ? `&linkedTo=${linkedTo}` : '';
+          res.redirect(`${returnTo}?error=already_linked${linkedToParam}`);
+        } else {
+          res.redirect(`${returnTo}?error=link_failed`);
+        }
         return;
       }
 

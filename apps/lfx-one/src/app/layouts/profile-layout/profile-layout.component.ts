@@ -14,6 +14,7 @@ import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { BehaviorSubject, catchError, combineLatest, filter, map, of, startWith, switchMap, take } from 'rxjs';
 
+import { stripAuthPrefix } from '@app/shared/pipes/strip-auth-prefix.pipe';
 import { ProfileEditDialogComponent } from '../../modules/profile/components/profile-edit-dialog/profile-edit-dialog.component';
 
 /**
@@ -23,6 +24,10 @@ import { ProfileEditDialogComponent } from '../../modules/profile/components/pro
  * - Tab navigation (horizontal on desktop, dropdown on mobile)
  * - Router outlet for child components
  */
+// Error codes that originate from the Flow C profile-auth (/passwordless/callback) flow.
+// Child routes (e.g. identities) handle their own error codes — do not swallow them here.
+const PROFILE_AUTH_ERROR_CODES = new Set(['profile_auth_not_configured', 'profile_auth_failed', 'token_exchange_failed', 'login_session_invalid', 'user_mismatch']);
+
 @Component({
   selector: 'lfx-profile-layout',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, SelectComponent],
@@ -70,16 +75,20 @@ export class ProfileLayoutComponent {
   public readonly loading = signal<boolean>(true);
 
   // Computed signals
+  public readonly displayUsername = computed(() => stripAuthPrefix(this.profileData()?.username));
+
   public readonly displayName = computed(() => {
     const data = this.profileData();
     if (!data) return '';
-    return `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.username || 'User';
+    const cleanUsername = stripAuthPrefix(data.username);
+    return `${data.firstName || ''} ${data.lastName || ''}`.trim() || (cleanUsername !== 'N/A' ? cleanUsername : 'User');
   });
 
   public readonly initials = computed(() => {
     const data = this.profileData();
     if (!data) return 'U';
-    return data.firstName?.charAt(0).toUpperCase() || data.username?.charAt(0).toUpperCase() || 'U';
+    const cleanUsername = stripAuthPrefix(data.username);
+    return data.firstName?.charAt(0).toUpperCase() || (cleanUsername !== 'N/A' ? cleanUsername.charAt(0).toUpperCase() : 'U') || 'U';
   });
 
   public readonly jobTitle = computed(() => this.profileData()?.jobTitle || '');
@@ -133,7 +142,7 @@ export class ProfileLayoutComponent {
         this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
       }
 
-      if (params['error']) {
+      if (PROFILE_AUTH_ERROR_CODES.has(params['error'])) {
         this.messageService.add({
           severity: 'error',
           summary: 'Authorization Error',
