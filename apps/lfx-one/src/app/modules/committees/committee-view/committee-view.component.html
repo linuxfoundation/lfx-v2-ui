@@ -42,7 +42,7 @@
             (click)="goBack()"
             data-testid="committee-view-back-link">
             <i class="fa-light fa-angle-left text-xs"></i>
-            {{ backLabel() }}
+            {{ backLabel() ?? 'Groups' }}
           </button>
           <div class="flex items-center gap-3">
             <h1 class="font-display font-light text-[20px]" data-testid="committee-view-name">{{ committee()?.name }}</h1>
@@ -122,6 +122,7 @@
                       [rounded]="true"
                       size="small"
                       severity="secondary"
+                      [ariaLabel]="committee()?.description ? 'Edit description' : 'Add description'"
                       tooltip="Edit description"
                       (onClick)="openEditDescription()"></lfx-button>
                   }
@@ -221,8 +222,8 @@
             @if (hasChannels()) {
               <div
                 class="relative bg-gray-50 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 w-full lg:max-w-[380px] flex-shrink-0 self-start"
-                data-testid="committee-view-channels-card"
-                [attr.inert]="isVisitor() || null">
+                data-testid="committee-view-channels-card">
+                <div [attr.inert]="isVisitor() || null">
                 <!-- Associated Mailing Lists -->
                 @if (associatedMailingLists().length > 0) {
                   @let firstMl = associatedMailingLists()[0];
@@ -360,7 +361,8 @@
                   }
                 </div>
 
-                <!-- Visitor blur mask -->
+                </div>
+                <!-- Visitor blur mask (sibling of inert subtree so it's reachable by assistive tech) -->
                 @if (isVisitor()) {
                   <div class="absolute inset-0 bg-gray-50/60 backdrop-blur-sm rounded-lg z-[5] flex items-center justify-center">
                     <div class="text-center">
