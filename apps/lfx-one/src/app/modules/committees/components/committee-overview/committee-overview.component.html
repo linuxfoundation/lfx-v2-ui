@@ -5,7 +5,6 @@
   <!-- Two-column layout: Stats+Chairs | Meetings+Actions -->
   @if (!myRoleLoading()) {
     <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start" data-testid="committee-overview-stats">
-
       <!-- LEFT: Stats list + Chairs -->
       <lfx-card styleClass="[&_.p-card-body]:!p-0">
         <!-- Stats rows -->
@@ -90,7 +89,7 @@
                   <div
                     class="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0"
                     [style.background-color]="chair.role?.name === 'Chair' ? '#6366f1' : '#f59e0b'">
-                    {{ (chair.first_name[0] || '') + (chair.last_name[0] || '') }}
+                    {{ (chair.first_name?.[0] || '') + (chair.last_name?.[0] || '') }}
                   </div>
                   <div class="min-w-0">
                     <p class="text-[13px] font-medium text-gray-900 truncate">{{ chair.first_name }} {{ chair.last_name }}</p>
@@ -118,7 +117,13 @@
                 <i class="fa-light fa-calendar text-gray-400"></i>
                 Next Meeting
               </h2>
-              <lfx-button label="View All" [text]="true" size="small" severity="info" styleClass="!text-xs" (onClick)="navigateToTab('meetings:upcoming')"></lfx-button>
+              <lfx-button
+                label="View All"
+                [text]="true"
+                size="small"
+                severity="info"
+                styleClass="!text-xs"
+                (onClick)="navigateToTab('meetings:upcoming')"></lfx-button>
             </div>
             @if (upcomingMeetingsLoading()) {
               <lfx-card>
@@ -147,7 +152,13 @@
                 <i class="fa-light fa-clock-rotate-left text-gray-400"></i>
                 Past Meeting
               </h2>
-              <lfx-button label="View All" [text]="true" size="small" severity="info" styleClass="!text-xs" (onClick)="navigateToTab('meetings:past')"></lfx-button>
+              <lfx-button
+                label="View All"
+                [text]="true"
+                size="small"
+                severity="info"
+                styleClass="!text-xs"
+                (onClick)="navigateToTab('meetings:past')"></lfx-button>
             </div>
             @if (pastMeetingsLoading()) {
               <lfx-card>
@@ -228,7 +239,9 @@
           </div>
         } @else if (canJoin()) {
           <!-- Visitor CTA -->
-          <div class="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-6 text-center" data-testid="committee-overview-visitor-cta">
+          <div
+            class="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-6 text-center"
+            data-testid="committee-overview-visitor-cta">
             <div class="flex flex-col gap-3 items-center">
               <i [class]="joinCtaIcon() + ' text-2xl text-blue-500'"></i>
               <h3 class="text-base font-semibold text-gray-900">{{ joinCtaTitle() }}</h3>

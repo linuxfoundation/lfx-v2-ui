@@ -378,8 +378,7 @@ export class CommitteeOverviewComponent {
 
   private initPendingActionsViewAllTab(): Signal<'votes' | 'surveys'> {
     return computed(() => {
-      const overflow = this.pendingActionItems().slice(2);
-      const hasVotes = overflow.some((item) => item.type === 'Vote');
+      const hasVotes = this.pendingActionItems().some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
   }

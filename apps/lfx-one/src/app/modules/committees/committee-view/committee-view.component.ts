@@ -87,7 +87,7 @@ export class CommitteeViewComponent {
   private readonly dialogService = inject(DialogService);
   private readonly userService = inject(UserService);
 
-  private readonly navBackLabel: string = this.router.getCurrentNavigation()?.extras?.state?.['backLabel'] ?? null;
+  private readonly navBackLabel: string | null = this.router.getCurrentNavigation()?.extras?.state?.['backLabel'] ?? null;
 
   public meetingsTimeFilter = signal<'upcoming' | 'past'>('upcoming');
 
@@ -192,9 +192,7 @@ export class CommitteeViewComponent {
   ];
 
   public visibleTabs = computed(() =>
-    this.tabConfig
-      .filter((tab) => tab.visible())
-      .map((tab) => ({ ...tab, label: typeof tab.label === 'function' ? tab.label() : tab.label })),
+    this.tabConfig.filter((tab) => tab.visible()).map((tab) => ({ ...tab, label: typeof tab.label === 'function' ? tab.label() : tab.label }))
   );
 
   // -- Tab state --
