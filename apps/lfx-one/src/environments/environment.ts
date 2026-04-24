@@ -3,7 +3,6 @@
 
 export const environment = {
   production: false,
-  mockData: true,
   urls: {
     home: 'http://localhost:4200',
     support: 'https://jira.linuxfoundation.org/plugins/servlet/desk',
