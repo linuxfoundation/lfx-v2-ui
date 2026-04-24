@@ -95,7 +95,7 @@ export class UnifiedCertCardComponent {
   private initSecondaryAction(): Signal<{ label: string; href: string; icon?: string } | null> {
     return computed(() => {
       const cert = this.cert();
-      if (cert.state === 'cert-expired' && cert.downloadUrl) {
+      if ((cert.state === 'cert-expired' || cert.state === 'expiring-soon') && cert.downloadUrl) {
         return { label: 'Download', href: cert.downloadUrl, icon: 'fa-light fa-arrow-down-to-line' };
       }
       return null;
