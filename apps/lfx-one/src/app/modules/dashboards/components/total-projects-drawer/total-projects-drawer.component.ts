@@ -18,7 +18,7 @@ import {
   lfxColors,
   TOTAL_PROJECTS_DRAWER_ITEMS_PER_PAGE,
 } from '@lfx-one/shared/constants';
-import { hexToRgba } from '@lfx-one/shared/utils';
+import { buildLensAwareInsightsUrl, hexToRgba } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
@@ -88,6 +88,12 @@ export class TotalProjectsDrawerComponent {
   protected readonly primaryView = signal<'chart' | 'table'>('chart');
   protected readonly primaryPage = signal(1);
   protected readonly drawerLoading = signal(false);
+
+  // === Computed Signals ===
+  protected readonly insightsUrl: Signal<string> = computed(() =>
+    buildLensAwareInsightsUrl(this.projectContextService.activeContext()?.slug, this.projectContextService.isFoundationContext())
+  );
+
   protected readonly hasData: Signal<boolean> = computed(() => this.data().monthlyData.length > 0);
   protected readonly primarySearch: Signal<string> = this.initPrimarySearch();
   private readonly drawerData = this.initDrawerData();

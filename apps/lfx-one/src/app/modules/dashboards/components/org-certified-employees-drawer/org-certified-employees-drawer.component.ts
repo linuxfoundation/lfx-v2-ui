@@ -4,7 +4,6 @@
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { hexToRgba, wrapLabel } from '@lfx-one/shared/utils';
 import { AccountContextService } from '@services/account-context.service';
@@ -21,7 +20,7 @@ const DEFAULT_DISTRIBUTION: OrgCertifiedEmployeesDistributionResponse = { progra
 
 @Component({
   selector: 'lfx-org-certified-employees-drawer',
-  imports: [DrawerModule, ChartComponent, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent],
   templateUrl: './org-certified-employees-drawer.component.html',
 })
 export class OrgCertifiedEmployeesDrawerComponent {

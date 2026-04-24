@@ -5,7 +5,6 @@ import { Component, computed, inject, input, model, signal, Signal } from '@angu
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DEFAULT_FOUNDATION_EVENTS_ATTENDANCE_DISTRIBUTION, DEFAULT_FOUNDATION_EVENTS_QUARTERLY, lfxColors } from '@lfx-one/shared/constants';
 import { AnalyticsService } from '@services/analytics.service';
@@ -22,7 +21,7 @@ import type {
 
 @Component({
   selector: 'lfx-events-drawer',
-  imports: [DrawerModule, ChartComponent, SelectComponent, ReactiveFormsModule, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent, SelectComponent, ReactiveFormsModule],
   templateUrl: './events-drawer.component.html',
 })
 export class EventsDrawerComponent {
