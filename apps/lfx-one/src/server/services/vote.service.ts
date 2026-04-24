@@ -1,7 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CreateVoteRequest, QueryServiceCountResponse, QueryServiceResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
+import { CreateVoteRequest, IndexedVote, QueryServiceCountResponse, QueryServiceResponse, UpdateVoteRequest, Vote, VoteResultsResponse } from '@lfx-one/shared/interfaces';
 import { Request } from 'express';
 
 import { ResourceNotFoundError } from '../errors';
@@ -41,16 +41,14 @@ export class VoteService {
       type: 'vote',
     };
 
-    const rawVotes = await fetchAllQueryResources<Vote & { vote_uid?: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+    const rawVotes = await fetchAllQueryResources<IndexedVote>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),
       })
     );
 
-    // The voting service indexes votes with `vote_uid` (not `uid`). Normalize so
-    // downstream code can rely on the standard Vote.uid field.
-    const votes = rawVotes.map((v) => ({ ...v, uid: v.uid || v.vote_uid || '' })) as Vote[];
+    const votes = rawVotes.map((v) => this.normalizeIndexedVote(req, v));
 
     logger.debug(req, 'get_votes', 'Completed vote fetch', {
       final_count: votes.length,
@@ -122,13 +120,12 @@ export class VoteService {
       req,
       operation: 'create_vote',
       pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'vote',
           tags: voteUid,
         });
         if (resources.length > 0) {
-          const raw = resources[0].data;
-          fetchedVote = { ...raw, uid: raw.uid || raw.vote_uid || '' } as Vote;
+          fetchedVote = this.normalizeIndexedVote(req, resources[0].data);
           return true;
         }
         return false;
@@ -198,13 +195,12 @@ export class VoteService {
       req,
       operation: 'enable_vote',
       pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<IndexedVote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'vote',
           tags: voteUid,
         });
         if (resources.length > 0 && resources[0].data.status === 'active') {
-          const raw = resources[0].data;
-          fetchedVote = { ...raw, uid: raw.uid || raw.vote_uid || '' } as Vote;
+          fetchedVote = this.normalizeIndexedVote(req, resources[0].data);
           return true;
         }
         return false;
@@ -322,5 +318,24 @@ export class VoteService {
       });
 
     return this.projectService.enrichWithProjectData(req, sorted);
+  }
+
+  // ============================================
+  // Private Helpers
+  // ============================================
+
+  /**
+   * Normalizes a vote from the query service indexer shape (vote_uid) to the
+   * canonical REST shape (uid). The voting service indexes votes with `vote_uid`
+   * while the REST API returns `uid` — these are the same value, different field names.
+   */
+  private normalizeIndexedVote(req: Request, raw: IndexedVote): Vote {
+    const uid = raw.uid || raw.vote_uid;
+    if (!uid) {
+      logger.warning(req, 'normalize_indexed_vote', 'Indexed vote missing uid and vote_uid', {
+        name: raw.name,
+      });
+    }
+    return { ...raw, uid: uid ?? '' } as Vote;
   }
 }

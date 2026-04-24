@@ -218,6 +218,17 @@ export interface Vote {
 }
 
 /**
+ * Vote resource shape as returned by the query service indexer.
+ * Uses `vote_uid` (v2 primary key) — NOT `uid`.
+ * Normalize to canonical `Vote` via VoteService.normalizeIndexedVote().
+ * @see lfx-v2-voting-service/docs/indexer-contract.md
+ */
+export interface IndexedVote extends Omit<Vote, 'uid'> {
+  vote_uid: string;
+  uid?: string;
+}
+
+/**
  * Individual Vote entity from query service
  * @description Represents a user's participation record from lfx.index.individual_vote
  */
