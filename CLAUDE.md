@@ -123,7 +123,7 @@ Utilities split into **generic** helpers (date/time, string, url, file, form, ht
 
 ## Gotchas & Conventions
 
-**Commits & PRs**
+### Commits & PRs
 
 - Follow Angular commit format: `type(scope): description`. Valid types: `feat, fix, docs, style, refactor, perf, test, build, ci, revert` — **`chore` is not allowed** by commitlint.
 - Commit header is capped at **72 characters** (commitlint `header-max-length`).
@@ -131,20 +131,20 @@ Utilities split into **generic** helpers (date/time, string, url, file, form, ht
 - Pre-commit hooks auto-run `prettier`, `lint`, and `check-types` on staged files — **don't run `yarn format` manually** before committing.
 - See `.claude/rules/commit-workflow.md` for PR title / sizing / JIRA details.
 
-**Source hygiene**
+### Source hygiene
 
 - Every source file needs the MIT license header — `./check-headers.sh` validates and the pre-commit hook enforces.
 - Never nest ternary expressions.
 - Use `flex + flex-col + gap-*`, not `space-y-*`, for vertical stacking.
 - All shared constants and interfaces live in `@lfx-one/shared` — no module-level consts or local `interface Foo {}` inside `apps/lfx-one/`.
 
-**Architecture**
+### Architecture
 
 - Always reference PrimeNG's component interface when defining types — all PrimeNG components are wrapped in LFX components for UI library independence.
 - Use direct imports for standalone components (no barrel exports).
 - Authentication is selective: public routes (`/meeting`, `/public/api`) bypass auth, protected routes require it. Auth0/Authelia via express-openid-connect; custom `/login` handler with URL validation. Prefer user bearer tokens over M2M tokens except in genuinely public endpoints — see `.claude/rules/development-rules.md` for the M2M usage rules.
 
-**Dev server**
+### Dev server
 
 - Don't restart the dev server on code changes — hot reload handles it. Check logs instead.
 
