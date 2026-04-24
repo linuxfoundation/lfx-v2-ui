@@ -52,9 +52,11 @@ export class RecurrenceSummaryPipe implements PipeTransform {
 
     // Determine end type — sentinel means "never ends", not a real user-chosen date
     let endType: 'never' | 'date' | 'occurrences' = 'never';
-    const hasRealEndDate = recurrence.end_date_time && recurrence.end_date_time !== RECURRENCE_NO_END_SENTINEL_DATE;
+    const endDateMs = recurrence.end_date_time ? new Date(recurrence.end_date_time).getTime() : NaN;
+    const sentinelMs = new Date(RECURRENCE_NO_END_SENTINEL_DATE).getTime();
+    const hasRealEndDate = Number.isFinite(endDateMs) && Number.isFinite(sentinelMs) && endDateMs !== sentinelMs;
     if (hasRealEndDate) endType = 'date';
-    else if (endTimes) endType = 'occurrences';
+    else if ((endTimes ?? 0) > 0) endType = 'occurrences';
 
     // Convert weekly_days to array if present
     let weeklyDaysArray: number[] = [];
