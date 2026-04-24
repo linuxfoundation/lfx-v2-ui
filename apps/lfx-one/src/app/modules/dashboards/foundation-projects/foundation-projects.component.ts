@@ -21,15 +21,14 @@ import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
 import { catchError, combineLatest, finalize, from, map, mergeMap, Observable, of, scan, startWith, switchMap } from 'rxjs';
 
-import type { FilterPillOption, FoundationProjectsDetailResponse, ProjectTableRow, StatCardItem } from '@lfx-one/shared/interfaces';
-
-interface ProjectCounts {
-  committees: number;
-  mailingLists: number;
-  hasChat: boolean;
-}
-
-type PresencePill = 'all' | 'with-groups' | 'without-groups' | 'with-channels' | 'without-channels';
+import type {
+  FilterPillOption,
+  FoundationProjectsDetailResponse,
+  PresencePill,
+  ProjectCounts,
+  ProjectTableRow,
+  StatCardItem,
+} from '@lfx-one/shared/interfaces';
 
 // UUID v4 pattern — used to decide whether Snowflake's PROJECT_ID is safe to
 // use as a fallback project-service UID. Some foundations store a Salesforce

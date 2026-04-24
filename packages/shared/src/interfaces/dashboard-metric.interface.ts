@@ -275,6 +275,27 @@ export interface ProjectTableRow {
   lastUpdated: string | null;
 }
 
+/**
+ * Per-project group/channel indicator counts for the foundation projects page.
+ * Populated row-by-row from upstream committee + mailing-list queries; drives
+ * the Groups and Channels column icons and the presence filter pills.
+ */
+export interface ProjectCounts {
+  /** Number of committees (groups) scoped to this project via `project_uid` tag. */
+  committees: number;
+  /** Number of mailing lists scoped to this project via `project_uid` tag. */
+  mailingLists: number;
+  /** True when any committee on this project has a `chat_channel` configured. */
+  hasChat: boolean;
+}
+
+/**
+ * Filter pill identifiers for the foundation projects page presence filter.
+ * `channels` = mailing lists OR chat, so a project with just a chat channel
+ * still lands in the "with-channels" bucket.
+ */
+export type PresencePill = 'all' | 'with-groups' | 'without-groups' | 'with-channels' | 'without-channels';
+
 // ============================================
 // Health Metrics Page (Summary Cards)
 // ============================================
