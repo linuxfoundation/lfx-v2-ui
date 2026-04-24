@@ -13,40 +13,47 @@ lfx-v2-ui/
 ├── apps/
 │   └── lfx-one/              # Angular 20 SSR application with stable zoneless change detection
 │       ├── src/app/
-│       │   ├── layouts/      # Layout components (main-layout, profile-layout, project-layout, dev-toolbar)
-│       │   ├── modules/      # 10 Feature modules (see Feature Modules section)
+│       │   ├── layouts/      # Layout components (main-layout, profile-layout)
+│       │   ├── modules/      # Feature modules (see Feature Modules section)
 │       │   └── shared/       # Shared application code
-│       │       ├── components/   # 46 UI components
-│       │       ├── directives/   # Custom directives (scroll-shadow)
-│       │       ├── guards/       # Route guards (auth, writer)
+│       │       ├── components/   # UI components (PrimeNG wrappers + LFX primitives)
+│       │       ├── directives/   # Custom directives (on-render, scroll-shadow)
+│       │       ├── guards/       # Route guards (auth, writer, executive-director)
 │       │       ├── interceptors/ # HTTP interceptors (authentication)
-│       │       ├── pipes/        # 34 custom pipes
+│       │       ├── pipes/        # Custom pipes
 │       │       ├── providers/    # App providers (datadog-rum, feature-flag, runtime-config)
-│       │       ├── services/     # 20 services
+│       │       ├── services/     # Frontend services
 │       │       ├── strategies/   # Routing strategies (custom-preloading)
-│       │       └── utils/        # App utilities (console-override)
+│       │       └── utils/        # App utilities (console-override, download-card, http-error, etc.)
 │       ├── src/server/       # Express.js SSR server
-│       │   ├── controllers/  # 13 route controllers
-│       │   ├── errors/       # Custom error classes (base, authentication, microservice, validation)
-│       │   ├── helpers/      # Server helpers (error-serializer, http-status, meeting, url-validation, validation)
-│       │   ├── middleware/   # Express middleware (auth, error-handler)
-│       │   ├── routes/       # 13 API route definitions
-│       │   ├── services/     # 18 backend services (api-client, microservice-proxy, nats, snowflake, etc.)
-│       │   ├── utils/        # Server utilities (auth-helper, lock-manager, m2m-token, security, etc.)
+│       │   ├── constants/    # Server-only constants
+│       │   ├── controllers/  # Route controllers
+│       │   ├── errors/       # Custom error classes (base, authentication, microservice, service-validation)
+│       │   ├── helpers/      # Server helpers (api-gateway, error-serializer, http-status, ics, meeting, poll-endpoint, query-service, url-validation, validation)
+│       │   ├── middleware/   # Express middleware (auth, error-handler, rate-limit)
+│       │   ├── pdf-templates/ # PDF generation templates (e.g., visa-letter-manual)
+│       │   ├── routes/       # API route definitions
+│       │   ├── services/     # Backend services (api-client, microservice-proxy, nats, snowflake, etc.)
+│       │   ├── utils/        # Server utilities (auth-helper, lock-manager, m2m-token, persona-helper, security)
 │       │   ├── server.ts     # Express server entry point
-│       │   └── server-logger.ts # Pino logger configuration
+│       │   ├── server-logger.ts # Pino logger configuration
+│       │   └── server-tracer.ts # OpenTelemetry tracer configuration
+│       ├── e2e/              # Playwright E2E tests (dual architecture: content + structural)
+│       ├── playwright/       # Playwright helpers and fixtures
 │       ├── eslint.config.js  # Angular-specific ESLint rules
 │       ├── .prettierrc.js    # Prettier configuration with Tailwind integration
 │       ├── ecosystem.config.js # PM2 production configuration
+│       ├── otel.mjs          # OpenTelemetry instrumentation bootstrap
+│       ├── postcss.config.js # PostCSS configuration (Tailwind + autoprefixer)
 │       └── tailwind.config.js # Tailwind with PrimeUI plugin and LFX colors
 ├── packages/
 │   └── shared/               # Shared types, interfaces, constants, utilities, and validators
 │       ├── src/
-│       │   ├── interfaces/   # 30 TypeScript interface files (meetings, committees, auth, projects, etc.)
-│       │   ├── constants/    # 30 constant files (design tokens, API config, domain constants)
-│       │   ├── enums/        # 10 shared enumerations (committee, meeting, poll, survey, etc.)
-│       │   ├── utils/        # 12 utility modules (date, string, url, meeting, poll, survey, etc.)
-│       │   └── validators/   # 3 form validators (meeting, mailing-list, vote)
+│       │   ├── interfaces/   # TypeScript interface files (meetings, committees, auth, projects, etc.)
+│       │   ├── constants/    # Constant files (design tokens, API config, domain constants)
+│       │   ├── enums/        # Shared enumerations (committee, meeting, poll, survey, etc.)
+│       │   ├── utils/        # Utility modules (date, string, url, meeting, poll, survey, project, etc.)
+│       │   └── validators/   # Form validators (meeting, mailing-list, vote)
 │       ├── package.json      # Package configuration with proper exports
 │       └── tsconfig.json     # TypeScript configuration
 ├── docs/                     # Architecture and deployment documentation
@@ -56,19 +63,23 @@ lfx-v2-ui/
 
 ## Feature Modules
 
-The application is organized into 9 feature modules under `apps/lfx-one/src/app/modules/`:
+The application is organized into feature modules under `apps/lfx-one/src/app/modules/`:
 
 | Module            | Description                                                                      |
 | ----------------- | -------------------------------------------------------------------------------- |
-| **committees**    | Committee management - view, create, and manage project committees               |
-| **dashboards**    | Role-based dashboards - personalized views for different user roles              |
-| **mailing-lists** | Mailing list management - subscribe, unsubscribe, and manage lists               |
-| **meetings**      | Meeting scheduling - create, manage, and join meetings with calendar integration |
-| **my-activity**   | User activity tracking - personal activity history and notifications             |
-| **profile**       | User profile - profile management and account settings                           |
-| **settings**      | Application settings - preferences and configuration                             |
-| **surveys**       | Survey management - create surveys, collect responses, view NPS analytics        |
-| **votes**         | Voting system - create polls, cast votes, and view results                       |
+| **badges**        | LFX badges — view and manage credentialing badges earned across projects         |
+| **committees**    | Committee management — view, create, and manage project committees               |
+| **dashboards**    | Lens-based dashboards (Me, Foundation, Project, Org) and supporting drawers      |
+| **documents**     | Document management — browse and manage project documents                        |
+| **events**        | Events — browse LFX events and manage attendance                                 |
+| **mailing-lists** | Mailing list management — subscribe, unsubscribe, and manage lists               |
+| **meetings**      | Meeting scheduling — create, manage, and join meetings with calendar integration |
+| **profile**       | User profile — profile management and account settings                           |
+| **settings**      | Application settings — preferences and configuration                             |
+| **surveys**       | Survey management — create surveys, collect responses, view NPS analytics        |
+| **trainings**     | Training enrollments — view and manage training programs                         |
+| **transactions**  | Transactions — view billing / purchase history                                   |
+| **votes**         | Voting system — create polls, cast votes, and view results                       |
 
 ## Shared Package
 
@@ -132,24 +143,27 @@ Detailed patterns are in `.claude/rules/` and loaded contextually based on file 
 
 ## Architecture Documentation
 
-| Document                                                                       | Topics                                             |
-| ------------------------------------------------------------------------------ | -------------------------------------------------- |
-| [Angular Patterns](docs/architecture/frontend/angular-patterns.md)             | Zoneless change detection, signals, components     |
-| [Component Architecture](docs/architecture/frontend/component-architecture.md) | PrimeNG wrapper patterns                           |
-| [Styling System](docs/architecture/frontend/styling-system.md)                 | Tailwind, fonts, theming                           |
-| [Drawer Pattern](docs/architecture/frontend/drawer-pattern.md)                 | Drawer components, lazy loading, chart integration |
-| [Backend Architecture](docs/architecture/backend/README.md)                    | Controller-Service pattern, Express.js server      |
-| [Authentication](docs/architecture/backend/authentication.md)                  | Auth0 setup, selective auth middleware             |
-| [Impersonation](docs/architecture/backend/impersonation.md)                    | User impersonation via Auth0 CTE                   |
-| [SSR Server](docs/architecture/backend/ssr-server.md)                          | Server-side rendering                              |
-| [Logging & Monitoring](docs/architecture/backend/logging-monitoring.md)        | Structured logging with Pino                       |
-| [Error Handling](docs/architecture/backend/error-handling-architecture.md)     | Error classification, middleware                   |
-| [Server Helpers](docs/architecture/backend/server-helpers.md)                  | Validation, pagination, URL utilities              |
-| [Pagination](docs/architecture/backend/pagination.md)                          | Cursor-based pagination, infinite scroll           |
-| [AI Service](docs/architecture/backend/ai-service.md)                          | LiteLLM proxy, agenda generation                   |
-| [NATS Integration](docs/architecture/backend/nats-integration.md)              | Inter-service messaging                            |
-| [Snowflake Integration](docs/architecture/backend/snowflake-integration.md)    | Analytics queries, connection pooling              |
-| [Public Meetings](docs/architecture/backend/public-meetings.md)                | Unauthenticated access, M2M tokens                 |
-| [Shared Package](docs/architecture/shared/package-architecture.md)             | Types, interfaces, utilities, validators           |
-| [E2E Testing](docs/architecture/testing/e2e-testing.md)                        | Dual architecture testing                          |
-| [Testing Best Practices](docs/architecture/testing/testing-best-practices.md)  | Testing patterns and guide                         |
+| Document                                                                       | Topics                                                           |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| [Angular Patterns](docs/architecture/frontend/angular-patterns.md)             | Zoneless change detection, signals, components                   |
+| [Component Architecture](docs/architecture/frontend/component-architecture.md) | PrimeNG wrapper patterns                                         |
+| [Lens & Persona System](docs/architecture/frontend/lens-system.md)             | `LensService`, persona detection, `ProjectContextService`        |
+| [Styling System](docs/architecture/frontend/styling-system.md)                 | Tailwind, fonts, theming                                         |
+| [Drawer Pattern](docs/architecture/frontend/drawer-pattern.md)                 | Drawer components, lazy loading, chart integration               |
+| [Backend Architecture](docs/architecture/backend/README.md)                    | Controller-Service pattern, Express.js server                    |
+| [Authentication](docs/architecture/backend/authentication.md)                  | Auth0 setup, selective auth middleware                           |
+| [Impersonation](docs/architecture/backend/impersonation.md)                    | User impersonation via Auth0 CTE                                 |
+| [Rate Limiting](docs/architecture/backend/rate-limiting.md)                    | `express-rate-limit` budgets for `/api`, `/public/api`, `/login` |
+| [Observability](docs/architecture/backend/observability.md)                    | OpenTelemetry auto-instrumentation, custom spans                 |
+| [SSR Server](docs/architecture/backend/ssr-server.md)                          | Server-side rendering                                            |
+| [Logging & Monitoring](docs/architecture/backend/logging-monitoring.md)        | Structured logging with Pino                                     |
+| [Error Handling](docs/architecture/backend/error-handling-architecture.md)     | Error classification, middleware                                 |
+| [Server Helpers](docs/architecture/backend/server-helpers.md)                  | Validation, pagination, URL utilities                            |
+| [Pagination](docs/architecture/backend/pagination.md)                          | Cursor-based pagination, infinite scroll                         |
+| [AI Service](docs/architecture/backend/ai-service.md)                          | LiteLLM proxy, agenda generation                                 |
+| [NATS Integration](docs/architecture/backend/nats-integration.md)              | Inter-service messaging                                          |
+| [Snowflake Integration](docs/architecture/backend/snowflake-integration.md)    | Analytics queries, connection pooling                            |
+| [Public Meetings](docs/architecture/backend/public-meetings.md)                | Unauthenticated access, M2M tokens                               |
+| [Shared Package](docs/architecture/shared/package-architecture.md)             | Types, interfaces, utilities, validators                         |
+| [E2E Testing](docs/architecture/testing/e2e-testing.md)                        | Dual architecture testing                                        |
+| [Testing Best Practices](docs/architecture/testing/testing-best-practices.md)  | Testing patterns and guide                                       |
