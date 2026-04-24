@@ -12,8 +12,8 @@ export function formatNumber(num: number): string {
   if (!Number.isFinite(num)) return '0';
   const abs = Math.abs(num);
   const sign = num < 0 ? '-' : '';
-  if (abs >= 999_950) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(1)}K`;
+  if (abs >= 999_950) return `${sign}${stripTrailingZero((abs / 1_000_000).toFixed(1))}M`;
+  if (abs >= 1_000) return `${sign}${stripTrailingZero((abs / 1_000).toFixed(1))}K`;
   return num.toLocaleString();
 }
 
@@ -28,8 +28,8 @@ export function formatCurrency(num: number): string {
   if (!Number.isFinite(num)) return '$0';
   const abs = Math.abs(num);
   const sign = num < 0 ? '-' : '';
-  if (abs >= 999_950) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
+  if (abs >= 999_950) return `${sign}$${stripTrailingZero((abs / 1_000_000).toFixed(1))}M`;
+  if (abs >= 1_000) return `${sign}$${stripTrailingZero((abs / 1_000).toFixed(1))}K`;
   return `${sign}$${abs.toLocaleString()}`;
 }
 
@@ -45,7 +45,12 @@ export function formatValueLost(value: number): string {
   if (!Number.isFinite(value)) return '$0';
   const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
-  if (abs >= 999_950) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
+  if (abs >= 999_950) return `${sign}$${stripTrailingZero((abs / 1_000_000).toFixed(1))}M`;
+  if (abs >= 1_000) return `${sign}$${stripTrailingZero((abs / 1_000).toFixed(1))}K`;
   return `${sign}$${abs.toLocaleString()}`;
+}
+
+/** Strip trailing ".0" from a fixed-decimal string (e.g., "968.0" → "968", "27.2" → "27.2"). */
+function stripTrailingZero(s: string): string {
+  return s.endsWith('.0') ? s.slice(0, -2) : s;
 }
