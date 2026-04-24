@@ -102,10 +102,10 @@ export class FoundationProjectsComponent {
           // Putting `loading.set(true)` in an outer `tap` would make the ordering
           // implementation-dependent when new slugs arrive while a request is in flight.
           this.loading.set(true);
-          return this.analyticsService.getFoundationProjectsDetail(slug).pipe(
-            catchError(() => of(DEFAULT_FOUNDATION_PROJECTS_DETAIL)),
-            finalize(() => this.loading.set(false))
-          );
+          // Error handling lives in AnalyticsService.getFoundationProjectsDetail,
+          // which returns `{ projects: [], totalCount: 0 }` on failure and evicts
+          // the failed slug from its cache. No component-level catchError needed.
+          return this.analyticsService.getFoundationProjectsDetail(slug).pipe(finalize(() => this.loading.set(false)));
         })
       ),
       { initialValue: DEFAULT_FOUNDATION_PROJECTS_DETAIL }

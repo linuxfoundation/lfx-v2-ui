@@ -4,7 +4,11 @@
 <main class="flex flex-col gap-6 p-6" data-testid="foundation-projects-page">
   <header class="flex flex-col gap-1">
     <h1 class="text-xl font-semibold text-gray-900">Projects</h1>
-    <p class="text-sm text-gray-500">All projects under {{ foundationName() }}. Monitor health, activity, and contributor metrics.</p>
+    @if (foundationSlug()) {
+      <p class="text-sm text-gray-500">All projects under {{ foundationName() }}. Monitor health, activity, and contributor metrics.</p>
+    } @else {
+      <p class="text-sm text-gray-500">Select a foundation to monitor project health, activity, and contributor metrics.</p>
+    }
   </header>
 
   @if (!foundationSlug()) {

@@ -292,6 +292,11 @@ export class AnalyticsService {
    * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
   public getFoundationProjectsDetail(foundationSlug: string): Observable<FoundationProjectsDetailResponse> {
+    // Cache is session-scoped (no TTL). Entries live for the service lifetime —
+    // which, because this service is root-provided, means until the user reloads
+    // the tab. Acceptable today because foundation project rolls rarely change
+    // within a session; if freshness becomes a concern, add a TTL or an explicit
+    // `invalidate(foundationSlug)` call.
     if (!this.foundationProjectsDetailCache.has(foundationSlug)) {
       // Evict the cache entry on error so a transient HTTP failure doesn't lock
       // subsequent subscribers to an empty fallback response for the session.
