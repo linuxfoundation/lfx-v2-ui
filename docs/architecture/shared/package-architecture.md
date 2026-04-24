@@ -28,11 +28,12 @@ import { MeetingType, VoteStatus } from '@lfx-one/shared/enums';
 import { formatDate, stripHtml, isValidUrl } from '@lfx-one/shared/utils';
 import { MeetingValidators } from '@lfx-one/shared/validators';
 
-// Direct-source imports are allowed for hot-reloading during development:
-import { User } from '@lfx-one/shared/src/interfaces/auth.interface';
+// Deep imports into a specific file — use only when the category barrel doesn't
+// re-export the symbol you need:
+import { User } from '@lfx-one/shared/interfaces/auth.interface';
 ```
 
-During development, TypeScript path mappings resolve `@lfx-one/shared/*` directly to `packages/shared/src/*` — there is no need to rebuild the package after changes. Production builds go through `tsc` (see Build Process below).
+During development, TypeScript path mappings resolve `@lfx-one/shared/*` directly to `packages/shared/src/*`, so both the category form and the deep form hot-reload without a rebuild. Production builds go through `tsc` (see Build Process below).
 
 ## What Goes Where
 
@@ -112,7 +113,7 @@ TypeScript targets ES2022 with strict mode and `moduleResolution: "bundler"`; se
 ## Dependencies
 
 - **Runtime**: `date-fns`, `date-fns-tz` (timezone-aware date operations — the only runtime deps).
-- **Peer**: `@angular/forms` (validators + form utils), `@fullcalendar/core`, `chart.js`, `snowflake-sdk` (types only).
+- **Peer**: `@angular/core`, `@angular/forms`, `rxjs`, `@fullcalendar/core`, `chart.js`, `snowflake-sdk` — see `packages/shared/package.json` for the canonical list and version ranges.
 
 Keep runtime deps minimal. Prefer peer dependencies for framework-specific types so consumers control the version.
 

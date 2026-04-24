@@ -30,7 +30,7 @@ All commands run from the repo root via Turborepo:
 | `yarn e2e:headed`   | Playwright headed, visible browser                   |
 | `yarn commitlint`   | Validate commit message against Angular conventions  |
 
-> Always use `yarn`, never `npx`. The repo pins Yarn 4.x through `packageManager` — `npx` can resolve to the wrong binary.
+> For manual commands, prefer `yarn` over `npx` — the repo pins Yarn 4.x through `packageManager`, so `npx` can resolve to the wrong binary. Repo-managed tooling (e.g. `.husky/pre-commit` invokes `npx lint-staged`) may still use `npx` where already configured.
 
 ## Monorepo Structure
 
@@ -128,7 +128,7 @@ Utilities split into **generic** helpers (date/time, string, url, file, form, ht
 - Follow Angular commit format: `type(scope): description`. Valid types: `feat, fix, docs, style, refactor, perf, test, build, ci, revert` — **`chore` is not allowed** by commitlint.
 - Commit header is capped at **72 characters** (commitlint `header-max-length`).
 - Always use `git commit --signoff` (DCO enforced).
-- Pre-commit hooks auto-run `prettier`, `lint`, and `check-types` on staged files — **don't run `yarn format` manually** before committing.
+- Pre-commit runs `./check-headers.sh`, `npx lint-staged` (prettier + lint on staged files), then repo-wide `yarn format:check`, `yarn lint:check`, and `yarn check-types`. Only `lint-staged` is scoped to staged files — the rest run on the whole repo. You don't need to run `yarn format` manually; `lint-staged` already prettifies staged files. If a commit fails, fix the reported issue and retry.
 - See `.claude/rules/commit-workflow.md` for PR title / sizing / JIRA details.
 
 ### Source hygiene
