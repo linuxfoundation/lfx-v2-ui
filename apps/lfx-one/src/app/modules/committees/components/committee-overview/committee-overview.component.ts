@@ -1,13 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
-import { MessageComponent } from '@components/message/message.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { CommitteeMemberRole, PollStatus, SurveyStatus } from '@lfx-one/shared/enums';
 import { Committee, CommitteeMember, Meeting, PastMeeting, PendingActionItem, Survey, Vote } from '@lfx-one/shared/interfaces';
@@ -28,7 +26,7 @@ import { EditChairsDialogComponent } from '../edit-chairs-dialog/edit-chairs-dia
 
 @Component({
   selector: 'lfx-committee-overview',
-  imports: [CardComponent, ButtonComponent, DashboardMeetingCardComponent, MessageComponent, NgClass, SkeletonModule, TagComponent, VoteResultsDrawerComponent],
+  imports: [CardComponent, ButtonComponent, DashboardMeetingCardComponent, SkeletonModule, TagComponent, VoteResultsDrawerComponent],
   providers: [DialogService],
   templateUrl: './committee-overview.component.html',
   styleUrl: './committee-overview.component.scss',
@@ -148,13 +146,7 @@ export class CommitteeOverviewComponent {
     return `${name} is closed to new members. Contact a group admin for access.`;
   });
 
-  public joinCtaTitle: Signal<string> = computed(() => {
-    const mode = this.committee().join_mode;
-    const name = this.committee().name;
-    if (mode === 'application') return `Apply to join ${name}`;
-    if (mode === 'invite_only') return `Request access to ${name}`;
-    return `Join ${name}`;
-  });
+  public joinCtaTitle: Signal<string> = computed(() => `Interested in ${this.committee().name}?`);
 
   public joinCtaDescription: Signal<string> = computed(() => {
     const mode = this.committee().join_mode;
@@ -191,7 +183,7 @@ export class CommitteeOverviewComponent {
   }
 
   public handlePendingActionClick(item: PendingActionItem): void {
-    if (item.type === 'Cast Vote') {
+    if (item.type === 'Vote') {
       const vote = this.pendingVotes().find((v) => v.uid === item.buttonLink);
       if (vote) {
         this.selectedVoteId.set(vote.uid);
@@ -356,7 +348,7 @@ export class CommitteeOverviewComponent {
   private initPendingActionItems(): Signal<PendingActionItem[]> {
     return computed(() => {
       const voteItems: PendingActionItem[] = this.pendingVotes().map((vote) => ({
-        type: 'Cast Vote',
+        type: 'Vote',
         badge: this.committee().name,
         text: vote.name,
         icon: 'fa-light fa-check-to-slot',
@@ -368,7 +360,7 @@ export class CommitteeOverviewComponent {
           : undefined,
       }));
       const surveyItems: PendingActionItem[] = this.pendingSurveys().map((survey) => ({
-        type: 'Submit Feedback',
+        type: 'Survey',
         badge: this.committee().name,
         text: survey.survey_title,
         icon: 'fa-light fa-chart-simple',
@@ -384,8 +376,7 @@ export class CommitteeOverviewComponent {
 
   private initPendingActionsViewAllTab(): Signal<'votes' | 'surveys'> {
     return computed(() => {
-      const overflow = this.pendingActionItems().slice(2);
-      const hasVotes = overflow.some((item) => item.type === 'Cast Vote');
+      const hasVotes = this.pendingActionItems().some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
   }
