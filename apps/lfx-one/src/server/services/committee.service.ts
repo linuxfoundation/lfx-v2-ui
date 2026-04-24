@@ -166,9 +166,11 @@ export class CommitteeService {
    *
    * @param options.includeMembership When true, enriches the response with the caller's
    *   `my_role` / `my_member_uid` resolved via a username-tagged membership query. Costs
-   *   one extra `/query/resources` call, so default is `false`. Enable only on user-facing
-   *   reads (e.g. the GET /committees/:id controller), not on internal validation reads
-   *   (member CRUD, meeting fan-out) where the caller-membership fields are unused.
+   *   one or more extra `/query/resources` calls (typically one — paginates only if upstream
+   *   returns >50 matching rows for the caller, which should be rare for a single committee),
+   *   so default is `false`. Enable only on user-facing reads (e.g. the GET /committees/:id
+   *   controller), not on internal validation reads (member CRUD, meeting fan-out) where
+   *   the caller-membership fields are unused.
    */
   public async getCommitteeById(req: Request, committeeId: string, options: { includeMembership?: boolean } = {}): Promise<Committee> {
     const committee = await this.microserviceProxy.proxyRequest<Committee>(req, 'LFX_V2_SERVICE', `/committees/${committeeId}`, 'GET');
@@ -892,12 +894,23 @@ export class CommitteeService {
    * and {@link getMyCommittees} so the detail and dashboard endpoints surface the
    * same `my_role` / `my_member_uid` for a given group when upstream returns
    * multiple rows (duplicate index entry, multi-account edge case).
+   *
+   * Ties on role priority are broken deterministically by lexicographically smallest
+   * `uid`, so repeated requests pick the same row regardless of upstream ordering.
    */
   private pickBestMembership(memberships: CommitteeMember[]): CommitteeMember | null {
     if (memberships.length === 0) {
       return null;
     }
-    return memberships.reduce((best, current) => (this.rolePriority(current.role?.name) > this.rolePriority(best.role?.name) ? current : best));
+    return memberships.reduce((best, current) => {
+      const currentPriority = this.rolePriority(current.role?.name);
+      const bestPriority = this.rolePriority(best.role?.name);
+      if (currentPriority !== bestPriority) {
+        return currentPriority > bestPriority ? current : best;
+      }
+      // Tie-breaker: prefer lexicographically smallest uid for stable ordering across requests.
+      return (current.uid ?? '') < (best.uid ?? '') ? current : best;
+    });
   }
 
   /**
