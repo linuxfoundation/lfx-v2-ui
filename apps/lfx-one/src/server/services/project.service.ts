@@ -109,6 +109,9 @@ import { MicroserviceProxyService } from './microservice-proxy.service';
 import { NatsService } from './nats.service';
 import { SnowflakeService } from './snowflake.service';
 
+/** Valid LifecycleStage values used to guard the Snowflake LIFECYCLE_STAGE string. Hoisted to module scope so the Set isn't re-created on every row mapping. */
+const VALID_LIFECYCLE_STAGES: ReadonlySet<LifecycleStage> = new Set(Object.values(LifecycleStage));
+
 /**
  * Service for handling project business logic
  */
@@ -1522,7 +1525,6 @@ export class ProjectService {
     try {
       const result = await this.snowflakeService.execute<FoundationProjectsDetailRow>(query, [foundationSlug]);
 
-      const validStages = new Set(Object.values(LifecycleStage));
       const projects = result.rows.map((row) => ({
         id: row.PROJECT_SLUG,
         // Snowflake's raw PROJECT_ID column — exact upstream semantics vary by
@@ -1535,7 +1537,8 @@ export class ProjectService {
         projectSlug: row.PROJECT_SLUG,
         // Guard against unknown stage strings slipping through the Snowflake
         // response; the interface promises LifecycleStage | null, not arbitrary strings.
-        lifecycleStage: row.LIFECYCLE_STAGE && validStages.has(row.LIFECYCLE_STAGE as LifecycleStage) ? (row.LIFECYCLE_STAGE as LifecycleStage) : null,
+        lifecycleStage:
+          row.LIFECYCLE_STAGE && VALID_LIFECYCLE_STAGES.has(row.LIFECYCLE_STAGE as LifecycleStage) ? (row.LIFECYCLE_STAGE as LifecycleStage) : null,
         activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
         commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
         maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,

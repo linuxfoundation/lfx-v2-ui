@@ -293,8 +293,14 @@ export class AnalyticsService {
    */
   public getFoundationProjectsDetail(foundationSlug: string): Observable<FoundationProjectsDetailResponse> {
     if (!this.foundationProjectsDetailCache.has(foundationSlug)) {
+      // Evict the cache entry on error so a transient HTTP failure doesn't lock
+      // subsequent subscribers to an empty fallback response for the session.
+      // The fallback is returned for this subscription only; next subscribe re-fetches.
       const req$ = this.http.get<FoundationProjectsDetailResponse>('/api/analytics/foundation-projects-detail', { params: { foundationSlug } }).pipe(
-        catchError(() => of({ projects: [], totalCount: 0 })),
+        catchError(() => {
+          this.foundationProjectsDetailCache.delete(foundationSlug);
+          return of({ projects: [], totalCount: 0 });
+        }),
         shareReplay(1)
       );
       this.foundationProjectsDetailCache.set(foundationSlug, req$);

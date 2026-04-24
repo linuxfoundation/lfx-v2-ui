@@ -84,13 +84,22 @@
       <ng-template #emptymessage>
         <tr>
           <td colspan="6" class="p-10 text-center">
-            <div class="flex flex-col items-center gap-2" data-testid="foundation-projects-empty">
-              <i class="fa-light fa-eyes text-3xl text-gray-400"></i>
-              <p class="text-sm font-medium text-gray-700">No project data available</p>
-              <p class="max-w-md text-sm text-gray-500">
-                Project-level data is only available for sub-foundations. Select a specific sub-foundation from the foundation selector to see project details.
-              </p>
-            </div>
+            @if (searchQuery()) {
+              <div class="flex flex-col items-center gap-2" data-testid="foundation-projects-search-empty">
+                <i class="fa-light fa-magnifying-glass text-3xl text-gray-400"></i>
+                <p class="text-sm font-medium text-gray-700">No projects match your search</p>
+                <p class="max-w-md text-sm text-gray-500">Try a different term or clear the search to see all projects.</p>
+              </div>
+            } @else {
+              <div class="flex flex-col items-center gap-2" data-testid="foundation-projects-empty">
+                <i class="fa-light fa-eyes text-3xl text-gray-400"></i>
+                <p class="text-sm font-medium text-gray-700">No project data available</p>
+                <p class="max-w-md text-sm text-gray-500">
+                  Project-level data is only available for sub-foundations. Select a specific sub-foundation from the foundation selector to see project
+                  details.
+                </p>
+              </div>
+            }
           </td>
         </tr>
       </ng-template>
