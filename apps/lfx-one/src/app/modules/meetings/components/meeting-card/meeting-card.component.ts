@@ -487,6 +487,7 @@ export class MeetingCardComponent implements OnInit {
         take(1),
         tap((meeting) => {
           this.additionalRegistrantsCount.set(0);
+          this.drawerGuestCount.set(0);
           this.meeting.set(meeting);
         })
       )
@@ -714,9 +715,9 @@ export class MeetingCardComponent implements OnInit {
   private initGuestCount(): Signal<number> {
     return computed(() => {
       const meeting = this.meeting();
-      const meetingBaseCount = resolveMeetingBaseCount(meeting);
+      const meetingBaseCount = resolveMeetingBaseCount(meeting) ?? 0;
       const meetingTotalCount = meetingBaseCount + this.additionalRegistrantsCount();
-      return Math.max(meetingTotalCount, this.drawerGuestCount() ?? 0);
+      return Math.max(meetingTotalCount, this.drawerGuestCount());
     });
   }
 

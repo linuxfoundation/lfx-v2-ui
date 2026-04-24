@@ -41,9 +41,9 @@ export class MeetingRegistrantsDisplayComponent {
 
   private readonly internalLoading: WritableSignal<boolean> = signal(true);
   private readonly refresh$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private readonly optimisticRegistrants: WritableSignal<MeetingRegistrant[]> = signal<MeetingRegistrant[]>([]);
   private readonly externallyManaged: Signal<boolean> = computed(() => this.initialRegistrants() !== null);
   private readonly internalRegistrants: Signal<MeetingRegistrant[]> = this.initRegistrantsList();
-  private readonly optimisticRegistrants: WritableSignal<MeetingRegistrant[]> = signal<MeetingRegistrant[]>([]);
   public readonly pastMeetingParticipants: Signal<PastMeetingParticipant[]> = this.initPastMeetingParticipantsList();
   public readonly registrants: Signal<MeetingRegistrant[]> = this.initRegistrants();
   public readonly registrantsLoading: Signal<boolean> = computed(() => {
@@ -123,10 +123,6 @@ export class MeetingRegistrantsDisplayComponent {
         this.showAddForm.set(false);
         this.addRegistrantForm.reset();
         this.optimisticRegistrants.set([]);
-        this.additionalRegistrantsCount.set(0);
-        this.registrantsCountChange.emit(0);
-        const meeting = this.meeting();
-        this.totalCountChange.emit(resolveMeetingBaseCount(meeting));
       });
   }
 
@@ -187,7 +183,7 @@ export class MeetingRegistrantsDisplayComponent {
                   attended: null,
                 };
                 const meeting = this.meeting();
-                const baseCount = resolveMeetingBaseCount(meeting) || this.internalRegistrants().length;
+                const baseCount = resolveMeetingBaseCount(meeting) ?? this.internalRegistrants().length;
                 const nextAdditionalCount = this.additionalRegistrantsCount() + response.summary.successful;
                 this.optimisticRegistrants.update((list) => [...list, optimistic]);
                 this.additionalRegistrantsCount.set(nextAdditionalCount);
@@ -239,10 +235,11 @@ export class MeetingRegistrantsDisplayComponent {
                 map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
                 tap((registrants) => {
                   const meeting = this.meeting();
-                  const baseCount = resolveMeetingBaseCount(meeting) || registrants?.length || 0;
-                  const fetchedAdditional = Math.max(0, (registrants?.length || 0) - baseCount);
-                  // Never decrease below the current optimistic count (async indexing may lag)
-                  const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
+                  const resolvedBaseCount = resolveMeetingBaseCount(meeting);
+                  const hasBackendBaseCount = resolvedBaseCount !== undefined;
+                  const baseCount = hasBackendBaseCount ? resolvedBaseCount : (registrants?.length ?? 0);
+                  const fetchedAdditional = Math.max(0, (registrants?.length ?? 0) - baseCount);
+                  const additionalCount = hasBackendBaseCount ? Math.max(fetchedAdditional, this.additionalRegistrantsCount()) : fetchedAdditional;
                   this.additionalRegistrantsCount.set(additionalCount);
                   this.registrantsCountChange.emit(additionalCount);
                   this.totalCountChange.emit(baseCount + additionalCount);
