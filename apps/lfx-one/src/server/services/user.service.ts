@@ -48,6 +48,9 @@ import { NatsService } from './nats.service';
 import { ProjectService } from './project.service';
 import { SnowflakeService } from './snowflake.service';
 
+const VALID_TSHIRT_SIZES: ReadonlySet<string> = new Set(TSHIRT_SIZES.map((s) => s.value));
+const VALID_TSHIRT_SIZES_LABEL = TSHIRT_SIZES.map((s) => s.value).join(', ');
+
 /**
  * Service for handling user-related operations and user analytics
  */
@@ -177,11 +180,8 @@ export class UserService {
    */
   public validateUserMetadata(metadata: UserMetadata): boolean {
     // Validate t-shirt size if provided
-    if (metadata?.t_shirt_size) {
-      const validSizes = TSHIRT_SIZES.map((s) => s.value);
-      if (!validSizes.includes(metadata.t_shirt_size as (typeof TSHIRT_SIZES)[number]['value'])) {
-        throw new Error(`Invalid t-shirt size. Must be one of: ${validSizes.join(', ')}`);
-      }
+    if (metadata?.t_shirt_size && !VALID_TSHIRT_SIZES.has(metadata.t_shirt_size)) {
+      throw new Error(`Invalid t-shirt size. Must be one of: ${VALID_TSHIRT_SIZES_LABEL}`);
     }
 
     // Validate phone number format if provided
