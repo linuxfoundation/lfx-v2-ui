@@ -575,6 +575,12 @@ export interface DashboardMeetingCardProps {
   project?: string;
 }
 
+export interface DashboardQuickLink {
+  label: string;
+  icon: string;
+  route: string[];
+}
+
 /**
  * Committee selector option
  * @description Configuration for committee selector component options

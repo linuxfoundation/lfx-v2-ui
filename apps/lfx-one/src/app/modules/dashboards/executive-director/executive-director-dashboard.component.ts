@@ -10,6 +10,7 @@ import { ProjectService } from '@services/project.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BehaviorSubject, catchError, combineLatest, of, switchMap } from 'rxjs';
 
+import { DashboardQuicklinksComponent } from '../components/dashboard-quicklinks/dashboard-quicklinks.component';
 import { FoundationHealthComponent } from '../components/foundation-health/foundation-health.component';
 import { MyMeetingsComponent } from '../components/my-meetings/my-meetings.component';
 import { OrganizationInvolvementComponent } from '../components/organization-involvement/organization-involvement.component';
@@ -26,6 +27,7 @@ import { MarketingOverviewComponent } from './components/marketing-overview/mark
     FoundationHealthComponent,
     OrganizationInvolvementComponent,
     SkeletonModule,
+    DashboardQuicklinksComponent,
   ],
   templateUrl: './executive-director-dashboard.component.html',
 })
