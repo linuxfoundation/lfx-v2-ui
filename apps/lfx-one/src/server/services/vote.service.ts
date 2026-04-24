@@ -8,7 +8,6 @@ import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
-import { generateM2MToken } from '../utils/m2m-token.util';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
@@ -42,12 +41,16 @@ export class VoteService {
       type: 'vote',
     };
 
-    const votes = await fetchAllQueryResources<Vote>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+    const rawVotes = await fetchAllQueryResources<Vote & { vote_uid?: string }>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
         ...params,
         ...(pageToken && { page_token: pageToken }),
       })
     );
+
+    // The voting service indexes votes with `vote_uid` (not `uid`). Normalize so
+    // downstream code can rely on the standard Vote.uid field.
+    const votes = rawVotes.map((v) => ({ ...v, uid: v.uid || v.vote_uid || '' })) as Vote[];
 
     logger.debug(req, 'get_votes', 'Completed vote fetch', {
       final_count: votes.length,
@@ -119,12 +122,13 @@ export class VoteService {
       req,
       operation: 'create_vote',
       pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'vote',
           tags: voteUid,
         });
         if (resources.length > 0) {
-          fetchedVote = resources[0].data;
+          const raw = resources[0].data;
+          fetchedVote = { ...raw, uid: raw.uid || raw.vote_uid || '' } as Vote;
           return true;
         }
         return false;
@@ -194,12 +198,13 @@ export class VoteService {
       req,
       operation: 'enable_vote',
       pollFn: async () => {
-        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
+        const { resources } = await this.microserviceProxy.proxyRequest<QueryServiceResponse<Vote & { vote_uid?: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
           type: 'vote',
           tags: voteUid,
         });
         if (resources.length > 0 && resources[0].data.status === 'active') {
-          fetchedVote = resources[0].data;
+          const raw = resources[0].data;
+          fetchedVote = { ...raw, uid: raw.uid || raw.vote_uid || '' } as Vote;
           return true;
         }
         return false;
@@ -222,26 +227,11 @@ export class VoteService {
 
   /**
    * Fetches aggregated vote results for a given vote.
-   *
-   * The upstream `/votes/:uid/results` endpoint requires the `results_viewer` FGA relation on the
-   * vote, which is only granted to voters (participants). Project admins and committee managers
-   * have `viewer` but not `results_viewer`, so their user bearer token would be rejected with 403.
-   * We use an M2M token here — the route is already authenticated and the user's access to the
-   * vote itself was already verified by the query-service when the vote list was fetched.
    */
   public async getVoteResults(req: Request, voteUid: string): Promise<VoteResultsResponse> {
     logger.debug(req, 'get_vote_results', 'Fetching vote results', { vote_uid: voteUid });
 
-    const m2mToken = await generateM2MToken(req);
-    const results = await this.microserviceProxy.proxyRequest<VoteResultsResponse>(
-      req,
-      'LFX_V2_SERVICE',
-      `/votes/${voteUid}/results`,
-      'GET',
-      undefined,
-      undefined,
-      { Authorization: `Bearer ${m2mToken}` }
-    );
+    const results = await this.microserviceProxy.proxyRequest<VoteResultsResponse>(req, 'LFX_V2_SERVICE', `/votes/${voteUid}/results`, 'GET');
 
     logger.debug(req, 'get_vote_results', 'Completed vote results fetch', {
       vote_uid: voteUid,
