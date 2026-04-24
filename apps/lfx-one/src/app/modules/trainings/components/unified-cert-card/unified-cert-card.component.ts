@@ -11,7 +11,11 @@ import { COURSE_URL_PREFIX, CONTINUE_LEARNING_URL, ENROLL_AGAIN_URL, ENROLL_AGAI
 import { ButtonComponent } from '@components/button/button.component';
 import { CardComponent } from '@components/card/card.component';
 
-const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+const EXPIRY_CLASS_BY_STATE: Partial<Record<UnifiedCertState, string>> = {
+  'expiring-soon': 'text-amber-600 font-medium',
+  'enrolled-cert-expired': 'text-red-600 font-medium',
+  'cert-expired': 'text-red-600 font-medium',
+};
 
 @Component({
   selector: 'lfx-unified-cert-card',
@@ -55,11 +59,7 @@ export class UnifiedCertCardComponent {
       }
 
       if (cert.expiryDate) {
-        const expired = new Date(cert.expiryDate) < new Date();
-        const expiringSoon = !expired && new Date(cert.expiryDate).getTime() - Date.now() <= NINETY_DAYS_MS;
-        let expiryClasses = 'text-gray-700';
-        if (expired) expiryClasses = 'text-red-600 font-medium';
-        else if (expiringSoon) expiryClasses = 'text-amber-600 font-medium';
+        const expiryClasses = EXPIRY_CLASS_BY_STATE[cert.state] ?? 'text-gray-700';
         fields.push({ label: 'Valid Until', value: cert.expiryDate, classes: expiryClasses });
       } else if (cert.certId) {
         fields.push({ label: 'Valid Until', value: 'No Expiry', classes: 'text-gray-700' });

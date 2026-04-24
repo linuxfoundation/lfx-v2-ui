@@ -57,7 +57,7 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
     SELECT *,
       ROW_NUMBER() OVER (
         PARTITION BY COURSE_ID
-        ORDER BY EXPIRATION_DATE DESC NULLS FIRST
+        ORDER BY EXPIRATION_DATE DESC NULLS FIRST, ISSUED_TS DESC NULLS LAST, _KEY DESC
       ) AS rn
     FROM ANALYTICS.PLATINUM_LFX_ONE.USER_CERTIFICATES
     WHERE USER_NAME = ?
@@ -256,11 +256,20 @@ export class TrainingService {
   private deriveUnifiedCertState(row: UnifiedCertRow): UnifiedCertState {
     const hasCert = row.CERT_KEY !== null;
     const hasActiveEnrollment = row.IS_ACTIVE_ENROLLMENT === true;
-    const now = new Date();
-    const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
 
-    const certExpired = hasCert && row.EXPIRATION_DATE !== null && new Date(row.EXPIRATION_DATE) < now;
-    const certExpiringSoon = hasCert && row.EXPIRATION_DATE !== null && !certExpired && new Date(row.EXPIRATION_DATE).getTime() - now.getTime() <= ninetyDaysMs;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayPlus90 = new Date(today);
+    todayPlus90.setDate(todayPlus90.getDate() + 90);
+
+    let expiryDateOnly: Date | null = null;
+    if (row.EXPIRATION_DATE !== null) {
+      expiryDateOnly = new Date(row.EXPIRATION_DATE);
+      expiryDateOnly.setHours(0, 0, 0, 0);
+    }
+
+    const certExpired = hasCert && expiryDateOnly !== null && expiryDateOnly < today;
+    const certExpiringSoon = hasCert && expiryDateOnly !== null && !certExpired && expiryDateOnly <= todayPlus90;
 
     if (hasCert && certExpired && hasActiveEnrollment) return 'enrolled-cert-expired';
     if (hasCert && certExpired) return 'cert-expired';
