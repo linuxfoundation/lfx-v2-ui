@@ -38,6 +38,7 @@ import {
   buildJoinUrlWithParams,
   canJoinMeeting,
   COMMITTEE_LABEL,
+  resolveMeetingBaseCount,
   DEFAULT_MEETING_TYPE_CONFIG,
   getCurrentOrNextOccurrence,
   Meeting,
@@ -712,11 +713,10 @@ export class MeetingCardComponent implements OnInit {
 
   private initGuestCount(): Signal<number> {
     return computed(() => {
-      const m = this.meeting();
-      const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
-      const meetingBaseCount = splitCount || m.registrant_count || 0;
+      const meeting = this.meeting();
+      const meetingBaseCount = resolveMeetingBaseCount(meeting);
       const meetingTotalCount = meetingBaseCount + this.additionalRegistrantsCount();
-      return Math.max(meetingTotalCount, this.drawerGuestCount() || 0);
+      return Math.max(meetingTotalCount, this.drawerGuestCount() ?? 0);
     });
   }
 

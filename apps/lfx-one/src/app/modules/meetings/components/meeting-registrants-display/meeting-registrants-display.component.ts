@@ -9,7 +9,7 @@ import { AvatarComponent } from '@components/avatar/avatar.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { SelectComponent } from '@components/select/select.component';
 import { Meeting, MeetingRegistrant, PastMeeting, PastMeetingParticipant } from '@lfx-one/shared';
-import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
+import { markFormControlsAsTouched, resolveMeetingBaseCount } from '@lfx-one/shared/utils';
 import { MeetingService } from '@services/meeting.service';
 import { MessageService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
@@ -125,9 +125,8 @@ export class MeetingRegistrantsDisplayComponent {
         this.optimisticRegistrants.set([]);
         this.additionalRegistrantsCount.set(0);
         this.registrantsCountChange.emit(0);
-        const m = this.meeting();
-        const splitCount = (m.individual_registrants_count || 0) + (m.committee_members_count || 0);
-        this.totalCountChange.emit(splitCount || m.registrant_count || 0);
+        const meeting = this.meeting();
+        this.totalCountChange.emit(resolveMeetingBaseCount(meeting));
       });
   }
 
@@ -167,7 +166,7 @@ export class MeetingRegistrantsDisplayComponent {
                 // Self-managed mode: optimistically add to the displayed list immediately
                 // (query-service indexing is async; the refetch may not include them yet).
                 const optimistic: MeetingRegistrant = {
-                  uid: `optimistic-${Date.now()}`,
+                  uid: `optimistic-${crypto.randomUUID()}`,
                   meeting_id: this.meeting().id,
                   email: formValue.email ?? '',
                   first_name: formValue.first_name ?? '',
@@ -188,8 +187,7 @@ export class MeetingRegistrantsDisplayComponent {
                   attended: null,
                 };
                 const meeting = this.meeting();
-                const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-                const baseCount = splitCount > 0 ? splitCount : meeting.registrant_count || this.internalRegistrants().length;
+                const baseCount = resolveMeetingBaseCount(meeting) || this.internalRegistrants().length;
                 const nextAdditionalCount = this.additionalRegistrantsCount() + response.summary.successful;
                 this.optimisticRegistrants.update((list) => [...list, optimistic]);
                 this.additionalRegistrantsCount.set(nextAdditionalCount);
@@ -241,8 +239,7 @@ export class MeetingRegistrantsDisplayComponent {
                 map((registrants) => registrants.sort((a, b) => a.first_name?.localeCompare(b.first_name ?? '') ?? 0) as MeetingRegistrant[]),
                 tap((registrants) => {
                   const meeting = this.meeting();
-                  const splitCount = (meeting.individual_registrants_count || 0) + (meeting.committee_members_count || 0);
-                  const baseCount = splitCount > 0 ? splitCount : meeting.registrant_count || registrants?.length || 0;
+                  const baseCount = resolveMeetingBaseCount(meeting) || registrants?.length || 0;
                   const fetchedAdditional = Math.max(0, (registrants?.length || 0) - baseCount);
                   // Never decrease below the current optimistic count (async indexing may lag)
                   const additionalCount = Math.max(fetchedAdditional, this.additionalRegistrantsCount());
@@ -289,8 +286,8 @@ export class MeetingRegistrantsDisplayComponent {
       } else {
         list = this.internalRegistrants();
       }
-      const fetchedEmails = new Set(list.map((r) => r.email?.toLowerCase()));
-      const pending = this.optimisticRegistrants().filter((r) => !fetchedEmails.has(r.email?.toLowerCase()));
+      const fetchedEmails = new Set(list.map((r) => r.email?.trim().toLowerCase()));
+      const pending = this.optimisticRegistrants().filter((r) => !fetchedEmails.has(r.email?.trim().toLowerCase()));
       return pending.length ? [...pending, ...list] : list;
     });
   }
