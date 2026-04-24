@@ -43,6 +43,7 @@ export class EventSelectionComponent {
   protected readonly loading = signal(true);
   protected readonly loadingMore = signal(false);
   protected readonly registeredEventsLoading = signal(true);
+  protected readonly eventsLoadError = signal(false);
   private currentOffset = signal(0);
 
   // Location filter options loaded once
@@ -79,15 +80,34 @@ export class EventSelectionComponent {
 
   // Detects whether the user has any registered upcoming events at all (ignoring request-type and other filters).
   // Used to differentiate the empty state between "no registered events" and "feature not available on registered events".
+  // null means the probe failed (network error) — treated as unknown, not zero.
   private readonly registeredEventsTotal = this.initializeRegisteredEventsTotal();
 
-  // Treat unresolved (0 with loading=true) as "has events" to avoid flashing the wrong message; the spinner covers the load.
+  // Only true when the probe resolved successfully with a confirmed zero total.
   private readonly hasNoRegisteredUpcomingEvents = computed(() => !this.registeredEventsLoading() && this.registeredEventsTotal() === 0);
+
+  // True when the user has applied search, location, or time filters that may be hiding results.
+  private readonly hasActiveFilters = computed(() => {
+    const f = this.activeFilters();
+    return !!(f.searchQuery || f.country || f.startDateFrom);
+  });
 
   protected readonly emptyState = computed(() => {
     const isVisa = this.requestType() === 'visa';
+
+    // 1. Initial load failed — show a neutral error rather than a misleading "not available" message.
+    if (this.eventsLoadError()) {
+      return {
+        icon: 'fa-light fa-triangle-exclamation text-3xl text-amber-400',
+        title: 'Unable to load events',
+        description: 'Something went wrong while loading your events. Please try again.',
+      };
+    }
+
+    // 2. No registered upcoming events at all — must register first.
     if (this.hasNoRegisteredUpcomingEvents()) {
       return {
+        icon: 'fa-light fa-calendar-xmark text-3xl text-gray-300',
         title: 'No registered events',
         description: isVisa
           ? 'You must be registered for an upcoming event to apply for a visa letter.'
@@ -95,7 +115,18 @@ export class EventSelectionComponent {
       };
     }
 
+    // 3. Active filters are hiding results — suggest clearing them.
+    if (this.hasActiveFilters()) {
+      return {
+        icon: 'fa-light fa-filter-slash text-3xl text-gray-300',
+        title: 'No events match your filters',
+        description: 'Try adjusting or clearing your search and filters.',
+      };
+    }
+
+    // 4. User has registered events but none support this request type.
     return {
+      icon: 'fa-light fa-calendar-xmark text-3xl text-gray-300',
       title: isVisa ? 'Visa letters not available' : 'Travel funding not available',
       description: isVisa
         ? 'None of your registered events currently offer visa letter requests. Check back later or contact the event organizer for more information.'
@@ -103,15 +134,13 @@ export class EventSelectionComponent {
     };
   });
 
-  // Wait for both the initial events query and the registered-events lookup before deciding which empty state to render.
-  protected readonly initialLoading = computed(() => this.loading() || this.registeredEventsLoading());
-
   public constructor() {
     // Reset additional events when filters change (skip initial emission)
     toObservable(this.activeFilters)
       .pipe(skip(1), takeUntilDestroyed())
       .subscribe(() => {
         this.currentOffset.set(0);
+        this.eventsLoadError.set(false);
       });
   }
 
@@ -155,7 +184,7 @@ export class EventSelectionComponent {
           this.eventsService.getMyEvents({ isPast: false, pageSize: EVENT_SELECTION_PAGE_SIZE, offset, registeredOnly: true, ...filters }).pipe(
             catchError(() => {
               if (offset === 0) {
-                // Initial load failed - show empty state
+                this.eventsLoadError.set(true);
                 return of(EMPTY_MY_EVENTS_RESPONSE);
               }
               // Load more failed - revert offset so retry fetches the same page
@@ -190,10 +219,10 @@ export class EventSelectionComponent {
     return toSignal(
       this.eventsService.getMyEvents({ isPast: false, registeredOnly: true, pageSize: 1 }).pipe(
         map((res) => res.total ?? 0),
-        catchError(() => of(0)),
+        catchError(() => of(null)),
         finalize(() => this.registeredEventsLoading.set(false))
       ),
-      { initialValue: 0 }
+      { initialValue: null as number | null }
     );
   }
 }
