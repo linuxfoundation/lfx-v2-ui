@@ -1522,12 +1522,20 @@ export class ProjectService {
     try {
       const result = await this.snowflakeService.execute<FoundationProjectsDetailRow>(query, [foundationSlug]);
 
+      const validStages = new Set(Object.values(LifecycleStage));
       const projects = result.rows.map((row) => ({
         id: row.PROJECT_SLUG,
+        // Snowflake's raw PROJECT_ID column — exact upstream semantics vary by
+        // foundation (may be Salesforce ID or project-service UID depending on
+        // the ingest source). Consumers should resolve to a canonical
+        // project-service UID via slug→uid lookup rather than assume this is
+        // that UID. See ProjectTableRow.projectId JSDoc.
         projectId: row.PROJECT_ID,
         projectName: row.PROJECT_NAME,
         projectSlug: row.PROJECT_SLUG,
-        lifecycleStage: (row.LIFECYCLE_STAGE as LifecycleStage) ?? null,
+        // Guard against unknown stage strings slipping through the Snowflake
+        // response; the interface promises LifecycleStage | null, not arbitrary strings.
+        lifecycleStage: row.LIFECYCLE_STAGE && validStages.has(row.LIFECYCLE_STAGE as LifecycleStage) ? (row.LIFECYCLE_STAGE as LifecycleStage) : null,
         activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
         commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
         maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,

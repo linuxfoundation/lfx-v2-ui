@@ -256,6 +256,14 @@ export enum LifecycleStage {
  */
 export interface ProjectTableRow {
   id: string;
+  /**
+   * Raw `PROJECT_ID` column from Snowflake's platinum table. The exact upstream
+   * semantics vary — for some foundations this is a Salesforce ID, for others
+   * the project-service UUID. Consumers that need the canonical project UID for
+   * lens switching or cross-service lookups should resolve it via
+   * `projectService.getProjects({ parent: 'project:<foundation_uid>' })` keyed
+   * by `projectSlug`.
+   */
   projectId: string;
   projectName: string;
   projectSlug: string;

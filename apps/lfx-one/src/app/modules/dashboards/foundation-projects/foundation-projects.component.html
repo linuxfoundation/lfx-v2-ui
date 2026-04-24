@@ -28,7 +28,7 @@
     [rowsPerPageOptions]="[10, 25, 50]"
     [showCurrentPageReport]="true"
     currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
-    dataKey="id"
+    dataKey="projectSlug"
     data-testid="foundation-projects-table">
     <ng-template #header>
       <tr>
@@ -46,7 +46,7 @@
         <td>
           <button
             type="button"
-            class="flex flex-col items-start text-left"
+            class="flex flex-col items-start border-none bg-transparent p-0 text-left"
             (click)="openProjectLens(project)"
             [attr.data-testid]="'foundation-projects-name-' + project.projectSlug">
             <span class="lfx-table-name-link text-sm">{{ project.projectName }}</span>

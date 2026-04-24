@@ -17,7 +17,7 @@ import { PersonaService } from '@services/persona.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
 import { DrawerModule } from 'primeng/drawer';
-import { catchError, filter, map, of, switchMap, take } from 'rxjs';
+import { filter, map, of, startWith, switchMap, take } from 'rxjs';
 
 import { ButtonComponent } from '@components/button/button.component';
 
@@ -159,6 +159,9 @@ export class MainLayoutComponent {
 
   // Whether the currently selected foundation has project-level data in Snowflake.
   // Drives the conditional "Projects" sidebar entry — hidden when the foundation has no rows.
+  // `startWith(false)` inside the inner pipe clears the previous value while the next
+  // foundation's request is in flight, so the nav doesn't momentarily show "Projects"
+  // for a foundation that hasn't been verified yet.
   private readonly foundationHasProjects: Signal<boolean> = toSignal(
     toObservable(computed(() => this.projectContextService.selectedFoundation()?.slug ?? '')).pipe(
       switchMap((slug) => {
@@ -167,7 +170,7 @@ export class MainLayoutComponent {
         }
         return this.analyticsService.getFoundationProjectsDetail(slug).pipe(
           map((response) => response.projects.length > 0),
-          catchError(() => of(false))
+          startWith(false)
         );
       })
     ),

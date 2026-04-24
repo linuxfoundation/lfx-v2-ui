@@ -14,7 +14,7 @@ import { buildLensAwareInsightsUrl } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { filter, switchMap, tap } from 'rxjs';
+import { catchError, filter, finalize, of, switchMap, tap } from 'rxjs';
 
 import type { FoundationProjectsDetailResponse, ProjectTableRow, StatCardItem } from '@lfx-one/shared/interfaces';
 
@@ -74,7 +74,12 @@ export class FoundationProjectsComponent {
       toObservable(this.foundationSlug).pipe(
         filter((slug) => !!slug),
         tap(() => this.loading.set(true)),
-        switchMap((slug) => this.analyticsService.getFoundationProjectsDetail(slug).pipe(tap(() => this.loading.set(false))))
+        switchMap((slug) =>
+          this.analyticsService.getFoundationProjectsDetail(slug).pipe(
+            catchError(() => of(DEFAULT_FOUNDATION_PROJECTS_DETAIL)),
+            finalize(() => this.loading.set(false))
+          )
+        )
       ),
       { initialValue: DEFAULT_FOUNDATION_PROJECTS_DETAIL }
     );
