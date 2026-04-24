@@ -122,16 +122,10 @@
               subtitle="This project has no groups set up yet."
               data-testid="committees-project-empty-state">
             </lfx-empty-state>
-          } @else if (filteredCommittees().length === 0) {
-            <lfx-empty-state
-              icon="fa-light fa-users-rectangle"
-              [title]="'No ' + committeeLabel.plural.toLowerCase() + ' found'"
-              subtitle="Try adjusting your search or filter criteria."
-              data-testid="committees-filtered-empty-state">
-            </lfx-empty-state>
           } @else {
             <lfx-committee-table
               [committees]="filteredCommittees()"
+              [hasItems]="committees().length > 0"
               [canManageCommittee]="canWrite()"
               [myCommitteeUids]="myCommitteeUids()"
               [searchForm]="searchForm"
