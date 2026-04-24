@@ -6,10 +6,10 @@
 
 The LFX One application implements an intelligent lazy loading and preloading strategy to optimize:
 
-- **Initial bundle size** - Reduced from potential 7.7MB to essential-only code
-- **Time to Interactive (TTI)** - Faster initial page loads
-- **User experience** - Smart preloading based on usage patterns and network conditions
-- **Resource efficiency** - Network-aware loading strategies
+- **Initial bundle size** — only essential code ships in the initial bundle; feature modules load on demand.
+- **Time to Interactive (TTI)** — faster initial page loads by deferring non-critical routes.
+- **User experience** — smart preloading based on usage patterns and network conditions.
+- **Resource efficiency** — network-aware loading strategies that skip preloading on slow connections.
 
 ### Architecture Pattern
 
@@ -17,8 +17,10 @@ The LFX One application implements an intelligent lazy loading and preloading st
 Initial Load (Home) → Smart Preloading → User Navigation (Instant)
      ↓                      ↓                    ↓
   Core App           High-Priority Routes    Pre-loaded Routes
-  (~1-2MB)           (Background Loading)    (Cached & Ready)
+                     (Background Loading)    (Cached & Ready)
 ```
+
+> Bundle sizes vary per build. Verify current footprint locally with `yarn build` — never hardcode specific numbers into architecture docs (they drift silently).
 
 ---
 
@@ -41,7 +43,6 @@ All routes are flat children of `MainLayoutComponent` (no nested `project/:slug`
     { path: 'meetings', loadChildren: () => import('./modules/meetings/meetings.routes').then(m => m.MEETING_ROUTES) },
     { path: 'groups', loadChildren: () => import('./modules/committees/committees.routes').then(m => m.COMMITTEE_ROUTES) },
     { path: 'mailing-lists', loadChildren: () => import('./modules/mailing-lists/mailing-lists.routes').then(m => m.MAILING_LIST_ROUTES) },
-    { path: 'my-activity', loadChildren: () => import('./modules/my-activity/my-activity.routes').then(m => m.MY_ACTIVITY_ROUTES) },
     { path: 'votes', loadChildren: () => import('./modules/votes/votes.routes').then(m => m.VOTE_ROUTES) },
     { path: 'surveys', loadChildren: () => import('./modules/surveys/surveys.routes').then(m => m.SURVEY_ROUTES) },
     { path: 'settings', loadChildren: () => import('./modules/settings/settings.routes').then(m => m.SETTINGS_ROUTES) },
@@ -80,7 +81,6 @@ export const MEETING_ROUTES: Routes = [
 | **Surveys**       | Lazy + Medium Preload (1500ms) | Medium   |
 | **Settings**      | Lazy + On-demand               | Low      |
 | **Profile**       | Lazy + On-demand               | Low      |
-| **My Activity**   | Lazy + On-demand               | Low      |
 
 ---
 
@@ -130,7 +130,6 @@ Routes are configured with priority-based preloading metadata in each feature's 
 | Surveys       | `true`                  | 1500ms | Medium   |
 | Settings      | No preload data         | -      | Low      |
 | Profile       | No preload data         | -      | Low      |
-| My Activity   | No preload data         | -      | Low      |
 
 ```typescript
 // High-priority route (fast preload) - meetings.routes.ts
@@ -139,7 +138,7 @@ data: { preload: true, preloadDelay: 500 }
 // Medium-priority route - committees.routes.ts, mailing-lists.routes.ts, votes.routes.ts, surveys.routes.ts
 data: { preload: true, preloadDelay: 1500 }
 
-// On-demand only (no preload) - settings, profile, my-activity
+// On-demand only (no preload) - settings, profile
 // No data attribute or data: { preload: false }
 ```
 
@@ -149,37 +148,27 @@ data: { preload: true, preloadDelay: 1500 }
 
 ### Bundle Size Optimization
 
-**Before Lazy Loading:**
+Lazy-loading feature modules and using the custom preloading strategy keeps the initial bundle small, defers non-critical work, and makes subsequent navigation near-instant because preloaded chunks are already in cache. Verify the shipping footprint for your build locally:
 
-```text
-Total Bundle: ~7.7MB
-Initial Load: ~7.7MB (100%)
-Time to Interactive: ~8-12s
-```
-
-**With Lazy Loading + Preloading:**
-
-```text
-Initial Bundle: ~1.5MB
-Critical Path: ~2.0MB (26%)
-Time to Interactive: ~2-3s
-Subsequent Navigation: <100ms (cached)
+```bash
+yarn build                                   # production bundle + stats
+ls -lh apps/lfx-one/dist/lfx-one/browser/    # inspect emitted chunks
 ```
 
 ### Network Efficiency
 
-| Connection Type    | Strategy              | Benefit                            |
-| ------------------ | --------------------- | ---------------------------------- |
-| **Fast (4G/WiFi)** | Aggressive preloading | 50-80% faster navigation           |
-| **Medium (3G)**    | Selective preloading  | 30-50% faster navigation           |
-| **Slow (2G)**      | No preloading         | Saves bandwidth, prevents timeouts |
+| Connection Type    | Strategy              | Behavior                                                |
+| ------------------ | --------------------- | ------------------------------------------------------- |
+| **Fast (4G/WiFi)** | Aggressive preloading | All `preload: true` routes loaded in the background     |
+| **Medium (3G)**    | Selective preloading  | Preloading honored but delay is respected               |
+| **Slow (2G)**      | No preloading         | `CustomPreloadingStrategy` short-circuits to `of(null)` |
 
 ### User Experience Impact
 
-- **Initial Page Load**: 60-70% faster
-- **Route Navigation**: 80-95% faster (preloaded routes)
-- **Bandwidth Usage**: 40-60% reduction on slow connections
-- **Battery Impact**: Minimal (network-aware strategy)
+- **Initial page load** shrinks — only the route the user is actually landing on ships up-front.
+- **Route navigation** is near-instant for preloaded routes because their chunks are already in cache.
+- **Bandwidth** is preserved on slow connections (`effectiveType === 'slow-2g'` / `'2g'` skips preloading entirely).
+- **Battery impact** is minimal because preloading is network-aware and delay-scheduled instead of aggressive on page load.
 
 ---
 

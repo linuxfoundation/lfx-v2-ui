@@ -4,7 +4,6 @@
 import { Component, computed, inject, model, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
 import { AccountContextService } from '@services/account-context.service';
 import { AnalyticsService } from '@services/analytics.service';
@@ -19,7 +18,7 @@ const DEFAULT_MONTHLY: OrgEventAttendeesMonthlyResponse = { monthlyData: [], mon
 
 @Component({
   selector: 'lfx-org-event-attendees-drawer',
-  imports: [DrawerModule, ChartComponent, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent],
   templateUrl: './org-event-attendees-drawer.component.html',
 })
 export class OrgEventAttendeesDrawerComponent {

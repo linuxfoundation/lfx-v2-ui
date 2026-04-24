@@ -4,7 +4,6 @@
 import { Component, computed, inject, input, model, Signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ChartComponent } from '@components/chart/chart.component';
-import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { SelectComponent } from '@components/select/select.component';
 import { DEFAULT_FOUNDATION_TOTAL_MEMBERS, lfxColors } from '@lfx-one/shared/constants';
 import { DrawerModule } from 'primeng/drawer';
@@ -14,7 +13,7 @@ import type { FoundationTotalMembersResponse } from '@lfx-one/shared/interfaces'
 
 @Component({
   selector: 'lfx-total-members-drawer',
-  imports: [DrawerModule, ChartComponent, SelectComponent, ReactiveFormsModule, InsightsHandoffSectionComponent],
+  imports: [DrawerModule, ChartComponent, SelectComponent, ReactiveFormsModule],
   templateUrl: './total-members-drawer.component.html',
 })
 export class TotalMembersDrawerComponent {

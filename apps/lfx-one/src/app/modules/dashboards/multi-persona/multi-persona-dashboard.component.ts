@@ -31,7 +31,7 @@ import { ProjectService } from '@services/project.service';
 import { SurveyService } from '@services/survey.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { BehaviorSubject, catchError, combineLatest, filter, forkJoin, map, of, switchMap, take, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, filter, map, of, switchMap, tap } from 'rxjs';
 
 import { CardComponent } from '@components/card/card.component';
 import { TableComponent } from '@components/table/table.component';
@@ -77,6 +77,7 @@ export class MultiPersonaDashboardComponent {
   protected readonly subtitleText: Signal<string> = this.initSubtitleText();
   protected readonly analyticsSummary: Signal<MultiFoundationSummaryResponse | null> = this.initAnalyticsSummary();
   protected readonly projectRows: Signal<PersonaProjectRow[]> = this.initProjectRows();
+  protected readonly rppOptions = computed<number[] | undefined>(() => (this.projectRows().length > 10 ? [10, 25, 50] : undefined));
   // Independent loading signals so each pill renders as its source lands (no combineLatest gate).
   protected readonly openSurveysLoading = signal(true);
   protected readonly meetingsPillLoading = signal(true);
@@ -128,6 +129,11 @@ export class MultiPersonaDashboardComponent {
   private initSubtitleText(): Signal<string> {
     return computed(() => {
       const personas = this.personaService.allPersonas();
+
+      if (personas.length > 1) {
+        return 'This is a collection of your activities across all roles, foundations, and projects.';
+      }
+
       const roleLabels = personas.map((p) => {
         switch (p) {
           case 'executive-director':
@@ -236,19 +242,8 @@ export class MultiPersonaDashboardComponent {
       this.refresh$.pipe(
         switchMap(() => {
           this.pendingActionsLoading.set(true);
-          return toObservable(this.userFoundations).pipe(take(1));
-        }),
-        switchMap((foundations) => {
-          if (foundations.length === 0) {
-            this.pendingActionsLoading.set(false);
-            return of([]);
-          }
-          const persona = this.personaService.currentPersona();
-          return forkJoin(
-            foundations.map((f) =>
-              this.projectService.getPendingActions(f.projectSlug, f.projectUid, persona).pipe(catchError(() => of([] as PendingActionItem[])))
-            )
-          ).pipe(map((results) => results.flat()));
+          // Single unscoped request — the backend aggregates across all of the user's FGA grants.
+          return this.projectService.getPendingActions().pipe(catchError(() => of([] as PendingActionItem[])));
         }),
         // Windowing (dismiss filtering + display cap) is owned by PendingActionsComponent.
         // Pass the raw aggregated list and let the child render the top 5 unhidden items.

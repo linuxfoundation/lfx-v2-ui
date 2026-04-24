@@ -1,10 +1,12 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, input, model, Signal } from '@angular/core';
+import { Component, computed, inject, input, model, Signal } from '@angular/core';
 import { ChartComponent } from '@components/chart/chart.component';
 import { InsightsHandoffSectionComponent } from '@components/insights-handoff-section/insights-handoff-section.component';
 import { lfxColors } from '@lfx-one/shared/constants';
+import { buildLensAwareInsightsUrl } from '@lfx-one/shared/utils';
+import { ProjectContextService } from '@services/project-context.service';
 import { DrawerModule } from 'primeng/drawer';
 
 import type { ChartData, ChartOptions } from 'chart.js';
@@ -16,6 +18,9 @@ import type { FoundationValueConcentrationResponse } from '@lfx-one/shared/inter
   templateUrl: './total-value-drawer.component.html',
 })
 export class TotalValueDrawerComponent {
+  // === Services ===
+  private readonly projectContextService = inject(ProjectContextService);
+
   // === Model Signals (two-way binding) ===
   public readonly visible = model<boolean>(false);
 
@@ -34,6 +39,10 @@ export class TotalValueDrawerComponent {
   });
 
   // === Computed Signals ===
+  protected readonly insightsUrl: Signal<string> = computed(() =>
+    buildLensAwareInsightsUrl(this.projectContextService.activeContext()?.slug, this.projectContextService.isFoundationContext())
+  );
+
   protected readonly chartData: Signal<ChartData<'bar'>> = this.initChartData();
 
   protected readonly chartOptions: ChartOptions<'bar'> = {
