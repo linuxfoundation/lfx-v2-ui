@@ -521,6 +521,19 @@ export class EmailVerificationService {
    * @param userIdentifier - User's subject ID (e.g. auth0|123456789), username, or email — sent as raw string to auth-service which resolves it without JWT audience validation (same convention as getUserEmails)
    * @returns Array of Auth0 linked identities
    */
+  /**
+   * Non-throwing variant for callers that can degrade gracefully (e.g. email backfill).
+   * Returns an empty array on failure. Use listIdentities() when identity data is critical.
+   */
+  public async listIdentitiesSafe(req: Request, userIdentifier: string): Promise<Auth0Identity[]> {
+    try {
+      return await this.listIdentities(req, userIdentifier);
+    } catch (error) {
+      logger.warning(req, 'list_identities_safe', 'Identity list unavailable — continuing without it', { err: error });
+      return [];
+    }
+  }
+
   public async listIdentities(req: Request, userIdentifier: string): Promise<Auth0Identity[]> {
     const codec = this.natsService.getCodec();
 

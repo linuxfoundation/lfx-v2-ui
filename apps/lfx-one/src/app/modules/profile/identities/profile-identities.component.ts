@@ -219,8 +219,9 @@ export class ProfileIdentitiesComponent implements OnInit {
     return toSignal(
       this.refreshTrigger$.pipe(
         startWith(undefined),
-        switchMap(() =>
-          this.userService.getIdentities().pipe(
+        switchMap(() => {
+          this.identitiesLoadError.set(false);
+          return this.userService.getIdentities().pipe(
             catchError((err: HttpErrorResponse) => {
               if (err.status === 503) {
                 this.identitiesLoadError.set(true);
@@ -229,8 +230,8 @@ export class ProfileIdentitiesComponent implements OnInit {
               }
               return of([] as EnrichedIdentity[]);
             })
-          )
-        ),
+          );
+        }),
         map((identities): IdentitiesState => ({ identities, loaded: true }))
       ),
       { initialValue: { identities: [] as EnrichedIdentity[], loaded: false } }

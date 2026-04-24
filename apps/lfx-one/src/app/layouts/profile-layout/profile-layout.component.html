@@ -59,7 +59,7 @@
                 @if (username && username !== 'N/A') {
                   <div class="flex items-center gap-2" data-testid="profile-username">
                     <i class="fa-light fa-user w-4 text-center text-slate-400"></i>
-                    <span class="truncate">{{ username }}</span>
+                    <span class="truncate">&#64;{{ username }}</span>
                   </div>
                 }
                 @if (emailInfo()) {

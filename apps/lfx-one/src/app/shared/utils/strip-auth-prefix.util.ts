@@ -6,5 +6,6 @@ const LEGACY_USERNAME_MAX_LENGTH = 60;
 export function stripAuthPrefix(value: string | null | undefined): string {
   if (!value) return 'N/A';
   const stripped = value.startsWith('auth0|') ? value.slice(6) : value;
+  if (!stripped.trim()) return 'N/A';
   return stripped.length > LEGACY_USERNAME_MAX_LENGTH ? 'N/A' : stripped;
 }

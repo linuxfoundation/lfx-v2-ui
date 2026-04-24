@@ -346,7 +346,7 @@ export class ProfileController {
 
       const [freshEmails, identities] = await Promise.all([
         this.emailVerificationService.getUserEmails(req, userSub),
-        this.emailVerificationService.listIdentities(req, userSub),
+        this.emailVerificationService.listIdentitiesSafe(req, userSub),
       ]);
 
       const primaryEmail = freshEmails?.primary_email || sessionEmail;
@@ -603,11 +603,22 @@ export class ProfileController {
       const result = await this.emailVerificationService.changePassword(req, mgmtToken, current_password, new_password);
 
       if (!result.success) {
-        const msg = (result.message || result.error || '').toLowerCase();
-        const match = PASSWORD_ERROR_RULES.find((rule) => rule.pattern.test(msg));
+        const upstreamText = [result.error, result.message].filter(Boolean).join(' ').toLowerCase();
+        const match = PASSWORD_ERROR_RULES.find((rule) => rule.pattern.test(upstreamText));
         const { status, code, message } = match
-          ? { status: match.status, code: match.code, message: match.useUpstreamMessage ? result.message || match.message : match.message }
+          ? {
+              status: match.status,
+              code: match.code,
+              message: match.useUpstreamMessage ? result.message || result.error || match.message : match.message,
+            }
           : { status: 502, code: 'AUTH_SERVICE_ERROR', message: result.message || 'Failed to change password' };
+
+        if (!match) {
+          logger.warning(req, 'change_password', 'Unclassified password change failure — upstream message format may have changed', {
+            upstream_message: result.message,
+            upstream_error: result.error,
+          });
+        }
 
         return next(
           new MicroserviceError(message, status, code, {
