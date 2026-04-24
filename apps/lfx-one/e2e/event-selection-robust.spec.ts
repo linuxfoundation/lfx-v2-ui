@@ -22,7 +22,7 @@ async function mockEventRoutes(page: Page, { probeTotal = 0, mainStatus = 200 }:
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_COUNTRIES_RESPONSE) });
     }
     if (url.includes('/visa-requests') || url.includes('/travel-fund-requests') || url.includes('/organizations') || url.includes('/all')) {
-      return route.continue();
+      return route.fulfill({ status: mainStatus !== 200 ? mainStatus : 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
     }
 
     // Distinguish the pageSize=1 probe from the main paginated query via URL params.
