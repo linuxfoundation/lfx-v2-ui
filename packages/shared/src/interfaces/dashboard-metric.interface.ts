@@ -306,6 +306,38 @@ export interface ProjectCounts {
  */
 export type PresencePill = (typeof PRESENCE_PILL_IDS)[number];
 
+/**
+ * Three-state presence marker for an individual indicator (groups, mailing
+ * lists, chat) on the foundation projects row. `'pending'` = upstream request
+ * still in flight; `'present'` = confirmed non-zero count / truthy flag;
+ * `'absent'` = confirmed zero / falsy resolution.
+ */
+export type PresenceState = 'present' | 'absent' | 'pending';
+
+/**
+ * Pre-computed per-row display data for the foundation projects table.
+ * Derived once per row by a computed signal so the template can consume bare
+ * property reads (no component-method calls during change detection). Tooltip
+ * strings and presence-state enums are computed once per counts-update and
+ * reused across every CD cycle.
+ */
+export interface FoundationProjectRowView {
+  /** True when lens navigation has a trustworthy project-service UID to hand to `ProjectContextService`. */
+  lensReady: boolean;
+  /** Three-state marker for the groups icon — drives icon class bindings. */
+  groupsPresence: PresenceState;
+  /** Three-state marker for the mailing-lists icon. */
+  mailingListsPresence: PresenceState;
+  /** Three-state marker for the chat icon. */
+  chatPresence: PresenceState;
+  /** Tooltip / sr-only label for the groups icon, e.g. `"3 groups"`, `"1 group"`, or `"Loading"`. */
+  groupsText: string;
+  /** Tooltip / sr-only label for the mailing-lists icon. */
+  mailingListsText: string;
+  /** Tooltip / sr-only label for the chat icon — `"Chat configured"`, `"No chat configured"`, or `"Loading"`. */
+  chatText: string;
+}
+
 // ============================================
 // Health Metrics Page (Summary Cards)
 // ============================================

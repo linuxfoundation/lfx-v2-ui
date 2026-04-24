@@ -1,6 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import type { FoundationProjectRowView } from '../interfaces/dashboard-metric.interface';
+
 /**
  * Maximum number of concurrent HTTP request subscriptions fired by the
  * foundation projects page. Each project issues 2 requests (committees +
@@ -21,3 +23,19 @@ export const FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY = 8;
  * sync with the TypeScript union.
  */
 export const PRESENCE_PILL_IDS = ['all', 'with-groups', 'without-groups', 'with-channels', 'without-channels'] as const;
+
+/**
+ * Fallback row view used when the precomputed `projectRowViews` map has no
+ * entry for a given project slug (transient — e.g. a new project arriving
+ * before the view-computed has rebuilt). Mirrors a fully-pending row with
+ * all display labels set to `"Loading"`.
+ */
+export const DEFAULT_FOUNDATION_PROJECT_ROW_VIEW: FoundationProjectRowView = {
+  lensReady: false,
+  groupsPresence: 'pending',
+  mailingListsPresence: 'pending',
+  chatPresence: 'pending',
+  groupsText: 'Loading',
+  mailingListsText: 'Loading',
+  chatText: 'Loading',
+};

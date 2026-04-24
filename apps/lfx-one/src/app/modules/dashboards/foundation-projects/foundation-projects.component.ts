@@ -11,7 +11,13 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { StatCardGridComponent } from '@components/stat-card-grid/stat-card-grid.component';
 import { TableComponent } from '@components/table/table.component';
-import { DEFAULT_FOUNDATION_PROJECTS_DETAIL, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY, PRESENCE_PILL_IDS, UUID_REGEX } from '@lfx-one/shared/constants';
+import {
+  DEFAULT_FOUNDATION_PROJECT_ROW_VIEW,
+  DEFAULT_FOUNDATION_PROJECTS_DETAIL,
+  FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY,
+  PRESENCE_PILL_IDS,
+  UUID_REGEX,
+} from '@lfx-one/shared/constants';
 import { buildLensAwareInsightsUrl, hasAnyChannel } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { CommitteeService } from '@services/committee.service';
@@ -19,12 +25,14 @@ import { LensService } from '@services/lens.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
-import { catchError, combineLatest, finalize, from, map, mergeMap, Observable, of, scan, startWith, switchMap } from 'rxjs';
+import { bufferTime, catchError, combineLatest, filter, finalize, from, map, mergeMap, Observable, of, scan, startWith, switchMap } from 'rxjs';
 
 import type {
   FilterPillOption,
+  FoundationProjectRowView,
   FoundationProjectsDetailResponse,
   PresencePill,
+  PresenceState,
   ProjectCounts,
   ProjectTableRow,
   StatCardItem,
@@ -77,6 +85,13 @@ export class FoundationProjectsComponent {
   private readonly subProjectUidBySlug: Signal<Map<string, string>> = this.initSubProjectUidBySlug();
   protected readonly projectCounts: Signal<Map<string, ProjectCounts>> = this.initProjectCounts();
   protected readonly pillOptions: Signal<FilterPillOption[]> = this.initPillOptions();
+  // Per-row display data — lens-ready flag + pre-formatted tooltip / sr-only
+  // labels — keyed by project slug. Computed once per (projects ⊕ counts ⊕
+  // slug→uid) update so the template consumes bare property reads instead of
+  // component methods during change detection.
+  protected readonly projectRowViews: Signal<Map<string, FoundationProjectRowView>> = this.initProjectRowViews();
+  // Exposed so the template can `?? defaultRowView` without calling a getter.
+  protected readonly defaultRowView: FoundationProjectRowView = DEFAULT_FOUNDATION_PROJECT_ROW_VIEW;
 
   // === Protected Methods ===
   protected getInsightsUrl(slug: string): string {
@@ -85,18 +100,6 @@ export class FoundationProjectsComponent {
 
   protected openProjectLens(project: ProjectTableRow): void {
     this.navigateToProject(project, '/project/overview');
-  }
-
-  // True when lens navigation has a trustworthy canonical project-service UID
-  // to hand to ProjectContextService. Prefers the slug→uid map; falls back to
-  // Snowflake's PROJECT_ID only when it looks like a UUID (not a Salesforce ID).
-  protected canOpenProjectLens(project: ProjectTableRow): boolean {
-    if (this.subProjectUidBySlug().has(project.projectSlug)) return true;
-    return !!project.projectId && UUID_REGEX.test(project.projectId);
-  }
-
-  protected getCountFor(project: ProjectTableRow): ProjectCounts {
-    return this.projectCounts().get(project.projectSlug) ?? { committees: undefined, mailingLists: undefined, hasChat: undefined };
   }
 
   protected onPillChange(pillId: string): void {
@@ -300,16 +303,26 @@ export class FoundationProjectsComponent {
             this.countsLoading.set(false);
             return of(initialCounts);
           }
+          // Coalesce mergeMap results into ~50ms batches before folding them into
+          // the signal-backed Map. Without this, each of the 2N upstream responses
+          // emits a fresh Map and triggers downstream computeds (filter + pill
+          // options) to re-run — ~800 recomputes for a 400-project foundation.
+          // Buffering keeps the row-by-row "light up" feel visually intact while
+          // collapsing bursts into at most ~20 signal updates per second.
           return from(requests).pipe(
             mergeMap((req$) => req$, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY),
-            scan((acc, result) => {
-              const existing = acc.get(result.slug) ?? { committees: undefined, mailingLists: undefined, hasChat: undefined };
+            bufferTime(50),
+            filter((batch) => batch.length > 0),
+            scan((acc, batch) => {
               const next = new Map(acc);
-              next.set(result.slug, {
-                committees: result.committees ?? existing.committees,
-                mailingLists: result.mailingLists ?? existing.mailingLists,
-                hasChat: result.hasChat ?? existing.hasChat,
-              });
+              for (const result of batch) {
+                const existing = next.get(result.slug) ?? { committees: undefined, mailingLists: undefined, hasChat: undefined };
+                next.set(result.slug, {
+                  committees: result.committees ?? existing.committees,
+                  mailingLists: result.mailingLists ?? existing.mailingLists,
+                  hasChat: result.hasChat ?? existing.hasChat,
+                });
+              }
               return next;
             }, initialCounts),
             startWith(initialCounts),
@@ -350,7 +363,61 @@ export class FoundationProjectsComponent {
     });
   }
 
+  private initProjectRowViews(): Signal<Map<string, FoundationProjectRowView>> {
+    return computed(() => {
+      const projects = this.allProjects();
+      const counts = this.projectCounts();
+      const slugToUid = this.subProjectUidBySlug();
+      const views = new Map<string, FoundationProjectRowView>();
+      for (const project of projects) {
+        const row = counts.get(project.projectSlug);
+        const committees = row?.committees;
+        const mailingLists = row?.mailingLists;
+        const hasChat = row?.hasChat;
+        views.set(project.projectSlug, {
+          lensReady: this.resolveLensReady(project, slugToUid),
+          groupsPresence: this.countPresence(committees),
+          mailingListsPresence: this.countPresence(mailingLists),
+          chatPresence: this.booleanPresence(hasChat),
+          groupsText: this.formatCountLabel(committees, 'group', 'groups'),
+          mailingListsText: this.formatCountLabel(mailingLists, 'mailing list', 'mailing lists'),
+          chatText: this.formatChatLabel(hasChat),
+        });
+      }
+      return views;
+    });
+  }
+
   // === Private Helper Methods ===
+  private resolveLensReady(project: ProjectTableRow, slugToUid: Map<string, string>): boolean {
+    if (slugToUid.has(project.projectSlug)) return true;
+    return !!project.projectId && UUID_REGEX.test(project.projectId);
+  }
+
+  private countPresence(count: number | undefined): PresenceState {
+    if (count === undefined) return 'pending';
+    if (count > 0) return 'present';
+    return 'absent';
+  }
+
+  private booleanPresence(value: boolean | undefined): PresenceState {
+    if (value === undefined) return 'pending';
+    if (value) return 'present';
+    return 'absent';
+  }
+
+  private formatCountLabel(count: number | undefined, singular: string, plural: string): string {
+    if (count === undefined) return 'Loading';
+    if (count === 1) return `1 ${singular}`;
+    return `${count} ${plural}`;
+  }
+
+  private formatChatLabel(hasChat: boolean | undefined): string {
+    if (hasChat === undefined) return 'Loading';
+    if (hasChat) return 'Chat configured';
+    return 'No chat configured';
+  }
+
   private navigateToProject(project: ProjectTableRow, destination: string): void {
     // Resolve the canonical project-service UID from the foundation's sub-project
     // listing — this is the same identifier that committee/mailing-list tagging
