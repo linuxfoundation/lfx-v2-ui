@@ -71,10 +71,7 @@ export class ExecutiveDirectorDashboardComponent {
           }
 
           return this.projectService.getPendingActions(project.slug, project.uid, 'executive-director').pipe(
-            catchError((error) => {
-              console.error('Failed to fetch pending actions:', error);
-              return of([]);
-            })
+            catchError(() => of([]))
           );
         })
       ),

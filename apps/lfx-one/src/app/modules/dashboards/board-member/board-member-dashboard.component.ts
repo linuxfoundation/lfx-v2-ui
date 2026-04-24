@@ -62,10 +62,7 @@ export class BoardMemberDashboardComponent {
 
               // Fetch all pending actions from unified backend endpoint
               return this.projectService.getPendingActions(project.slug, project.uid, 'board-member').pipe(
-                catchError((error) => {
-                  console.error('Failed to fetch pending actions:', error);
-                  return of([]);
-                })
+                catchError(() => of([]))
               );
             })
           );
