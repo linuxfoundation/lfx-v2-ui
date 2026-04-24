@@ -8,6 +8,7 @@ import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
+import { generateM2MToken } from '../utils/m2m-token.util';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
@@ -220,12 +221,27 @@ export class VoteService {
   }
 
   /**
-   * Fetches aggregated vote results for a given vote
+   * Fetches aggregated vote results for a given vote.
+   *
+   * The upstream `/votes/:uid/results` endpoint requires the `results_viewer` FGA relation on the
+   * vote, which is only granted to voters (participants). Project admins and committee managers
+   * have `viewer` but not `results_viewer`, so their user bearer token would be rejected with 403.
+   * We use an M2M token here — the route is already authenticated and the user's access to the
+   * vote itself was already verified by the query-service when the vote list was fetched.
    */
   public async getVoteResults(req: Request, voteUid: string): Promise<VoteResultsResponse> {
     logger.debug(req, 'get_vote_results', 'Fetching vote results', { vote_uid: voteUid });
 
-    const results = await this.microserviceProxy.proxyRequest<VoteResultsResponse>(req, 'LFX_V2_SERVICE', `/votes/${voteUid}/results`, 'GET');
+    const m2mToken = await generateM2MToken(req);
+    const results = await this.microserviceProxy.proxyRequest<VoteResultsResponse>(
+      req,
+      'LFX_V2_SERVICE',
+      `/votes/${voteUid}/results`,
+      'GET',
+      undefined,
+      undefined,
+      { Authorization: `Bearer ${m2mToken}` }
+    );
 
     logger.debug(req, 'get_vote_results', 'Completed vote results fetch', {
       vote_uid: voteUid,
