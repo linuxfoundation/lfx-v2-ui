@@ -8,10 +8,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { SelectComponent } from '@components/select/select.component';
-import { COUNTRIES, TSHIRT_SIZES, US_STATES } from '@lfx-one/shared';
+import { COUNTRIES, normalizeTShirtSize, TSHIRT_SIZES, US_STATES } from '@lfx-one/shared';
 import { CombinedProfile, ProfileUpdateRequest, UserEmail, UserMetadata } from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
 import { UserService } from '@services/user.service';
+import { stripAuthPrefixOrNull } from '@app/shared/utils/strip-auth-prefix.util';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { finalize } from 'rxjs';
@@ -221,14 +222,14 @@ export class ProfileEditDialogComponent {
     this.profileForm.patchValue({
       given_name: profile.user.first_name || '',
       family_name: profile.user.last_name || '',
-      username: profile.user.username || '',
+      username: stripAuthPrefixOrNull(profile.user.username) ?? '',
       country: countryValue,
       state_province: profile.profile?.state_province || '',
       city: profile.profile?.city || '',
       address: profile.profile?.address || '',
       postal_code: profile.profile?.postal_code || '',
       phone_number: profile.profile?.phone_number || '',
-      t_shirt_size: profile.profile?.t_shirt_size || '',
+      t_shirt_size: normalizeTShirtSize(profile.profile?.t_shirt_size),
       job_title: profile.profile?.job_title || '',
       organization: profile.profile?.organization || '',
     });
