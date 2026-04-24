@@ -834,7 +834,7 @@ export class CommitteeService {
    * to keep the read pattern consistent with the rest of the service and with
    * {@link meeting.helper.ts} which uses the same `(username, committee_uid)` lookup.
    */
-  private async getCallerMembership(req: Request, committeeId: string): Promise<{ role: string; member_uid: string } | null> {
+  private async getCallerMembership(req: Request, committeeId: string): Promise<{ role: CommitteeMemberRole | 'Member'; member_uid: string } | null> {
     const username = await getUsernameFromAuth(req);
     if (!username) {
       return null;
