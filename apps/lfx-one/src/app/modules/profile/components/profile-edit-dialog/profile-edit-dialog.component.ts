@@ -11,7 +11,7 @@ import { SelectComponent } from '@components/select/select.component';
 import { COUNTRIES, TSHIRT_SIZES, US_STATES } from '@lfx-one/shared';
 import { CombinedProfile, ProfileUpdateRequest, UserEmail, UserMetadata } from '@lfx-one/shared/interfaces';
 import { markFormControlsAsTouched } from '@lfx-one/shared/utils';
-import { stripAuthPrefix } from '@app/shared/pipes/strip-auth-prefix.pipe';
+import { stripAuthPrefix } from '@app/shared/utils/strip-auth-prefix.util';
 import { UserService } from '@services/user.service';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -222,7 +222,7 @@ export class ProfileEditDialogComponent {
     this.profileForm.patchValue({
       given_name: profile.user.first_name || '',
       family_name: profile.user.last_name || '',
-      username: stripAuthPrefix(profile.user.username),
+      username: profile.user.username ? stripAuthPrefix(profile.user.username) : '',
       country: countryValue,
       state_province: profile.profile?.state_province || '',
       city: profile.profile?.city || '',

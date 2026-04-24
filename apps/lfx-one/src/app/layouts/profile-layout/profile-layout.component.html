@@ -55,10 +55,11 @@
 
               <!-- Column 2: Username & Email -->
               <div class="flex flex-col gap-2 text-xs text-slate-500">
-                @if (displayUsername() && displayUsername() !== 'N/A') {
+                @let username = displayUsername();
+                @if (username && username !== 'N/A') {
                   <div class="flex items-center gap-2" data-testid="profile-username">
                     <i class="fa-light fa-user w-4 text-center text-slate-400"></i>
-                    <span class="truncate">{{ displayUsername() }}</span>
+                    <span class="truncate">{{ username }}</span>
                   </div>
                 }
                 @if (emailInfo()) {

@@ -526,17 +526,14 @@ export class EmailVerificationService {
 
     logger.debug(req, 'list_identities', 'Listing user identities via NATS');
 
+    let parsed: ListIdentitiesNatsResponse;
     try {
-      const payload = JSON.stringify({
-        user: { auth_token: userIdentifier },
-      });
-
+      const payload = JSON.stringify({ user: { auth_token: userIdentifier } });
       const response = await this.natsService.request(NatsSubjects.USER_IDENTITY_LIST, codec.encode(payload), {
         timeout: NATS_CONFIG.REQUEST_TIMEOUT,
       });
-
       const responseText = codec.decode(response.data);
-      const parsed: ListIdentitiesNatsResponse = JSON.parse(responseText);
+      parsed = JSON.parse(responseText);
 
       logger.debug(req, 'list_identities', 'Raw NATS USER_IDENTITY_LIST response', {
         raw_response: responseText,
@@ -544,34 +541,27 @@ export class EmailVerificationService {
         parsed_data: parsed.data,
         parsed_error: parsed.error,
       });
-
-      if (!parsed.success || !parsed.data) {
-        logger.warning(req, 'list_identities', 'NATS identity list returned unsuccessful', {
-          error: parsed.error,
-          message: parsed.message,
-        });
-        throw new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
-          operation: 'list_identities',
-          service: 'email_verification_service',
-        });
-      }
-
-      logger.debug(req, 'list_identities', 'Fetched identities via NATS', {
-        identity_count: parsed.data.length,
-      });
-
-      return parsed.data;
     } catch (error) {
-      if (error instanceof MicroserviceError) {
-        throw error;
-      }
-      logger.warning(req, 'list_identities', 'Failed to list identities via NATS', {
-        err: error,
-      });
-      throw new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
-        operation: 'list_identities',
-        service: 'email_verification_service',
-      });
+      logger.warning(req, 'list_identities', 'Failed to list identities via NATS', { err: error });
+      throw this.authServiceUnavailable();
     }
+
+    if (!parsed.success || !parsed.data) {
+      logger.warning(req, 'list_identities', 'NATS identity list returned unsuccessful', {
+        error: parsed.error,
+        message: parsed.message,
+      });
+      throw this.authServiceUnavailable();
+    }
+
+    logger.debug(req, 'list_identities', 'Fetched identities via NATS', { identity_count: parsed.data.length });
+    return parsed.data;
+  }
+
+  private authServiceUnavailable(): MicroserviceError {
+    return new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
+      operation: 'list_identities',
+      service: 'email_verification_service',
+    });
   }
 }

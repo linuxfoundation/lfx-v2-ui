@@ -50,12 +50,9 @@ export class ProfileIdentitiesComponent implements OnInit {
   // Manual dismiss overrides the query-param-derived banner.
   private readonly conflictDismissed = signal(false);
   private readonly queryParams = toSignal(this.route.queryParams, { initialValue: this.route.snapshot.queryParams });
-  public readonly conflictBanner: Signal<{ linkedTo: string | null } | null> = computed(() => {
-    if (this.conflictDismissed()) return null;
-    const params = this.queryParams();
-    if (params?.['error'] !== 'already_linked') return null;
-    const linkedTo = params['linkedTo'] ? decodeURIComponent(params['linkedTo']) : null;
-    return { linkedTo };
+  public readonly conflictBanner: Signal<boolean> = computed(() => {
+    if (this.conflictDismissed()) return false;
+    return this.queryParams()?.['error'] === 'already_linked';
   });
 
   public readonly identities: Signal<ConnectedIdentityFull[]> = computed(() =>
@@ -105,13 +102,6 @@ export class ProfileIdentitiesComponent implements OnInit {
   public dismissConflictBanner(): void {
     this.conflictDismissed.set(true);
     this.clearQueryParams();
-  }
-
-  private clearQueryParams(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    // Use history API instead of router.navigate to avoid triggering route re-evaluation
-    // that could destroy component state or re-run lifecycle hooks.
-    window.history.replaceState({}, '', window.location.pathname);
   }
 
   public onVerify(identity: ConnectedIdentityFull): void {
@@ -165,6 +155,13 @@ export class ProfileIdentitiesComponent implements OnInit {
         this.refreshTrigger$.next();
       }
     });
+  }
+
+  private clearQueryParams(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    // Use history API instead of router.navigate to avoid triggering route re-evaluation
+    // that could destroy component state or re-run lifecycle hooks.
+    window.history.replaceState({}, '', window.location.pathname);
   }
 
   private openRemoveDialog(identity: ConnectedIdentityFull): void {

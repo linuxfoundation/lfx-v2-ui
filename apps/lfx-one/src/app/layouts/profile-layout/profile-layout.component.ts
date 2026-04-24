@@ -14,8 +14,18 @@ import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { BehaviorSubject, catchError, combineLatest, filter, map, of, startWith, switchMap, take } from 'rxjs';
 
-import { stripAuthPrefix } from '@app/shared/pipes/strip-auth-prefix.pipe';
+import { stripAuthPrefix } from '@app/shared/utils/strip-auth-prefix.util';
 import { ProfileEditDialogComponent } from '../../modules/profile/components/profile-edit-dialog/profile-edit-dialog.component';
+
+// Error codes that originate from the Flow C profile-auth (/passwordless/callback) flow.
+// Child routes (e.g. identities) handle their own error codes — do not swallow them here.
+const PROFILE_AUTH_ERROR_CODES = new Set([
+  'profile_auth_not_configured',
+  'profile_auth_failed',
+  'token_exchange_failed',
+  'login_session_invalid',
+  'user_mismatch',
+]);
 
 /**
  * ProfileLayoutComponent serves as the shell for all profile pages.
@@ -24,10 +34,6 @@ import { ProfileEditDialogComponent } from '../../modules/profile/components/pro
  * - Tab navigation (horizontal on desktop, dropdown on mobile)
  * - Router outlet for child components
  */
-// Error codes that originate from the Flow C profile-auth (/passwordless/callback) flow.
-// Child routes (e.g. identities) handle their own error codes — do not swallow them here.
-const PROFILE_AUTH_ERROR_CODES = new Set(['profile_auth_not_configured', 'profile_auth_failed', 'token_exchange_failed', 'login_session_invalid', 'user_mismatch']);
-
 @Component({
   selector: 'lfx-profile-layout',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, SelectComponent],
@@ -88,7 +94,7 @@ export class ProfileLayoutComponent {
     const data = this.profileData();
     if (!data) return 'U';
     const cleanUsername = stripAuthPrefix(data.username);
-    return data.firstName?.charAt(0).toUpperCase() || (cleanUsername !== 'N/A' ? cleanUsername.charAt(0).toUpperCase() : 'U') || 'U';
+    return data.firstName?.charAt(0).toUpperCase() || (cleanUsername !== 'N/A' ? cleanUsername.charAt(0).toUpperCase() : 'U');
   });
 
   public readonly jobTitle = computed(() => this.profileData()?.jobTitle || '');

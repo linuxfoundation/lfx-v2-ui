@@ -31,6 +31,36 @@ import { UserService } from '../services/user.service';
 import { getUsernameFromAuth } from '../utils/auth-helper';
 import { generateM2MToken } from '../utils/m2m-token.util';
 
+// Maps auth-service error strings to user-facing responses. First match wins; if
+// none match, the password-change path falls back to a generic 502.
+const PASSWORD_ERROR_RULES: readonly {
+  pattern: RegExp;
+  status: number;
+  code: string;
+  message: string;
+  useUpstreamMessage?: boolean;
+}[] = [
+  {
+    pattern: /wrong password|invalid password|incorrect password/,
+    status: 400,
+    code: 'INVALID_CURRENT_PASSWORD',
+    message: 'Your current password is incorrect.',
+  },
+  {
+    pattern: /password is too weak|password policy|does not meet/,
+    status: 400,
+    code: 'PASSWORD_POLICY_VIOLATION',
+    message: 'Your new password does not meet the password policy requirements.',
+    useUpstreamMessage: true,
+  },
+  {
+    pattern: /too many|rate limit|blocked/,
+    status: 429,
+    code: 'TOO_MANY_ATTEMPTS',
+    message: 'Too many password change attempts. Please wait a few minutes and try again.',
+  },
+];
+
 /**
  * Controller for handling profile HTTP requests
  */
@@ -573,45 +603,14 @@ export class ProfileController {
       const result = await this.emailVerificationService.changePassword(req, mgmtToken, current_password, new_password);
 
       if (!result.success) {
-        const msg = result.message || result.error || '';
-        const isWrongPassword =
-          msg.toLowerCase().includes('wrong password') || msg.toLowerCase().includes('invalid password') || msg.toLowerCase().includes('incorrect password');
-        const isPolicyViolation =
-          msg.toLowerCase().includes('password is too weak') || msg.toLowerCase().includes('password policy') || msg.toLowerCase().includes('does not meet');
-        const isRateLimit = msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('blocked');
-
-        if (isWrongPassword) {
-          return next(
-            new MicroserviceError('Your current password is incorrect.', 400, 'INVALID_CURRENT_PASSWORD', {
-              operation: 'change_password',
-              service: 'profile_controller',
-              path: req.path,
-            })
-          );
-        }
-
-        if (isPolicyViolation) {
-          return next(
-            new MicroserviceError(result.message || 'Your new password does not meet the password policy requirements.', 400, 'PASSWORD_POLICY_VIOLATION', {
-              operation: 'change_password',
-              service: 'profile_controller',
-              path: req.path,
-            })
-          );
-        }
-
-        if (isRateLimit) {
-          return next(
-            new MicroserviceError('Too many password change attempts. Please wait a few minutes and try again.', 429, 'TOO_MANY_ATTEMPTS', {
-              operation: 'change_password',
-              service: 'profile_controller',
-              path: req.path,
-            })
-          );
-        }
+        const msg = (result.message || result.error || '').toLowerCase();
+        const match = PASSWORD_ERROR_RULES.find((rule) => rule.pattern.test(msg));
+        const { status, code, message } = match
+          ? { status: match.status, code: match.code, message: match.useUpstreamMessage ? result.message || match.message : match.message }
+          : { status: 502, code: 'AUTH_SERVICE_ERROR', message: result.message || 'Failed to change password' };
 
         return next(
-          new MicroserviceError(result.message || 'Failed to change password', 502, 'AUTH_SERVICE_ERROR', {
+          new MicroserviceError(message, status, code, {
             operation: 'change_password',
             service: 'profile_controller',
             path: req.path,
@@ -1409,13 +1408,8 @@ export class ProfileController {
           social_sub: socialSub,
           is_already_linked: isAlreadyLinked,
         });
-        if (isAlreadyLinked) {
-          const linkedTo = encodeURIComponent(linkResponse.message?.match(/account:\s*(\S+)/)?.[1] || '');
-          const linkedToParam = linkedTo ? `&linkedTo=${linkedTo}` : '';
-          res.redirect(`${returnTo}?error=already_linked${linkedToParam}`);
-        } else {
-          res.redirect(`${returnTo}?error=link_failed`);
-        }
+        // Do not include the owning LFID — leaking it would enable account enumeration.
+        res.redirect(`${returnTo}?error=${isAlreadyLinked ? 'already_linked' : 'link_failed'}`);
         return;
       }
 
