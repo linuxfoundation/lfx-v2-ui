@@ -336,6 +336,8 @@ export class VoteService {
         name: raw.name,
       });
     }
-    return { ...raw, uid: uid ?? '' } as Vote;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { vote_uid: _discard, ...rest } = raw;
+    return { ...rest, uid: uid ?? '' };
   }
 }
