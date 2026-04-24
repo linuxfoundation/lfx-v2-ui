@@ -1294,8 +1294,7 @@ export class MeetingService {
    * the meeting as "never ends" rather than showing a specific end date.
    */
   private normalizeRecurrence(req: Request, recurrence: MeetingRecurrence): MeetingRecurrence {
-    const hasValidEndDateTime =
-      typeof recurrence.end_date_time === 'string' && recurrence.end_date_time.trim().length > 0;
+    const hasValidEndDateTime = typeof recurrence.end_date_time === 'string' && recurrence.end_date_time.trim().length > 0;
     const hasValidEndTimes = typeof recurrence.end_times === 'number' && recurrence.end_times > 0;
 
     if (hasValidEndDateTime || hasValidEndTimes) {
@@ -1303,6 +1302,7 @@ export class MeetingService {
     }
     logger.debug(req, 'normalize_recurrence', 'Stamping never-end sentinel — recurrence has no end condition', {
       end_date_time: RECURRENCE_NO_END_SENTINEL_DATE,
+      recurrence_type: recurrence.type,
     });
     return { ...recurrence, end_date_time: RECURRENCE_NO_END_SENTINEL_DATE };
   }

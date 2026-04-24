@@ -16,7 +16,6 @@ import {
   MAX_EARLY_JOIN_TIME,
   MEETING_STEP_TITLES,
   MIN_EARLY_JOIN_TIME,
-  RECURRENCE_NO_END_SENTINEL_DATE,
   STEPPER_SCROLL_OFFSET,
   TOTAL_STEPS,
 } from '@lfx-one/shared/constants';
@@ -41,6 +40,7 @@ import {
   generateRecurrenceObject,
   getDefaultStartDateTime,
   getUserTimezone,
+  isRecurrenceNeverEndSentinel,
   mapRecurrenceToFormValue,
 } from '@lfx-one/shared/utils';
 import { editModeDateTimeValidator, futureDateTimeValidator } from '@lfx-one/shared/validators';
@@ -781,12 +781,7 @@ export class MeetingManageComponent {
 
       let endTypeUI = 'never';
       const recurrenceEndDateTime = meeting.recurrence.end_date_time;
-      const parsedRecurrenceEndDateTime = recurrenceEndDateTime ? new Date(recurrenceEndDateTime) : null;
-      const parsedSentinelEndDateTime = new Date(RECURRENCE_NO_END_SENTINEL_DATE);
-      const hasValidRecurrenceEndDateTime = parsedRecurrenceEndDateTime !== null && !Number.isNaN(parsedRecurrenceEndDateTime.getTime());
-      const hasValidSentinelEndDateTime = !Number.isNaN(parsedSentinelEndDateTime.getTime());
-      const isSentinel =
-        hasValidRecurrenceEndDateTime && hasValidSentinelEndDateTime && parsedRecurrenceEndDateTime!.getTime() === parsedSentinelEndDateTime.getTime();
+      const isSentinel = isRecurrenceNeverEndSentinel(recurrenceEndDateTime);
       if (recurrenceEndDateTime && !isSentinel) endTypeUI = 'date';
       else if (meeting.recurrence.end_times) endTypeUI = 'occurrences';
 
@@ -1265,10 +1260,7 @@ export class MeetingManageComponent {
     if (recurrence.weekly_days && recurrence.weekly_days.split(',').length > 1) return true;
 
     // End conditions (end date or occurrence count) — exclude the sentinel, which means "never ends"
-    const endDateMs = recurrence.end_date_time ? new Date(recurrence.end_date_time).getTime() : NaN;
-    const sentinelMs = new Date(RECURRENCE_NO_END_SENTINEL_DATE).getTime();
-    const hasRealEndDateTime = Number.isFinite(endDateMs) && Number.isFinite(sentinelMs) && endDateMs !== sentinelMs;
-    if (hasRealEndDateTime) return true;
+    if (recurrence.end_date_time && !isRecurrenceNeverEndSentinel(recurrence.end_date_time)) return true;
     if ((recurrence.end_times ?? 0) > 0) return true;
 
     return false;
