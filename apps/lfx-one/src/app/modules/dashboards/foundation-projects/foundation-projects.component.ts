@@ -31,6 +31,11 @@ interface ProjectCounts {
 
 type PresencePill = 'all' | 'with-groups' | 'without-groups' | 'with-channels' | 'without-channels';
 
+// UUID v4 pattern — used to decide whether Snowflake's PROJECT_ID is safe to
+// use as a fallback project-service UID. Some foundations store a Salesforce
+// ID there instead; those must NEVER be passed to lens navigation.
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Limit concurrent per-project count fetches so a large foundation doesn't burst
 // N × 2 HTTP requests at once. Results are accumulated progressively so pill
 // counts and channel indicators update row-by-row as each project resolves.
@@ -110,6 +115,14 @@ export class FoundationProjectsComponent {
     this.navigateToProject(project, '/project/overview');
   }
 
+  // True when lens navigation has a trustworthy canonical project-service UID
+  // to hand to ProjectContextService. Prefers the slug→uid map; falls back to
+  // Snowflake's PROJECT_ID only when it looks like a UUID (not a Salesforce ID).
+  protected canOpenProjectLens(project: ProjectTableRow): boolean {
+    if (this.subProjectUidBySlug().has(project.projectSlug)) return true;
+    return !!project.projectId && UUID_V4_REGEX.test(project.projectId);
+  }
+
   protected getCountFor(project: ProjectTableRow): ProjectCounts {
     return this.projectCounts()[project.projectSlug] ?? { committees: 0, mailingLists: 0, hasChat: false };
   }
@@ -139,7 +152,15 @@ export class FoundationProjectsComponent {
           // Error handling lives in AnalyticsService.getFoundationProjectsDetail,
           // which returns `{ projects: [], totalCount: 0 }` on failure and evicts
           // the failed slug from its cache. No component-level catchError needed.
-          return this.analyticsService.getFoundationProjectsDetail(slug).pipe(finalize(() => this.loading.set(false)));
+          // `startWith(DEFAULT)` clears rawData immediately on slug change,
+          // symmetric with `subProjectUidBySlug`'s own startWith. Without it,
+          // `initProjectCounts`'s combineLatest could briefly pair the NEW
+          // slug→uid map with the OLD projects list and fire count fetches
+          // against the wrong data.
+          return this.analyticsService.getFoundationProjectsDetail(slug).pipe(
+            startWith(DEFAULT_FOUNDATION_PROJECTS_DETAIL),
+            finalize(() => this.loading.set(false))
+          );
         })
       ),
       { initialValue: DEFAULT_FOUNDATION_PROJECTS_DETAIL }
@@ -179,12 +200,14 @@ export class FoundationProjectsComponent {
   }
 
   private navigateToProject(project: ProjectTableRow, destination: string): void {
-    // Prefer the canonical project-service UID resolved from the foundation's
-    // sub-project listing; fall back to Snowflake's PROJECT_ID only if the
-    // sub-projects response hasn't landed or the slug isn't in the map. The
-    // resolved UID is the same identifier that committee/mailing-list tagging
-    // uses, so lens switching consistently lands on the right project.
-    const resolvedUid = this.subProjectUidBySlug().get(project.projectSlug) ?? project.projectId;
+    // Resolve the canonical project-service UID from the foundation's sub-project
+    // listing — this is the same identifier that committee/mailing-list tagging
+    // uses. Only fall back to Snowflake's PROJECT_ID when it's already a UUID;
+    // some foundations' PROJECT_ID is a Salesforce ID, which would lens-switch
+    // to the wrong (or invalid) project. If neither is available, no-op — the
+    // template's [disabled] binding should have blocked this click anyway.
+    const mappedUid = this.subProjectUidBySlug().get(project.projectSlug);
+    const resolvedUid = mappedUid ?? (project.projectId && UUID_V4_REGEX.test(project.projectId) ? project.projectId : undefined);
     if (!resolvedUid) {
       return;
     }

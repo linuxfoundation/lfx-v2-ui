@@ -55,7 +55,7 @@
           <th scope="col" class="text-right">Stars</th>
           <th scope="col" class="text-right">Contributors</th>
           <th scope="col" class="text-right">Commits (90d)</th>
-          <th scope="col"></th>
+          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
         </tr>
       </ng-template>
 
@@ -63,11 +63,12 @@
         @let counts = getCountFor(project);
         <tr [attr.data-testid]="'foundation-projects-row-' + project.projectSlug">
           <td>
+            @let lensReady = canOpenProjectLens(project);
             <button
               type="button"
               class="flex flex-col items-start border-none bg-transparent p-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
-              [disabled]="!project.projectId"
-              [attr.title]="!project.projectId ? 'Project lens unavailable for this row' : null"
+              [disabled]="!lensReady"
+              [attr.title]="!lensReady ? 'Project lens unavailable for this row' : null"
               (click)="openProjectLens(project)"
               [attr.data-testid]="'foundation-projects-name-' + project.projectSlug">
               <span class="lfx-table-name-link text-sm">{{ project.projectName }}</span>
