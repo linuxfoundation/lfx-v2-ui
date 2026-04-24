@@ -7,6 +7,7 @@ import {
   NATS_CONFIG,
   QUERY_SERVICE_FILTERS_OR_BATCH_SIZE,
   ROOT_PROJECT_SLUG,
+  TSHIRT_SIZES,
 } from '@lfx-one/shared/constants';
 import { NatsSubjects, PollStatus } from '@lfx-one/shared/enums';
 import {
@@ -177,8 +178,8 @@ export class UserService {
   public validateUserMetadata(metadata: UserMetadata): boolean {
     // Validate t-shirt size if provided
     if (metadata?.t_shirt_size) {
-      const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-      if (!validSizes.includes(metadata.t_shirt_size.toUpperCase())) {
+      const validSizes = TSHIRT_SIZES.map((s) => s.value);
+      if (!validSizes.includes(metadata.t_shirt_size as (typeof TSHIRT_SIZES)[number]['value'])) {
         throw new Error(`Invalid t-shirt size. Must be one of: ${validSizes.join(', ')}`);
       }
     }
