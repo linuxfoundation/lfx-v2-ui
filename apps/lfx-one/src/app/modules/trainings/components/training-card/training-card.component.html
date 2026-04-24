@@ -2,32 +2,46 @@
 <!-- SPDX-License-Identifier: MIT -->
 
 <lfx-card data-testid="training-card">
-  <div class="p-4 flex items-start gap-5">
-    <!-- Col 1: Logo -->
-    <div
-      class="flex-shrink-0 w-14 h-14 flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 border border-gray-100"
-      data-testid="training-card-image-container">
-      @if (hasImage()) {
-        <img
-          [src]="training().imageUrl"
-          [alt]="training().name"
-          class="w-14 h-14 object-cover scale-[1.16] origin-[center_60%]"
-          data-testid="training-card-image" />
-      } @else {
-        <i class="fa-light fa-book-open text-2xl text-gray-400" data-testid="training-card-icon-fallback"></i>
+  <div class="p-4 flex flex-col gap-3 md:flex-row md:items-start md:gap-5">
+    <!-- Top row on mobile: logo + level badge | Desktop: logo only (col 1) -->
+    <div class="flex items-start justify-between gap-3 md:block md:flex-shrink-0">
+      <!-- Logo -->
+      <div
+        class="flex-shrink-0 w-14 h-14 flex items-center justify-center overflow-hidden rounded-xl bg-gray-50 border border-gray-100"
+        data-testid="training-card-image-container">
+        @if (hasImage()) {
+          <img
+            [src]="training().imageUrl"
+            [alt]="training().name"
+            class="w-14 h-14 object-cover scale-[1.16] origin-[center_60%]"
+            data-testid="training-card-image" />
+        } @else {
+          <i class="fa-light fa-book-open text-2xl text-gray-400" data-testid="training-card-icon-fallback"></i>
+        }
+      </div>
+
+      <!-- Mobile-only level badge (shown next to logo) -->
+      @if (training().level) {
+        <span
+          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium md:hidden"
+          [ngClass]="levelClasses()"
+          data-testid="training-card-level-badge-mobile">
+          {{ training().level }}
+        </span>
       }
     </div>
 
     <!-- Col 2: Main content -->
     <div class="flex-1 min-w-0 flex flex-col gap-3">
-      <!-- Top row: name + level badge + issuedBy | action button -->
+      <!-- Top row: name + level badge + issuedBy | action button (desktop) / name only (mobile) -->
       <div class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-sm font-semibold text-gray-900 leading-snug" data-testid="training-card-name">{{ training().name }}</h3>
+            <!-- Desktop-only level badge -->
             @if (training().level) {
               <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
                 [ngClass]="levelClasses()"
                 data-testid="training-card-level-badge">
                 {{ training().level }}
@@ -37,8 +51,9 @@
           <p class="text-sm text-gray-500" data-testid="training-card-issued-by">{{ training().issuedBy }}</p>
         </div>
 
+        <!-- Desktop-only action buttons -->
         @if (isOngoing()) {
-          <div class="flex-shrink-0 flex items-center gap-2" data-testid="training-card-continue-action">
+          <div class="flex-shrink-0 hidden md:flex items-center gap-2" data-testid="training-card-continue-action">
             @if (isActiveEnrollment()) {
               <lfx-button
                 severity="primary"
@@ -69,7 +84,7 @@
             }
           </div>
         } @else if (downloadUrl()) {
-          <div class="flex-shrink-0" data-testid="training-card-actions">
+          <div class="flex-shrink-0 hidden md:block" data-testid="training-card-actions">
             <lfx-button
               severity="secondary"
               size="small"
@@ -94,7 +109,9 @@
       @if (!isOngoing() && completedIssuedDate()) {
         <div class="border-t border-gray-100 pt-3" data-testid="training-card-meta-row">
           <div class="flex items-center flex-wrap gap-2 text-xs text-gray-500" data-testid="training-card-meta">
-            <span data-testid="training-card-issued-date"> <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ completedIssuedDate() | date: 'MMM d, y' }} </span>
+            <span data-testid="training-card-issued-date">
+              <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ completedIssuedDate() | date: 'MMM d, y' }}
+            </span>
           </div>
         </div>
       }
@@ -121,9 +138,59 @@
               @if (timeSpent() || (showStatus() && statusLabel())) {
                 <span class="text-gray-300" aria-hidden="true">·</span>
               }
-              <span data-testid="training-card-date"> <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ enrolledDate() | date: 'MMM d, y' }} </span>
+              <span data-testid="training-card-date">
+                <i class="fa-light fa-calendar mr-1" aria-hidden="true"></i>{{ enrolledDate() | date: 'MMM d, y' }}
+              </span>
             }
           </div>
+        </div>
+      }
+
+      <!-- Mobile-only action buttons row -->
+      @if (isOngoing()) {
+        <div class="flex md:hidden items-center gap-2 pt-1" data-testid="training-card-continue-action-mobile">
+          @if (isActiveEnrollment()) {
+            <lfx-button
+              severity="primary"
+              size="small"
+              styleClass="whitespace-nowrap"
+              label="Continue Learning"
+              [href]="continueLearningUrl()"
+              target="_blank"
+              rel="noopener noreferrer"
+              [outlined]="true"
+              data-testid="training-card-continue-btn-mobile" />
+          } @else {
+            <span
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 border border-red-200 text-red-700"
+              data-testid="training-card-expired-badge-mobile">
+              Expired
+            </span>
+            <lfx-button
+              severity="primary"
+              size="small"
+              styleClass="whitespace-nowrap"
+              label="Enroll Again"
+              [href]="enrollAgainUrl()"
+              target="_blank"
+              rel="noopener noreferrer"
+              [outlined]="true"
+              data-testid="training-card-enroll-again-btn-mobile" />
+          }
+        </div>
+      } @else if (downloadUrl()) {
+        <div class="flex md:hidden pt-1" data-testid="training-card-actions-mobile">
+          <lfx-button
+            severity="secondary"
+            size="small"
+            styleClass="whitespace-nowrap"
+            label="Download Certificate"
+            icon="fa-light fa-arrow-down-to-line"
+            [href]="downloadUrl()!"
+            target="_blank"
+            rel="noopener noreferrer"
+            [outlined]="true"
+            data-testid="training-card-download-btn-mobile" />
         </div>
       }
     </div>
