@@ -283,14 +283,13 @@ feat(component): add new table component
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run unit tests (Karma)
 yarn test
 
-# Run tests in watch mode
-yarn test:watch
-
-# Run e2e tests
-yarn e2e
+# Playwright E2E suite
+yarn e2e             # headless, all browsers
+yarn e2e:ui          # Playwright UI mode
+yarn e2e:headed      # visible browser
 ```
 
 ### Test Requirements

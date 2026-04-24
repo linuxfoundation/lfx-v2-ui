@@ -118,8 +118,8 @@ yarn build
 # Check server logs
 yarn start:server
 
-# Test health endpoint
-curl http://localhost:4200/health
+# Test health endpoint (SSR server defaults to PORT 4000; override via $PORT)
+curl http://localhost:4000/health
 
 # Check environment variables
 echo $NODE_ENV
@@ -309,9 +309,9 @@ yarn build
 # Verify dependencies
 yarn install --check-files
 
-# Test SSR rendering
+# Test SSR rendering (SSR server defaults to PORT 4000; override via $PORT)
 yarn start:server
-curl http://localhost:4200/
+curl http://localhost:4000/
 ```
 
 ### Performance Analysis

@@ -84,4 +84,4 @@ lfx-v2-ui/
 └── docs/                 # You are here
 ```
 
-For runtime commands (`yarn start`, `yarn build`, `yarn e2e`, etc.), see the Commands section in [CLAUDE.md](../CLAUDE.md) or `docs/index.md`.
+For runtime commands (`yarn start`, `yarn build`, `yarn e2e`, etc.), see [docs/index.md](./index.md) or the Commands section in [README.md](../README.md).

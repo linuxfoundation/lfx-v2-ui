@@ -164,13 +164,15 @@ ng test
 
 ### End-to-End Tests
 
-For end-to-end (e2e) testing, run:
+End-to-end tests run via Playwright. From the repo root or this directory:
 
 ```bash
-ng e2e
+yarn e2e          # headless, all browsers
+yarn e2e:ui       # Playwright UI mode
+yarn e2e:headed   # visible browser
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+See [E2E Testing](../../docs/architecture/testing/e2e-testing.md) for the dual-architecture spec layout and `data-testid` conventions.
 
 ## Code Quality
 

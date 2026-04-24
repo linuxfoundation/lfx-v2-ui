@@ -8,7 +8,7 @@ Always choose the most specific, least brittle selector. In priority order:
 
 ### 1. `getByTestId()` — preferred for UI elements
 
-Survives copy, layout, styling, and library changes. Every LFX One component exposes its own testid surface, so feature specs should never reach below it with CSS selectors.
+Survives copy, layout, styling, and library changes. Every LFX One component exposes its own `data-testid` surface, so feature specs should never reach below it with CSS selectors.
 
 ```typescript
 // profile-identities-verify.spec.ts
@@ -34,7 +34,7 @@ await expect(page.getByText('No badges yet')).toBeVisible(); // ✓ asserting em
 
 ### 4. CSS selectors — last resort, prefix-scoped
 
-Only reach for raw CSS when querying a _set_ of testids sharing a prefix:
+Only reach for raw CSS when querying a _set_ of `data-testid`s sharing a prefix:
 
 ```typescript
 // badges-dashboard.spec.ts
@@ -82,7 +82,7 @@ await expect(grid.or(emptyState)).toBeVisible({ timeout: DATA_LOAD_TIMEOUT });
 
 ### Scope `networkidle` carefully
 
-`page.waitForLoadState('networkidle')` is useful for pages with heavy initial fetches, but it hangs on endpoints with persistent connections (SSE, WebSockets, long-poll). Prefer asserting on a specific "ready" testid instead:
+`page.waitForLoadState('networkidle')` is useful for pages with heavy initial fetches, but it hangs on endpoints with persistent connections (SSE, WebSockets, long-poll). Prefer asserting on a specific "ready" `data-testid` instead:
 
 ```typescript
 // ✓ deterministic
@@ -132,20 +132,20 @@ profile-identities                    # root section
       verify-btn-idf-2                # action (dynamic id)
 ```
 
-Don't bury an element's testid inside an ancestor-specific prefix if the element itself is reused elsewhere — prefer the element-level testid and chain locators if you need scoping:
+Don't bury an element's `data-testid` inside an ancestor-specific prefix if the element itself is reused elsewhere — prefer the element-level `data-testid` and chain locators if you need scoping:
 
 ```typescript
 // ✓ chain locators
 const section = page.getByTestId('unverified-identities-section');
 await expect(section.getByTestId('identity-row-idf-2')).toBeVisible();
 
-// ✗ proliferates testids
+// ✗ proliferates test IDs
 await expect(page.getByTestId('unverified-identities-section-identity-row-idf-2')).toBeVisible();
 ```
 
-### Encode identity in dynamic testids
+### Encode identity in dynamic `data-testid`s
 
-When a list needs per-item assertions, encode the stable identifier in the testid rather than relying on nth-child:
+When a list needs per-item assertions, encode the stable identifier in the `data-testid` rather than relying on nth-child:
 
 ```html
 <!-- template pattern -->
@@ -222,7 +222,7 @@ test.describe('Identities Verify Flow - Robust Tests', () => {
   });
 
   test.describe('Row actions', () => {
-    test('should have verify-btn testids only on unverified rows', ...);
+    test('should have verify-btn `data-testid`s only on unverified rows', ...);
   });
 });
 ```
@@ -231,7 +231,7 @@ Each inner describe maps to one user-facing concern, which keeps failures easy t
 
 ## Anti-Patterns
 
-- **Asserting before navigation settles.** `page.goto()` returns when the HTTP response lands, not when Angular has rendered. Always chain an `expect(...).toBeVisible()` on a "ready" testid before other assertions.
+- **Asserting before navigation settles.** `page.goto()` returns when the HTTP response lands, not when Angular has rendered. Always chain an `expect(...).toBeVisible()` on a "ready" `data-testid` before other assertions.
 - **Relying on test order.** Tests run in parallel by default. Don't write "test 2 depends on test 1 having created a record." Each test should set up its own state.
 - **Hardcoding response bodies in assertions.** `expect(row).toContainText('jdoe@company.org')` is fine for fixture-backed specs; for real-API specs, assert on a shape or pattern instead.
 - **Over-mocking.** The purpose of E2E is to exercise integration. Mock only the endpoint you're trying to failover — leave everything else live against the dev server.

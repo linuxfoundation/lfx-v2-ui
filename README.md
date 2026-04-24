@@ -315,7 +315,7 @@ yarn build          # Verify the production build
 yarn e2e            # Run the Playwright E2E suite (when applicable)
 ```
 
-Commit messages must follow Angular conventional-commit format and are validated by **commitlint** (`@commitlint/config-angular`). Commits must be signed off (`git commit -s`) to satisfy DCO — see the [Contributing Guide](CONTRIBUTING.md) for accepted types and signoff details.
+Commit messages must follow Angular conventional-commit format and are validated by **commitlint** (`@commitlint/config-angular`). Commits must be signed off (`git commit -s`) to satisfy DCO — see the [Contributing Guide](CONTRIBUTING.md) for accepted types and sign-off details.
 
 **Note**: All source files must include the MIT license header. `./check-headers.sh` validates locally and the pre-commit hook enforces it.
 
@@ -331,7 +331,7 @@ ng generate guard my-guard
 
 ### Using PrimeNG Components
 
-PrimeNG components are **not** used directly in feature code. Every PrimeNG component is wrapped by a thin `lfx-*` component under `apps/lfx-one/src/app/shared/components/` — this gives LFX One UI-library independence and a consistent signal-based API. When building a feature, import the LFX wrapper:
+Feature code can import `primeng/*` directly, but the preferred path for new code is the thin `lfx-*` wrapper components under `apps/lfx-one/src/app/shared/components/`. The wrappers give LFX One UI-library independence and a consistent signal-based API; several feature modules still import PrimeNG modules directly today, and migrating them to wrappers is an ongoing effort. When building a new feature, prefer the wrapper:
 
 ```typescript
 import { ButtonComponent } from '@app/shared/components/button/button.component';
@@ -352,7 +352,7 @@ export class ExampleComponent {}
 </lfx-card>
 ```
 
-Direct imports from `primeng/*` belong only inside the wrapper components themselves. See the [Component Architecture](docs/architecture/frontend/component-architecture.md) doc for the wrapper pattern in full.
+See the [Component Architecture](docs/architecture/frontend/component-architecture.md) doc for the wrapper pattern in full and for guidance on when to add a new wrapper vs. import PrimeNG directly.
 
 ## Technology Stack
 

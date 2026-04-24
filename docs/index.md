@@ -100,8 +100,9 @@ yarn format         # Format code with Prettier
 yarn format:check   # Check formatting without fixing
 
 # Testing
-yarn test           # Run unit tests
-yarn test:watch     # Run tests in watch mode
+yarn test           # Run unit tests (Karma)
+yarn e2e            # Playwright E2E suite (headless)
+yarn e2e:ui         # Playwright UI mode
 ```
 
 ### Common Commands
