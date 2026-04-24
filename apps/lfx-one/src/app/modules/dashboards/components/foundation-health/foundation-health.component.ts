@@ -317,6 +317,8 @@ export class FoundationHealthComponent {
   private transformSoftwareValue(metric: DashboardMetricCard): DashboardMetricCard {
     const data = this.softwareValueData();
 
+    // Incremental bucket values: top1, top2-3, top4-5, all others.
+    // Clamp to 0 so a non-monotonic API response can't render a negative segment.
     const bucketLabels = ['Top 1', 'Top 2-3', 'Top 4-5', 'All Others'];
     const bucketValues = [
       Math.max(0, data.top1Value),
@@ -347,10 +349,8 @@ export class FoundationHealthComponent {
         },
         datasets: {
           bar: {
-            barPercentage: 0.9,
-            categoryPercentage: 0.95,
+            ...this.barChartOptions.datasets?.bar,
             borderRadius: 0,
-            borderSkipped: false,
           },
         },
         interaction: { mode: 'nearest' as const, intersect: true },
