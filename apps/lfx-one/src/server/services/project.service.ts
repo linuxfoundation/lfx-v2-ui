@@ -1505,6 +1505,7 @@ export class ProjectService {
 
     const query = `
       SELECT
+        PROJECT_ID,
         PROJECT_NAME,
         PROJECT_SLUG,
         LIFECYCLE_STAGE,
@@ -1521,19 +1522,18 @@ export class ProjectService {
     try {
       const result = await this.snowflakeService.execute<FoundationProjectsDetailRow>(query, [foundationSlug]);
 
-      const projects = result.rows
-        .filter((row): row is typeof row & { LIFECYCLE_STAGE: string } => row.LIFECYCLE_STAGE != null)
-        .map((row) => ({
-          id: row.PROJECT_SLUG,
-          projectName: row.PROJECT_NAME,
-          projectSlug: row.PROJECT_SLUG,
-          lifecycleStage: row.LIFECYCLE_STAGE as LifecycleStage,
-          activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
-          commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
-          maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
-          stars: row.STARS_YTD_COUNT ?? 0,
-          lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
-        }));
+      const projects = result.rows.map((row) => ({
+        id: row.PROJECT_SLUG,
+        projectId: row.PROJECT_ID,
+        projectName: row.PROJECT_NAME,
+        projectSlug: row.PROJECT_SLUG,
+        lifecycleStage: (row.LIFECYCLE_STAGE as LifecycleStage) ?? null,
+        activeContributors: row.CONTRIBUTORS_90D_COUNT ?? 0,
+        commitsLast90Days: row.COMMITS_90D_COUNT ?? 0,
+        maintainers: row.MAINTAINERS_YTD_COUNT ?? 0,
+        stars: row.STARS_YTD_COUNT ?? 0,
+        lastUpdated: row.LAST_UPDATED_TS ? new Date(row.LAST_UPDATED_TS).toISOString().split('T')[0] : null,
+      }));
 
       logger.debug(undefined, 'get_foundation_projects_detail', 'Fetched project detail rows', { count: projects.length });
 

@@ -250,13 +250,16 @@ export enum LifecycleStage {
 
 /**
  * Project row for the total projects drill-down table
- * @description Represents a single project with key health and activity metrics
+ * @description Represents a single project with key health and activity metrics.
+ * `lifecycleStage` is nullable because newer foundations may have projects indexed
+ * before their lifecycle classification is assigned.
  */
 export interface ProjectTableRow {
   id: string;
+  projectId: string;
   projectName: string;
   projectSlug: string;
-  lifecycleStage: LifecycleStage;
+  lifecycleStage: LifecycleStage | null;
   activeContributors: number;
   commitsLast90Days: number;
   maintainers: number;
