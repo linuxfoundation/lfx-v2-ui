@@ -19,21 +19,17 @@ const EMPTY_COUNTRIES_RESPONSE = { data: [] };
 async function openVisaDialogWithEmptyEvents(page: Parameters<typeof test>[1]['page']) {
   await page.route('**/api/events**', (route) => {
     const url = route.request().url();
-    if (
-      url.includes('/countries') ||
-      url.includes('/visa-requests') ||
-      url.includes('/travel-fund-requests') ||
-      url.includes('/organizations') ||
-      url.includes('/all')
-    ) {
+    // Countries must be fulfilled here — a separate route for **/api/events/countries
+    // would never be reached because this broader handler matches first and route.continue()
+    // short-circuits before the more-specific handler runs.
+    if (url.includes('/countries')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_COUNTRIES_RESPONSE) });
+    }
+    if (url.includes('/visa-requests') || url.includes('/travel-fund-requests') || url.includes('/organizations') || url.includes('/all')) {
       return route.continue();
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_EVENTS_RESPONSE) });
   });
-
-  await page.route('**/api/events/countries', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_COUNTRIES_RESPONSE) })
-  );
 
   await page.goto('/me/events', { waitUntil: 'domcontentloaded' });
   await expect(page).not.toHaveURL(/auth0\.com/);
@@ -138,20 +134,14 @@ test.describe('Event Selection — Robust Structural Tests', () => {
     test('travel funding dialog shows "No registered events" title', async ({ page }) => {
       await page.route('**/api/events**', (route) => {
         const url = route.request().url();
-        if (
-          url.includes('/countries') ||
-          url.includes('/visa-requests') ||
-          url.includes('/travel-fund-requests') ||
-          url.includes('/organizations') ||
-          url.includes('/all')
-        ) {
+        if (url.includes('/countries')) {
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_COUNTRIES_RESPONSE) });
+        }
+        if (url.includes('/visa-requests') || url.includes('/travel-fund-requests') || url.includes('/organizations') || url.includes('/all')) {
           return route.continue();
         }
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_EVENTS_RESPONSE) });
       });
-      await page.route('**/api/events/countries', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_COUNTRIES_RESPONSE) })
-      );
 
       await page.goto('/me/events', { waitUntil: 'domcontentloaded' });
       await expect(page).not.toHaveURL(/auth0\.com/);
