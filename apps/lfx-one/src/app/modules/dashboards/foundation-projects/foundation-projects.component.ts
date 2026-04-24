@@ -14,7 +14,7 @@ import { buildLensAwareInsightsUrl } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, filter, finalize, of, switchMap, tap } from 'rxjs';
+import { catchError, filter, finalize, of, switchMap } from 'rxjs';
 
 import type { FoundationProjectsDetailResponse, ProjectTableRow, StatCardItem } from '@lfx-one/shared/interfaces';
 
@@ -73,13 +73,17 @@ export class FoundationProjectsComponent {
     return toSignal(
       toObservable(this.foundationSlug).pipe(
         filter((slug) => !!slug),
-        tap(() => this.loading.set(true)),
-        switchMap((slug) =>
-          this.analyticsService.getFoundationProjectsDetail(slug).pipe(
+        switchMap((slug) => {
+          // Set loading inside switchMap so that on rapid slug changes the order is:
+          // old inner's `finalize(false)` (switchMap cancels it) → new inner's `loading.set(true)`.
+          // Putting `loading.set(true)` in an outer `tap` would make the ordering
+          // implementation-dependent when new slugs arrive while a request is in flight.
+          this.loading.set(true);
+          return this.analyticsService.getFoundationProjectsDetail(slug).pipe(
             catchError(() => of(DEFAULT_FOUNDATION_PROJECTS_DETAIL)),
             finalize(() => this.loading.set(false))
-          )
-        )
+          );
+        })
       ),
       { initialValue: DEFAULT_FOUNDATION_PROJECTS_DETAIL }
     );

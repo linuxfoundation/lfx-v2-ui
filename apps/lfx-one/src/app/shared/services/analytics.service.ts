@@ -71,7 +71,7 @@ import {
   MarketingAttributionResponse,
   MultiFoundationSummaryResponse,
 } from '@lfx-one/shared/interfaces';
-import { catchError, Observable, of } from 'rxjs';
+import { catchError, Observable, of, shareReplay } from 'rxjs';
 
 /**
  * Analytics service for fetching analytics data from Snowflake
@@ -82,6 +82,11 @@ import { catchError, Observable, of } from 'rxjs';
 })
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
+
+  // Per-slug request cache for the foundation projects detail response. Lets the
+  // sidebar (Projects nav visibility check) and the Projects page share one
+  // request per foundation instead of each firing its own.
+  private readonly foundationProjectsDetailCache = new Map<string, Observable<FoundationProjectsDetailResponse>>();
 
   /**
    * Get active weeks streak data for the current user
@@ -287,11 +292,14 @@ export class AnalyticsService {
    * @param foundationSlug - Required foundation slug (e.g., 'cncf', 'tlf')
    */
   public getFoundationProjectsDetail(foundationSlug: string): Observable<FoundationProjectsDetailResponse> {
-    return this.http.get<FoundationProjectsDetailResponse>('/api/analytics/foundation-projects-detail', { params: { foundationSlug } }).pipe(
-      catchError(() => {
-        return of({ projects: [], totalCount: 0 });
-      })
-    );
+    if (!this.foundationProjectsDetailCache.has(foundationSlug)) {
+      const req$ = this.http.get<FoundationProjectsDetailResponse>('/api/analytics/foundation-projects-detail', { params: { foundationSlug } }).pipe(
+        catchError(() => of({ projects: [], totalCount: 0 })),
+        shareReplay(1)
+      );
+      this.foundationProjectsDetailCache.set(foundationSlug, req$);
+    }
+    return this.foundationProjectsDetailCache.get(foundationSlug)!;
   }
 
   /**
