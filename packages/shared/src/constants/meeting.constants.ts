@@ -367,7 +367,7 @@ export const MEETING_FORM_STEPS = {
  * (meeting-manage form population) must agree on this constant so the UI can
  * distinguish "never ends" from a user-selected date.
  */
-export const RECURRENCE_NO_END_SENTINEL_DATE = '2999-12-31T23:59:59Z';
+export const RECURRENCE_NO_END_SENTINEL_DATE = '2999-12-31T23:59:59.000Z';
 
 /**
  * Recurrence type string mappings

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { Pipe, PipeTransform } from '@angular/core';
-import { buildRecurrenceSummary, CustomRecurrencePattern, MeetingRecurrence } from '@lfx-one/shared';
+import { buildRecurrenceSummary, CustomRecurrencePattern, MeetingRecurrence, RECURRENCE_NO_END_SENTINEL_DATE } from '@lfx-one/shared';
 
 @Pipe({
   name: 'recurrenceSummary',
@@ -50,9 +50,10 @@ export class RecurrenceSummaryPipe implements PipeTransform {
       monthlyType = 'dayOfWeek';
     }
 
-    // Determine end type
+    // Determine end type — sentinel means "never ends", not a real user-chosen date
     let endType: 'never' | 'date' | 'occurrences' = 'never';
-    if (recurrence.end_date_time) endType = 'date';
+    const hasRealEndDate = recurrence.end_date_time && recurrence.end_date_time !== RECURRENCE_NO_END_SENTINEL_DATE;
+    if (hasRealEndDate) endType = 'date';
     else if (endTimes) endType = 'occurrences';
 
     // Convert weekly_days to array if present

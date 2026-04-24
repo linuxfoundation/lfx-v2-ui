@@ -780,8 +780,17 @@ export class MeetingManageComponent {
       else if (meeting.recurrence.monthly_week && meeting.recurrence.monthly_week_day) monthlyTypeUI = 'dayOfWeek';
 
       let endTypeUI = 'never';
-      const isSentinel = meeting.recurrence.end_date_time === RECURRENCE_NO_END_SENTINEL_DATE;
-      if (meeting.recurrence.end_date_time && !isSentinel) endTypeUI = 'date';
+      const recurrenceEndDateTime = meeting.recurrence.end_date_time;
+      const parsedRecurrenceEndDateTime = recurrenceEndDateTime ? new Date(recurrenceEndDateTime) : null;
+      const parsedSentinelEndDateTime = new Date(RECURRENCE_NO_END_SENTINEL_DATE);
+      const hasValidRecurrenceEndDateTime =
+        parsedRecurrenceEndDateTime !== null && !Number.isNaN(parsedRecurrenceEndDateTime.getTime());
+      const hasValidSentinelEndDateTime = !Number.isNaN(parsedSentinelEndDateTime.getTime());
+      const isSentinel =
+        hasValidRecurrenceEndDateTime &&
+        hasValidSentinelEndDateTime &&
+        parsedRecurrenceEndDateTime!.getTime() === parsedSentinelEndDateTime.getTime();
+      if (recurrenceEndDateTime && !isSentinel) endTypeUI = 'date';
       else if (meeting.recurrence.end_times) endTypeUI = 'occurrences';
 
       // Set the pattern type UI control if this is custom recurrence
@@ -1258,8 +1267,9 @@ export class MeetingManageComponent {
     // Multiple days selected for weekly
     if (recurrence.weekly_days && recurrence.weekly_days.split(',').length > 1) return true;
 
-    // End conditions (end date or occurrence count)
-    if (recurrence.end_date_time || recurrence.end_times) return true;
+    // End conditions (end date or occurrence count) — exclude the sentinel, which means "never ends"
+    if (recurrence.end_date_time && recurrence.end_date_time !== RECURRENCE_NO_END_SENTINEL_DATE) return true;
+    if (recurrence.end_times) return true;
 
     return false;
   }
