@@ -1,6 +1,7 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
+import { HttpParams } from '@angular/common/http';
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -14,7 +15,8 @@ import { buildLensAwareInsightsUrl } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { LensService } from '@services/lens.service';
 import { ProjectContextService } from '@services/project-context.service';
-import { catchError, finalize, of, switchMap } from 'rxjs';
+import { ProjectService } from '@services/project.service';
+import { catchError, finalize, map, of, startWith, switchMap } from 'rxjs';
 
 import type { FoundationProjectsDetailResponse, ProjectTableRow, StatCardItem } from '@lfx-one/shared/interfaces';
 
@@ -28,6 +30,7 @@ export class FoundationProjectsComponent {
   // === Services ===
   private readonly projectContextService = inject(ProjectContextService);
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly projectService = inject(ProjectService);
   private readonly lensService = inject(LensService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -49,6 +52,12 @@ export class FoundationProjectsComponent {
   protected readonly totalProjects: Signal<number> = computed(() => this.allProjects().length);
   protected readonly summaryCards: Signal<StatCardItem[]> = this.initSummaryCards();
   protected readonly filteredProjects: Signal<ProjectTableRow[]> = this.initFilteredProjects();
+  // Canonical project-service UIDs keyed by slug, resolved once per foundation change.
+  // Used by openProjectLens so lens switching uses the proper upstream UID instead of
+  // Snowflake's PROJECT_ID, which may be a Salesforce ID for some foundations per
+  // ProjectTableRow JSDoc. `startWith(new Map())` inside the inner switchMap clears
+  // any stale map from the previous foundation while the new request is in flight.
+  private readonly subProjectUidBySlug: Signal<Map<string, string>> = this.initSubProjectUidBySlug();
 
   // === Protected Methods ===
   protected getInsightsUrl(slug: string): string {
@@ -56,11 +65,18 @@ export class FoundationProjectsComponent {
   }
 
   protected openProjectLens(project: ProjectTableRow): void {
-    if (!project.projectId) {
+    // Prefer the canonical project-service UID resolved from the foundation's
+    // sub-project listing; fall back to Snowflake's PROJECT_ID only if the
+    // sub-projects response hasn't landed or the slug isn't in the map. The
+    // resolved UID is the identifier committee/mailing-list tagging uses, so
+    // lens switching consistently lands on the right project instead of
+    // tripping on Salesforce-vs-UUID ambiguity.
+    const resolvedUid = this.subProjectUidBySlug().get(project.projectSlug) ?? project.projectId;
+    if (!resolvedUid) {
       return;
     }
     this.projectContextService.setProject({
-      uid: project.projectId,
+      uid: resolvedUid,
       name: project.projectName,
       slug: project.projectSlug,
     });
@@ -136,5 +152,41 @@ export class FoundationProjectsComponent {
       }
       return this.allProjects().filter((project) => project.projectName.toLowerCase().includes(query));
     });
+  }
+
+  // Resolve slug → project-service UID for every sub-project of the current foundation.
+  // Snowflake's PROJECT_ID is foundation-specific and may be a Salesforce ID rather
+  // than the canonical project-service UUID used by committee/mailing-list tagging,
+  // so we fetch the sub-projects once per foundation change and build an authoritative
+  // slug→uid map. `startWith(new Map())` inside the inner switchMap clears the map
+  // when a new slug arrives so a stale mapping from the previous foundation can't
+  // leak through if slugs happen to overlap.
+  private initSubProjectUidBySlug(): Signal<Map<string, string>> {
+    return toSignal(
+      toObservable(this.foundationSlug).pipe(
+        switchMap((slug) => {
+          if (!slug) {
+            return of(new Map<string, string>());
+          }
+          const foundationUid = this.projectContextService.selectedFoundation()?.uid;
+          if (!foundationUid) {
+            return of(new Map<string, string>());
+          }
+          const params = new HttpParams().set('parent', `project:${foundationUid}`);
+          return this.projectService.getProjects(params).pipe(
+            map((subProjects) => {
+              const slugToUid = new Map<string, string>();
+              for (const sub of subProjects) {
+                if (sub.slug && sub.uid) slugToUid.set(sub.slug, sub.uid);
+              }
+              return slugToUid;
+            }),
+            startWith(new Map<string, string>()),
+            catchError(() => of(new Map<string, string>()))
+          );
+        })
+      ),
+      { initialValue: new Map<string, string>() }
+    );
   }
 }
