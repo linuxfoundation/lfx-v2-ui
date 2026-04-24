@@ -33,10 +33,18 @@
     <!-- Committee Dashboard Content -->
     <div class="flex flex-col gap-6">
       <!-- Header Section -->
-      <div class="flex flex-col gap-3" data-testid="committee-view-header">
-        <lfx-breadcrumb [model]="breadcrumbItems()" data-testid="committee-view-breadcrumb"></lfx-breadcrumb>
+      <lfx-card styleClass="[&_.p-card-body]:!p-0" data-testid="committee-view-header">
+        <div class="px-6 pt-5 pb-4 flex flex-col gap-4">
+          <!-- Back link -->
+          <button
+            class="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors w-fit"
+            (click)="goBack()"
+            data-testid="committee-view-back-link">
+            <i class="fa-light fa-angle-left text-xs"></i>
+            {{ backLabel() }}
+          </button>
         <div class="flex items-center gap-3">
-          <h1 data-testid="committee-view-name">{{ committee()?.name }}</h1>
+          <h1 class="font-display font-light text-[20px]" data-testid="committee-view-name">{{ committee()?.name }}</h1>
           @if (!committee()?.public) {
             <i class="fa-light fa-lock w-4 h-4 text-gray-400"></i>
           }
@@ -93,18 +101,6 @@
                 (onClick)="handleLeaveRequest()"
                 data-testid="committee-view-leave-btn" />
             }
-            @if (canEdit() || canReview()) {
-              <lfx-button
-                icon="fa-light fa-gear"
-                [text]="true"
-                [rounded]="true"
-                size="small"
-                [severity]="showSettings() ? 'primary' : 'secondary'"
-                [tooltip]="showSettings() ? 'Hide settings tab' : 'Show settings tab'"
-                [ariaLabel]="showSettings() ? 'Hide settings tab' : 'Show settings tab'"
-                (onClick)="toggleSettings()"
-                data-testid="committee-view-settings-toggle" />
-            }
           </div>
         </div>
         <!-- Description + Channels card side by side -->
@@ -114,14 +110,7 @@
             @if (committee()?.description || canEdit()) {
               <div class="flex items-start gap-2 max-w-2xl" data-testid="committee-view-description">
                 @if (committee()?.description) {
-                  <p class="text-gray-500 line-clamp-2 flex-1">{{ committee()?.description }}</p>
-                  <lfx-button
-                    label="more"
-                    [text]="true"
-                    size="small"
-                    severity="info"
-                    styleClass="!text-xs !p-0 whitespace-nowrap"
-                    (onClick)="openDescriptionView()"></lfx-button>
+                  <p class="text-gray-500 flex-1 text-sm">{{ committee()?.description }}</p>
                 } @else if (canEdit()) {
                   <span class="text-gray-400 text-sm italic flex-1">No description yet.</span>
                 }
@@ -378,29 +367,27 @@
             </div>
           }
         </div>
-      </div>
+        </div>
 
-      <!-- Tabs -->
-      <div class="flex gap-1 border-b" data-testid="committee-view-tabs">
-        @for (tab of visibleTabs(); track tab.key) {
-          <button
-            (click)="activeTab.set(tab.key)"
-            class="px-4 py-2 text-sm font-medium transition-colors"
-            [ngClass]="{
-              'border-b-2 border-blue-600 text-blue-600': activeTab() === tab.key,
-              'text-gray-500': activeTab() !== tab.key,
-            }">
-            <i class="fa-light {{ tab.icon }} mr-2"></i>{{ tab.label }}
-            @if (tab.badge && tab.badge() !== null) {
-              <lfx-tag
-                [value]="'' + tab.badge()"
-                [rounded]="true"
-                [severity]="activeTab() === tab.key ? 'info' : 'secondary'"
-                styleClass="ml-1 !text-[10px] !px-1.5 !py-0.5" />
-            }
-          </button>
-        }
-      </div>
+        <!-- Tabs strip -->
+        <div class="border-t border-gray-200 px-6 py-4 flex gap-2 flex-wrap" data-testid="committee-view-tabs">
+          @for (tab of visibleTabs(); track tab.key) {
+            <button
+              (click)="activeTab.set(tab.key)"
+              class="flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              [ngClass]="activeTab() === tab.key ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+              <i class="fa-light {{ tab.icon }} mr-1.5"></i>{{ tab.label }}
+              @if (tab.badge && tab.badge() !== null) {
+                <lfx-tag
+                  [value]="'' + tab.badge()"
+                  [rounded]="true"
+                  [severity]="activeTab() === tab.key ? 'contrast' : 'secondary'"
+                  styleClass="ml-1.5 !text-[10px] !px-1.5 !py-0.5" />
+              }
+            </button>
+          }
+        </div>
+      </lfx-card>
 
       <!-- Tab Panels -->
       @switch (activeTab()) {
