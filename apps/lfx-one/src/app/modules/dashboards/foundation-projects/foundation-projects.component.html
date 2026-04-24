@@ -83,9 +83,9 @@
               [class.text-blue-600]="counts.committees > 0"
               [class.text-gray-300]="counts.committees === 0"
               aria-hidden="true"
-              [title]="counts.committees + ' groups'"
+              [title]="counts.committees + ' ' + (counts.committees === 1 ? 'group' : 'groups')"
               [attr.data-testid]="'foundation-projects-groups-' + project.projectSlug"></i>
-            <span class="sr-only">{{ counts.committees }} groups</span>
+            <span class="sr-only">{{ counts.committees }} {{ counts.committees === 1 ? 'group' : 'groups' }}</span>
           </td>
           <td class="text-center">
             <span class="inline-flex items-center justify-center gap-2">
@@ -94,9 +94,9 @@
                 [class.text-blue-600]="counts.mailingLists > 0"
                 [class.text-gray-300]="counts.mailingLists === 0"
                 aria-hidden="true"
-                [title]="counts.mailingLists + ' mailing lists'"
+                [title]="counts.mailingLists + ' ' + (counts.mailingLists === 1 ? 'mailing list' : 'mailing lists')"
                 [attr.data-testid]="'foundation-projects-mailing-lists-' + project.projectSlug"></i>
-              <span class="sr-only">{{ counts.mailingLists }} mailing lists</span>
+              <span class="sr-only">{{ counts.mailingLists }} {{ counts.mailingLists === 1 ? 'mailing list' : 'mailing lists' }}</span>
               <i
                 class="fa-light fa-message"
                 [class.text-blue-600]="counts.hasChat"

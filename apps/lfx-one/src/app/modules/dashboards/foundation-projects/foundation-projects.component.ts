@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { DecimalPipe } from '@angular/common';
+import { HttpParams } from '@angular/common/http';
 import { Component, computed, inject, signal, Signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -10,9 +11,8 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { StatCardGridComponent } from '@components/stat-card-grid/stat-card-grid.component';
 import { TableComponent } from '@components/table/table.component';
-import { DEFAULT_FOUNDATION_PROJECTS_DETAIL } from '@lfx-one/shared/constants';
-import { buildLensAwareInsightsUrl } from '@lfx-one/shared/utils';
-import { HttpParams } from '@angular/common/http';
+import { DEFAULT_FOUNDATION_PROJECTS_DETAIL, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY, UUID_REGEX } from '@lfx-one/shared/constants';
+import { buildLensAwareInsightsUrl, hasAnyChannel } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { CommitteeService } from '@services/committee.service';
 import { LensService } from '@services/lens.service';
@@ -29,22 +29,6 @@ import type {
   ProjectTableRow,
   StatCardItem,
 } from '@lfx-one/shared/interfaces';
-
-// UUID v4 pattern — used to decide whether Snowflake's PROJECT_ID is safe to
-// use as a fallback project-service UID. Some foundations store a Salesforce
-// ID there instead; those must NEVER be passed to lens navigation.
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Limit concurrent per-project count fetches so a large foundation doesn't burst
-// N × 2 HTTP requests at once. Results are accumulated progressively so pill
-// counts and channel indicators update row-by-row as each project resolves.
-const COUNT_FETCH_CONCURRENCY = 8;
-
-/** A project "has channels" when it has at least one mailing list OR a chat_channel. */
-function hasAnyChannel(counts: ProjectCounts | undefined): boolean {
-  if (!counts) return false;
-  return counts.mailingLists > 0 || counts.hasChat;
-}
 
 @Component({
   selector: 'lfx-foundation-projects',
@@ -86,24 +70,8 @@ export class FoundationProjectsComponent {
   // (lens context uid) so we never fall back to the ambiguous Snowflake PROJECT_ID
   // when the correct project-service UID is already on hand.
   private readonly subProjectUidBySlug: Signal<Map<string, string>> = this.initSubProjectUidBySlug();
-  protected readonly projectCounts: Signal<Record<string, ProjectCounts>> = this.initProjectCounts();
-  protected readonly pillOptions: Signal<FilterPillOption[]> = computed(() => {
-    const projects = this.allProjects();
-    const counts = this.projectCounts();
-    const withGroups = projects.filter((p) => (counts[p.projectSlug]?.committees ?? 0) > 0).length;
-    const withoutGroups = projects.length - withGroups;
-    // Channels = mailing lists OR chat channel. A project with just a chat
-    // channel should still count as "with channels" to match the Channels column.
-    const withChannels = projects.filter((p) => hasAnyChannel(counts[p.projectSlug])).length;
-    const withoutChannels = projects.length - withChannels;
-    return [
-      { id: 'all', label: `All (${projects.length})` },
-      { id: 'with-groups', label: `With Groups (${withGroups})` },
-      { id: 'without-groups', label: `Without Groups (${withoutGroups})` },
-      { id: 'with-channels', label: `With Channels (${withChannels})` },
-      { id: 'without-channels', label: `Without Channels (${withoutChannels})` },
-    ];
-  });
+  protected readonly projectCounts: Signal<Map<string, ProjectCounts>> = this.initProjectCounts();
+  protected readonly pillOptions: Signal<FilterPillOption[]> = this.initPillOptions();
 
   // === Protected Methods ===
   protected getInsightsUrl(slug: string): string {
@@ -119,11 +87,11 @@ export class FoundationProjectsComponent {
   // Snowflake's PROJECT_ID only when it looks like a UUID (not a Salesforce ID).
   protected canOpenProjectLens(project: ProjectTableRow): boolean {
     if (this.subProjectUidBySlug().has(project.projectSlug)) return true;
-    return !!project.projectId && UUID_V4_REGEX.test(project.projectId);
+    return !!project.projectId && UUID_REGEX.test(project.projectId);
   }
 
   protected getCountFor(project: ProjectTableRow): ProjectCounts {
-    return this.projectCounts()[project.projectSlug] ?? { committees: 0, mailingLists: 0, hasChat: false };
+    return this.projectCounts().get(project.projectSlug) ?? { committees: 0, mailingLists: 0, hasChat: false };
   }
 
   protected onPillChange(pillId: string): void {
@@ -206,7 +174,12 @@ export class FoundationProjectsComponent {
     // to the wrong (or invalid) project. If neither is available, no-op — the
     // template's [disabled] binding should have blocked this click anyway.
     const mappedUid = this.subProjectUidBySlug().get(project.projectSlug);
-    const resolvedUid = mappedUid ?? (project.projectId && UUID_V4_REGEX.test(project.projectId) ? project.projectId : undefined);
+    let resolvedUid: string | undefined;
+    if (mappedUid) {
+      resolvedUid = mappedUid;
+    } else if (project.projectId && UUID_REGEX.test(project.projectId)) {
+      resolvedUid = project.projectId;
+    }
     if (!resolvedUid) {
       return;
     }
@@ -226,7 +199,7 @@ export class FoundationProjectsComponent {
       const counts = this.projectCounts();
       return this.allProjects().filter((project) => {
         if (query && !project.projectName.toLowerCase().includes(query)) return false;
-        const row = counts[project.projectSlug];
+        const row = counts.get(project.projectSlug);
         const committees = row?.committees ?? 0;
         const channels = hasAnyChannel(row);
         if (pill === 'with-groups' && committees === 0) return false;
@@ -287,19 +260,20 @@ export class FoundationProjectsComponent {
   //   1. Loads only when a user visits /foundation/projects (page-scoped, not site-wide).
   //   2. Chat-channel presence requires the committee list (no lightweight endpoint
   //      exposes `chat_channel` membership today).
-  //   3. Concurrency is capped via COUNT_FETCH_CONCURRENCY to avoid flooding the BFF.
+  //   3. Concurrency is capped via FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY to
+  //      avoid flooding the BFF.
   // Long-term fix: add a Snowflake-aggregated column or a lightweight
   // /api/committees/chat-exists?tags=project_uid:X endpoint.
-  private initProjectCounts(): Signal<Record<string, ProjectCounts>> {
+  private initProjectCounts(): Signal<Map<string, ProjectCounts>> {
     return toSignal(
       combineLatest([toObservable(this.allProjects), toObservable(this.subProjectUidBySlug)]).pipe(
         switchMap(([projects, slugToUid]) => {
           if (projects.length === 0 || slugToUid.size === 0) {
-            return of({} as Record<string, ProjectCounts>);
+            return of(new Map<string, ProjectCounts>());
           }
-          const initialCounts: Record<string, ProjectCounts> = {};
+          const initialCounts = new Map<string, ProjectCounts>();
           for (const project of projects) {
-            initialCounts[project.projectSlug] = { committees: 0, mailingLists: 0, hasChat: false };
+            initialCounts.set(project.projectSlug, { committees: 0, mailingLists: 0, hasChat: false });
           }
           const requests: Observable<{ slug: string; committees?: number; hasChat?: boolean; mailingLists?: number }>[] = [];
           for (const project of projects) {
@@ -325,19 +299,42 @@ export class FoundationProjectsComponent {
             return of(initialCounts);
           }
           return from(requests).pipe(
-            mergeMap((req$) => req$, COUNT_FETCH_CONCURRENCY),
+            mergeMap((req$) => req$, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY),
             scan((acc, result) => {
-              const next = { ...acc, [result.slug]: { ...acc[result.slug] } };
-              if (result.committees !== undefined) next[result.slug].committees = result.committees;
-              if (result.hasChat !== undefined) next[result.slug].hasChat = result.hasChat;
-              if (result.mailingLists !== undefined) next[result.slug].mailingLists = result.mailingLists;
+              const existing = acc.get(result.slug) ?? { committees: 0, mailingLists: 0, hasChat: false };
+              const next = new Map(acc);
+              next.set(result.slug, {
+                committees: result.committees ?? existing.committees,
+                mailingLists: result.mailingLists ?? existing.mailingLists,
+                hasChat: result.hasChat ?? existing.hasChat,
+              });
               return next;
             }, initialCounts),
             startWith(initialCounts)
           );
         })
       ),
-      { initialValue: {} as Record<string, ProjectCounts> }
+      { initialValue: new Map<string, ProjectCounts>() }
     );
+  }
+
+  private initPillOptions(): Signal<FilterPillOption[]> {
+    return computed(() => {
+      const projects = this.allProjects();
+      const counts = this.projectCounts();
+      const withGroups = projects.filter((p) => (counts.get(p.projectSlug)?.committees ?? 0) > 0).length;
+      const withoutGroups = projects.length - withGroups;
+      // Channels = mailing lists OR chat channel. A project with just a chat
+      // channel should still count as "with channels" to match the Channels column.
+      const withChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug))).length;
+      const withoutChannels = projects.length - withChannels;
+      return [
+        { id: 'all', label: `All (${projects.length})` },
+        { id: 'with-groups', label: `With Groups (${withGroups})` },
+        { id: 'without-groups', label: `Without Groups (${withoutGroups})` },
+        { id: 'with-channels', label: `With Channels (${withChannels})` },
+        { id: 'without-channels', label: `Without Channels (${withoutChannels})` },
+      ];
+    });
   }
 }
