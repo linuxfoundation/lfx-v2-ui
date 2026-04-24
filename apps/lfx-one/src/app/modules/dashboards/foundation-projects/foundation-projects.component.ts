@@ -11,7 +11,7 @@ import { FilterPillsComponent } from '@components/filter-pills/filter-pills.comp
 import { InputTextComponent } from '@components/input-text/input-text.component';
 import { StatCardGridComponent } from '@components/stat-card-grid/stat-card-grid.component';
 import { TableComponent } from '@components/table/table.component';
-import { DEFAULT_FOUNDATION_PROJECTS_DETAIL, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY, UUID_REGEX } from '@lfx-one/shared/constants';
+import { DEFAULT_FOUNDATION_PROJECTS_DETAIL, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY, PRESENCE_PILL_IDS, UUID_REGEX } from '@lfx-one/shared/constants';
 import { buildLensAwareInsightsUrl, hasAnyChannel } from '@lfx-one/shared/utils';
 import { AnalyticsService } from '@services/analytics.service';
 import { CommitteeService } from '@services/committee.service';
@@ -55,6 +55,11 @@ export class FoundationProjectsComponent {
   // === Simple WritableSignals ===
   protected readonly loading = signal(false);
   protected readonly activePill = signal<PresencePill>('all');
+  // True while any of the per-project committee / mailing-list count fetches
+  // are still in flight. Flips to false once the mergeMap stream completes.
+  // Used by `initPillOptions` to hide the count suffix during progressive
+  // loading so "With Groups" doesn't flicker 0 → 1 → 2 → 3 per resolution.
+  protected readonly countsLoading = signal(false);
 
   // === Computed/toSignal Signals ===
   protected readonly foundationSlug: Signal<string> = computed(() => this.projectContextService.selectedFoundation()?.slug ?? '');
@@ -95,6 +100,11 @@ export class FoundationProjectsComponent {
   }
 
   protected onPillChange(pillId: string): void {
+    // Runtime-validate against PRESENCE_PILL_IDS (the same tuple PresencePill
+    // is derived from). An unknown id is a contract bug — silently no-op
+    // rather than cast-through, which would short-circuit all filter branches
+    // and look like "All" while not being semantically "all".
+    if (!(PRESENCE_PILL_IDS as readonly string[]).includes(pillId)) return;
     this.activePill.set(pillId as PresencePill);
   }
 
@@ -103,6 +113,11 @@ export class FoundationProjectsComponent {
     return toSignal(
       toObservable(this.foundationSlug).pipe(
         switchMap((slug) => {
+          // Reset the presence filter back to "All" on every foundation change
+          // so a selection from the previous foundation (e.g. "With Groups")
+          // doesn't silently narrow the new foundation's table while the pill
+          // still appears active.
+          this.activePill.set('all');
           // Handle the empty-slug case inside switchMap (not via an upstream `filter`)
           // so that clearing the foundation also cancels any in-flight request for the
           // previous slug — otherwise the old fetch could complete and overwrite
@@ -243,8 +258,10 @@ export class FoundationProjectsComponent {
       combineLatest([toObservable(this.allProjects), toObservable(this.subProjectUidBySlug)]).pipe(
         switchMap(([projects, slugToUid]) => {
           if (projects.length === 0 || slugToUid.size === 0) {
+            this.countsLoading.set(false);
             return of(new Map<string, ProjectCounts>());
           }
+          this.countsLoading.set(true);
           const initialCounts = new Map<string, ProjectCounts>();
           for (const project of projects) {
             initialCounts.set(project.projectSlug, { committees: 0, mailingLists: 0, hasChat: false });
@@ -270,6 +287,7 @@ export class FoundationProjectsComponent {
             );
           }
           if (requests.length === 0) {
+            this.countsLoading.set(false);
             return of(initialCounts);
           }
           return from(requests).pipe(
@@ -284,7 +302,8 @@ export class FoundationProjectsComponent {
               });
               return next;
             }, initialCounts),
-            startWith(initialCounts)
+            startWith(initialCounts),
+            finalize(() => this.countsLoading.set(false))
           );
         })
       ),
@@ -296,18 +315,24 @@ export class FoundationProjectsComponent {
     return computed(() => {
       const projects = this.allProjects();
       const counts = this.projectCounts();
+      // Hide the presence-pill count suffixes while per-project committee /
+      // mailing-list fetches are still streaming in — otherwise labels flicker
+      // "With Groups (0)" → "(1)" → "(2)" per resolved row. The "All (N)" count
+      // is sourced from rawData and is stable from first paint, so it stays.
+      const countsStreaming = this.countsLoading();
       const withGroups = projects.filter((p) => (counts.get(p.projectSlug)?.committees ?? 0) > 0).length;
       const withoutGroups = projects.length - withGroups;
       // Channels = mailing lists OR chat channel. A project with just a chat
       // channel should still count as "with channels" to match the Channels column.
       const withChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug))).length;
       const withoutChannels = projects.length - withChannels;
+      const suffix = (n: number): string => (countsStreaming ? '' : ` (${n})`);
       return [
         { id: 'all', label: `All (${projects.length})` },
-        { id: 'with-groups', label: `With Groups (${withGroups})` },
-        { id: 'without-groups', label: `Without Groups (${withoutGroups})` },
-        { id: 'with-channels', label: `With Channels (${withChannels})` },
-        { id: 'without-channels', label: `Without Channels (${withoutChannels})` },
+        { id: 'with-groups', label: `With Groups${suffix(withGroups)}` },
+        { id: 'without-groups', label: `Without Groups${suffix(withoutGroups)}` },
+        { id: 'with-channels', label: `With Channels${suffix(withChannels)}` },
+        { id: 'without-channels', label: `Without Channels${suffix(withoutChannels)}` },
       ];
     });
   }

@@ -9,3 +9,12 @@
  * row-by-row as each project resolves.
  */
 export const FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY = 8;
+
+/**
+ * All valid presence-filter pill IDs on the foundation projects page, in
+ * display order. Source of truth for the {@link PresencePill} type, which
+ * is derived from this tuple — so adding or removing an ID here updates the
+ * type automatically and keeps the runtime validator (`onPillChange`) in
+ * sync with the TypeScript union.
+ */
+export const PRESENCE_PILL_IDS = ['all', 'with-groups', 'without-groups', 'with-channels', 'without-channels'] as const;

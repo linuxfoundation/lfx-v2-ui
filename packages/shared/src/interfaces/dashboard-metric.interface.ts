@@ -3,6 +3,8 @@
 
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 
+import type { PRESENCE_PILL_IDS } from '../constants/foundation-projects.constants';
+
 /**
  * Health score type for foundations
  * @description Indicates the overall health status of a foundation
@@ -292,9 +294,11 @@ export interface ProjectCounts {
 /**
  * Filter pill identifiers for the foundation projects page presence filter.
  * `channels` = mailing lists OR chat, so a project with just a chat channel
- * still lands in the "with-channels" bucket.
+ * still lands in the "with-channels" bucket. Derived from the
+ * {@link PRESENCE_PILL_IDS} tuple so the runtime validator and the static
+ * union can never drift apart.
  */
-export type PresencePill = 'all' | 'with-groups' | 'without-groups' | 'with-channels' | 'without-channels';
+export type PresencePill = (typeof PRESENCE_PILL_IDS)[number];
 
 // ============================================
 // Health Metrics Page (Summary Cards)
