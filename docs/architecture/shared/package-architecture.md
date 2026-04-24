@@ -112,7 +112,7 @@ TypeScript targets ES2022 with strict mode and `moduleResolution: "bundler"`; se
 
 ## Dependencies
 
-- **Runtime**: `date-fns`, `date-fns-tz` (timezone-aware date operations — the only runtime deps).
+- **Runtime** (within `packages/shared/`): `date-fns`, `date-fns-tz` — the only runtime deps inside the shared package. Other repo-wide runtime deps live in the root `package.json`.
 - **Peer**: `@angular/core`, `@angular/forms`, `rxjs`, `@fullcalendar/core`, `chart.js`, `snowflake-sdk` — see `packages/shared/package.json` for the canonical list and version ranges.
 
 Keep runtime deps minimal. Prefer peer dependencies for framework-specific types so consumers control the version.
