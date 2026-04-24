@@ -78,9 +78,7 @@ export class EventSelectionComponent {
   protected readonly allEvents = computed(() => this.initialEventsResponse().data);
   protected readonly hasMore = computed(() => this.allEvents().length < this.initialEventsResponse().total);
 
-  // Detects whether the user has any registered upcoming events at all (ignoring request-type and other filters).
-  // Used to differentiate the empty state between "no registered events" and "feature not available on registered events".
-  // null means the probe failed (network error) — treated as unknown, not zero.
+  // null = probe skipped (results were present) or probe failed; both treated as unknown, not zero.
   private readonly registeredEventsTotal = this.initializeRegisteredEventsTotal();
 
   // Only true when the probe resolved successfully with a confirmed zero total.
@@ -216,8 +214,7 @@ export class EventSelectionComponent {
   }
 
   private initializeRegisteredEventsTotal() {
-    // Defer the probe until the main query finishes. If results are already visible the empty
-    // state is never rendered, so the probe adds no value and is skipped entirely.
+    // Probe fires only when the main query settles with zero results; skipped otherwise.
     return toSignal(
       toObservable(this.loading).pipe(
         filter((loading) => !loading),
