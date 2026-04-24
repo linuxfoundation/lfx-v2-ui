@@ -588,8 +588,9 @@ export class CommitteeService {
       }
       const best = this.pickBestMembership(rows);
       if (!best) continue;
+      const roleName = best.role?.name;
       membershipMap.set(committeeUid, {
-        role: best.role?.name || 'Member',
+        role: !roleName || roleName === CommitteeMemberRole.NONE ? 'Member' : roleName,
         member_uid: best.uid,
         committee_category: best.committee_category,
       });
@@ -826,6 +827,10 @@ export class CommitteeService {
    * the caller authenticated with — matching the pattern used by
    * {@link getMyCommittees} / {@link getMyCommitteeUids} for the same `committee_member`
    * resource type.
+   *
+   * Reuses {@link getCommitteeMembers} (which paginates via `fetchAllQueryResources`)
+   * to keep the read pattern consistent with the rest of the service and with
+   * {@link meeting.helper.ts} which uses the same `(username, committee_uid)` lookup.
    */
   private async getCallerMembership(req: Request, committeeId: string): Promise<{ role: string; member_uid: string } | null> {
     const username = await getUsernameFromAuth(req);
@@ -833,20 +838,8 @@ export class CommitteeService {
       return null;
     }
 
-    // A (username, committee_uid) pair should yield at most one membership row. We
-    // request a small page rather than paginating; if upstream ever returns more than
-    // this page's worth we log and continue with the best-of-page below.
-    const PAGE_SIZE = 10;
-
     try {
-      const response = await this.microserviceProxy.proxyRequest<QueryServiceResponse<CommitteeMember>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        v: '1',
-        type: 'committee_member',
-        tags_all: [`username:${username}`, `committee_uid:${committeeId}`],
-        page_size: PAGE_SIZE,
-      });
-
-      const memberships = (response?.resources ?? []).map((r) => r.data);
+      const memberships = await this.getCommitteeMembers(req, committeeId, { tags_all: [`username:${username}`] });
       if (memberships.length === 0) {
         return null;
       }
@@ -859,23 +852,15 @@ export class CommitteeService {
           row_count: memberships.length,
         });
       }
-      // Belt-and-suspenders: if upstream signals more pages we still return the best
-      // of what we got, but the inconsistency deserves a trace. Rely on `page_token`
-      // alone — `length >= PAGE_SIZE` would false-positive on a saturated final page.
-      if (response?.page_token) {
-        logger.warning(req, 'get_caller_membership', 'Membership query truncated; selecting best row from first page', {
-          committee_uid: committeeId,
-          page_size: PAGE_SIZE,
-          row_count: memberships.length,
-        });
-      }
+
       const best = this.pickBestMembership(memberships);
       if (!best) {
         return null;
       }
 
+      const roleName = best.role?.name;
       return {
-        role: best.role?.name || 'Member',
+        role: !roleName || roleName === CommitteeMemberRole.NONE ? 'Member' : roleName,
         member_uid: best.uid,
       };
     } catch (error) {
@@ -894,7 +879,7 @@ export class CommitteeService {
    * Any named role outranks `None`/missing so a real membership row is never tied with
    * a placeholder row. Chair / Vice Chair are explicitly elevated above the rest.
    */
-  private rolePriority(role: CommitteeMemberRole | string | undefined): number {
+  private rolePriority(role: CommitteeMemberRole | undefined): number {
     if (role === CommitteeMemberRole.CHAIR) return 3;
     if (role === CommitteeMemberRole.VICE_CHAIR) return 2;
     if (!role || role === CommitteeMemberRole.NONE) return 0;
