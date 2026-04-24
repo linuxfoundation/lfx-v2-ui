@@ -580,7 +580,7 @@ export class CommitteeService {
       }
     }
 
-    const membershipMap = new Map<string, { role: string; member_uid: string; committee_category?: string }>();
+    const membershipMap = new Map<string, { role: CommitteeMemberRole | 'Member'; member_uid: string; committee_category?: string }>();
     for (const [committeeUid, rows] of membershipsByCommittee) {
       if (rows.length > 1) {
         logger.warning(req, 'get_my_committees', 'Multiple membership rows for (username, committee_uid); picking highest-privilege role', {
