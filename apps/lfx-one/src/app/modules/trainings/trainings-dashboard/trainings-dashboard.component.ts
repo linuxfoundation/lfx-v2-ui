@@ -71,6 +71,8 @@ export class TrainingsDashboardComponent {
   protected readonly trainingsStatsLoading = computed(
     () => this.unifiedCerts() === undefined || this.enrollments() === undefined || this.completedTrainings() === undefined
   );
+  protected readonly activeEnrollments = computed(() => this.enrollments()?.filter((e) => e.isActiveEnrollment) ?? []);
+  protected readonly expiredEnrollments = computed(() => this.enrollments()?.filter((e) => !e.isActiveEnrollment) ?? []);
   protected readonly enrolledCount = computed(() => this.enrollments()?.length ?? 0);
   protected readonly completedCount = computed(() => this.completedTrainings()?.length ?? 0);
 
