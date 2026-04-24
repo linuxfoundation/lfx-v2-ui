@@ -575,9 +575,16 @@ export interface DashboardMeetingCardProps {
   project?: string;
 }
 
+/**
+ * Dashboard quick link
+ * @description Navigation shortcut displayed in the dashboard header for write-enabled users
+ */
 export interface DashboardQuickLink {
+  /** Display label for the quick link */
   label: string;
+  /** FontAwesome icon class (e.g. 'fa-light fa-calendar') */
   icon: string;
+  /** Router link path segments */
   route: string[];
 }
 
