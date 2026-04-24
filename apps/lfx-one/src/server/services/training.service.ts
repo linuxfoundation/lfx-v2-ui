@@ -102,11 +102,11 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
 
 const UNIFIED_CERT_STATE_ORDER: Record<UnifiedCertState, number> = {
   'certified-active': 1,
+  'cert-only': 1,
   'expiring-soon': 2,
   'enrolled-cert-expired': 3,
   'cert-expired': 4,
   'in-progress': 5,
-  'cert-only': 6,
 };
 
 export class TrainingService {
