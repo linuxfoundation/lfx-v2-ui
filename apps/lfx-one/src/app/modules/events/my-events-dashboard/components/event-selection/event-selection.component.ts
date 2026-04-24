@@ -10,7 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { MyEvent, RequestType, TimeFilterValue } from '@lfx-one/shared/interfaces';
-import { catchError, combineLatest, debounceTime, EMPTY, finalize, map, of, scan, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, EMPTY, filter, finalize, map, of, scan, skip, switchMap, take, tap } from 'rxjs';
 import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.constants';
 @Component({
   selector: 'lfx-event-selection',
@@ -216,11 +216,23 @@ export class EventSelectionComponent {
   }
 
   private initializeRegisteredEventsTotal() {
+    // Defer the probe until the main query finishes. If results are already visible the empty
+    // state is never rendered, so the probe adds no value and is skipped entirely.
     return toSignal(
-      this.eventsService.getMyEvents({ isPast: false, registeredOnly: true, pageSize: 1 }).pipe(
-        map((res) => res.total ?? 0),
-        catchError(() => of(null)),
-        finalize(() => this.registeredEventsLoading.set(false))
+      toObservable(this.loading).pipe(
+        filter((loading) => !loading),
+        take(1),
+        switchMap(() => {
+          if (this.allEvents().length > 0 || this.eventsLoadError()) {
+            this.registeredEventsLoading.set(false);
+            return of(null as number | null);
+          }
+          return this.eventsService.getMyEvents({ isPast: false, registeredOnly: true, pageSize: 1 }).pipe(
+            map((res) => res.total ?? 0),
+            catchError(() => of(null as number | null)),
+            finalize(() => this.registeredEventsLoading.set(false))
+          );
+        })
       ),
       { initialValue: null as number | null }
     );
