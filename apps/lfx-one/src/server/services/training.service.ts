@@ -45,7 +45,9 @@ const ENROLLMENTS_QUERY = `
 
 const UNIFIED_CERTIFICATIONS_QUERY = `
   WITH best_enrollment AS (
-    SELECT *,
+    SELECT
+      COURSE_ID, COURSE_NAME, COURSE_GROUP_DESCRIPTION, LOGO_URL, PROJECT_NAME, LEVEL,
+      ENROLLMENT_ID, STATUS, IS_ACTIVE_ENROLLMENT, COURSE_SLUG,
       ROW_NUMBER() OVER (
         PARTITION BY COURSE_ID
         ORDER BY IS_ACTIVE_ENROLLMENT DESC NULLS LAST, ENROLLMENT_TS DESC NULLS LAST, ENROLLMENT_ID DESC
@@ -54,7 +56,9 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
     WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
   ),
   best_cert AS (
-    SELECT *,
+    SELECT
+      COURSE_ID, COURSE_NAME, COURSE_GROUP_DESCRIPTION, LOGO_URL, PROJECT_NAME, LEVEL,
+      _KEY, IDENTIFIER, ISSUED_TS, EXPIRATION_DATE, DOWNLOAD_URL,
       ROW_NUMBER() OVER (
         PARTITION BY COURSE_ID
         ORDER BY EXPIRATION_DATE DESC NULLS FIRST, ISSUED_TS DESC NULLS LAST, _KEY DESC
@@ -85,18 +89,16 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
   FROM e
   FULL OUTER JOIN c ON e.COURSE_ID = c.COURSE_ID
   WHERE COALESCE(e.COURSE_ID, c.COURSE_ID) IS NOT NULL
-  ORDER BY
-    CASE
-      WHEN c._KEY IS NOT NULL AND (c.EXPIRATION_DATE IS NULL OR c.EXPIRATION_DATE >= CURRENT_DATE())
-           AND NOT (c.EXPIRATION_DATE IS NOT NULL AND DATEDIFF('day', CURRENT_DATE(), c.EXPIRATION_DATE) <= 90) THEN 1
-      WHEN c.EXPIRATION_DATE IS NOT NULL AND c.EXPIRATION_DATE >= CURRENT_DATE()
-           AND DATEDIFF('day', CURRENT_DATE(), c.EXPIRATION_DATE) <= 90 THEN 2
-      WHEN c.EXPIRATION_DATE IS NOT NULL AND c.EXPIRATION_DATE < CURRENT_DATE() AND e.IS_ACTIVE_ENROLLMENT = TRUE THEN 3
-      WHEN c.EXPIRATION_DATE IS NOT NULL AND c.EXPIRATION_DATE < CURRENT_DATE() THEN 4
-      ELSE 5
-    END,
-    COALESCE(e.COURSE_NAME, c.COURSE_NAME) ASC
 `;
+
+const UNIFIED_CERT_STATE_ORDER: Record<UnifiedCertState, number> = {
+  'certified-active': 1,
+  'expiring-soon': 2,
+  'enrolled-cert-expired': 3,
+  'cert-expired': 4,
+  'in-progress': 5,
+  'cert-only': 6,
+};
 
 export class TrainingService {
   private readonly snowflakeService: SnowflakeService;
@@ -177,7 +179,8 @@ export class TrainingService {
     logger.debug(req, 'get_unified_certifications', 'Fetched unified certifications', { count: result.rows.length });
 
     const items = result.rows.map((row) => this.mapRowToUnifiedCert(row));
-    const courseIds = result.rows.map((row) => row.COURSE_ID);
+    items.sort((a, b) => UNIFIED_CERT_STATE_ORDER[a.state] - UNIFIED_CERT_STATE_ORDER[b.state] || a.name.localeCompare(b.name));
+    const courseIds = items.map((item) => item.courseId || null);
 
     return this.enrichWithTiLogos(req, items, courseIds);
   }

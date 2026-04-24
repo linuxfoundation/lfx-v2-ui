@@ -73,10 +73,10 @@ export class TrainingsDashboardComponent {
   );
   protected readonly enrolledCount = computed(() => this.enrollments()?.length ?? 0);
   protected readonly completedCount = computed(() => this.completedTrainings()?.length ?? 0);
-  protected readonly certificatesCount = computed(() => this.unifiedCerts()?.filter((c) => c.certId !== null).length ?? 0);
 
   // ─── Certification Section Signals ────────────────────────────────────────
   protected readonly myCerts = computed(() => this.unifiedCerts()?.filter((c) => c.certId !== null) ?? []);
+  protected readonly certificatesCount = computed(() => this.myCerts().length);
 
   // ─── Protected Methods ─────────────────────────────────────────────────────
   protected onTabChange(tabId: string): void {
