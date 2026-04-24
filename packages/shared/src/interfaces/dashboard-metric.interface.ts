@@ -3,7 +3,7 @@
 
 import type { ChartData, ChartOptions, ChartType } from 'chart.js';
 
-import type { PRESENCE_PILL_IDS } from '../constants/foundation-projects.constants';
+import { PRESENCE_PILL_IDS } from '../constants/foundation-projects.constants';
 
 /**
  * Health score type for foundations
