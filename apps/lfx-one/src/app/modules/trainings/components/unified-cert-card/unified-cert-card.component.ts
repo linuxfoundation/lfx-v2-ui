@@ -57,11 +57,10 @@ export class UnifiedCertCardComponent {
       if (cert.expiryDate) {
         const expired = new Date(cert.expiryDate) < new Date();
         const expiringSoon = !expired && new Date(cert.expiryDate).getTime() - Date.now() <= NINETY_DAYS_MS;
-        fields.push({
-          label: 'Valid Until',
-          value: cert.expiryDate,
-          classes: expired ? 'text-red-600 font-medium' : expiringSoon ? 'text-amber-600 font-medium' : 'text-gray-700',
-        });
+        let expiryClasses = 'text-gray-700';
+        if (expired) expiryClasses = 'text-red-600 font-medium';
+        else if (expiringSoon) expiryClasses = 'text-amber-600 font-medium';
+        fields.push({ label: 'Valid Until', value: cert.expiryDate, classes: expiryClasses });
       } else if (cert.certId) {
         fields.push({ label: 'Valid Until', value: 'No Expiry', classes: 'text-gray-700' });
       }
@@ -74,7 +73,7 @@ export class UnifiedCertCardComponent {
     });
   }
 
-  private initPrimaryAction(): Signal<{ label: string; href: string; icon?: string } | null> {
+  private initPrimaryAction(): Signal<{ label: string; href: string; icon?: string; severity?: ButtonSeverity } | null> {
     return computed(() => {
       const cert = this.cert();
       const renewUrl = cert.isActiveEnrollment ? this.continueLearningUrl() : this.enrollAgainUrl();
