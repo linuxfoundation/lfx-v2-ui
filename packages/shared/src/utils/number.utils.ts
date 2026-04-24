@@ -50,7 +50,7 @@ export function formatValueLost(value: number): string {
   return `${sign}$${abs.toLocaleString()}`;
 }
 
-/** Strip trailing ".0" from a fixed-decimal string (e.g., "968.0" → "968", "27.2" → "27.2"). */
+/** Strip trailing zeros (and a dangling decimal point) from a fixed-decimal string. */
 function stripTrailingZero(s: string): string {
-  return s.endsWith('.0') ? s.slice(0, -2) : s;
+  return s.includes('.') ? s.replace(/\.?0+$/, '') : s;
 }
