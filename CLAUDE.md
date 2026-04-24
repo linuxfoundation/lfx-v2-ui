@@ -16,19 +16,19 @@ For first-time setup (1Password env vars, microservice stack, etc.) invoke the `
 
 All commands run from the repo root via Turborepo:
 
-| Command             | Purpose                                              |
-| ------------------- | ---------------------------------------------------- |
-| `yarn start`        | Dev server with SSR + hot reload (Angular + Express) |
-| `yarn build`        | Production build (all packages)                      |
-| `yarn lint`         | Lint + auto-fix across the monorepo                  |
-| `yarn lint:check`   | Lint without auto-fix (CI mode)                      |
-| `yarn check-types`  | TypeScript type-check only (no emit)                 |
-| `yarn format`       | Prettier write across the repo                       |
-| `yarn format:check` | Prettier check (CI mode)                             |
-| `yarn e2e`          | Playwright E2E suite (headless)                      |
-| `yarn e2e:ui`       | Playwright in interactive UI mode                    |
-| `yarn e2e:headed`   | Playwright headed, visible browser                   |
-| `yarn commitlint`   | Validate commit message against Angular conventions  |
+| Command             | Purpose                                             |
+| ------------------- | --------------------------------------------------- |
+| `yarn start`        | Angular dev server with hot reload (via Turbo)      |
+| `yarn build`        | Production build (all packages)                     |
+| `yarn lint`         | Lint + auto-fix across the monorepo                 |
+| `yarn lint:check`   | Lint without auto-fix (CI mode)                     |
+| `yarn check-types`  | TypeScript type-check only (no emit)                |
+| `yarn format`       | Prettier write across the repo                      |
+| `yarn format:check` | Prettier check (CI mode)                            |
+| `yarn e2e`          | Playwright E2E suite (headless)                     |
+| `yarn e2e:ui`       | Playwright in interactive UI mode                   |
+| `yarn e2e:headed`   | Playwright headed, visible browser                  |
+| `yarn commitlint`   | Validate commit message against Angular conventions |
 
 > For manual commands, prefer `yarn` over `npx` — the repo pins Yarn 4.x through `packageManager`, so `npx` can resolve to the wrong binary. Repo-managed tooling (e.g. `.husky/pre-commit` invokes `npx lint-staged`) may still use `npx` where already configured.
 
@@ -114,12 +114,12 @@ The `@lfx-one/shared` package centralizes types, constants, enums, utilities, an
 Common import patterns:
 
 ```typescript
-import { formatDate, getRelativeDate, buildUrl } from '@lfx-one/shared/utils';
+import { formatDate, getRelativeDate, normalizeToUrl } from '@lfx-one/shared/utils';
 import { User, AuthContext } from '@lfx-one/shared/interfaces';
-import { MeetingValidators } from '@lfx-one/shared/validators';
+import { futureDateTimeValidator } from '@lfx-one/shared/validators';
 ```
 
-Utilities split into **generic** helpers (date/time, string, url, file, form, html, color) and **domain** helpers (meeting, poll, survey, vote, rsvp-calculator, project, committee, badge, rewards, insights, etc.). See [Package Architecture docs](docs/architecture/shared/package-architecture.md) for conventions, import patterns, and the full howto for adding new items.
+Utilities split into **generic** helpers (date/time, string, url, file, form, html, color) and **domain** helpers (meeting, poll, survey, vote, rsvp-calculator, project, committee, badge, rewards, insights, etc.). See [Package Architecture docs](docs/architecture/shared/package-architecture.md) for conventions, import patterns, and the full how-to for adding new items.
 
 ## Gotchas & Conventions
 

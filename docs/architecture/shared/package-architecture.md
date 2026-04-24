@@ -26,7 +26,7 @@ import { User, AuthContext, MeetingResponse } from '@lfx-one/shared/interfaces';
 import { lfxColors, lfxFontSizes } from '@lfx-one/shared/constants';
 import { MeetingType, VoteStatus } from '@lfx-one/shared/enums';
 import { formatDate, stripHtml, isValidUrl } from '@lfx-one/shared/utils';
-import { MeetingValidators } from '@lfx-one/shared/validators';
+import { futureDateTimeValidator, editModeDateTimeValidator } from '@lfx-one/shared/validators';
 
 // Deep imports into a specific file — use only when the category barrel doesn't
 // re-export the symbol you need:
@@ -78,11 +78,11 @@ Conventions:
 Reusable Angular reactive form validators, one file per domain.
 
 - File suffix: `.validators.ts`.
-- Export as a static class (e.g. `MeetingValidators.validTitle`) so imports are grouped by domain.
+- Export as standalone `ValidatorFn` functions (one per rule), grouped by domain in the file.
 - Import path: `@lfx-one/shared/validators`.
 
 ```typescript
-import { MeetingValidators, MailingListValidators, VoteValidators } from '@lfx-one/shared/validators';
+import { futureDateTimeValidator, editModeDateTimeValidator, voteOptionValidator } from '@lfx-one/shared/validators';
 ```
 
 ## Adding New Items
