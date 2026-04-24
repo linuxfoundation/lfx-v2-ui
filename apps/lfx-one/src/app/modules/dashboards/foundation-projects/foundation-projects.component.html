@@ -67,7 +67,8 @@
               type="button"
               class="flex flex-col items-start border-none bg-transparent p-0 text-left disabled:cursor-not-allowed disabled:opacity-60"
               [disabled]="!view.lensReady"
-              [attr.title]="!view.lensReady ? 'Project lens unavailable for this row' : null"
+              [pTooltip]="view.lensReady ? '' : 'Project lens unavailable for this row'"
+              tooltipPosition="top"
               (click)="openProjectLens(project)"
               [attr.data-testid]="'foundation-projects-name-' + project.projectSlug">
               <span class="lfx-table-name-link text-sm">{{ project.projectName }}</span>
@@ -83,7 +84,8 @@
               [class.text-gray-300]="view.groupsPresence === 'absent'"
               [class.text-gray-200]="view.groupsPresence === 'pending'"
               aria-hidden="true"
-              [title]="view.groupsText"
+              [pTooltip]="view.groupsText"
+              tooltipPosition="top"
               [attr.data-testid]="'foundation-projects-groups-' + project.projectSlug"></i>
             <span class="sr-only">{{ view.groupsText }}</span>
           </td>
@@ -95,7 +97,8 @@
                 [class.text-gray-300]="view.mailingListsPresence === 'absent'"
                 [class.text-gray-200]="view.mailingListsPresence === 'pending'"
                 aria-hidden="true"
-                [title]="view.mailingListsText"
+                [pTooltip]="view.mailingListsText"
+                tooltipPosition="top"
                 [attr.data-testid]="'foundation-projects-mailing-lists-' + project.projectSlug"></i>
               <span class="sr-only">{{ view.mailingListsText }}</span>
               <i
@@ -104,7 +107,8 @@
                 [class.text-gray-300]="view.chatPresence === 'absent'"
                 [class.text-gray-200]="view.chatPresence === 'pending'"
                 aria-hidden="true"
-                [title]="view.chatText"
+                [pTooltip]="view.chatText"
+                tooltipPosition="top"
                 [attr.data-testid]="'foundation-projects-chat-' + project.projectSlug"></i>
               <span class="sr-only">{{ view.chatText }}</span>
             </span>

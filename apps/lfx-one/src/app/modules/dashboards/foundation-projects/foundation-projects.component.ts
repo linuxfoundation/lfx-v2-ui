@@ -25,6 +25,7 @@ import { LensService } from '@services/lens.service';
 import { MailingListService } from '@services/mailing-list.service';
 import { ProjectContextService } from '@services/project-context.service';
 import { ProjectService } from '@services/project.service';
+import { TooltipModule } from 'primeng/tooltip';
 import { bufferTime, catchError, combineLatest, filter, finalize, from, map, mergeMap, Observable, of, scan, startWith, switchMap } from 'rxjs';
 
 import type {
@@ -40,7 +41,7 @@ import type {
 
 @Component({
   selector: 'lfx-foundation-projects',
-  imports: [DecimalPipe, ReactiveFormsModule, FilterPillsComponent, InputTextComponent, StatCardGridComponent, TableComponent],
+  imports: [DecimalPipe, ReactiveFormsModule, FilterPillsComponent, InputTextComponent, StatCardGridComponent, TableComponent, TooltipModule],
   templateUrl: './foundation-projects.component.html',
   styleUrl: './foundation-projects.component.scss',
 })
@@ -343,15 +344,17 @@ export class FoundationProjectsComponent {
       // "With Groups (0)" → "(1)" → "(2)" per resolved row. The "All (N)" count
       // is sourced from rawData and is stable from first paint, so it stays.
       const countsStreaming = this.countsLoading();
+      // Count explicit resolved states so pending rows (committees / hasAnyChannel
+      // === undefined) are excluded from BOTH "with" and "without" buckets — matching
+      // initFilteredProjects, which also excludes undefined from both views. Without
+      // this, rows without a slug→uid mapping stay pending permanently and would
+      // inflate the "without" suffix counts vs. the actually-rendered row count.
       const withGroups = projects.filter((p) => (counts.get(p.projectSlug)?.committees ?? 0) > 0).length;
-      const withoutGroups = projects.length - withGroups;
+      const withoutGroups = projects.filter((p) => counts.get(p.projectSlug)?.committees === 0).length;
       // Channels = mailing lists OR chat channel. A project with just a chat
       // channel should still count as "with channels" to match the Channels column.
-      // hasAnyChannel returns `true | false | undefined`; treat undefined (pending)
-      // the same as false for the running pill count while `countsStreaming` hides
-      // the suffix anyway.
       const withChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug)) === true).length;
-      const withoutChannels = projects.length - withChannels;
+      const withoutChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug)) === false).length;
       const suffix = (n: number): string => (countsStreaming ? '' : ` (${n})`);
       return [
         { id: 'all', label: `All (${projects.length})` },

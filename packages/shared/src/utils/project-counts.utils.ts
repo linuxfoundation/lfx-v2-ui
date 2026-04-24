@@ -10,17 +10,21 @@ import type { ProjectCounts } from '../interfaces';
  * project with only a chat channel (no mailing lists) still counts as
  * "with channels".
  *
- * Returns `undefined` when neither the `mailingLists` nor the `hasChat` field
- * has resolved yet (i.e., both are still `undefined` / in-flight). This lets
- * callers distinguish "pending" from "confirmed no channels" and avoid
- * counting unresolved rows as absent in the "Without Channels" filter.
+ * Resolution rules:
+ * - `true` as soon as either field confirms presence (short-circuits even
+ *   while the other source is still in-flight).
+ * - `undefined` when either field is still pending and no presence has been
+ *   confirmed yet — so callers can distinguish "loading" from
+ *   "confirmed no channels" and avoid counting unresolved rows as absent.
+ * - `false` only once both sources have resolved to `0` / `false`.
  */
 export function hasAnyChannel(counts: ProjectCounts | undefined): boolean | undefined {
   if (!counts) return undefined;
-  // If at least one channel field is confirmed present, short-circuit immediately.
-  if ((counts.mailingLists ?? 0) > 0 || counts.hasChat === true) return true;
-  // If both channel fields are still pending, the channel status is unknown.
-  if (counts.mailingLists === undefined && counts.hasChat === undefined) return undefined;
-  // Both fields have resolved (to 0 / false) — confirmed no channels.
+  // Confirmed presence short-circuits — don't wait on the other source.
+  if (counts.mailingLists !== undefined && counts.mailingLists > 0) return true;
+  if (counts.hasChat === true) return true;
+  // Either field still pending → channel status is unknown.
+  if (counts.mailingLists === undefined || counts.hasChat === undefined) return undefined;
+  // Both fields resolved to 0 / false — confirmed no channels.
   return false;
 }
