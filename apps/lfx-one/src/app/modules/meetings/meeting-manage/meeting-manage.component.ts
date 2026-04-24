@@ -16,6 +16,7 @@ import {
   MAX_EARLY_JOIN_TIME,
   MEETING_STEP_TITLES,
   MIN_EARLY_JOIN_TIME,
+  RECURRENCE_NO_END_SENTINEL_DATE,
   STEPPER_SCROLL_OFFSET,
   TOTAL_STEPS,
 } from '@lfx-one/shared/constants';
@@ -779,7 +780,8 @@ export class MeetingManageComponent {
       else if (meeting.recurrence.monthly_week && meeting.recurrence.monthly_week_day) monthlyTypeUI = 'dayOfWeek';
 
       let endTypeUI = 'never';
-      if (meeting.recurrence.end_date_time) endTypeUI = 'date';
+      const isSentinel = meeting.recurrence.end_date_time === RECURRENCE_NO_END_SENTINEL_DATE;
+      if (meeting.recurrence.end_date_time && !isSentinel) endTypeUI = 'date';
       else if (meeting.recurrence.end_times) endTypeUI = 'occurrences';
 
       // Set the pattern type UI control if this is custom recurrence
@@ -796,7 +798,7 @@ export class MeetingManageComponent {
           monthly_day: meeting.recurrence.monthly_day || null,
           monthly_week: meeting.recurrence.monthly_week || null,
           monthly_week_day: meeting.recurrence.monthly_week_day || null,
-          end_date_time: meeting.recurrence.end_date_time ? new Date(meeting.recurrence.end_date_time) : null,
+          end_date_time: meeting.recurrence.end_date_time && !isSentinel ? new Date(meeting.recurrence.end_date_time) : null,
           end_times: meeting.recurrence.end_times || null,
           // UI helper controls
           monthlyTypeUI: monthlyTypeUI,
