@@ -10,7 +10,7 @@ import { InputTextComponent } from '@components/input-text/input-text.component'
 import { SelectComponent } from '@components/select/select.component';
 import { EMPTY_MY_EVENTS_RESPONSE } from '@lfx-one/shared/constants';
 import { MyEvent, RequestType, TimeFilterValue } from '@lfx-one/shared/interfaces';
-import { catchError, combineLatest, debounceTime, EMPTY, finalize, of, scan, skip, switchMap, tap } from 'rxjs';
+import { catchError, combineLatest, debounceTime, EMPTY, finalize, map, of, scan, skip, switchMap, tap } from 'rxjs';
 import { EVENT_SELECTION_PAGE_SIZE } from '@lfx-one/shared/constants/events.constants';
 @Component({
   selector: 'lfx-event-selection',
@@ -42,6 +42,7 @@ export class EventSelectionComponent {
   // Events & pagination
   protected readonly loading = signal(true);
   protected readonly loadingMore = signal(false);
+  protected readonly registeredEventsLoading = signal(true);
   private currentOffset = signal(0);
 
   // Location filter options loaded once
@@ -75,6 +76,35 @@ export class EventSelectionComponent {
   // Combine initial events with any "load more" results
   protected readonly allEvents = computed(() => this.initialEventsResponse().data);
   protected readonly hasMore = computed(() => this.allEvents().length < this.initialEventsResponse().total);
+
+  // Detects whether the user has any registered upcoming events at all (ignoring request-type and other filters).
+  // Used to differentiate the empty state between "no registered events" and "feature not available on registered events".
+  private readonly registeredEventsTotal = this.initializeRegisteredEventsTotal();
+
+  // Treat unresolved (0 with loading=true) as "has events" to avoid flashing the wrong message; the spinner covers the load.
+  private readonly hasNoRegisteredUpcomingEvents = computed(() => !this.registeredEventsLoading() && this.registeredEventsTotal() === 0);
+
+  protected readonly emptyState = computed(() => {
+    const isVisa = this.requestType() === 'visa';
+    if (this.hasNoRegisteredUpcomingEvents()) {
+      return {
+        title: 'No registered events',
+        description: isVisa
+          ? 'You must be registered for an upcoming event to apply for a visa letter.'
+          : 'You must be registered for an upcoming event to apply for travel funding.',
+      };
+    }
+
+    return {
+      title: isVisa ? 'Visa letters not available' : 'Travel funding not available',
+      description: isVisa
+        ? 'None of your registered events currently offer visa letter requests. Check back later or contact the event organizer for more information.'
+        : 'None of your registered events currently offer travel funding. Check back later or contact the event organizer for more information.',
+    };
+  });
+
+  // Wait for both the initial events query and the registered-events lookup before deciding which empty state to render.
+  protected readonly initialLoading = computed(() => this.loading() || this.registeredEventsLoading());
 
   public constructor() {
     // Reset additional events when filters change (skip initial emission)
@@ -154,5 +184,16 @@ export class EventSelectionComponent {
     return toSignal(this.eventsService.getUpcomingCountries().pipe(catchError(() => of({ data: [] }))), {
       initialValue: { data: [] as string[] },
     });
+  }
+
+  private initializeRegisteredEventsTotal() {
+    return toSignal(
+      this.eventsService.getMyEvents({ isPast: false, registeredOnly: true, pageSize: 1 }).pipe(
+        map((res) => res.total ?? 0),
+        catchError(() => of(0)),
+        finalize(() => this.registeredEventsLoading.set(false))
+      ),
+      { initialValue: 0 }
+    );
   }
 }
