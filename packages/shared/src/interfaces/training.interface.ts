@@ -64,7 +64,7 @@ export interface UnifiedCertification {
  * Snowflake row shape for the unified certification join query
  */
 export interface UnifiedCertRow {
-  COURSE_ID: string;
+  COURSE_ID: string | null;
   COURSE_NAME: string;
   COURSE_GROUP_DESCRIPTION: string | null;
   LOGO_URL: string | null;

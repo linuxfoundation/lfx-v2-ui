@@ -48,7 +48,7 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
     SELECT *,
       ROW_NUMBER() OVER (
         PARTITION BY COURSE_ID
-        ORDER BY IS_ACTIVE_ENROLLMENT DESC NULLS LAST, ENROLLMENT_ID
+        ORDER BY IS_ACTIVE_ENROLLMENT DESC NULLS LAST, ENROLLMENT_TS DESC NULLS LAST, ENROLLMENT_ID DESC
       ) AS rn
     FROM ANALYTICS.PLATINUM_LFX_ONE.USER_COURSE_ENROLLMENTS
     WHERE USER_NAME = ? AND PRODUCT_TYPE = ?
@@ -84,6 +84,7 @@ const UNIFIED_CERTIFICATIONS_QUERY = `
     c.DOWNLOAD_URL
   FROM e
   FULL OUTER JOIN c ON e.COURSE_ID = c.COURSE_ID
+  WHERE COALESCE(e.COURSE_ID, c.COURSE_ID) IS NOT NULL
   ORDER BY
     CASE
       WHEN c._KEY IS NOT NULL AND (c.EXPIRATION_DATE IS NULL OR c.EXPIRATION_DATE >= CURRENT_DATE())
@@ -233,7 +234,7 @@ export class TrainingService {
 
   private mapRowToUnifiedCert(row: UnifiedCertRow): UnifiedCertification {
     return {
-      courseId: row.COURSE_ID,
+      courseId: row.COURSE_ID ?? '',
       name: row.COURSE_NAME,
       description: row.COURSE_GROUP_DESCRIPTION ?? '',
       imageUrl: row.LOGO_URL ?? '',
@@ -254,19 +255,19 @@ export class TrainingService {
 
   private deriveUnifiedCertState(row: UnifiedCertRow): UnifiedCertState {
     const hasCert = row.CERT_KEY !== null;
-    const hasActivEnrollment = row.IS_ACTIVE_ENROLLMENT === true;
+    const hasActiveEnrollment = row.IS_ACTIVE_ENROLLMENT === true;
     const now = new Date();
     const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
 
     const certExpired = hasCert && row.EXPIRATION_DATE !== null && new Date(row.EXPIRATION_DATE) < now;
     const certExpiringSoon = hasCert && row.EXPIRATION_DATE !== null && !certExpired && new Date(row.EXPIRATION_DATE).getTime() - now.getTime() <= ninetyDaysMs;
 
-    if (hasCert && certExpired && hasActivEnrollment) return 'enrolled-cert-expired';
+    if (hasCert && certExpired && hasActiveEnrollment) return 'enrolled-cert-expired';
     if (hasCert && certExpired) return 'cert-expired';
     if (hasCert && certExpiringSoon) return 'expiring-soon';
     if (hasCert && !row.ENROLLMENT_ID) return 'cert-only';
     if (hasCert) return 'certified-active';
-    if (hasActivEnrollment) return 'in-progress';
+    if (hasActiveEnrollment) return 'in-progress';
     return 'cert-expired'; // expired enrollment, no cert
   }
 
