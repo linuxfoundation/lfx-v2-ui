@@ -516,12 +516,6 @@ export class EmailVerificationService {
   }
 
   /**
-   * List linked identities for a user via NATS
-   * @param req - Express request object for logging
-   * @param userIdentifier - User's subject ID (e.g. auth0|123456789), username, or email — sent as raw string to auth-service which resolves it without JWT audience validation (same convention as getUserEmails)
-   * @returns Array of Auth0 linked identities
-   */
-  /**
    * Non-throwing variant for callers that can degrade gracefully (e.g. email backfill).
    * Returns an empty array on failure. Use listIdentities() when identity data is critical.
    */
@@ -534,6 +528,13 @@ export class EmailVerificationService {
     }
   }
 
+  /**
+   * List linked identities for a user via NATS.
+   * @param req - Express request object for logging
+   * @param userIdentifier - User's subject ID (e.g. auth0|123456789), username, or email — sent as raw string to auth-service which resolves it without JWT audience validation (same convention as getUserEmails)
+   * @returns Array of Auth0 linked identities
+   * @throws {MicroserviceError} 503 when the auth service is unavailable
+   */
   public async listIdentities(req: Request, userIdentifier: string): Promise<Auth0Identity[]> {
     const codec = this.natsService.getCodec();
 
@@ -556,7 +557,7 @@ export class EmailVerificationService {
       });
     } catch (error) {
       logger.warning(req, 'list_identities', 'Failed to list identities via NATS', { err: error });
-      throw this.authServiceUnavailable();
+      throw this.authServiceUnavailable('list_identities');
     }
 
     if (!parsed.success || !parsed.data) {
@@ -564,16 +565,16 @@ export class EmailVerificationService {
         error: parsed.error,
         message: parsed.message,
       });
-      throw this.authServiceUnavailable();
+      throw this.authServiceUnavailable('list_identities');
     }
 
     logger.debug(req, 'list_identities', 'Fetched identities via NATS', { identity_count: parsed.data.length });
     return parsed.data;
   }
 
-  private authServiceUnavailable(): MicroserviceError {
+  private authServiceUnavailable(operation: string): MicroserviceError {
     return new MicroserviceError('Auth service temporarily unavailable', 503, 'AUTH_SERVICE_UNAVAILABLE', {
-      operation: 'list_identities',
+      operation,
       service: 'email_verification_service',
     });
   }

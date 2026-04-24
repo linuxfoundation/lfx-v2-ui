@@ -54,7 +54,7 @@ const PASSWORD_ERROR_RULES: readonly {
     useUpstreamMessage: true,
   },
   {
-    pattern: /too many|rate limit|blocked/,
+    pattern: /\btoo many (attempts|requests)\b|\brate.?limit\b|\baccount (is )?blocked\b/,
     status: 429,
     code: 'TOO_MANY_ATTEMPTS',
     message: 'Too many password change attempts. Please wait a few minutes and try again.',

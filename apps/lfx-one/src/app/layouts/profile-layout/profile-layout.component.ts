@@ -14,7 +14,7 @@ import { MessageService } from 'primeng/api';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { BehaviorSubject, catchError, combineLatest, filter, map, of, startWith, switchMap, take } from 'rxjs';
 
-import { stripAuthPrefix } from '@app/shared/utils/strip-auth-prefix.util';
+import { stripAuthPrefixOrNull } from '@app/shared/utils/strip-auth-prefix.util';
 import { ProfileEditDialogComponent } from '../../modules/profile/components/profile-edit-dialog/profile-edit-dialog.component';
 
 // Error codes that originate from the Flow C profile-auth (/passwordless/callback) flow.
@@ -81,20 +81,20 @@ export class ProfileLayoutComponent {
   public readonly loading = signal<boolean>(true);
 
   // Computed signals
-  public readonly displayUsername = computed(() => stripAuthPrefix(this.profileData()?.username));
+  public readonly displayUsername = computed(() => stripAuthPrefixOrNull(this.profileData()?.username));
 
   public readonly displayName = computed(() => {
     const data = this.profileData();
     if (!data) return '';
-    const cleanUsername = stripAuthPrefix(data.username);
-    return `${data.firstName || ''} ${data.lastName || ''}`.trim() || (cleanUsername !== 'N/A' ? cleanUsername : 'User');
+    const cleanUsername = stripAuthPrefixOrNull(data.username);
+    return `${data.firstName || ''} ${data.lastName || ''}`.trim() || cleanUsername || 'User';
   });
 
   public readonly initials = computed(() => {
     const data = this.profileData();
     if (!data) return 'U';
-    const cleanUsername = stripAuthPrefix(data.username);
-    return data.firstName?.charAt(0).toUpperCase() || (cleanUsername !== 'N/A' ? cleanUsername.charAt(0).toUpperCase() : 'U');
+    const cleanUsername = stripAuthPrefixOrNull(data.username);
+    return data.firstName?.charAt(0).toUpperCase() || cleanUsername?.charAt(0).toUpperCase() || 'U';
   });
 
   public readonly jobTitle = computed(() => this.profileData()?.jobTitle || '');

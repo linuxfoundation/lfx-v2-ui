@@ -47,13 +47,14 @@ export class ProfileIdentitiesComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
 
   public readonly identitiesLoadError = signal(false);
-  // Manual dismiss overrides the query-param-derived banner.
   private readonly conflictDismissed = signal(false);
-  private readonly queryParams = toSignal(this.route.queryParams, { initialValue: this.route.snapshot.queryParams });
-  public readonly conflictBanner: Signal<boolean> = computed(() => {
-    if (this.conflictDismissed()) return false;
-    return this.queryParams()?.['error'] === 'already_linked';
-  });
+  // Captured once from the URL snapshot in ngOnInit. Using a plain signal instead of
+  // toSignal(queryParams) avoids a subtle invariant: clearQueryParams() uses
+  // history.replaceState (not router.navigate), which does not emit on the Router's
+  // queryParams observable. If that ever changes to router.navigate, this approach
+  // stays correct while a queryParams-derived computed would silently break.
+  private readonly conflictDetected = signal(false);
+  public readonly conflictBanner: Signal<boolean> = computed(() => this.conflictDetected() && !this.conflictDismissed());
 
   public readonly identities: Signal<ConnectedIdentityFull[]> = computed(() =>
     this.identitiesState()
@@ -81,8 +82,7 @@ export class ProfileIdentitiesComponent implements OnInit {
       this.refreshTrigger$.next();
       this.clearQueryParams();
     } else if (params['error'] === 'already_linked') {
-      // Banner renders via the conflictBanner computed signal (derived from queryParams).
-      // Clean up URL via history API so the banner signal isn't wiped by a router navigation.
+      this.conflictDetected.set(true);
       this.clearQueryParams();
     } else if (params['error']) {
       const errorMap: Record<string, string> = {
@@ -161,7 +161,7 @@ export class ProfileIdentitiesComponent implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
     // Use history API instead of router.navigate to avoid triggering route re-evaluation
     // that could destroy component state or re-run lifecycle hooks.
-    window.history.replaceState({}, '', window.location.pathname);
+    window.history.replaceState(window.history.state, '', window.location.pathname);
   }
 
   private openRemoveDialog(identity: ConnectedIdentityFull): void {
@@ -222,12 +222,10 @@ export class ProfileIdentitiesComponent implements OnInit {
         switchMap(() => {
           this.identitiesLoadError.set(false);
           return this.userService.getIdentities().pipe(
-            catchError((err: HttpErrorResponse) => {
-              if (err.status === 503) {
-                this.identitiesLoadError.set(true);
-              } else {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load identities.' });
-              }
+            catchError(() => {
+              // Any load failure hides the list entirely — a missing Auth0 overlay
+              // would mis-label every CDP identity as "unverified".
+              this.identitiesLoadError.set(true);
               return of([] as EnrichedIdentity[]);
             })
           );
