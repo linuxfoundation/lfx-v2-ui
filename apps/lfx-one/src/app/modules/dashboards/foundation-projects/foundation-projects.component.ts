@@ -96,7 +96,7 @@ export class FoundationProjectsComponent {
   }
 
   protected getCountFor(project: ProjectTableRow): ProjectCounts {
-    return this.projectCounts().get(project.projectSlug) ?? { committees: 0, mailingLists: 0, hasChat: false };
+    return this.projectCounts().get(project.projectSlug) ?? { committees: undefined, mailingLists: undefined, hasChat: undefined };
   }
 
   protected onPillChange(pillId: string): void {
@@ -189,12 +189,15 @@ export class FoundationProjectsComponent {
       return this.allProjects().filter((project) => {
         if (query && !project.projectName.toLowerCase().includes(query)) return false;
         const row = counts.get(project.projectSlug);
-        const committees = row?.committees ?? 0;
-        const channels = hasAnyChannel(row);
-        if (pill === 'with-groups' && committees === 0) return false;
-        if (pill === 'without-groups' && committees > 0) return false;
-        if (pill === 'with-channels' && !channels) return false;
-        if (pill === 'without-channels' && channels) return false;
+        const committees = row?.committees;
+        // hasAnyChannel returns undefined while channel fields are still in-flight.
+        // Pending rows are excluded from both "with" and "without" filters so they
+        // never inflate the "Without Channels/Groups" count while loading.
+        const channelStatus = hasAnyChannel(row);
+        if (pill === 'with-groups' && (committees === undefined || committees === 0)) return false;
+        if (pill === 'without-groups' && (committees === undefined || committees > 0)) return false;
+        if (pill === 'with-channels' && channelStatus !== true) return false;
+        if (pill === 'without-channels' && channelStatus !== false) return false;
         return true;
       });
     });
@@ -264,7 +267,10 @@ export class FoundationProjectsComponent {
           this.countsLoading.set(true);
           const initialCounts = new Map<string, ProjectCounts>();
           for (const project of projects) {
-            initialCounts.set(project.projectSlug, { committees: 0, mailingLists: 0, hasChat: false });
+            // undefined fields signal "pending" — distinct from confirmed zero.
+            // Pending rows are excluded from "With/Without" filter pills so they
+            // never inflate the "Without" count while requests are still in flight.
+            initialCounts.set(project.projectSlug, { committees: undefined, mailingLists: undefined, hasChat: undefined });
           }
           const requests: Observable<{ slug: string; committees?: number; hasChat?: boolean; mailingLists?: number }>[] = [];
           for (const project of projects) {
@@ -293,7 +299,7 @@ export class FoundationProjectsComponent {
           return from(requests).pipe(
             mergeMap((req$) => req$, FOUNDATION_PROJECT_COUNT_FETCH_CONCURRENCY),
             scan((acc, result) => {
-              const existing = acc.get(result.slug) ?? { committees: 0, mailingLists: 0, hasChat: false };
+              const existing = acc.get(result.slug) ?? { committees: undefined, mailingLists: undefined, hasChat: undefined };
               const next = new Map(acc);
               next.set(result.slug, {
                 committees: result.committees ?? existing.committees,
@@ -324,7 +330,10 @@ export class FoundationProjectsComponent {
       const withoutGroups = projects.length - withGroups;
       // Channels = mailing lists OR chat channel. A project with just a chat
       // channel should still count as "with channels" to match the Channels column.
-      const withChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug))).length;
+      // hasAnyChannel returns `true | false | undefined`; treat undefined (pending)
+      // the same as false for the running pill count while `countsStreaming` hides
+      // the suffix anyway.
+      const withChannels = projects.filter((p) => hasAnyChannel(counts.get(p.projectSlug)) === true).length;
       const withoutChannels = projects.length - withChannels;
       const suffix = (n: number): string => (countsStreaming ? '' : ` (${n})`);
       return [

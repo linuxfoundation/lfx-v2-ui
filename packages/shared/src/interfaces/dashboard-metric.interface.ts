@@ -281,14 +281,20 @@ export interface ProjectTableRow {
  * Per-project group/channel indicator counts for the foundation projects page.
  * Populated row-by-row from upstream committee + mailing-list queries; drives
  * the Groups and Channels column icons and the presence filter pills.
+ *
+ * Fields are `undefined` while the corresponding upstream request is still in
+ * flight (pending state). Once the request resolves — or fails — they become a
+ * concrete number / boolean. This allows the UI to distinguish "not yet loaded"
+ * from "confirmed zero / false" and avoid showing unresolved rows as confirmed
+ * absent in the filter pills.
  */
 export interface ProjectCounts {
-  /** Number of committees (groups) scoped to this project via `project_uid` tag. */
-  committees: number;
-  /** Number of mailing lists scoped to this project via `project_uid` tag. */
-  mailingLists: number;
-  /** True when any committee on this project has a `chat_channel` configured. */
-  hasChat: boolean;
+  /** Number of committees (groups) scoped to this project via `project_uid` tag. `undefined` while the request is in-flight. */
+  committees: number | undefined;
+  /** Number of mailing lists scoped to this project via `project_uid` tag. `undefined` while the request is in-flight. */
+  mailingLists: number | undefined;
+  /** True when any committee on this project has a `chat_channel` configured. `undefined` while the request is in-flight. */
+  hasChat: boolean | undefined;
 }
 
 /**
