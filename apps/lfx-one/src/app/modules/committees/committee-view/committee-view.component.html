@@ -147,6 +147,7 @@
                 }
                 @if (parentGroup(); as parent) {
                   <button
+                    type="button"
                     class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                     (click)="navigateToParentGroup()"
                     data-testid="committee-view-parent-group-link">
@@ -161,6 +162,7 @@
                 } @else if (subGroups().length === 1) {
                   <!-- Single sub-group: inline link, no dropdown -->
                   <button
+                    type="button"
                     class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                     (click)="navigateToSubGroup(subGroups()[0])"
                     data-testid="committee-view-sub-group-link">
@@ -173,6 +175,7 @@
                   <!-- Multiple sub-groups: dropdown popover -->
                   <div class="relative">
                     <button
+                      type="button"
                       class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                       (click)="subGroupsPopover.toggle($event)"
                       data-testid="committee-view-sub-groups-trigger">
@@ -186,6 +189,7 @@
                         <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-3 pt-2 pb-1.5">Sub-Groups</div>
                         @for (sg of subGroups(); track sg.uid) {
                           <button
+                            type="button"
                             class="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer w-full text-left"
                             (click)="navigateToSubGroup(sg); subGroupsPopover.hide()"
                             data-testid="committee-view-sub-group-item">
@@ -374,6 +378,7 @@
         <div class="border-t border-gray-200 px-6 py-4 flex gap-2 flex-wrap" data-testid="committee-view-tabs">
           @for (tab of visibleTabs(); track tab.key) {
             <button
+              type="button"
               (click)="activeTab.set(tab.key)"
               class="flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
               [ngClass]="activeTab() === tab.key ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">

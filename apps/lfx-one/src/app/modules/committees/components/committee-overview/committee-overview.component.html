@@ -3,8 +3,7 @@
 
 <div class="flex flex-col gap-6 pt-2">
   <!-- Two-column layout: Stats+Chairs | Meetings+Actions -->
-  @if (!myRoleLoading()) {
-    <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start" data-testid="committee-overview-stats">
+  <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start" data-testid="committee-overview-stats">
       <!-- LEFT: Stats list + Chairs -->
       <lfx-card styleClass="[&_.p-card-body]:!p-0">
         <!-- Stats rows -->
@@ -252,7 +251,6 @@
         }
       </div>
     </div>
-  }
 </div>
 
 <!-- Vote Results Drawer -->
