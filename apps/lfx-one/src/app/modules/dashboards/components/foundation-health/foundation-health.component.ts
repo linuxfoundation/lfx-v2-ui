@@ -344,8 +344,9 @@ export class FoundationHealthComponent {
       chartOptions: {
         ...this.barChartOptions,
         scales: {
-          x: { display: false, stacked: true },
-          y: { display: false, stacked: true, min: 0 },
+          ...this.barChartOptions.scales,
+          x: { ...this.barChartOptions.scales?.['x'], display: false, stacked: true },
+          y: { ...this.barChartOptions.scales?.['y'], display: false, stacked: true, min: 0 },
         },
         datasets: {
           bar: {
