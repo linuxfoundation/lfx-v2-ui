@@ -586,6 +586,8 @@ export interface DashboardQuickLink {
   icon: string;
   /** Router link path segments */
   route: string[];
+  /** Pre-computed data-testid slug (e.g. 'create-meeting') */
+  testId: string;
 }
 
 /**

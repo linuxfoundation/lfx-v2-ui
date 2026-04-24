@@ -8,7 +8,7 @@
       <a
         [routerLink]="link.route"
         class="flex items-center gap-1.5 text-primary hover:underline"
-        [attr.data-testid]="'dashboard-quicklink-' + link.label.toLowerCase().replaceAll(' ', '-')">
+        [attr.data-testid]="'dashboard-quicklink-' + link.testId">
         <i [class]="link.icon" aria-hidden="true"></i>
         {{ link.label }}
       </a>

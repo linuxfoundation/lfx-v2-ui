@@ -17,8 +17,8 @@ export class DashboardQuicklinksComponent {
   protected readonly canWrite = this.projectContextService.canWrite;
 
   protected readonly links: DashboardQuickLink[] = [
-    { label: 'Create meeting', icon: 'fa-light fa-calendar', route: ['/meetings', 'create'] },
-    { label: 'Create Group', icon: 'fa-light fa-users', route: ['/groups', 'create'] },
-    { label: 'Create mailing list', icon: 'fa-light fa-envelope', route: ['/mailing-lists', 'create'] },
+    { label: 'Create meeting', icon: 'fa-light fa-calendar', route: ['/meetings', 'create'], testId: 'create-meeting' },
+    { label: 'Create group', icon: 'fa-light fa-users', route: ['/groups', 'create'], testId: 'create-group' },
+    { label: 'Create mailing list', icon: 'fa-light fa-envelope', route: ['/mailing-lists', 'create'], testId: 'create-mailing-list' },
   ];
 }
