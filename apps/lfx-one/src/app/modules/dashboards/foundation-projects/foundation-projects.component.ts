@@ -260,8 +260,12 @@ export class FoundationProjectsComponent {
     return toSignal(
       combineLatest([toObservable(this.allProjects), toObservable(this.subProjectUidBySlug)]).pipe(
         switchMap(([projects, slugToUid]) => {
-          if (projects.length === 0 || slugToUid.size === 0) {
+          if (projects.length === 0) {
             this.countsLoading.set(false);
+            return of(new Map<string, ProjectCounts>());
+          }
+          if (slugToUid.size === 0) {
+            this.countsLoading.set(true);
             return of(new Map<string, ProjectCounts>());
           }
           this.countsLoading.set(true);
