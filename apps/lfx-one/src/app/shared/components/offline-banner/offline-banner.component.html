@@ -1,0 +1,22 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (offline()) {
+  <div
+    class="sticky top-0 z-[70] flex items-center justify-center gap-2 bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+    data-testid="offline-banner"
+    role="status"
+    aria-live="polite">
+    <i class="fa-light fa-wifi-slash"></i>
+    <span>You're offline — showing saved data. Some actions may not work.</span>
+  </div>
+} @else if (slow()) {
+  <div
+    class="sticky top-0 z-[70] flex items-center justify-center gap-2 bg-amber-500 px-4 py-2 text-xs font-medium text-slate-900"
+    data-testid="slow-network-banner"
+    role="status"
+    aria-live="polite">
+    <i class="fa-light fa-signal-bars-weak"></i>
+    <span>Slow connection detected. Content may load slowly.</span>
+  </div>
+}

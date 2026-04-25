@@ -20,5 +20,28 @@
       }
     }
   ],
-  "dataGroups": []
+  "dataGroups": [
+    {
+      "name": "api-user-readonly",
+      "urls": ["/api/user/personas", "/api/user/personas?*", "/api/nav/lens-items", "/api/nav/lens-items?*", "/api/profile", "/api/profile?*"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 30,
+        "maxAge": "1h",
+        "timeout": "3s",
+        "cacheOpaqueResponses": false
+      }
+    },
+    {
+      "name": "api-user-dashboard",
+      "urls": ["/api/user/pending-actions", "/api/user/pending-actions?*", "/api/user/meetings", "/api/user/meetings?*"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 20,
+        "maxAge": "15m",
+        "timeout": "3s",
+        "cacheOpaqueResponses": false
+      }
+    }
+  ]
 }

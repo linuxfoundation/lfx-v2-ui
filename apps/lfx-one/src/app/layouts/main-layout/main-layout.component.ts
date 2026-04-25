@@ -18,12 +18,23 @@ import { DrawerModule } from 'primeng/drawer';
 import { filter, take } from 'rxjs';
 
 import { ButtonComponent } from '@components/button/button.component';
+import { OfflineBannerComponent } from '@components/offline-banner/offline-banner.component';
 import { PwaInstallPromptComponent } from '@components/pwa-install-prompt/pwa-install-prompt.component';
 import { PwaUpdatePromptComponent } from '@components/pwa-update-prompt/pwa-update-prompt.component';
 
 @Component({
   selector: 'lfx-main-layout',
-  imports: [NgClass, RouterModule, SidebarComponent, DrawerModule, LensSwitcherComponent, ButtonComponent, PwaInstallPromptComponent, PwaUpdatePromptComponent],
+  imports: [
+    NgClass,
+    RouterModule,
+    SidebarComponent,
+    DrawerModule,
+    LensSwitcherComponent,
+    ButtonComponent,
+    PwaInstallPromptComponent,
+    PwaUpdatePromptComponent,
+    OfflineBannerComponent,
+  ],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
