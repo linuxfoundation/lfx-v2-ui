@@ -43,6 +43,9 @@ export * from './dashboard-metric.interface';
 // PWA interfaces
 export * from './pwa.interface';
 
+// Push notification interfaces
+export * from './push.interface';
+
 // AI interfaces
 export * from './ai.interface';
 

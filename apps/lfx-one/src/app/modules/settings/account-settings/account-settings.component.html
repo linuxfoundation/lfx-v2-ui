@@ -40,6 +40,14 @@
             data-testid="toc-developer-settings">
             Developer Settings
           </button>
+          <button
+            type="button"
+            (click)="scrollToSection('notifications')"
+            class="text-left px-2 py-1.5 text-[13px] font-medium rounded-lg transition-colors whitespace-nowrap block"
+            [ngClass]="activeSection() === 'notifications' ? 'text-blue-500 bg-blue-50' : 'text-slate-600 hover:text-blue-500 hover:bg-blue-50'"
+            data-testid="toc-notifications">
+            Notifications
+          </button>
         </div>
       </div>
     </div>
@@ -530,6 +538,11 @@
           }
         </div>
       </div>
+
+      <!-- ════════════════════════════════════ -->
+      <!-- SECTION 4: NOTIFICATIONS (ED/Board) -->
+      <!-- ════════════════════════════════════ -->
+      <lfx-notification-preferences />
     </div>
   </div>
 </div>

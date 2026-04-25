@@ -33,6 +33,7 @@ import pastMeetingsRouter from './routes/past-meetings.route';
 import personaRouter from './routes/persona.route';
 import profileRouter from './routes/profile.route';
 import projectsRouter from './routes/projects.route';
+import pushRouter from './routes/push.route';
 import publicCommitteesRouter from './routes/public-committees.route';
 import publicMeetingsRouter from './routes/public-meetings.route';
 import rewardsRouter from './routes/rewards.route';
@@ -175,6 +176,7 @@ app.use('/api/impersonate', impersonationRouter);
 app.use('/api/training', trainingRouter);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/transactions', transactionRouter);
+app.use('/api/push', pushRouter);
 
 app.use('/api/*', apiErrorHandler);
 

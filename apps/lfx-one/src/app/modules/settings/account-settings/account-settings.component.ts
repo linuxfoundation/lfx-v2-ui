@@ -8,6 +8,7 @@ import { AbstractControl, FormBuilder, FormControl, FormGroup, ReactiveFormsModu
 import { BadgeComponent } from '@components/badge/badge.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { InputTextComponent } from '@components/input-text/input-text.component';
+import { NotificationPreferencesComponent } from '../components/notification-preferences/notification-preferences.component';
 import { markFormControlsAsTouched } from '@lfx-one/shared';
 import { useResendCooldown } from '@shared/utils/resend-cooldown';
 import { ChangePasswordRequest, EmailManagementData, PasswordStrength, UserEmail } from '@lfx-one/shared/interfaces';
@@ -22,7 +23,17 @@ import { BehaviorSubject, catchError, finalize, of, switchMap, take } from 'rxjs
 @Component({
   selector: 'lfx-account-settings',
   host: { class: 'block' },
-  imports: [NgClass, ReactiveFormsModule, BadgeComponent, ButtonComponent, InputTextComponent, ConfirmDialogModule, ToastModule, TooltipModule],
+  imports: [
+    NgClass,
+    ReactiveFormsModule,
+    BadgeComponent,
+    ButtonComponent,
+    InputTextComponent,
+    ConfirmDialogModule,
+    ToastModule,
+    TooltipModule,
+    NotificationPreferencesComponent,
+  ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './account-settings.component.html',
 })
