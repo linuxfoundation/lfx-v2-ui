@@ -19,7 +19,7 @@ import { UserService } from '@services/user.service';
 import { DrawerModule } from 'primeng/drawer';
 import { filter, map, of, startWith, switchMap, take } from 'rxjs';
 
-import { environment } from '../../../environments/environment';
+import { environment } from '@environments/environment';
 
 import { ButtonComponent } from '@components/button/button.component';
 
