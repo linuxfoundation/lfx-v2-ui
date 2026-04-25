@@ -4,6 +4,7 @@
 .lfx-pwa-install-banner {
   left: 0.75rem;
   right: 0.75rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 
   @media (min-width: 640px) {
     left: 50%;
