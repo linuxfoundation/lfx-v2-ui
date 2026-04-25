@@ -29,10 +29,14 @@ cd apps/lfx-one
 # Scaffold the Xcode project. This creates apps/lfx-one/ios/ which is
 # gitignored — it's a generated artefact, not source.
 yarn cap:ios:init
+
+# Generate the iOS app icon set + splash screens from
+# resources/icon.png + resources/splash.png (LFX brand mark).
+yarn cap:assets
 ```
 
 This produces an `ios/App/App.xcworkspace` with the Capacitor runtime,
-icons, splash screens, and Info.plist already wired to
+LFX-branded icon and splash, and Info.plist already wired to
 `org.linuxfoundation.lfx`.
 
 ## Per-build cycle
