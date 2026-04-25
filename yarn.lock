@@ -752,6 +752,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@angular/service-worker@npm:20.3.15":
+  version: 20.3.15
+  resolution: "@angular/service-worker@npm:20.3.15"
+  dependencies:
+    tslib: "npm:^2.3.0"
+  peerDependencies:
+    "@angular/core": 20.3.15
+    rxjs: ^6.5.3 || ^7.4.0
+  bin:
+    ngsw-config: ngsw-config.js
+  checksum: 10c0/c0a47b60c6b14bfe1ed848e60f15cd5f320441a2d2e074f0af942969396f121430a547cd287e63edb1c75bff9570a97eca32477fa49e97ea27b0c07c91a82f43
+  languageName: node
+  linkType: hard
+
 "@angular/ssr@npm:^20.3.13":
   version: 20.3.13
   resolution: "@angular/ssr@npm:20.3.13"
@@ -12541,6 +12555,7 @@ __metadata:
     "@angular/platform-browser-dynamic": "npm:^20.3.15"
     "@angular/platform-server": "npm:^20.3.15"
     "@angular/router": "npm:^20.3.15"
+    "@angular/service-worker": "npm:20.3.15"
     "@angular/ssr": "npm:^20.3.13"
     "@datadog/browser-rum": "npm:6.25.4"
     "@eslint/js": "npm:^9.39.1"

@@ -1,0 +1,72 @@
+<!-- Copyright The Linux Foundation and each contributor to LFX. -->
+<!-- SPDX-License-Identifier: MIT -->
+
+@if (shouldRender()) {
+  <div
+    class="lfx-pwa-install-banner fixed inset-x-0 bottom-0 z-[1100] mx-auto mb-3 flex max-w-xl flex-col gap-3 rounded-xl bg-white p-4 shadow-xl ring-1 ring-slate-200 sm:mb-4 sm:flex-row sm:items-center sm:justify-between"
+    data-testid="pwa-install-banner"
+    role="dialog"
+    aria-live="polite"
+    aria-label="Install LFX One">
+    <div class="flex items-start gap-3">
+      <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#003778]">
+        <img src="/icons/icon-192.png" width="28" height="28" alt="" />
+      </div>
+      <div class="flex flex-col">
+        <span class="text-sm font-semibold text-slate-900">Install LFX One</span>
+        <span class="text-xs text-slate-600">
+          @if (canShowIosHint()) {
+            Add LFX to your home screen for faster access.
+          } @else {
+            Install the app for quick, app-like access.
+          }
+        </span>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-2">
+      <lfx-button label="Not now" size="small" severity="secondary" [text]="true" (onClick)="onDismiss()" data-testid="pwa-install-dismiss" />
+      <lfx-button
+        [label]="canShowIosHint() ? 'How to install' : 'Install'"
+        size="small"
+        icon="fa-light fa-download"
+        (onClick)="onInstallClick()"
+        data-testid="pwa-install-accept" />
+    </div>
+  </div>
+}
+
+@if (iosHintOpen()) {
+  <div
+    class="fixed inset-0 z-[1200] flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
+    data-testid="pwa-install-ios-hint"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Add LFX One to your iPhone home screen">
+    <div class="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-white p-5 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#003778]">
+          <img src="/icons/icon-192.png" width="28" height="28" alt="" />
+        </div>
+        <h2 class="text-base font-semibold text-slate-900">Install LFX on iOS</h2>
+      </div>
+      <ol class="flex flex-col gap-3 text-sm text-slate-700">
+        <li class="flex items-start gap-3">
+          <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">1</span>
+          <span>Tap the <i class="fa-light fa-arrow-up-from-bracket mx-1"></i> Share icon in Safari.</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">2</span>
+          <span>Scroll and choose <span class="font-medium">Add to Home Screen</span>.</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">3</span>
+          <span>Tap <span class="font-medium">Add</span>, then launch LFX from your home screen.</span>
+        </li>
+      </ol>
+      <div class="flex justify-end gap-2">
+        <lfx-button label="Not now" size="small" severity="secondary" [text]="true" (onClick)="onDismiss()" />
+        <lfx-button label="Got it" size="small" (onClick)="onIosHintClose()" />
+      </div>
+    </div>
+  </div>
+}

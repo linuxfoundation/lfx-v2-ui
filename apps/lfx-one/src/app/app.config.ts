@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideZonelessChangeDetection } from '@angular/core';
 import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions, withIncrementalHydration } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter, withInMemoryScrolling, withPreloading } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { lfxCardTheme, lfxDataTableTheme } from '@lfx-one/shared';
 import { lfxPreset } from '@linuxfoundation/lfx-ui-core';
 import { definePreset } from '@primeuix/themes';
@@ -54,6 +55,10 @@ export const appConfig: ApplicationConfig = {
     provideRuntimeConfig(), // Must be before other providers that depend on runtime config
     provideDataDogRum(),
     provideFeatureFlags(),
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
     ConfirmationService,
     DialogService,
     MessageService,

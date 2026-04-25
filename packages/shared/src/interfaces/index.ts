@@ -40,6 +40,9 @@ export * from './meeting-attachment.interface';
 // Dashboard metric interfaces (unified)
 export * from './dashboard-metric.interface';
 
+// PWA interfaces
+export * from './pwa.interface';
+
 // AI interfaces
 export * from './ai.interface';
 
