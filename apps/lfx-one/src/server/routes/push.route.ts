@@ -12,5 +12,6 @@ router.get('/public-key', controller.getPublicKey);
 router.post('/subscribe', controller.subscribe);
 router.post('/unsubscribe', controller.unsubscribe);
 router.post('/test', controller.sendTest);
+router.post('/notify', controller.notify);
 
 export default router;

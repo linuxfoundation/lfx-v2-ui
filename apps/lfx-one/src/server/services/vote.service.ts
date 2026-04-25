@@ -7,10 +7,11 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
-import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
+import { getEffectiveEmail, getEffectiveSub, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 import { ProjectService } from './project.service';
+import { PushNotificationService } from './push-notification.service';
 
 /**
  * Service for handling vote/poll business logic with microservice proxy
@@ -132,10 +133,12 @@ export class VoteService {
     });
 
     if (resolved && fetchedVote) {
+      this.notifyVoteCreated(req, fetchedVote);
       return fetchedVote;
     }
 
     logger.warning(req, 'create_vote', 'Vote not yet indexed in query service, returning POST response', { vote_uid: voteUid });
+    this.notifyVoteCreated(req, newVote);
     return newVote;
   }
 
@@ -316,5 +319,35 @@ export class VoteService {
       });
 
     return this.projectService.enrichWithProjectData(req, sorted);
+  }
+
+  /**
+   * Fire a push notification to the vote creator on successful creation.
+   * Best-effort — failures are logged at WARN and never block the vote
+   * creation flow.
+   */
+  private notifyVoteCreated(req: Request, vote: Vote): void {
+    const userId = getEffectiveSub(req);
+    if (!userId) {
+      return;
+    }
+    const pushService = PushNotificationService.getInstance();
+    if (!pushService.isEnabled()) {
+      return;
+    }
+    void pushService
+      .sendToUser(req, userId, {
+        kind: 'pending_action',
+        title: `${vote.name} is live`,
+        body: vote.committee_name ? `Voting is open with ${vote.committee_name}.` : 'Voting is open.',
+        url: `/votes/${vote.uid}`,
+        tag: `vote-created:${vote.uid}`,
+      })
+      .catch((error) => {
+        logger.warning(req, 'create_vote', 'Push notification fan-out failed', {
+          vote_uid: vote.uid,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      });
   }
 }

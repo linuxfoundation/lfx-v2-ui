@@ -1,13 +1,21 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { PushPayload, WebPushSubscriptionJSON } from '@lfx-one/shared/interfaces';
+import { PERSONA_COOKIE_KEY } from '@lfx-one/shared/constants';
+import { PersistedPersonaState, PushPayload, WebPushSubscriptionJSON } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
-import { ServiceValidationError } from '../errors';
+import { AuthorizationError, ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
 import { PushNotificationService } from '../services/push-notification.service';
 import { getEffectiveSub } from '../utils/auth-helper';
+
+const FAN_OUT_PERSONAS = new Set<string>(['executive-director', 'board-member']);
+
+interface NotifyBody {
+  payload?: Partial<PushPayload> & { title: string; body: string };
+  userIds?: string[];
+}
 
 export class PushController {
   private readonly pushService = PushNotificationService.getInstance();
@@ -82,4 +90,56 @@ export class PushController {
       next(error);
     }
   };
+
+  /**
+   * Generic trigger surface — fires a push to the caller, or (for ED / Board
+   * personas) to a list of user ids. Designed to be the entry point any
+   * future trigger source (cron, NATS subscriber, webhook) can call.
+   */
+  public notify = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const startTime = logger.startOperation(req, 'send_push');
+    try {
+      const userId = getEffectiveSub(req);
+      if (!userId) {
+        return next(ServiceValidationError.forField('user_id', 'Authentication required', { operation: 'send_push' }));
+      }
+      const body = (req.body ?? {}) as NotifyBody;
+      const { payload, userIds } = body;
+      if (!payload?.title || !payload.body) {
+        return next(ServiceValidationError.forField('payload', 'payload.title and payload.body are required', { operation: 'send_push' }));
+      }
+      const targets = userIds && userIds.length > 0 ? userIds : [userId];
+      const fanOut = targets.length > 1 || (targets.length === 1 && targets[0] !== userId);
+      if (fanOut && !this.callerCanFanOut(req)) {
+        return next(new AuthorizationError('Only ED or Board Member personas can target other users'));
+      }
+      const fullPayload: PushPayload = {
+        kind: payload.kind ?? 'test',
+        title: payload.title,
+        body: payload.body,
+        url: payload.url,
+        icon: payload.icon,
+        tag: payload.tag,
+      };
+      const result = await this.pushService.sendToUsers(req, targets, fullPayload);
+      logger.success(req, 'send_push', startTime, { ...result, target_count: targets.length, fan_out: fanOut });
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private callerCanFanOut(req: Request): boolean {
+    const cookieHeader = req.headers.cookie ?? '';
+    const match = cookieHeader.match(new RegExp(`${PERSONA_COOKIE_KEY}=([^;]+)`));
+    if (!match?.[1]) {
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(decodeURIComponent(match[1])) as PersistedPersonaState;
+      return parsed.primary !== undefined && FAN_OUT_PERSONAS.has(parsed.primary);
+    } catch {
+      return false;
+    }
+  }
 }

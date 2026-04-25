@@ -92,14 +92,26 @@ export class PushNotificationService {
   }
 
   public async sendToUser(req: Request | undefined, userId: string, payload: PushPayload): Promise<{ delivered: number; failed: number }> {
+    return this.sendToUsers(req, [userId], payload);
+  }
+
+  /**
+   * Fan out a payload to every subscription owned by any user in the list.
+   * Expired subscriptions (404 / 410) are dropped from the store on the way out.
+   */
+  public async sendToUsers(req: Request | undefined, userIds: string[], payload: PushPayload): Promise<{ delivered: number; failed: number }> {
     if (!this.enabled) {
-      logger.warning(req, 'push_send', 'Skipped — push notifications disabled', { user_id: userId });
+      logger.warning(req, 'push_send', 'Skipped — push notifications disabled', { user_count: userIds.length });
+      return { delivered: 0, failed: 0 };
+    }
+    if (userIds.length === 0) {
       return { delivered: 0, failed: 0 };
     }
     await this.ensureLoaded();
-    const targets = Array.from(this.subscriptions.values()).filter((sub) => sub.user_id === userId);
+    const userSet = new Set(userIds);
+    const targets = Array.from(this.subscriptions.values()).filter((sub) => userSet.has(sub.user_id));
     if (targets.length === 0) {
-      logger.debug(req, 'push_send', 'No subscriptions for user', { user_id: userId });
+      logger.debug(req, 'push_send', 'No subscriptions for any target user', { user_count: userIds.length });
       return { delivered: 0, failed: 0 };
     }
     const json = JSON.stringify(payload);
@@ -116,13 +128,13 @@ export class PushNotificationService {
         if (error instanceof WebPushError && (error.statusCode === 404 || error.statusCode === 410)) {
           expired.push(sub.endpoint);
           logger.warning(req, 'push_send', 'Subscription expired — removing', {
-            user_id: userId,
+            user_id: sub.user_id,
             endpoint_host: this.endpointHost(sub.endpoint),
             status_code: error.statusCode,
           });
         } else {
           logger.warning(req, 'push_send', 'Push delivery failed', {
-            user_id: userId,
+            user_id: sub.user_id,
             endpoint_host: this.endpointHost(sub.endpoint),
             error: error instanceof Error ? error.message : 'Unknown error',
           });
