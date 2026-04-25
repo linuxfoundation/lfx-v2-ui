@@ -3,12 +3,31 @@
 
 @if (offline()) {
   <div
-    class="sticky top-0 z-[70] flex items-center justify-center gap-2 bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+    class="sticky top-0 z-[70] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-slate-900 px-4 py-2 text-xs font-medium text-white"
     data-testid="offline-banner"
     role="status"
     aria-live="polite">
-    <i class="fa-light fa-wifi-slash"></i>
-    <span>You're offline — showing saved data. Some actions may not work.</span>
+    <span class="flex items-center gap-2">
+      <i class="fa-light fa-wifi-slash"></i>
+      <span>You're offline — showing saved data.</span>
+    </span>
+    @if (hasQueue()) {
+      <span class="flex items-center gap-1.5 text-amber-300" data-testid="offline-queue-count">
+        <i class="fa-light fa-clock-rotate-left"></i>
+        <span>{{ queueLabel() }} — will sync when online.</span>
+      </span>
+    } @else {
+      <span class="text-slate-300">Some actions may not work.</span>
+    }
+  </div>
+} @else if (hasQueue()) {
+  <div
+    class="sticky top-0 z-[70] flex items-center justify-center gap-2 bg-blue-600 px-4 py-2 text-xs font-medium text-white"
+    data-testid="syncing-banner"
+    role="status"
+    aria-live="polite">
+    <i class="fa-light fa-arrows-rotate"></i>
+    <span>Syncing {{ queueLabel() }}…</span>
   </div>
 } @else if (slow()) {
   <div

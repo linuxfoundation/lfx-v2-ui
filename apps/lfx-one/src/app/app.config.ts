@@ -55,7 +55,7 @@ export const appConfig: ApplicationConfig = {
     provideRuntimeConfig(), // Must be before other providers that depend on runtime config
     provideDataDogRum(),
     provideFeatureFlags(),
-    provideServiceWorker('ngsw-worker.js', {
+    provideServiceWorker('sw.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
