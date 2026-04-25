@@ -7,8 +7,9 @@ import { NextFunction, Request, Response } from 'express';
 
 import { AuthorizationError, ServiceValidationError } from '../errors';
 import { logger } from '../services/logger.service';
+import { MeetingReminderService } from '../services/meeting-reminder.service';
 import { PushNotificationService } from '../services/push-notification.service';
-import { getEffectiveSub } from '../utils/auth-helper';
+import { getEffectiveEmail, getEffectiveSub } from '../utils/auth-helper';
 
 const FAN_OUT_PERSONAS = new Set<string>(['executive-director', 'board-member']);
 
@@ -19,6 +20,7 @@ interface NotifyBody {
 
 export class PushController {
   private readonly pushService = PushNotificationService.getInstance();
+  private readonly reminderService = MeetingReminderService.getInstance();
 
   public getPublicKey = (req: Request, res: Response, next: NextFunction): void => {
     const startTime = logger.startOperation(req, 'get_push_public_key');
@@ -123,6 +125,27 @@ export class PushController {
       };
       const result = await this.pushService.sendToUsers(req, targets, fullPayload);
       logger.success(req, 'send_push', startTime, { ...result, target_count: targets.length, fan_out: fanOut });
+      res.json({ ok: true, ...result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Trigger meeting reminders for the authenticated user. Designed to be
+   * called from a cron — point a scheduler at this endpoint every 5 min
+   * and any meeting starting in 10–20 minutes will fire a push.
+   */
+  public checkMeetingReminders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const startTime = logger.startOperation(req, 'check_meeting_reminders');
+    try {
+      const userId = getEffectiveSub(req);
+      const email = getEffectiveEmail(req);
+      if (!userId || !email) {
+        return next(ServiceValidationError.forField('user_id', 'Authentication required', { operation: 'check_meeting_reminders' }));
+      }
+      const result = await this.reminderService.checkAndNotifyForUser(req, userId, email);
+      logger.success(req, 'check_meeting_reminders', startTime, { ...result });
       res.json({ ok: true, ...result });
     } catch (error) {
       next(error);
