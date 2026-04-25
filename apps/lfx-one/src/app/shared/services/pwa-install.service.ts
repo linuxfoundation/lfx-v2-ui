@@ -5,6 +5,7 @@ import { DOCUMENT } from '@angular/common';
 import { computed, DestroyRef, inject, Injectable, PLATFORM_ID, Signal, signal, WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
+import { Capacitor } from '@capacitor/core';
 import { BeforeInstallPromptEvent, PwaDisplayMode, PwaPlatform } from '@lfx-one/shared/interfaces';
 import { fromEvent } from 'rxjs';
 
@@ -33,11 +34,16 @@ export class PwaInstallService {
   /**
    * True when the app is installable via the browser's native prompt (Android / desktop Chrome).
    * iOS does not fire beforeinstallprompt — use {@link canShowIosHint} for the manual-add flow.
+   * Always false inside the Capacitor native shell, where the user already has the app.
    */
-  public readonly canInstall: Signal<boolean> = computed(() => !this.isStandalone() && !this.isDismissed() && this.deferredPromptSignal() !== null);
+  public readonly canInstall: Signal<boolean> = computed(
+    () => !Capacitor.isNativePlatform() && !this.isStandalone() && !this.isDismissed() && this.deferredPromptSignal() !== null
+  );
 
   /** iOS Safari has no programmatic install — show the "Add to Home Screen" hint instead. */
-  public readonly canShowIosHint: Signal<boolean> = computed(() => !this.isStandalone() && !this.isDismissed() && this.platform() === 'ios');
+  public readonly canShowIosHint: Signal<boolean> = computed(
+    () => !Capacitor.isNativePlatform() && !this.isStandalone() && !this.isDismissed() && this.platform() === 'ios'
+  );
 
   public constructor() {
     if (!isPlatformBrowser(this.platformId)) {

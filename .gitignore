@@ -18,6 +18,11 @@ node_modules
 # Local-only research / dev data (e.g. PWA push subscription store)
 .local-data/
 
+# Capacitor native scaffolds — generated locally on macOS via `yarn cap:ios:init`.
+# Keep them out of the monorepo to avoid bloat; re-create on demand.
+apps/lfx-one/ios/
+apps/lfx-one/android/
+
 # Testing
 coverage
 

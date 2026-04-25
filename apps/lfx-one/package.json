@@ -19,7 +19,10 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss,css,json}\"",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "e2e:headed": "playwright test --headed"
+    "e2e:headed": "playwright test --headed",
+    "cap:ios:init": "cap add ios",
+    "cap:sync": "cap sync ios",
+    "cap:open": "cap open ios"
   },
   "private": true,
   "dependencies": {
@@ -35,6 +38,8 @@
     "@angular/router": "^20.3.15",
     "@angular/service-worker": "20.3.15",
     "@angular/ssr": "^20.3.13",
+    "@capacitor/core": "7.6.2",
+    "@capacitor/ios": "7.6.2",
     "@datadog/browser-rum": "6.25.4",
     "@fullcalendar/angular": "6.1.20",
     "@fullcalendar/core": "6.1.20",
@@ -77,6 +82,7 @@
     "@angular-eslint/builder": "21.0.1",
     "@angular/cli": "^20.3.13",
     "@angular/compiler-cli": "^20.3.15",
+    "@capacitor/cli": "7.6.2",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "1.58.0",
     "@types/compression": "1.8.1",
