@@ -1,13 +1,15 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal, Signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
 import { MeetingService } from '@services/meeting.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
+import { timer } from 'rxjs';
 
 import type { Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
 @Component({
@@ -20,6 +22,7 @@ export class PendingActionsComponent {
   private readonly hiddenActionsService = inject(HiddenActionsService);
   private readonly meetingService = inject(MeetingService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public readonly pendingActions = input.required<PendingActionItem[]>();
   public readonly displayLimit = input<number>(5);
@@ -33,13 +36,14 @@ export class PendingActionsComponent {
   private readonly hiddenActionsVersion = signal(0);
 
   // Tracks which row, if any, has been clicked into "RSVP mode" so the right-hand cell can swap
-  // from the Set RSVP CTA to the inline Yes/No/Maybe button group. Keyed by the same row key the
-  // template uses for @for tracking so a re-rendered list can preserve the expanded state.
+  // from the Set RSVP CTA to the inline Yes/No/Maybe button group. Keyed by getRowKey(item) — the
+  // same expression the template's @for trackBy uses, so reordering the list preserves expansion.
   protected readonly expandedRsvpKey = signal<string | null>(null);
 
-  // True while the Meeting payload for an expanded RSVP row is being fetched. Drives the inline
-  // spinner state on the CTA so the user gets immediate feedback after clicking Set RSVP.
-  protected readonly rsvpMeetingLoading = signal(false);
+  // The meetingUid currently being fetched (if any). Per-meeting tracking instead of a global flag
+  // so a stale response from row A's request can't clobber row B's loading state when the user
+  // quickly toggles between rows.
+  private readonly loadingMeetingUid = signal<string | null>(null);
 
   // Per-meetingUid cache so the user can collapse and re-expand the same row (or expand a sibling
   // RSVP row that points at the same meeting) without triggering a refetch each time.
@@ -83,12 +87,16 @@ export class PendingActionsComponent {
     //  - The cookie-based dismiss is a sufficient client-side reconciliation; the next page
     //    load reconciles authoritatively against the server.
     // Short delay before dismissing so the user can see their choice register inside the row
-    // and read the toast — abrupt removal feels like the click did nothing.
-    setTimeout(() => {
-      this.expandedRsvpKey.set(null);
-      this.hiddenActionsService.hideAction(item);
-      this.hiddenActionsVersion.update((v) => v + 1);
-    }, 1500);
+    // and read the toast — abrupt removal feels like the click did nothing. timer + takeUntilDestroyed
+    // (instead of raw setTimeout) ensures the deferred work is cancelled if the component unmounts
+    // mid-delay, so we never write to signals on a destroyed instance.
+    timer(1500)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.expandedRsvpKey.set(null);
+        this.hiddenActionsService.hideAction(item);
+        this.hiddenActionsVersion.update((v) => v + 1);
+      });
   }
 
   protected isRsvpInline(item: PendingActionItem): boolean {
@@ -99,11 +107,22 @@ export class PendingActionsComponent {
     return this.expandedRsvpKey() === this.getRowKey(item);
   }
 
+  protected isLoadingForItem(item: PendingActionItem): boolean {
+    return !!item.meetingUid && this.loadingMeetingUid() === item.meetingUid;
+  }
+
   protected getMeetingForItem(item: PendingActionItem): Meeting | null {
     return item.meetingUid ? (this.rsvpMeetingCache()[item.meetingUid] ?? null) : null;
   }
 
+  // Stable identifier for a row. Prefers intrinsic IDs (meetingUid + occurrenceId) when present —
+  // those don't drift if copy is edited or query strings shift. Falls back to a type+text+buttonLink
+  // composite for action types that don't carry IDs yet (Vote/Survey/Agenda). The template's @for
+  // trackBy uses this same expression so the row identity is consistent everywhere.
   protected getRowKey(item: PendingActionItem): string {
+    if (item.meetingUid) {
+      return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
+    }
     return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
   }
 
@@ -115,18 +134,27 @@ export class PendingActionsComponent {
 
     if (this.rsvpMeetingCache()[meetingUid]) return;
 
-    this.rsvpMeetingLoading.set(true);
+    this.loadingMeetingUid.set(meetingUid);
     this.meetingService.getMeeting(meetingUid).subscribe({
       next: (meeting) => {
         this.rsvpMeetingCache.update((cache) => ({ ...cache, [meetingUid]: meeting }));
-        this.rsvpMeetingLoading.set(false);
+        // Only clear the loading flag when this response is the one we're still waiting on. If the
+        // user moved to a different row before this completed, leave the new row's loading state
+        // alone — its own request owns it now.
+        if (this.loadingMeetingUid() === meetingUid) {
+          this.loadingMeetingUid.set(null);
+        }
       },
       error: () => {
-        // Surface the failure so the user knows the click did register and why the inline
-        // RSVP didn't come up. Without this, the spinner just vanishes back to the Set RSVP
-        // CTA and looks like nothing happened.
-        this.rsvpMeetingLoading.set(false);
-        this.expandedRsvpKey.set(null);
+        // Surface the failure so the user knows the click did register and why the inline RSVP
+        // didn't come up. Same staleness guard as the success path: a late-arriving failure for
+        // row A must not collapse row B if the user has already moved on.
+        if (this.loadingMeetingUid() === meetingUid) {
+          this.loadingMeetingUid.set(null);
+        }
+        if (this.expandedRsvpKey() === this.getRowKey(item)) {
+          this.expandedRsvpKey.set(null);
+        }
         this.messageService.add({
           severity: 'error',
           summary: 'Could not load meeting',
