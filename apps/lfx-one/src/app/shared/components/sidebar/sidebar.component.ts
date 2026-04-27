@@ -9,7 +9,7 @@ import { BadgeComponent } from '@components/badge/badge.component';
 import { ProjectSelectorComponent } from '@components/project-selector/project-selector.component';
 import { environment } from '@environments/environment';
 import { PERSONA_OPTIONS, PERSONA_PRIORITY } from '@lfx-one/shared/constants';
-import { LensItem, NavLens, ProjectContext, SidebarMenuItem } from '@lfx-one/shared/interfaces';
+import { LensItem, NavLens, PersonaType, ProjectContext, SidebarMenuItem } from '@lfx-one/shared/interfaces';
 import { lensItemToProjectContext, toTitleCase } from '@lfx-one/shared/utils';
 import { LensService } from '@services/lens.service';
 import { NavigationService } from '@services/navigation.service';
@@ -18,7 +18,7 @@ import { ProjectContextService } from '@services/project-context.service';
 import { UserService } from '@services/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
 
-const PERSONA_ICONS: Record<string, string> = {
+const PERSONA_ICONS: Partial<Record<PersonaType, string>> = {
   'executive-director': 'fa-light fa-briefcase',
   'board-member': 'fa-light fa-building-columns',
   'maintainer': 'fa-light fa-code',
@@ -109,14 +109,15 @@ export class SidebarComponent {
 
   private initPersonaLabels(): Signal<{ label: string; icon: string }[]> {
     return computed(() => {
-      const toTag = (p: string) => {
+      const toTag = (p: PersonaType) => {
         const option = PERSONA_OPTIONS.find((o) => o.value === p);
         return { label: option?.label ?? toTitleCase(p), icon: PERSONA_ICONS[p] ?? 'fa-light fa-user' };
       };
 
       if (this.activeLens() === 'me') {
+        const priorityMap = new Map(PERSONA_PRIORITY.map((p, i) => [p, i]));
         const sorted = [...this.personaService.allPersonas()].sort(
-          (a, b) => PERSONA_PRIORITY.indexOf(a) - PERSONA_PRIORITY.indexOf(b),
+          (a, b) => (priorityMap.get(a) ?? Number.MAX_SAFE_INTEGER) - (priorityMap.get(b) ?? Number.MAX_SAFE_INTEGER),
         );
         return sorted.slice(0, 3).map(toTag);
       }

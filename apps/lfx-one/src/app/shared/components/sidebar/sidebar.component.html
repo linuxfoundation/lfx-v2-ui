@@ -36,9 +36,9 @@
             <p class="font-semibold text-base text-gray-900 leading-5 tracking-tight line-clamp-2">{{ user()?.name }}</p>
             @if (showPersonaBadge()) {
               <div class="flex flex-wrap gap-1">
-                @for (tag of personaLabels(); track tag.label) {
+                @for (tag of personaLabels(); track $index) {
                   <span class="inline-flex items-center gap-1 text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-0.5 leading-4">
-                    <i [ngClass]="tag.icon" class="text-[10px]"></i>{{ tag.label }}
+                    <i [ngClass]="tag.icon" class="text-[10px]" aria-hidden="true"></i>{{ tag.label }}
                   </span>
                 }
               </div>
