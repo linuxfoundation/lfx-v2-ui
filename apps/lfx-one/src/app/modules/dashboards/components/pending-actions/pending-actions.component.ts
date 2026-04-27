@@ -2,19 +2,24 @@
 // SPDX-License-Identifier: MIT
 
 import { Component, computed, inject, input, output, signal, Signal } from '@angular/core';
+import { RsvpButtonGroupComponent } from '@app/modules/meetings/components/rsvp-button-group/rsvp-button-group.component';
 import { ButtonComponent } from '@components/button/button.component';
 import { TagComponent } from '@components/tag/tag.component';
+import { MeetingService } from '@services/meeting.service';
 import { HiddenActionsService } from '@shared/services/hidden-actions.service';
+import { MessageService } from 'primeng/api';
 
-import type { PendingActionItem } from '@lfx-one/shared/interfaces';
+import type { Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
 @Component({
   selector: 'lfx-pending-actions',
-  imports: [ButtonComponent, TagComponent],
+  imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent],
   templateUrl: './pending-actions.component.html',
   styleUrl: './pending-actions.component.scss',
 })
 export class PendingActionsComponent {
   private readonly hiddenActionsService = inject(HiddenActionsService);
+  private readonly meetingService = inject(MeetingService);
+  private readonly messageService = inject(MessageService);
 
   public readonly pendingActions = input.required<PendingActionItem[]>();
   public readonly displayLimit = input<number>(5);
@@ -26,6 +31,19 @@ export class PendingActionsComponent {
   // re-trigger the computed on dismiss. Bumping this signal forces a recompute so the dismissed
   // row disappears and the next waiting item slides into the slot immediately.
   private readonly hiddenActionsVersion = signal(0);
+
+  // Tracks which row, if any, has been clicked into "RSVP mode" so the right-hand cell can swap
+  // from the Set RSVP CTA to the inline Yes/No/Maybe button group. Keyed by the same row key the
+  // template uses for @for tracking so a re-rendered list can preserve the expanded state.
+  protected readonly expandedRsvpKey = signal<string | null>(null);
+
+  // True while the Meeting payload for an expanded RSVP row is being fetched. Drives the inline
+  // spinner state on the CTA so the user gets immediate feedback after clicking Set RSVP.
+  protected readonly rsvpMeetingLoading = signal(false);
+
+  // Per-meetingUid cache so the user can collapse and re-expand the same row (or expand a sibling
+  // RSVP row that points at the same meeting) without triggering a refetch each time.
+  private readonly rsvpMeetingCache = signal<Record<string, Meeting>>({});
 
   // Windowed view of the incoming list: drop anything the user has dismissed (HiddenActionsService
   // sets a 24h cookie on click) and cap to displayLimit so the user focuses on a handful at a time.
@@ -43,8 +61,79 @@ export class PendingActionsComponent {
   });
 
   protected handleActionClick(item: PendingActionItem): void {
+    // RSVP-inline path: expand the row and lazy-load the Meeting. Don't dismiss the row or emit
+    // actionClick yet — both happen once the user actually picks a response (handleRsvpChanged).
+    if (this.isRsvpInline(item)) {
+      this.loadMeetingForRsvp(item);
+      return;
+    }
+
     this.hiddenActionsService.hideAction(item);
     this.hiddenActionsVersion.update((v) => v + 1);
     this.actionClick.emit(item);
+  }
+
+  protected handleRsvpChanged(item: PendingActionItem): void {
+    // Local, post-confirmation row removal. We deliberately do NOT emit `actionClick` here:
+    //  - The button group already gives the user visual confirmation (the selected response
+    //    becomes the active button + the success toast).
+    //  - Emitting `actionClick` makes parent dashboards call `refresh$.next()`, which puts the
+    //    pending-actions card into a loading state and briefly collapses every OTHER row into
+    //    a skeleton flash / "Your desk is clear" empty state.
+    //  - The cookie-based dismiss is a sufficient client-side reconciliation; the next page
+    //    load reconciles authoritatively against the server.
+    // Short delay before dismissing so the user can see their choice register inside the row
+    // and read the toast — abrupt removal feels like the click did nothing.
+    setTimeout(() => {
+      this.expandedRsvpKey.set(null);
+      this.hiddenActionsService.hideAction(item);
+      this.hiddenActionsVersion.update((v) => v + 1);
+    }, 1500);
+  }
+
+  protected isRsvpInline(item: PendingActionItem): boolean {
+    return item.type === 'RSVP' && !!item.meetingUid;
+  }
+
+  protected isExpanded(item: PendingActionItem): boolean {
+    return this.expandedRsvpKey() === this.getRowKey(item);
+  }
+
+  protected getMeetingForItem(item: PendingActionItem): Meeting | null {
+    return item.meetingUid ? (this.rsvpMeetingCache()[item.meetingUid] ?? null) : null;
+  }
+
+  protected getRowKey(item: PendingActionItem): string {
+    return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
+  }
+
+  private loadMeetingForRsvp(item: PendingActionItem): void {
+    const meetingUid = item.meetingUid;
+    if (!meetingUid) return;
+
+    this.expandedRsvpKey.set(this.getRowKey(item));
+
+    if (this.rsvpMeetingCache()[meetingUid]) return;
+
+    this.rsvpMeetingLoading.set(true);
+    this.meetingService.getMeeting(meetingUid).subscribe({
+      next: (meeting) => {
+        this.rsvpMeetingCache.update((cache) => ({ ...cache, [meetingUid]: meeting }));
+        this.rsvpMeetingLoading.set(false);
+      },
+      error: () => {
+        // Surface the failure so the user knows the click did register and why the inline
+        // RSVP didn't come up. Without this, the spinner just vanishes back to the Set RSVP
+        // CTA and looks like nothing happened.
+        this.rsvpMeetingLoading.set(false);
+        this.expandedRsvpKey.set(null);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Could not load meeting',
+          detail: 'Open the meeting page from the title link and try again.',
+          life: 4000,
+        });
+      },
+    });
   }
 }
