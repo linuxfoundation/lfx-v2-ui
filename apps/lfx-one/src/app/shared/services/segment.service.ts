@@ -31,6 +31,19 @@ export class SegmentService {
   private analyticsReady = false;
   private analytics?: LfxSegmentAnalytics;
   private identifyQueue: { user: unknown }[] = [];
+  private impersonating = false;
+
+  /**
+   * Suppress all Segment tracking during impersonation sessions to prevent
+   * mixed-identity payloads from corrupting real member profiles in Segment.
+   */
+  public setImpersonating(isImpersonating: boolean): void {
+    this.impersonating = isImpersonating;
+    if (isImpersonating) {
+      // Discard any queued identify calls from before the impersonation flag was set.
+      this.identifyQueue = [];
+    }
+  }
 
   /**
    * Initialize the analytics service - should be called from app component
@@ -49,7 +62,7 @@ export class SegmentService {
    * @param properties Optional page properties
    */
   public trackPage(pageName: string, properties?: Record<string, unknown>): void {
-    if (!this.analyticsReady || !this.analytics) {
+    if (this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -66,7 +79,7 @@ export class SegmentService {
    * @param properties Event properties
    */
   public trackEvent(eventName: string, properties?: Record<string, unknown>): void {
-    if (!this.analyticsReady || !this.analytics) {
+    if (this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -82,7 +95,7 @@ export class SegmentService {
    * @param auth0User Auth0 user object
    */
   public identifyUser(auth0User: unknown): void {
-    if (!auth0User) {
+    if (!auth0User || this.impersonating) {
       return;
     }
 

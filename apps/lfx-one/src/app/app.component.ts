@@ -62,7 +62,20 @@ export class AppComponent {
         this.accountContextService.initializeUserOrganizations(this.auth.organizations);
       }
 
-      // Identify user with Segment tracking (pass entire Auth0 user object)
+      // Hydrate canImpersonate permission from server context
+      if (this.auth?.canImpersonate) {
+        this.userService.canImpersonate.set(true);
+      }
+
+      // Hydrate impersonation state from server context — must run before any
+      // Segment calls so the suppression flag is set before identifyUser fires.
+      if (this.auth?.impersonating) {
+        this.userService.impersonating.set(true);
+        this.userService.impersonator.set(this.auth.impersonator ?? null);
+        this.segmentService.setImpersonating(true);
+      }
+
+      // Identify user with Segment tracking (suppressed during impersonation)
       this.segmentService.identifyUser(this.auth.user);
 
       // Initialize feature flags with user context
@@ -72,17 +85,6 @@ export class AppComponent {
 
       // Set DataDog RUM user context for session tracking
       this.dataDogRumService.setUser(this.auth.user);
-
-      // Hydrate canImpersonate permission from server context
-      if (this.auth?.canImpersonate) {
-        this.userService.canImpersonate.set(true);
-      }
-
-      // Hydrate impersonation state from server context
-      if (this.auth?.impersonating) {
-        this.userService.impersonating.set(true);
-        this.userService.impersonator.set(this.auth.impersonator ?? null);
-      }
     }
   }
 }
