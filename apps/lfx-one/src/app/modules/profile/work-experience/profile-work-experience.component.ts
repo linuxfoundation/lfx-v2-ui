@@ -50,7 +50,6 @@ export class ProfileWorkExperienceComponent {
   public readonly workExperience: Signal<WorkExperienceEntry[]> = computed(() => this.apiWorkExperience());
   public readonly sortedExperience: Signal<WorkExperienceEntry[]> = this.initSortedExperience();
   public readonly isEmpty: Signal<boolean> = computed(() => this.workExperience().length === 0);
-  public readonly hasReviewable: Signal<boolean> = computed(() => this.workExperience().some((e) => e.needsReview));
   public readonly menuItemsMap: Signal<Map<string, MenuItem[]>> = this.initMenuItemsMap();
 
   public onAdd(): void {
