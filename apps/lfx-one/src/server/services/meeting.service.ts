@@ -177,12 +177,20 @@ export class MeetingService {
     // All meetings are now ITX-managed, use the ITX endpoint
     const meeting = await this.microserviceProxy.proxyRequest<Meeting>(req, 'LFX_V2_SERVICE', `/itx/meetings/${meetingUid}`, 'GET');
 
+    if (!meeting) {
+      throw new ResourceNotFoundError('Meeting', meetingUid, {
+        operation: 'get_meeting_by_id',
+        service: 'meeting_service',
+        path: `/itx/meetings/${meetingUid}`,
+      });
+    }
+
     // Set the meeting ID from the URL param
     meeting.id = meetingUid;
 
     this.sanitizePublicLink(meeting);
 
-    if (!meeting || !meeting.id) {
+    if (!meeting.id) {
       throw new ResourceNotFoundError('Meeting', meetingUid, {
         operation: 'get_meeting_by_id',
         service: 'meeting_service',
