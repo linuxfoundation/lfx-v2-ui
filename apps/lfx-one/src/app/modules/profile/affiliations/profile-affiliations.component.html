@@ -170,7 +170,7 @@
                 (click)="openSingleProjectTimeline(group)"
                 [attr.data-testid]="'compact-add-affiliation-' + group.id">
                 <i class="fa-light fa-plus-circle text-base"></i>
-                <span>No affiliation set — add one</span>
+                <span>No project specific affiliation set — add one</span>
               </button>
             </div>
           } @else {
@@ -345,7 +345,7 @@
                   (click)="openSingleProjectTimeline(row.group)"
                   [attr.data-testid]="'add-affiliation-' + row.group.id">
                   <i class="fa-light fa-plus-circle text-base"></i>
-                  <span>No affiliation set — add one</span>
+                  <span>No project specific affiliation set — add one</span>
                 </button>
               } @else {
                 <div class="flex items-center gap-2.5">
