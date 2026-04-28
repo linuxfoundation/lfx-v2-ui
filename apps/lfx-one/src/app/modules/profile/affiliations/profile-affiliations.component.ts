@@ -173,7 +173,7 @@ export class ProfileAffiliationsComponent {
     void this.router.navigate(['/profile', 'identities']);
   }
 
-  public openSingleProjectTimeline(project: ProjectGroup): void {
+  protected openSingleProjectTimeline(project: ProjectGroup): void {
     const timelineProjects: TimelineProjectData[] = [
       {
         projectName: project.projectName,
