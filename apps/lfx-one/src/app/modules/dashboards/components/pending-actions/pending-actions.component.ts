@@ -64,28 +64,9 @@ export class PendingActionsComponent {
     return unhidden.slice(0, safeLimit);
   });
 
-  protected readonly decoratedActions: Signal<DecoratedPendingAction[]> = computed(() => {
-    const expandedKey = this.expandedRsvpKey();
-    const loadingUid = this.loadingMeetingUid();
-    const cache = this.rsvpMeetingCache();
+  protected readonly decoratedActions: Signal<DecoratedPendingAction[]> = this.initDecoratedActions();
 
-    return this.visibleActions().map((item) => {
-      const rowKey = this.getRowKey(item);
-      const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid;
-      const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
-      return {
-        ...item,
-        rowKey,
-        isRsvpInline,
-        isRsvpInlineLink: isRsvpInline && !!item.buttonLink,
-        isExpanded: expandedKey === rowKey,
-        isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
-        meeting,
-      };
-    });
-  });
-
-  protected handleActionClick(item: PendingActionItem): void {
+  protected handleActionClick(item: DecoratedPendingAction): void {
     // RSVP-inline path: expand the row and lazy-load the Meeting. Don't dismiss the row or emit
     // actionClick yet — both happen once the user actually picks a response (handleRsvpChanged).
     if (this.isRsvpInline(item)) {
@@ -98,7 +79,7 @@ export class PendingActionsComponent {
     this.actionClick.emit(item);
   }
 
-  protected handleRsvpChanged(item: PendingActionItem): void {
+  protected handleRsvpChanged(item: DecoratedPendingAction): void {
     // Local, post-confirmation row removal. We deliberately do NOT emit `actionClick` here:
     //  - The button group already gives the user visual confirmation (the selected response
     //    becomes the active button + the success toast).
@@ -142,6 +123,29 @@ export class PendingActionsComponent {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
     }
     return `${item.type}-${item.text}-${item.buttonLink ?? ''}`;
+  }
+
+  private initDecoratedActions(): Signal<DecoratedPendingAction[]> {
+    return computed(() => {
+      const expandedKey = this.expandedRsvpKey();
+      const loadingUid = this.loadingMeetingUid();
+      const cache = this.rsvpMeetingCache();
+
+      return this.visibleActions().map((item) => {
+        const rowKey = this.getRowKey(item);
+        const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid;
+        const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
+        return {
+          ...item,
+          rowKey,
+          isRsvpInline,
+          isRsvpInlineLink: isRsvpInline && !!item.buttonLink,
+          isExpanded: expandedKey === rowKey,
+          isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
+          meeting,
+        };
+      });
+    });
   }
 
   private loadMeetingForRsvp(item: PendingActionItem): void {
