@@ -421,7 +421,7 @@ export class ProfileAffiliationsComponent {
 
     const verifiedOrgIds = new Set(
       this.workExperience()
-        .filter((we) => !we.needsReview && we.organizationId)
+        .filter((we) => we.organizationId)
         .map((we) => we.organizationId!)
     );
 
