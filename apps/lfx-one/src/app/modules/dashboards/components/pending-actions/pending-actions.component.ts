@@ -90,10 +90,19 @@ export class PendingActionsComponent {
     // and read the toast — abrupt removal feels like the click did nothing. timer + takeUntilDestroyed
     // (instead of raw setTimeout) ensures the deferred work is cancelled if the component unmounts
     // mid-delay, so we never write to signals on a destroyed instance.
+    //
+    // Capture this row's key up front so the guarded clear below knows exactly which row scheduled
+    // this timer. If the user RSVPs row A and opens row B before A's 1.5s timer fires, the timer
+    // must not collapse B's expansion just because A's deferred dismiss is firing. hideAction and
+    // the version bump still run unconditionally — those dismiss row A from the visible list,
+    // which is what the user actually asked for.
+    const rowKey = this.getRowKey(item);
     timer(1500)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.expandedRsvpKey.set(null);
+        if (this.expandedRsvpKey() === rowKey) {
+          this.expandedRsvpKey.set(null);
+        }
         this.hiddenActionsService.hideAction(item);
         this.hiddenActionsVersion.update((v) => v + 1);
       });
