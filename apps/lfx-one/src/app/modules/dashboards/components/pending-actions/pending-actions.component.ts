@@ -12,6 +12,7 @@ import { MessageService } from 'primeng/api';
 import { timer } from 'rxjs';
 
 import type { DecoratedPendingAction, Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
+
 @Component({
   selector: 'lfx-pending-actions',
   imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent],
