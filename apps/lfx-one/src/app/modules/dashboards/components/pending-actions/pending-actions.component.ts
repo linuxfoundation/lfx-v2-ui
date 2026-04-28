@@ -133,7 +133,7 @@ export class PendingActionsComponent {
 
       return this.visibleActions().map((item) => {
         const rowKey = this.getRowKey(item);
-        const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid;
+        const isRsvpInline = this.isRsvpInline(item);
         const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
         return {
           ...item,
