@@ -40,6 +40,7 @@ import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
 import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix, usernameMatches } from '../utils/auth-helper';
+import { isZoomJoinUrl } from '../utils/zoom-url.util';
 import { AccessCheckService } from './access-check.service';
 import { CommitteeService } from './committee.service';
 import { logger } from './logger.service';
@@ -99,6 +100,8 @@ export class MeetingService {
       ...resource.data,
       id: resource.data.id || resource.id?.split(':').pop() || resource.id,
     }));
+
+    meetings.forEach((m) => this.sanitizePublicLink(m));
 
     // Enrich meetings with project names and committee data in parallel (independent enrichments)
     const hasCommittees = meetings.some((m) => m.committees && m.committees.length > 0);
@@ -176,6 +179,8 @@ export class MeetingService {
 
     // Set the meeting ID from the URL param
     meeting.id = meetingUid;
+
+    this.sanitizePublicLink(meeting);
 
     if (!meeting || !meeting.id) {
       throw new ResourceNotFoundError('Meeting', meetingUid, {
@@ -1240,6 +1245,22 @@ export class MeetingService {
 
   public async getMeetingProjectName<T extends Meeting>(req: Request, meetings: T[]): Promise<T[]> {
     return this.projectService.enrichWithProjectData(req, meetings) as Promise<T[]>;
+  }
+
+  /**
+   * Drops `public_link` unless it's a Zoom join URL. ITX writes the LFX landing-page URL
+   * there, which downstream code would otherwise misuse as a join URL.
+   */
+  private sanitizePublicLink(meeting: Meeting): void {
+    if (meeting.public_link === undefined) return;
+
+    const trimmed = typeof meeting.public_link === 'string' ? meeting.public_link.trim() : '';
+    if (!trimmed || !isZoomJoinUrl(trimmed)) {
+      delete meeting.public_link;
+      return;
+    }
+
+    meeting.public_link = trimmed;
   }
 
   /**

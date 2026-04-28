@@ -128,7 +128,7 @@ export class PublicMeetingController {
       if (meeting.visibility === MeetingVisibility.PUBLIC && !meeting.restricted) {
         // Only get join URL if within allowed join time window
         if (this.isWithinJoinWindow(meeting)) {
-          // Fetch join URL if not already available from ITX data
+          // Fetch join URL if not already populated (service layer guarantees it's a Zoom URL when present)
           if (!meeting.public_link) {
             await this.handleJoinUrlForPublicMeeting(req, meeting, id);
           }
@@ -312,7 +312,7 @@ export class PublicMeetingController {
         await this.restrictedMeetingCheck(req, next, email, id);
       }
 
-      // Return public_link if available from ITX data, otherwise fetch from API
+      // Use existing join URL if available, otherwise fetch a per-user URL from ITX
       if (meeting.public_link) {
         res.json({ link: meeting.public_link });
         return;
