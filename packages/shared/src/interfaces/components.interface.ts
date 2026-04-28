@@ -3,6 +3,8 @@
 
 import { ChartData, ChartOptions, ChartType } from 'chart.js';
 
+import { Meeting } from './meeting.interface';
+
 /**
  * Named entity interface for pipes
  * @description Common interface for entities with name and email fields
@@ -492,6 +494,15 @@ export interface PendingActionItem {
   meetingUid?: string;
   /** Occurrence ID for recurring meetings (set on RSVP action types today). Passed to RsvpButtonGroupComponent so the scope picker (single / this_and_following / all) can scope the response correctly. */
   occurrenceId?: string;
+}
+
+export interface DecoratedPendingAction extends PendingActionItem {
+  rowKey: string;
+  isRsvpInline: boolean;
+  isRsvpInlineLink: boolean;
+  isExpanded: boolean;
+  isLoading: boolean;
+  meeting: Meeting | null;
 }
 
 /**

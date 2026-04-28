@@ -11,7 +11,7 @@ import { HiddenActionsService } from '@shared/services/hidden-actions.service';
 import { MessageService } from 'primeng/api';
 import { timer } from 'rxjs';
 
-import type { Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
+import type { DecoratedPendingAction, Meeting, PendingActionItem } from '@lfx-one/shared/interfaces';
 @Component({
   selector: 'lfx-pending-actions',
   imports: [ButtonComponent, TagComponent, RsvpButtonGroupComponent],
@@ -54,7 +54,7 @@ export class PendingActionsComponent {
   // When one is dismissed, it leaves the window and the next waiting item slides into the slot on
   // the next change-detection pass. The full list still lives on the parent — this just controls
   // what gets rendered.
-  protected readonly visibleActions: Signal<PendingActionItem[]> = computed(() => {
+  private readonly visibleActions: Signal<PendingActionItem[]> = computed(() => {
     this.hiddenActionsVersion();
     const unhidden = this.pendingActions().filter((item) => !this.hiddenActionsService.isActionHidden(item));
     // Guard against negative / non-finite inputs — `slice(0, -1)` would silently drop the last
@@ -62,6 +62,27 @@ export class PendingActionsComponent {
     const limit = this.displayLimit();
     const safeLimit = Number.isFinite(limit) ? Math.max(0, limit) : 5;
     return unhidden.slice(0, safeLimit);
+  });
+
+  protected readonly decoratedActions: Signal<DecoratedPendingAction[]> = computed(() => {
+    const expandedKey = this.expandedRsvpKey();
+    const loadingUid = this.loadingMeetingUid();
+    const cache = this.rsvpMeetingCache();
+
+    return this.visibleActions().map((item) => {
+      const rowKey = this.getRowKey(item);
+      const isRsvpInline = item.type === 'RSVP' && !!item.meetingUid;
+      const meeting = item.meetingUid ? (cache[item.meetingUid] ?? null) : null;
+      return {
+        ...item,
+        rowKey,
+        isRsvpInline,
+        isRsvpInlineLink: isRsvpInline && !!item.buttonLink,
+        isExpanded: expandedKey === rowKey,
+        isLoading: !!item.meetingUid && loadingUid === item.meetingUid,
+        meeting,
+      };
+    });
   });
 
   protected handleActionClick(item: PendingActionItem): void {
@@ -108,27 +129,15 @@ export class PendingActionsComponent {
       });
   }
 
-  protected isRsvpInline(item: PendingActionItem): boolean {
+  private isRsvpInline(item: PendingActionItem): boolean {
     return item.type === 'RSVP' && !!item.meetingUid;
-  }
-
-  protected isExpanded(item: PendingActionItem): boolean {
-    return this.expandedRsvpKey() === this.getRowKey(item);
-  }
-
-  protected isLoadingForItem(item: PendingActionItem): boolean {
-    return !!item.meetingUid && this.loadingMeetingUid() === item.meetingUid;
-  }
-
-  protected getMeetingForItem(item: PendingActionItem): Meeting | null {
-    return item.meetingUid ? (this.rsvpMeetingCache()[item.meetingUid] ?? null) : null;
   }
 
   // Stable identifier for a row. Prefers intrinsic IDs (meetingUid + occurrenceId) when present —
   // those don't drift if copy is edited or query strings shift. Falls back to a type+text+buttonLink
   // composite for action types that don't carry IDs yet (Vote/Survey/Agenda). The template's @for
   // trackBy uses this same expression so the row identity is consistent everywhere.
-  protected getRowKey(item: PendingActionItem): string {
+  private getRowKey(item: PendingActionItem): string {
     if (item.meetingUid) {
       return `${item.type}-${item.meetingUid}-${item.occurrenceId ?? ''}`;
     }
