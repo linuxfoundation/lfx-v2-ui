@@ -67,10 +67,12 @@ export class AppComponent {
         this.userService.canImpersonate.set(true);
       }
 
-      if (this.auth?.impersonating) {
+      const isImpersonating = Boolean(this.auth?.impersonating);
+      this.segmentService.setImpersonating(isImpersonating);
+
+      if (isImpersonating) {
         this.userService.impersonating.set(true);
         this.userService.impersonator.set(this.auth.impersonator ?? null);
-        this.segmentService.setImpersonating(true);
       }
 
       this.segmentService.identifyUser(this.auth.user);
