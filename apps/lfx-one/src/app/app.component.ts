@@ -67,15 +67,12 @@ export class AppComponent {
         this.userService.canImpersonate.set(true);
       }
 
-      // Hydrate impersonation state from server context — must run before any
-      // Segment calls so the suppression flag is set before identifyUser fires.
       if (this.auth?.impersonating) {
         this.userService.impersonating.set(true);
         this.userService.impersonator.set(this.auth.impersonator ?? null);
         this.segmentService.setImpersonating(true);
       }
 
-      // Identify user with Segment tracking (suppressed during impersonation)
       this.segmentService.identifyUser(this.auth.user);
 
       // Initialize feature flags with user context

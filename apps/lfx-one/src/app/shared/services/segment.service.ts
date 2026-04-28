@@ -33,14 +33,9 @@ export class SegmentService {
   private identifyQueue: { user: unknown }[] = [];
   private impersonating = false;
 
-  /**
-   * Suppress all Segment tracking during impersonation sessions to prevent
-   * mixed-identity payloads from corrupting real member profiles in Segment.
-   */
   public setImpersonating(isImpersonating: boolean): void {
     this.impersonating = isImpersonating;
     if (isImpersonating) {
-      // Discard any queued identify calls from before the impersonation flag was set.
       this.identifyQueue = [];
     }
   }
