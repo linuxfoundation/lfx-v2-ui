@@ -144,33 +144,36 @@ export class PendingActionsComponent {
     if (this.rsvpMeetingCache()[meetingUid]) return;
 
     this.loadingMeetingUid.set(meetingUid);
-    this.meetingService.getMeeting(meetingUid).subscribe({
-      next: (meeting) => {
-        this.rsvpMeetingCache.update((cache) => ({ ...cache, [meetingUid]: meeting }));
-        // Only clear the loading flag when this response is the one we're still waiting on. If the
-        // user moved to a different row before this completed, leave the new row's loading state
-        // alone — its own request owns it now.
-        if (this.loadingMeetingUid() === meetingUid) {
-          this.loadingMeetingUid.set(null);
-        }
-      },
-      error: () => {
-        // Surface the failure so the user knows the click did register and why the inline RSVP
-        // didn't come up. Same staleness guard as the success path: a late-arriving failure for
-        // row A must not collapse row B if the user has already moved on.
-        if (this.loadingMeetingUid() === meetingUid) {
-          this.loadingMeetingUid.set(null);
-        }
-        if (this.expandedRsvpKey() === this.getRowKey(item)) {
-          this.expandedRsvpKey.set(null);
-        }
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Could not load meeting',
-          detail: 'Open the meeting page from the title link and try again.',
-          life: 4000,
-        });
-      },
-    });
+    this.meetingService
+      .getMeeting(meetingUid)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (meeting) => {
+          this.rsvpMeetingCache.update((cache) => ({ ...cache, [meetingUid]: meeting }));
+          // Only clear the loading flag when this response is the one we're still waiting on. If the
+          // user moved to a different row before this completed, leave the new row's loading state
+          // alone — its own request owns it now.
+          if (this.loadingMeetingUid() === meetingUid) {
+            this.loadingMeetingUid.set(null);
+          }
+        },
+        error: () => {
+          // Surface the failure so the user knows the click did register and why the inline RSVP
+          // didn't come up. Same staleness guard as the success path: a late-arriving failure for
+          // row A must not collapse row B if the user has already moved on.
+          if (this.loadingMeetingUid() === meetingUid) {
+            this.loadingMeetingUid.set(null);
+          }
+          if (this.expandedRsvpKey() === this.getRowKey(item)) {
+            this.expandedRsvpKey.set(null);
+          }
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Could not load meeting',
+            detail: 'Open the meeting page from the title link and try again.',
+            life: 4000,
+          });
+        },
+      });
   }
 }
