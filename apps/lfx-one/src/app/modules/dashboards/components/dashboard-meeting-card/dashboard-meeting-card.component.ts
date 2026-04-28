@@ -95,8 +95,8 @@ export class DashboardMeetingCardComponent {
           return of(null);
         }
 
-        if (meeting.public_link) {
-          return of(meeting.public_link);
+        if (meeting.join_url) {
+          return of(meeting.join_url);
         }
 
         if (authenticated && user?.email) {

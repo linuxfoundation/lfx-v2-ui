@@ -129,12 +129,12 @@ export class PublicMeetingController {
         // Only get join URL if within allowed join time window
         if (this.isWithinJoinWindow(meeting)) {
           // Fetch join URL if not already available from ITX data
-          if (!meeting.public_link) {
+          if (!meeting.join_url) {
             await this.handleJoinUrlForPublicMeeting(req, meeting, id);
           }
         } else {
-          // Remove public link outside join window
-          delete meeting.public_link;
+          // Remove join URL outside join window
+          delete meeting.join_url;
         }
         res.json({
           meeting,
@@ -143,8 +143,8 @@ export class PublicMeetingController {
         return;
       }
 
-      // Remove public link for restricted/private meetings (will be provided after password validation)
-      delete meeting.public_link;
+      // Remove join URL for restricted/private meetings (will be provided after password validation)
+      delete meeting.join_url;
 
       // Check if the user has passed in a password, if so, check if it's correct
       const { password } = req.query;
@@ -312,9 +312,9 @@ export class PublicMeetingController {
         await this.restrictedMeetingCheck(req, next, email, id);
       }
 
-      // Return public_link if available from ITX data, otherwise fetch from API
-      if (meeting.public_link) {
-        res.json({ link: meeting.public_link });
+      // Use existing join URL if available, otherwise fetch a per-user URL from ITX
+      if (meeting.join_url) {
+        res.json({ link: meeting.join_url });
         return;
       }
 
@@ -509,7 +509,7 @@ export class PublicMeetingController {
 
     try {
       const joinUrlData = await this.meetingService.getMeetingJoinUrl(req, id);
-      meeting.public_link = joinUrlData.link;
+      meeting.join_url = joinUrlData.link;
 
       logger.success(req, 'handle_link_for_public_meeting', startTime, {
         meeting_id: id,
