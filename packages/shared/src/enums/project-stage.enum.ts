@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Project lifecycle stage, synced from SFDC via lfx-v1-sync-helper.
+ * Project lifecycle stage.
  * Values mirror the upstream Goa enum declared in `lfx-v2-project-service` at
  * `api/project/v1/design/types.go` (`ProjectStageAttribute`).
  */

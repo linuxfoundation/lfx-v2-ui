@@ -15,7 +15,7 @@ import {
   Project,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
-import { computeIsFoundation, computeIsFoundationEligible } from '@lfx-one/shared/utils';
+import { computeIsFoundation } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { personaDetectionService } from '../utils/persona-helper';
@@ -169,7 +169,7 @@ export class NavigationService {
       if (!project) return null;
       // Mirror the main-pipeline contract so an archived selection doesn't get re-injected.
       if (lens === 'foundation') {
-        if (!computeIsFoundationEligible(project)) return null;
+        if (!computeIsFoundation(project)) return null;
       } else {
         if (project.stage !== ProjectStage.Active && project.stage !== ProjectStage.FormationEngaged) return null;
       }
@@ -184,7 +184,7 @@ export class NavigationService {
     let projects = resources.map((r) => r.data);
     // legal_entity_type negation isn't supported by the filter grammar — re-check locally.
     if (lens === 'foundation') {
-      projects = projects.filter((p) => computeIsFoundationEligible(p));
+      projects = projects.filter((p) => computeIsFoundation(p));
     }
     if (eligibleUids) {
       projects = projects.filter((p) => eligibleUids.has(p.uid));
