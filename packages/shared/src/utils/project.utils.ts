@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { ProjectFunding } from '../enums/project-funding.enum';
+import { ProjectStage } from '../enums/project-stage.enum';
 import type { EnrichedPersonaProject, LensItem, Project, ProjectContext } from '../interfaces';
 
 export function toProjectContext(project: EnrichedPersonaProject): ProjectContext {
@@ -46,7 +47,24 @@ export function computeIsFoundation(project: Project | null): boolean {
   }
 
   return (
-    project.stage === 'Active' &&
+    project.stage === ProjectStage.Active &&
+    project.legal_entity_type !== 'Internal Allocation' &&
+    project.funding === ProjectFunding.Funded &&
+    Array.isArray(project.funding_model) &&
+    project.funding_model.includes('Membership')
+  );
+}
+
+/**
+ * Foundation-eligible for the navigation lens dropdown: includes both live
+ * (Active) and pre-launch (Formation - Engaged) membership-funded projects.
+ * Use this for the foundation lens; use `computeIsFoundation` everywhere else.
+ */
+export function computeIsFoundationEligible(project: Project | null): boolean {
+  if (!project) return false;
+  if (FOUNDATION_NAME_OVERRIDES.has(project.name)) return true;
+  return (
+    (project.stage === ProjectStage.Active || project.stage === ProjectStage.FormationEngaged) &&
     project.legal_entity_type !== 'Internal Allocation' &&
     project.funding === ProjectFunding.Funded &&
     Array.isArray(project.funding_model) &&

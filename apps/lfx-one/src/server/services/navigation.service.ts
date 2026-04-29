@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { LENS_PERSONA_MAP, NAV_MAX_UPSTREAM_ITERATIONS, NAV_MIN_ITEMS_PER_RESPONSE } from '@lfx-one/shared/constants';
-import { ProjectFunding } from '@lfx-one/shared/enums';
+import { ProjectFunding, ProjectStage } from '@lfx-one/shared/enums';
 import {
   EnrichedPersonaProject,
   GetLensItemsParams,
@@ -15,7 +15,7 @@ import {
   Project,
   QueryServiceResponse,
 } from '@lfx-one/shared/interfaces';
-import { computeIsFoundation } from '@lfx-one/shared/utils';
+import { computeIsFoundation, computeIsFoundationEligible } from '@lfx-one/shared/utils';
 import { Request } from 'express';
 
 import { personaDetectionService } from '../utils/persona-helper';
@@ -168,13 +168,11 @@ export class NavigationService {
       const project = response?.resources?.[0]?.data;
       if (!project) return null;
       // Mirror the main-pipeline contract so an archived selection doesn't get re-injected.
-      // Formation - Engaged is only valid for the project lens; foundation lens stays strict.
       if (lens === 'foundation') {
-        if (project.stage !== 'Active') return null;
+        if (!computeIsFoundationEligible(project)) return null;
       } else {
-        if (project.stage !== 'Active' && project.stage !== 'Formation - Engaged') return null;
+        if (project.stage !== ProjectStage.Active && project.stage !== ProjectStage.FormationEngaged) return null;
       }
-      if (lens === 'foundation' && !computeIsFoundation(project)) return null;
       return this.toLensItem(project);
     } catch (error) {
       logger.warning(req, 'fetch_selected_item', 'Failed to fetch selected lens item', { err: error, uid, lens });
@@ -186,7 +184,7 @@ export class NavigationService {
     let projects = resources.map((r) => r.data);
     // legal_entity_type negation isn't supported by the filter grammar — re-check locally.
     if (lens === 'foundation') {
-      projects = projects.filter((p) => computeIsFoundation(p));
+      projects = projects.filter((p) => computeIsFoundationEligible(p));
     }
     if (eligibleUids) {
       projects = projects.filter((p) => eligibleUids.has(p.uid));
@@ -198,11 +196,14 @@ export class NavigationService {
     // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
     const base: LensItemsQuery = { type: 'project', filters: [], sort: 'name_asc' };
     if (lens === 'foundation') {
-      base.filters = ['stage:Active', `funding:${ProjectFunding.Funded}`, 'funding_model:Membership'];
+      // Funding + membership required (AND); Active or Formation - Engaged accepted (OR).
+      // This ensures pre-launch foundations appear in the dropdown before they go Active.
+      base.filters = [`funding:${ProjectFunding.Funded}`, 'funding_model:Membership'];
+      base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`];
     } else {
       // Include Formation - Engaged projects so persona-eligible pre-launch
       // projects appear in the project dropdown.
-      base.filters_or = ['stage:Active', 'stage:Formation - Engaged'];
+      base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`];
     }
 
     if (pageToken) base.page_token = pageToken;
