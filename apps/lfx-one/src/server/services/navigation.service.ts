@@ -168,7 +168,7 @@ export class NavigationService {
       const project = response?.resources?.[0]?.data;
       if (!project) return null;
       // Mirror the main-pipeline contract so an archived selection doesn't get re-injected.
-      if (project.stage !== 'Active') return null;
+      if (project.stage !== 'Active' && project.stage !== 'Formation - Engaged') return null;
       if (lens === 'foundation' && !computeIsFoundation(project)) return null;
       return this.toLensItem(project);
     } catch (error) {
@@ -191,8 +191,14 @@ export class NavigationService {
 
   private buildQuery(lens: NavLens, pageToken: string | undefined, name: string | undefined): LensItemsQuery {
     // legal_entity_type negation is post-filtered (filter grammar has no exclusions).
-    const filters = lens === 'foundation' ? ['stage:Active', `funding:${ProjectFunding.Funded}`, 'funding_model:Membership'] : ['stage:Active'];
-    const base: LensItemsQuery = { type: 'project', filters, sort: 'name_asc' };
+    const base: LensItemsQuery = { type: 'project', filters: [], sort: 'name_asc' };
+    if (lens === 'foundation') {
+      base.filters = ['stage:Active', `funding:${ProjectFunding.Funded}`, 'funding_model:Membership'];
+    } else {
+      // Include Formation - Engaged projects so persona-eligible pre-launch
+      // projects appear in the project dropdown.
+      base.filters_or = ['stage:Active', 'stage:Formation - Engaged'];
+    }
 
     if (pageToken) base.page_token = pageToken;
     if (name) base.name = name;

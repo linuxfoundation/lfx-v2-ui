@@ -53,6 +53,7 @@ export interface GetLensItemsParams {
 export interface LensItemsQuery {
   type: 'project';
   filters: string[];
+  filters_or?: string[];
   sort: 'name_asc';
   page_token?: string;
   name?: string;
