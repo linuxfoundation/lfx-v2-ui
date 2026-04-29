@@ -314,6 +314,12 @@ export class PublicMeetingController {
 
       // Use existing join URL if available, otherwise fetch a per-user URL from ITX
       if (meeting.join_url) {
+        logger.success(req, 'post_meeting_link', startTime, {
+          meeting_id: id,
+          email: email,
+          project_uid: meeting.project_uid,
+          title: meeting.title,
+        });
         res.json({ link: meeting.join_url });
         return;
       }
