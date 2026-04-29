@@ -22,6 +22,9 @@ import { personaDetectionService } from '../utils/persona-helper';
 import { logger } from './logger.service';
 import { MicroserviceProxyService } from './microservice-proxy.service';
 
+/** Stages eligible for the project lens — Active plus supported pre-launch formation stages. */
+const PROJECT_LENS_ALLOWED_STAGES = new Set<string>([ProjectStage.Active, ProjectStage.FormationEngaged, ProjectStage.FormationExploratory]);
+
 /** Powers the foundation/project lens dropdown. Root writers bypass the persona filter. */
 export class NavigationService {
   private readonly microserviceProxy: MicroserviceProxyService;
@@ -171,7 +174,7 @@ export class NavigationService {
       if (lens === 'foundation') {
         if (!computeIsFoundation(project)) return null;
       } else {
-        if (project.stage !== ProjectStage.Active && project.stage !== ProjectStage.FormationEngaged && project.stage !== ProjectStage.FormationExploratory) return null;
+        if (!PROJECT_LENS_ALLOWED_STAGES.has(project.stage)) return null;
       }
       return this.toLensItem(project);
     } catch (error) {
@@ -201,9 +204,9 @@ export class NavigationService {
       base.filters = [`funding:${ProjectFunding.Funded}`, 'funding_model:Membership'];
       base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`];
     } else {
-      // Include all formation-stage projects so persona-eligible pre-launch
-      // projects appear in the project dropdown.
-      base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`, `stage:${ProjectStage.FormationExploratory}`];
+      // Include active projects plus supported pre-launch formation stages so
+      // persona-eligible pre-launch projects appear in the project dropdown.
+      base.filters_or = [...PROJECT_LENS_ALLOWED_STAGES].map((stage) => `stage:${stage}`);
     }
 
     if (pageToken) base.page_token = pageToken;
