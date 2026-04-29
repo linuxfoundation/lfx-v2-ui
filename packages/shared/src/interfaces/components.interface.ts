@@ -3,6 +3,8 @@
 
 import { ChartData, ChartOptions, ChartType } from 'chart.js';
 
+import type { Meeting } from './meeting.interface';
+
 /**
  * Named entity interface for pipes
  * @description Common interface for entities with name and email fields
@@ -488,6 +490,29 @@ export interface PendingActionItem {
   buttonLink?: string;
   /** Optional date string for display (e.g., "Jan 15, 2025 at 10:00 AM") */
   date?: string;
+  /** Meeting UID (set on RSVP action types today; Agenda may populate this in a follow-up). Used by the dashboard to lazy-load the Meeting and render the RSVP button group inline without leaving the page. */
+  meetingUid?: string;
+  /** Occurrence ID for recurring meetings (set on RSVP action types today). Passed to RsvpButtonGroupComponent so the scope picker (single / this_and_following / all) can scope the response correctly. */
+  occurrenceId?: string;
+}
+
+/**
+ * Pending action decorated with template-friendly view state
+ * @description Extends PendingActionItem with precomputed flags so the dashboard template can avoid function calls in `@for ... track` and conditional bindings.
+ */
+export interface DecoratedPendingAction extends PendingActionItem {
+  /** Stable row identifier used for `@for ... track` and to scope expanded-RSVP state */
+  rowKey: string;
+  /** True when the action is an RSVP that should expand inline (RSVP type with a meetingUid) */
+  isRsvpInline: boolean;
+  /** True when the row's title should render as an external meeting link */
+  isRsvpInlineLink: boolean;
+  /** True when this row's inline RSVP button group is currently visible */
+  isExpanded: boolean;
+  /** True while the Meeting payload for this RSVP row is being fetched */
+  isLoading: boolean;
+  /** Lazily-loaded Meeting passed to RsvpButtonGroupComponent; null until fetched */
+  meeting: Meeting | null;
 }
 
 /**
@@ -501,38 +526,6 @@ export interface MeetingItem {
   time: string;
   /** Number of attendees */
   attendees: number;
-}
-
-/**
- * Project item for project list
- * @description Structure for project information from USER_PROJECT_CONTRIBUTIONS_DAILY
- */
-export interface ProjectItem {
-  /** Project name */
-  name: string;
-  /** Project URL slug */
-  slug: string;
-  /** Project logo URL */
-  logo?: string;
-  /** User's role in project (Maintainer or Contributor) */
-  role: 'Maintainer' | 'Contributor';
-  /** User's affiliations (comma-separated if multiple) */
-  affiliations: string[];
-  /** Code activity data for chart (daily values) */
-  codeActivities: number[];
-  /** Non-code activity data for chart (daily values) */
-  nonCodeActivities: number[];
-}
-
-/**
- * Project item with pre-generated chart data for dashboard
- * @description Extended project item with Chart.js line chart configurations
- */
-export interface ProjectItemWithCharts extends ProjectItem {
-  /** Chart.js data configuration for code activities line chart */
-  codeActivitiesChartData: ChartData<'line'>;
-  /** Chart.js data configuration for non-code activities line chart */
-  nonCodeActivitiesChartData: ChartData<'line'>;
 }
 
 /**

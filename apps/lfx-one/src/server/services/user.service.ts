@@ -21,15 +21,12 @@ import {
   PastMeeting,
   PastMeetingParticipant,
   PendingActionItem,
-  ProjectItem,
   QueryServiceResponse,
   UserCodeCommitsResponse,
   UserCodeCommitsRow,
   UserMetadata,
   UserMetadataUpdateRequest,
   UserMetadataUpdateResponse,
-  UserProjectContributionRow,
-  UserProjectsResponse,
   UserPullRequestsResponse,
   UserPullRequestsRow,
   Vote,
@@ -368,96 +365,6 @@ export class UserService {
   }
 
   /**
-   * Get user's projects with activity data
-   * Queries USER_PROJECT_CONTRIBUTIONS_DAILY table filtered by LF username
-   * @param lfUsername - Linux Foundation username from OIDC
-   * @returns All projects with activity data for the user
-   */
-  public async getMyProjects(lfUsername: string): Promise<UserProjectsResponse> {
-    // Get all projects with their activity data
-    // Aggregates affiliations per project and sums activities by date
-    const query = `
-      WITH UserProjects AS (
-        SELECT PROJECT_ID, PROJECT_NAME, PROJECT_SLUG, PROJECT_LOGO,
-               MAX(IS_MAINTAINER) AS IS_MAINTAINER
-        FROM ANALYTICS.PLATINUM_LFX_ONE.USER_PROJECT_CONTRIBUTIONS_DAILY
-        WHERE SUB = ?
-        GROUP BY PROJECT_ID, PROJECT_NAME, PROJECT_SLUG, PROJECT_LOGO
-        ORDER BY PROJECT_NAME, PROJECT_ID
-      ),
-      ProjectAffiliations AS (
-        SELECT PROJECT_ID, LISTAGG(DISTINCT AFFILIATION, ', ') WITHIN GROUP (ORDER BY AFFILIATION) AS AFFILIATIONS
-        FROM ANALYTICS.PLATINUM_LFX_ONE.USER_PROJECT_CONTRIBUTIONS_DAILY
-        WHERE SUB = ?
-          AND AFFILIATION IS NOT NULL
-          AND AFFILIATION != ''
-        GROUP BY PROJECT_ID
-      ),
-      DailyActivities AS (
-        SELECT PROJECT_ID, ACTIVITY_DATE,
-               SUM(DAILY_CODE_ACTIVITIES) AS DAILY_CODE_ACTIVITIES,
-               SUM(DAILY_NON_CODE_ACTIVITIES) AS DAILY_NON_CODE_ACTIVITIES
-        FROM ANALYTICS.PLATINUM_LFX_ONE.USER_PROJECT_CONTRIBUTIONS_DAILY
-        WHERE SUB = ?
-        GROUP BY PROJECT_ID, ACTIVITY_DATE
-      )
-      SELECT
-        p.PROJECT_ID,
-        p.PROJECT_NAME,
-        p.PROJECT_SLUG,
-        p.PROJECT_LOGO,
-        p.IS_MAINTAINER,
-        COALESCE(pa.AFFILIATIONS, '') AS AFFILIATION,
-        a.ACTIVITY_DATE,
-        a.DAILY_CODE_ACTIVITIES,
-        a.DAILY_NON_CODE_ACTIVITIES
-      FROM UserProjects p
-      LEFT JOIN ProjectAffiliations pa ON p.PROJECT_ID = pa.PROJECT_ID
-      LEFT JOIN DailyActivities a ON p.PROJECT_ID = a.PROJECT_ID
-      ORDER BY p.PROJECT_NAME, p.PROJECT_ID, a.ACTIVITY_DATE ASC
-    `;
-
-    const result = await this.snowflakeService.execute<UserProjectContributionRow>(query, [lfUsername, lfUsername, lfUsername]);
-
-    // Group rows by PROJECT_ID and transform into ProjectItem[]
-    const projectsMap = new Map<string, ProjectItem>();
-
-    for (const row of result.rows) {
-      if (!projectsMap.has(row.PROJECT_ID)) {
-        // Parse affiliations from comma-separated string
-        const affiliations = row.AFFILIATION ? row.AFFILIATION.split(', ').filter((a) => a.trim()) : [];
-
-        // Initialize new project
-        projectsMap.set(row.PROJECT_ID, {
-          name: row.PROJECT_NAME,
-          slug: row.PROJECT_SLUG,
-          logo: row.PROJECT_LOGO || undefined,
-          role: row.IS_MAINTAINER ? 'Maintainer' : 'Contributor',
-          affiliations,
-          codeActivities: [],
-          nonCodeActivities: [],
-        });
-      }
-
-      // Add daily activity values to arrays (if there's activity data)
-      if (row.ACTIVITY_DATE) {
-        const project = projectsMap.get(row.PROJECT_ID)!;
-        project.codeActivities.push(row.DAILY_CODE_ACTIVITIES || 0);
-        project.nonCodeActivities.push(row.DAILY_NON_CODE_ACTIVITIES || 0);
-      }
-    }
-
-    // Convert map to array; ROOT is an administrative pseudo-project used only for persona
-    // detection and must never surface in user-facing project lists.
-    const projects = Array.from(projectsMap.values()).filter((p) => p.slug !== ROOT_PROJECT_SLUG);
-
-    return {
-      data: projects,
-      totalProjects: projects.length,
-    };
-  }
-
-  /**
    * Get all pending actions for the authenticated user across every persona. A pending action
    * is a pending action regardless of which dashboard the user is viewing — the board-only
    * scoping in the earlier implementation was an MVP artifact, not a principled design choice.
@@ -566,9 +473,9 @@ export class UserService {
 
       if ((email || username) && meetings.length > 0) {
         try {
-          const [userRsvps, activeRegistrantIds] = await Promise.all([
+          const [userRsvps, activeRegistrants] = await Promise.all([
             this.fetchAllUserRsvps(req, email, username),
-            this.fetchUserActiveRegistrantIds(req, email, username),
+            this.fetchUserActiveRegistrantIdentities(req, email, username),
           ]);
 
           // Strongest-response-wins (accepted/declined beats maybe beats nothing) — same logic as
@@ -578,7 +485,7 @@ export class UserService {
           const rsvpByMeeting = new Map<string, MeetingRsvp>();
           for (const rsvp of userRsvps) {
             if (!rsvp.meeting_id) continue;
-            if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
+            if (!rsvp.registrant_id || !activeRegistrants.uids.has(rsvp.registrant_id)) continue;
             const existing = rsvpByMeeting.get(rsvp.meeting_id);
             if (!existing || (existing.response_type === 'maybe' && rsvp.response_type !== 'maybe')) {
               rsvpByMeeting.set(rsvp.meeting_id, rsvp);
@@ -1143,11 +1050,11 @@ export class UserService {
     let rsvpActions: PendingActionItem[] = [];
     if (inWindowMeetings.length > 0) {
       try {
-        const [userRsvps, activeRegistrantIds] = await Promise.all([
+        const [userRsvps, activeRegistrants] = await Promise.all([
           this.fetchAllUserRsvps(req, email, username),
-          this.fetchUserActiveRegistrantIds(req, email, username),
+          this.fetchUserActiveRegistrantIdentities(req, email, username),
         ]);
-        rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrantIds);
+        rsvpActions = this.transformMissingRsvpsToActions(inWindowMeetings, userRsvps, activeRegistrants);
       } catch (error) {
         logger.warning(req, 'get_user_pending_actions', 'RSVP prerequisite lookup failed, suppressing Set RSVP actions', { err: error });
       }
@@ -1286,17 +1193,26 @@ export class UserService {
   }
 
   /**
-   * Fetch the UIDs of every currently-active registrant record for the current user. RSVP rows
-   * persist from removed registrations, so we use the same guard as
-   * `MeetingService.getMeetingRsvps`: keep only those RSVPs whose `registrant_id` matches an
-   * active registrant. Otherwise an old accepted/declined RSVP from a removed registration
-   * would incorrectly suppress a Set RSVP action for the user's current registration.
+   * Fetch the active registrant identities for the current user, returning two sets:
+   *  - `uids`: registrant UIDs (used to invalidate RSVP rows that point at a removed registration —
+   *    same guard as `MeetingService.getMeetingRsvps`, prevents an old declined RSVP from
+   *    suppressing a Set RSVP action for a still-active re-registration).
+   *  - `meetingIds`: every `meeting_id` the user is currently a registrant for. Used to gate
+   *    Set RSVP action emission to meetings the RSVP API will actually accept — a v1_meeting can
+   *    show up via direct FGA grants (host, organizer, committee inheritance) without the user
+   *    having a v1_meeting_registrant row, in which case `createMeetingRsvp` returns 404
+   *    ("Only invited users are allowed to RSVP"). Filtering here keeps the dashboard from
+   *    surfacing rows the user can't action.
    */
-  private async fetchUserActiveRegistrantIds(req: Request, email: string, username: string | null): Promise<Set<string>> {
+  private async fetchUserActiveRegistrantIdentities(
+    req: Request,
+    email: string,
+    username: string | null
+  ): Promise<{ uids: Set<string>; meetingIds: Set<string> }> {
     const orClauses: string[] = [];
     if (email) orClauses.push(`email:${email.toLowerCase()}`);
     if (username) orClauses.push(`username:${username}`);
-    if (orClauses.length === 0) return new Set();
+    if (orClauses.length === 0) return { uids: new Set(), meetingIds: new Set() };
 
     // failOnPartial: a missing registrant UID here means an RSVP-guard lookup would wrongly
     // reject a still-active registrant's RSVP, which then fires a duplicate Set RSVP nag.
@@ -1311,7 +1227,13 @@ export class UserService {
       { failOnPartial: true }
     );
 
-    return new Set(registrants.map((r) => r.uid).filter((uid): uid is string => !!uid));
+    const uids = new Set<string>();
+    const meetingIds = new Set<string>();
+    for (const r of registrants) {
+      if (r.uid) uids.add(r.uid);
+      if (r.meeting_id) meetingIds.add(r.meeting_id);
+    }
+    return { uids, meetingIds };
   }
 
   /**
@@ -1350,7 +1272,11 @@ export class UserService {
    * set so historical RSVPs from removed registrations can't suppress a needed Set RSVP action
    * for the user's current registration.
    */
-  private transformMissingRsvpsToActions(meetings: Meeting[], rsvps: MeetingRsvp[], activeRegistrantIds: Set<string>): PendingActionItem[] {
+  private transformMissingRsvpsToActions(
+    meetings: Meeting[],
+    rsvps: MeetingRsvp[],
+    activeRegistrants: { uids: Set<string>; meetingIds: Set<string> }
+  ): PendingActionItem[] {
     if (meetings.length === 0) return [];
 
     const inWindowMeetingIds = new Set(meetings.map((m) => m.id).filter((id): id is string => !!id));
@@ -1358,7 +1284,7 @@ export class UserService {
     const respondedMeetingIds = new Set<string>();
     for (const rsvp of rsvps) {
       if (!rsvp.meeting_id || !inWindowMeetingIds.has(rsvp.meeting_id)) continue;
-      if (!rsvp.registrant_id || !activeRegistrantIds.has(rsvp.registrant_id)) continue;
+      if (!rsvp.registrant_id || !activeRegistrants.uids.has(rsvp.registrant_id)) continue;
       respondedMeetingIds.add(rsvp.meeting_id);
     }
 
@@ -1366,6 +1292,12 @@ export class UserService {
     for (const meeting of meetings) {
       if (!meeting.id) continue;
       if (respondedMeetingIds.has(meeting.id)) continue;
+      // Suppress the action when the user is not a registrant for this specific meeting.
+      // The pending-actions list comes from `filter_grants: 'direct'` on `v1_meeting`, which
+      // includes hosts/organizers and committee-inherited grants — none of which carry a
+      // `v1_meeting_registrant` row. The RSVP API requires that row, so showing a "Set RSVP"
+      // CTA we know will 404 is a UX dead end.
+      if (!activeRegistrants.meetingIds.has(meeting.id)) continue;
       actions.push(this.createRsvpAction(meeting));
     }
     return actions;
@@ -1432,6 +1364,8 @@ export class UserService {
       buttonText: 'Set RSVP',
       buttonLink,
       date: formattedDate,
+      meetingUid: meeting.id,
+      ...(nextOccurrence?.occurrence_id ? { occurrenceId: nextOccurrence.occurrence_id } : {}),
     };
   }
 
