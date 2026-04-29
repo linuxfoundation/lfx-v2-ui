@@ -198,14 +198,28 @@ export class SurveyService {
     }
 
     // Query survey_response records using filters_or (OR logic on data fields)
-    const responses = await fetchAllQueryResources<{ survey_uid: string }>(req, (pageToken) =>
-      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid: string }>>(req, 'LFX_V2_SERVICE', '/query/resources', 'GET', {
-        v: '1',
-        type: 'survey_response',
-        filters_or: filtersOr,
-        ...(pageToken && { page_token: pageToken }),
-      })
+    const responses = await fetchAllQueryResources<{ survey_uid: string; survey_link?: string }>(req, (pageToken) =>
+      this.microserviceProxy.proxyRequest<QueryServiceResponse<{ survey_uid: string; survey_link?: string }>>(
+        req,
+        'LFX_V2_SERVICE',
+        '/query/resources',
+        'GET',
+        {
+          v: '1',
+          type: 'survey_response',
+          filters_or: filtersOr,
+          ...(pageToken && { page_token: pageToken }),
+        }
+      )
     );
+
+    // Build survey_uid → survey_link map (first non-empty link wins when a user has multiple responses for the same survey)
+    const surveyLinkMap = new Map<string, string>();
+    for (const r of responses) {
+      if (r.survey_uid && r.survey_link && !surveyLinkMap.has(r.survey_uid)) {
+        surveyLinkMap.set(r.survey_uid, r.survey_link);
+      }
+    }
 
     // Extract unique survey UIDs
     const surveyUids = [...new Set(responses.filter((r) => r.survey_uid).map((r) => r.survey_uid))];
@@ -263,12 +277,13 @@ export class SurveyService {
       })
       .map((entry) => entry.survey);
 
-    // Flatten project_uid from committees to top level for enrichment
+    // Flatten project_uid from committees to top level for enrichment, and attach the personalized survey_link
     const withProjectUid = sorted.map((s) => {
       const projectUids = [...new Set((s.committees ?? []).map((c) => c.project_uid).filter(Boolean))];
       return {
         ...s,
         project_uid: projectUids.length === 1 ? projectUids[0] : '',
+        survey_link: surveyLinkMap.get(s.uid),
       };
     });
 
