@@ -168,7 +168,12 @@ export class NavigationService {
       const project = response?.resources?.[0]?.data;
       if (!project) return null;
       // Mirror the main-pipeline contract so an archived selection doesn't get re-injected.
-      if (project.stage !== 'Active' && project.stage !== 'Formation - Engaged') return null;
+      // Formation - Engaged is only valid for the project lens; foundation lens stays strict.
+      if (lens === 'foundation') {
+        if (project.stage !== 'Active') return null;
+      } else {
+        if (project.stage !== 'Active' && project.stage !== 'Formation - Engaged') return null;
+      }
       if (lens === 'foundation' && !computeIsFoundation(project)) return null;
       return this.toLensItem(project);
     } catch (error) {
