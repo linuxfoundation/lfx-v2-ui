@@ -297,7 +297,7 @@ export class SurveyManageComponent {
       // Step 2: Timing & Reminders
       distributionMethod: new FormControl<SurveyDistributionMethod>('immediate', [Validators.required]),
       scheduledDate: new FormControl<Date | null>(null),
-      cutoffDate: new FormControl<Date | null>(null, [Validators.required]),
+      cutoffDate: new FormControl<Date | null>(null),
       reminderType: new FormControl<SurveyReminderType>('automatic', [Validators.required]),
       reminderFrequency: new FormControl<string>('7', [Validators.required]),
 
