@@ -1,10 +1,11 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { CreateVoteRequest, UpdateVoteRequest } from '@lfx-one/shared/interfaces';
+import { CreateVoteRequest, CreateVoteResponseRequest, UpdateVoteRequest } from '@lfx-one/shared/interfaces';
 import { NextFunction, Request, Response } from 'express';
 
-import { validateUidParameter } from '../helpers/validation.helper';
+import { ServiceValidationError } from '../errors';
+import { validateRequestBody, validateUidParameter } from '../helpers/validation.helper';
 import { logger } from '../services/logger.service';
 import { VoteService } from '../services/vote.service';
 
@@ -230,6 +231,76 @@ export class VoteController {
       });
 
       res.json(results);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /votes/responses
+   */
+  public async createVoteResponse(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const payload: CreateVoteResponseRequest = req.body;
+    const startTime = logger.startOperation(req, 'create_vote_response', {
+      vote_uid: payload?.vote_uid,
+      vote_response_uid: payload?.vote_response_uid,
+      abstain: payload?.abstain,
+    });
+
+    try {
+      if (
+        !validateRequestBody(payload, req, next, {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+        })
+      ) {
+        return;
+      }
+
+      if (
+        !validateUidParameter(payload.vote_uid, req, next, {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+          fieldName: 'vote_uid',
+        })
+      ) {
+        return;
+      }
+
+      if (
+        !validateUidParameter(payload.vote_response_uid, req, next, {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+          fieldName: 'vote_response_uid',
+        })
+      ) {
+        return;
+      }
+
+      if (typeof payload.abstain !== 'boolean') {
+        throw ServiceValidationError.forField('abstain', 'abstain is required and must be a boolean', {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+        });
+      }
+
+      if (!payload.abstain && (!Array.isArray(payload.user_vote_content) || payload.user_vote_content.length === 0)) {
+        throw ServiceValidationError.forField('user_vote_content', 'user_vote_content is required when not abstaining', {
+          operation: 'create_vote_response',
+          service: 'vote_controller',
+        });
+      }
+
+      await this.voteService.createVoteResponse(req, payload);
+
+      logger.success(req, 'create_vote_response', startTime, {
+        vote_uid: payload.vote_uid,
+        vote_response_uid: payload.vote_response_uid,
+        abstain: payload.abstain,
+        status_code: 204,
+      });
+
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
