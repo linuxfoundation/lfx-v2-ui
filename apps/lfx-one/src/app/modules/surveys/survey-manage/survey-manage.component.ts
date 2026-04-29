@@ -406,14 +406,18 @@ Thank you,
       case 2: {
         const distributionMethod = form.get('distributionMethod')?.value as SurveyDistributionMethod;
         const distributionMethodValid = !!form.get('distributionMethod')?.valid;
+        const isImmediate = distributionMethod === 'immediate';
 
-        // Scheduled date is required only when distribution method is 'scheduled'
-        const scheduledDateValid = distributionMethod === 'scheduled' ? !!form.get('scheduledDate')?.value : true;
+        const scheduledDate = form.get('scheduledDate')?.value as Date | null;
+        const cutoffDate = form.get('cutoffDate')?.value as Date | null;
 
-        const cutoffDateValid = !!form.get('cutoffDate')?.value;
+        const scheduledDateValid = distributionMethod === 'scheduled' ? !!scheduledDate : true;
+
+        const effectiveSendDate = isImmediate ? new Date(Date.now() + IMMEDIATE_SEND_OFFSET_MS) : scheduledDate;
+        const cutoffDateValid = !!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate);
+
         const reminderTypeValid = !!form.get('reminderType')?.valid;
 
-        // Reminder frequency is required only when reminder type is 'automatic'
         const reminderType = form.get('reminderType')?.value as SurveyReminderType;
         const reminderFrequencyValid = reminderType === 'automatic' ? !!form.get('reminderFrequency')?.valid : true;
 
