@@ -175,7 +175,7 @@ export class CommitteeOverviewComponent {
   public readonly pendingActionRowClassByKey: Signal<Record<string, string>> = computed(() => {
     const classes: Record<string, string> = {};
     this.pendingActionItems().forEach((item, index) => {
-      const key = `${item.type}-${item.text}`;
+      const key = this.getPendingActionRowKey(item, index);
       classes[key] = index % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
     });
     return classes;
@@ -213,8 +213,8 @@ export class CommitteeOverviewComponent {
     }
   }
 
-  public getPendingActionRowClass(item: PendingActionItem): string {
-    return this.pendingActionRowClassByKey()[`${item.type}-${item.text}`] ?? 'bg-white';
+  public getPendingActionRowClass(item: PendingActionItem, index: number): string {
+    return this.pendingActionRowClassByKey()[this.getPendingActionRowKey(item, index)] ?? 'bg-white';
   }
 
   // Chairs edit methods
@@ -401,6 +401,14 @@ export class CommitteeOverviewComponent {
       const hasVotes = this.pendingActionItems().some((item) => item.type === 'Vote');
       return hasVotes ? 'votes' : 'surveys';
     });
+  }
+
+  // Stable per-row key. Prefer `buttonLink` (vote uid) when present so two items with the same
+  // `text` (e.g., re-issued votes / surveys with identical titles) don't collide and overwrite
+  // each other's tint in `pendingActionRowClassByKey`. Surveys don't currently carry an id here,
+  // so fall back to `index` to keep the key unique within the visible list.
+  private getPendingActionRowKey(item: PendingActionItem, index: number): string {
+    return item.buttonLink ? `${item.type}-${item.buttonLink}` : `${item.type}-${item.text}-${index}`;
   }
 
   private initSurveys(): Signal<Survey[]> {

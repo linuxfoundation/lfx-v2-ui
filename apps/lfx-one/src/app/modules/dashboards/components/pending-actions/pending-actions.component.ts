@@ -34,10 +34,12 @@ export class PendingActionsComponent {
   private readonly hiddenActionsVersion = signal(0);
   protected readonly expandedRsvpKey = signal<string | null>(null);
   // Tracks the row currently in the 1.5s post-RSVP confirmation window so the row background can
-  // briefly tint green to acknowledge the response before the row is dismissed. Cleared inside the
-  // same `timer(1500)` callback that dismisses the row. Independent from `expandedRsvpKey` because
-  // the row stays expanded (showing the selected response button) for the full 1.5s — the tint is
-  // an additive cue, not an exclusive state.
+  // briefly tint green to acknowledge the response before the row visually collapses. Cleared
+  // inside the `timer(1500)` callback in `handleRsvpChanged`. Note: persistence (cookie write via
+  // `hideAction`) runs SYNCHRONOUSLY before that timer — only the visual cue lives on the timer,
+  // so a route change inside the window can't undo the dismissal. Independent from
+  // `expandedRsvpKey` because the row stays expanded (showing the selected response button) for
+  // the full 1.5s — the tint is an additive cue, not an exclusive state.
   protected readonly dismissingRowKey = signal<string | null>(null);
 
   // The meetingUid currently being fetched (if any). Per-meeting tracking instead of a global flag
@@ -70,7 +72,15 @@ export class PendingActionsComponent {
 
   protected handleRsvpChanged(item: DecoratedPendingAction): void {
     // Skip `actionClick` emit so the parent dashboard doesn't refresh and skeleton-flash sibling rows.
-    // Defer the dismiss so the chosen response and toast register before the row vanishes.
+    // Persist the dismissal SYNCHRONOUSLY (before the timer) so a route change / unmount within
+    // the 1.5s window can't cancel the cookie write via `takeUntilDestroyed` and cause the
+    // already-RSVPed row to reappear on the next visit. The timer below is purely the visual
+    // confirmation cue — it owns `dismissingRowKey` (emerald tint) and the deferred collapse of
+    // `expandedRsvpKey`, both of which are safe to drop on unmount because the row is gone anyway.
+    this.hiddenActionsService.hideAction(item);
+    this.hiddenActionsVersion.update((v) => v + 1);
+
+    // Defer the visual cleanup so the chosen response and toast register before the row vanishes.
     // Guard the collapse on rowKey so A's timer can't collapse B if the user moved on.
     const rowKey = this.getRowKey(item);
     this.dismissingRowKey.set(rowKey);
@@ -85,8 +95,6 @@ export class PendingActionsComponent {
         if (this.dismissingRowKey() === rowKey) {
           this.dismissingRowKey.set(null);
         }
-        this.hiddenActionsService.hideAction(item);
-        this.hiddenActionsVersion.update((v) => v + 1);
       });
   }
 
