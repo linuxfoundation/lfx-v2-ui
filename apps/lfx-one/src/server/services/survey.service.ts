@@ -9,6 +9,7 @@ import { Request } from 'express';
 import { ResourceNotFoundError } from '../errors';
 import { pollEndpoint } from '../helpers/poll-endpoint.helper';
 import { fetchAllQueryResources } from '../helpers/query-service.helper';
+import { validateAndSanitizeUrl } from '../helpers/url-validation';
 import { getEffectiveEmail, getUsernameFromAuth, stripAuthPrefix } from '../utils/auth-helper';
 import { ETagService } from './etag.service';
 import { logger } from './logger.service';
@@ -215,8 +216,9 @@ export class SurveyService {
 
     const surveyLinkMap = new Map<string, string>();
     for (const r of responses) {
-      if (r.survey_uid && r.survey_link && !surveyLinkMap.has(r.survey_uid)) {
-        surveyLinkMap.set(r.survey_uid, r.survey_link);
+      const validatedLink = validateAndSanitizeUrl(r.survey_link?.trim() ?? '', ['https://www.surveymonkey.com', 'https://linuxfoundation.surveymonkey.com']);
+      if (r.survey_uid && validatedLink && !surveyLinkMap.has(r.survey_uid)) {
+        surveyLinkMap.set(r.survey_uid, validatedLink);
       }
     }
 
