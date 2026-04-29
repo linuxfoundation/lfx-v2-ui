@@ -125,7 +125,6 @@ export interface Survey {
   num_passives?: number;
   /** Number of detractors from detail API */
   num_detractors?: number;
-  /** Personalized SurveyMonkey URL for the current user (only present in My Surveys / Me-lens responses) */
   survey_link?: string;
 }
 

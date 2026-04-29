@@ -213,7 +213,6 @@ export class SurveyService {
       )
     );
 
-    // Build survey_uid → survey_link map (first non-empty link wins when a user has multiple responses for the same survey)
     const surveyLinkMap = new Map<string, string>();
     for (const r of responses) {
       if (r.survey_uid && r.survey_link && !surveyLinkMap.has(r.survey_uid)) {
@@ -277,7 +276,7 @@ export class SurveyService {
       })
       .map((entry) => entry.survey);
 
-    // Flatten project_uid from committees to top level for enrichment, and attach the personalized survey_link
+    // Flatten project_uid from committees to top level for enrichment
     const withProjectUid = sorted.map((s) => {
       const projectUids = [...new Set((s.committees ?? []).map((c) => c.project_uid).filter(Boolean))];
       return {
