@@ -127,11 +127,15 @@ export class SurveyTimingRemindersComponent {
       if (this.isScheduled()) {
         const scheduledDate = this.scheduledDate();
         if (scheduledDate) {
-          return scheduledDate;
+          const nextDay = new Date(scheduledDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          nextDay.setHours(0, 0, 0, 0);
+          return nextDay;
         }
       }
       const tomorrow = new Date(this.todayDate);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
       return tomorrow;
     });
   }

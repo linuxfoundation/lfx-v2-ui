@@ -60,20 +60,21 @@
             </div>
           }
 
-          <!-- Cutoff Date -->
-          <div class="flex flex-col gap-2 pt-2">
-            <label class="block mb-2 text-neutral-950"> Survey Cutoff Date <span class="text-red-500">*</span> </label>
-            <p class="text-sm text-gray-500 mb-2">The date when the survey will close and no longer accept responses.</p>
-            <lfx-calendar
-              [form]="form()"
-              control="cutoffDate"
-              placeholder="Select date"
-              [minDate]="minCutoffDate()"
-              styleClass="w-full"
-              data-testid="cutoff-date-picker"
-              appendTo="body">
-            </lfx-calendar>
-          </div>
+          @if (isScheduled()) {
+            <div class="flex flex-col gap-2 pt-2">
+              <label class="block mb-2 text-neutral-950"> Survey Cutoff Date <span class="text-red-500">*</span> </label>
+              <p class="text-sm text-gray-500 mb-2">The date when the survey will close and no longer accept responses.</p>
+              <lfx-calendar
+                [form]="form()"
+                control="cutoffDate"
+                placeholder="Select date"
+                [minDate]="minCutoffDate()"
+                styleClass="w-full"
+                data-testid="cutoff-date-picker"
+                appendTo="body">
+              </lfx-calendar>
+            </div>
+          }
         </div>
       </div>
     </div>
