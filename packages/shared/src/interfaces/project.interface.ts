@@ -13,7 +13,6 @@ export interface Project {
   writer?: boolean;
   public: boolean;
   parent_uid: string;
-  /** Upstream Goa enum — optional to tolerate records indexed before the attribute was rolled out. */
   stage: ProjectStage | string;
   category: string;
   /** Upstream Goa enum — optional to tolerate records indexed before the attribute was rolled out. */
