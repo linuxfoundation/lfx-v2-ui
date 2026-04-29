@@ -171,7 +171,7 @@ export class NavigationService {
       if (lens === 'foundation') {
         if (!computeIsFoundation(project)) return null;
       } else {
-        if (project.stage !== ProjectStage.Active && project.stage !== ProjectStage.FormationEngaged) return null;
+        if (project.stage !== ProjectStage.Active && project.stage !== ProjectStage.FormationEngaged && project.stage !== ProjectStage.FormationExploratory) return null;
       }
       return this.toLensItem(project);
     } catch (error) {
@@ -201,9 +201,9 @@ export class NavigationService {
       base.filters = [`funding:${ProjectFunding.Funded}`, 'funding_model:Membership'];
       base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`];
     } else {
-      // Include Formation - Engaged projects so persona-eligible pre-launch
+      // Include all formation-stage projects so persona-eligible pre-launch
       // projects appear in the project dropdown.
-      base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`];
+      base.filters_or = [`stage:${ProjectStage.Active}`, `stage:${ProjectStage.FormationEngaged}`, `stage:${ProjectStage.FormationExploratory}`];
     }
 
     if (pageToken) base.page_token = pageToken;
