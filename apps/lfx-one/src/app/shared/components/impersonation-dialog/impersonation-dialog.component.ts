@@ -1,7 +1,8 @@
 // Copyright The Linux Foundation and each contributor to LFX.
 // SPDX-License-Identifier: MIT
 
-import { Component, computed, inject, signal, Signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { AutocompleteComponent } from '@components/autocomplete/autocomplete.component';
 import { ButtonComponent } from '@components/button/button.component';
@@ -38,9 +39,21 @@ export class ImpersonationDialogComponent {
   protected loading = signal(false);
   protected error = signal('');
   protected recentImpersonations = signal<RecentImpersonation[]>(this.impersonationService.getRecentImpersonations());
-  private searchQuery = signal('');
+  protected suggestions = signal<RecentImpersonation[]>(this.recentImpersonations());
+  private selectedRecentTargetUser = signal<string | null>(null);
 
-  protected suggestions: Signal<RecentImpersonation[]> = this.initSuggestions();
+  public constructor() {
+    // Drop the auto-restored persona context as soon as the user steers the target away from
+    // the recent profile they picked — otherwise submit() would impersonate the new target
+    // under the previous profile's lens.
+    this.targetUserForm.controls.targetUser.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      const lastSelected = this.selectedRecentTargetUser();
+      if (lastSelected && value !== lastSelected) {
+        this.selectedRecentTargetUser.set(null);
+        this.targetUserForm.controls.personaContext.setValue(null);
+      }
+    });
+  }
 
   public submit(): void {
     const target = this.targetUserForm.controls.targetUser.value.trim();
@@ -83,33 +96,33 @@ export class ImpersonationDialogComponent {
   }
 
   protected onSearchComplete(event: AutoCompleteCompleteEvent): void {
-    this.searchQuery.set(event.query ?? '');
-  }
+    const query = (event.query ?? '').trim().toLowerCase();
+    const entries = this.recentImpersonations();
 
-  protected onSuggestionSelected(event: AutoCompleteSelectEvent): void {
-    const targetUser = event.value;
-    if (typeof targetUser !== 'string') return;
+    if (!query) {
+      this.suggestions.set([...entries]);
+      return;
+    }
 
-    const entry = this.recentImpersonations().find((r) => r.targetUser === targetUser);
-    if (!entry) return;
-
-    this.targetUserForm.controls.personaContext.setValue(entry.personaContext ?? null);
-  }
-
-  private initSuggestions(): Signal<RecentImpersonation[]> {
-    return computed(() => {
-      const query = this.searchQuery().trim().toLowerCase();
-      const recents = this.recentImpersonations();
-      if (!query) {
-        return recents;
-      }
-      return recents.filter(
+    this.suggestions.set(
+      entries.filter(
         (r) =>
           r.email.toLowerCase().includes(query) ||
           r.username?.toLowerCase().includes(query) ||
           (r.name?.toLowerCase().includes(query) ?? false) ||
           r.targetUser.toLowerCase().includes(query)
-      );
-    });
+      )
+    );
+  }
+
+  protected onSuggestionSelected(event: AutoCompleteSelectEvent): void {
+    // p-autocomplete writes the full option object into the form on select; replace it with
+    // the targetUser string so submit() and free-text typing both see a plain string.
+    const entry = event.value as RecentImpersonation | null;
+    if (!entry || typeof entry !== 'object') return;
+
+    this.selectedRecentTargetUser.set(entry.targetUser);
+    this.targetUserForm.controls.targetUser.setValue(entry.targetUser);
+    this.targetUserForm.controls.personaContext.setValue(entry.personaContext ?? null);
   }
 }

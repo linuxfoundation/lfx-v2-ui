@@ -77,6 +77,13 @@ export class ImpersonationService {
       return false;
     }
     const candidate = entry as Partial<RecentImpersonation>;
-    return typeof candidate.targetUser === 'string' && typeof candidate.email === 'string' && typeof candidate.lastUsedAt === 'number';
+    return (
+      typeof candidate.targetUser === 'string' &&
+      typeof candidate.email === 'string' &&
+      typeof candidate.username === 'string' &&
+      typeof candidate.lastUsedAt === 'number' &&
+      (candidate.name === undefined || typeof candidate.name === 'string') &&
+      (candidate.picture === undefined || typeof candidate.picture === 'string')
+    );
   }
 }

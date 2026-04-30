@@ -20,12 +20,13 @@
         [suggestions]="suggestions()"
         placeholder="e.g. jdoe or jdoe@example.com"
         optionLabel="email"
-        optionValue="targetUser"
         [minLength]="0"
-        [completeOnFocus]="true"
+        [showEmptyMessage]="false"
         [dropdown]="true"
         dropdownMode="blank"
+        size="small"
         appendTo="body"
+        styleClass="w-full"
         inputId="targetUser"
         dataTestId="impersonation-target-input"
         (completeMethod)="onSearchComplete($event)"
@@ -43,11 +44,6 @@
               <span class="truncate text-sm">{{ entry.name || entry.username || entry.email }}</span>
               <span class="truncate text-xs text-gray-500">{{ entry.email }}</span>
             </div>
-          </div>
-        </ng-template>
-        <ng-template #empty>
-          <div class="p-3 text-center">
-            <p class="text-sm text-gray-600">No matching recent profiles. Press Enter to impersonate this user.</p>
           </div>
         </ng-template>
       </lfx-autocomplete>

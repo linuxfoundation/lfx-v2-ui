@@ -40,6 +40,8 @@ export class AutocompleteComponent {
   public dataKey = input<string>();
   public showClear = input<boolean>(false);
   public forceSelection = input<boolean>(false);
+  public showEmptyMessage = input<boolean>(true);
+  public size = input<'small' | 'large'>('small');
 
   public readonly completeMethod = output<AutoCompleteCompleteEvent>();
   public readonly onSelect = output<AutoCompleteSelectEvent>();
