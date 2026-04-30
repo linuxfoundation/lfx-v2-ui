@@ -119,12 +119,12 @@ export const SURVEY_IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
 /**
  * Allowed origins for survey response links surfaced to members.
  */
-export const SURVEY_LINK_ALLOWLIST = [
+export const SURVEY_LINK_ALLOWLIST: string[] = [
   'https://www.surveymonkey.com',
   'https://linuxfoundation.surveymonkey.com',
   'https://www.research.net',
   'https://linuxfoundation.research.net',
-] as const;
+];
 
 /**
  * Step titles for the survey creation/edit stepper
