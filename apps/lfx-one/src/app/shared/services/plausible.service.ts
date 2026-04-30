@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
 import { PLAUSIBLE_DOMAIN, PLAUSIBLE_SRC } from '@lfx-one/shared/constants';
+import { PlausibleCall } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
 
 /**
@@ -92,7 +93,7 @@ export class PlausibleService {
       // the real Plausible script drains q and o on first run.
       window.plausible =
         window.plausible ||
-        ((...args: unknown[]) => {
+        ((...args: PlausibleCall) => {
           (window.plausible!.q = window.plausible!.q || []).push(args);
         });
       window.plausible.init =
