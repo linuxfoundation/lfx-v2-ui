@@ -31,8 +31,6 @@ import { SurveyTimingRemindersComponent } from '../components/survey-timing-remi
 
 /** Upstream requires survey_send_date in the future — offset for "immediate" sends. */
 const IMMEDIATE_SEND_OFFSET_MS = 5 * 60 * 1000;
-/** Default cutoff for immediate sends — 30 days after the effective send time. */
-const IMMEDIATE_DEFAULT_CUTOFF_MS = 30 * 24 * 60 * 60 * 1000;
 
 @Component({
   selector: 'lfx-survey-manage',
@@ -253,7 +251,7 @@ export class SurveyManageComponent {
       survey_title: committees[0]?.name ? `${committees[0].name} Survey` : 'New Survey',
       send_immediately: isImmediate,
       survey_send_date: isImmediate ? new Date(immediateSendAtMs).toISOString() : new Date(formData.scheduledDate).toISOString(),
-      survey_cutoff_date: isImmediate ? new Date(immediateSendAtMs + IMMEDIATE_DEFAULT_CUTOFF_MS).toISOString() : new Date(formData.cutoffDate).toISOString(),
+      survey_cutoff_date: new Date(formData.cutoffDate).toISOString(),
       survey_reminder_rate_days: parseInt(formData.reminderFrequency, 10) || 7,
       email_subject: formData.emailSubject,
       email_body: `<!DOCTYPE html><html><body>${formData.emailBody}</body></html>`,
@@ -409,7 +407,6 @@ Thank you,
       case 2: {
         const distributionMethod = form.get('distributionMethod')?.value as SurveyDistributionMethod;
         const distributionMethodValid = !!form.get('distributionMethod')?.valid;
-        const isImmediate = distributionMethod === 'immediate';
 
         const scheduledDate = form.get('scheduledDate')?.value as Date | null;
         const cutoffDate = form.get('cutoffDate')?.value as Date | null;
@@ -417,7 +414,7 @@ Thank you,
         const scheduledDateValid = distributionMethod === 'scheduled' ? !!scheduledDate : true;
 
         const effectiveSendDate = scheduledDate;
-        const cutoffDateValid = isImmediate || (!!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate));
+        const cutoffDateValid = !!cutoffDate && (!effectiveSendDate || cutoffDate > effectiveSendDate);
 
         const reminderTypeValid = !!form.get('reminderType')?.valid;
 
