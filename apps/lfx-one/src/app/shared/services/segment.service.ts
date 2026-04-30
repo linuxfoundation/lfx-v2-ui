@@ -5,16 +5,8 @@ import { afterNextRender, DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
-import { LfxSegmentAnalytics, LfxSegmentAnalyticsClass } from '@lfx-one/shared/interfaces';
+import { LfxSegmentAnalytics } from '@lfx-one/shared/interfaces';
 import { filter } from 'rxjs';
-
-declare global {
-  interface Window {
-    LfxAnalytics?: {
-      LfxSegmentsAnalytics: LfxSegmentAnalyticsClass;
-    };
-  }
-}
 
 /**
  * Segment tracking service for Segment integration

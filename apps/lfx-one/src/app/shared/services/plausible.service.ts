@@ -7,16 +7,6 @@ import { NavigationEnd, Router } from '@angular/router';
 import { environment } from '@environments/environment';
 import { filter } from 'rxjs';
 
-declare global {
-  interface Window {
-    plausible?: ((eventName: string, options?: { u?: string; props?: Record<string, unknown> }) => void) & {
-      q?: unknown[];
-      init?: (options?: Record<string, unknown>) => void;
-      o?: Record<string, unknown>;
-    };
-  }
-}
-
 /**
  * Plausible analytics service for privacy-friendly page and event tracking.
  * Uses Angular's afterNextRender for SSR-safe script loading.
