@@ -208,7 +208,6 @@ export class SurveyService {
         '/query/resources',
         'GET',
         {
-          v: '1',
           type: 'survey_response',
           filters_or: filtersOr,
           ...(pageToken && { page_token: pageToken }),
