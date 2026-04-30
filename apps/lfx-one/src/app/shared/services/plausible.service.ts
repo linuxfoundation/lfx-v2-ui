@@ -46,7 +46,7 @@ export class PlausibleService {
     }
 
     try {
-      window.plausible('pageview', { u: window.location.href, props: properties });
+      window.plausible('pageview', { u: this.getSanitizedUrl(), props: properties });
     } catch (error) {
       console.error('Error tracking page with Plausible:', error);
     }
@@ -78,7 +78,8 @@ export class PlausibleService {
     }
 
     try {
-      // Stub queues events fired before the real script finishes loading
+      // Stub queues events fired before the real script finishes loading;
+      // the real Plausible script drains q and o on first run.
       window.plausible =
         window.plausible ||
         ((...args: unknown[]) => {
@@ -89,15 +90,21 @@ export class PlausibleService {
         ((options?: Record<string, unknown>) => {
           window.plausible!.o = options || {};
         });
+      window.plausible.init();
 
       const script = document.createElement('script');
       script.src = environment.plausible.src;
+      if (environment.plausible.domain) {
+        script.setAttribute('data-domain', environment.plausible.domain);
+      }
       script.async = true;
       script.defer = true;
 
+      // analyticsReady is gated on the real script loading — onload fires
+      // only after the bundle has executed and replaced the queue stub.
       script.onload = () => {
         this.scriptLoaded = true;
-        this.waitForPlausible();
+        this.analyticsReady = true;
       };
 
       script.onerror = (error) => {
@@ -108,31 +115,6 @@ export class PlausibleService {
     } catch (error) {
       console.error('Error initializing Plausible:', error);
     }
-  }
-
-  /**
-   * Wait for Plausible to be available and initialize it
-   */
-  private async waitForPlausible(): Promise<void> {
-    const maxAttempts = 100; // 10 seconds max wait
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      if (typeof window?.plausible === 'function') {
-        try {
-          window.plausible.init?.();
-          this.analyticsReady = true;
-        } catch (error) {
-          console.error('Error initializing Plausible:', error);
-        }
-        return;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    console.error('Plausible not available after timeout');
   }
 
   /**
@@ -147,9 +129,18 @@ export class PlausibleService {
       .subscribe((event: NavigationEnd) => {
         this.trackPage({
           path: event.urlAfterRedirects,
-          url: window.location.href,
+          url: this.getSanitizedUrl(),
           title: document.title,
         });
       });
+  }
+
+  /**
+   * Build a privacy-safe URL string for Plausible.
+   * Strips query params and hash to avoid leaking auth tokens, OTPs, or
+   * password-reset codes that callbacks sometimes carry in the URL.
+   */
+  private getSanitizedUrl(): string {
+    return `${window.location.origin}${window.location.pathname}`;
   }
 }
