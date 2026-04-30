@@ -45,7 +45,7 @@ export class SegmentService {
    * @param properties Optional page properties
    */
   public trackPage(pageName: string, properties?: Record<string, unknown>): void {
-    if (this.impersonating || !this.analyticsReady || !this.analytics) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -62,7 +62,7 @@ export class SegmentService {
    * @param properties Event properties
    */
   public trackEvent(eventName: string, properties?: Record<string, unknown>): void {
-    if (this.impersonating || !this.analyticsReady || !this.analytics) {
+    if (typeof window === 'undefined' || this.impersonating || !this.analyticsReady || !this.analytics) {
       return;
     }
 
@@ -78,7 +78,7 @@ export class SegmentService {
    * @param auth0User Auth0 user object
    */
   public identifyUser(auth0User: unknown): void {
-    if (!auth0User || this.impersonating) {
+    if (typeof window === 'undefined' || !auth0User || this.impersonating) {
       return;
     }
 
@@ -177,6 +177,9 @@ export class SegmentService {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((event: NavigationEnd) => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+          return;
+        }
         const pageName = event.urlAfterRedirects.split('/').pop() || 'Home';
         this.trackPage(pageName, {
           path: event.urlAfterRedirects,
